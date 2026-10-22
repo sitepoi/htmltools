@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Volunteer Profile &amp; Hour Portal - Technical Source of Truth</title>
+  <!--
+  SSOT for the Volunteer Profile & Hour Portal html tool (one tool instance per
+  volunteer profile; it is the volunteer's own record: applications, tasks,
+  submitted hours, messages, certificate and details). Governance: a decision
+  that is not in section 11 did not happen; the register is append-only; when
+  code and this document disagree, this document is updated first, then the
+  code follows. Task board is section 15; ideas section 16; tests section 17;
+  risks section 18; releases section 19 (managed by the release process).
+  -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">Volunteer Profile &amp; Hour Portal</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v1.4</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>Volunteer Profile &amp; Hour Portal</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for the Volunteer Profile &amp; Hour Portal html
+    tool. One tool instance is attached to one volunteer profile and holds
+    everything that volunteer owns: the applications to events, the work
+    assigned, the hours submitted, the messages received, the certificate and
+    the profile details. Event side data - the event definition, the roster,
+    the task list, the approvals - belongs to the Event Volunteer Manager.
+    Every decision made for this tool is logged in section 11 and this
+    document is updated in the same change as the code. When this document or
+    the code disagree, this document is the tiebreaker - it is updated to
+    capture the final decision, never silently left divergent.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>1.4</td></tr>
+    <tr><th>Last updated</th><td>2026-10-22</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (VolunteerProfile).</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/VolunteerProfile.html</code>, <code>app/VolunteerProfile.css</code>, <code>app/VolunteerProfile.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>Creating or editing event objects, deciding applications, approving hours, the event roster and task list, cross event reporting (Event Volunteer Manager), email delivery, volunteer screening documents.</td></tr>
+    <tr><th>Companion documents</th><td>Satellites to be generated from this SSOT: <code>index.html</code> (docs shell), <code>webpage.html</code>, <code>help.html</code>, <code>presentation.html</code>, <code>social.html</code>, <code>updates.html</code></td></tr>
+    <tr><th>Paired tool</th><td><code>../EventVolunteerManager/docs/ssot.html</code> - the manager side. Both act on the same membership records.</td></tr>
+  </table>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one tool and one set of invariants around a single
+  volunteer's own record - and it is the <strong>single source of truth for
+  every decision we make</strong> about this tool, now and in the future. No
+  decision is considered made until it is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this tool, the decision is added to section 11 with a
+    date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the code
+    disagree, the discrepancy is resolved in this document first, then applied
+    to the code - never the other way around.</li>
+    <li><strong>Check before changing.</strong> Read the relevant section and
+    the register before changing behavior, and update this document in the
+    same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function and snippet uses understandable names. No cryptic abbreviations.
+    Short names only for loop indexes and universally known abbreviations
+    (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> The volunteer sees their own
+  record and only their own record. They can ask to join an event, report work
+  and submit hours. They can never decide an application, approve an hour line
+  or edit an event. Everything below serves those two sentences.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerProfile/app/VolunteerProfile.html"><code>app/VolunteerProfile.html</code></a></td>
+      <td>Tool markup: top bar, menu, seven screens, modal shell.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerProfile/app/VolunteerProfile.css"><code>app/VolunteerProfile.css</code></a></td>
+      <td>Tool stylesheet (navy design language, cards and tables).</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerProfile/app/VolunteerProfile.js"><code>app/VolunteerProfile.js</code></a></td>
+      <td>Tool logic: SDK wiring, five object types, applications, tasks, hours, messages, certificate.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerProfile/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Standalone harness with the mock SDK and a sample volunteer; inlines the tool HTML.</td>
+      <td>Whole file - the mock storage must mirror the five types</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/EventVolunteerManager/app/EventVolunteerManager.js"><code>../EventVolunteerManager/app/EventVolunteerManager.js</code></a></td>
+      <td>Paired tool. Not imported, but shares the membership record contract.</td>
+      <td>Membership fields and ledger id rule</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <p>The factual baseline of what is already built and working in this tool
+  folder. Planned work never appears here; planned work is in section 15 and
+  the idea backlog in section 16.</p>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>Profile resolved from the host object, the session user or the <code>personId</code> param</td><td><code>VolunteerProfile.js</code> - resolveHostObjectId / loadAll</td><td>v1.0 (2026-10-21)</td><td>Smoke suite</td></tr>
+    <tr><td>C-02</td><td>Dashboard with applications, open work, pending hours and total approved hours</td><td>renderDashboard</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-03</td><td>Event list with my placement status and my roles per event</td><td>renderEvents</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-04</td><td>Apply to an open event, withdraw while the request is pending</td><td>applyToEvent / withdrawFromEvent</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-05</td><td>My tasks with start and report done, mirrored onto the placement</td><td>setTaskLinkStatus</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-06</td><td>Submit hours per event and date, remove a pending line, see the approved ledger</td><td>addPendingHours / removePendingHours / collapseOldestYear</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-07</td><td>Rejection shown as a rejected line with the manager note</td><td>renderHours</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-08</td><td>Messages from approved events with read tracking and unread badge</td><td>messagesOf / markMessagesRead</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-09</td><td>Certificate with approved hours, events and first and last hour date</td><td>renderCertificate</td><td>v1.0</td><td>Headless render</td></tr>
+    <tr><td>C-10</td><td>Profile details form: name, phone, email, city, availability, skills, notes</td><td>saveProfileDetails</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-11</td><td>Read only mode when the session user is not this profile's owner</td><td>canEditProfile</td><td>v1.0</td><td>Headless render</td></tr>
+    <tr><td>C-12</td><td>Screen purposes: every screen states in one line what it is for</td><td>markup, <code>.vp-lead</code></td><td>v1.1 (2026-10-21)</td><td>Headless render</td></tr>
+    <tr><td>C-13</td><td>Find opportunities: one catalog of every open opportunity with a text search and a type filter</td><td>renderOpportunities / catalogRecords</td><td>v1.4 (2026-10-22)</td><td>Headless render, harness</td></tr>
+    <tr><td>C-14</td><td>Four volunteering types - event, task based, recurring and self paced - declared by the record or derived from its fields</td><td>opportunityTypeOf / opportunityWhenText</td><td>v1.4</td><td>Harness with one record per type</td></tr>
+    <tr><td>C-15</td><td>Apply to one POSITION of an opportunity, with an optional note; a second role of the same opportunity joins the same membership</td><td>openApplyPositionModal / applyToPosition</td><td>v1.4</td><td>Harness write path</td></tr>
+    <tr><td>C-16</td><td>Place counts per position from every membership, approved roles only, with a Full state</td><td>positionFilledCount</td><td>v1.4</td><td>Harness write path</td></tr>
+    <tr><td>C-17</td><td>Active opportunity selector in the menu instead of a fixed label; volunteers switch between everything they joined</td><td>renderNavSelection / selectEvent</td><td>v1.4</td><td>Headless render</td></tr>
+    <tr><td>C-18</td><td>Coloured identity header with large name, contact line, place and network state</td><td>markup + <code>.vp-topbar</code></td><td>v1.4</td><td>Headless render</td></tr>
+  </table>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Profile</td><td>The volunteer's own record in the shared volunteer registry. The host object of this tool.</td></tr>
+    <tr><td>Placement (membership)</td><td>A record linking this volunteer to one event: status, roles, task rows, pending hours, approved total.</td></tr>
+    <tr><td>Application</td><td>A placement with status <code>requested</code>, waiting for a manager decision.</td></tr>
+    <tr><td>Task row</td><td>The volunteer's copy of a task assigned to them. Progress is written here, never in the manager's task document.</td></tr>
+    <tr><td>Pending hours</td><td>Hour lines submitted here, not yet approved. They are not part of any total.</td></tr>
+    <tr><td>Ledger</td><td>The permanent <code>hoursLedger[]</code> on the profile. Only manager approval writes to it.</td></tr>
+    <tr><td>Volume</td><td>One message document of an event. Read only here.</td></tr>
+    <tr><td>Release group</td><td>A set of tasks that must ship together, defined in section 15.</td></tr>
+  </table>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <ul>
+    <li>2026-10-21: in the previous single tool a volunteer could edit event data and approved totals because every screen trusted the page, not the role.</li>
+    <li>The volunteer had no single place for their own history: applications, tasks, hours and messages were spread across shared documents that also carried other people's records.</li>
+    <li>A volunteer could not see why an hour line was rejected, and could not see their own certificate at all.</li>
+  </ul>
+  <h3>5.2 Current implementation (verified in code)</h3>
+  <pre>
+// app/VolunteerProfile.js - the same five types as the manager side
+var DEFAULT_TYPES = {
+  person: 'volunteerRegistry-uniconbaseapps',     // host object
+  relation: 'vm.eventMemberships-uniconbaseapps', // personId + '__' + eventId
+  event: 'vm.events-uniconbaseapps',              // read only
+  tasks: 'vm.eventTasks-uniconbaseapps',          // read only
+  messages: 'vm.eventMessages-uniconbaseapps'     // read only
+};
+  </pre>
+  <h3>5.3 Structural decisions that follow</h3>
+  <ol>
+    <li><strong>One instance per profile.</strong> The profile is the unit of identity and of permission.</li>
+    <li><strong>Read for context, write for self.</strong> Events, tasks and messages are read; placements and own details are written.</li>
+    <li><strong>Hours are submitted, not recorded.</strong> The volunteer proposes, the manager approves into the ledger.</li>
+  </ol>
+  <p class="risk"><strong>Root cause of the old design:</strong> a shared page with write access to shared documents gave
+  every volunteer the manager's pen.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>The tool shows exactly ONE volunteer: the host profile, the session user's own profile, or the <code>personId</code> param.</li>
+    <li>A volunteer writes only their own placement and their own profile details. Every other write is refused.</li>
+    <li>Every record is its own CMS object via <code>tool.requestObjects()</code>. <code>tool.setValue()</code> holds UI preferences only.</li>
+    <li>Applications are placements with <code>requested</code> status; only the manager changes the status.</li>
+    <li>Task progress is written on the placement task row only.</li>
+    <li>Submitting hours writes a pending line that is not counted anywhere until approved.</li>
+    <li>Approved hours are read from the ledger, never recomputed from pending lines.</li>
+    <li>Messages are filtered to approved events and read state is remembered per profile.</li>
+    <li>Every screen states its purpose in one line, and every empty state names the next action.</li>
+    <li>Graceful degradation: a missing object type produces a clear empty state and a report, never a broken page.</li>
+    <li>The catalog serves every volunteering type. A record declares <code>opportunityType</code>; when the field is missing the type is derived from the record, so older records keep working.</li>
+    <li>An application always names the position. An opportunity without positions offers one general position instead of blocking the volunteer.</li>
+    <li>Requesting a second role of an opportunity the volunteer already belongs to adds a role request; it never creates a second membership.</li>
+    <li>Places filled are counted from approved roles only. A request is not a place.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr>
+      <td><strong>A. One tool per profile, read only context</strong></td>
+      <td>Attached to the volunteer profile; writes placements and own details, reads events, tasks and messages.</td>
+      <td>Yes - identity drives permission, and the volunteer can never reach another person's record.</td>
+      <td>Medium - new folder and a new model</td>
+      <td class="status-adopted">ADOPTED</td>
+    </tr>
+    <tr>
+      <td><strong>B. One portal for every volunteer</strong></td>
+      <td>One tool lists all volunteers and lets each one open their page.</td>
+      <td>No - the list itself exposes the whole network, and permissions become a screen concern.</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED (privacy)</td>
+    </tr>
+    <tr>
+      <td><strong>C. Volunteer edits the shared task document</strong></td>
+      <td>Progress written directly into the event task list.</td>
+      <td>No - two volunteers writing one large document overwrite each other.</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED (data loss risk)</td>
+    </tr>
+    <tr>
+      <td><strong>D. Volunteer records their own approved hours</strong></td>
+      <td>The volunteer writes the ledger directly, with no approval step.</td>
+      <td>No - approved hours feed the certificate and recognition; without a gate the number means nothing.</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED (trust)</td>
+    </tr>
+  </table>
+  <p><strong>Decision: option A.</strong> The volunteer owns their record and their submissions; the manager owns the
+  decisions.</p>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Core invariants</h3>
+  <p class="note"><strong>Invariant ONE-VOLUNTEER.</strong> An instance resolves to exactly one profile and never lists
+  other volunteers.<br />
+  <strong>Invariant SELF-WRITE.</strong> Only the profile owner can write; a different session user gets a read only
+  view.<br />
+  <strong>Invariant SUBMIT-NOT-APPROVE.</strong> Hours are proposed here and approved by the manager. No approval logic
+  exists in this tool.</p>
+
+  <h3>8.2 Type model</h3>
+  <table>
+    <tr><th>Type</th><th>Scope</th><th>Document = one ...</th><th>Key fields used here</th></tr>
+    <tr><td><code>volunteerRegistry-uniconbaseapps</code></td><td>shared (host)</td><td>volunteer profile</td><td><code>userId</code>, <code>fullName</code>, <code>phone</code>, <code>email</code>, <code>city</code>, <code>availability</code>, <code>skills[]</code>, <code>notes</code>, <code>status</code>, <code>hoursLedger[]</code>, <code>totals</code></td></tr>
+    <tr><td><code>vm.eventMemberships-uniconbaseapps</code></td><td>instance</td><td>placement</td><td><code>personId</code>, <code>eventId</code>, <code>status</code> (requested / approved / declined / removed), <code>positions[]</code>, <code>taskLinks[]</code>, <code>pendingHours[]</code>, <code>hoursHistory[]</code>, <code>hoursApprovedTotal</code>, <code>ledgerCount</code></td></tr>
+    <tr><td><code>vm.events-uniconbaseapps</code></td><td>instance</td><td>opportunity (any volunteering type)</td><td><code>name</code>, <code>status</code>, <code>opportunityType</code> (event / task / recurring / self-paced), <code>locationMode</code> (onsite / remote / hybrid), <code>startDate</code>, <code>endDate</code>, <code>startTime</code>, <code>endTime</code>, <code>locationName</code>, <code>city</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code>, <code>recurrence</code>, <code>capacity</code>, <code>positions[]</code> - read only</td></tr>
+    <tr><td><code>vm.eventTasks-uniconbaseapps</code></td><td>instance</td><td>task list of an event</td><td><code>tasks[]</code> - read only, matched by task id in the placement task row</td></tr>
+    <tr><td><code>vm.eventMessages-uniconbaseapps</code></td><td>instance</td><td>message volume</td><td><code>messages[]</code>, <code>closed</code>, <code>volume</code> - read only, plus <code>readBy[]</code> written through the manager side</td></tr>
+  </table>
+
+  <h3>8.3 Document ids</h3>
+  <table>
+    <tr><th>Object</th><th>Id</th><th>Reason</th></tr>
+    <tr><td>Placement</td><td><code>personId + '__' + eventId</code></td><td>One placement per person and event; the manager constructs the same id.</td></tr>
+    <tr><td>Event</td><td>the id stored on the placement</td><td>Direct get per placement, no query.</td></tr>
+    <tr><td>Task list</td><td><code>eventId + '__tasks'</code></td><td>Loaded once per approved event to resolve task titles.</td></tr>
+    <tr><td>Message volume</td><td><code>eventId + '__messages'</code>, then <code>#2</code>, <code>#3</code></td><td>Read in order until the newest volume is reached.</td></tr>
+  </table>
+
+  <h3>8.4 Placement and ledger shapes</h3>
+  <pre>
+placement: { personId, personUserId, eventId, status,
+             positions: [{ positionId, name, status }],
+             taskLinks: [{ taskId, title, status }],        // status: assigned | in-progress | done | confirmed
+             pendingHours: [{ id, date, hours, note }],     // submitted here, counted nowhere yet
+             hoursHistory: [{ date, hours, note, reason, decidedAt }],
+             hoursApprovedTotal, ledgerCount }
+
+ledger line: { id,  // placementId + ':' + pendingId  (written by the manager only)
+               date, hours, note, eventId, eventName, taskTitle, approvedAt, approvedBy }
+  </pre>
+
+  <h3>8.5 Firestore size budget (per document, 1 MB cap)</h3>
+  <table>
+    <tr><th>Where</th><th>What is stored</th><th>Typical size</th><th>Cap risk</th></tr>
+    <tr><td><code>tool.setValue()</code></td><td>UI preferences only: <code>{ personObjectId, lastView, activeEventId }</code></td><td>~0.1 KB</td><td>None - records are forbidden here</td></tr>
+    <tr><td>Placement</td><td>10 roles, 40 task rows, 60 pending hours, 40 history rows</td><td>~60 KB</td><td>None</td></tr>
+    <tr><td>Volunteer ledger</td><td>500 lines, oldest year collapsed into a summary line</td><td>~335 KB</td><td>Low - collapse keeps totals exact</td></tr>
+    <tr><td>Event, task and message documents</td><td>read only</td><td>-</td><td>Not writable from here at all</td></tr>
+  </table>
+  <p>Soft budget 400 KB, hard budget 600 KB, measured before every write. Above the hard budget the write is blocked
+  with an explanation instead of being sent to fail. The yearly collapse writes a summary line with the line count so
+  totals and the certificate stay correct.</p>
+
+  <h3>8.6 Data flow</h3>
+  <pre>
+VolunteerProfile ──write──▶ placement (requested, task progress, pending hours)
+                                  │
+                                  ▼
+EventVolunteerManager ──decide──▶ status approved, roles, hour approval
+                                  │
+                                  ▼
+                        volunteerRegistry.hoursLedger ──read──▶ certificate and totals
+  </pre>
+  <ul>
+    <li>The volunteer never reads another volunteer's placement; the query is filtered by <code>personId</code>.</li>
+    <li>Approved totals come from the ledger, so a rejected or removed pending line can never inflate them.</li>
+  </ul>
+
+  <h3>8.7 Caller contract table</h3>
+  <table>
+    <tr><th>Caller</th><th>Required behavior</th></tr>
+    <tr><td>This tool (load)</td><td>Resolve the profile, then read placements by <code>personId</code>, then the events and task documents of approved placements.</td></tr>
+    <tr><td>This tool (apply)</td><td>Create the placement with status <code>requested</code>; never create with <code>approved</code>.</td></tr>
+    <tr><td>This tool (submit hours)</td><td>Append a pending line with a generated id; never write the ledger.</td></tr>
+    <tr><td>Event Volunteer Manager</td><td>Changes status, roles and approval; writes the ledger line.</td></tr>
+    <tr><td>CMS</td><td>Creates and deletes the profile object and authorizes the five types.</td></tr>
+  </table>
+
+  <h3>8.8 Volunteering types and the position model</h3>
+  <p>One list serves every kind of volunteering. The record declares its type; when the field is absent the type
+  is derived, so a record written before this model existed still lands in the right group.</p>
+  <table>
+    <tr><th>Type</th><th>Declared as</th><th>Derived when</th><th>What the catalog shows</th></tr>
+    <tr><td><strong>Event</strong></td><td><code>opportunityType: "event"</code></td><td><code>startDate</code> or <code>endDate</code> exists</td><td>The date range and the time window</td></tr>
+    <tr><td><strong>Task based</strong></td><td><code>opportunityType: "task"</code></td><td>A task document exists for the record</td><td>The commitment, or the deadline</td></tr>
+    <tr><td><strong>Recurring</strong></td><td><code>opportunityType: "recurring"</code></td><td><code>recurrence</code>, <code>recurringSchedule</code> or <code>recurrenceText</code> exists</td><td>"Every Saturday, 10:00 to 12:00"</td></tr>
+    <tr><td><strong>Self paced</strong></td><td><code>opportunityType: "self-paced"</code></td><td>No date, no tasks and a commitment is set</td><td>"About 2 hours per article" and "Online"</td></tr>
+  </table>
+  <p>Any other declared string is accepted and displayed with its own chip, so a new type needs no code change to
+  appear; it only gets a dedicated colour when it is added to the type list.</p>
+  <pre>
+position: { id, name, slots, description, skills, timeCommitment }
+
+recurrence: { weekdays: [6], timeFrom: '10:00', timeTo: '12:00', frequency: 'weekly' }
+
+requested role on a membership:
+  { positionId, name, status: 'requested', requestedAt }
+  </pre>
+  <p><strong>Position rules.</strong> One application names exactly one position. A position with <code>slots</code> is full
+  when the number of approved roles reaches that number. An opportunity without positions offers one row called
+  "General volunteer" that creates a requested role with an empty <code>positionId</code>.</p>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>No profile attached and no <code>personId</code> param and no session user</td><td>Every screen shows the empty state "No profile loaded"; the menu foot explains how the tool must be attached.</td></tr>
+    <tr><td>The session user is not the profile owner</td><td>Read only: no apply, no submit, no edit; the role pill states the mode.</td></tr>
+    <tr><td>Applying to an event that is closed, full or already applied for</td><td>Refused with a message on the event row; no write is attempted.</td></tr>
+    <tr><td>Withdrawing after approval</td><td>Refused here with a message that the manager removes a placement after approval.</td></tr>
+    <tr><td>Submitting hours for an event that is not approved</td><td>The event dropdown only offers approved placements.</td></tr>
+    <tr><td>Removing a pending line that was already approved</td><td>Refused: the line is no longer pending, and the ledger is untouched.</td></tr>
+    <tr><td>A task title can no longer be resolved</td><td>The task row still shows its stored title, so history reads correctly.</td></tr>
+    <tr><td><code>requestObjects</code> error mid write</td><td>Error toast, the previous screen state stays, nothing is half written.</td></tr>
+    <tr><td>Ledger above 500 lines</td><td>Oldest year collapses into one summary line before the write, totals preserved.</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>No self registration: the profile must exist before the tool is usable</td><td>A new volunteer needs a manager or the CMS</td><td>Task T-10</td></tr>
+    <tr><td>L-02</td><td>The certificate cannot be emailed or downloaded as a PDF</td><td>It is printed from the browser</td><td>Task T-11</td></tr>
+    <tr><td>L-03</td><td>Withdrawing after approval is not possible here</td><td>Needs the manager</td><td>Accepted (D-VP-06)</td></tr>
+    <tr><td>L-04</td><td>No profile photo or identity document upload</td><td>Text details only</td><td>Idea I-02</td></tr>
+    <tr><td>L-05</td><td>No direct message to a manager from this tool</td><td>Questions go through the event announcement thread</td><td>Idea I-04</td></tr>
+    <tr><td>L-06</td><td>No recognition badges or milestones</td><td>Hours are the only recognition signal</td><td>Idea I-03</td></tr>
+    <tr><td>L-07</td><td>Shift sign up is not possible</td><td>An event is one date and time</td><td>Idea I-01</td></tr>
+    <tr><td>L-08</td><td>The manager tool cannot edit the new opportunity fields yet (type, location mode, commitment, recurrence)</td><td>A task based or recurring opportunity has to be created in the CMS</td><td>Manager task T-19</td></tr>
+    <tr><td>L-09</td><td>A full position cannot take a waitlist request</td><td>The volunteer sees Full and waits</td><td>Idea I-02</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr>
+      <td>D-VP-01</td><td>2026-10-21</td>
+      <td>One tool instance per volunteer profile, named Volunteer Profile &amp; Hour Portal.</td>
+      <td>Identity drives permission; the profile is a shared registry object.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-02</td><td>2026-10-21</td>
+      <td>The volunteer never writes event data, task documents or the ledger.</td>
+      <td>Two writers on one document lose data, and approved hours need a single gate.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-03</td><td>2026-10-21</td>
+      <td>An application is a placement with status <code>requested</code>.</td>
+      <td>One record per person and event; a decision is one field change.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-04</td><td>2026-10-21</td>
+      <td>Task progress lives on the placement task row, mirrored from the manager's task document.</td>
+      <td>Concurrent volunteers never collide, and the manager still sees one list.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-05</td><td>2026-10-21</td>
+      <td>Hour submission writes a pending line; the ledger is written only by manager approval.</td>
+      <td>Totals and certificate must mean "approved by a manager".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-06</td><td>2026-10-21</td>
+      <td>Withdrawal is allowed only while the request is pending; after approval the manager removes the placement.</td>
+      <td>One owner per decision, and no silent hole in the roster.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-07</td><td>2026-10-21</td>
+      <td>The ledger collapses its oldest year above 500 lines, writing a summary line with the line count.</td>
+      <td>Keeps documents far from the size limit while totals and the certificate stay exact.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-08</td><td>2026-10-21</td>
+      <td>Read only view when the session user is not the profile owner.</td>
+      <td>Sharing a link must never expose another volunteer's record for writing.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-09</td><td>2026-10-21</td>
+      <td>Every screen carries a one-line purpose and plain menu labels.</td>
+      <td>Asked to make the tools as easy to use and understand as possible.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-10</td><td>2026-10-22</td>
+      <td>The tool uses the documentation visual language: Inter, slate ink on #f8fafc, white cards with #e2e8f0 borders, indigo #4f46e5 accents, the same chips and the same table header treatment.</td>
+      <td>Asked for the apps to look like the SSOT documents. One visual language across tool and document removes the second design system and its colours.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-11</td><td>2026-10-22</td>
+      <td>One catalog, "Find opportunities", serves every volunteering type: event, task based, recurring and self paced, with a type filter and a text search.</td>
+      <td>Asked to support task based, date and time based, recurring and self paced volunteering in one place. A type specific screen per kind would repeat the same list four times.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-12</td><td>2026-10-22</td>
+      <td>An application targets one POSITION, not the opportunity. A second role request joins the existing membership as a requested role.</td>
+      <td>Asked to apply to any job description inside any opportunity. One membership per person and opportunity keeps the manager view and the hour ledger unambiguous.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-13</td><td>2026-10-22</td>
+      <td>The menu says My volunteering and My Profile, and the header carries the volunteer name, contact, place and network state on the indigo band.</td>
+      <td>Asked for a wider wording than "event" and a more professional top line. "Selected event" was a fixed label that could not be changed, so it became a working selector.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li>Every decision is recorded in section 11 with a date, and the affected section changes in the same commit as the code.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with a reason; never delete rows.</li>
+    <li>Before adding a field to the placement, ask whether the volunteer should be able to change it. If not, it belongs to the manager side.</li>
+    <li>Never write records through <code>tool.setValue()</code>; it is reserved for UI preferences.</li>
+    <li>Never add approval logic here. Approval lives in the manager tool and its SSOT.</li>
+    <li>Keep the five type names identical to the paired tool's SSOT. A rename must change both documents in one change.</li>
+    <li>After any change, re-run the checks in section 17 and update the capability table in section 3.</li>
+    <li>Keep the visual language identical to the documentation (Inter, slate ink, indigo accent, white cards, the shared chip palette). A new colour or font is a decision row, not a local tweak.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Five type constants and profile resolution (param, session user, value)</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Dashboard with applications, work and hours</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Events: apply and withdraw while pending</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>My tasks with start and report done</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>5</td><td>Hours: submit, remove pending, approved ledger, yearly collapse</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Messages with read tracking and unread badge</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Certificate from approved ledger lines</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>8</td><td>Profile details form</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>9</td><td>Read only mode for a non owner session</td><td><code>app/VolunteerProfile.js</code> - DONE</td></tr>
+    <tr><td>10</td><td>Mock SDK mirrors the five types, sample volunteer, role switch, deep link</td><td><code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>11</td><td>Screen purposes and plain menu labels</td><td><code>.html</code> + <code>.css</code> - DONE</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <ol>
+    <li><strong>Real per-object size limit.</strong> The whole budget assumes 1 MiB; if the store is smaller only the caps in section 8.5 scale.</li>
+    <li><strong>Can a profile be created from the volunteer side?</strong> Blocks self registration (T-10).</li>
+    <li><strong>Can the session user be resolved to a profile automatically?</strong> Today the <code>personId</code> param or <code>getUser()</code> is used.</li>
+    <li><strong>Should a declined volunteer see the manager note?</strong> A declined line today has no note to show.</li>
+    <li><strong>Is the certificate a printed page or a file?</strong> Blocks the email certificate (T-11).</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE release or is a
+  related set that must not be broken across releases. Click a task to expand
+  its details. Tick the checkbox when a task is done - progress is remembered
+  by the browser per document and shown in the task panel.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong> - a task starts only when:
+      <ul>
+        <li>Its requirement is written in section 6.</li>
+        <li>Options are evaluated and the decision is logged (section 11).</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong> - a group is done only when:
+      <ul>
+        <li>All its tasks are checked.</li>
+        <li>Its open risks are solved or accepted (section 18).</li>
+        <li>The test scenarios of section 17 pass.</li>
+        <li>The document version is bumped and the push tab shows READY.</li>
+      </ul>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> - unclear benefit or a product decision is required.</li>
+  </ul>
+
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <section class="task-group" data-release-group="g1-portal" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Volunteer portal foundation</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE RELEASE - do not split</span>
+      <span class="task-group-progress" data-group-progress="g1-portal">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g1-portal"></div></div>
+    <p class="task-group-note">Why these belong together: profile resolution, the placement model and the seven screens are one contract with the manager tool. Shipping one without the others breaks the pairing.</p>
+
+    <div class="task-item" data-task-id="T-01" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Adopt the five-type model and profile resolution</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a shared page that let a volunteer write shared documents.</p>
+          <p><strong>How we will solve it:</strong> five type constants, profile resolution from the <code>personId</code> param, the session user or the stored value, and a load path that reads placements, then their events and task documents.</p>
+          <p><strong>Benefit:</strong> one volunteer, one record, reads for context only.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-02" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Dashboard with applications, open work and hours</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the volunteer had no place that answered "what is waiting for me?".</p>
+          <p><strong>How we will solve it:</strong> four stat cards plus an activity list of the latest placements and hour decisions.</p>
+          <p><strong>Benefit:</strong> one glance shows applications, open tasks and pending hours.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-03" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Apply to an event and withdraw while pending</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> joining an event required a manager.</p>
+          <p><strong>How we will solve it:</strong> a placement created with status <code>requested</code> against an open event that is not full and not already joined; withdrawal allowed only while pending.</p>
+          <p><strong>Benefit:</strong> self service joining with a manager gate.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-04" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">My tasks: start and report done</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a manager could not see progress without asking.</p>
+          <p><strong>How we will solve it:</strong> the placement task row moves to <code>in-progress</code> and then <code>done</code>; the manager sees it and confirms.</p>
+          <p><strong>Benefit:</strong> progress without a shared document.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-05" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Submit hours and see the approved ledger</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> hours were typed straight into the record with no gate.</p>
+          <p><strong>How we will solve it:</strong> a pending line per event and date, removable while pending, and the approved ledger read from the profile with the yearly collapse.</p>
+          <p><strong>Benefit:</strong> totals mean "approved", and the volunteer still sees a full history.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-06" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Messages with read tracking and unread badge</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> announcements were invisible unless the volunteer opened every event.</p>
+          <p><strong>How we will solve it:</strong> messages from approved events only, read state recorded per profile, unread count on the menu.</p>
+          <p><strong>Benefit:</strong> nothing important is missed silently.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-07" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Certificate from approved hours</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the volunteer had no proof of their contribution.</p>
+          <p><strong>How we will solve it:</strong> a certificate block with total approved hours, events served and the first and last hour date, printable from the browser.</p>
+          <p><strong>Benefit:</strong> usable for school, work or a reference.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>catalog" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Opportunity catalog and per position applications</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE RELEASE - do not split</span>
+      <span class="task-group-progress" data-group-progress="g2-catalog">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g2-catalog"></div></div>
+    <p class="task-group-note">Why these belong together: the catalog, the type model, the position application and the place counts describe one flow. Shipping the list without the position application would leave the volunteer with nothing to click.</p>
+
+    <div class="task-item" data-task-id="T-14" data-group="g2-catalog" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-14</span>
+          <span class="task-title">Volunteering type model with derivation fallback</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-14 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the model only knew date and time events, so task based, recurring and self paced volunteering had no home.</p>
+          <p><strong>How we will solve it:</strong> read <code>opportunityType</code>, fall back to deriving it from dates, tasks or a recurrence, and give each type its own chip and its own way of writing the when line.</p>
+          <p><strong>Benefit:</strong> one screen serves every kind of volunteering, and new types need no new screen.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-15" data-group="g2-catalog" data-group-status="done" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-15</span>
+          <span class="task-title">Find opportunities catalog with search and type filter</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-15 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> open opportunities were a small table inside My events, with no search and no positions.</p>
+          <p><strong>How we will solve it:</strong> a dedicated screen listing every open opportunity as a card, with a text search over name, place and role, and type chips that show their counts.</p>
+          <p><strong>Benefit:</strong> a volunteer finds the right way to help in seconds.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code>, <code>app/VolunteerProfile.html</code>, <code>app/VolunteerProfile.css</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-16" data-group="g2-catalog" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-16</span>
+          <span class="task-title">Apply for one position, with additional role requests</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-16 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the old dialog asked for a checkbox list of roles and quietly replaced the existing roles of a membership.</p>
+          <p><strong>How we will solve it:</strong> one Apply button per position, a dialog that shows the role, its places, its skills and an optional note, and a write that merges the requested role into the existing membership instead of replacing it.</p>
+          <p><strong>Benefit:</strong> a volunteer can ask for a second role without losing the first.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-17" data-group="g2-catalog" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-17</span>
+          <span class="task-title">Places filled per position and a Full state</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-17 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a volunteer could apply for a role that already had no places left.</p>
+          <p><strong>How we will solve it:</strong> keep every membership of the opportunity in memory, count approved roles per position and show "2 of 6 filled" or Full.</p>
+          <p><strong>Benefit:</strong> honest numbers before the application, and nobody is added to a role that is closed.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-18" data-group="g2-catalog" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-18</span>
+          <span class="task-title">Identity header, wider menu wording and a working active-opportunity selector</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-18 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the top line was a small title on white, the menu said My events and My details, and the "Selected event" label could not be changed.</p>
+          <p><strong>How we will solve it:</strong> an indigo header with the volunteer name in large type, contact line, place and network state; menu labels My volunteering and My Profile; and the fixed label replaced by a select listing everything the volunteer joined.</p>
+          <p><strong>Benefit:</strong> the page reads as a personal space, and the active opportunity can actually be switched.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.html</code>, <code>app/VolunteerProfile.css</code>, <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g2-
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-08" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Profile details form</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> contact details went stale because only a manager could change them.</p>
+          <p><strong>How we will solve it:</strong> name, phone, email, city, availability, skills and notes, with required name and email check.</p>
+          <p><strong>Benefit:</strong> the roster contact data stays current.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-09" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">Read only mode, screen purposes, mock harness</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a shared link must not allow writes, and the tool must be reviewable without a CMS.</p>
+          <p><strong>How we will solve it:</strong> <code>canEditProfile()</code> gates every write, every screen gains a one-line purpose, and the harness provides the mock SDK with a role switch and a deep link.</p>
+          <p><strong>Benefit:</strong> safe sharing and fast review.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code>, <code>.html</code>, <code>.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g2-selfservice" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Self service for a new volunteer</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g2-selfservice">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g2-selfservice"></div></div>
+    <p class="task-group-note">Why these belong together: both remove the manager from a step the volunteer can do alone, and both depend on the same answer about creating a profile object from the tool.</p>
+
+    <div class="task-item" data-task-id="T-10" data-group="g2-selfservice" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Self registration when no profile exists</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> today the tool is unusable until someone creates the profile.</p>
+          <p><strong>How we will solve it:</strong> when the session user has no profile, show a short form and create it with status <code>pending review</code>; a manager approves the profile before any application.</p>
+          <p><strong>Benefit:</strong> a volunteer can start without an administrator.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-11" data-group="g2-selfservice" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-11</span>
+          <span class="task-title">Certificate as a file or by email</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> printing is the only way to keep the certificate.</p>
+          <p><strong>How we will solve it:</strong> use the PDF export if the CMS provides it; otherwise an email to the volunteer address with a link to the certificate screen.</p>
+          <p><strong>Benefit:</strong> the volunteer keeps their own proof.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g3-release" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Live verification and first release</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g3-release">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g3-release"></div></div>
+    <p class="task-group-note">Why these belong together: the tool is only real once it runs on a live profile paired with a live event, and the docs satellites are generated from this document.</p>
+
+    <div class="task-item" data-task-id="T-12" data-group="g3-release" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-12</span>
+          <span class="task-title">Verify on one live profile and one live event</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> everything so far is verified against a mock.</p>
+          <p><strong>How we will solve it:</strong> authorize the five types, attach both tools, run scenarios S-01 to S-08 of section 17, record the results.</p>
+          <p><strong>Benefit:</strong> real permissions, real ids, real sizes.</p>
+          <p><strong>Files:</strong> CMS settings + this document</p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-13" data-group="g3-release" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-13</span>
+          <span class="task-title">Generate the docs satellites</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the folder has an SSOT but no docs shell, help page or marketing page.</p>
+          <p><strong>How we will solve it:</strong> <code>npm run docs:init</code> then <code>npm run docs:generate -- VolunteerProfile</code>.</p>
+          <p><strong>Benefit:</strong> the catalog publish score rises and the tool is explainable.</p>
+          <p><strong>Files:</strong> <code>docs/</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. Discuss each idea and write the outcome inside its details. An
+  agreed idea moves to section 15 with a priority; a rejected idea is marked Ignored with the reason.</p>
+
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Claim a shift instead of the whole event</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> events can publish shifts with their own times and places; the volunteer claims one.</p>
+        <p><strong>Why:</strong> most volunteers can give three hours, not a whole day.</p>
+        <p><strong>Discussion / outcome:</strong> deferred with the manager side idea I-01; both need the same shift model.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Profile photo</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> an optional photo so a manager recognizes people on the event day.</p>
+        <p><strong>Why:</strong> names alone are hard to match at a busy venue.</p>
+        <p><strong>Discussion / outcome:</strong> needs an upload channel and a storage decision; not before the core is stable.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Recognition badges and milestones</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> badges at 10, 50 and 100 approved hours, shown on the dashboard and the certificate.</p>
+        <p><strong>Why:</strong> recognition keeps volunteers returning.</p>
+        <p><strong>Discussion / outcome:</strong> cheap to compute from the ledger; needs a decision on whether badges are visible to managers too.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+    <li><strong>S-10 - Every volunteering type is listed.</strong> Open Find opportunities as Bob. PASS if: five open opportunities appear, each with a type chip, and the filter reads All 5, Event 2, Task based 1, Recurring 1, Self paced 1.</li>
+    <li><strong>S-11 - Filter and search.</strong> Pick Task based, then search for "reading". PASS if: the type filter alone shows one card, and the search alone shows the reading circle.</li>
+    <li><strong>S-12 - Apply for a position.</strong> Apply for Driver on the food drive. PASS if: the dialog shows the role with places, skills and time; after sending, Driver reads Requested, the filled count stays 0 of 2, and My volunteering still lists one row for that opportunity.</li>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Ask the manager a question from an event</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a private message thread between one volunteer and the event manager.</p>
+        <p><strong>Why:</strong> personal questions should not go to the whole team.</p>
+        <p><st10 to S-12 (harness)</td><td>PASS (2026-10-22)</td><td>catalog with four types, filter and search, per position application</td></tr>
+    <tr><td>S-01 to S-12ssion / outcome:</strong> pairs with manager side task T-15 (targeted messages); design both together.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Check in at the venue with a code</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a short code shown at the venue starts and ends the hour clock automatically.</p>
+        <p><strong>Why:</strong> nobody remembers exact times afterwards.</p>
+        <p><strong>Discussion / outcome:</strong> interesting but heavy; needs a code generator and an offline story.</p>
+      </div>
+    </details>
+  </div>
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>Preparation: open <code>app/test-harness.html</code> in a browser (no server needed). The harness bar switches
+  between the volunteer (Bob Volunteer, the profile owner) and another signed in user (viewer, not the owner). The
+  browser console shows every notify the mock SDK receives.</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>S-01 - Owner opens the portal.</strong> Open the harness as Bob. PASS if: the header shows his name and status, the four stat cards show live numbers, and the menu shows an unread badge.</li>
+    <li><strong>S-02 - Apply to an event.</strong> Apply to an open event. PASS if: the placement shows Requested, the dashboard application count rises, and the withdraw action is available.</li>
+    <li><strong>S-03 - Withdraw while pending.</strong> Withdraw the same request. PASS if: the row returns to "not joined" and the event is selectable again.</li>
+    <li><strong>S-04 - Task progress.</strong> Start an assigned task, then report it done. PASS if: the row moves to In progress and then to Waiting for confirmation.</li>
+    <li><strong>S-05 - Submit hours.</strong> Submit 3 hours for an approved event. PASS if: the line appears under pending, the dashboard pending count rises, and no total changes.</li>
+    <li><strong>S-06 - Remove a pending line.</strong> Remove that line. PASS if: the line disappears and the pending count returns to its previous value.</li>
+    <li><strong>S-07 - Approved ledger and certificate.</strong> Load the sample with existing ledger lines. PASS if: the ledger lists them oldest first and the certificate shows the same total.</li>
+    <li><strong>S-08 - Read only for a non owner.</strong> Switch the harness to the viewer role and reload. PASS if: apply, submit and save are all disabled and the role pill states the mode.</li>
+    <li><strong>S-09 - No profile.</strong> Point <code>?personId=missing</code>. PASS if: every screen shows the "No profile loaded" state and nothing throws.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>S-01 to S-06 (harness)</td><td>PASS (2026-10-21, smoke suite and headless render)</td><td>22 assertions in the write path suite</td></tr>
+    <tr><td>S-07 (harness)</td><td>PASS (2026-10-21, smoke suite)</td><td>ledger totals and certificate agree</td></tr>
+    <tr><td>S-08 (harness)</td><td>PASS (2026-10-21, headless render)</td><td>viewer role pill and disabled controls</td></tr>
+    <tr><td>S-09 (harness)</td><td>PASS (2026-10-21)</td><td>empty state, no console errors</td></tr>
+    <tr><td>S-01 to S-09 (live CMS)</td><td></td><td>task T-12</td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when the live CMS run passes and group g3-release is fully checked.</p>
+  <p><strong>Progress log:</strong> 2026-10-21 - harness scenarios S-01 to S-09 pass; 2026-10-22 - screen purposes and
+  menu labels verified in a headless render.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is not pushed yet lives here, linked to its release group. Before every
+  push, re-evaluate every open risk of the groups being pushed: solve it and tick the box, or mark it Accepted with a
+  reason and the date. A group is push-ready when its tasks are done and it has no open risk.</p>
+
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-01" data-group="g1-portal" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">A profile owner can write fields the manager owns</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-01, T-03 (g1-portal)</p>
+        <p><strong>What can go wrong:</strong> a volunteer who can update their own placement could set <code>status</code> to approved or edit <code>hoursApprovedTotal</code>.</p>
+        <p><strong>Likelihood / impact:</strong> low likelihood, high impact.</p>
+        <p><strong>Mitigation:</strong> the tool always writes an explicit field set; approved totals are taken from the ledger, so a forged total cannot create hours; field level protection is tracked in the manager register as R-01 too.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, waiting for the platform answer.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-02" data-group="g1-portal" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">Two parts of the portal write one placement at the same time</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-04, T-05</p>
+        <p><strong>What can go wrong:</strong> a task update and an hour submission started from two tabs; the last write wins.</p>
+        <p><strong>Likelihood / impact:</strong> low likelihood, medium impact - a lost pending line rather than lost hours.</p>
+        <p><strong>Mitigation:</strong> the screen reloads after every write, and each write re-reads the placement before merging its change.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, accepted unless it appears in practice.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-03" data-group="g2-selfservice" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">Self registration creates duplicate profiles</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-10</p>
+        <p><strong>What can go wrong:</strong> the same person signs in twice and two profiles hold different hours.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, medium impact.</p>
+        <p><strong>Mitigation:</strong> look up by <code>userId</code> before creating; a manager merge step is planned before the feature ships.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, must be designed with T-10.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-04" data-group="g1-portal" data-risk-level="low" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-04</span>
+        <span class="risk-title">The volunteer ledger grows past the document limit</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">4
+        <p><strong>Applies to:</strong> T-05</p>
+        <p><strong>What can go wrong:</strong> years of approved lines push the profile document toward 1 MB.</p>
+        <p><strong>Likelihood / impact:</strong> low in the first years, high once it happens - a blocked write.</p>
+        <p><strong>Mitigation:</strong> above 500 lines the oldest year collapses into one summary line that keeps the count, so totals and the certificate stay exact.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - solved by D-VP-07.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-05" data-group="" data-risk-level="low" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-05</span>
+        <span class="risk-title">The profile object is deleted in the CMS</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> all groups</p>
+        <p><strong>What can go wrong:</strong> the instance has nothing to show.</p>
+        <p><strong>Likelihood / impact:</strong> low likelihood, low impact - the empty state explains it.</p>
+        <p><strong>Mitigation:</strong> placements remain, so hours are not lost if the profile is recreated with the same id.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - accepted, documented in the failure matrix.</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> The built group is safe to test locally today. First push waits for
+  T-12 (live verification) and T-13 (docs satellites), and for R-01 to be answered or accepted with a written reason.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. Nothing has been pushed to the store yet; the first release is planned after group
+  g3-release. Do not edit or remove the marker comment below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - the release process appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Volunteer Profile &amp; Hour Portal - single source of truth for all
+    decisions about this tool. Version 1.3, 2026-10-22.
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live from section 15. Tick a checkbox here or in
+    the Document view - both stay in sync.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register (section 18). Gate rule: a group is PUSH
+    READY when all tasks are done and it has no open risks. Critical risks block every push until solved; high risks
+    block unless accepted; medium risks warn; low risks are reported only.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open, accepted and solved state. Tick the checkbox here or in section 18 -
+    both stay in sync.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>

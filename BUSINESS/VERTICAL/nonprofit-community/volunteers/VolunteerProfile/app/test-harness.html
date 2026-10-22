@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VolunteerProfile - test harness</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #e8eef4; font-family: "Segoe UI", system-ui, sans-serif; }
+  #th-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 6px 10px; background: #16324f; color: #fff; font-size: 12px;
+  }
+  #th-bar strong { font-size: 12.5px; letter-spacing: .3px; }
+  #th-bar button {
+    font: inherit; font-size: 11.5px; cursor: pointer;
+    background: rgba(255,255,255,.12); color: #fff;
+    border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 3px 9px;
+  }
+  #th-bar button:hover { background: rgba(255,255,255,.22); }
+  #th-status { margin-left: auto; opacity: .8; font-size: 11px; }
+  #app-container { height: calc(100vh - 34px); overflow: hidden; background: #f2f6fa; }
+  body.th-bare #th-bar { display: none; }
+  body.th-bare #app-container { height: 100vh; }
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>VolunteerProfile</strong>
+  <button id="thRoleBtn" title="Switch the signed-in role">Role: volunteer</button>
+  <button id="thLoadSample" title="Reload the sample data">Load sample</button>
+  <button id="thReset" title="Clear the local test database">Reset data</button>
+  <button id="thWide" title="Toggle a narrow container to test responsiveness">Narrow</button>
+  <span id="th-status">ready</span>
+</div>
+
+<div id="app-container">
+  <!-- TOOL HTML START -->
+<div class="vp-app" id="vpApp">
+
+  <header class="vp-topbar">
+    <div class="vp-brand">
+      <span class="vp-avatar" id="vpAvatar">?</span>
+      <div class="vp-brand-text">
+        <div class="vp-brand-name" id="vpPersonName">Volunteer profile</div>
+        <div class="vp-brand-sub" id="vpPersonMail">no email on record</div>
+      </div>
+    </div>
+    <div class="vp-topbar-right">
+      <div class="vp-brand-tags" id="vpBrandTags"></div>
+      <span class="vp-role-pill" id="vpRolePill">Volunteer</span>
+      <button type="button" class="vp-btn vp-btn-ghost" id="vpRefreshBtn" title="Reload this profile from the CMS">Refresh</button>
+    </div>
+  </header>
+
+  <div class="vp-layout">
+
+    <nav class="vp-nav" id="vpNav">
+      <button type="button" class="vp-nav-btn active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="vp-nav-btn" data-view="opportunities">Find opportunities <span class="vp-nav-badge" id="vpBadgeOpportunities">0</span></button>
+      <button type="button" class="vp-nav-btn" data-view="events">My volunteering <span class="vp-nav-badge" id="vpBadgeEvents">0</span></button>
+      <div class="vp-nav-sub" id="vpNavEvent" title="The opportunity your messages and hours default to">
+        <label class="vp-nav-sub-label" for="vpNavEventSelect">Active opportunity</label>
+        <select class="vp-nav-sub-select" id="vpNavEventSelect" onchange="selectEvent(this.value)"></select>
+      </div>
+      <button type="button" class="vp-nav-btn" data-view="tasks">My tasks <span class="vp-nav-badge" id="vpBadgeTasks">0</span></button>
+      <button type="button" class="vp-nav-btn" data-view="hours">My hours <span class="vp-nav-badge" id="vpBadgeHours">0</span></button>
+      <button type="button" class="vp-nav-btn" data-view="messages">Messages <span class="vp-nav-badge" id="vpBadgeMessages">0</span></button>
+      <button type="button" class="vp-nav-btn" data-view="certificate">Certificate</button>
+      <button type="button" class="vp-nav-btn" data-view="profile">My Profile</button>
+      <div class="vp-nav-foot" id="vpNavFoot"></div>
+    </nav>
+
+    <main class="vp-main">
+
+      <section class="vp-panel active" id="vpPanelDashboard">
+        <p class="vp-lead">Where you stand, and what to do next.</p>
+        <div class="vp-stats" id="vpStats"></div>
+        <div class="vp-card" id="vpStartCard"></div>
+        <div class="vp-card" id="vpUpcomingCard"></div>
+        <div class="vp-card" id="vpRecentCard"></div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelOpportunities">
+        <p class="vp-lead">Every way you can help right now - a fixed event, a task based project, a recurring role or self paced work. Open a position to apply for it.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Find opportunities</h2>
+            <span class="vp-count" id="vpOpportunityCount"></span>
+          </div>
+          <div class="vp-card-body">
+            <div class="vp-filter-bar">
+              <input class="vp-input vp-filter-search" id="vpOppSearch" type="search" placeholder="Search by opportunity, place or role" autocomplete="off" />
+              <div class="vp-filter-chips" id="vpOppTypeFilters"></div>
+            </div>
+          </div>
+        </div>
+        <div id="vpOpportunityList"></div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelEvents">
+        <p class="vp-lead">Everything you signed up for, whatever the volunteering type, and every request still waiting for a decision.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>My volunteering</h2>
+            <span class="vp-count" id="vpMyEventCount"></span>
+          </div>
+          <div class="vp-card-body" id="vpMyEvents"></div>
+        </div>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Waiting for a decision</h2>
+            <span class="vp-count" id="vpPendingRequestCount"></span>
+          </div>
+          <div class="vp-card-body" id="vpPendingRequests"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelTasks">
+        <p class="vp-lead">Work assigned to you. Start it, and report it done when you finish.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>My tasks</h2>
+            <span class="vp-count" id="vpTaskCount"></span>
+          </div>
+          <div class="vp-card-body" id="vpTaskList"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelHours">
+        <p class="vp-lead">Hours you logged. They count once an event manager approves them.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>My hours</h2>
+            <button type="button" class="vp-btn vp-btn-primary" id="vpLogHoursBtn">Log hours</button>
+          </div>
+          <div class="vp-card-body" id="vpHoursSummary"></div>
+        </div>
+        <div class="vp-card">
+          <div class="vp-card-head"><h2>Waiting for a manager</h2></div>
+          <div class="vp-card-body" id="vpHoursPending"></div>
+        </div>
+        <div class="vp-card">
+          <div class="vp-card-head"><h2>Approved hours</h2></div>
+          <div class="vp-card-body" id="vpHoursLedger"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelMessages">
+        <p class="vp-lead">Announcements from the opportunities you joined. Open a thread to mark it read.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Team messages</h2>
+            <button type="button" class="vp-btn vp-btn-outline" id="vpMessageTeamBtn">Message the opportunity team</button>
+          </div>
+          <div class="vp-card-body" id="vpMessageList"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelCertificate">
+        <p class="vp-lead">Your approved hours on one printable page.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Certificate</h2>
+            <button type="button" class="vp-btn vp-btn-primary" id="vpCertificateBtn">Download PDF</button>
+          </div>
+          <div class="vp-card-body" id="vpCertificateBody"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelProfile">
+        <p class="vp-lead">Your contact details and skills. Only you and the volunteer team see them.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>My profile</h2>
+            <span class="vp-count" id="vpProfileStatus"></span>
+          </div>
+          <div class="vp-card-body" id="vpProfileForm"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="vp-modal" id="vpModal">
+    <div class="vp-modal-box">
+      <div class="vp-modal-head">
+        <h2 id="vpModalTitle">Action</h2>
+        <button type="button" class="vp-modal-close" id="vpModalClose" title="Close">&times;</button>
+      </div>
+      <div class="vp-modal-body" id="vpModalBody"></div>
+      <div class="vp-modal-foot" id="vpModalFoot"></div>
+    </div>
+  </div>
+
+  <div class="vp-toast" id="vpToast"></div>
+</div>
+  <!-- TOOL HTML END -->
+</div>
+
+<link rel="stylesheet" href="VolunteerProfile.css">
+
+<script>
+/* ---------------- mock CMS SDK ---------------- */
+var STORAGE_KEY = 'vprofile_test_db_v1';
+var ROLE = (new URLSearchParams(location.search).get('role') || 'volunteer');
+var HOST_PROFILE_ID = 'per_bob';
+var CURRENT_USERS = {
+  volunteer: { id: 'u_bob', name: 'Bob Volunteer', email: 'bob@example.org', roles: ['viewer'] },
+  manager: { id: 'u_alice', name: 'Alice Manager', email: 'alice@example.org', roles: ['admin'] }
+};
+var MOCK_VALUE = null;
+var MOCK_READ_ONLY = false;
+
+function seedDatabase() {
+  return {
+    'volunteerRegistry-uniconbaseapps': [
+      {
+        id: 'per_bob', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          firstName: 'Bob', lastName: 'Volunteer', email: 'bob@example.org', phone: '555-0101',
+          city: 'Vancouver', skills: 'Logistics, driving', languages: 'English, Turkish',
+          availabilityNotes: 'Weekends', status: 'active', userId: 'u_bob',
+          joinedAt: '2026-02-10T09:00:00Z',
+          hoursLedger: [
+            { id: 'per_bob__evt_food:ph_1', eventId: 'evt_food', eventName: 'Community Food Drive', eventDate: '2026-09-12', taskSummary: 'Sorting (4.0 h)', hours: 4, approvedBy: 'Alice Manager', approvedAt: '2026-09-13T10:00:00Z' }
+          ],
+          totals: { hoursApproved: 4, eventsAttended: 1, tasksCompleted: 1 }
+        } }
+      },
+      {
+        id: 'per_carol', name: 'Carol Volunteer',
+        productData: { data_categoriesBased: {
+          firstName: 'Carol', lastName: 'Volunteer', email: 'carol@example.org', phone: '555-0102',
+          city: 'Burnaby', skills: 'Kitchen, serving', status: 'active', userId: 'u_carol',
+          joinedAt: '2026-03-02T09:00:00Z', hoursLedger: [], totals: { hoursApproved: 0, eventsAttended: 0, tasksCompleted: 0 }
+        } }
+      },
+      {
+        id: 'per_dave', name: 'Dave Candidate',
+        productData: { data_categoriesBased: {
+          firstName: 'Dave', lastName: 'Candidate', email: 'dave@example.org',
+          city: 'Richmond', skills: 'Setup', status: 'candidate', userId: 'u_dave',
+          joinedAt: '2026-10-01T09:00:00Z', hoursLedger: [], totals: { hoursApproved: 0, eventsAttended: 0, tasksCompleted: 0 }
+        } }
+      }
+    ],
+    'vm.events-uniconbaseapps': [
+      {
+        id: 'evt_food', name: 'Community Food Drive',
+        productData: { data_categoriesBased: {
+          name: 'Community Food Drive', status: 'open', opportunityType: 'event', locationMode: 'onsite',
+          startDate: '2026-11-07', endDate: '2026-11-07',
+          startTime: '09:00', endTime: '15:00', locationName: 'Community Hall', city: 'Vancouver',
+          description: 'Sort and pack donations for winter hampers.',
+          positions: [
+            { id: 'pos_sort', name: 'Sorting', slots: 6, description: 'Sort donations by category.', skills: 'Organising', timeCommitment: '6 hours on the day' },
+            { id: 'pos_drive', name: 'Driver', slots: 2, description: 'Collect donations from drop-off points.', skills: 'Driving licence', timeCommitment: '4 hours on the day' }
+          ],
+          capacity: 20, seriesId: '', category: 'Food program'
+        } }
+      },
+      {
+        id: 'evt_coat', name: 'Winter Coat Distribution',
+        productData: { data_categoriesBased: {
+          name: 'Winter Coat Distribution', status: 'open', opportunityType: 'event', locationMode: 'onsite',
+          startDate: '2026-11-21', endDate: '2026-11-21',
+          startTime: '10:00', endTime: '16:00', locationName: 'Eastside Centre', city: 'Vancouver',
+          description: 'Hand out coats and warm clothing.',
+          positions: [{ id: 'pos_desk', name: 'Welcome desk', slots: 3, description: 'Greet and register visitors.', skills: 'Friendly, organised' }],
+          applicationDeadline: '2026-11-15',
+          capacity: 15, seriesId: 'winter-2026', category: 'Clothing program'
+        } }
+      },
+      {
+        id: 'evt_curriculum', name: 'Weekend School Curriculum Build',
+        productData: { data_categoriesBased: {
+          name: 'Weekend School Curriculum Build', status: 'open', opportunityType: 'task', locationMode: 'remote',
+          description: 'Write and review lesson plans for the weekend school. Work from anywhere inside the two week window.',
+          commitment: '8 to 12 hours in total', deadline: '2026-11-30', applicationDeadline: '2026-11-20',
+          positions: [
+            { id: 'pos_writer', name: 'Curriculum writer', slots: 4, description: 'Draft two lesson plans from the outline we provide.', skills: 'Teaching, writing', timeCommitment: '8 hours' },
+            { id: 'pos_reviewer', name: 'Reviewer', slots: 2, description: 'Read drafts and give structured feedback.', skills: 'Proofreading', timeCommitment: '3 hours' }
+          ],
+          capacity: 10, category: 'Education program'
+        } }
+      },
+      {
+        id: 'evt_reading', name: 'Saturday Reading Circle',
+        productData: { data_categoriesBased: {
+          name: 'Saturday Reading Circle', status: 'open', opportunityType: 'recurring', locationMode: 'onsite',
+          locationName: 'Public Library', city: 'Burnaby',
+          description: 'Read with children every Saturday morning during the school term.',
+          recurrence: { weekdays: [6], timeFrom: '10:00', timeTo: '12:00' },
+          commitment: 'Two hours every Saturday', applicationDeadline: '2026-11-14',
+          positions: [{ id: 'pos_reader', name: 'Reading buddy', slots: 8, description: 'Read one to one with a child.', skills: 'Patience, English or Turkish', timeCommitment: '2 hours a week' }],
+          capacity: 8, category: 'Education program'
+        } }
+      },
+      {
+        id: 'evt_translate', name: 'Newsletter Translation (Turkish)',
+        productData: { data_categoriesBased: {
+          name: 'Newsletter Translation (Turkish)', status: 'open', opportunityType: 'self-paced', locationMode: 'remote',
+          description: 'Translate short newsletter articles from English to Turkish whenever they are ready. No fixed hours.',
+          commitment: 'About 2 hours per article', applicationDeadline: '2026-12-01',
+          positions: [{ id: 'pos_translator', name: 'Translator', slots: 10, description: 'Translate one article a month.', skills: 'Turkish, English', timeCommitment: 'Flexible' }],
+          capacity: 10, category: 'Communications'
+        } }
+      },
+      {
+        id: 'evt_past', name: 'Summer Picnic',
+        productData: { data_categoriesBased: {
+          name: 'Summer Picnic', status: 'closed', opportunityType: 'event', locationMode: 'onsite',
+          startDate: '2026-07-18', endDate: '2026-07-18',
+          startTime: '11:00', endTime: '15:00', locationName: 'Park', city: 'Vancouver',
+          positions: [], capacity: 30
+        } }
+      }
+    ],
+    'vm.eventMemberships-uniconbaseapps': [
+      {
+        id: 'per_bob__evt_food', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_food', eventName: 'Community Food Drive',
+          status: 'approved', source: 'volunteer',
+          positions: [{ positionId: 'pos_sort', name: 'Sorting', status: 'approved' }],
+          appliedAt: '2026-09-01T09:00:00Z', decidedAt: '2026-09-02T09:00:00Z', decidedBy: 'Alice Manager',
+          taskLinks: [
+            { taskId: 'tsk_labels', title: 'Print hamper labels', status: 'assigned' },
+            { taskId: 'tsk_tables', title: 'Set up tables', status: 'in-progress', startedAt: '2026-10-18T09:00:00Z' }
+          ],
+          pendingHours: [
+            { id: 'ph_2', date: '2026-10-18', hours: 3.5, note: 'Sorted dry goods', taskId: 'tsk_tables', taskTitle: 'Set up tables', submittedAt: '2026-10-18T18:00:00Z' }
+          ],
+          hoursHistory: [], approvedLedgerIds: ['per_bob__evt_food:ph_1'], hoursApprovedTotal: 4,
+          lastApprovedAt: '2026-09-13T10:00:00Z', notes: ''
+        } }
+      },
+      {
+        id: 'per_bob__evt_coat', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_coat', eventName: 'Winter Coat Distribution',
+          status: 'requested', source: 'volunteer',
+          positions: [{ positionId: 'pos_desk', name: 'Welcome desk', status: 'requested' }],
+          appliedAt: '2026-10-10T09:00:00Z',
+          taskLinks: [], pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      },
+      {
+        id: 'per_bob__evt_curriculum', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_curriculum', eventName: 'Weekend School Curriculum Build',
+          status: 'requested', source: 'volunteer',
+          positions: [{ positionId: 'pos_writer', name: 'Curriculum writer', status: 'requested', requestedAt: '2026-10-20T09:00:00Z' }],
+          appliedAt: '2026-10-20T09:00:00Z',
+          taskLinks: [], pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      },
+      {
+        id: 'per_carol__evt_food', name: 'Carol Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_carol', personUserId: 'u_carol', eventId: 'evt_food', eventName: 'Community Food Drive',
+          status: 'approved', source: 'manager',
+          positions: [{ positionId: 'pos_sort', name: 'Sorting', status: 'approved' }],
+          appliedAt: '2026-09-05T09:00:00Z',
+          taskLinks: [], pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      }
+    ],
+    'vm.eventTasks-uniconbaseapps': [
+      {
+        id: 'evt_food__tasks', name: 'Community Food Drive tasks',
+        productData: { data_categoriesBased: {
+          eventId: 'evt_food', eventName: 'Community Food Drive',
+          tasks: [
+            { id: 'tsk_labels', title: 'Print hamper labels', description: 'Print and attach labels to 200 hampers.', status: 'assigned', dueDate: '2026-11-01', estimatedHours: 2, assigneePersonId: 'per_bob', assigneeName: 'Bob Volunteer' },
+            { id: 'tsk_tables', title: 'Set up tables', description: 'Six tables in the main hall.', status: 'in-progress', dueDate: '2026-11-06', estimatedHours: 3, assigneePersonId: 'per_bob', assigneeName: 'Bob Volunteer' },
+            { id: 'tsk_signs', title: 'Print signage', description: 'Direction signs for the entrance.', status: 'open', dueDate: '2026-11-05', estimatedHours: 1, assigneePersonId: 'per_carol', assigneeName: 'Carol Volunteer' }
+          ],
+          updatedAt: '2026-10-18T09:00:00Z', updatedBy: 'Alice Manager'
+        } }
+      },
+      {
+        id: 'evt_coat__tasks', name: 'Winter Coat Distribution tasks',
+        productData: { data_categoriesBased: {
+          eventId: 'evt_coat', eventName: 'Winter Coat Distribution',
+          tasks: [{ id: 'tsk_rack', title: 'Set up coat racks', description: '', status: 'open', dueDate: '2026-11-20', estimatedHours: 2, assigneePersonId: '', assigneeName: '' }],
+          updatedAt: '2026-10-12T09:00:00Z', updatedBy: 'Alice Manager'
+        } }
+      }
+    ],
+    'vm.eventMessages-uniconbaseapps': [
+      {
+        id: 'evt_food__messages', name: 'Community Food Drive messages',
+        productData: { data_categoriesBased: {
+          eventId: 'evt_food', eventName: 'Community Food Drive', volume: 1, closed: false,
+          messages: [
+            { id: 'm_2', fromUserId: 'u_alice', fromName: 'Alice Manager', fromRole: 'manager', subject: 'Parking on Saturday', body: 'Use the rear lot, the front gate is closed for repairs.', sentAt: '2026-10-19T08:30:00Z', audience: 'team', readBy: ['u_alice'] },
+            { id: 'm_1', fromUserId: 'u_alice', fromName: 'Alice Manager', fromRole: 'manager', subject: 'Welcome to the food drive', body: 'Thanks for joining. Bring comfortable shoes.', sentAt: '2026-10-01T09:00:00Z', audience: 'team', readBy: ['u_alice', 'u_bob'] }
+          ],
+          firstSentAt: '2026-10-01T09:00:00Z', lastSentAt: '2026-10-19T08:30:00Z'
+        } }
+      }
+    ]
+  };
+}
+
+var STORE = loadStore();
+
+function loadStore() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (error) { /* ignore */ }
+  var seeded = seedDatabase();
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded)); } catch (error) { /* ignore */ }
+  return seeded;
+}
+
+function saveStore() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STORE)); } catch (error) { /* ignore */ }
+}
+
+function findObject(type, id) {
+  var rows = STORE[type] || [];
+  for (var index = 0; index < rows.length; index++) {
+    if (rows[index].id === id) return rows[index];
+  }
+  return null;
+}
+
+function generateId(prefix) {
+  return (prefix || 'obj') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function mockQuery(params, callback) {
+  var rows = STORE[params.mainObjectType] || [];
+  setTimeout(function () { callback(null, { objects: rows.slice() }); }, 15);
+}
+
+function mockGet(params, callback) {
+  var found = findObject(params.mainObjectType, params.objectId);
+  setTimeout(function () {
+    if (!found) { callback('not found', null); return; }
+    callback(null, { object: found });
+  }, 15);
+}
+
+function mockCreate(params, callback) {
+  var type = params.mainObjectType;
+  if (!STORE[type]) STORE[type] = [];
+  var record = {
+    id: params.objectId || generateId(type.split('.')[0] || 'obj'),
+    name: params.name || 'Untitled',
+    productData: { data_categoriesBased: (params.productData && params.productData.data_categoriesBased) || {} }
+  };
+  STORE[type].push(record);
+  saveStore();
+  setTimeout(function () { callback(null, { object: record }); }, 15);
+}
+
+function mockUpdate(params, callback) {
+  var found = findObject(params.mainObjectType, params.objectId);
+  if (!found) { setTimeout(function () { callback('not found', null); }, 15); return; }
+  var incoming = (params.productData && params.productData.data_categoriesBased) || {};
+  var merged = found.productData && found.productData.data_categoriesBased ? found.productData.data_categoriesBased : {};
+  for (var key in incoming) {
+    if (Object.prototype.hasOwnProperty.call(incoming, key)) merged[key] = incoming[key];
+  }
+  found.productData = { data_categoriesBased: merged };
+  if (params.name) found.name = params.name;
+  saveStore();
+  setTimeout(function () { callback(null, { object: found }); }, 15);
+}
+
+function mockDelete(params, callback) {
+  var rows = STORE[params.mainObjectType] || [];
+  var remaining = rows.filter(function (row) { return row.id !== params.objectId; });
+  STORE[params.mainObjectType] = remaining;
+  saveStore();
+  setTimeout(function () { callback(null, { deleted: true }); }, 15);
+}
+
+window.tool = {
+  onReady: function (callback) {
+    window.__vmOnReady = callback;
+    document.addEventListener('DOMContentLoaded', function () {
+      try { callback(MOCK_VALUE, { id: HOST_PROFILE_ID, name: 'Bob Volunteer' }); }
+      catch (error) { setStatus('onReady error: ' + error.message); }
+    });
+  },
+  declareParams: function () {},
+  declareOutput: function () {},
+  reportValid: function () {},
+  reportMissingParams: function () {},
+  param: function (name, fallback) {
+    if (name === 'personId') return HOST_PROFILE_ID;
+    if (name === 'orgName') return 'Community Volunteers';
+    return fallback;
+  },
+  getValue: function () { return MOCK_VALUE; },
+  setValue: function (value) { MOCK_VALUE = value; },
+  isReadOnly: function () { return MOCK_READ_ONLY; },
+  onReadonlyChange: function () {},
+  getUser: function () { return CURRENT_USERS[ROLE]; },
+  onUserChange: function () {},
+  getFields: function () { return { id: HOST_PROFILE_ID, name: 'Bob Volunteer' }; },
+  getPermittedUsers: function () { return []; },
+  onPermittedUsersChange: function () {},
+  notify: function (message, kind) { setStatus((kind || 'info') + ': ' + message); },
+  resize: function () {},
+  openUrl: function () {},
+  requestExportPdf: function (options, callback) {
+    setTimeout(function () {
+      setStatus('PDF requested: ' + options.filename);
+      callback(null, { url: 'mock://' + options.filename + '.pdf' });
+    }, 30);
+  },
+  requestObjects: function (action, params, callback) {
+    if (action === 'query') return mockQuery(params, callback);
+    if (action === 'get') return mockGet(params, callback);
+    if (action === 'create') return mockCreate(params, callback);
+    if (action === 'update') return mockUpdate(params, callback);
+    if (action === 'delete') return mockDelete(params, callback);
+    callback('unsupported action: ' + action, null);
+  }
+};
+
+function setStatus(text) {
+  var node = document.getElementById('th-status');
+  if (node) node.textContent = String(text).slice(0, 140);
+}
+
+document.getElementById('thRoleBtn').addEventListener('click', function () {
+  ROLE = ROLE === 'volunteer' ? 'manager' : 'volunteer';
+  this.textContent = 'Role: ' + ROLE;
+  location.reload();
+});
+
+document.getElementById('thLoadSample').addEventListener('click', function () {
+  STORE = seedDatabase();
+  saveStore();
+  location.reload();
+});
+
+document.getElementById('thReset').addEventListener('click', function () {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* ignore */ }
+  location.reload();
+});
+
+document.getElementById('thWide').addEventListener('click', function () {
+  var container = document.getElementById('app-container');
+  var narrow = container.style.maxWidth === '430px';
+  container.style.maxWidth = narrow ? '' : '430px';
+  container.style.margin = narrow ? '' : '0 auto';
+  this.textContent = narrow ? 'Narrow' : 'Full width';
+});
+
+document.getElementById('thRoleBtn').textContent = 'Role: ' + ROLE;
+if (new URLSearchParams(location.search).get('bare') === '1') document.body.classList.add('th-bare');
+var requestedView = new URLSearchParams(location.search).get('view');
+if (requestedView) {
+  setTimeout(function () {
+    var button = document.querySelector('.vp-nav-btn[data-view="' + requestedView + '"]');
+    if (button) button.click();
+  }, 400);
+}
+</script>
+
+<script src="VolunteerProfile.js"></script>
+</body>
+</html>

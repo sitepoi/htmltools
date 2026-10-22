@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventVolunteerManager - test harness</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #e8eef4; font-family: "Segoe UI", system-ui, sans-serif; }
+  #th-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 10px; background: #16324f; color: #fff; font-size: 12px; }
+  #th-bar strong { font-size: 12.5px; letter-spacing: .3px; }
+  #th-bar button {
+    font: inherit; font-size: 11.5px; cursor: pointer;
+    background: rgba(255,255,255,.12); color: #fff;
+    border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 3px 9px;
+  }
+  #th-bar button:hover { background: rgba(255,255,255,.22); }
+  #th-status { margin-left: auto; opacity: .8; font-size: 11px; }
+  #app-container { height: calc(100vh - 34px); overflow: hidden; background: #f2f6fa; }
+  body.th-bare #th-bar { display: none; }
+  body.th-bare #app-container { height: 100vh; }
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>EventVolunteerManager</strong>
+  <button id="thRoleBtn" title="Switch the signed-in role">Role: manager</button>
+  <button id="thLoadSample" title="Reload the sample data">Load sample</button>
+  <button id="thReset" title="Clear the local test database">Reset data</button>
+  <button id="thWide" title="Toggle a narrow container to test responsiveness">Narrow</button>
+  <span id="th-status">ready</span>
+</div>
+
+<div id="app-container">
+  <!-- TOOL HTML START -->
+<div class="et-app" id="etApp">
+
+  <header class="et-topbar">
+    <div class="et-brand">
+      <span class="et-mark" id="etMark">E</span>
+      <div class="et-brand-text">
+        <div class="et-brand-name" id="etEventName">Event</div>
+        <div class="et-brand-sub" id="etEventMeta">no date set</div>
+      </div>
+    </div>
+    <div class="et-topbar-right">
+      <span class="et-status-pill" id="etStatusPill">Draft</span>
+      <span class="et-role-pill" id="etRolePill">Event manager</span>
+      <button type="button" class="et-btn et-btn-ghost" id="etRefreshBtn" title="Reload this event from the CMS">Refresh</button>
+    </div>
+  </header>
+
+  <div class="et-layout">
+
+    <nav class="et-nav" id="etNav">
+      <button type="button" class="et-nav-btn active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="et-nav-btn" data-view="team">Volunteers <span class="et-nav-badge" id="etBadgeTeam">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="tasks">Tasks <span class="et-nav-badge" id="etBadgeTasks">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="hours">Hours <span class="et-nav-badge" id="etBadgeHours">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="messages">Messages <span class="et-nav-badge" id="etBadgeMessages">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="report">Summary</button>
+      <button type="button" class="et-nav-btn" data-view="event">Event details</button>
+      <div class="et-nav-foot" id="etNavFoot"></div>
+    </nav>
+
+    <main class="et-main">
+
+      <section class="et-panel active" id="etPanelDashboard">
+        <p class="et-lead">What needs a decision, what is still open, and what happened recently.</p>
+        <div class="et-stats" id="etStats"></div>
+        <div class="et-card" id="etRequestsCard"></div>
+        <div class="et-card" id="etOpenWorkCard"></div>
+        <div class="et-card" id="etActivityCard"></div>
+      </section>
+
+      <section class="et-panel" id="etPanelTeam">
+        <p class="et-lead">Everyone linked to this event. Approve requests, set roles, add or remove people.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Event team</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etAddVolunteerBtn">Add volunteers</button>
+          </div>
+          <div class="et-card-body" id="etTeamTable"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelTasks">
+        <p class="et-lead">Work to be done. Assign a task to a volunteer, and confirm it when they report it done.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Task list</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etAddTaskBtn">Add task</button>
+          </div>
+          <div class="et-card-body" id="etTaskTable"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelHours">
+        <p class="et-lead">Hours volunteers sent in. Approve once, and the hours go on the volunteer record for good.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Approved per volunteer</h2>
+            <span class="et-count" id="etHoursTotals"></span>
+          </div>
+          <div class="et-card-body" id="etHoursByVolunteer"></div>
+        </div>
+        <div class="et-card">
+          <div class="et-card-head"><h2>Waiting for approval</h2></div>
+          <div class="et-card-body" id="etHoursPending"></div>
+        </div>
+        <div class="et-card">
+          <div class="et-card-head"><h2>Hour records</h2></div>
+          <div class="et-card-body" id="etHoursLedger"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelMessages">
+        <p class="et-lead">Announcements for this event team. A full volume is closed and a new one starts, so nothing is ever lost.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Announcements</h2>
+            <div class="et-head-actions">
+              <button type="button" class="et-btn et-btn-outline" id="etRotateBtn" title="Close this volume and start a new one">Start new volume</button>
+              <button type="button" class="et-btn et-btn-primary" id="etNewMessageBtn">New message</button>
+            </div>
+          </div>
+          <div class="et-card-body" id="etMessageList"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelReport">
+        <p class="et-lead">The numbers of this event: volunteers, tasks and approved hours.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Event report</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etExportReportBtn">Export PDF</button>
+          </div>
+          <div class="et-card-body" id="etReportBody"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelEvent">
+        <p class="et-lead">The event information itself. The event object is created in the CMS; this screen maintains it and its roles.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Event definition</h2>
+            <span class="et-count" id="etEventUpdated"></span>
+          </div>
+          <div class="et-card-body" id="etEventForm"></div>
+        </div>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Roles</h2>
+            <button type="button" class="et-btn et-btn-outline" id="etAddPositionBtn">Add role</button>
+          </div>
+          <div class="et-card-body" id="etPositionList"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="et-modal" id="etModal">
+    <div class="et-modal-box">
+      <div class="et-modal-head">
+        <h2 id="etModalTitle">Action</h2>
+        <button type="button" class="et-modal-close" id="etModalClose" title="Close">&times;</button>
+      </div>
+      <div class="et-modal-body" id="etModalBody"></div>
+      <div class="et-modal-foot" id="etModalFoot"></div>
+    </div>
+  </div>
+
+  <div class="et-toast" id="etToast"></div>
+</div>
+  <!-- TOOL HTML END -->
+</div>
+
+<link rel="stylesheet" href="EventVolunteerManager.css">
+
+<script>
+var STORAGE_KEY = 'evm_test_db_v1';
+var ROLE = (new URLSearchParams(location.search).get('role') || 'manager');
+var HOST_EVENT_ID = 'evt_food';
+var CURRENT_USERS = {
+  manager: { id: 'u_alice', name: 'Alice Manager', email: 'alice@example.org', roles: ['admin'] },
+  volunteer: { id: 'u_bob', name: 'Bob Volunteer', email: 'bob@example.org', roles: ['viewer'] }
+};
+var MOCK_VALUE = null;
+var MOCK_READ_ONLY = false;
+
+function seedDatabase() {
+  return {
+    'volunteerRegistry-uniconbaseapps': [
+      {
+        id: 'per_bob', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          firstName: 'Bob', lastName: 'Volunteer', email: 'bob@example.org', phone: '555-0101', city: 'Vancouver',
+          skills: 'Logistics, driving', status: 'active', userId: 'u_bob',
+          hoursLedger: [
+            { id: 'per_bob__evt_food:ph_1', eventId: 'evt_food', eventName: 'Community Food Drive', eventDate: '2026-09-12', taskSummary: 'Sorting (4.0 h)', hours: 4, approvedBy: 'Alice Manager', approvedAt: '2026-09-13T10:00:00Z' }
+          ],
+          totals: { hoursApproved: 4, eventsAttended: 1, tasksCompleted: 1 }
+        } }
+      },
+      {
+        id: 'per_carol', name: 'Carol Volunteer',
+        productData: { data_categoriesBased: {
+          firstName: 'Carol', lastName: 'Volunteer', email: 'carol@example.org', phone: '555-0102', city: 'Burnaby',
+          skills: 'Kitchen, serving', status: 'active', userId: 'u_carol', hoursLedger: [],
+          totals: { hoursApproved: 0, eventsAttended: 0, tasksCompleted: 0 }
+        } }
+      },
+      {
+        id: 'per_dave', name: 'Dave Candidate',
+        productData: { data_categoriesBased: {
+          firstName: 'Dave', lastName: 'Candidate', email: 'dave@example.org', city: 'Richmond',
+          skills: 'Setup', status: 'candidate', userId: 'u_dave', hoursLedger: [],
+          totals: { hoursApproved: 0, eventsAttended: 0, tasksCompleted: 0 }
+        } }
+      },
+      {
+        id: 'per_erin', name: 'Erin Helper',
+        productData: { data_categoriesBased: {
+          firstName: 'Erin', lastName: 'Helper', email: 'erin@example.org', city: 'Vancouver',
+          skills: 'Signage', status: 'active', userId: 'u_erin', hoursLedger: [],
+          totals: { hoursApproved: 0, eventsAttended: 0, tasksCompleted: 0 }
+        } }
+      }
+    ],
+    'vm.events-uniconbaseapps': [
+      {
+        id: 'evt_food', name: 'Community Food Drive',
+        productData: { data_categoriesBased: {
+          name: 'Community Food Drive', status: 'open', startDate: '2026-11-07', endDate: '2026-11-07',
+          startTime: '09:00', endTime: '15:00', locationName: 'Community Hall', city: 'Vancouver',
+          address: '120 Main Street', capacity: 20, category: 'Food program', seriesId: '',
+          description: 'Sort and pack donations for winter hampers.',
+          contactName: 'Alice Manager', contactPhone: '555-0100', contactEmail: 'alice@example.org',
+          notes: 'Loading bay opens at 8:00.',
+          positions: [
+            { id: 'pos_sort', name: 'Sorting', slots: 6, description: 'Sort donations by category.' },
+            { id: 'pos_drive', name: 'Driver', slots: 2, description: 'Collect donations from drop-off points.' },
+            { id: 'pos_desk', name: 'Welcome desk', slots: 3, description: 'Greet visitors and sign them in.' }
+          ],
+          updatedAt: '2026-10-18T09:00:00Z'
+        } }
+      }
+    ],
+    'vm.eventMemberships-uniconbaseapps': [
+      {
+        id: 'per_bob__evt_food', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_food', eventName: 'Community Food Drive',
+          status: 'approved', source: 'volunteer',
+          positions: [{ positionId: 'pos_sort', name: 'Sorting', status: 'approved' }],
+          appliedAt: '2026-09-01T09:00:00Z', decidedAt: '2026-09-02T09:00:00Z', decidedBy: 'Alice Manager',
+          taskLinks: [
+            { taskId: 'tsk_labels', title: 'Print hamper labels', dueDate: '2026-11-01', status: 'assigned' },
+            { taskId: 'tsk_tables', title: 'Set up tables', dueDate: '2026-11-06', status: 'in-progress', startedAt: '2026-10-18T09:00:00Z' }
+          ],
+          pendingHours: [
+            { id: 'ph_2', date: '2026-10-18', hours: 3.5, note: 'Sorted dry goods', taskId: 'tsk_tables', taskTitle: 'Set up tables', submittedAt: '2026-10-18T18:00:00Z' }
+          ],
+          hoursHistory: [], approvedLedgerIds: ['per_bob__evt_food:ph_1'], hoursApprovedTotal: 4,
+          lastApprovedAt: '2026-09-13T10:00:00Z', notes: ''
+        } }
+      },
+      {
+        id: 'per_carol__evt_food', name: 'Carol Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_carol', personUserId: 'u_carol', eventId: 'evt_food', eventName: 'Community Food Drive',
+          status: 'approved', source: 'manager',
+          positions: [{ positionId: 'pos_desk', name: 'Welcome desk', status: 'approved' }],
+          appliedAt: '2026-09-05T09:00:00Z', decidedAt: '2026-09-05T10:00:00Z',
+          taskLinks: [{ taskId: 'tsk_signs', title: 'Print signage', dueDate: '2026-11-05', status: 'reported-done', reportedAt: '2026-10-19T12:00:00Z' }],
+          pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      },
+      {
+        id: 'per_dave__evt_food', name: 'Dave Candidate',
+        productData: { data_categoriesBased: {
+          personId: 'per_dave', personUserId: 'u_dave', eventId: 'evt_food', eventName: 'Community Food Drive',
+          status: 'requested', source: 'volunteer',
+          positions: [{ positionId: 'pos_drive', name: 'Driver', status: 'requested' }],
+          appliedAt: '2026-10-15T09:00:00Z',
+          taskLinks: [], pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      }
+    ],
+    'vm.eventTasks-uniconbaseapps': [
+      {
+        id: 'evt_food__tasks', name: 'Community Food Drive tasks',
+        productData: { data_categoriesBased: {
+          eventId: 'evt_food', eventName: 'Community Food Drive',
+          tasks: [
+            { id: 'tsk_labels', title: 'Print hamper labels', description: 'Print and attach labels to 200 hampers.', status: 'assigned', dueDate: '2026-11-01', estimatedHours: 2, assigneePersonId: 'per_bob', assigneeName: 'Bob Volunteer', createdAt: '2026-10-05T10:00:00Z', createdBy: 'Alice Manager' },
+            { id: 'tsk_tables', title: 'Set up tables', description: 'Six tables in the main hall.', status: 'in-progress', dueDate: '2026-11-06', estimatedHours: 3, assigneePersonId: 'per_bob', assigneeName: 'Bob Volunteer', createdAt: '2026-10-05T10:05:00Z', createdBy: 'Alice Manager' },
+            { id: 'tsk_signs', title: 'Print signage', description: 'Direction signs for the entrance.', status: 'reported-done', dueDate: '2026-11-05', estimatedHours: 1, assigneePersonId: 'per_carol', assigneeName: 'Carol Volunteer', createdAt: '2026-10-05T10:10:00Z', createdBy: 'Alice Manager' },
+            { id: 'tsk_cleanup', title: 'Hall cleanup', description: 'Sweep and stack chairs after the event.', status: 'open', dueDate: '2026-11-07', estimatedHours: 2, assigneePersonId: '', assigneeName: '', createdAt: '2026-10-05T10:15:00Z', createdBy: 'Alice Manager' }
+          ],
+          updatedAt: '2026-10-18T09:00:00Z', updatedBy: 'Alice Manager'
+        } }
+      }
+    ],
+    'vm.eventMessages-uniconbaseapps': [
+      {
+        id: 'evt_food__messages', name: 'Community Food Drive messages',
+        productData: { data_categoriesBased: {
+          eventId: 'evt_food', eventName: 'Community Food Drive', volume: 1, closed: false,
+          messages: [
+            { id: 'm_2', fromUserId: 'u_alice', fromName: 'Alice Manager', fromRole: 'manager', subject: 'Parking on Saturday', body: 'Use the rear lot, the front gate is closed for repairs.', sentAt: '2026-10-19T08:30:00Z', audience: 'team', readBy: ['u_alice'] },
+            { id: 'm_1', fromUserId: 'u_alice', fromName: 'Alice Manager', fromRole: 'manager', subject: 'Welcome to the food drive', body: 'Thanks for joining. Bring comfortable shoes.', sentAt: '2026-10-01T09:00:00Z', audience: 'team', readBy: ['u_alice', 'u_bob'] }
+          ],
+          firstSentAt: '2026-10-01T09:00:00Z', lastSentAt: '2026-10-19T08:30:00Z'
+        } }
+      }
+    ]
+  };
+}
+
+var STORE = loadStore();
+
+function loadStore() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (error) { /* ignore */ }
+  var seeded = seedDatabase();
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded)); } catch (error) { /* ignore */ }
+  return seeded;
+}
+
+function saveStore() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STORE)); } catch (error) { /* ignore */ }
+}
+
+function findObject(type, id) {
+  var rows = STORE[type] || [];
+  for (var index = 0; index < rows.length; index++) {
+    if (rows[index].id === id) return rows[index];
+  }
+  return null;
+}
+
+function generateId(prefix) {
+  return (prefix || 'obj') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function mockQuery(params, callback) {
+  var rows = STORE[params.mainObjectType] || [];
+  setTimeout(function () { callback(null, { objects: rows.slice() }); }, 15);
+}
+
+function mockGet(params, callback) {
+  var found = findObject(params.mainObjectType, params.objectId);
+  setTimeout(function () {
+    if (!found) { callback('not found', null); return; }
+    callback(null, { object: found });
+  }, 15);
+}
+
+function mockCreate(params, callback) {
+  var type = params.mainObjectType;
+  if (!STORE[type]) STORE[type] = [];
+  var record = {
+    id: generateId(type.split('.')[0] || 'obj'),
+    name: params.name || 'Untitled',
+    productData: { data_categoriesBased: (params.productData && params.productData.data_categoriesBased) || {} }
+  };
+  STORE[type].push(record);
+  saveStore();
+  setTimeout(function () { callback(null, { object: record }); }, 15);
+}
+
+function mockUpdate(params, callback) {
+  var found = findObject(params.mainObjectType, params.objectId);
+  if (!found) { setTimeout(function () { callback('not found', null); }, 15); return; }
+  var incoming = (params.productData && params.productData.data_categoriesBased) || {};
+  var merged = found.productData && found.productData.data_categoriesBased ? found.productData.data_categoriesBased : {};
+  for (var key in incoming) {
+    if (Object.prototype.hasOwnProperty.call(incoming, key)) merged[key] = incoming[key];
+  }
+  found.productData = { data_categoriesBased: merged };
+  if (params.name) found.name = params.name;
+  saveStore();
+  setTimeout(function () { callback(null, { object: found }); }, 15);
+}
+
+function mockDelete(params, callback) {
+  var rows = STORE[params.mainObjectType] || [];
+  STORE[params.mainObjectType] = rows.filter(function (row) { return row.id !== params.objectId; });
+  saveStore();
+  setTimeout(function () { callback(null, { deleted: true }); }, 15);
+}
+
+window.tool = {
+  onReady: function (callback) {
+    document.addEventListener('DOMContentLoaded', function () {
+      try { callback(MOCK_VALUE, { id: HOST_EVENT_ID, name: 'Community Food Drive' }); }
+      catch (error) { setStatus('onReady error: ' + error.message); }
+    });
+  },
+  declareParams: function () {},
+  declareOutput: function () {},
+  reportValid: function () {},
+  reportMissingParams: function () {},
+  param: function (name, fallback) {
+    if (name === 'eventId') return HOST_EVENT_ID;
+    if (name === 'orgName') return 'Community Volunteers';
+    return fallback;
+  },
+  getValue: function () { return MOCK_VALUE; },
+  setValue: function (value) { MOCK_VALUE = value; },
+  isReadOnly: function () { return MOCK_READ_ONLY; },
+  onReadonlyChange: function () {},
+  getUser: function () { return CURRENT_USERS[ROLE]; },
+  onUserChange: function () {},
+  getFields: function () { return { id: HOST_EVENT_ID, name: 'Community Food Drive' }; },
+  getPermittedUsers: function () { return []; },
+  onPermittedUsersChange: function () {},
+  notify: function (message, kind) { setStatus((kind || 'info') + ': ' + message); },
+  resize: function () {},
+  openUrl: function () {},
+  requestExportPdf: function (options, callback) {
+    setTimeout(function () {
+      setStatus('PDF requested: ' + options.filename);
+      callback(null, { url: 'mock://' + options.filename + '.pdf' });
+    }, 30);
+  },
+  requestObjects: function (action, params, callback) {
+    if (action === 'query') return mockQuery(params, callback);
+    if (action === 'get') return mockGet(params, callback);
+    if (action === 'create') return mockCreate(params, callback);
+    if (action === 'update') return mockUpdate(params, callback);
+    if (action === 'delete') return mockDelete(params, callback);
+    callback('unsupported action: ' + action, null);
+  }
+};
+
+function setStatus(text) {
+  var node = document.getElementById('th-status');
+  if (node) node.textContent = String(text).slice(0, 140);
+}
+
+document.getElementById('thRoleBtn').addEventListener('click', function () {
+  ROLE = ROLE === 'manager' ? 'volunteer' : 'manager';
+  this.textContent = 'Role: ' + ROLE;
+  location.reload();
+});
+
+document.getElementById('thLoadSample').addEventListener('click', function () {
+  STORE = seedDatabase();
+  saveStore();
+  location.reload();
+});
+
+document.getElementById('thReset').addEventListener('click', function () {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* ignore */ }
+  location.reload();
+});
+
+document.getElementById('thWide').addEventListener('click', function () {
+  var container = document.getElementById('app-container');
+  var narrow = container.style.maxWidth === '430px';
+  container.style.maxWidth = narrow ? '' : '430px';
+  container.style.margin = narrow ? '' : '0 auto';
+  this.textContent = narrow ? 'Narrow' : 'Full width';
+});
+
+document.getElementById('thRoleBtn').textContent = 'Role: ' + ROLE;
+if (new URLSearchParams(location.search).get('bare') === '1') document.body.classList.add('th-bare');
+var requestedView = new URLSearchParams(location.search).get('view');
+if (requestedView) {
+  setTimeout(function () {
+    var button = document.querySelector('.et-nav-btn[data-view="' + requestedView + '"]');
+    if (button) button.click();
+  }, 400);
+}
+</script>
+
+<script src="EventVolunteerManager.js"></script>
+</body>
+</html>

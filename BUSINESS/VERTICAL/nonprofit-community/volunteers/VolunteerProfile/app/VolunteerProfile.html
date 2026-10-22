@@ -1,0 +1,165 @@
+<!-- VolunteerProfile
+     One tool instance = ONE volunteer profile object (host object).
+     Volunteer sees and maintains their own record; a manager sees any record.
+     Data model: Person (this object) + Event + Membership relation + Event Tasks + Event Messages.
+-->
+
+<div class="vp-app" id="vpApp">
+
+  <header class="vp-topbar">
+    <div class="vp-brand">
+      <span class="vp-avatar" id="vpAvatar">?</span>
+      <div class="vp-brand-text">
+        <div class="vp-brand-name" id="vpPersonName">Volunteer profile</div>
+        <div class="vp-brand-sub" id="vpPersonMail">no email on record</div>
+      </div>
+    </div>
+    <div class="vp-topbar-right">
+      <div class="vp-brand-tags" id="vpBrandTags"></div>
+      <span class="vp-role-pill" id="vpRolePill">Volunteer</span>
+      <button type="button" class="vp-btn vp-btn-ghost" id="vpRefreshBtn" title="Reload this profile from the CMS">Refresh</button>
+    </div>
+  </header>
+
+  <div class="vp-layout">
+
+    <nav class="vp-nav" id="vpNav">
+      <button type="button" class="vp-nav-btn active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="vp-nav-btn" data-view="opportunities">Find opportunities <span class="vp-nav-badge" id="vpBadgeOpportunities">0</span></button>
+      <button type="button" class="vp-nav-btn" data-view="events">My volunteering <span class="vp-nav-badge" id="vpBadgeEvents">0</span></button>
+      <div class="vp-nav-sub" id="vpNavEvent" title="The opportunity your messages and hours default to">
+        <label class="vp-nav-sub-label" for="vpNavEventSelect">Active opportunity</label>
+        <select class="vp-nav-sub-select" id="vpNavEventSelect" onchange="selectEvent(this.value)"></select>
+      </div>
+      <button type="button" class="vp-nav-btn" data-view="tasks">My tasks <span class="vp-nav-badge" id="vpBadgeTasks">0</span></button>
+      <button type="button" class="vp-nav-btn" data-view="hours">My hours <span class="vp-nav-badge" id="vpBadgeHours">0</span></button>
+      <button type="button" class="vp-nav-btn" data-view="messages">Messages <span class="vp-nav-badge" id="vpBadgeMessages">0</span></button>
+      <button type="button" class="vp-nav-btn" data-view="certificate">Certificate</button>
+      <button type="button" class="vp-nav-btn" data-view="profile">My Profile</button>
+      <div class="vp-nav-foot" id="vpNavFoot"></div>
+    </nav>
+
+    <main class="vp-main">
+
+      <section class="vp-panel active" id="vpPanelDashboard">
+        <p class="vp-lead">Where you stand, and what to do next.</p>
+        <div class="vp-stats" id="vpStats"></div>
+        <div class="vp-card" id="vpStartCard"></div>
+        <div class="vp-card" id="vpUpcomingCard"></div>
+        <div class="vp-card" id="vpRecentCard"></div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelOpportunities">
+        <p class="vp-lead">Every way you can help right now - a fixed event, a task based project, a recurring role or self paced work. Open a position to apply for it.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Find opportunities</h2>
+            <span class="vp-count" id="vpOpportunityCount"></span>
+          </div>
+          <div class="vp-card-body">
+            <div class="vp-filter-bar">
+              <input class="vp-input vp-filter-search" id="vpOppSearch" type="search" placeholder="Search by opportunity, place or role" autocomplete="off" />
+              <div class="vp-filter-chips" id="vpOppTypeFilters"></div>
+            </div>
+          </div>
+        </div>
+        <div id="vpOpportunityList"></div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelEvents">
+        <p class="vp-lead">Everything you signed up for, whatever the volunteering type, and every request still waiting for a decision.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>My volunteering</h2>
+            <span class="vp-count" id="vpMyEventCount"></span>
+          </div>
+          <div class="vp-card-body" id="vpMyEvents"></div>
+        </div>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Waiting for a decision</h2>
+            <span class="vp-count" id="vpPendingRequestCount"></span>
+          </div>
+          <div class="vp-card-body" id="vpPendingRequests"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelTasks">
+        <p class="vp-lead">Work assigned to you. Start it, and report it done when you finish.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>My tasks</h2>
+            <span class="vp-count" id="vpTaskCount"></span>
+          </div>
+          <div class="vp-card-body" id="vpTaskList"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelHours">
+        <p class="vp-lead">Hours you logged. They count once an event manager approves them.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>My hours</h2>
+            <button type="button" class="vp-btn vp-btn-primary" id="vpLogHoursBtn">Log hours</button>
+          </div>
+          <div class="vp-card-body" id="vpHoursSummary"></div>
+        </div>
+        <div class="vp-card">
+          <div class="vp-card-head"><h2>Waiting for a manager</h2></div>
+          <div class="vp-card-body" id="vpHoursPending"></div>
+        </div>
+        <div class="vp-card">
+          <div class="vp-card-head"><h2>Approved hours</h2></div>
+          <div class="vp-card-body" id="vpHoursLedger"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelMessages">
+        <p class="vp-lead">Announcements from the opportunities you joined. Open a thread to mark it read.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Team messages</h2>
+            <button type="button" class="vp-btn vp-btn-outline" id="vpMessageTeamBtn">Message the opportunity team</button>
+          </div>
+          <div class="vp-card-body" id="vpMessageList"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelCertificate">
+        <p class="vp-lead">Your approved hours on one printable page.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Certificate</h2>
+            <button type="button" class="vp-btn vp-btn-primary" id="vpCertificateBtn">Download PDF</button>
+          </div>
+          <div class="vp-card-body" id="vpCertificateBody"></div>
+        </div>
+      </section>
+
+      <section class="vp-panel" id="vpPanelProfile">
+        <p class="vp-lead">Your contact details and skills. Only you and the volunteer team see them.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>My profile</h2>
+            <span class="vp-count" id="vpProfileStatus"></span>
+          </div>
+          <div class="vp-card-body" id="vpProfileForm"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="vp-modal" id="vpModal">
+    <div class="vp-modal-box">
+      <div class="vp-modal-head">
+        <h2 id="vpModalTitle">Action</h2>
+        <button type="button" class="vp-modal-close" id="vpModalClose" title="Close">&times;</button>
+      </div>
+      <div class="vp-modal-body" id="vpModalBody"></div>
+      <div class="vp-modal-foot" id="vpModalFoot"></div>
+    </div>
+  </div>
+
+  <div class="vp-toast" id="vpToast"></div>
+</div>

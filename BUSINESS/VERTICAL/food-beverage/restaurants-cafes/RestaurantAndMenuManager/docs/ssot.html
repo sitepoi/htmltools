@@ -92,7 +92,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.12</span>
+      <span>v0.13</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -141,13 +141,13 @@
     produces it.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.12</td></tr>
-    <tr><th>Last updated</th><td>2026-10-21</td></tr>
+    <tr><th>Document version</th><td>0.13</td></tr>
+    <tr><th>Last updated</th><td>2026-10-22</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (RestaurantAndMenuManager).</td></tr>
-    <tr><th>Primary code areas</th><td><code>app/gloria-migration-report-v2.html</code>, <code>app/gloria-migration-report.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/sample-gloria-json.json</code>, <code>app/sample-menu-data-1.json</code>, <code>app/sample-menu-data-2.json</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Primary code areas</th><td><code>app/gloria-migration-report-v2.html</code>, <code>app/gloria-migration-report.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/sample-gloria-json.json</code>, <code>app/sample-menu-data-1.json</code>, <code>app/sample-menu-data-2.json</code>, <code>app/sample-deals-data.json</code>, <code>app/sample-deals-broken.json</code>, <code>app/sample-menu-data.json</code>, <code>app/test-harness.html</code></td></tr>
     <tr><th>Explicitly out of scope</th><td>Website rendering and cart behavior, the order detail tool (<code>RestaurantOrderManager</code>), the platform write-back relay, styling decisions, and any field the customer contract does not define.</td></tr>
     <tr><th>Companion documents</th><td><strong>Authoritative companion:</strong> <code>docs/client-data-contract.html</code> (customer-side contract, version 3.3, 2026-10-21). Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
   </table>
@@ -650,6 +650,12 @@
       <td>Owner request: testing every rule type by hand takes too long. The samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings); importing into a different menu is blocked with the validation errors shown.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-RAMM-21</td><td>2026-10-22</td>
+      <td>Sample menu data ships as <code>sample-menu-data.json</code> and imports from the Menu tab (append or replace). Append mode keeps the original ids, so the deals samples' category / item / group references keep matching.</td>
+      <td>Owner report: importing the deals samples failed because the demo menu did not exist in the record. The menu sample is the same demo restaurant the deals samples reference, so the two files import as a pair (menu first, then deals).</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -694,6 +700,7 @@
     <tr><td>13</td><td>Active-flag label update - the website honors the flag since 2026-10-21</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-41)</td></tr>
     <tr><td>14</td><td>Tabbed deal editor (Basics / Offer rule / Schedule) and fixed modal wiring</td><td><code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-43, T-45)</td></tr>
     <tr><td>15</td><td>Sample data generator files and the Deals tab import feature</td><td><code>app/sample-deals-data.json</code>, <code>app/sample-deals-broken.json</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-44)</td></tr>
+    <tr><td>16</td><td>Sample menu JSON and the Menu tab import feature (ids kept on append so deal references keep matching)</td><td><code>app/sample-menu-data.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-22, T-46)</td></tr>
   </table>
 
     <h2 id="sec-questions">14. Open questions</h2>
@@ -1663,6 +1670,24 @@
           <p><strong>Benefit:</strong> Every modal opens, closes and saves again.</p>
           <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
           <p><strong>Status:</strong> Done 2026-10-21: all three wiring functions complete without throwing and every referenced element id exists in both HTML files.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-46" data-group="deals-ux-tools" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-46</span>
+          <span class="task-title">Sample menu import (Menu tab)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-46 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The deals samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings); importing deals into an empty menu blocks with reference errors, and the menu itself had no sample JSON to import.</p>
+          <p><strong>How we will solve it:</strong> A "📥 Samples" button in the Menu toolbar opens an import modal (bundled <code>sample-menu-data.json</code> or pasted JSON) that appends categories / items / modifier groups keeping their ids (so deal references still match) or replaces the whole menu, with structural checks before applying.</p>
+          <p><strong>Benefit:</strong> One click builds the demo restaurant; the deals samples then import with zero validation errors.</p>
+          <p><strong>Files:</strong> <code>app/sample-menu-data.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-22: headless test confirms 4 categories / 9 items / 1 modifier group import with ids kept, all 22 sample deals validate with 0 errors afterwards, and a second append imports nothing (id dedupe).</p>
         </div>
       </details>
     </div>

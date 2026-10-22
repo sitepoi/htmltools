@@ -5468,6 +5468,19 @@ function initAllEvents() {
   document.getElementById('gloria-import-run').addEventListener('click', importGloriaMenu);
   document.getElementById('gloria-import-cancel').addEventListener('click', closeGloriaImportModal);
 
+  /* Sample Menu Import */
+  var menuSampleBtn = document.getElementById('menu-import-sample-btn');
+  if (menuSampleBtn) menuSampleBtn.addEventListener('click', openMenuImportModal);
+  var menuImportRunBtn = document.getElementById('menu-import-run');
+  if (menuImportRunBtn) menuImportRunBtn.addEventListener('click', runMenuImport);
+  var menuImportCancelBtn = document.getElementById('menu-import-cancel');
+  if (menuImportCancelBtn) menuImportCancelBtn.addEventListener('click', closeMenuImportModal);
+  var menuImportCloseBtn = document.getElementById('menu-import-close');
+  if (menuImportCloseBtn) menuImportCloseBtn.addEventListener('click', closeMenuImportModal);
+  document.querySelectorAll('input[name="menu-import-source"]').forEach(function (radio) {
+    radio.addEventListener('change', refreshMenuImportMode);
+  });
+
   /* Menu: Panel Tabs */
   document.querySelectorAll('.panel-tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
@@ -8243,6 +8256,213 @@ function runDealsImport() {
     parsed = JSON.parse(pastedText);
   } catch (parseError) {
     showDealsImportErrors(['The pasted text is not valid JSON: ' + parseError.message]);
+    return;
+  }
+  applyImport(parsed);
+}
+
+/* ---- Sample menu import (T-46) ---- */
+var MENU_SAMPLE_SOURCES = [
+  { id: 'sample-menu-data', label: 'Demo menu - Pizza / Dips / Wings / Drinks + Toppings (4 categories, 9 items, 1 modifier group)', file: 'sample-menu-data.json' }
+];
+
+function refreshMenuImportMode() {
+  var bundledRadio = document.getElementById('menu-import-bundled');
+  var textarea = document.getElementById('menu-import-json');
+  var sourceSelect = document.getElementById('menu-import-file');
+  if (!bundledRadio || !textarea || !sourceSelect) return;
+  var isBundled = bundledRadio.checked;
+  textarea.style.display = isBundled ? 'none' : '';
+  sourceSelect.style.display = isBundled ? '' : 'none';
+  var errorContainer = document.getElementById('menu-import-errors');
+  if (errorContainer) errorContainer.style.display = 'none';
+}
+
+function openMenuImportModal() {
+  if (isDealEditingBlocked()) {
+    tool.notify('This record is read-only.', 'warning');
+    return;
+  }
+  var modal = document.getElementById('menu-import-modal');
+  if (!modal) return;
+  var sourceSelect = document.getElementById('menu-import-file');
+  if (sourceSelect) {
+    sourceSelect.innerHTML = MENU_SAMPLE_SOURCES.map(function (source) {
+      return '<option value="' + esc(source.id) + '">' + esc(source.label) + '</option>';
+    }).join('');
+  }
+  document.getElementById('menu-import-bundled').checked = true;
+  document.getElementById('menu-import-json').value = '';
+  document.getElementById('menu-import-categories').checked = true;
+  document.getElementById('menu-import-items').checked = true;
+  document.getElementById('menu-import-modifiers').checked = true;
+  document.getElementById('menu-import-append').checked = true;
+  refreshMenuImportMode();
+  modal.style.display = 'flex';
+  tool.resize();
+}
+
+function closeMenuImportModal() {
+  var modal = document.getElementById('menu-import-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function showMenuImportErrors(errors) {
+  var errorContainer = document.getElementById('menu-import-errors');
+  if (!errorContainer) return;
+  errorContainer.innerHTML = '<strong>Nothing was imported - fix these first:</strong><br>' +
+    errors.map(esc).join('<br>');
+  errorContainer.style.display = '';
+}
+
+function runMenuImport() {
+  if (isDealEditingBlocked()) {
+    tool.notify('This record is read-only.', 'warning');
+    return;
+  }
+  var errorContainer = document.getElementById('menu-import-errors');
+  if (errorContainer) errorContainer.style.display = 'none';
+
+  var isBundled = document.getElementById('menu-import-bundled').checked;
+  var isReplace = !document.getElementById('menu-import-append').checked;
+  var importCategories = document.getElementById('menu-import-categories').checked;
+  var importItems = document.getElementById('menu-import-items').checked;
+  var importModifiers = document.getElementById('menu-import-modifiers').checked;
+
+  function applyImport(incoming) {
+    var menuIncoming = isPlainObject(incoming) && isPlainObject(incoming.menu) ? incoming.menu : incoming;
+    var hasCategories = Array.isArray(menuIncoming.categories);
+    var hasItems = Array.isArray(menuIncoming.items);
+    var hasModifiers = Array.isArray(menuIncoming.modifier_groups);
+    if (!isPlainObject(menuIncoming) || (!hasCategories && !hasItems && !hasModifiers)) {
+      showMenuImportErrors(['The imported JSON must be an object with a "menu" key (or the menu object itself) holding at least one of: categories, items, modifier_groups.']);
+      return;
+    }
+
+    var structuralErrors = [];
+    function checkId(list, label, requiredField) {
+      (list || []).forEach(function (entry) {
+        var entryLabel = entry && entry.id ? entry.id : '?';
+        if (!entry || !entry.id) structuralErrors.push(label + ' entries need an "id" field.');
+        if (entry && !entry[requiredField]) structuralErrors.push(label + ' entry "' + entryLabel + '" is missing "' + requiredField + '".');
+      });
+    }
+    if (hasCategories && importCategories) checkId(menuIncoming.categories, 'Category', 'name');
+    if (hasItems && importItems) {
+      checkId(menuIncoming.items, 'Item', 'item_name');
+      (menuIncoming.items || []).forEach(function (entry) {
+        if (entry && entry.id && !entry.category_id && entry.category_id !== '') {
+          structuralErrors.push('Item "' + entry.id + '" is missing "category_id".');
+        }
+      });
+    }
+    if (hasModifiers && importModifiers) {
+      checkId(menuIncoming.modifier_groups, 'Modifier group', 'group_name');
+      (menuIncoming.modifier_groups || []).forEach(function (group) {
+        (group.options || []).forEach(function (opt) {
+          if (!opt || !opt.id) structuralErrors.push('Modifier group "' + (group.id || '?') + '" has an option without an "id".');
+          if (opt && opt.id && !opt.option_name) structuralErrors.push('Modifier option "' + opt.id + '" is missing "option_name".');
+        });
+      });
+    }
+    if (structuralErrors.length > 0) {
+      showMenuImportErrors(structuralErrors);
+      return;
+    }
+
+    var candidate = JSON.parse(JSON.stringify(data));
+    var importedCounts = {};
+    var skippedCounts = {};
+
+    function appendUnique(section, incomingList) {
+      var existing = candidate.menu[section] || [];
+      var existingIds = {};
+      existing.forEach(function (entry) { existingIds[entry.id] = true; });
+      var added = 0;
+      var skipped = 0;
+      (incomingList || []).forEach(function (entry) {
+        if (existingIds[entry.id]) { skipped++; return; }
+        existingIds[entry.id] = true;
+        existing.push(JSON.parse(JSON.stringify(entry)));
+        added++;
+      });
+      candidate.menu[section] = existing;
+      importedCounts[section] = added;
+      if (skipped > 0) skippedCounts[section] = skipped;
+    }
+
+    if (isReplace) {
+      candidate.menu = { categories: [], items: [], modifier_groups: [] };
+      if (hasCategories) candidate.menu.categories = JSON.parse(JSON.stringify(menuIncoming.categories));
+      if (hasItems) candidate.menu.items = JSON.parse(JSON.stringify(menuIncoming.items));
+      if (hasModifiers) candidate.menu.modifier_groups = JSON.parse(JSON.stringify(menuIncoming.modifier_groups));
+      importedCounts.categories = candidate.menu.categories.length;
+      importedCounts.items = candidate.menu.items.length;
+      importedCounts.modifier_groups = candidate.menu.modifier_groups.length;
+    } else {
+      if (hasCategories && importCategories) appendUnique('categories', menuIncoming.categories);
+      if (hasItems && importItems) appendUnique('items', menuIncoming.items);
+      if (hasModifiers && importModifiers) appendUnique('modifier_groups', menuIncoming.modifier_groups);
+    }
+
+    if (Object.keys(importedCounts).length === 0) {
+      showMenuImportErrors(['Nothing to import - the JSON does not contain any of the selected sections, or every entry id already exists.']);
+      return;
+    }
+
+    data = candidate;
+    renderCategories();
+    renderModGroups();
+    renderItems();
+    renderModGroupCheckboxes();
+    renderDeals();
+    scheduleSave();
+
+    var summary = Object.keys(importedCounts).map(function (key) { return key + ': ' + importedCounts[key]; }).join(', ');
+    var skippedNote = Object.keys(skippedCounts).map(function (key) {
+      return skippedCounts[key] + ' ' + key + ' skipped (same id already exists)';
+    }).join(', ');
+    var validation = validatePresentationDocument(data);
+    if (validation.errors.length > 0) {
+      tool.notify('Menu imported (' + summary + ') - ' + validation.errors.length + ' existing deal error(s) remain', 'warning');
+    } else {
+      tool.notify('Sample menu imported (' + summary + ')' + (skippedNote ? '; ' + skippedNote : ''), 'success');
+    }
+    closeMenuImportModal();
+  }
+
+  if (isBundled) {
+    var sourceSelect = document.getElementById('menu-import-file');
+    var source = MENU_SAMPLE_SOURCES.find(function (entry) { return entry.id === sourceSelect.value; });
+    if (!source) {
+      showMenuImportErrors(['Choose a bundled sample file.']);
+      return;
+    }
+    fetch(source.file)
+      .then(function (response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+      })
+      .then(applyImport)
+      .catch(function () {
+        showMenuImportErrors([
+          'Could not load ' + source.file + ' from this environment. Switch to "Paste JSON" and paste the contents of ' +
+          source.file + ' instead (the file ships next to this tool in the app folder).'
+        ]);
+      });
+    return;
+  }
+
+  var pastedText = document.getElementById('menu-import-json').value.trim();
+  if (!pastedText) {
+    showMenuImportErrors(['Paste a JSON object with a "menu" key holding categories, items and modifier_groups.']);
+    return;
+  }
+  var parsed;
+  try {
+    parsed = JSON.parse(pastedText);
+  } catch (parseError) {
+    showMenuImportErrors(['The pasted text is not valid JSON: ' + parseError.message]);
     return;
   }
   applyImport(parsed);

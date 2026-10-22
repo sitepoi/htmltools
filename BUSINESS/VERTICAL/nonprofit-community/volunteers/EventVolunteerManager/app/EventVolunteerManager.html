@@ -1,0 +1,162 @@
+<!-- EventVolunteerManager
+     One tool instance = ONE event object (host object), created in the CMS.
+     This tool manages the event information and every connection between the event and its volunteers:
+     requests, roles, tasks, hours, messages and the report.
+-->
+
+<div class="et-app" id="etApp">
+
+  <header class="et-topbar">
+    <div class="et-brand">
+      <span class="et-mark" id="etMark">E</span>
+      <div class="et-brand-text">
+        <div class="et-brand-name" id="etEventName">Event</div>
+        <div class="et-brand-sub" id="etEventMeta">no date set</div>
+      </div>
+    </div>
+    <div class="et-topbar-right">
+      <span class="et-status-pill" id="etStatusPill">Draft</span>
+      <span class="et-role-pill" id="etRolePill">Event manager</span>
+      <button type="button" class="et-btn et-btn-ghost" id="etRefreshBtn" title="Reload this event from the CMS">Refresh</button>
+    </div>
+  </header>
+
+  <div class="et-layout">
+
+    <nav class="et-nav" id="etNav">
+      <button type="button" class="et-nav-btn active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="et-nav-btn" data-view="team">Volunteers <span class="et-nav-badge" id="etBadgeTeam">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="tasks">Tasks <span class="et-nav-badge" id="etBadgeTasks">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="hours">Hours <span class="et-nav-badge" id="etBadgeHours">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="messages">Messages <span class="et-nav-badge" id="etBadgeMessages">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="report">Summary</button>
+      <button type="button" class="et-nav-btn" data-view="event">Event details</button>
+      <div class="et-nav-foot" id="etNavFoot"></div>
+    </nav>
+
+    <main class="et-main">
+
+      <section class="et-panel active" id="etPanelDashboard">
+        <p class="et-lead">What needs a decision, what is still open, and what happened recently.</p>
+        <div class="et-stats" id="etStats"></div>
+        <div class="et-card" id="etRequestsCard"></div>
+        <div class="et-card" id="etOpenWorkCard"></div>
+        <div class="et-card" id="etActivityCard"></div>
+      </section>
+
+      <section class="et-panel" id="etPanelTeam">
+        <p class="et-lead">Everyone linked to this event. Approve requests, set roles, add or remove people.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Event team</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etAddVolunteerBtn">Add volunteers</button>
+          </div>
+          <div class="et-card-body" id="etTeamTable"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelTasks">
+        <p class="et-lead">Work to be done. Assign a task to a volunteer, and confirm it when they report it done.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Task list</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etAddTaskBtn">Add task</button>
+          </div>
+          <div class="et-card-body" id="etTaskTable"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelHours">
+        <p class="et-lead">Hours volunteers sent in. Approve once, and the hours go on the volunteer record for good.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Approved per volunteer</h2>
+            <span class="et-count" id="etHoursTotals"></span>
+          </div>
+          <div class="et-card-body" id="etHoursByVolunteer"></div>
+        </div>
+        <div class="et-card">
+          <div class="et-card-head"><h2>Waiting for approval</h2></div>
+          <div class="et-card-body" id="etHoursPending"></div>
+        </div>
+        <div class="et-card">
+          <div class="et-card-head"><h2>Hour records</h2></div>
+          <div class="et-card-body" id="etHoursLedger"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelMessages">
+        <p class="et-lead">Announcements for this event team. A full volume is closed and a new one starts, so nothing is ever lost.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Announcements</h2>
+            <div class="et-head-actions">
+              <button type="button" class="et-btn et-btn-outline" id="etRotateBtn" title="Close this volume and start a new one">Start new volume</button>
+              <button type="button" class="et-btn et-btn-primary" id="etNewMessageBtn">New message</button>
+            </div>
+          </div>
+          <div class="et-card-body" id="etMessageList"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelReport">
+        <p class="et-lead">The numbers of this event: volunteers, tasks and approved hours.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Event report</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etExportReportBtn">Export PDF</button>
+          </div>
+          <div class="et-card-body" id="etReportBody"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelEvent">
+        <p class="et-lead">The event information itself. The event object is created in the CMS; this screen maintains it and its roles.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Event definition</h2>
+            <span class="et-count" id="etEventUpdated"></span>
+          </div>
+          <div class="et-card-body" id="etEventForm"></div>
+        </div>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Roles</h2>
+            <button type="button" class="et-btn et-btn-outline" id="etAddPositionBtn">Add role</button>
+          </div>
+          <div class="et-card-body" id="etPositionList"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="et-modal" id="etModal">
+    <div class="et-modal-box">
+      <div class="et-modal-head">
+        <h2 id="etModalTitle">Action</h2>
+        <button type="button" class="et-modal-close" id="etModalClose" title="Close">&times;</button>
+      </div>
+      <div class="et-modal-body" id="etModalBody"></div>
+      <div class="et-modal-foot" id="etModalFoot"></div>
+    </div>
+  </div>
+
+  <div class="et-drawer" id="etMemberDrawer">
+    <div class="et-drawer-overlay" id="etMemberDrawerOverlay"></div>
+    <aside class="et-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="etDrawerName">
+      <header class="et-drawer-head">
+        <span class="et-avatar et-avatar-lg" id="etDrawerAvatar">?</span>
+        <div class="et-drawer-id">
+          <h2 id="etDrawerName">Volunteer</h2>
+          <div class="et-cell-sub" id="etDrawerEmail"></div>
+        </div>
+        <button type="button" class="et-modal-close" id="etDrawerClose" title="Close">&times;</button>
+      </header>
+      <div class="et-drawer-body" id="etDrawerBody"></div>
+      <footer class="et-drawer-foot" id="etDrawerFoot"></footer>
+    </aside>
+  </div>
+
+  <div class="et-toast" id="etToast"></div>
+</div>

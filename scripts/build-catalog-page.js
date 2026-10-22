@@ -72,6 +72,8 @@ const TOOL_IDEA_MAP = {
   GrantWorkflowManager: { idea: 'Grant Workflow Manager', code: 'B-V-04-b' },
   PledgeAndDonationTracker: { idea: 'Recurring Giving Manager', code: 'B-V-04-c' },
   VolunteerManagement: { idea: 'Volunteer Hour Tracker & Awards', code: 'B-V-04-d' },
+  VolunteerProfile: { idea: 'Volunteer Profile & Hour Portal', code: 'B-V-04-d' },
+  EventVolunteerManager: { idea: 'Event Volunteer Manager', code: 'B-V-04-d' },
   BusCompanyWorkOrder: { idea: 'Bus Company Work Orders', code: 'B-V-07-a' },
   WarehouseManager: { idea: 'Warehouse Manager', code: 'B-V-07-b' },
   AIBlindsConsultation: { idea: 'AI Blinds Consultation', code: 'B-V-11-d' },

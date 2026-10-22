@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volunteer Platform - Three-Object Architecture Plan (v3, draft for approval)</title>
+<!--
+  PLAN DOCUMENT - planning only. No application code is changed by this file.
+  Style: white background, light surfaces, hyphens (no em dashes), no emoji in headings.
+  v3 replaces v2 after four questions were answered:
+  D1 relation object, D2/D3 array-contains and batch details, D4 pending hours,
+  D5 task completion, D6 what a volunteer may see.
+-->
+<style>
+  :root {
+    --ink: #0f172a;
+    --text: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --line-soft: #eef2f7;
+    --bg: #ffffff;
+    --panel: #f8fafc;
+    --panel-2: #f1f5f9;
+    --primary: #1e4e79;
+    --primary-soft: #e0ecf8;
+    --ok: #15803d;
+    --ok-bg: #dcfce7;
+    --warn: #b45309;
+    --warn-bg: #fef3c7;
+    --bad: #b91c1c;
+    --bad-bg: #fee2e2;
+    --info: #1e40af;
+    --info-bg: #dbeafe;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Cascadia Code', Consolas, 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.62;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  nav.toc {
+    width: 278px;
+    flex: 0 0 278px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 22px 14px 40px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+  nav.toc .toc-title {
+    font-size: 10.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 1px 0; }
+  nav.toc a { display: block; padding: 5px 9px; border-radius: 6px; color: var(--text); text-decoration: none; }
+  nav.toc a:hover { background: var(--panel-2); }
+  nav.toc .toc-l2 a { padding-left: 22px; font-size: 11.8px; color: var(--muted); }
+
+  main { flex: 1 1 auto; min-width: 0; max-width: 1000px; padding: 38px 46px 140px; }
+
+  h1 { font-size: 1.8rem; color: var(--ink); letter-spacing: -0.02em; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: .95rem; margin: 0 0 10px; }
+  .meta-line {
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+  }
+  h2 {
+    font-size: 1.28rem;
+    color: var(--ink);
+    margin: 44px 0 12px;
+    padding-bottom: 7px;
+    border-bottom: 2px solid var(--line);
+    scroll-margin-top: 20px;
+  }
+  h3 { font-size: 1.02rem; color: var(--ink); margin: 26px 0 8px; scroll-margin-top: 20px; }
+  h4 { font-size: .9rem; color: var(--text); margin: 18px 0 6px; }
+  p { margin: 9px 0; font-size: .9rem; }
+  ul, ol { margin: 8px 0 8px 22px; font-size: .9rem; }
+  li { margin: 4px 0; }
+
+  code {
+    font-family: var(--mono);
+    font-size: .78em;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #6d28d9;
+    white-space: nowrap;
+  }
+  pre {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 11.8px;
+    line-height: 1.55;
+    color: var(--text);
+    margin: 12px 0;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; white-space: pre; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.4px;
+    margin: 12px 0;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  th {
+    background: var(--panel-2);
+    text-align: left;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--muted);
+    padding: 8px 11px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td { padding: 8px 11px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td code { white-space: normal; overflow-wrap: anywhere; }
+
+  .callout {
+    border-radius: 8px;
+    padding: 11px 15px;
+    margin: 13px 0;
+    font-size: .88rem;
+    border-left: 4px solid;
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout-note { background: var(--info-bg); border-color: #2563eb; color: #1e3a8a; }
+  .callout-warn { background: var(--warn-bg); border-color: #d97706; color: #78350f; }
+  .callout-bad { background: var(--bad-bg); border-color: #dc2626; color: #7f1d1d; }
+  .callout-ok { background: var(--ok-bg); border-color: #16a34a; color: #14532d; }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .pill-ok { background: var(--ok-bg); color: var(--ok); }
+  .pill-warn { background: var(--warn-bg); color: var(--warn); }
+  .pill-bad { background: var(--bad-bg); color: var(--bad); }
+  .pill-info { background: var(--primary-soft); color: var(--primary); }
+  .pill-mute { background: var(--panel-2); color: var(--muted); }
+
+  .status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    margin-bottom: 20px;
+  }
+  .status-bar strong { color: var(--ink); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .two-col > * { min-width: 0; }
+
+  .obj-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--primary);
+    border-radius: 8px;
+    padding: 12px 15px;
+  }
+  .obj-card h4 { margin: 0 0 2px; font-size: .98rem; color: var(--primary); }
+  .obj-card .obj-sub { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-family: var(--mono); }
+  .obj-card ul { margin: 0 0 0 16px; font-size: 12.2px; }
+
+  .ascii-diagram {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    white-space: pre;
+    overflow-x: auto;
+    color: var(--text);
+    margin: 12px 0;
+  }
+
+  .checklist { list-style: none; margin-left: 0; padding-left: 0; }
+  .checklist li { padding-left: 22px; position: relative; }
+  .checklist li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 11px;
+    height: 11px;
+    border: 2px solid var(--muted);
+    border-radius: 3px;
+  }
+
+  .qa {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin: 12px 0;
+    background: #fff;
+  }
+  .qa .q {
+    font-weight: 700;
+    color: var(--ink);
+    font-size: .92rem;
+    margin-bottom: 6px;
+  }
+  .qa .a { font-size: .89rem; }
+  .qa .a p:first-child { margin-top: 0; }
+  .qa .a p:last-child { margin-bottom: 0; }
+
+  .verdict {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .verdict .v-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 13px;
+    background: #fff;
+  }
+  .verdict .v-card .v-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .verdict .v-card .v-body { font-size: 12.6px; margin-top: 3px; }
+
+  @media (max-width: 980px) {
+    body { flex-direction: column; }
+    nav.toc {
+      width: 100%;
+      flex: 0 0 auto;
+      height: auto;
+      position: static;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+      max-height: 40vh;
+    }
+    main { padding: 24px 18px 90px; }
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    nav.toc { display: none; }
+    main { max-width: none; padding: 0; }
+    h2 { page-break-after: avoid; }
+    table, pre, .callout, .obj-card, .qa { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <div class="toc-title">Plan contents</div>
+  <ol>
+    <li><a href="#verdict">1. Verdict: three objects, not two</a></li>
+    <li><a href="#answers">2. Your questions, answered</a></li>
+    <li class="toc-l2"><a href="#d1">2.1 D1 - separate relation object?</a></li>
+    <li class="toc-l2"><a href="#d2">2.2 D2 - where array-contains was used</a></li>
+    <li class="toc-l2"><a href="#d3">2.3 D3 - do we still need batches?</a></li>
+    <li class="toc-l2"><a href="#d4">2.4 D4 - pending hours</a></li>
+    <li class="toc-l2"><a href="#d5">2.5 D5 - task completion</a></li>
+    <li class="toc-l2"><a href="#d6">2.6 D6 - what a volunteer may see</a></li>
+    <li class="toc-l2"><a href="#d7">2.7 Is it really never 1 MiB?</a></li>
+    <li><a href="#objects">3. The objects (split by write frequency)</a></li>
+    <li class="toc-l2"><a href="#person">3.1 Volunteer Profile (person)</a></li>
+    <li class="toc-l2"><a href="#event">3.2 Volunteer Event</a></li>
+    <li class="toc-l2"><a href="#relation">3.3 Membership (relation)</a></li>
+    <li class="toc-l2"><a href="#taskdoc">3.4 Event Tasks document</a></li>
+    <li class="toc-l2"><a href="#msgdoc">3.5 Event Messages document</a></li>
+    <li><a href="#writes">4. Who writes what</a></li>
+    <li><a href="#flows">5. The four flows in detail</a></li>
+    <li><a href="#queries">6. Queries needed (no array-contains)</a></li>
+    <li><a href="#reads">7. Read budget per screen</a></li>
+    <li><a href="#caps">8. Document budget (never 1 MiB)</a></li>
+    <li><a href="#platform">9. Platform questions to verify</a></li>
+    <li><a href="#ux">10. UI and UX</a></li>
+    <li><a href="#migration">11. Migration plan</a></li>
+    <li><a href="#risks">12. Risks</a></li>
+    <li><a href="#open">13. Remaining decisions</a></li>
+    <li><a href="#appendix">14. Appendix: schemas</a></li>
+    <li><a href="#parity">15. Better Impact parity</a></li>
+    <li><a href="#roadmap">16. Roadmap: step by step</a></li>
+  </ol>
+</nav>
+
+<main>
+
+  <h1>Volunteer Platform - Three-Object Architecture</h1>
+  <p class="subtitle">Volunteer Profile, Volunteer Event, and a Member-Membership relation that links them.</p>
+  <div class="status-bar">
+    <span class="pill pill-warn">DRAFT v3 - for approval</span>
+    <span><strong>Status:</strong> planning only. No application code, data or configuration is changed.</span>
+    <span class="pill pill-mute">2026-10-21</span>
+  </div>
+  <p class="meta-line">
+    v3 answers the four open questions. The model changes from two objects to three: the membership relation becomes
+    its own object again, because the platform may not support <code>array-contains</code>, and because a separate
+    relation removes the dual writes, the roster exposure and the 1 MiB risk in one move.
+  </p>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="verdict">1. Verdict: three objects, not two</h2>
+
+  <p><strong>Yes - make the relation a separate object. I changed my recommendation.</strong></p>
+
+  <p>In v2 I accepted the two-object model on the condition that the platform can do
+  <code>array-contains</code> queries and a two-object batch write. You just told me neither is confirmed, and a
+  standard JSON object system may support neither. That condition is not met, so the model has to change - and the
+  change is for the better anyway.</p>
+
+  <div class="verdict">
+    <div class="v-card">
+      <div class="v-head">No special query features</div>
+      <div class="v-body">Every lookup becomes an equality filter on one field: <code>personId</code>,
+        <code>eventId</code> or <code>status</code>. Nothing exotic is required from the object store.</div>
+    </div>
+    <div class="v-card">
+      <div class="v-head">No duplicated state</div>
+      <div class="v-body">The relation is the single source of truth for "person X in event Y". No mirrors, no
+        reconcile action, no drift between two documents.</div>
+    </div>
+    <div class="v-card">
+      <div class="v-head">Nothing shared gets rewritten</div>
+      <div class="v-body">A volunteer writes one small relation, not the event. The event document is only touched by
+        managers, for definitions and tasks.</div>
+    </div>
+    <div class="v-card">
+      <div class="v-head">Privacy by shape</div>
+      <div class="v-body">The event document holds no roster at all, so a volunteer reading an event cannot see other
+        volunteers. Their own data lives in their own relation.</div>
+    </div>
+    <div class="v-card">
+      <div class="v-head">The 1 MiB question disappears</div>
+      <div class="v-body">Memberships, tasks, hours and messages never pile up in one document. Every document stays
+        small for the life of the system.</div>
+    </div>
+  </div>
+
+  <p><strong>What you give up:</strong> the event page needs two reads instead of one (event plus its relations), and
+  the volunteer's page needs two reads instead of one (profile plus their relations). In exchange, no document ever
+  carries a list of people, so no write is ever amplified and no document grows with participation.</p>
+
+  <div class="callout callout-ok">
+    <p><strong>Bonus:</strong> the relation type already exists in your data. Today's
+    <code>vm.eventApplications-uniconbaseapps</code> is exactly a person-event relation with a status. This is an
+    additive upgrade of an existing object rather than a new concept, which keeps migration cheap.</p>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="answers">2. Your questions, answered</h2>
+
+  <div class="qa" id="d1">
+    <div class="q">D1 - Would a separate event-person relation object type be better?</div>
+    <div class="a">
+      <p><strong>Yes.</strong> With two objects, the relation has to be duplicated (an array in the event plus an
+      array in the person) and the platform has to support <code>array-contains</code> to find it from both sides.
+      With three objects, the relation is stored once, and both sides find it with a plain equality filter. It also
+      removes the only place where two documents had to be written together.</p>
+      <p>Cost check, same event as before (250 members, 100 tasks): reading the event team costs 1 event read plus
+      250 small relation reads. That is more <em>operations</em> than one embedded read, but about the same bytes, and
+      it is the only shape that works without special query support.</p>
+    </div>
+  </div>
+
+  <div class="qa" id="d2">
+    <div class="q">D2 - Where exactly would we have used array-contains?</div>
+    <div class="a">
+      <p>In v2, in five places. All five disappear with the relation object:</p>
+      <table>
+        <tr><th>#</th><th>Need</th><th>v2 query (needs array-contains)</th><th>v3 query</th></tr>
+        <tr>
+          <td>1</td>
+          <td>Event tool: who is in this event</td>
+          <td><code>events.where(memberProfileIds, array-contains, me)</code></td>
+          <td><code>relations.where(eventId == X)</code></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Volunteer tool: the events I belong to</td>
+          <td><code>persons.where(memberEventIds, array-contains, eventId)</code></td>
+          <td><code>relations.where(personId == me)</code></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Event tool: pending join requests</td>
+          <td><code>persons.where(requestEventIds, array-contains, eventId)</code></td>
+          <td><code>relations.where(eventId == X)</code> then keep <code>status = requested</code></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Event tool: pending hours to approve</td>
+          <td><code>persons.where(pendingEventIds, array-contains, eventId)</code></td>
+          <td><code>relations.where(eventId == X)</code> then keep rows with pending hours</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Volunteer tool: my open tasks</td>
+          <td><code>events.where(memberProfileIds, array-contains, me)</code> then filter tasks</td>
+          <td><code>relations.where(personId == me)</code> then read the task rows</td>
+        </tr>
+      </table>
+      <p>Rows 3 and 4 need no second query at all: the event tool already loads the relations of its event, so
+      requests and pending hours are filtered in memory. <strong>v3 uses zero array-contains queries.</strong></p>
+    </div>
+  </div>
+
+  <div class="qa" id="d3">
+    <div class="q">D3 - Do we still need a batched write across two objects?</div>
+    <div class="a">
+      <p>For membership decisions: <strong>no</strong>. Approving, declining or removing a person is one write to one
+      relation. That was the main reason v2 needed a batch, and it is gone.</p>
+      <p>For hours there is still one two-step case: the approved line goes on the person (permanent record) and the
+      pending line is cleared from the relation. Recommended handling without a batch:</p>
+      <ol>
+        <li>Give every pending hour line an id. The ledger line id is deterministic:
+          <code>relationId + ':' + pendingHourId</code>.</li>
+        <li>Write the person ledger first - if it fails, nothing changed.</li>
+        <li>Then clear the pending entry from the relation.</li>
+        <li>If the second write fails, the pending line stays. A re-approval would try to add the same ledger id,
+          which the tool skips, so the worst case is a stale "pending" row, not double hours.</li>
+        <li>The relation keeps <code>approvedLedgerIds[]</code> (ids only, capped) so a repair action can detect and
+          fix a mismatch.</li>
+      </ol>
+      <p>If a batch does exist, use it - it turns this into one atomic step. If not, the deterministic id makes the
+      flow idempotent and safe.</p>
+    </div>
+  </div>
+
+  <div class="qa" id="d4">
+    <div class="q">D4 - Pending hours collect and get approved on the same object?</div>
+    <div class="a">
+      <p>Yes, that is the idea, with one refinement: they live on the <strong>relation</strong>, not on the person
+      document. The relation is exactly "this person in this event", which is the scope of an hour line. The flow:</p>
+      <ol>
+        <li>Volunteer adds <code>pendingHours[]</code> to their own relation (temporary, private, only they and the
+          event managers see it).</li>
+        <li>Event tool lists the relations of its event and shows every pending line, grouped by volunteer.</li>
+        <li>Manager approves: a permanent line is appended to the person's <code>hoursLedger[]</code>, and the pending
+          entry is removed from the relation.</li>
+        <li>The person's certificate and totals read the ledger only, so pending hours never count.</li>
+      </ol>
+      <p>Nothing is ever written into the event document for hours.</p>
+    </div>
+  </div>
+
+  <div class="qa" id="d5">
+    <div class="q">D5 - Volunteer marks a task done, manager confirms later</div>
+    <div class="a">
+      <p>Agreed, and it fits the object model cleanly: the task <em>definition</em> and its confirmation live on the
+      event; the volunteer's <em>progress</em> lives on their relation.</p>
+      <p>Statuses: <code>open</code> (no assignee) - <code>assigned</code> - <code>in-progress</code> -
+      <code>reported-done</code> (volunteer) - <code>completed</code> (manager confirmed) - <code>cancelled</code>.</p>
+      <p>The event tool reads relations anyway, so it shows "Reported done, waiting for confirmation" without any
+      extra read. Confirming writes the event task to <code>completed</code> and marks the relation row
+      <code>confirmed</code>.</p>
+    </div>
+  </div>
+
+  <div class="qa" id="d6">
+    <div class="q">D6 - What did "roster name" mean? Volunteers need their info, nothing unrelated</div>
+    <div class="a">
+      <p>"Roster name" was my shorthand for a name snapshot stored in the event document so the manager list renders
+      without reading person documents. My concern was that whoever can read the event document can read that list.
+      Your rule resolves it: <strong>the event document should carry no roster at all.</strong></p>
+      <p>With the relation object this is automatic. A volunteer can read:</p>
+      <ul>
+        <li>the event definition (name, dates, venue, contact, description, positions),</li>
+        <li>their own relation (their status, their positions, their tasks, their pending hours),</li>
+        <li>their own person document (profile, ledger, certificate).</li>
+      </ul>
+      <p>They cannot see other volunteers' names, statuses, task assignments or hours, because that data is not in
+      any document they can read. The manager roster comes from the relations query, which is a manager-side
+      permission.</p>
+    </div>
+  </div>
+
+  <div class="qa" id="d7">
+    <div class="q">Is the plan fully applicable, and does it never hit 1 MiB? Are all questions answered?</div>
+    <div class="a">
+      <p><strong>Never 1 MiB:</strong> not by count caps alone - my v3 draft had two holes (an 8,000-character message
+      body, and unbounded free text in task descriptions and notes). They are closed in section 8: field length
+      limits, array caps, and a measured pre-write check against a 600 KB hard budget. With those in place the worst
+      case is 390 KB (event), 335 KB (person) and 60 KB (relation), so a single write can never reach the store
+      limit - it is blocked in the UI first.</p>
+      <p><strong>Fully applicable:</strong> yes for the model; not yet for the platform. Five behaviours must be
+      confirmed before the volunteer flow is buildable: equality filters (P1), volunteers writing only their own
+      relation (P2), read scope (P4), chosen document ids (P5), and whether an update replaces or merges the object
+      (P6 - this one matters because a relation has two writers). If P2 or P4 fails, the volunteer side needs a
+      different route.</p>
+      <p><strong>All questions answered:</strong> the six product questions are closed (D1, D2, D3, D4, D5, D6).
+      What is left is platform verification plus three product decisions: whether old ledger detail may be collapsed
+      into yearly summary lines, whether a 2,000-character message limit is acceptable, and what the real per-object
+      size limit is.</p>
+    </div>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="objects">3. The objects (split by write frequency)</h2>
+
+  <div class="callout callout-note">
+    <p><strong>One change from the previous draft.</strong> Tasks and team messages moved out of the event document
+    into their own document per event (sections 3.4 and 3.5). The rule behind the split: <em>one document per write
+    rhythm</em>. The event definition changes a few times in its life, tasks change a few times a week, messages change
+    every day and grow forever. Keeping them in one document meant every chat message rewrote the whole event, and a
+    runaway message list could damage the event record itself.</p>
+  </div>
+
+  <div class="ascii-diagram">
++---------------------------+          +---------------------------+          +---------------------------+
+| VOLUNTEER PROFILE         |          | MEMBERSHIP (relation)     |          | VOLUNTEER EVENT           |
+| one per person            |          | one per person + event    |          | one per event             |
++---------------------------+          +---------------------------+          +---------------------------+
+| identity, contact         | 1      n | personId, personUserId    | n      1 | name, dates, venue        |
+| skills, availability      |----------| eventId, eventName        |----------| description, capacity     |
+| network status            |          | status: requested |       |          | positions[]               |
+| userId (login link)       |          |   approved | declined |    |          | status, capacity          |
+| hoursLedger[] (permanent) |          |   removed                 |          +---------------------------+
+| totals                    |          | positions[]               |                    1 |
+| messages[] (direct)       |          | taskLinks[]               |                    |
++---------------------------+          | pendingHours[]            |                    | n
+                                       | hoursApprovedTotal        |          +---------------------------+
+                                       +---------------------------+          | EVENT TASKS               |
+                                                                              | eventId + '__tasks'       |
+                                                                              +---------------------------+
+                                                                              | tasks[] (definition)      |
+                                                                              +---------------------------+
+                                                                                        1 |
+                                                                                          | n volumes
+                                                                              +---------------------------+
+                                                                              | EVENT MESSAGES            |
+                                                                              | eventId + '__messages'    |
+                                                                              | then __messages#2, #3 ... |
+                                                                              +---------------------------+
+                                                                              | messages[] (newest first) |
+                                                                              +---------------------------+
+  </div>
+
+  <table>
+    <tr><th>Object</th><th>Cardinality</th><th>Writes per day (realistic)</th><th>Why separate</th></tr>
+    <tr><td>Person</td><td>one per person</td><td>0 - 2 profile edits</td><td>Lifetime record, must survive events</td></tr>
+    <tr><td>Event</td><td>one per event</td><td>0 - 3 edits</td><td>Stable definition, safe to cache</td></tr>
+    <tr><td>Tasks</td><td>one per event</td><td>1 - 30</td><td>Manager-driven, bounded, archivable</td></tr>
+    <tr><td>Messages</td><td>1..n volumes per event</td><td>0 - 200</td><td>Unbounded, multi-writer, deletable by relevance</td></tr>
+    <tr><td>Relation</td><td>one per person + event</td><td>1 - 20</td><td>Everything that ties one person to one event</td></tr>
+  </table>
+
+  <h3 id="person">3.1 Volunteer Profile (person) - <code>volunteerRegistry-uniconbaseapps</code></h3>
+  <table>
+    <tr><th>Group</th><th>Fields</th><th>Written by</th><th>Cap</th></tr>
+    <tr><td>Identity</td><td><code>firstName, lastName, preferredName, email, emailNormalized, phone, city, photoUrl, languages[]</code></td><td>Volunteer, manager</td><td>-</td></tr>
+    <tr><td>Profile</td><td><code>skills, interests, availabilityNotes, emergencyContactName, emergencyContactPhone</code></td><td>Volunteer, manager</td><td>-</td></tr>
+    <tr><td>Network</td><td><code>status (candidate | active | inactive | banned), joinedAt, joinedVia, approvedBy, approvedAt, notes</code></td><td>Manager only</td><td>-</td></tr>
+    <tr><td>Login</td><td><code>userId</code> (CMS user id, may be empty for imported people)</td><td>Manager, system</td><td>-</td></tr>
+    <tr><td>Permanent hours</td><td><code>hoursLedger[]: {id, eventId, eventName, eventDate, taskSummary, hours, approvedBy, approvedAt}</code></td><td>Manager only</td><td>500 lines</td></tr>
+    <tr><td>Totals</td><td><code>totals: {hoursApproved, eventsAttended, tasksCompleted}</code> (cached, recomputed on write)</td><td>Manager</td><td>-</td></tr>
+    <tr><td>Direct messages</td><td><code>messages[]: {id, fromRole, fromName, subject, body, sentAt, read}</code></td><td>Manager, volunteer</td><td>100 (2,000 chars each)</td></tr>
+    <tr><td>Audit</td><td><code>createdAt, createdBy, updatedAt, schemaVersion</code></td><td>System</td><td>-</td></tr>
+  </table>
+  <p>No event arrays, no pending hours, no task list: everything that ties the person to an event lives in the
+  relation.</p>
+
+  <h3 id="event">3.2 Volunteer Event - <code>vm.events-uniconbaseapps</code></h3>
+  <table>
+    <tr><th>Group</th><th>Fields</th><th>Written by</th><th>Cap</th></tr>
+    <tr><td>Definition</td><td><code>name, description, status (draft | open | closed | cancelled), startDate, endDate, startTime, endTime, locationName, address, city, contactName, contactPhone, contactEmail, capacity, photoUrl, notes</code></td><td>Manager only</td><td>-</td></tr>
+    <tr><td>Positions</td><td><code>positions[]: {id, name, slots, description}</code></td><td>Manager only</td><td>20</td></tr>
+    <tr><td>Audit</td><td><code>createdAt, createdBy, updatedAt, schemaVersion</code></td><td>System</td><td>-</td></tr>
+  </table>
+  <p>No members, no hours, no counters that change with participation, and - since this draft - <strong>no tasks and
+  no messages</strong>. The event report is computed by joining this document with its relations, its tasks document,
+  which the tool loads anyway.</p>
+
+  <h3 id="relation">3.3 Membership (relation) - <code>vm.eventMemberships-uniconbaseapps</code></h3>
+  <table>
+    <tr><th>Field</th><th>Meaning</th><th>Cap</th></tr>
+    <tr><td><code>personId</code></td><td>Registry profile id. Indexed, used for "my events".</td><td>-</td></tr>
+    <tr><td><code>personUserId</code></td><td>CMS user id when the person can log in (for permission filters).</td><td>-</td></tr>
+    <tr><td><code>eventId</code></td><td>Event object id. Indexed, used for "event team".</td><td>-</td></tr>
+    <tr><td><code>status</code></td><td><code>requested | approved | declined | removed</code></td><td>-</td></tr>
+    <tr><td><code>positions[]</code></td><td><code>{positionId, name, status}</code> - which roles this person has in this event</td><td>10</td></tr>
+    <tr><td><code>appliedAt, decidedAt, decidedBy, source</code></td><td>Timeline: when asked, who decided, from a request or added by a manager</td><td>-</td></tr>
+    <tr><td><code>taskLinks[]</code></td><td><code>{taskId, title, dueDate, status, reportedAt, confirmedAt}</code> - this person's task progress in this event</td><td>40</td></tr>
+    <tr><td><code>pendingHours[]</code></td><td><code>{id, date, taskId, taskTitle, hours, note, submittedAt}</code> - temporary, volunteer-written</td><td>60</td></tr>
+    <tr><td><code>hoursApprovedTotal, lastApprovedAt</code></td><td>Aggregate of approved hours for this pair (the detail is on the person ledger)</td><td>-</td></tr>
+    <tr><td><code>approvedLedgerIds[]</code></td><td>Ids already written to the person ledger - makes approval idempotent</td><td>60</td></tr>
+    <tr><td><code>notes</code></td><td>Manager note for this placement</td><td>-</td></tr>
+    <tr><td><code>createdAt, updatedAt, schemaVersion</code></td><td>Audit</td><td>-</td></tr>
+  </table>
+  <p><strong>Document id is deterministic:</strong> <code>personId + '__' + eventId</code>. That makes "is this
+  person in this event?" a direct get, prevents duplicates by construction, and gives approval ids a stable prefix.</p>
+
+  <h3 id="taskdoc">3.4 Event Tasks - <code>vm.eventTasks-uniconbaseapps</code></h3>
+  <table>
+    <tr><th>Field</th><th>Meaning</th><th>Cap</th></tr>
+    <tr><td><code>eventId, eventName</code></td><td>Owner event (indexed for the event tool, name copied for lists)</td><td>-</td></tr>
+    <tr><td><code>tasks[]</code></td><td><code>{id, title, description, status, positionId, assigneePersonId, assigneeName, dueDate, estimatedHours, createdAt, createdBy, completedAt, completedBy}</code></td><td>200</td></tr>
+    <tr><td><code>updatedAt, updatedBy, schemaVersion</code></td><td>Audit, also used for the optimistic check</td><td>-</td></tr>
+  </table>
+  <p><strong>Document id:</strong> <code>eventId + '__tasks'</code>. One task list per event, always the same id, so the
+  event tool reads it with a direct get - no query, no index.</p>
+  <p><strong>Why not keep tasks on the event?</strong> Three reasons:</p>
+  <ol>
+    <li>A task can be archived, bulk-cleared or rebuilt without touching the event definition (dates, venue, capacity).</li>
+    <li>Task writes stop competing with event edits for the same ~1 write/second document limit.</li>
+    <li>The volunteer-facing task list can be fetched without loading the whole event, if that ever matters.</li>
+  </ol>
+  <p><strong>The cost, stated honestly:</strong> a task status change rewrites the whole task document. At 200 tasks
+  (about 120 KB of JSON) that is a real write, so the tool must <em>not</em> write on every keystroke or checkbox click.
+  The lifecycle is designed for it: volunteers report progress on <em>their relation</em> (small document, one writer),
+  and only the manager's confirm/cancel touches the task document. A confirmed task is written once.</p>
+  <div class="callout callout-warn">
+    <p><strong>Hard rule:</strong> volunteer progress never writes the task document. If it did, ten volunteers clicking
+    "done" in the same minute would rewrite a 120 KB document ten times, and some writes would be lost.</p>
+  </div>
+
+  <h3 id="msgdoc">3.5 Event Messages - <code>vm.eventMessages-uniconbaseapps</code></h3>
+  <table>
+    <tr><th>Field</th><th>Meaning</th><th>Cap</th></tr>
+    <tr><td><code>eventId, eventName</code></td><td>Owner event</td><td>-</td></tr>
+    <tr><td><code>volume</code></td><td>1, 2, 3 ... - a rotated container, see below</td><td>-</td></tr>
+    <tr><td><code>closed</code></td><td>true once rotated: read-only, deletable by relevance</td><td>-</td></tr>
+    <tr><td><code>messages[]</code></td><td><code>{id, fromUserId, fromName, fromRole, subject, body, sentAt, audience}</code>, newest first</td><td>150 messages</td></tr>
+    <tr><td><code>firstSentAt, lastSentAt</code></td><td>Used by the rotation check and by the "message history" view</td><td>-</td></tr>
+    <tr><td><code>updatedAt, schemaVersion</code></td><td>Audit</td><td>-</td></tr>
+  </table>
+  <p><strong>Document id:</strong> <code>eventId + '__messages'</code> for volume 1, then
+  <code>eventId + '__messages#2'</code>, <code>#3</code>, and so on.</p>
+  <p><strong>Why a document, not per-message documents?</strong> A typical event produces tens of messages from one or
+  two managers. One document means one read for the whole conversation, one write per message, and no pagination
+  plumbing. Per-message documents would triple the document count and the read cost for the same conversation.</p>
+  <p><strong>When it turns into a problem, and the fix:</strong> two-way chat between many volunteers would serialise
+  writes on one document (the 1 write/second rule), and the document grows forever. Both are handled by
+  <strong>rotation</strong>:</p>
+  <ol>
+    <li>Before writing, check <code>messages.length &gt;= 150</code> or <code>lastSentAt</code> older than the retention
+      window, or an estimated size above 250 KB.</li>
+    <li>If any is true, mark the current volume <code>closed = true</code> and write the new message into volume
+      <code>n + 1</code>.</li>
+    <li>Closed volumes are read-only. The event tool shows the newest open volume by default and offers "older
+      messages" (volume list, still one get each).</li>
+    <li>A closed volume can be deleted as a whole when it is no longer relevant. Deleting it can never damage the event,
+      the tasks, the hours or the person records.</li>
+  </ol>
+  <p><strong>"Remove by relevance"</strong> therefore has a safe unit: a volume, not a message. That is the property
+  the previous design could not offer - a message list lived inside the event, so deleting old chatter meant rewriting
+  the event's core record, and any size accident damaged the event itself.</p>
+  <div class="callout callout-note">
+    <p><strong>If two-way volunteer chat becomes a requirement</strong> (not just manager announcements), move that one
+    feature to per-message documents (<code>eventId + '__msg__' + timestamp</code>) and keep this document for
+    announcements. The tool can show both merged by <code>sentAt</code>. Do not do this before it is asked for: it
+    multiplies reads by a factor of 10 - 50 for the same screen.</p>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="writes">4. Who writes what</h2>
+
+  <table>
+    <tr><th>Object</th><th>Volunteer</th><th>Event manager</th><th>System admin</th></tr>
+    <tr>
+      <td>Own relation</td>
+      <td>request to join, withdraw, log pending hours, task start / done</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>Any relation of their event</td>
+      <td>-</td>
+      <td>approve, decline, remove, assign positions, confirm task, approve / reject hours</td>
+      <td>repair</td>
+    </tr>
+    <tr>
+      <td>Event document</td>
+      <td><span class="pill pill-bad">never</span></td>
+      <td>definition, positions</td>
+      <td>repair</td>
+    </tr>
+    <tr>
+      <td>Event tasks document</td>
+      <td><span class="pill pill-bad">never</span></td>
+      <td>create, add, edit, assign, confirm, cancel tasks</td>
+      <td>repair</td>
+    </tr>
+    <tr>
+      <td>Event messages document</td>
+      <td>add a message to their event (if two-way is enabled), else never</td>
+      <td>announce, rotate volume, delete a closed volume</td>
+      <td>repair</td>
+    </tr>
+    <tr>
+      <td>Own person document</td>
+      <td>profile fields (email, phone, skills, availability)</td>
+      <td>all fields, network status, hours ledger</td>
+      <td>all</td>
+    </tr>
+    <tr>
+      <td>Other person documents</td>
+      <td><span class="pill pill-bad">never</span></td>
+      <td>read for their event, edit network data only</td>
+      <td>all</td>
+    </tr>
+  </table>
+
+  <div class="callout callout-warn">
+    <p><strong>The one platform rule this depends on:</strong> a volunteer must be allowed to write <em>their own</em>
+    relation and nowhere else. If the object store only grants write access per type (all relations or none), then a
+    volunteer could alter someone else's membership. That must be verified in phase 1 - see section 9.</p>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="flows">5. The four flows in detail</h2>
+
+  <h3>5.1 Apply to an event or a position</h3>
+  <ol>
+    <li>Volunteer opens their profile tool, sees the events they may join (open events, paged).</li>
+    <li>They pick an event and optionally a position. The tool creates the relation with
+      <code>status = requested</code>, the requested position, and <code>appliedAt</code>.</li>
+    <li>Event tool loads its relations and shows the requested ones in "Requests to decide".</li>
+    <li>Manager approves: one write, <code>status = approved</code>, <code>decidedAt/By</code>, positions confirmed.
+      Declining is the same write with <code>declined</code>.</li>
+  </ol>
+
+  <h3>5.2 Log hours, then approve them</h3>
+  <ol>
+    <li>Volunteer adds a pending line to their relation: date, task (optional), hours, note.</li>
+    <li>Event tool shows it under Hours for that volunteer; the person tool shows it as "pending, waiting for the
+      event manager".</li>
+    <li>Manager approves: append to the person ledger with id <code>relationId + ':' + pendingId</code>, remove the
+      pending line, increase <code>hoursApprovedTotal</code>.</li>
+    <li>Reject: remove the pending line and record the rejection on the relation
+      (<code>hoursHistory[]</code>, capped) without touching the person ledger.</li>
+    <li>Certificate and totals read the person ledger only.</li>
+  </ol>
+
+  <h3>5.3 Task lifecycle</h3>
+  <pre><code>event.tasks[]                         relation.taskLinks[]
+------------------------------------  ------------------------------------------
+open                                  (absent)
+  | manager assigns
+assigned            --------------->  { status: "assigned" }
+  | volunteer starts                    |
+in-progress         --------------->  { status: "in-progress" }
+  | volunteer reports                   |
+reported-done       <---------------  { status: "reported-done", reportedAt }
+  | manager confirms                    |
+completed           --------------->  { status: "confirmed", confirmedAt }
+  | manager cancels
+cancelled                             (row removed)</code></pre>
+  <p>The event document stays the source of truth for the task itself; the relation is the source of truth for what
+  this person did. The event tool joins them in memory because it already has both.</p>
+
+  <h3>5.4 Network approval (stage one)</h3>
+  <p>Unchanged and unrelated to events: the manager flips the person's network status from
+  <code>candidate</code> to <code>active</code>. One write, one document.</p>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="queries">6. Queries needed (no array-contains)</h2>
+
+  <table>
+    <tr><th>#</th><th>Screen</th><th>Query</th><th>Filter type</th></tr>
+    <tr><td>Q1</td><td>Volunteer / manager: one person</td><td>get person by id</td><td>direct get</td></tr>
+    <tr><td>Q2</td><td>Any person page</td><td><code>relations.where(personId == personId)</code></td><td>equality</td></tr>
+    <tr><td>Q3</td><td>Event tool: team, requests, hours, tasks progress</td><td><code>relations.where(eventId == eventId)</code></td><td>equality</td></tr>
+    <tr><td>Q4</td><td>Event tool: the event itself</td><td>get event by id (host object)</td><td>direct get</td></tr>
+    <tr><td>Q5</td><td>Volunteer: events to join</td><td><code>events.where(status == "open")</code>, paged</td><td>equality</td></tr>
+    <tr><td>Q6</td><td>Manager: people list</td><td>persons paged by name</td><td>range or paging</td></tr>
+    <tr><td>Q7</td><td>Manager: all events</td><td>events paged by start date</td><td>range or paging</td></tr>
+    <tr><td>Q8</td><td>Approval idempotency</td><td><code>relations.where(personId == x, eventId == y)</code> or the deterministic id</td><td>equality / get</td></tr>
+    <tr><td>Q9</td><td>Event tool: task list</td><td>get tasks document by <code>eventId + '__tasks'</code></td><td>direct get</td></tr>
+    <tr><td>Q10</td><td>Event tool: newest messages</td><td>get messages document by <code>eventId + '__messages'</code> (then the older volumes by id)</td><td>direct get</td></tr>
+  </table>
+
+  <p>Ten query shapes, and still <strong>zero array-contains</strong>. Q9 and Q10 are direct gets by a deterministic id,
+  so they need no index at all. If the store cannot filter at all, only Q5, Q6 and Q7 need paging, and the relation
+  queries can be replaced by a full-type query filtered in the client - slower, but still correct, which is not true for
+  an array-contains design.</p>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="reads">7. Read budget per screen</h2>
+
+  <table>
+    <tr><th>Screen</th><th>Documents read</th><th>Notes</th></tr>
+    <tr><td>Volunteer opens their page</td><td class="num">1 + own relations</td><td>Profile plus usually 1 - 10 small relations</td></tr>
+    <tr><td>Manager opens one person</td><td class="num">1 + their relations</td><td>Same shape, manager actions</td></tr>
+    <tr><td>Event tool opens</td><td class="num">3 + team size</td><td>Event, tasks document, newest messages document, plus its relations (250 members = 250 tiny docs, about 90 KB)</td></tr>
+    <tr><td>Event tool: older messages</td><td class="num">1 per closed volume</td><td>Only when the manager expands history</td></tr>
+    <tr><td>Event tool: requests / pending hours</td><td class="num">0 extra</td><td>Filtered from the relations already loaded</td></tr>
+    <tr><td>Volunteer: events to join</td><td class="num">12 per page</td><td>Open events, paged, definition fields only</td></tr>
+    <tr><td>Manager: people list</td><td class="num">50 per page</td><td>Paged</td></tr>
+    <tr><td>Manager: all events</td><td class="num">20 per page</td><td>Paged</td></tr>
+    <tr><td>Certificate</td><td class="num">1</td><td>Person ledger only</td></tr>
+  </table>
+
+  <div class="callout callout-note">
+    <p><strong>Read amplification check.</strong> The event tool needs the relations of one event, never of the whole
+    system. The person tool needs the relations of one person, never of the whole network. That is the property the
+    two-object design could not guarantee without array-contains.</p>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="caps">8. Document budget - how "never 1 MiB" is actually guaranteed</h2>
+
+  <div class="callout callout-bad">
+    <p><strong>Correction to the previous draft.</strong> Count caps alone do <em>not</em> guarantee the limit. Two
+    holes existed: a message body was allowed to be 8,000 characters, so 130 messages already reach 1 MiB, and free
+    text fields (task description, notes, skills) had no length limit. Both are closed below. The guarantee is now:
+    <em>field length limits + array caps + a measured pre-write check against a hard byte budget</em>.</p>
+  </div>
+
+  <h3>8.1 Field length limits</h3>
+  <table>
+    <tr><th>Field</th><th>Limit</th><th>Reason</th></tr>
+    <tr><td>Message body (person and event)</td><td class="num">2,000 chars</td><td>Was 8,000 - the single biggest size risk</td></tr>
+    <tr><td>Message subject</td><td class="num">200 chars</td><td>-</td></tr>
+    <tr><td>Event description / notes</td><td class="num">1,000 chars each</td><td>Readable in the UI, bounded in the document</td></tr>
+    <tr><td>Task title / task description</td><td class="num">120 / 500 chars</td><td>200 tasks per event must fit</td></tr>
+    <tr><td>Person skills / interests / availability / notes</td><td class="num">500 / 300 / 300 / 1,000 chars</td><td>Free text by nature, needs a ceiling</td></tr>
+    <tr><td>Hour note / ledger task summary</td><td class="num">500 / 200 chars</td><td>60 pending rows per relation</td></tr>
+    <tr><td>Position name / description</td><td class="num">60 / 300 chars</td><td>20 positions per event</td></tr>
+    <tr><td>Relation notes</td><td class="num">500 chars</td><td>One per person and event</td></tr>
+  </table>
+
+  <h3>8.2 Array caps</h3>
+  <table>
+    <tr><th>Document</th><th>Array</th><th>Cap</th><th>At the cap</th></tr>
+    <tr><td rowspan="6">Relation</td><td><code>positions[]</code></td><td class="num">10</td><td>Block with a message</td></tr>
+    <tr><td><code>taskLinks[]</code></td><td class="num">40</td><td>Prune rows older than 90 days that are confirmed</td></tr>
+    <tr><td><code>pendingHours[]</code></td><td class="num">60</td><td>Warn the manager: 60 lines are waiting for approval</td></tr>
+    <tr><td><code>approvedLedgerIds[]</code></td><td class="num">60</td><td>Prune ids that are no longer pending</td></tr>
+    <tr><td><code>hoursHistory[]</code></td><td class="num">40</td><td>Drop oldest rejected entries</td></tr>
+    <tr><td><code>messages[]</code> (direct)</td><td class="num">100</td><td>Drop oldest read messages</td></tr>
+    <tr><td rowspan="2">Event</td><td><code>positions[]</code></td><td class="num">20</td><td>Block with a message</td></tr>
+    <tr><td>definition fields</td><td class="num">-</td><td>Field limits in 8.1 apply</td></tr>
+    <tr><td>Event tasks</td><td><code>tasks[]</code></td><td class="num">200</td><td>Block: this event has reached its task limit, archive old tasks or start a new event</td></tr>
+    <tr><td rowspan="2">Event messages</td><td><code>messages[]</code> (one volume)</td><td class="num">150</td><td>Rotate: close this volume, write into the next one</td></tr>
+    <tr><td>volume size</td><td class="num">250 KB</td><td>Rotate on the measured size, not only on the count</td></tr>
+    <tr><td rowspan="2">Person</td><td><code>hoursLedger[]</code></td><td class="num">500</td><td>Collapse the oldest year into one summary line (see 8.4)</td></tr>
+    <tr><td><code>messages[]</code> (direct)</td><td class="num">100</td><td>Drop oldest read messages</td></tr>
+  </table>
+
+  <h3>8.3 Worst case with limits applied</h3>
+  <table>
+    <tr><th>Document</th><th>Composition at every cap</th><th>Worst case</th><th>Share of 1 MiB</th></tr>
+    <tr>
+      <td>Relation</td>
+      <td>10 positions + 40 task rows + 60 pending hours + 40 history + 100 messages + ids</td>
+      <td class="num">about 60 KB</td>
+      <td class="num">6%</td>
+    </tr>
+    <tr>
+      <td>Event</td>
+      <td>3 KB definition + 20 positions</td>
+      <td class="num">about 12 KB</td>
+      <td class="num">1%</td>
+    </tr>
+    <tr>
+      <td>Event tasks</td>
+      <td>200 tasks at 500-char descriptions + assignment fields</td>
+      <td class="num">about 120 KB</td>
+      <td class="num">11%</td>
+    </tr>
+    <tr>
+      <td>Event messages (one volume)</td>
+      <td>150 messages at 2,000 chars, or the 250 KB size gate - whichever comes first</td>
+      <td class="num">250 KB max</td>
+      <td class="num">24%</td>
+    </tr>
+    <tr>
+      <td>Person</td>
+      <td>3 KB profile + 500 ledger lines + 100 messages at 2,000 chars</td>
+      <td class="num">about 335 KB</td>
+      <td class="num">32%</td>
+    </tr>
+  </table>
+  <p>Worst case is now 335 KB on the largest document, against a hard budget of 600 KB and a store limit of 1,048,576
+  bytes. Splitting tasks and messages also lowered the event document from about 390 KB to about 12 KB, so an event
+  edit is a cheap write that can never be blocked by chatter or task volume. The gap is deliberate: it absorbs platform
+  metadata, future fields and non-ASCII text that costs more than one byte per character.</p>
+
+  <h3>8.4 Enforcement in the tool (this is the actual guarantee)</h3>
+  <ol>
+    <li><strong>Measure before writing.</strong> Every write path computes the serialized byte size of the document
+      it is about to write (UTF-8, plus a 1 KB platform overhead allowance).</li>
+    <li><strong>Soft budget 400 KB.</strong> Above it the tool runs the prune rule for that document type, then
+      re-measures.</li>
+    <li><strong>Hard budget 600 KB.</strong> If the document is still above it, the write is <em>blocked</em> with a
+      clear message and an action, instead of being sent and failing at the store. A failed write at the limit looks
+      like data loss to a user; a blocked write with an explanation does not.</li>
+    <li><strong>Pruning must not change totals.</strong> When the ledger exceeds 500 lines, the oldest year is
+      collapsed into one line: <code>{ id: "summary-2025", summary: true, year: 2025, hours: 118.5, events: 14 }</code>.
+      The certificate and the totals add summary lines exactly like detail lines, so the number never drops.</li>
+    <li><strong>Every new array needs a cap and a length limit in the same change.</strong> A field added without a
+      budget is how a document quietly grows past the limit.</li>
+  </ol>
+
+  <div class="callout callout-note">
+    <p><strong>If the store limit is not 1 MiB</strong> (P7), set the hard budget to 60% of the real limit and scale
+    the caps: 600 KB assumes 1 MiB. The rule stays the same, only the numbers move.</p>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="platform">9. Platform questions to verify</h2>
+
+  <table>
+    <tr><th>#</th><th>Question</th><th>Why it matters</th><th>Fallback if no</th></tr>
+    <tr>
+      <td>P1</td>
+      <td>Can a query filter by one field equality, for example <code>eventId == X</code>?</td>
+      <td>All team, person-history and event-report screens depend on it</td>
+      <td>Query the type and filter in the client, and page results</td>
+    </tr>
+    <tr>
+      <td>P2</td>
+      <td>Can a volunteer write <strong>their own</strong> relation object (and no one else's)?</td>
+      <td>Applying, logging hours and task progress are volunteer-initiated</td>
+      <td><span class="pill pill-ok">answered: yes</span> the CMS can be changed. Required rule in 9.1</td>
+    </tr>
+    <tr>
+      <td>P3</td>
+      <td>Is a batched write across two objects available?</td>
+      <td>Only the hours approval touches two objects; deterministic ids already make it safe</td>
+      <td>Person ledger first, relation second, idempotent retry</td>
+    </tr>
+    <tr>
+      <td>P4</td>
+      <td>Can reads be restricted so a volunteer sees only their own relation?</td>
+      <td>Privacy: otherwise any volunteer could read the whole event roster</td>
+      <td><span class="pill pill-ok">answered: yes</span> same ownership rule as P2 (9.1)</td>
+    </tr>
+    <tr>
+      <td>P5</td>
+      <td>Can documents be created with a chosen id (deterministic relation id)?</td>
+      <td>Prevents duplicate relations, makes approval ids stable</td>
+      <td>Query by <code>personId + eventId</code> before creating</td>
+    </tr>
+    <tr>
+      <td>P6</td>
+      <td>Does an update <strong>replace</strong> the object's data or <strong>merge</strong> it field by field?</td>
+      <td>A relation has two writers (volunteer and manager). With replace semantics a concurrent write can drop the
+        other side's change; with merge it cannot.</td>
+      <td><span class="pill pill-ok">answered: merge</span> field-level merge is required - protocol in 9.1</td>
+    </tr>
+    <tr>
+      <td>P7</td>
+      <td>What is the real maximum size of one object? (This plan assumes 1 MiB.)</td>
+      <td>The whole budget in section 8 is derived from it</td>
+      <td><span class="pill pill-warn">open</span> needs one number from the platform - see 9.2</td>
+    </tr>
+    <tr>
+      <td>P8</td>
+      <td>Are fields inside arrays indexed automatically, and can that be turned off?</td>
+      <td>Only relevant if the store is Firestore-like: rich arrays add index entries and update cost</td>
+      <td>Keep arrays under the caps in section 8; index entry cost stays small</td>
+    </tr>
+  </table>
+
+  <ule, and it answers P2 (write), P4 (read) and the privacy question in a single place.</p>
+  <table>
+    <tr><th>Object</th><th>Volunteer</th><th>Manager / admin</th></tr>
+  < <tr><td>Person</td><td>read and update the record where <code>userId == session.userId</code></td><td>all records</td></tr>
+    <tr><td>Relation</td><td>read and update records where <code>personUserId == session.userId</code>; may create one for themselves</td><td>all records</td></tr>
+    <tr><td>Event, Event Tasks, Event Messages</td><td>read events with <code>status == open</code> plus the ones they belong to; read the tasks and messages of their events</td><td>create and update</td></tr>
+    <tr><td>Other volunteers' persons</td><td><span class="pill pill-bad">never</span></td><td>all records</td></tr>
+  </table>
+  <p>The rule in words, to hand to the platform owner:</p>
+  <pre><code>allow update, delete on relation:
+    resource.data.personUserId == request.auth.uid        // own record only
+    AND protected fields unchanged                         // see below
+
+allow create on relation:
+    request.resource.data.personUserId == request.auth.uid
+    AND request.resource.data.status == "requested"        // cannot self-approve
+
+allow read on relation:
+    resource.data.personUserId == request.auth.uid  OR  isManager()
+
+protected fields (a volunteer may never change them):
+    status after creation, decidedAt, decidedBy, hoursApprovedTotal,
+    approvedLedgerIds, positions[].status, notes</code></pre>
+  <div class="callout callout-warn">
+    <p><strong>What the rule must prevent, explicitly:</strong> a volunteer setting <code>status = approved</code>,
+    awarding themselves hours by writing <code>hoursApprovedTotal</code>, or editing <code>positions[].status</code>.
+    If the store cannot compare individual fields on update, then the volunteer-writable part must move into its own
+    field group that the manager's screen never trusts until a manager confirms it - which is what
+    <code>pendingHours[]</code> and <code>taskLinks[].status</code> already are. That is the fallback, and it is why
+    those two arrays are named "pending" and "reported", not "approved".</p>
+  </div>
+
+  <p><strong>Merge (P6).</strong> Updates merge field by field, so the volunteer writing <code>pendingHours[]</code>
+  cannot erase <code>status</code> that the manager just changed. Two limits still apply, and the tool handles them:</p>
+  <ol>
+    <li><strong>Arrays are written as a whole value.</strong> Merge does not merge array entries. Two writers editing
+      the same array at the same time means the last one wins.</li>
+    <li><strong>Protocol for array edits:</strong> read the relation, keep its <code>updatedAt</code>, change the array,
+      write with a check that <code>updatedAt</code> is unchanged. On mismatch: re-read, re-apply the change to the
+      fresh array, retry once. If it fails again, tell the user instead of overwriting.</li>
+  </ol>
+  <p>Because the two sides normally write <em>different</em> arrays (volunteer: <code>pendingHours</code>,
+  <code>taskLinks</code>; manager: <code>status</code>, <code>positions</code>, <code>hoursApprovedTotal</code>),
+  collisions are rare in practice - the protocol is the safety net, not the normal path.</p>
+
+  <h3 id="p7">9.2 P7 in plain words - the one number still missing</h3>
+  <p>P7 is simply this question: <em>what is the largest single record your object store allows?</em> Every database
+  answers it differently:</p>
+  <table>
+    <tr><th>Store</th><th>Limit per record</th><th>Consequence for this plan</th></tr>
+    <tr><td>Firestore</td><td class="num">1 MiB (1,048,576 bytes)</td><td>The plan in section 8 applies as written</td></tr>
+    <tr><td>DynamoDB</td><td class="num">400 KB</td><td>Caps shrink: 500 ledger lines becomes about 200, message volume about 60</td></tr>
+    <tr><td>MongoDB / SQL JSON column</td><td class="num">16 MB or more</td><td>Nothing to change; the budget becomes a performance rule, not a safety rule</td></tr>
+  </table>
+  <p><strong>Why it matters even when the limit is large:</strong> the same number decides write cost and read cost.
+  A record is written and read as a whole, so a 300 KB record is a 300 KB write on every message. The budget in
+  section 8 keeps the everyday records small on purpose - not only to avoid the hard limit.</p>
+  <p><strong>What is needed from the platform owner:</strong> one sentence - "the per-object limit is X". If the answer
+  is Firestore, nothing changes. If it is smaller, the hard budget becomes 60% of X and the caps in 8.2 scale down
+  proportionally. <strong>No design decision in this document depends on the answer</strong>; only the numbers in
+  8.2 and 8.3 do.</pd="ux">10. UI and UX</h2>
+
+  <h3>10.1 Two tools, three audiences</h3>
+  <table>
+    <tr><th>Tool</th><th>Instance</th><th>Audience</th><th>Sidebar</th></tr>
+    <tr>
+      <td><strong>Volunteer Profile</strong></td>
+      <td>One per person object</td>
+      <td>Volunteer (own record), manager (any record)</td>
+      <td>Overview, Hours, Events, Tasks, Messages, Certificate</td>
+    </tr>
+    <tr>
+      <td><strong>Event Team</strong></td>
+      <td>One per event object</td>
+      <td>Event manager</td>
+      <td>Dashboard, Team, Tasks, Hours, Report, Messages</td>
+    </tr>
+  </table>
+
+  <h3>10.2 What each audience sees</h3>
+  <div class="two-col">
+    <div class="obj-card">
+      <h4>Volunteer</h4>
+      <div class="obj-sub">own data only</div>
+      <ul>
+        <li>Profile and network status.</li>
+        <li>Events joined: status, positions, dates.</li>
+        <li>Tasks: my progress, report done.</li>
+        <li>Hours: pending (waiting) and approved (ledger).</li>
+        <li>Certificate from approved hours only.</li>
+        <li>Open events they may apply to.</li>
+      </ul>
+    </div>
+    <div class="obj-card">
+      <h4>Event manager</h4>
+      <div class="obj-sub">their event only</div>
+      <ul>
+        <li>Event definition and positions.</li>
+        <li>Team: requests to decide, approved members.</li>
+        <li>Tasks: create, assign, confirm reported work.</li>
+        <li>Hours: pending approvals, approved totals.</li>
+        <li>Report and team messages.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>10.3 Interaction rules</h3>
+  <ul>
+    <li>The volunteer's pending rows are visibly pending and never counted in totals.</li>
+    <li>"Report done" is a volunteer button; "Confirm" is a manager button. Two words, two owners.</li>
+    <li>A rejected hour line disappears from the volunteer's pending list; the reason stays with the manager.</li>
+    <li>No screen ever lists other volunteers inside the volunteer's tool.</li>
+    <li>Caps surface at 70% with a one-click archive action.</li>
+  </ul>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="migration">11. Migration plan</h2>
+
+  <h3>Phase 0 - Decisions</h3>
+  <ul class="checklist">
+    <li>Approve the three-object model.</li>
+    <li>Answer P1, P2 and P4 (query filters, volunteer write scope, read scope).</li>
+    <li>Confirm the volume assumptions.</li>
+  </ul>
+
+  <h3>Phase 1 - Platform check (no UI work)</h3>
+  <ul class="checklist">
+    <li>Prove an equality filter on <code>eventId</code> and on <code>personId</code>.</li>
+    <li>Prove a volunteer can write their own relation and cannot write another person's.</li>
+    <li>Prove a chosen document id is accepted (deterministic relation id).</li>
+  </ul>
+
+  <h3>Phase 2 - Extend the relation type</h3>
+  <ul class="checklist">
+    <li>Reuse today's <code>vm.eventApplications</code> records as relations; add <code>taskLinks</code>,
+      <code>pendingHours</code>, <code>positions</code>, <code>hoursApprovedTotal</code>,
+      <code>approvedLedgerIds</code>, <code>schemaVersion</code>.</li>
+    <li>Rename the display label to "Membership"; keep the type id to avoid config churn.</li>
+    <li>Backfill <code>personId</code> from <code>registryProfileId</code> or resolve by <code>volunteerUserId</code>.</li>
+  </ul>
+
+  <h3>Phase 3 - Extend person and event</h3>
+  <ul class="checklist">
+    <li>Person: add <code>hoursLedger</code> (aggregated from approved hour records) and totals.</li>
+    <li>Event: add <code>positions</code> and keep <code>tasks</code> as an array, imported from
+      <code>vm.eventTasks</code>.</li>
+    <li>Fold approved hours into the person ledger; move pending hours into their relations; keep
+      <code>vm.eventHours</code> read-only.</li>
+  </ul>
+
+  <h3>Phase 4 - Event Team tool</h3>
+  <ul class="checklist">
+    <li>Dashboard, Team, Tasks, Hours, Report, Messages against event plus relations.</li>
+    <li>Approve, confirm, approve hours - one write per decision where possible.</li>
+    <li>Exit criterion: one event runs end to end, and the report matches the old numbers.</li>
+  </ul>
+
+  <h3>Phase 5 - Volunteer Profile tool</h3>
+  <ul class="checklist">
+    <li>Own profile, events, tasks, hours, certificate, messages.</li>
+    <li>Manager variant on the same tool: network approval, edit, ledger verification.</li>
+  </ul>
+
+  <h3>Phase 6 - Hygiene and retirement</h3>
+  <ul class="checklist">
+    <li>Merge duplicate persons by normalized email.</li>
+    <li>Archive <code>vm.eventTasks</code>, <code>vm.eventHours</code>, <code>vm.eventMessages</code> after two clean
+      releases.</li>
+  </ul>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="risks">12. Risks</h2>
+
+  <table>
+    <tr><th>Risk</th><th>Impact</th><th>Mitigation</th></tr>
+    <tr>
+      <td>Volunteers cannot write their own relation (P2)</td>
+      <td>No volunteer-initiated apply, hours or task progress</td>
+      <td>Resolve in phase 1 before building; fallback options in section 9</td>
+    </tr>
+    <tr>
+      <td>Volunteers can read the whole relation type</td>
+      <td>Roster exposure</td>
+      <td>Restrict reads by person (P4); if impossible, accept "names only, no contact data" as policy</td>
+    </tr>
+    <tr>
+      <td>Duplicate relations for one pair</td>
+      <td>Double membership, double hours</td>
+      <td>Deterministic id, or check-then-create in one tool action</td>
+    </tr>
+    <tr>
+      <td>Hours approval half-completed</td>
+      <td>Ledger written but pending row left, or the reverse</td>
+      <td>Deterministic ledger ids and <code>approvedLedgerIds</code>; repair action re-runs safely</td>
+    </tr>
+    <tr>
+      <td>Event tool loads a very large team</td>
+      <td>Slow event page</td>
+      <td>Page the relations list (50 at a time); totals come from aggregation or a capped scan</td>
+    </tr>
+    <tr>
+      <td>Task progress split between event and relation</td>
+      <td>Confusing status</td>
+      <td>One lifecycle with a single derivation rule: the relation says what the volunteer did, the event says what
+        the manager confirmed</td>
+    </tr>
+    <tr>
+      <td>Two writers on one relation (volunteer and manager)</td>
+      <td>One side's change is lost: a new pending hour line disappears, or an approved line comes back</td>
+      <td>Answer P6; re-read before write with an <code>updatedAt</code> check; retry once; show "this record
+        changed, refresh" instead of overwriting silently</td>
+    </tr>
+    <tr>
+      <td>Pruning silently lowers a certificate total</td>
+      <td>The volunteer's lifetime hours appear to drop</td>
+      <td>Collapse old ledger lines into a <code>summary</code> line that keeps the hours; totals are recomputed from
+        detail plus summary lines</td>
+    </tr>
+    <tr>
+      <td>A new field or array is added later without a budget</td>
+      <td>The document grows past the limit again</td>
+      <td>Rule in section 8.4: every new array needs a cap and a length limit in the same change, reviewed</td>
+    </tr>
+  </table>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="open">13. Remaining decisions</h2>
+
+  <table>
+    <tr><th>#</th><th>Decision</th><th>Recommendation</th></tr>
+    <tr><td>D1</td><td>Two or three object types?</td><td>Three: person, event, membership relation</td></tr>
+    <tr><td>P1</td><td>Equality filters available?</td><td>Required; verify first</td></tr>
+    <tr><td>P2</td><td>Can a volunteer write only their own relation?</td><td>Required for volunteer-initiated actions</td></tr>
+    <tr><td>P4</td><td>Can reads be limited to one's own relations?</td><td>Preferred; otherwise names-only policy</td></tr>
+    <tr><td>D4</td><td>Pending hours location</td><td>Relation (confirmed)</td></tr>
+    <tr><td>D5</td><td>Task completion</td><td>Volunteer reports, manager confirms (confirmed)</td></tr>
+    <tr><td>D7</td><td>New type id or reuse <code>vm.eventApplications</code>?</td><td>Reuse and relabel; add a new id only if the semantics must be separated</td></tr>
+    <tr><td>D8</td><td>Are positions mandatory?</td><td>Optional; no positions means a single "volunteer" slot</td></tr>
+    <tr><td>D9</td><td>May old ledger detail be collapsed into yearly summary lines?</td><td>Yes; required to keep the person document bounded without losing the total</td></tr>
+    <tr><td>D10</td><td>Is a 2,000-character message limit acceptable?</td><td>Yes; it is the single change that makes the event document safe</td></tr>
+    <tr><td>P7</td><td>What is the real per-object size limit?</td><td>Confirm before phase 2; the budget assumes 1 MiB</td></tr>
+    <tr><td>P6</td><td>Replace or merge on update?</td><td>Confirm before phase 3; it decides how the two relation writers are made safe</td></tr>
+  </table>
+
+  <!-- ═════════════════════════════════════════════════════════ -->
+  <h2 id="appendix">14. Appendix: schemas</h2>
+
+  <h3>14.1 Membership relation</h3>
+  <pre><code>{
+  "id": "per_1__evt_food_2026",
+  "personId": "per_1",
+  "personUserId": "usr_123",
+  "eventId": "evt_food_2026",
+  "eventName": "Community Food Drive",
+  "eventDate": "2026-10-26",5 KB each typical (definition only)</td><td class="num">0.3 MB</td></tr>
+    <tr><td>Task documents</td><td class="num">60</td><td>about 25 KB each typical</td><td class="num">1.5 MB</td></tr>
+    <tr><td>Message volumes</td><td class="num">90</td><td>about 60 KB each typical, rotated</td><td class="num">5.4 MB</td></tr>
+    <tr><td>Relations</td><td class="num">6,000</td><td>about 2 KB each typical</td><td class="num">12 MB</td></tr>
+    <tr><td>Largest relation</td><td class="num">1</td><td>all caps + field limits</td><td class="num">60 KB (6%)</td></tr>
+    <tr><td>Largest event</td><td class="num">1</td><td>definition + 20 positions</td><td class="num">12 KB (1%)</td></tr>
+    <tr><td>Largest tasks document</td><td class="num">1</td><td>200 tasks at 500-char descriptions</td><td class="num">120 KB (11%)</td></tr>
+    <tr><td>Largest message volume</td><td class="num">1</td><td>size gate, not count</td><td class="num">250 KB (24%)</td></tr>
+    <tr><td>Largest person</td><td class="num">1</td><td>500 ledger lines + 100 messages</td><td class="num">335 KB (32%)</td></tr>
+    <tr><th colspan="3">Hard budget enforced before every write</th><th class="num">600 KB</th></tr>
+    <tr><th colspan="3">Store limit assumed</th><th class="num">1 MiB</th></tr>
+  </table>
+
+  <p style="margin-top:28px; color: var(--muted); font-size: 12px;">
+    End of plan v4
+  "pendingHours": [
+    { "id": "ph_1", "date": "2026-10-26", "taskId": "tsk_1",
+      "taskTitle": "Welcome desk setup", "hours": 4.5,
+      "note": "Set up and ran the desk", "submittedAt": "2026-10-26T18:00:00Z" }
+  ],
+  "hoursApprovedTotal": 0,
+  "lastApprovedAt": "",
+  "approvedLedgerIds": [],
+  "notes": "",
+  "createdAt": "2026-10-01T09:00:00Z",
+  "updatedAt": "2026-10-26T18:00:00Z",
+  "schemaVersion": 3
+}</code></pre>
+
+  <h3>14.2 Person ledger line</h3>
+  <pre><code>{
+  "id": "per_1__evt_food_2026:ph_1",
+  "eventId": "evt_food_2026",
+  "eventName": "Community Food Drive",
+  "eventDate": "2026-10-26",
+  "taskSummary": "Welcome desk setup (4.5 h)",
+  "hours": 4.5,
+  "approvedBy": "Alice Manager",
+  "approvedAt": "2026-10-27T09:00:00Z"
+}</code></pre>
+
+  <h3>14.3 Event task</h3>
+  <pre><code>{
+  "id": "tsk_1",
+  "title": "Welcome desk setup",
+  "description": "Set up the registration desk before doors open.",
+  "status": "reported-done",
+  "assigneePersonId": "per_1",
+  "assigneeName": "Bob Volunteer",
+  "dueDate": "2026-10-25",
+  "estimatedHours": 3,
+  "createdAt": "2026-10-05T10:00:00Z",
+  "createdBy": "Alice Manager",
+  "completedAt": "",
+  "completedBy": ""
+}</code></pre>
+
+  <h3>14.4 Calculator</h3>
+  <table>
+    <tr><th>Item</th><th>Value</th><th>Formula</th><th>Result</th></tr>
+    <tr><td>Persons</td><td class="num">1,000</td><td>about 20 KB each typical</td><td class="num">20 MB</td></tr>
+    <tr><td>Events per year</td><td class="num">60</td><td>about 30 KB each typical</td><td class="num">1.8 MB</td></tr>
+    <tr><td>Relations</td><td class="num">6,000</td><td>about 2 KB each typical</td><td class="num">12 MB</td></tr>
+    <tr><td>Largest relation</td><td class="num">1</td><td>all caps + field limits</td><td class="num">60 KB (6%)</td></tr>
+    <tr><td>Largest event</td><td class="num">1</td><td>200 tasks + 100 messages at 2,000 chars</td><td class="num">390 KB (37%)</td></tr>
+    <tr><td>Largest person</td><td class="num">1</td><td>500 ledger lines + 100 messages</td><td class="num">335 KB (32%)</td></tr>
+    <tr><th colspan="3">Hard budget enforced before every write</th><th class="num">600 KB</th></tr>
+    <tr><th colspan="3">Store limit assumed</th><th class="num">1 MiB</th></tr>
+  </table>
+
+  <p style="margin-top:28px; color: var(--muted); font-size: 12px;">
+    End of plan v3. Nothing in this document changes application code, data or configuration.
+  </p>
+
+</main>
+
+</body>
+</html>

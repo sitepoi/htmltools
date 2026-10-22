@@ -558,6 +558,7 @@
         <select class="form-input sort-select" id="menu-sort"><option value="name_asc">Name A-Z</option><option value="name_desc">Name Z-A</option><option value="price_asc">Price: Low-High</option><option value="price_desc">Price: High-Low</option></select>
         <button type="button" class="btn btn-sm btn-primary" id="menu-add-item-btn">+ Add Item</button>
         <button type="button" class="btn btn-sm btn-ghost" id="menu-import-gloria-btn" title="Import menu from Gloria JSON">📥 Import Gloria</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="menu-import-sample-btn" title="Import the bundled sample menu or a pasted menu JSON">📥 Samples</button>
       </div>
       <div class="items-grid" id="menu-items-grid"><div class="empty-state">Select a category to view items</div></div>
     </main>
@@ -931,6 +932,54 @@
     </div>
   </div>
 
+  <!-- Sample Menu Import Modal -->
+  <div class="modal-overlay" id="menu-import-modal" style="display:none;">
+    <div class="modal-dialog modal-dialog-deal">
+      <div class="deal-editor-header">
+        <div class="modal-title">📥 Import sample menu</div>
+        <button type="button" class="btn btn-sm btn-ghost" id="menu-import-close">✕</button>
+      </div>
+      <div class="deal-editor-body">
+        <fieldset class="settings-group">
+          <legend>Source</legend>
+          <div class="radio-row">
+            <label class="radio-label"><input type="radio" name="menu-import-source" id="menu-import-bundled" checked> Bundled sample file</label>
+            <label class="radio-label"><input type="radio" name="menu-import-source" id="menu-import-paste"> Paste JSON</label>
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <select class="form-input" id="menu-import-file"></select>
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <textarea class="form-input form-textarea" id="menu-import-json" rows="8" style="display:none;" placeholder='Paste a JSON object with a "menu" key holding "categories", "items" and "modifier_groups" (or paste those arrays directly)'></textarea>
+          </div>
+          <span class="field-hint">The bundled sample menu is the demo restaurant used by the deals samples (Pizza / Dips / Wings / Drinks + Toppings). Import it first, then import the deals samples without errors.</span>
+        </fieldset>
+        <fieldset class="settings-group">
+          <legend>Sections to import</legend>
+          <div class="deal-import-checks">
+            <label class="radio-label"><input type="checkbox" id="menu-import-categories" checked> Categories</label>
+            <label class="radio-label"><input type="checkbox" id="menu-import-items" checked> Items</label>
+            <label class="radio-label"><input type="checkbox" id="menu-import-modifiers" checked> Modifier groups</label>
+          </div>
+        </fieldset>
+        <fieldset class="settings-group">
+          <legend>Mode</legend>
+          <div class="radio-row">
+            <label class="radio-label"><input type="radio" name="menu-import-mode" id="menu-import-append" checked> Append - add missing ids next to what exists (ids are kept so deal references still match)</label>
+            <label class="radio-label"><input type="radio" name="menu-import-mode" id="menu-import-replace"> Replace - overwrite the whole menu</label>
+          </div>
+        </fieldset>
+        <div id="menu-import-errors" class="deal-editor-errors" style="display:none;"></div>
+      </div>
+      <div class="deal-editor-actions">
+        <div class="deal-editor-actions-right">
+          <button type="button" class="btn btn-sm btn-ghost" id="menu-import-cancel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" id="menu-import-run">📥 Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Category Delete Confirmation Modal -->
   <div class="modal-overlay" id="cat-delete-modal" style="display:none;">
     <div class="modal-dialog modal-dialog-sm">
@@ -1197,7 +1246,7 @@
         <div class="form-group" style="margin-top:8px;">
           <textarea class="form-input form-textarea" id="deals-import-json" rows="8" style="display:none;" placeholder='Paste a JSON object with any of: "deals", "campaigns", "promotions", "hero", "promo_codes"'></textarea>
         </div>
-        <span class="field-hint">The samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings). Importing into a menu without those categories is blocked and the validation errors are shown.</span>
+        <span class="field-hint">The samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings). Import the sample menu first (Menu tab → 📥 Samples), then import the deals - otherwise the import is blocked and the validation errors are shown.</span>
       </fieldset>
       <fieldset class="settings-group">
         <legend>Sections to import</legend>

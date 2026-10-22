@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Event Volunteer Manager - Technical Source of Truth</title>
+  <!--
+  SSOT for the Event Volunteer Manager html tool (one tool instance per event
+  object; it holds the event information and every connection between the
+  event and its volunteers). Governance: a decision that is not in section 11
+  did not happen; the register is append-only; when code and this document
+  disagree, this document is updated first, then the code follows. Task board
+  is section 15; ideas section 16; tests section 17; risks section 18;
+  releases section 19 (managed by the release process).
+  -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">Event Volunteer Manager</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v1.4</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>Event Volunteer Manager</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for the Event Volunteer Manager html tool. One tool
+    instance is attached to one event CMS object and manages everything that
+    happens around that event: the volunteers linked to it, their roles, the
+    work, the hours, the messages, the report and the event information
+    itself. The event object is created in the CMS; this tool never creates or
+    deletes it. Every decision made for this tool is logged in section 11 and
+    this document is updated in the same change as the code. When this
+    document or the code disagree, this document is the tiebreaker - it is
+    updated to capture the final decision, never silently left divergent.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>1.4</td></tr>
+    <tr><th>Last updated</th><td>2026-10-22</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (EventVolunteerManager).</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/EventVolunteerManager.html</code>, <code>app/EventVolunteerManager.css</code>, <code>app/EventVolunteerManager.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>Creating or deleting the event object (CMS owns the object), the volunteer's own record and applications (VolunteerProfile tool), cross event reporting and program level dashboards (future reporting surface), email campaign design.</td></tr>
+    <tr><th>Companion documents</th><td>Satellites to be generated from this SSOT: <code>index.html</code> (docs shell), <code>webpage.html</code>, <code>help.html</code>, <code>presentation.html</code>, <code>social.html</code>, <code>updates.html</code></td></tr>
+    <tr><th>Paired tool</th><td><code>../VolunteerProfile/docs/ssot.html</code> - the volunteer's own side. Both act on the same membership records.</td></tr>
+  </table>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one tool and one set of invariants around running a
+  single event with volunteers - and it is the <strong>single source of truth
+  for every decision we make</strong> about this tool, now and in the future.
+  No decision is considered made until it is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this tool, the decision is added to section 11 with a
+    date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the code
+    disagree, the discrepancy is resolved in this document first, then applied
+    to the code - never the other way around.</li>
+    <li><strong>Check before changing.</strong> Read the relevant section and
+    the register before changing behavior, and update this document in the
+    same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function and snippet uses understandable names. No cryptic abbreviations.
+    Short names only for loop indexes and universally known abbreviations
+    (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> The event object holds the
+  event. The membership object holds the connection between one volunteer and
+  that event. This tool never copies a volunteer profile into event data and
+  never stores records in <code>tool.setValue()</code>. Everything below
+  serves those two sentences.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/EventVolunteerManager/app/EventVolunteerManager.html"><code>app/EventVolunteerManager.html</code></a></td>
+      <td>Tool markup: top bar, menu, seven screens, modal shell.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/EventVolunteerManager/app/EventVolunteerManager.css"><code>app/EventVolunteerManager.css</code></a></td>
+      <td>Tool stylesheet (navy design language, dense tables).</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/EventVolunteerManager/app/EventVolunteerManager.js"><code>app/EventVolunteerManager.js</code></a></td>
+      <td>Tool logic: SDK wiring, five object types, decisions, tasks, hours, messages, report.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/EventVolunteerManager/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Standalone harness with the mock SDK and sample event; inlines the tool HTML.</td>
+      <td>Whole file - the mock storage must mirror the five types</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerProfile/app/VolunteerProfile.js"><code>../VolunteerProfile/app/VolunteerProfile.js</code></a></td>
+      <td>Paired tool. Not imported, but shares the membership record contract.</td>
+      <td>Membership fields and ledger id rule</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <p>The factual baseline of what is already built and working in this tool
+  folder. Planned work never appears here; planned work is in section 15 and
+  the idea backlog in section 16.</p>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>Event read from the host object with every field this tool needs</td><td><code>EventVolunteerManager.js</code> - loadAll / afterEvent</td><td>v1.0 (2026-10-21)</td><td>Smoke suite, headless render</td></tr>
+    <tr><td>C-02</td><td>Event information editing: name, status, capacity, dates, times, venue, city, address, description, notes</td><td>saveEventDefinition / renderEventForm</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-03</td><td>Roles with slot counts, add, edit and delete</td><td>savePositions / openPositionModal</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-04</td><td>Requests to decide, approve and decline with decided date and decider</td><td>decideRelation / openDecideModal</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-05</td><td>Add volunteers from the network in one action, approved immediately</td><td>confirmAddVolunteers</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-06</td><td>Roles per placement, remove a placement without touching the person</td><td>saveRolesFor / removeRelation</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-07</td><td>Task document per event: create, edit, assign, reassign, confirm, delete</td><td>createTask / updateTaskRecord / setTaskStatus</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-08</td><td>Assignment restricted to volunteers approved for this event, with the task row mirrored on the placement</td><td>assignTaskLink</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-09</td><td>Hour approval into the permanent volunteer ledger with deterministic ids</td><td>approvePendingHours / writePersonLedger</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-10</td><td>Hour rejection recorded in the placement history</td><td>rejectPendingHours</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-11</td><td>Announcements in volumes, automatic rotation at 150 messages, manual rotation</td><td>postMessage / rotateVolume</td><td>v1.0</td><td>Smoke suite</td></tr>
+    <tr><td>C-12</td><td>Summary screen with headline numbers and per volunteer table, plus PDF export</td><td>renderReport / exportReport</td><td>v1.0</td><td>Headless render</td></tr>
+    <tr><td>C-13</td><td>Read-only mode for volunteers, with every write control disabled and a role pill</td><td>renderAll / canManage</td><td>v1.0</td><td>Headless render</td></tr>
+    <tr><td>C-14</td><td>Screen purposes: every screen states in one line what it is for</td><td>markup, <code>.et-lead</code></td><td>v1.1 (2026-10-21)</td><td>Headless render</td></tr>
+    <tr><td>C-15</td><td>Renamed from EventTeam to Event Volunteer Manager, folder, files and catalog idea</td><td>folder + catalog</td><td>v1.1</td><td>Catalog rebuild</td></tr>
+  </table>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Event object</td><td>The CMS object this tool instance is attached to. Created in the CMS, never here.</td></tr>
+    <tr><td>Placement (membership)</td><td>A record linking one volunteer profile to this event: status, roles, task rows, pending hours, approved total.</td></tr>
+    <tr><td>Request</td><td>A placement with status <code>requested</code>, created by the volunteer tool and decided here.</td></tr>
+    <tr><td>Role</td><td>A named job on the event with a slot count, for example Sorting with six places. Volunteers apply for roles.</td></tr>
+    <tr><td>Pending hours</td><td>Hour lines a volunteer submitted, not yet decided. They are not part of any total.</td></tr>
+    <tr><td>Ledger</td><td>The permanent <code>hoursLedger[]</code> on the volunteer profile. Only manager approval writes to it.</td></tr>
+    <tr><td>Volume</td><td>One message document of this event. A full volume closes and the next one opens.</td></tr>
+    <tr><td>Release group</td><td>A set of tasks that must ship together, defined in section 15.</td></tr>
+  </table>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <ul>
+    <li>2026-10-21: the previous single tool mixed event management, volunteer master data and cross event reporting in one screen, and stored tasks, hours and messages as separate documents stamped with <code>eventId</code>.</li>
+    <li>The event record itself lived inside the same tool as the volunteer roster, so a message flood or a long task list increased the event document and slowed event edits.</li>
+    <li>An event could not have its own manager workspace: every manager saw every event and every person in one page.</li>
+  </ul>
+  <h3>5.2 Current implementation (verified in code)</h3>
+  <pre>
+// app/EventVolunteerManager.js - five types, one document per write rhythm
+var DEFAULT_TYPES = {
+  event: 'vm.events-uniconbaseapps',              // host object
+  relation: 'vm.eventMemberships-uniconbaseapps', // personId + '__' + eventId
+  person: 'volunteerRegistry-uniconbaseapps',     // names + permanent ledger
+  tasks: 'vm.eventTasks-uniconbaseapps',          // eventId + '__tasks'
+  messages: 'vm.eventMessages-uniconbaseapps'     // eventId + '__messages', then '#2', '#3'
+};
+  </pre>
+  <h3>5.3 Structural decisions that follow</h3>
+  <ol>
+    <li><strong>One instance per event.</strong> The event is the unit of work and of permission.</li>
+    <li><strong>Three write rhythms, three documents.</strong> Event information, task list and message volumes are separate so a busy conversation cannot touch the event record.</li>
+    <li><strong>The volunteer owns one record.</strong> This tool reads the profile and only writes the ledger line when approving hours.</li>
+  </ol>
+  <p class="risk"><strong>Root cause of the old design:</strong> one document carried the event definition, the roster,
+  the tasks and the messages, and one tool carried every event of the organization.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>The tool manages exactly ONE event: it is attached to an event object; all operational data is scoped to that event.</li>
+    <li>The event object is created, named and deleted in the CMS. This tool only reads and updates its fields.</li>
+    <li>Every record (placement, task document, message volume, ledger line) is its own CMS object via <code>tool.requestObjects()</code>. <code>tool.setValue()</code> holds UI preferences only.</li>
+    <li>Task definitions live in one document per event; volunteer progress lives on the placement and never writes the task document.</li>
+    <li>Hours approval writes the volunteer ledger first, then clears the pending line, and is idempotent.</li>
+    <li>Assignments are limited to volunteers approved for this event.</li>
+    <li>Messages rotate by volume so no volume approaches the document budget.</li>
+    <li>Role gating: managers write everything; a volunteer opening the tool sees a read only view.</li>
+    <li>Every screen states its purpose in one line, and every empty state names the next action.</li>
+    <li>Graceful degradation: a missing object type produces a clear empty state and a report, never a broken page.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr>
+      <td><strong>A. One tool per event object</strong></td>
+      <td>One instance per event; tasks and messages in their own documents; volunteer master data in the shared registry.</td>
+      <td>Yes - matches the CMS object model, isolates permissions, keeps every document small.</td>
+      <td>Medium - new folder and a new model</td>
+      <td class="status-adopted">ADOPTED</td>
+    </tr>
+    <tr>
+      <td><strong>B. Keep one organization-wide console</strong></td>
+      <td>One tool lists every event and opens each one inside itself.</td>
+      <td>No - one document would grow with the whole program, and permission per event becomes a screen concern instead of a store rule.</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED (budget and permissions)</td>
+    </tr>
+    <tr>
+      <td><strong>C. Keep tasks and messages inside the event document</strong></td>
+      <td>One event document holds definition, roster, tasks and messages.</td>
+      <td>No - every message rewrites the event and a long task list slows every event edit.</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED (write amplification)</td>
+    </tr>
+    <tr>
+      <td><strong>D. Let volunteers manage the event too</strong></td>
+      <td>One tool for both sides, with the volunteer editing tasks and hours directly.</td>
+      <td>No - decisions need one owner, and a volunteer writing the task document loses concurrent updates.</td>
+      <td>Medium</td>
+      <td class="status-rejected">REJECTED (data loss risk)</td>
+    </tr>
+  </table>
+  <p><strong>Decision: option A.</strong> The event is a CMS object, the tool is attached to it, and the volunteer side is
+  a separate tool with its own SSOT.</p>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Core invariants</h3>
+  <p class="note"><strong>Invariant EVENT-HOST.</strong> An instance is bound to exactly one event object. It cannot list,
+  create or delete events.<br />
+  <strong>Invariant PLACEMENT-ONLY.</strong> Anything that connects a volunteer to this event lives in the placement
+  record, never inside the event document.<br />
+  <strong>Invariant ONE-APPROVER.</strong> A manager decides requests, hours and task confirmation. A volunteer never
+  decides.</p>
+
+  <h3>8.2 Type model</h3>
+  <table>
+    <tr><th>Type</th><th>Scope</th><th>Document = one ...</th><th>Key fields</th></tr>
+    <tr><td><code>vm.events-uniconbaseapps</code></td><td>instance (host)</td><td>opportunity</td><td><code>name</code>, <code>status</code> (draft / open / closed / cancelled), <code>opportunityType</code> (event / task / recurring / self-paced), <code>locationMode</code> (onsite / remote / hybrid), <code>startDate</code>, <code>endDate</code>, <code>startTime</code>, <code>endTime</code>, <code>locationName</code>, <code>city</code>, <code>address</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code>, <code>recurrence</code>, <code>capacity</code>, <code>description</code>, <code>notes</code>, <code>positions[]</code></td></tr>
+    <tr><td><code>vm.eventMemberships-uniconbaseapps</code></td><td>instance</td><td>placement</td><td><code>personId</code>, <code>personUserId</code>, <code>eventId</code>, <code>status</code> (requested / approved / declined / removed), <code>positions[]</code>, <code>taskLinks[]</code>, <code>pendingHours[]</code>, <code>hoursHistory[]</code>, <code>hoursApprovedTotal</code>, <code>approvedLedgerIds[]</code></td></tr>
+    <tr><td><code>volunteerRegistry-uniconbaseapps</code></td><td>shared</td><td>volunteer profile</td><td><code>userId</code>, name, contact, skills, <code>status</code>, <code>hoursLedger[]</code>, <code>totals</code></td></tr>
+    <tr><td><code>vm.eventTasks-uniconbaseapps</code></td><td>instance</td><td>task list of this event</td><td><code>eventId</code>, <code>tasks[]</code>, <code>updatedAt</code>, <code>updatedBy</code></td></tr>
+    <tr><td><code>vm.eventMessages-uniconbaseapps</code></td><td>instance</td><td>message volume</td><td><code>eventId</code>, <code>volume</code>, <code>closed</code>, <code>messages[]</code>, <code>lastSentAt</code></td></tr>
+  </table>
+
+  <h3>8.3 Document ids</h3>
+  <table>
+    <tr><th>Object</th><th>Id</th><th>Reason</th></tr>
+    <tr><td>Placement</td><td><code>personId + '__' + eventId</code></td><td>One placement per person and event; stable prefix for ledger ids.</td></tr>
+    <tr><td>Task list</td><td><code>eventId + '__tasks'</code></td><td>Direct get, no query and no index.</td></tr>
+    <tr><td>Message volume</td><td><code>eventId + '__messages'</code>, then <code>#2</code>, <code>#3</code></td><td>One read per volume; rotation keeps each volume small.</td></tr>
+  </table>
+  <p>If the platform cannot create an object with a chosen id, the tool queries the same field first and only then
+  creates. Duplicates are prevented either way.</p>
+
+  <h3>8.4 Event, task and message shapes</h3>
+  <pre>
+event:    { name, status, startDate, endDate, startTime, endTime, locationName, city, address,
+            capacity, description, notes, positions: [{ id, name, slots, description }] }
+
+task:     { id, title, description, status, dueDate, estimatedHours, assigneePersonId, assigneeName,
+            createdAt, createdBy, completedAt, completedBy }
+
+placement:{ personId, personUserId, eventId, status, positions: [{ positionId, name, status }],
+            taskLinks: [{ taskId, title, status }], pendingHours: [{ id, date, hours, note }],
+            hoursApprovedTotal, approvedLedgerIds }
+
+volume:   { eventId, volume, closed, messages: [{ id, fromUserId, fromName, fromRole, subject,
+            body, sentAt, audience, readBy[] }] }
+  </pre>
+
+  <h3>8.5 Firestore size budget (per document, 1 MB cap)</h3>
+  <table>
+    <tr><th>Where</th><th>What is stored</th><th>Typical size</th><th>Cap risk</th></tr>
+    <tr><td><code>tool.setValue()</code></td><td>UI preferences only: <code>{ eventObjectId, lastView }</code></td><td>~0.1 KB</td><td>None - records are forbidden here</td></tr>
+    <tr><td>Event document</td><td>definition and up to 20 roles</td><td>~12 KB</td><td>None</td></tr>
+    <tr><td>Task document</td><td>up to 200 tasks</td><td>~120 KB</td><td>Low - blocked at the 200 cap</td></tr>
+    <tr><td>Message volume</td><td>up to 150 messages, 2,000 characters each</td><td>~250 KB</td><td>Low - rotation keeps it bounded</td></tr>
+    <tr><td>Placement</td><td>10 roles, 40 task rows, 60 pending hours, 40 history rows</td><td>~60 KB</td><td>None</td></tr>
+    <tr><td>Volunteer ledger</td><td>500 lines, oldest year collapsed</td><td>~335 KB</td><td>Low - summary lines preserve totals</td></tr>
+  </table>
+  <p>Soft budget 400 KB, hard budget 600 KB, measured before every write. Above the hard budget the write is blocked
+  with an explanation instead of being sent to fail.</p>
+
+  <h3>8.6 Data flow</h3>
+  <pre>
+VolunteerProfile ──write──▶ placement (requested, pending hours, task progress)
+                                  │
+EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
+                                  ▼
+                 volunteerRegistry.hoursLedger  ◀── approval writes one line
+  </pre>
+  <ul>
+    <li>Both tools read the same placement, so each side sees the other's change on the next refresh.</li>
+    <li>The manager tool never edits a volunteer profile except the ledger line created by approval.</li>
+  </ul>
+
+  <h3>8.7 Caller contract table</h3>
+  <table>
+    <tr><th>Caller</th><th>Required behavior</th></tr>
+    <tr><td>This tool (load)</td><td>Read the event by id, filter placements by <code>eventId</code>, read the task document by id, read message volumes by prefix.</td></tr>
+    <tr><td>This tool (assign)</td><td>Write the task document first, then the placement task row. Never the reverse.</td></tr>
+    <tr><td>This tool (approve hours)</td><td>Write the profile ledger first, then clear the pending line and update totals.</td></tr>
+    <tr><td>VolunteerProfile</td><td>Writes <code>pendingHours[]</code> and <code>taskLinks[]</code> status only.</td></tr>
+    <tr><td>CMS</td><td>Creates and deletes the event object; authorizes the five types.</td></tr>
+  </table>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>No event object attached</td><td>Every screen shows the empty state "No event loaded"; the menu foot explains the tool must be attached to an event.</td></tr>
+    <tr><td>The event object was deleted in the CMS</td><td>Same empty state; placements and approved hours stay intact.</td></tr>
+    <tr><td>A volunteer opens the tool</td><td>Read only: no add, no decision, no approval, role pill reads "Volunteer (view only)".</td></tr>
+    <tr><td>Assigning to a person not approved for this event</td><td>Refused with a message; the dropdown only offers approved volunteers.</td></tr>
+    <tr><td>Approving the same hour line twice</td><td>Second approval finds the ledger id already present and does not double count.</td></tr>
+    <tr><td>A message fills the volume</td><td>The volume closes and the next one is created automatically, then the screen reloads.</td></tr>
+    <tr><td>Task document is missing on first task</td><td>Created on demand with <code>eventId</code> and an empty task list.</td></tr>
+    <tr><td><code>requestObjects</code> error mid write</td><td>Error toast, the previous screen state stays, nothing is half written.</td></tr>
+    <tr><td>A role is deleted while placements hold it</td><td>The event loses the role; placements keep their own name copy so history reads correctly.</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>No manager-side hour entry</td><td>A manager can only approve what the volunteer submitted</td><td>Task T-14</td></tr>
+    <tr><td>L-02</td><td>An approved hour line cannot be corrected or deleted here</td><td>A wrong line needs a manual CMS correction</td><td>Task T-14</td></tr>
+    <tr><td>L-03</td><td>No logged-hours column per task</td><td>The task table shows estimated hours only</td><td>Task T-13</td></tr>
+    <tr><td>L-04</td><td>No per person message targeting</td><td>Announcements always go to the whole team</td><td>Task T-15</td></tr>
+    <tr><td>L-05</td><td>Roles do not warn when slots are exceeded</td><td>A role can be overfilled without a hint</td><td>Task T-16</td></tr>
+    <tr><td>L-06</td><td>No shifts with their own time slots</td><td>An event is one date and time</td><td>Idea I-01</td></tr>
+    <tr><td>L-07</td><td>No email dispatch of announcements</td><td>Volunteers see messages only when they open the tool</td><td>Idea I-03</td></tr>
+    <tr><td>L-08</td><td>Closed message volumes cannot be deleted from inside the tool</td><td>A manager deletes the object in the CMS</td><td>Accepted for now</td></tr>
+    <tr><td>L-09</td><td>The event form does not edit the opportunity fields the volunteer catalog reads (type, location mode, commitment, deadline, recurrence)</td><td>A task based, recurring or self paced opportunity has to be created in the CMS</td><td>Task T-19</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr>
+      <td>D-EVM-01</td><td>2026-10-21</td>
+      <td>The tool is bound to ONE event object and is named Event Volunteer Manager.</td>
+      <td>An event is a CMS object; the tool manages that event and its volunteer connections, not a list of events.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-02</td><td>2026-10-21</td>
+      <td>No create or delete event in the tool.</td>
+      <td>Object lifecycle belongs to the CMS; the active application manages all event related data.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-03</td><td>2026-10-21</td>
+      <td>Tasks and messages live in their own documents per event.</td>
+      <td>Different write rhythms; a message can never damage the event record and every event edit stays cheap.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-04</td><td>2026-10-21</td>
+      <td>Volunteers never write the task document; progress lives on the placement.</td>
+      <td>Concurrent writes on one large document lose data.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-05</td><td>2026-10-21</td>
+      <td>Hours approval writes the volunteer ledger first, then clears the pending line.</td>
+      <td>Idempotent without a batch write; the worst case is a stale pending row, never double hours.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-06</td><td>2026-10-21</td>
+      <td>Assignments are limited to volunteers approved for this event.</td>
+      <td>Otherwise a task appears in a person's tool for an event they do not belong to.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-07</td><td>2026-10-21</td>
+      <td>A volunteer opening this tool gets a read only view.</td>
+      <td>One owner per decision keeps the model simple and the store rules enforceable.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-08</td><td>2026-10-21</td>
+      <td>Messages rotate by volume: 150 messages per volume, closed volumes stay readable.</td>
+      <td>Bounded documents, and old chatter can be deleted without touching the event, tasks or hours.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-09</td><td>2026-10-21</td>
+      <td>Every screen carries a one-line purpose, and menu labels use plain words (Volunteers, Summary, Event details).</td>
+      <td>Asked to make the tools as easy to use and understand as possible.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-10</td><td>2026-10-22</td>
+      <td>The tool uses the documentation visual language: Inter, slate ink on #f8fafc, white cards with #e2e8f0 borders, indigo #4f46e5 accents, the same chips and the same table header treatment.</td>
+      <td>Asked for the apps to look like the SSOT documents. One visual language across tool and document removes the second design system and its colours.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-11</td><td>2026-10-22</td>
+      <td>The event object also carries the volunteering offer: <code>opportunityType</code>, <code>locationMode</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code>, <code>recurrence</code> and richer positions (skills, timeCommitment). Positions are the job descriptions a volunteer applies for.</td>
+      <td>The volunteer catalog must serve task based, recurring and self paced volunteering, not only dated events. One object type keeps both tools on the same contract; the fields are optional and ignored when empty.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li>Every decision is recorded in section 11 with a date, and the affected section changes in the same commit as the code.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with a reason; never delete rows.</li>
+    <li>Before adding a field to the event document, ask whether it belongs to the event or to a placement. Event = the same for everybody; placement = one person.</li>
+    <li>Never write records through <code>tool.setValue()</code>; it is reserved for UI preferences.</li>
+    <li>Never let a volunteer write the task document or the ledger.</li>
+    <li>Keep the five type names identical to the paired tool's SSOT. A rename must change both documents in one change.</li>
+    <li>After any change, re-run the checks in section 17 and update the capability table in section 3.</li>
+    <li>Keep the visual language identical to the documentation (Inter, slate ink, indigo accent, white cards, the shared chip palette). A new colour or font is a decision row, not a local tweak.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Five type constants and host resolution (param, fields, value)</td><td><code>app/EventVolunteerManager.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Event read and edit form, role editor</td><td><code>app/EventVolunteerManager.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Placements: request decision, roles, add volunteers, remove</td><td><code>app/EventVolunteerManager.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Task document: create, assign, confirm, delete</td><td><code>app/EventVolunteerManager.js</code> - DONE</td></tr>
+    <tr><td>5</td><td>Hours: approve into the ledger, reject, records table</td><td><code>app/EventVolunteerManager.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Messages with automatic and manual volume rotation</td><td><code>app/EventVolunteerManager.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Summary screen and PDF export</td><td><code>app/EventVolunteerManager.js</code> - DONE</td></tr>
+    <tr><td>8</td><td>Read only view for volunteers</td><td><code>app/EventVolunteerManager.js</code> - DONE</td></tr>
+    <tr><td>9</td><td>Rename from EventTeam, navigation labels, screen purposes</td><td>folder + <code>.html</code> + <code>.css</code> - DONE</td></tr>
+    <tr><td>10</td><td>Mock SDK mirrors the five types, sample event, role switch, deep link</td><td><code>app/test-harness.html</code> - DONE</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <ol>
+    <li><strong>Real per-object size limit.</strong> The whole budget assumes 1 MiB; if the store is smaller only the caps in section 8.5 scale.</li>
+    <li><strong>Can a document be created with a chosen id?</strong> If not, the query-then-create fallback stays.</li>
+    <li><strong>Can individual fields be protected on update?</strong> If not, manager approval remains the effective gate.</li>
+    <li><strong>Should a decline be reversible without a new request?</strong> Today a declined person must ask again from the volunteer tool.</li>
+    <li><strong>Should a full role block approval or allow an override?</strong> Blocks the capacity warning in T-16.</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE release or is a
+  related set that must not be broken across releases. Click a task to expand
+  its details. Tick the checkbox when a task is done - progress is remembered
+  by the browser per document and shown in the task panel.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong> - a task starts only when:
+      <ul>
+        <li>Its requirement is written in section 6.</li>
+        <li>Options are evaluated and the decision is logged (section 11).</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong> - a group is done only when:
+      <ul>
+        <li>All its tasks are checked.</li>
+        <li>Its open risks are solved or accepted (section 18).</li>
+        <li>The test scenarios of section 17 pass.</li>
+        <li>The document version is bumped and the push tab shows READY.</li>
+      </ul>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> - unclear benefit or a product decision is required.</li>
+  </ul>
+
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <section class="task-group" data-release-group="g1-event-workspace" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Event workspace foundation</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE RELEASE - do not split</span>
+      <span class="task-group-progress" data-group-progress="g1-event-workspace">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g1-event-workspace"></div></div>
+    <p class="task-group-note">Why these belong together: the five type names, the load path and the screens all depend on each other. Shipping one without the others leaves call sites pointing at a type the other screens do not read.</p>
+
+    <div class="task-item" data-task-id="T-01" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Adopt the five-type model and host resolution</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a single document holding the event, the roster, the tasks and the messages.</p>
+          <p><strong>How we will solve it:</strong> five type constants, <code>eventId</code> param, host resolution from the value, the fields and then the query, and a load path that reads event, placements, persons, tasks and messages.</p>
+          <p><strong>Benefit:</strong> one document per write rhythm, every document small.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-02" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Event information screen with role editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the event information had to be editable inside the event tool, with roles volunteers can apply for.</p>
+          <p><strong>How we will solve it:</strong> one form for the event fields with validation (name required, end date not before start), plus a role list with add, edit and delete, capped at 20 roles.</p>
+          <p><strong>Benefit:</strong> the tool owns the event data without owning the object lifecycle.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-03" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Requests, approvals and roles per placement</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the manager needs one place to decide who joins and what they do.</p>
+          <p><strong>How we will solve it:</strong> the volunteers screen lists every placement with network status, placement status and roles; approve and decline write status, decided date and decider; roles are edited per placement.</p>
+          <p><strong>Benefit:</strong> every decision is one write on one record.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-04" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">Add volunteers from the network in one action</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a manager had to wait for volunteers to apply.</p>
+          <p><strong>How we will solve it:</strong> multi-select of people not yet linked and not banned, created as approved placements with source manager.</p>
+          <p><strong>Benefit:</strong> the roster can be built before the event opens.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-05" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Task document with assignment and confirmation</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> tasks were separate documents with no owner model.</p>
+          <p><strong>How we will solve it:</strong> one task document per event, created on demand; assignment mirrors a row onto the placement; reassignment moves the row; confirm sets the task completed and the row confirmed.</p>
+          <p><strong>Benefit:</strong> the volunteer side can report progress without touching a manager document.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-06" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Hours approval into the volunteer ledger</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> approved hours must be a permanent record, counted exactly once.</p>
+          <p><strong>How we will solve it:</strong> write the ledger line with id <code>placementId + ':' + pendingId</code>, recompute totals, then clear the pending line; skip lines already written; reject moves the line to the history.</p>
+          <p><strong>Benefit:</strong> safe without a batch write, no double counting.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-07" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Announcements with volume rotation</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> an unbounded message list inside the event would eventually break the event document.</p>
+          <p><strong>How we will solve it:</strong> a separate message type, 150 messages per volume, automatic rotation when full, manual rotation, closed volumes remain readable.</p>
+          <p><strong>Benefit:</strong> a message can never damage the event, its tasks or its hours.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-08" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Summary screen and PDF export</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the old tool reported across events but not one event in a printable form.</p>
+          <p><strong>How we will solve it:</strong> headline numbers plus a per volunteer table, and a PDF with the organization name.</p>
+          <p><strong>Benefit:</strong> one page for a board or a funder.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-09" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">Read only view for volunteers</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the same tool may be reached by a volunteer through a link.</p>
+          <p><strong>How we will solve it:</strong> <code>canManage()</code> gates every write; all primary buttons are disabled and the role pill states the mode.</p>
+          <p><strong>Benefit:</strong> no accidental writes, no confusing errors.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-10" data-group="g1-event-workspace" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Mock harness with the five types and a sample event</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> no way to test locally without a CMS.</p>
+          <p><strong>How we will solve it:</strong> localStorage store, role switch, sample event with three placements and four tasks, deep link <code>?view=</code>.</p>
+          <p><strong>Benefit:</strong> every screen can be reviewed in seconds.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g2-clarity" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Clarity and naming</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g2-clarity">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g2-clarity"></div></div>
+    <p class="task-group-note">Why these belong together: the rename, the menu labels and the screen purposes all describe the same thing, so shipping half of it would leave two names for one screen.</p>
+
+    <div class="task-item" data-task-id="T-11" data-group="g2-clarity" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-11</span>
+          <span class="task-title">Rename to Event Volunteer Manager and simplify the menu</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the old name described a team, not the event workspace the tool actually is.</p>
+          <p><strong>How we will solve it:</strong> folder and files renamed, catalog idea renamed, menu labels become Volunteers, Summary and Event details, every screen gains a one-line purpose.</p>
+          <p><strong>Benefit:</strong> a new manager understands each screen without training.</p>
+          <p><strong>Files:</strong> folder, <code>.html</code>, <code>.css</code>, catalog, this document</p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g3-parity" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Feature parity with the previous tool</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g3-parity">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g3-parity"></div></div>
+    <p class="task-group-note">Why these belong together: these are the capabilities the previous tool had and this one does not, all on the same two screens (Volunteers and Hours). They are small, additive and need no model change.</p>
+
+    <div class="task-item" data-task-id="T-12" data-group="g3-parity" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-12</span>
+          <span class="task-title">Contact details on the event</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the old event form had a contact name, phone and email; the new form dropped them.</p>
+          <p><strong>How we will solve it:</strong> three fields on the event details form, written to the event document, shown in the header area for the manager.</p>
+          <p><strong>Benefit:</strong> a volunteer with a question has a number to call without leaving the tool.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>app/EventVolunteerManager.html</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-13" data-group="g3-parity" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-13</span>
+          <span class="task-title">Logged hours per task and a cancelled status</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the task table shows estimated hours only, and a task that will not be done must be deleted to disappear.</p>
+          <p><strong>How we will solve it:</strong> sum approved hour records per task into a column; add a cancelled action that keeps the row and removes it from open work.</p>
+          <p><strong>Benefit:</strong> the manager sees effort against estimate, and history is not deleted.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-14" data-group="g3-parity" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-14</span>
+          <span class="task-title">Record hours for a volunteer, correct or delete a line</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-14 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the old tool let a manager set hours directly and fix a mistake; today the manager can only approve what was submitted.</p>
+          <p><strong>How we will solve it:</strong> an hour form for the manager (date, hours, task, volunteer) that writes the ledger line directly with the same deterministic id rule; edit and delete act on the ledger line and record a correction entry on the placement.</p>
+          <p><strong>Benefit:</strong> no more "the volunteer forgot to log it" dead end.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-15" data-group="g3-parity" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-15</span>
+          <span class="task-title">Message one volunteer instead of the whole team</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-15 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the old tool could target one person; now every announcement reaches the whole team.</p>
+          <p><strong>How we will solve it:</strong> an audience choice in the message form (team or one volunteer); a targeted message is written with the person id and shown only to them in the volunteer tool.</p>
+          <p><strong>Benefit:</strong> scheduling and personal matters stay private.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, paired tool read filter</p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-16" data-group="g3-parity" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-16</span>
+          <span class="task-title">Role capacity warning against slot counts</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-16 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a role can be overfilled without anybody noticing.</p>
+          <p><strong>How we will solve it:</strong> count placements per role and show places used against places available; warn, do not block, until section 14 question 5 is answered.</p>
+          <p><strong>Benefit:</strong> the manager sees the gap before the event day.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-19" data-group="g3-parity" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-19</span>
+          <span class="task-title">Edit the volunteering offer fields on the event details screen</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-19 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a manager cannot create a task based, recurring or self paced opportunity from the tool; those records have to be written in the CMS.</p>
+          <p><strong>How we will solve it:</strong> add the offer block to the event form - type select, location mode, commitment, deadline, application deadline and a simple weekly recurrence editor - and let a position carry skills and a time commitment.</p>
+          <p><strong>Benefit:</strong> one tool creates every kind of volunteering the volunteer catalog can show.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>app/EventVolunteerManager.html</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g4-release" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Live verification and first release</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g4-release">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g4-release"></div></div>
+    <p class="task-group-note">Why these belong together: the tool is only real once it runs on a live event with the five types authorized, and the docs satellites are generated from this document.</p>
+
+    <div class="task-item" data-task-id="T-17" data-group="g4-release" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-17</span>
+          <span class="task-title">Verify on one live event object</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-17 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> everything so far is verified against a mock.</p>
+          <p><strong>How we will solve it:</strong> authorize the five types, attach the tool to a draft event, run scenarios S-01 to S-06 of section 17, record the results.</p>
+          <p><strong>Benefit:</strong> real permissions, real ids, real sizes.</p>
+          <p><strong>Files:</strong> CMS settings + this document</p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-18" data-group="g4-release" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-18</span>
+          <span class="task-title">Generate the docs satellites</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-18 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the folder has an SSOT but no docs shell, help page or marketing page.</p>
+          <p><strong>How we will solve it:</strong> <code>npm run docs:init</code> then <code>npm run docs:generate -- EventVolunteerManager</code>.</p>
+          <p><strong>Benefit:</strong> the catalog publish score rises and the tool is explainable.</p>
+          <p><strong>Files:</strong> <code>docs/</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. Discuss each idea and write the outcome inside its details. An
+  agreed idea moves to section 15 with a priority; a rejected idea is marked Ignored with the reason.</p>
+
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Shifts with their own time slots</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> an event can have several shifts (date, start, end, places per role) and volunteers claim one.</p>
+        <p><strong>Why:</strong> a food drive with a morning and an afternoon block is common, and one date and time cannot express it.</p>
+        <p><strong>Discussion / outcome:</strong> deferred. It needs a shifts list on the event and <code>shiftIds[]</code> on the placement; plan for phase 4.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Waitlist for a full role</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> when a role has no places left, keep the request as waiting instead of declining it.</p>
+        <p><strong>Why:</strong> volunteers drop out; a waitlist fills the gap without a second round of advertising.</p>
+        <p><strong>Discussion / outcome:</strong> depends on the capacity warning (T-16) and section 14 question 5.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Send announcements by email</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> an announcement can also be sent by email through the CMS mail channel.</p>
+        <p><strong>Why:</strong> volunteers who do not open the tool miss schedule changes.</p>
+        <p><strong>Discussion / outcome:</strong> needs <code>allowSendEmail</code>, an email on every profile, and a delivery log. Revisit after the first live event.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Attendance rate per event</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> approved volunteers against volunteers who logged any hour, as one number on the summary.</p>
+        <p><strong>Why:</strong> no-shows are the most common reporting question.</p>
+        <p><strong>Discussion / outcome:</strong> cheap to compute from existing data; needs a definition of attendance first.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Task templates per event type</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> save the task list of an event as a template and apply it to the next event of the same kind.</p>
+        <p><strong>Why:</strong> food drives and coat drives repeat the same work every year.</p>
+        <p><strong>Discussion / outcome:</strong> a template store would be a sixth object type; not before the core is stable.</p>
+      </div>
+    </details>
+  </div>
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>Preparation: open <code>app/test-harness.html</code> in a browser (no server needed). The harness bar switches
+  between the event manager (Alice Manager, admin) and a volunteer (Bob Volunteer, viewer). The browser console shows
+  every notify the mock SDK receives.</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>S-01 - Manager opens the event.</strong> Open the harness as Alice. PASS if: the header shows the event name and its date, five stat cards show live numbers, and Requests to decide lists one pending person.</li>
+    <li><strong>S-02 - Decide a request.</strong> Approve Dave from the dashboard. PASS if: his row moves to approved, the request count drops to zero, and the event status is stamped with the decider name.</li>
+    <li><strong>S-03 - Set roles.</strong> Open Roles for Bob and tick two roles. PASS if: the volunteers table lists both role names and the event role list is unchanged.</li>
+    <li><strong>S-04 - Add volunteers.</strong> Add volunteers, tick one person, confirm. PASS if: the person appears as approved with source manager.</li>
+    <li><strong>S-05 - Task lifecycle.</strong> Create a task assigned to Bob; in the volunteer tool Bob starts it and reports done; back here confirm it. PASS if: task shows completed and Bob's row shows one confirmed task.</li>
+    <li><strong>S-06 - Approve hours.</strong> Bob logs 3 hours; here approve the line. PASS if: the waiting list empties, hours approved rises by 3, and the volunteer ledger holds one line with the deterministic id.</li>
+    <li><strong>S-07 - Message volume.</strong> Send an announcement, then start a new volume. PASS if: volume 1 reads Closed, volume 2 is Open, and the old message is still readable.</li>
+    <li><strong>S-08 - Read only.</strong> Switch the harness to the volunteer role and reload. PASS if: every add, approve and save control is disabled and the role pill reads view only.</li>
+    <li><strong>S-09 - No event object.</strong> Point <code>?eventId=missing</code>. PASS if: every screen shows the "No event loaded" state and nothing throws.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>S-01 to S-06 (harness)</td><td>PASS (2026-10-21, smoke suite and headless render)</td><td>26 assertions in the write path suite</td></tr>
+    <tr><td>S-07 (harness)</td><td>PASS (2026-10-21, smoke suite)</td><td>rotation covered by assertions</td></tr>
+    <tr><td>S-08 (harness)</td><td>PASS (2026-10-21, headless render)</td><td>volunteer role pill and disabled controls</td></tr>
+    <tr><td>S-09 (harness)</td><td>PASS (2026-10-21)</td><td>empty state, no console errors</td></tr>
+    <tr><td>S-01 to S-09 (live CMS)</td><td></td><td>task T-17</td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when the live CMS run passes and group g4-release is fully checked.</p>
+  <p><strong>Progress log:</strong> 2026-10-21 - harness scenarios S-01 to S-09 pass; 2026-10-22 - rename verified,
+  menu labels and screen purposes verified in a headless render.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is not pushed yet lives here, linked to its release group. Before every
+  push, re-evaluate every open risk of the groups being pushed: solve it and tick the box, or mark it Accepted with a
+  reason and the date. A group is push-ready when its tasks are done and it has no open risk.</p>
+
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-01" data-group="g1-event-workspace" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">The store cannot protect individual fields on update</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-03, T-06 (g1-event-workspace)</p>
+        <p><strong>What can go wrong:</strong> a volunteer who can update their own placement might try to set status approved or write the approved total.</p>
+        <p><strong>Likelihood / impact:</strong> low likelihood, high impact.</p>
+        <p><strong>Mitigation:</strong> the tool never trusts volunteer-written totals; the ledger is written only by manager approval; if field rules are impossible, the approval step stays the effective gate.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, waiting for the platform answer.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-02" data-group="g1-event-workspace" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">Two managers write the task document at the same time</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-05</p>
+        <p><strong>What can go wrong:</strong> the last write wins and one change disappears.</p>
+        <p><strong>Likelihood / impact:</strong> low for a single event manager, medium if two people run one event.</p>
+        <p><strong>Mitigation:</strong> the screen reloads after every write, so stale data is visible quickly; task lists are small; a future change can compare <code>updatedAt</code> before writing.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, accepted until a second manager appears in practice.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-03" data-group="g3-parity" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">Manager-recorded hours double count with a volunteer submission</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-14</p>
+        <p><strong>What can go wrong:</strong> a manager records hours the volunteer already submitted, and both lines land in the ledger.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, medium impact.</p>
+        <p><strong>Mitigation:</strong> the form shows the waiting lines of that volunteer first and warns when a line exists on the same date; the id rule stays deterministic per source line.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, must be designed with T-14.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-04" data-group="g1-event-workspace" data-risk-level="low" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-04</span>
+        <span class="risk-title">A message flood grows the event document</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-07</p>
+        <p><strong>What can go wrong:</strong> messages inside the event would grow it without limit.</p>
+        <p><strong>Likelihood / impact:</strong> certain with conversations, high impact before the split.</p>
+        <p><strong>Mitigation:</strong> messages live in their own type, rotate at 150 per volume, and the event document stays around 12 KB.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - solved by D-EVM-03 and D-EVM-08.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-05" data-group="" data-risk-level="low" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-05</span>
+        <span class="risk-title">The event object is deleted in the CMS</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> all groups</p>
+        <p><strong>What can go wrong:</strong> the instance has nothing to show.</p>
+        <p><strong>Likelihood / impact:</strong> low likelihood, low impact - the empty state explains it.</p>
+        <p><strong>Mitigation:</strong> placements, tasks and hours are separate documents and remain intact.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - accepted, documented in the failure matrix.</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> The built groups are safe to test locally today. First push waits for
+  T-17 (live verification) and T-18 (docs satellites), and for R-01 to be answered or accepted with a written reason.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. Nothing has been pushed to the store yet; the first release is planned after group
+  g4-release. Do not edit or remove the marker comment below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - the release process appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Event Volunteer Manager - single source of truth for all decisions about
+    this tool. Version 1.4, 2026-10-22.
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live from section 15. Tick a checkbox here or in
+    the Document view - both stay in sync.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register (section 18). Gate rule: a group is PUSH
+    READY when all tasks are done and it has no open risks. Critical risks block every push until solved; high risks
+    block unless accepted; medium risks warn; low risks are reported only.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open, accepted and solved state. Tick the checkbox here or in section 18 -
+    both stay in sync.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>
