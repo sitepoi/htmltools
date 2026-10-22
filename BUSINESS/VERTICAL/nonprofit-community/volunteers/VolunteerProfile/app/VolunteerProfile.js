@@ -40,6 +40,8 @@ var APP = {
   selectedEventId: '',
   catalogSearch: '',
   catalogType: 'all',
+  pendingAfterLoad: null,
+  timerTicker: null,
   loading: true,
   loadError: '',
   toastTimer: null
@@ -629,8 +631,16 @@ function loadAll(done) {
 
   function finish() {
     APP.loading = false;
+    /* A session left running while the page was gone is closed before the
+       screens render; the close reloads and renders again. */
+    if (closeStaleSessionOnLoad(done)) return;
     renderAll();
     if (done) done();
+    if (APP.pendingAfterLoad) {
+      var runAfterLoad = APP.pendingAfterLoad;
+      APP.pendingAfterLoad = null;
+      runAfterLoad();
+    }
   }
 
   var hostId = resolveHostObjectId();
@@ -842,6 +852,790 @@ function addPendingHours(eventId, line) {
   updateObject(typeRelation(), relation.id, data, personNameOf(APP.profileObject), function (error) {
     if (error) { notifyHost('Could not log hours: ' + error, 'error'); return; }
     notifyHost('Hours sent for approval.', 'success');
+    closeModal();
+    loadAll();
+  });
+}
+
+/* ---------------- time sessions: clock in and clock out ----------------
+   A session stores timestamps and the minutes are computed from them, so a
+   closed tab can never "keep counting". The end is always the earliest of:
+   what the volunteer pressed, the frozen window end, or a stale close built
+   from the last heartbeat (SSOT 8.9). */
+var TIMER_DEFAULTS = {
+  earlyGraceMinutes: 15,
+  graceMinutes: 15,
+  maxSessionMinutes: 480,
+  roundingMinutes: 5,
+  heartbeatSeconds: 60
+};
+var TIMER_TICK_MS = 30000;
+
+function pad2(value) { return (value < 10 ? '0' : '') + value; }
+
+function localDateIso(dateValue) {
+  return dateValue.getFullYear() + '-' + pad2(dateValue.getMonth() + 1) + '-' + pad2(dateValue.getDate());
+}
+
+function timeOfDay(dateValue) {
+  return pad2(dateValue.getHours()) + ':' + pad2(dateValue.getMinutes());
+}
+
+/* Local Date from 'YYYY-MM-DD' and 'HH:MM'; null when either part is unusable. */
+function dateAt(dateText, timeText) {
+  if (!dateText) return null;
+  var dateParts = String(dateText).slice(0, 10).split('-');
+  if (dateParts.length !== 3) return null;
+  var timeParts = String(timeText || '00:00').split(':');
+  var hours = Number(timeParts[0]);
+  var minutes = Number(timeParts[1] || 0);
+  if (isNaN(hours) || isNaN(minutes)) return null;
+  return new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]), hours, minutes, 0, 0);
+}
+
+/* Three monitoring primitives (SSOT 8.10). A window clock covers an event or a
+   recurring slot, a project sitting covers task based and self paced work, a
+   duty shift covers chat support, and a burst cycle uses a sitting for the
+   preparation plus a window clock for the delivery. */
+var MONITORING_PROFILES = {
+  window: { label: 'Window clock', maxSessionMinutes: 480, roundingMinutes: 5, graceMinutes: 15, dailyMaxMinutes: 720 },
+  recurring: { label: 'Slot clock', maxSessionMinutes: 240, roundingMinutes: 5, graceMinutes: 10, dailyMaxMinutes: 720 },
+  project: { label: 'Project sitting', maxSessionMinutes: 120, roundingMinutes: 5, graceMinutes: 0, dailyMaxMinutes: 480, weeklyMaxMinutes: 600 },
+  burst: { label: 'Burst cycle', maxSessionMinutes: 240, roundingMinutes: 5, graceMinutes: 0, cycleMaxMinutes: 480 },
+  duty: { label: 'Duty shift', maxSessionMinutes: 120, roundingMinutes: 15, graceMinutes: 0, dailyMaxMinutes: 120, weeklyMaxMinutes: 600 }
+};
+
+function monitoringProfileOf(record) {
+  var data = record ? vd(record) : {};
+  var declared = String(data.monitoringProfile || '').toLowerCase().trim();
+  if (MONITORING_PROFILES[declared]) return declared;
+  var typeKey = record ? opportunityTypeOf(record) : 'event';
+  if (typeKey === 'event') return 'window';
+  if (typeKey === 'recurring') return 'recurring';
+  return 'project';
+}
+
+function timerPolicyOf(record) {
+  var data = record ? vd(record) : {};
+  var profile = monitoringProfileOf(record);
+  var base = MONITORING_PROFILES[profile] || MONITORING_PROFILES.project;
+  var policy = data.timerPolicy || {};
+  function positiveOr(value, fallback) {
+    var parsed = Number(value);
+    return isNaN(parsed) || parsed <= 0 ? fallback : parsed;
+  }
+  return {
+    profile: profile,
+    label: base.label,
+    enabled: policy.enabled === false || data.timerEnabled === false ? false : true,
+    earlyGraceMinutes: positiveOr(policy.earlyGraceMinutes, TIMER_DEFAULTS.earlyGraceMinutes),
+    graceMinutes: positiveOr(policy.graceMinutes, base.graceMinutes),
+    maxSessionMinutes: positiveOr(policy.maxSessionMinutes, base.maxSessionMinutes),
+    roundingMinutes: positiveOr(policy.roundingMinutes, base.roundingMinutes),
+    dailyMaxMinutes: positiveOr(policy.dailyMaxMinutes, base.dailyMaxMinutes),
+    weeklyMaxMinutes: positiveOr(policy.weeklyMaxMinutes, base.weeklyMaxMinutes),
+    cycleMaxMinutes: positiveOr(policy.cycleMaxMinutes, base.cycleMaxMinutes)
+  };
+}
+
+/* Only a window clock and a recurring slot have a working window. A burst
+   cycle also uses a window for its delivery day, but only when the cycle has
+   a dated delivery; its preparation stays a sitting. */
+function timerWindowFor(record, atDate) {
+  if (!record) return null;
+  var profile = monitoringProfileOf(record);
+  if (profile !== 'window' && profile !== 'recurring' && profile !== 'burst') return null;
+  var data = vd(record);
+  var typeKey = opportunityTypeOf(record);
+
+  if (typeKey === 'event') {
+    var start = dateAt(data.startDate || data.endDate, data.startTime || '00:00');
+    var end = dateAt(data.endDate || data.startDate, data.endTime || '23:59');
+    if (!start || !end) return null;
+    if (end <= start) end = dateAt(data.endDate || data.startDate, '23:59');
+    return { start: start, end: end, occurrenceDate: localDateIso(start) };
+  }
+
+  if (typeKey === 'recurring') {
+    var recurrence = data.recurrence || data.recurringSchedule || {};
+    var weekdays = Array.isArray(recurrence.weekdays) ? recurrence.weekdays.map(Number) : [];
+    var day = atDate || new Date();
+    if (weekdays.length > 0 && weekdays.indexOf(day.getDay()) === -1) return null;
+    var fromTime = recurrence.timeFrom || recurrence.time_from || '09:00';
+    var toTime = recurrence.timeTo || recurrence.time_until || '10:00';
+    var recStart = dateAt(localDateIso(day), fromTime);
+    var recEnd = dateAt(localDateIso(day), toTime);
+    if (!recStart || !recEnd) return null;
+    return { start: recStart, end: recEnd, occurrenceDate: localDateIso(day) };
+  }
+
+  return null;
+}
+
+/* The allowed clock range: a little early, a little grace at the end. */
+function timerBoundaries(record, atDate) {
+  var window = timerWindowFor(record, atDate);
+  if (!window) return null;
+  var policy = timerPolicyOf(record);
+  return {
+    start: new Date(window.start.getTime() - policy.earlyGraceMinutes * 60000),
+    end: new Date(window.end.getTime() + policy.graceMinutes * 60000),
+    occurrenceDate: window.occurrenceDate,
+    policy: policy
+  };
+}
+
+/* The farthest a session may reach: the window end, or the profile session cap
+   when the profile has no window (SSOT 8.10.3). A window only applies when it
+   belongs to the day the session starts, so a prep sitting is never clamped by
+   a delivery date that already passed. */
+function sessionCeiling(record, startDate) {
+  var policy = timerPolicyOf(record);
+  var capEnd = new Date(startDate.getTime() + policy.maxSessionMinutes * 60000);
+  var boundaries = timerBoundaries(record, startDate);
+  if (boundaries && boundaries.end < capEnd && boundaries.occurrenceDate === localDateIso(startDate)) return boundaries.end;
+  return capEnd;
+}
+
+/* Minutes already recorded for one opportunity between two local dates, from
+   pending lines and from the approved ledger. Used for the weekly and cycle caps. */
+function minutesRecordedFor(eventId, fromDateText, toDateText) {
+  var total = 0;
+  var relation = relationForEvent(eventId);
+  if (relation) {
+    var pending = Array.isArray(relationData(relation).pendingHours) ? relationData(relation).pendingHours : [];
+    pending.forEach(function (line) {
+      var dateText = String(line.date || '').slice(0, 10);
+      if (!dateText || dateText < fromDateText || dateText > toDateText) return;
+      total += toNumber(line.minutes) > 0 ? toNumber(line.minutes) : Math.round(toNumber(line.hours) * 60);
+    });
+  }
+  var ledger = Array.isArray(APP.profileData.hoursLedger) ? APP.profileData.hoursLedger : [];
+  ledger.forEach(function (entry) {
+    if (entry.eventId !== eventId) return;
+    var dateText = String(entry.eventDate || entry.approvedAt || '').slice(0, 10);
+    if (!dateText || dateText < fromDateText || dateText > toDateText) return;
+    total += Math.round(toNumber(entry.hours) * 60);
+  });
+  return total;
+}
+
+function weekRangeFor(dateValue) {
+  var start = new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate());
+  var weekday = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - weekday);
+  var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  return { from: localDateIso(start), to: localDateIso(end) };
+}
+
+function minutesBetween(startIso, endIso) {
+  var startMs = new Date(startIso).getTime();
+  var endMs = new Date(endIso).getTime();
+  if (isNaN(startMs) || isNaN(endMs) || endMs <= startMs) return 0;
+  return Math.floor((endMs - startMs) / 60000);
+}
+
+function clockText(minutes) {
+  var total = Math.max(0, Math.round(minutes));
+  return Math.floor(total / 60) + ':' + pad2(total % 60);
+}
+
+function roundToStep(minutes, step) {
+  var size = Number(step) > 0 ? Number(step) : 1;
+  return Math.max(size, Math.round(minutes / size) * size);
+}
+
+function runningSession() {
+  var rows = relationsOfProfile();
+  for (var index = 0; index < rows.length; index++) {
+    var session = relationData(rows[index]).activeSession;
+    if (session && session.startedAt) return { relation: rows[index], session: session };
+  }
+  return null;
+}
+
+/* Approved places that can be measured right now, grouped by primitive. */
+function clockableItems() {
+  var now = new Date();
+  var items = [];
+  relationsOfProfile().forEach(function (relation) {
+    var data = relationData(relation);
+    if (data.status !== 'approved') return;
+    var record = eventById(data.eventId);
+    if (!record) return;
+    var policy = timerPolicyOf(record);
+    if (!policy.enabled) return;
+
+    if (policy.profile === 'window' || policy.profile === 'recurring' || policy.profile === 'burst') {
+      var boundaries = timerBoundaries(record, now);
+      var worksToday = !!boundaries
+        && boundaries.occurrenceDate === localDateIso(now)
+        && now <= boundaries.end;
+      var alreadyRecorded = worksToday && (Array.isArray(data.timeSessions) ? data.timeSessions : []).some(function (session) {
+        return session.occurrenceDate === boundaries.occurrenceDate;
+      });
+      if (worksToday && !alreadyRecorded) {
+        items.push({ kind: 'clock', record: record, policy: policy, boundaries: boundaries, tasks: [] });
+        return;
+      }
+      if (policy.profile !== 'burst') return;
+      /* A burst cycle with no delivery today is preparation, so it is a sitting. */
+      items.push({ kind: 'sitting', record: record, policy: policy, boundaries: null, tasks: openTasksFor(data.eventId) });
+      return;
+    }
+
+    if (policy.profile === 'duty') {
+      var dutyToday = localDateIso(now);
+      var hasDutyToday = (Array.isArray(data.pendingHours) ? data.pendingHours : []).some(function (line) {
+        return line.source === 'duty' && line.date === dutyToday;
+      });
+      if (hasDutyToday) return;
+      items.push({ kind: 'duty', record: record, policy: policy, boundaries: null, tasks: [] });
+      return;
+    }
+
+    items.push({ kind: 'sitting', record: record, policy: policy, boundaries: null, tasks: openTasksFor(data.eventId) });
+  });
+  return items;
+}
+
+/* Tasks the volunteer can sit on: mine, or still unassigned. */
+function openTasksFor(eventId) {
+  var myId = APP.profileObject ? APP.profileObject.id : '';
+  return tasksOf(eventId).filter(function (task) {
+    return !task.assigneePersonId || task.assigneePersonId === myId;
+  });
+}
+
+function startClock(opportunityId, taskId) {
+  if (!APP.profileObject) { notifyHost('A volunteer profile is needed before you can clock in.', 'warning'); return; }
+  if (!canWork()) { notifyHost('This view is read only.', 'warning'); return; }
+  if (APP.profileData.status === 'candidate') { notifyHost('A manager has to approve you before you can clock in.', 'warning'); return; }
+
+  var alreadyRunning = runningSession();
+  if (alreadyRunning) {
+    notifyHost('You are already clocked in for ' + eventNameOf(alreadyRunning.session.eventId) + '. Stop that first.', 'warning');
+    return;
+  }
+
+  var relation = relationForEvent(opportunityId);
+  if (!relation || relationData(relation).status !== 'approved') {
+    notifyHost('Only an approved place can be clocked.', 'warning');
+    return;
+  }
+
+  var record = eventById(opportunityId);
+  if (!record) return;
+  var policy = timerPolicyOf(record);
+  if (policy.profile === 'duty') { notifyHost('This role uses a duty shift, not a clock.', 'info'); return; }
+
+  var now = new Date();
+  var boundaries = timerBoundaries(record, now);
+  var usesWindow = policy.profile === 'window' || policy.profile === 'recurring'
+    || (policy.profile === 'burst' && !!boundaries && boundaries.occurrenceDate === localDateIso(now));
+  if (usesWindow) {
+    if (!boundaries) { notifyHost('This opportunity has no working window today.', 'warning'); return; }
+    if (now < boundaries.start) { notifyHost('The clock opens at ' + timeOfDay(boundaries.start) + '.', 'info'); return; }
+    if (now > boundaries.end) { notifyHost('The working window closed at ' + timeOfDay(boundaries.end) + '.', 'info'); return; }
+    var alreadyRecorded = (Array.isArray(relationData(relation).timeSessions) ? relationData(relation).timeSessions : []).some(function (session) {
+      return session.occurrenceDate === boundaries.occurrenceDate;
+    });
+    if (alreadyRecorded) { notifyHost('This occurrence is already recorded. A new one starts at the next slot.', 'info'); return; }
+  }
+
+  var taskTitle = '';
+  if (taskId) {
+    tasksOf(opportunityId).forEach(function (task) {
+      if (task.id === taskId) taskTitle = task.title || '';
+    });
+  }
+
+  var data = simpleCopy(relationData(relation));
+  data.activeSession = {
+    id: 'ts_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    eventId: opportunityId,
+    profile: policy.profile,
+    startedAt: now.toISOString(),
+    lastSeenAt: now.toISOString(),
+    startedByUserId: currentUserId(),
+    windowEnd: sessionCeiling(record, now).toISOString(),
+    occurrenceDate: boundaries ? boundaries.occurrenceDate : localDateIso(now),
+    taskId: taskId || '',
+    taskTitle: taskTitle
+  };
+  data.updatedAt = isoNow();
+
+  updateObject(typeRelation(), relation.id, data, personNameOf(APP.profileObject), function (error) {
+    if (error) { notifyHost('Could not start the clock: ' + error, 'error'); return; }
+    notifyHost((policy.profile === 'project' || policy.profile === 'burst')
+      ? 'Sitting started. It stops itself at the session cap.'
+      : 'Clocked in at ' + timeOfDay(now) + '.', 'success');
+    loadAll();
+  });
+}
+
+/* Stop, auto-stop or stale close in one place. The session becomes one or more
+   pending hour lines immediately, so no hours ever live only in a session. */
+function stopClock(endIso, options) {
+  var settings = options || {};
+  var running = runningSession();
+  if (!running) return;
+
+  var session = running.session;
+  var record = eventById(session.eventId);
+  var policy = timerPolicyOf(record);
+  var startDate = new Date(session.startedAt);
+  var endDate = endIso ? new Date(endIso) : new Date();
+  if (isNaN(endDate.getTime())) endDate = new Date();
+
+  /* The stored window end and the profile cap are both honoured, whichever is
+     earlier, so a session can never pass its own start plus the session cap. */
+  var hardEnd = session.windowEnd ? new Date(session.windowEnd) : null;
+  var profileCeiling = sessionCeiling(record, startDate);
+  if (!hardEnd || profileCeiling < hardEnd) hardEnd = profileCeiling;
+  if (endDate > hardEnd) endDate = hardEnd;
+  if (endDate < startDate) endDate = startDate;
+
+  /* Weekly cap for project work, cycle cap for a burst role. The overrun is
+     clamped instead of rejected, so the volunteer never loses the work. */
+  var week = weekRangeFor(startDate);
+  if (policy.profile === 'project' && policy.weeklyMaxMinutes) {
+    var usedThisWeek = minutesRecordedFor(session.eventId, week.from, week.to);
+    var leftThisWeek = policy.weeklyMaxMinutes - usedThisWeek;
+    if (leftThisWeek <= 0) {
+      notifyHost('The weekly limit for this opportunity is already reached. The manager can add the rest.', 'warning');
+      return;
+    }
+    var allowedEnd = new Date(startDate.getTime() + leftThisWeek * 60000);
+    if (endDate > allowedEnd) endDate = allowedEnd;
+  }
+  if (policy.profile === 'burst' && policy.cycleMaxMinutes) {
+    var usedInCycle = minutesRecordedFor(session.eventId, '1900-01-01', '2999-12-31');
+    var leftInCycle = policy.cycleMaxMinutes - usedInCycle;
+    if (leftInCycle <= 0) {
+      notifyHost('This cycle is already at its 8 hour cap.', 'warning');
+      return;
+    }
+    var cycleEnd = new Date(startDate.getTime() + leftInCycle * 60000);
+    if (endDate > cycleEnd) endDate = cycleEnd;
+  }
+
+  var totalMinutes = minutesBetween(startDate.toISOString(), endDate.toISOString());
+  if (totalMinutes < 1) { notifyHost('A session under a minute is not saved.', 'warning'); return; }
+
+  /* A session never crosses midnight: it becomes one line per day. */
+  var segments = [];
+  var startDay = localDateIso(startDate);
+  var endDay = localDateIso(endDate);
+  if (startDay !== endDay) {
+    var midnight = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 0, 0, 0, 0);
+    var firstEnd = new Date(midnight.getTime() - 60000);
+    if (firstEnd > startDate) segments.push({ start: startDate, end: firstEnd });
+    segments.push({ start: midnight, end: endDate });
+  } else {
+    segments.push({ start: startDate, end: endDate });
+  }
+
+  var data = simpleCopy(relationData(running.relation));
+  var pending = Array.isArray(data.pendingHours) ? data.pendingHours.slice() : [];
+  if (pending.length + segments.length > 60) {
+    notifyHost('60 hour lines are already waiting. Ask the manager to approve them first.', 'warning');
+    return;
+  }
+
+  var createdIds = [];
+  segments.forEach(function (segment) {
+    var segmentMinutes = minutesBetween(segment.start.toISOString(), segment.end.toISOString());
+    if (segmentMinutes < 1) return;
+    var pendingId = 'ph_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    createdIds.push(pendingId);
+    pending.push({
+      id: pendingId,
+      source: policy.profile === 'project' || policy.profile === 'burst' ? 'sitting' : 'timer',
+      sessionId: session.id,
+      date: localDateIso(segment.start),
+      startTime: timeOfDay(segment.start),
+      endTime: timeOfDay(segment.end),
+      minutes: segmentMinutes,
+      hours: roundToStep(segmentMinutes, policy.roundingMinutes) / 60,
+      note: String(settings.note || '').slice(0, 500),
+      taskId: session.taskId || '',
+      taskTitle: session.taskTitle || '',
+      unverified: !!settings.unverified,
+      submittedAt: isoNow()
+    });
+  });
+
+  if (createdIds.length === 0) { notifyHost('A session under a minute is not saved.', 'warning'); return; }
+
+  var sessions = Array.isArray(data.timeSessions) ? data.timeSessions.slice() : [];
+  sessions.push({
+    id: session.id,
+    startedAt: session.startedAt,
+    stoppedAt: endDate.toISOString(),
+    minutes: totalMinutes,
+    autoStopped: !!settings.auto,
+    autoStopReason: settings.reason || 'manual',
+    verified: !settings.unverified,
+    pendingId: createdIds[createdIds.length - 1]
+  });
+
+  data.pendingHours = pending;
+  data.timeSessions = sessions.slice(-20);
+  data.activeSession = null;
+  data.updatedAt = isoNow();
+
+  updateObject(typeRelation(), running.relation.id, data, personNameOf(APP.profileObject), function (error) {
+    if (error) { notifyHost('Could not stop the clock: ' + error, 'error'); return; }
+    closeModal();
+    if (!settings.silent) {
+      var roundedTotal = roundToStep(totalMinutes, policy.roundingMinutes);
+      var hoursText = (roundedTotal / 60).toFixed(2).replace(/\.?0+$/, '');
+      notifyHost(settings.auto
+        ? 'Clock stopped at ' + timeOfDay(endDate) + ' (' + totalMinutes + ' minutes). A manager still approves the line.'
+        : 'Sent ' + hoursText + ' h for approval.', 'success');
+    }
+    loadAll();
+  });
+}
+
+/* Heartbeat: only a page that is open keeps writing this. */
+function timerHeartbeat(running) {
+  if (!running) return;
+  var data = simpleCopy(relationData(running.relation));
+  if (!data.activeSession) return;
+  data.activeSession.lastSeenAt = isoNow();
+  data.updatedAt = isoNow();
+  updateObject(typeRelation(), running.relation.id, data, personNameOf(APP.profileObject), function () { /* quiet */ });
+}
+
+function timerTick() {
+  var running = runningSession();
+  if (!running) { renderClockStrip(); return; }
+
+  var now = new Date();
+  var lastSeen = new Date(running.session.lastSeenAt || running.session.startedAt);
+  if (now.getTime() - lastSeen.getTime() >= TIMER_DEFAULTS.heartbeatSeconds * 1000) timerHeartbeat(running);
+
+  var hardEnd = running.session.windowEnd ? new Date(running.session.windowEnd) : null;
+  if (hardEnd && now >= hardEnd) {
+    stopClock(hardEnd.toISOString(), { auto: true, reason: 'window-end' });
+    return;
+  }
+  renderClockStrip();
+}
+
+/* A session found running after the page was gone is closed at the last
+   heartbeat plus two intervals, capped by the window, and marked unverified. */
+function closeStaleSessionOnLoad(done) {
+  var running = runningSession();
+  if (!running) return false;
+
+  var lastSeen = new Date(running.session.lastSeenAt || running.session.startedAt);
+  var now = new Date();
+  var staleAfterMs = TIMER_DEFAULTS.heartbeatSeconds * 1000 * 2;
+  if (now.getTime() - lastSeen.getTime() < staleAfterMs) return false;
+
+  var suggestedEnd = new Date(lastSeen.getTime() + staleAfterMs);
+  if (running.session.windowEnd) {
+    var hardEnd = new Date(running.session.windowEnd);
+    if (suggestedEnd > hardEnd) suggestedEnd = hardEnd;
+  }
+  if (suggestedEnd > now) suggestedEnd = now;
+  if (suggestedEnd < new Date(running.session.startedAt)) suggestedEnd = new Date(running.session.startedAt);
+
+  APP.pendingAfterLoad = done || null;
+  stopClock(suggestedEnd.toISOString(), { auto: true, reason: 'stale', unverified: true, silent: true });
+  return true;
+}
+
+function renderClockStrip() {
+  var strip = el('vpClockStrip');
+  if (!strip) return;
+  var running = runningSession();
+  if (!running) { strip.hidden = true; return; }
+  strip.hidden = false;
+  var start = new Date(running.session.startedAt);
+  el('vpClockText').textContent = 'Clocked in at ' + timeOfDay(start) + ' - ' + eventNameOf(running.session.eventId);
+  el('vpClockElapsed').textContent = clockText(minutesBetween(running.session.startedAt, new Date().toISOString()));
+}
+
+function renderClockCard() {
+  var card = el('vpClockCard');
+  if (!card) return;
+
+  var running = runningSession();
+  if (running) {
+    var start = new Date(running.session.startedAt);
+    var runningPolicy = timerPolicyOf(eventById(running.session.eventId));
+    var runningDetail = running.session.taskTitle
+      ? 'Task: ' + esc(running.session.taskTitle)
+      : (runningPolicy.profile === 'project' || runningPolicy.profile === 'burst' ? 'Sitting' : 'Shift');
+    card.innerHTML = '<div class="vp-card-head"><h2>Your clock</h2><span class="vp-count">running</span></div>'
+      + '<div class="vp-card-body">'
+      + '<div class="vp-clock-live"><span class="vp-clock-dot" style="background:#4f46e5;box-shadow:0 0 0 4px #eef2ff;" aria-hidden="true"></span>'
+      + '<span>Started at <strong>' + esc(timeOfDay(start)) + '</strong> for ' + esc(eventNameOf(running.session.eventId)) + '.</span></div>'
+      + '<div class="vp-hint">' + runningDetail + '. The session cap is ' + Math.round(runningPolicy.maxSessionMinutes / 60 * 10) / 10 + ' h.</div>'
+      + '<div class="vp-actions" style="margin-top:12px;">'
+      + '<button type="button" class="vp-btn vp-btn-primary" onclick="openStopClockModal()">Stop and send</button>'
+      + '</div>'
+      + '<div class="vp-hint">If the page closes, the clock is closed at your last heartbeat when you come back and you can correct the end time.</div>'
+      + '</div>';
+    return;
+  }
+
+  var items = clockableItems();
+  var body = '';
+  if (items.length === 0) {
+    body = '<div class="vp-empty"><strong>Nothing to measure right now</strong>'
+      + 'A clock is offered for a fixed event or recurring slot on the day it runs, a sitting for task and self paced work, and a shift for chat duty.</div>';
+  } else {
+    var now = new Date();
+    body = '<div class="vp-clock-list">';
+    items.forEach(function (item) {
+      var recordId = escJs(item.record.id);
+      if (item.kind === 'clock') {
+        var opensAt = item.boundaries.start;
+        var closesAt = item.boundaries.end;
+        var closesToday = localDateIso(closesAt) === item.boundaries.occurrenceDate;
+        var state = now < opensAt
+          ? 'Opens at ' + timeOfDay(opensAt)
+          : (closesToday ? 'Open until ' + timeOfDay(closesAt) : 'Open until midnight');
+        body += '<div class="vp-clock-row">'
+          + '<div><div class="vp-pos-name">' + esc(eventNameOf(item.record.id)) + '</div>'
+          + '<div class="vp-pos-desc">' + esc(state) + '</div></div>'
+          + '<button type="button" class="vp-btn vp-btn-primary vp-btn-tiny"' + (now < opensAt ? ' disabled' : '')
+          + ' onclick="startClock(\'' + recordId + '\')">Clock in</button>'
+          + '</div>';
+        return;
+      }
+
+      if (item.kind === 'sitting') {
+        var options = '<option value="">General work</option>';
+        item.tasks.forEach(function (task) {
+          options += '<option value="' + esc(task.id) + '">' + esc(task.title || 'Untitled task') + '</option>';
+        });
+        body += '<div class="vp-clock-row vp-clock-row-stack">'
+          + '<div><div class="vp-pos-name">' + esc(eventNameOf(item.record.id)) + '</div>'
+          + '<div class="vp-pos-desc">Sitting, up to ' + Math.round(item.policy.maxSessionMinutes / 60 * 10) / 10 + ' h at a time</div></div>'
+          + '<div class="vp-clock-controls">'
+          + '<select class="vp-input vp-select-tiny" id="vpSittingTask_' + esc(item.record.id) + '">' + options + '</select>'
+          + '<button type="button" class="vp-btn vp-btn-primary vp-btn-tiny"'
+          + ' onclick="startSittingFromCard(\'' + recordId + '\')">Start sitting</button>'
+          + '</div></div>';
+        return;
+      }
+
+      body += '<div class="vp-clock-row">'
+        + '<div><div class="vp-pos-name">' + esc(eventNameOf(item.record.id)) + '</div>'
+        + '<div class="vp-pos-desc">Duty shift, up to ' + Math.round(item.policy.maxSessionMinutes / 60 * 10) / 10 + ' h per day</div></div>'
+        + '<button type="button" class="vp-btn vp-btn-primary vp-btn-tiny"'
+        + ' onclick="openClaimDutyModal(\'' + recordId + '\')">Claim shift</button>'
+        + '</div>';
+    });
+    body += '</div>';
+  }
+  card.innerHTML = '<div class="vp-card-head"><h2>Clock in and out</h2><span class="vp-count">' + items.length + ' available</span></div>'
+    + '<div class="vp-card-body">' + body + '</div>';
+}
+
+function startSittingFromCard(opportunityId) {
+  var select = el('vpSittingTask_' + opportunityId);
+  startClock(opportunityId, select ? select.value : '');
+}
+
+function openStopClockModal() {
+  var running = runningSession();
+  if (!running) return;
+  var start = new Date(running.session.startedAt);
+  var now = new Date();
+  openModal('Stop the clock',
+    '<p style="margin-top:0;color:#64748b;font-size:0.92rem;">' + esc(eventNameOf(running.session.eventId)) + '</p>'
+    + '<p>Started at <strong>' + esc(timeOfDay(start)) + '</strong>. Confirm the time you stopped.</p>'
+    + '<div class="vp-field"><label for="vpStopTime">Stopped at</label>'
+    + '<input class="vp-input" type="time" id="vpStopTime" value="' + esc(timeOfDay(now)) + '"></div>'
+    + '<div class="vp-field"><label for="vpStopNote">What you did (optional)</label>'
+    + '<textarea class="vp-textarea" id="vpStopNote" maxlength="500"></textarea></div>'
+    + '<div class="vp-note">The line goes to the opportunity manager for approval. It can never pass the event window or the session cap.</div>',
+    '<button type="button" class="vp-btn" onclick="closeModal()">Keep running</button>'
+    + '<button type="button" class="vp-btn vp-btn-primary" onclick="confirmStopClock()">Stop and send</button>');
+}
+
+function confirmStopClock() {
+  var running = runningSession();
+  if (!running) return;
+  var startDate = new Date(running.session.startedAt);
+  var timeNode = el('vpStopTime');
+  var noteNode = el('vpStopNote');
+  var endDate = dateAt(localDateIso(startDate), timeNode ? timeNode.value : '');
+  if (!endDate) { notifyHost('Enter the time you stopped.', 'warning'); return; }
+  /* A sitting can run past midnight: an earlier clock time means the next day. */
+  if (endDate.getTime() <= startDate.getTime()) {
+    endDate = new Date(endDate.getTime() + 24 * 60 * 60000);
+  }
+  stopClock(endDate.toISOString(), { note: noteNode ? noteNode.value : '' });
+}
+
+/* Chat duty is a claimed shift, not a live clock: the volunteer states the
+   time box and how many messages were answered. One shift per day. */
+function openClaimDutyModal(opportunityId) {
+  if (!APP.profileObject) { notifyHost('A volunteer profile is needed before you can claim a shift.', 'warning'); return; }
+  if (!canWork()) { notifyHost('This view is read only.', 'warning'); return; }
+  if (APP.profileData.status === 'candidate') { notifyHost('A manager has to approve you before you can claim a shift.', 'warning'); return; }
+
+  var relation = relationForEvent(opportunityId);
+  if (!relation || relationData(relation).status !== 'approved') {
+    notifyHost('Only an approved place can be claimed.', 'warning');
+    return;
+  }
+  var record = eventById(opportunityId);
+  if (!record) return;
+  var policy = timerPolicyOf(record);
+  var today = localDateIso(new Date());
+  var alreadyToday = (Array.isArray(relationData(relation).pendingHours) ? relationData(relation).pendingHours : []).some(function (row) {
+    return row.source === 'duty' && row.date === today;
+  });
+  if (alreadyToday) { notifyHost('A duty shift is already logged for today.', 'info'); return; }
+
+  var dutyWeek = weekRangeFor(new Date());
+  var dutyUsedThisWeek = minutesRecordedFor(opportunityId, dutyWeek.from, dutyWeek.to);
+  var dutyLeftThisWeek = policy.weeklyMaxMinutes - dutyUsedThisWeek;
+  if (dutyLeftThisWeek <= 0) {
+    notifyHost('The weekly limit for this duty is reached. A manager can review the week.', 'warning');
+    return;
+  }
+
+  var capHours = Math.round(policy.maxSessionMinutes / 60 * 10) / 10;
+  var leftHours = Math.round(dutyLeftThisWeek / 60 * 10) / 10;
+  openModal('Claim a duty shift',
+    '<p style="margin-top:0;color:#64748b;font-size:0.92rem;">' + esc(eventNameOf(opportunityId)) + ' - ' + esc(today) + '</p>'
+    + '<div class="vp-field"><label for="vpDutyStart">From</label>'
+    + '<input class="vp-input" type="time" id="vpDutyStart" value="19:00"></div>'
+    + '<div class="vp-field"><label for="vpDutyEnd">To</label>'
+    + '<input class="vp-input" type="time" id="vpDutyEnd" value="21:00"></div>'
+    + '<div class="vp-field"><label for="vpDutyAnswered">Messages answered</label>'
+    + '<input class="vp-input" type="number" id="vpDutyAnswered" min="0" step="1" value="0"></div>'
+    + '<div class="vp-field"><label for="vpDutyNote">What came up (optional)</label>'
+    + '<textarea class="vp-textarea" id="vpDutyNote" maxlength="500"></textarea></div>'
+    + '<div class="vp-note">A shift is at most ' + capHours + ' h on one day, and '
+    + leftHours + ' h are left this week. The volume of messages is logged next to the time, so a busy shift can be reviewed fairly.</div>',
+    '<button type="button" class="vp-btn" onclick="closeModal()">Cancel</button>'
+    + '<button type="button" class="vp-btn vp-btn-primary" onclick="submitDutyShift(\'' + escJs(opportunityId) + '\')">Send shift</button>');
+}
+
+function submitDutyShift(opportunityId) {
+  var relation = relationForEvent(opportunityId);
+  if (!relation) return;
+  var record = eventById(opportunityId);
+  if (!record) return;
+  var policy = timerPolicyOf(record);
+  var today = localDateIso(new Date());
+
+  var startNode = el('vpDutyStart');
+  var endNode = el('vpDutyEnd');
+  var answeredNode = el('vpDutyAnswered');
+  var noteNode = el('vpDutyNote');
+
+  var startDate = dateAt(today, startNode ? startNode.value : '');
+  var endDate = dateAt(today, endNode ? endNode.value : '');
+  if (!startDate || !endDate) { notifyHost('Enter the start and end time of the shift.', 'warning'); return; }
+  var minutes = minutesBetween(startDate.toISOString(), endDate.toISOString());
+  if (minutes < 1) { notifyHost('The end time has to be after the start time.', 'warning'); return; }
+  if (minutes > policy.maxSessionMinutes) {
+    notifyHost('A duty shift is at most ' + Math.round(policy.maxSessionMinutes / 60 * 10) / 10 + ' h. Split the rest into another day.', 'warning');
+    return;
+  }
+  var dutyWeek = weekRangeFor(new Date());
+  var dutyLeftThisWeek = policy.weeklyMaxMinutes - minutesRecordedFor(opportunityId, dutyWeek.from, dutyWeek.to);
+  if (minutes > dutyLeftThisWeek) {
+    notifyHost('Only ' + Math.round(dutyLeftThisWeek / 60 * 10) / 10 + ' h are left this week for this duty.', 'warning');
+    return;
+  }
+
+  var data = simpleCopy(relationData(relation));
+  var pending = Array.isArray(data.pendingHours) ? data.pendingHours.slice() : [];
+  if (pending.length >= 60) { notifyHost('60 hour lines are already waiting. Ask the manager to approve them first.', 'warning'); return; }
+  var dutyExists = pending.some(function (line) {
+    return line.source === 'duty' && line.date === today;
+  });
+  if (dutyExists) { notifyHost('A duty shift is already logged for today.', 'info'); closeModal(); return; }
+
+  pending.push({
+    id: 'ph_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    source: 'duty',
+    date: today,
+    startTime: timeOfDay(startDate),
+    endTime: timeOfDay(endDate),
+    minutes: minutes,
+    hours: roundToStep(minutes, policy.roundingMinutes) / 60,
+    answered: Math.max(0, Math.round(toNumber(answeredNode ? answeredNode.value : 0))),
+    note: String(noteNode ? noteNode.value : '').slice(0, 500),
+    taskId: '',
+    taskTitle: '',
+    unverified: false,
+    submittedAt: isoNow()
+  });
+
+  data.pendingHours = pending;
+  data.updatedAt = isoNow();
+
+  updateObject(typeRelation(), relation.id, data, personNameOf(APP.profileObject), function (error) {
+    if (error) { notifyHost('Could not send the shift: ' + error, 'error'); return; }
+    closeModal();
+    notifyHost('Duty shift sent for approval.', 'success');
+    loadAll();
+  });
+}
+
+/* A stale close is unverified: the volunteer confirms or corrects the end. */
+function openAdjustTimedLineModal(eventId, pendingId) {
+  var relation = relationForEvent(eventId);
+  if (!relation) return;
+  var line = null;
+  (Array.isArray(relationData(relation).pendingHours) ? relationData(relation).pendingHours : []).forEach(function (row) {
+    if (row.id === pendingId) line = row;
+  });
+  if (!line) return;
+
+  openModal('Check the end time',
+    '<p style="margin-top:0;color:#64748b;font-size:0.92rem;">' + esc(eventNameOf(eventId)) + '</p>'
+    + '<p>This session was closed for you because the page was not open. Started at <strong>'
+    + esc(line.startTime || '-') + '</strong>. Confirm the real end time.</p>'
+    + '<div class="vp-field"><label for="vpAdjustTime">Stopped at</label>'
+    + '<input class="vp-input" type="time" id="vpAdjustTime" value="' + esc(line.endTime || '') + '"></div>'
+    + '<div class="vp-note">Only the end time changes. The manager still approves the line.</div>',
+    '<button type="button" class="vp-btn" onclick="closeModal()">Cancel</button>'
+    + '<button type="button" class="vp-btn vp-btn-primary" onclick="saveTimedLineEnd(\'' + escJs(eventId) + '\',\'' + escJs(pendingId) + '\')">Save</button>');
+}
+
+function saveTimedLineEnd(eventId, pendingId) {
+  var relation = relationForEvent(eventId);
+  if (!relation) return;
+  var data = simpleCopy(relationData(relation));
+  var pending = Array.isArray(data.pendingHours) ? data.pendingHours.slice() : [];
+  var line = null;
+  for (var index = 0; index < pending.length; index++) {
+    if (pending[index].id === pendingId) { line = pending[index]; break; }
+  }
+  if (!line) return;
+
+  var startDate = dateAt(line.date, line.startTime || '00:00');
+  var timeNode = el('vpAdjustTime');
+  var endDate = dateAt(line.date, timeNode ? timeNode.value : '');
+  if (!startDate || !endDate) { notifyHost('Enter a valid end time.', 'warning'); return; }
+  var minutes = minutesBetween(startDate.toISOString(), endDate.toISOString());
+  if (minutes < 1) { notifyHost('The end time has to be after the start.', 'warning'); return; }
+
+  line.endTime = timeOfDay(endDate);
+  line.minutes = minutes;
+  line.hours = roundToStep(minutes, TIMER_DEFAULTS.roundingMinutes) / 60;
+  line.unverified = false;
+  data.pendingHours = pending;
+  data.updatedAt = isoNow();
+
+  updateObject(typeRelation(), relation.id, data, personNameOf(APP.profileObject), function (error) {
+    if (error) { notifyHost('Could not save the end time: ' + error, 'error'); return; }
+    notifyHost('End time confirmed.', 'success');
     closeModal();
     loadAll();
   });
@@ -1187,6 +1981,8 @@ function renderAll() {
   }
 
   renderDashboard();
+  renderClockCard();
+  renderClockStrip();
   renderOpportunities();
   renderEvents();
   renderTasks();
@@ -1631,12 +2427,34 @@ function renderHours() {
       + '<th>Date</th><th>Opportunity</th><th>Task</th><th class="vp-num">Hours</th><th></th>'
       + '</tr></thead><tbody>';
     pendingRows.forEach(function (row) {
+      var isTimer = row.line.source === 'timer';
+      var isSitting = row.line.source === 'sitting';
+      var isDuty = row.line.source === 'duty';
+      var sourceLabel = isDuty ? 'shift' : (isSitting ? 'sitting' : 'clocked');
+      var clockDetail = (row.line.startTime && row.line.endTime)
+        ? '<div class="vp-cell-sub">'
+          + esc((row.line.startTime || '') + ' - ' + (row.line.endTime || '')) + ' ' + sourceLabel
+          + (isDuty ? ' - ' + toNumber(row.line.answered) + ' answered' : '')
+          + (row.line.unverified ? ' - end time to check' : '')
+          + '</div>'
+        : '';
+      var clockAction = (!APP.isManager && (isTimer || isSitting) && row.line.unverified)
+        ? '<button type="button" class="vp-btn vp-btn-tiny vp-btn-outline" onclick="openAdjustTimedLineModal(\''
+          + escJs(row.eventId) + '\',\'' + escJs(row.line.id) + '\')">Check end</button>'
+        : '';
+      var sourceBadge = isDuty
+        ? ' <span class="vp-badge vp-badge-in-progress">shift</span>'
+        : (isSitting
+          ? ' <span class="vp-badge vp-badge-in-progress">sitting</span>'
+          : (isTimer ? ' <span class="vp-badge vp-badge-in-progress">clock</span>' : ''));
+
       pendingHtml += '<tr>'
-        + '<td>' + esc(fmtDate(row.line.date)) + '</td>'
+        + '<td>' + esc(fmtDate(row.line.date)) + clockDetail + '</td>'
         + '<td>' + esc(eventNameOf(row.eventId)) + '</td>'
-        + '<td>' + esc(row.line.taskTitle || 'General') + '</td>'
+        + '<td>' + esc(row.line.taskTitle || 'General') + sourceBadge + '</td>'
         + '<td class="vp-num">' + toNumber(row.line.hours).toFixed(1) + '</td>'
         + '<td><div class="vp-actions">'
+        + clockAction
         + (APP.isManager
           ? '<button type="button" class="vp-btn vp-btn-tiny vp-btn-ok" onclick="openApproveHoursModal(\'' + escJs(row.eventId) + '\',\'' + escJs(row.line.id) + '\')">Approve</button>'
             + '<button type="button" class="vp-btn vp-btn-tiny vp-btn-bad" onclick="openRejectHoursModal(\'' + escJs(row.eventId) + '\',\'' + escJs(row.line.id) + '\')">Reject</button>'
@@ -2200,6 +3018,16 @@ tool.onReady(function (value) {
   el('vpLogHoursBtn').addEventListener('click', function () { openLogHoursModal(APP.selectedEventId); });
   el('vpMessageTeamBtn').addEventListener('click', openTeamMessageModal);
   el('vpCertificateBtn').addEventListener('click', downloadCertificate);
+
+  var clockStopButton = el('vpClockStopBtn');
+  if (clockStopButton) clockStopButton.addEventListener('click', openStopClockModal);
+  if (APP.timerTicker) clearInterval(APP.timerTicker);
+  APP.timerTicker = setInterval(timerTick, TIMER_TICK_MS);
+  window.addEventListener('beforeunload', function (event) {
+    if (!runningSession()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
 
   var catalogSearchNode = el('vpOppSearch');
   if (catalogSearchNode) {

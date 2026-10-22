@@ -515,6 +515,10 @@ function renderIndex(roles) {
   <ul>
 ${items}
   </ul>
+  <p class="lede" style="margin-top:26px;">
+    Sharing the flyers on WhatsApp? The ready-made Turkish and English messages for parents, students and
+    partners are in <a href="../whatsapp-messages.html">whatsapp-messages.html</a>.
+  </p>
 </main>
 </body>
 </html>

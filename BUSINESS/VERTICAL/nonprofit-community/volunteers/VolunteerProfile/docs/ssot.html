@@ -28,7 +28,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v1.4</span>
+      <span>v1.9</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -73,7 +73,7 @@
     capture the final decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>1.4</td></tr>
+    <tr><th>Document version</th><td>1.9</td></tr>
     <tr><th>Last updated</th><td>2026-10-22</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (VolunteerProfile).</td></tr>
@@ -185,6 +185,8 @@
     <tr><td>C-16</td><td>Place counts per position from every membership, approved roles only, with a Full state</td><td>positionFilledCount</td><td>v1.4</td><td>Harness write path</td></tr>
     <tr><td>C-17</td><td>Active opportunity selector in the menu instead of a fixed label; volunteers switch between everything they joined</td><td>renderNavSelection / selectEvent</td><td>v1.4</td><td>Headless render</td></tr>
     <tr><td>C-18</td><td>Coloured identity header with large name, contact line, place and network state</td><td>markup + <code>.vp-topbar</code></td><td>v1.4</td><td>Headless render</td></tr>
+    <tr><td>C-19</td><td>Clock in and clock out for event and recurring roles: a timestamp session, an automatic stop at the frozen window end, a 60 second heartbeat with a stale close, one session per volunteer, and a clocked line that still needs manager approval</td><td>startClock / stopClock / timerTick / closeStaleSessionOnLoad</td><td>v1.8 (2026-10-22)</td><td>10 injected harness assertions and a headless render</td></tr>
+    <tr><td>C-20</td><td>Time measurement for every volunteering type: a window clock, a capped project sitting with an optional task, a duty shift with an answered count, and a burst cycle whose preparation and delivery share one cycle cap</td><td>MONITORING_PROFILES / clockableItems / startClock / stopClock / submitDutyShift</td><td>v1.9 (2026-10-22)</td><td>27 injected harness assertions and a headless render</td></tr>
   </table>
 
   <h2 id="sec-glossary">4. Glossary</h2>
@@ -243,6 +245,20 @@ var DEFAULT_TYPES = {
     <li>An application always names the position. An opportunity without positions offers one general position instead of blocking the volunteer.</li>
     <li>Requesting a second role of an opportunity the volunteer already belongs to adds a role request; it never creates a second membership.</li>
     <li>Places filled are counted from approved roles only. A request is not a place.</li>
+    <li>A time session stores timestamps, never a running counter. Delivered hours are computed from <code>startedAt</code> and <code>stoppedAt</code>.</li>
+    <li>A session can never end later than its type boundary: the event window plus grace, the recurring occurrence window plus grace, or a hard session cap.</li>
+    <li>Only an approved membership can clock in, and only one session runs per volunteer at any time.</li>
+    <li>A stopped session becomes a pending hour line with <code>source: 'timer'</code>. The manager still approves it.</li>
+    <li>Every opportunity resolves to a monitoring profile: window clock, project log, duty roster, or a burst cycle made of a project log plus a window clock.</li>
+    <li>Each profile has a visible cap, and a claim can never exceed it.</li>
+    <li>Preparation and delivery of one cycle are recorded separately and summed once; they never share one timer.</li>
+    <li>A duty shift claims the availability block, never the response time of the messages answered inside it.</li>
+    <li>Travel time is never counted as volunteer time.</li>
+    <li>A certificate covers exactly one closed period and is an immutable snapshot with a verification id. The statement of hours is the live report for any range.</li>
+    <li>By default one certificate is issued per volunteer per period, with every role as a line. A standalone event or role certificate is an excerpt issued on request.</li>
+    <li>No certificate is issued while any hour of the period is still pending.</li>
+    <li>A certificate never contains a third-party name, a pending hour or a quality claim.</li>
+    <li>A correction after issue creates a replacement certificate and marks the previous one superseded; an issued document is never silently rewritten.</li>
   </ol>
 
   <h2 id="sec-options">7. Option evaluation and decision</h2>
@@ -382,6 +398,288 @@ requested role on a membership:
   when the number of approved roles reaches that number. An opportunity without positions offers one row called
   "General volunteer" that creates a requested role with an empty <code>positionId</code>.</p>
 
+  <h3>8.9 Clock in and clock out (time sessions)</h3>
+  <div class="note">
+    <strong>The hard constraint that shapes the whole design.</strong> This tool is a browser page inside an iframe.
+    A counter that runs in JavaScript stops the moment the tab is closed, the laptop sleeps or the phone is locked.
+    A server job cannot be added here. So the timer is never a counter: a session stores a
+    <code>startedAt</code> and a <code>stoppedAt</code> timestamp, and the minutes are <em>computed</em> from those two
+    values. That is what makes "it counted for three days" impossible.
+  </div>
+  <p><strong>Automatic stop is a computation, not a background job.</strong> The event already carries the window we
+  need (<code>startDate</code>, <code>endDate</code> in <code>vm.events-uniconbaseapps</code>). A recurring
+  opportunity carries <code>recurrence.weekdays</code>, <code>timeFrom</code> and <code>timeTo</code>. The stop time is
+  the earlier of: what the volunteer pressed, the window end plus a grace period, or a hard session cap. Every load
+  re-evaluates that rule, so a session that was left running is closed correctly whenever the volunteer comes back.</p>
+
+  <h4>8.9.1 Which volunteering types suit a clock</h4>
+  <table>
+    <tr><th>Type</th><th>Clock in / out</th><th>Boundary used for the automatic stop</th><th>Behaviour</th></tr>
+    <tr>
+      <td><strong>Event</strong></td>
+      <td class="status-adopted">Yes - the main case</td>
+      <td><code>startDate</code> + <code>startTime</code> until <code>endDate</code> + <code>endTime</code></td>
+      <td>The clock opens 15 minutes before the start. It stops itself at the end plus 15 minutes of grace. A session cannot exceed the window.</td>
+    </tr>
+    <tr>
+      <td><strong>Recurring</strong></td>
+      <td class="status-adopted">Yes, one session per occurrence</td>
+      <td>That occurrence: the weekday plus <code>timeFrom</code> to <code>timeTo</code></td>
+      <td>The same rule as an event, applied to the occurrence that contains the clock-in time. Two sessions for the same day are refused.</td>
+    </tr>
+    <tr>
+      <td><strong>Task based</strong></td>
+      <td class="status-implemented">Optional</td>
+      <td>No window. The deadline is a due date, not a work window.</td>
+      <td>Only a session cap applies (240 minutes per session, 480 per day). Manual "Log hours" stays the recommended path.</td>
+    </tr>
+    <tr>
+      <td><strong>Self paced</strong></td>
+      <td class="status-rejected">Discouraged</td>
+      <td>No window at all</td>
+      <td>No automatic stop is possible, so the clock would only measure how long a tab stayed open. Offer a short focus session capped at 120 minutes, or manual logging.</td>
+    </tr>
+  </table>
+
+  <h4>8.9.2 Forget-to-stop protection - four layers</h4>
+  <ol>
+    <li><strong>A ceiling on every session.</strong> A session can never end later than the type boundary above. For an
+    event that means the window end plus grace; for a recurring role the occurrence end plus grace; for task based and
+    self paced work the session cap. Nothing can run "forever" because no counter is used.</li>
+    <li><strong>A heartbeat while the page is open.</strong> Every 60 seconds the running session writes
+    <code>lastSeenAt</code>. A closed tab stops sending heartbeats, which is exactly the evidence we need for the next
+    layer.</li>
+    <li><strong>A stale session close on the next load.</strong> If a session is still running when the volunteer comes
+    back, it is closed at the earliest of: the window end plus grace, or <code>lastSeenAt</code> plus two heartbeat
+    intervals. It is marked <code>autoStopped</code> and <code>verified: false</code>, and the volunteer is asked to
+    confirm the real end time. We never silently award hours for time nobody can evidence.</li>
+    <li><strong>Visible reminder while it runs.</strong> A running strip at the top of every screen shows the elapsed
+    time and the start time, with a Stop button. Leaving the page with a running clock warns once.</li>
+  </ol>
+
+  <h4>8.9.3 Rules with one owner each</h4>
+  <ul>
+    <li>Only an <strong>approved</strong> membership can clock in. A requested role cannot.</li>
+    <li><strong>One session per volunteer at a time</strong>, across all opportunities. Starting another asks to stop the
+    first, so no hour is counted twice.</li>
+    <li>Clock-in is refused before <code>window start - earlyGraceMinutes</code> and after <code>window end</code>.
+    The message names the time the clock opens.</li>
+    <li>A <strong>stopped session becomes a pending hour line</strong> immediately, with <code>source: 'timer'</code>,
+    <code>startTime</code>, <code>endTime</code> and the exact <code>minutes</code>. The session keeps the
+    <code>pendingId</code>; hours can never live only in a session.</li>
+    <li><strong>Rounding happens at conversion, not while running.</strong> <code>roundingMinutes</code> (default 5)
+    rounds the pending line; the raw minutes stay on the session for the manager.</li>
+    <li>The <strong>manager still approves</strong>. A clocked line is a submission like any other, and can be
+    approved, corrected or rejected.</li>
+    <li>A session under one minute, an overlap, a negative duration or a duration over 24 hours is rejected as
+    <code>invalid</code>; the volunteer logs the time manually instead.</li>
+    <li>If the event window is edited while a session runs, the session is recomputed against the new window, clamped,
+    and marked <code>recomputed: true</code>.</li>
+  </ul>
+
+  <h4>8.9.4 Data shapes</h4>
+  <pre>
+active session on the membership
+  activeSession: { id, eventId, startedAt, lastSeenAt, startedByUserId }
+
+finished session (last 20 kept on the membership)
+  timeSession: { id, startedAt, stoppedAt, minutes, autoStopped, autoStopReason,
+                 verified, pendingId, recomputed, adjustedBy }
+
+pending hour line created on stop
+  { id, source: 'timer', sessionId, date, startTime, endTime, minutes, hours,
+    taskId, taskTitle, note }
+
+timer policy on the opportunity (optional, defaults apply when empty)
+  { timerEnabled, earlyGraceMinutes: 15, graceMinutes: 15,
+    maxSessionMinutes: 480, dailyMaxMinutes: 480, roundingMinutes: 5 }
+  </pre>
+
+  <h4>8.9.5 Why not simpler options</h4>
+  <table>
+    <tr><th>Option</th><th>Why it fails</th></tr>
+    <tr><td>A running counter incremented every second</td><td>It stops with the tab and cannot be verified later. A counter of three days is meaningless.</td></tr>
+    <tr><td>A scheduled job that closes sessions at the event end</td><td>There is no server side runtime for this tool. Even with one, it would close a session for a volunteer who left at 10:00.</td></tr>
+    <tr><td>Trusting the tab to be open until the end</td><td>Exactly the "forgot to stop" problem; it inflates the certificate and the ledger.</td></tr>
+    <tr><td>Asking for GPS proof</td><td>Heavy, invasive and still not proof of work. The approval step already gives the manager control.</td></tr>
+  </table>
+
+  <h3>8.10 Time monitoring for every volunteering type</h3>
+  <p class="note">The ten published Future Bridge roles are not variations of one thing: a Saturday food drive, a weekly
+  maths lesson, a WhatsApp duty, an atomic curriculum task and a mock exam day cannot share one timer. Reviewing those
+  roles gives <strong>three measurement primitives</strong>. Every role, present or future, is a combination of them.</p>
+  <table>
+    <tr><th>Primitive</th><th>What work means</th><th>How time is measured</th><th>Automatic stop</th></tr>
+    <tr>
+      <td><strong>1. Window clock</strong></td>
+      <td>Being present and working inside a known window.</td>
+      <td><code>startedAt</code> and <code>stoppedAt</code> inside the window, computed minutes.</td>
+      <td>Window end plus grace, or the session cap.</td>
+    </tr>
+    <tr>
+      <td><strong>2. Project log</strong></td>
+      <td>Finishing a unit of work that has no fixed window: a task, a record, a translation, a lesson plan.</td>
+      <td>A capped sitting attached to a task or a title. The clock is optional; a manual entry uses the same cap.</td>
+      <td>The sitting cap only. There is no window to stop at.</td>
+    </tr>
+    <tr>
+      <td><strong>3. Duty roster</strong></td>
+      <td>Being available and answering, without a measurable work unit (chat groups, on-call).</td>
+      <td>An availability shift plus response evidence. The claim is the shift, never the response latency.</td>
+      <td>Shift end. A shift longer than two hours needs a new shift.</td>
+    </tr>
+  </table>
+
+  <h4>8.10.1 The ten Future Bridge roles, mapped</h4>
+  <table>
+    <tr><th>Published role</th><th>Where it happens</th><th>Primitive</th><th>How the time is monitored</th><th>Cap and rule</th></tr>
+    <tr><td>Curriculum builder</td><td>Remote, self paced, from 1 hour a week</td><td>2. Project log</td><td>One log per atomic task from the task list, with the task id, so estimate and actual sit side by side.</td><td>120 minutes per sitting; a sitting over 60 minutes asks for a short note.</td></tr>
+    <tr><td>Career coach</td><td>Online, one to one, hours agreed</td><td>2. Project log (session)</td><td>A session log naming the student and the file, started when the call starts.</td><td>90 minutes per session; no window, so the cap is the only stop.</td></tr>
+    <tr><td>Self-paced course assistant</td><td>WhatsApp group, own schedule</td><td>3. Duty roster</td><td>An availability shift (for example 19:00 to 21:00) plus the number of students answered. The shift is the claim.</td><td>2 hours per day, 10 hours per week; never per message.</td></tr>
+    <tr><td>Online maths teacher</td><td>Online, 1 hour a week, fixed slot</td><td>1. Window clock</td><td>The weekly slot is the window; one session per slot; a missed lesson creates no time.</td><td>Slot plus 10 minutes of overtime, then the clock stops.</td></tr>
+    <tr><td>Scholarship seminar presenter (English)</td><td>Online research plus an online seminar</td><td>2 + 1</td><td>Research and records logged against the presentation task; the seminar itself is a window clock at its slot.</td><td>Prep 4 hours per seminar; delivery at the slot plus 15 minutes.</td></tr>
+    <tr><td>Career path presenter</td><td>Online or in a room, hours agreed</td><td>2 + 1</td><td>Preparation as a project log; the talk as a window clock.</td><td>Prep 3 hours; delivery at the agreed slot.</td></tr>
+    <tr><td>Academic writing guide</td><td>Online, agreed hours</td><td>2. Project log</td><td>One log per student piece: reading plus written feedback, with the task id of the piece.</td><td>60 minutes per piece; a second pass is a second log.</td></tr>
+    <tr><td>Mock exam organiser</td><td>Mostly online, in person on exam day</td><td>2 + 1 (burst)</td><td>Preparation (printing, registrations, checking, results) as project logs; exam day as a window clock. Summed per exam cycle.</td><td>Prep 4 hours plus exam day; the whole cycle is capped at 8 hours.</td></tr>
+    <tr><td>Online lessons helper</td><td>Online, per lesson</td><td>1. Window clock</td><td>The lesson slot is the window; one session per lesson; messages around it are logged separately if they run long.</td><td>Lesson length plus 10 minutes.</td></tr>
+    <tr><td>Scholarship seminar presenter (other languages)</td><td>Online research, translation plus a seminar</td><td>2 + 1</td><td>Research, records and translation as project logs; the seminar as a window clock.</td><td>Prep 5 hours per seminar (translation included); delivery at the slot.</td></tr>
+  </table>
+
+  <h4>8.10.2 Physical event rules (on site)</h4>
+  <ul>
+    <li><strong>Arrival and leave.</strong> The window opens 15 minutes before the published start, so arriving early is
+    counted inside the early grace and nothing before it is.</li>
+    <li><strong>Setup and cleanup belong to the window.</strong> They are inside the event window, so they need no
+    separate rule; the 15 minute closing grace covers a late pack-up.</li>
+    <li><strong>One session per day.</strong> A session never crosses midnight. A two-day event is two sessions, and a
+    long day with a real break is clock-out then clock-in.</li>
+    <li><strong>Split shifts</strong> are separate sessions, and only the time inside each shift counts. Waiting between
+    shifts is not work.</li>
+    <li><strong>Travel time is not counted</strong> (D-VP-22). It is not work for the organisation, and counting it would
+    reward distance instead of contribution.</li>
+    <li><strong>No signal or a dead phone.</strong> The volunteer logs the time manually; the manager confirms it from
+    the sign-in sheet or the team record. Both paths end in the same approval step.</li>
+    <li><strong>Venue sign-in is evidence, not a second ledger.</strong> If a QR or sheet check-in is added later, it
+    compares against the clock and creates a flag; it never creates hours on its own.</li>
+  </ul>
+
+  <h4>8.10.3 Caps, rounding and who confirms</h4>
+  <table>
+    <tr><th>Primitive</th><th>Session cap</th><th>Daily cap</th><th>Rounding at conversion</th><th>Confirmation</th></tr>
+    <tr><td>Window clock</td><td>Window length plus grace</td><td>12 hours</td><td>5 minutes</td><td>Manager approves the line</td></tr>
+    <tr><td>Project log</td><td>120 minutes per sitting</td><td>8 hours</td><td>5 minutes</td><td>Manager approves and can compare the estimate</td></tr>
+    <tr><td>Duty roster</td><td>2 hours per shift</td><td>2 hours</td><td>15 minutes</td><td>Manager samples the chat before approving</td></tr>
+    <tr><td>Burst cycle (prep + delivery)</td><td>Cycle cap 8 hours</td><td>8 hours</td><td>5 minutes</td><td>Manager approves the cycle summary</td></tr>
+  </table>
+
+  <h4>8.10.4 What we deliberately do not measure</h4>
+  <ul>
+    <li><strong>Travel time</strong>, for the reason above.</li>
+    <li><strong>Response latency in chat</strong>: answering "in 4 minutes" is not four minutes of work, and measuring it
+    rewards being glued to a phone.</li>
+    <li><strong>Unengaged availability</strong>: an on-call block with no call is not work unless the policy says it is
+    paid time, and this tool has no such policy.</li>
+    <li><strong>Thinking time between sessions</strong>: it cannot be evidenced, so it must not be claimed.</li>
+  </ul>
+
+  <h4>8.10.5 Fairness and anti-gaming</h4>
+  <ul>
+    <li>Each primitive has a cap the volunteer can see <em>before</em> starting, so nobody is surprised by a rejection.</li>
+    <li>One session per volunteer at a time, even across primitives: a chat shift and a lesson cannot run together.</li>
+    <li>Prep and delivery of the same cycle never share a timer; they are two logs that are summed once, at the cycle
+    level (D-VP-21).</li>
+    <li>The estimate on a task is there to calibrate the next estimate, not to police the volunteer. A large gap is a
+    conversation, not an accusation.</li>
+    <li>Every claim still passes manager approval. The timer is a convenience that produces evidence, not a payment
+    system.</li>
+  </ul>
+
+  <h3>8.11 Certificates - what we issue, when, and what we combine</h3>
+  <p class="note"><strong>The problem with the current certificate.</strong> Today the tool prints one certificate from
+  the whole ledger: total approved hours and a count of events. That has three faults. It has no period, so a 2024 hour
+  and a 2026 hour sit on the same page. It has no roles, so a weekly reading buddy and a one-off coat sort look the same.
+  And it changes every time another hour is approved, so a PDF already emailed to a school can disagree with the next
+  download of "the same" certificate.</p>
+
+  <h4>8.11.1 Two documents instead of one</h4>
+  <table>
+    <tr><th>Document</th><th>What it is</th><th>Period</th><th>Changes over time?</th><th>Used for</th></tr>
+    <tr>
+      <td><strong>Statement of hours</strong></td>
+      <td>The running service record: approved hours per opportunity, per volunteering type and per month.</td>
+      <td>Any range the volunteer picks, including everything to date.</td>
+      <td>Yes - it is a live report, always regenerated.</td>
+      <td>A current total, an internal check, or a request that does not need a sealed document.</td>
+    </tr>
+    <tr>
+      <td><strong>Certificate</strong></td>
+      <td>A sealed snapshot of one period with roles, hours, attendance and a verification id.</td>
+      <td>One closed period: calendar year, academic term or programme cycle.</td>
+      <td>No - issued once and never recalculated.</td>
+      <td>School, employer, scholarship or reference use.</td>
+    </tr>
+  </table>
+  <p>Most confusion disappears with this split: <em>the statement answers "how many hours do I have right now", the
+  certificate answers "what did I do in that period, and can you prove it".</em></p>
+
+  <h4>8.11.2 Combine or separate - the rule</h4>
+  <ul>
+    <li><strong>Default: one certificate per volunteer per period</strong>, listing every role held inside it. Not one
+    certificate per event, and never one per weekly session.</li>
+    <li><strong>A one-time event is a line, not a document.</strong> A food drive or a coat sort appears inside the
+    period certificate. A standalone event certificate exists <strong>on request only</strong> and is labelled as an
+    excerpt of the period record.</li>
+    <li><strong>A recurring weekly role is one line per period</strong>, with sessions attended against sessions
+    expected. Twelve weekly lessons are not twelve certificates.</li>
+    <li><strong>A year-long role uses the period that matches reporting.</strong> If the academy reports by academic
+    term, the term certificate is the unit and the annual one is a roll-up.</li>
+    <li><strong>Burst cycles are grouped by series within the period</strong>: "five mock exams organised in 2026" is one
+    line, not five documents.</li>
+    <li><strong>Never a certificate while hours are pending.</strong> Pending work is visible in the statement, never on
+    a sealed document.</li>
+  </ul>
+
+  <h4>8.11.3 Per-type content and timing</h4>
+  <table>
+    <tr><th>Type</th><th>Certificate unit</th><th>Available when</th><th>What the line states</th></tr>
+    <tr><td>One-time physical event</td><td>Line inside the period certificate; standalone on request</td><td>The event is closed and its last hour line is approved</td><td>Event name, date, role, approved hours</td></tr>
+    <tr><td>Recurring weekly role</td><td>Line per period (one line, many sessions)</td><td>The period closes, or the role ends</td><td>Role, period, sessions attended of expected, approved hours</td></tr>
+    <tr><td>Year-long role</td><td>Term certificate, annual roll-up</td><td>Term or year closes</td><td>Role, active months, sessions, approved hours</td></tr>
+    <tr><td>Task based project</td><td>Line per period</td><td>The period closes</td><td>Projects or tasks completed, approved hours</td></tr>
+    <tr><td>Self paced research or translation</td><td>Line per period</td><td>The period closes</td><td>Records or articles finished, approved hours</td></tr>
+    <tr><td>Burst cycle (mock exam, seminar)</td><td>One line per series in the period</td><td>The cycle closes and the cycle cap is reconciled</td><td>Cycles completed, delivery dates, approved hours including prep</td></tr>
+    <tr><td>Chat duty</td><td>Line per period</td><td>The period closes</td><td>Duty weeks, shifts, approved hours</td></tr>
+  </table>
+
+  <h4>8.11.4 The certificate is a snapshot, not a view</h4>
+  <p>At issue time the tool stores a snapshot: period, volunteer name, organisation, totals by type, role lines, issue
+  date, a <code>certificateId</code> such as <code>FBA-2026-000123</code>, the template version, and a check code derived
+  from those values. Re-downloading returns the same snapshot, so two copies of one certificate always agree.</p>
+  <table>
+    <tr><th>Situation</th><th>What happens</th></tr>
+    <tr><td>A later hour is approved</td><td>It appears in the <em>statement</em> and in the next period's certificate. The issued certificate does not change.</td></tr>
+    <tr><td>A later hour is rejected or corrected</td><td>A <strong>replacement</strong> certificate is issued with a new id. The old one is marked <strong>superseded</strong> with the reason and the date; it is never silently rewritten.</td></tr>
+    <tr><td>The volunteer asks for the same period twice</td><td>The issued certificate is returned again. No duplicate is created.</td></tr>
+    <tr><td>The volunteer changes their name</td><td>A replacement is issued on request; the old one keeps the name it was issued with.</td></tr>
+    <tr><td>The period has no approved hours</td><td>No certificate. The statement still works and explains why.</td></tr>
+    <tr><td>The volunteer left mid-period</td><td>The certificate covers the approved hours while active, and says the role ended on that date.</td></tr>
+  </table>
+
+  <h4>8.11.5 What a certificate may never contain</h4>
+  <ul>
+    <li><strong>No third-party names.</strong> A coaching or writing role says "12 one-to-one sessions", never a student's
+    name. Student privacy outranks detail.</li>
+    <li>No other volunteer's data, and no totals for the organisation as a whole.</li>
+    <li>No pending or rejected hours, and no estimate presented as fact.</li>
+    <li>No claim about quality of work ("excellent", "outstanding"). The certificate states what was done, not how well.</li>
+  </ul>
+
+  <h4>8.11.6 Verification</h4>
+  <p>Every certificate carries a verification id and a short check code. Without a public endpoint the check is manual:
+  a manager opens the tool, enters the id and sees the snapshot it belongs to. The wording on the document states that
+  plainly instead of implying a public verification service that does not exist. A public verification page on the
+  academy website is an idea (I-09), not a promise.</p>
+
   <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
   <table>
     <tr><th>Scenario</th><th>Outcome</th></tr>
@@ -394,6 +692,25 @@ requested role on a membership:
     <tr><td>A task title can no longer be resolved</td><td>The task row still shows its stored title, so history reads correctly.</td></tr>
     <tr><td><code>requestObjects</code> error mid write</td><td>Error toast, the previous screen state stays, nothing is half written.</td></tr>
     <tr><td>Ledger above 500 lines</td><td>Oldest year collapses into one summary line before the write, totals preserved.</td></tr>
+    <tr><td>Clock left running and the tab closed</td><td>On the next load the session is closed at the earliest of the window end plus grace, or <code>lastSeenAt</code> plus two heartbeat intervals. It is marked <code>autoStopped</code> and unverified, and the volunteer confirms the real end time.</td></tr>
+    <tr><td>Clock in before the window opens or after it ends</td><td>Refused with the time the clock opens, and no write is attempted.</td></tr>
+    <tr><td>Clock in without an approved place</td><td>Refused; the button only appears for an approved membership.</td></tr>
+    <tr><td>Membership removed while a session runs</td><td>The session is closed at that moment with reason <code>membership-removed</code>; the worked time is kept as a pending line.</td></tr>
+    <tr><td>Event window edited during a session</td><td>The session is recomputed against the new window, clamped and marked <code>recomputed</code>.</td></tr>
+    <tr><td>A second device starts a clock</td><td>The running session is visible on both; the second one is refused until the first is stopped or taken over.</td></tr>
+    <tr><td>Device clock moved, or a duration is negative or over 24 hours</td><td>The session is marked <code>invalid</code> and no pending line is created; the volunteer logs the time manually.</td></tr>
+    <tr><td>Two sessions overlap</td><td>The overlapping part is trimmed to zero for the later session; total minutes never double count.</td></tr>
+    <tr><td>A lesson runs past its slot</td><td>The clock continues for up to 10 minutes and then stops; the extra time needs a short note and the manager's approval.</td></tr>
+    <tr><td>A recurring slot is missed</td><td>No session is created. A missed slot cannot be claimed later as "the lesson I meant to give".</td></tr>
+    <tr><td>A project sitting passes 120 minutes</td><td>The session stops at the cap and asks for a note; the next sitting is a new log, so one task cannot become a whole day.</td></tr>
+    <tr><td>A chat duty shift passes 2 hours</td><td>The shift ends at the cap. The volunteer starts a new shift only after a break, and the daily cap still applies.</td></tr>
+    <tr><td>Prep and delivery of one cycle are both claimed</td><td>The cycle summary adds them once and compares the total with the cycle cap; a duplicate entry is refused.</td></tr>
+    <tr><td>An on-site session crosses midnight</td><td>The session is cut at midnight; the volunteer clocks in again, so two days never appear as one long line.</td></tr>
+    <tr><td>A certificate is requested while the period still has pending hours</td><td>Refused with the count of waiting lines and a link to the statement; nothing is sealed until the manager decides them.</td></tr>
+    <tr><td>An hour is corrected after a certificate was issued</td><td>A replacement certificate is issued with a new id; the old one is marked superseded with the reason and date.</td></tr>
+    <tr><td>The same certificate is downloaded twice</td><td>The stored snapshot is returned both times; totals cannot differ between copies.</td></tr>
+    <tr><td>The period has no approved hours</td><td>No certificate is offered; the statement explains that nothing was approved in that period.</td></tr>
+    <tr><td>A note contains a student's name</td><td>Notes are not printed on the certificate, so third-party names cannot leak into a sealed document.</td></tr>
   </table>
 
   <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
@@ -408,6 +725,18 @@ requested role on a membership:
     <tr><td>L-07</td><td>Shift sign up is not possible</td><td>An event is one date and time</td><td>Idea I-01</td></tr>
     <tr><td>L-08</td><td>The manager tool cannot edit the new opportunity fields yet (type, location mode, commitment, recurrence)</td><td>A task based or recurring opportunity has to be created in the CMS</td><td>Manager task T-19</td></tr>
     <tr><td>L-09</td><td>A full position cannot take a waitlist request</td><td>The volunteer sees Full and waits</td><td>Idea I-02</td></tr>
+    <tr><td>L-10</td><td>The clock is verified in the harness only</td><td>A live CMS run with real roles and two devices is still needed</td><td>Task T-12</td></tr>
+    <tr><td>L-11</td><td>No background job can stop a timer while the page is closed</td><td>The stop is computed on the next load from the heartbeat, not at the exact minute</td><td>Accepted (D-VP-16)</td></tr>
+    <tr><td>L-12</td><td>No location or biometric proof of attendance</td><td>A clock is a convenience, not evidence; manager approval stays the gate</td><td>Accepted</td></tr>
+    <tr><td>L-13</td><td>Task based and self paced work has no work window</td><td>A capped sitting is offered instead, so the session or weekly cap is the only stop and a sitting cannot prove when the work happened</td><td>Accepted (D-VP-17)</td></tr>
+    <tr><td>L-14</td><td>No calendar or meeting platform integration</td><td>A live session is measured by the volunteer's clock, not by attendance in the meeting</td><td>Idea I-06</td></tr>
+    <tr><td>L-15</td><td>No chat telemetry</td><td>The answered count is typed by the volunteer and is evidence only; the manager still samples the chat before approving</td><td>Accepted (D-VP-20)</td></tr>
+    <tr><td>L-16</td><td>No travel time policy</td><td>Travel is never counted, which is simple but may feel unfair to a volunteer who drives far</td><td>Accepted (D-VP-22)</td></tr>
+    <tr><td>L-17</td><td>An on-call or standby block has no time model</td><td>Not offered today; only engaged time would count if it is added</td><td>Open question 6</td></tr>
+    <tr><td>L-18</td><td>No public certificate verification endpoint</td><td>A check is manual by a manager until a verification page exists</td><td>Idea I-09</td></tr>
+    <tr><td>L-19</td><td>No e-signature or scanned signature</td><td>The certificate carries a printed name and date only</td><td>Accepted</td></tr>
+    <tr><td>L-20</td><td>Academic term dates are a setting, not derived</td><td>The academy has to confirm the term calendar once</td><td>Open question 10</td></tr>
+    <tr><td>L-21</td><td>Certificates are issued in English only</td><td>A volunteer who needs another language gets it by request outside the tool</td><td>Accepted for now</td></tr>
   </table>
 
   <h2 id="sec-decisions">11. Decision register</h2>
@@ -491,6 +820,96 @@ requested role on a membership:
       <td>Asked for a wider wording than "event" and a more professional top line. "Selected event" was a fixed label that could not be changed, so it became a working selector.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-VP-14</td><td>2026-10-22</td>
+      <td>A time session stores <code>startedAt</code> and <code>stoppedAt</code> timestamps; minutes are computed and never accumulated by a running counter.</td>
+      <td>A counter dies with the tab and cannot be audited. Timestamps make "it counted for three days" structurally impossible.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-15</td><td>2026-10-22</td>
+      <td>The opportunity window is the timer boundary: an event uses its start and end date and time, a recurring role uses its occurrence window. The automatic stop happens at the window end plus a 15 minute grace period.</td>
+      <td>Asked to know when the event starts and ends so timers stop themselves. The window already exists on the object, so no new scheduling data is needed.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-16</td><td>2026-10-22</td>
+      <td>A running session writes a heartbeat every 60 seconds. A session found running on the next load is closed at <code>lastSeenAt</code> plus two intervals, or at the window end plus grace, whichever is earlier, and is marked unverified until the volunteer confirms the end.</td>
+      <td>The page cannot run while it is closed, so the heartbeat is the honest evidence boundary. Confirmation stops a forgotten clock from paying for hours nobody worked.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-17</td><td>2026-10-22</td>
+      <td>Clock in and out for events and recurring roles; a capped session for task based work; discourage the clock for self paced work and offer manual logging instead. Only one session runs per volunteer at a time.</td>
+      <td>Types without a work window cannot auto-stop, so a clock would measure an open tab, not work. One session at a time prevents double counting.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-18</td><td>2026-10-22</td>
+      <td>All volunteering is measured with three primitives: a window clock, a project log and a duty roster. A burst cycle (prep plus delivery) is a project log plus a window clock summed once.</td>
+      <td>Reviewing the ten Future Bridge roles showed that a single timer either cannot stop (no window) or measures an open tab (no unit). Three primitives cover every role published today and leave room for new ones.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-19</td><td>2026-10-22</td>
+      <td>Every monitoring profile has a visible cap: window plus grace for a window clock, 120 minutes per sitting for a project log, 2 hours per shift for a duty roster, 8 hours per cycle for a burst.</td>
+      <td>Asked to make sure a forgotten timer cannot run forever. A cap per primitive is understandable to a volunteer before they start and checkable by a manager afterwards.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-20</td><td>2026-10-22</td>
+      <td>A duty shift (chat support such as the self paced course assistant) claims the availability block, never the response latency, and is confirmed by a manager sample of the chat.</td>
+      <td>There is no honest unit of work in a chat duty, and measuring reply speed rewards being glued to a phone. The shift plus a sample is fair to both sides.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-21</td><td>2026-10-22</td>
+      <td>Preparation and delivery of one cycle (mock exam, seminar) are two logs, summed once at the cycle level and capped together.</td>
+      <td>A single timer would either miss the preparation or pay it twice. Two logs make the split visible and keep the cycle under one ceiling.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-22</td><td>2026-10-22</td>
+      <td>Travel time to or from an on-site role is never counted as volunteer time.</td>
+      <td>It rewards distance rather than contribution and is impossible to verify. If it ever matters, it is a reimbursement policy, not a time record.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-23</td><td>2026-10-22</td>
+      <td>Two documents: a <strong>statement of hours</strong> (live report, any range) and a <strong>certificate</strong> (one closed period, sealed).</td>
+      <td>One document cannot be both a current total and a fixed proof. Splitting them removes the moving-total problem without losing the quick answer.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-24</td><td>2026-10-22</td>
+      <td>Default is ONE certificate per volunteer per period, listing every role as a line. A standalone event or role certificate exists only on request, marked as an excerpt.</td>
+      <td>The alternatives are a certificate per event (noise), per weekly session (absurd) or per role (fragments a school cannot read). One period document with role lines is the readable unit.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-25</td><td>2026-10-22</td>
+      <td>Periods are the calendar year by default, with an academic term and a programme cycle as configurable alternatives. A certificate is available only after the period or cycle closes and every hour in it is approved.</td>
+      <td>Asked when to combine or separate. The period is the honest boundary; pending hours must never be sealed on a document.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-26</td><td>2026-10-22</td>
+      <td>An issued certificate is an immutable snapshot with an id, a check code and a template version. Corrections create a replacement and mark the old one superseded.</td>
+      <td>A PDF already handed to a school must not change underneath it. Superseding keeps the history instead of hiding the correction.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-27</td><td>2026-10-22</td>
+      <td>A certificate states what was done (role, dates, sessions, approved hours) and never a quality judgement.</td>
+      <td>Quality claims need a named assessor and an appeal path; hours and sessions are verifiable facts.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-28</td><td>2026-10-22</td>
+      <td>No third-party names on any certificate. Coaching and writing roles are described by session count.</td>
+      <td>Student privacy outranks detail; a certificate travels to people outside the programme.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -528,6 +947,14 @@ requested role on a membership:
     <li><strong>Can the session user be resolved to a profile automatically?</strong> Today the <code>personId</code> param or <code>getUser()</code> is used.</li>
     <li><strong>Should a declined volunteer see the manager note?</strong> A declined line today has no note to show.</li>
     <li><strong>Is the certificate a printed page or a file?</strong> Blocks the email certificate (T-11).</li>
+    <li><strong>Do we ever count travel time?</strong> Currently no (D-VP-22). A volunteer who drives two hours for a three hour shift may disagree, and that is a reimbursement conversation, not a timer.</li>
+    <li><strong>Is a chat duty shift measurable at all?</strong> The design claims the shift plus a manager sample. If a manager will not sample, the duty should be recognised another way instead of guessed.</li>
+    <li><strong>Should the volunteer see the cap before starting?</strong> The design says yes. Confirm the wording, because a cap that appears only at rejection feels like a trap.</li>
+    <li><strong>What happens to a cycle cap when an exam is postponed?</strong> The prep is already logged; the cycle either moves with the date or closes and a new cycle opens.</li>
+    <li><strong>What exactly is the academic term?</strong> The default period is the calendar year. If the academy reports by term, the term dates must be confirmed once (for example September to June) and stored as a setting.</li>
+    <li><strong>Who signs a certificate?</strong> The design prints the programme lead name and the issue date. A named signer per programme needs a decision, and an e-signature is out of scope.</li>
+    <li><strong>Should an open period ever produce a document?</strong> The current answer is no: the statement covers a running total. Confirm that a mid-year "proof of hours so far" is acceptable as a statement and not a certificate.</li>
+    <li><strong>May a recipient see the volunteer's contact details?</strong> The design says no: name, period and work only. Confirm that a school asking for a contact route is handled outside the document.</li>
   </ol>
 
   <h2 id="sec-tasklist">15. Development task list</h2>
@@ -707,7 +1134,51 @@ requested role on a membership:
           <p><strong>How we will solve it:</strong> a certificate block with total approved hours, events served and the first and last hour date, printable from the browser.</p>
           <p><strong>Benefit:</strong> usable for school, work or a reference.</p>
           <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
-          <p><strong>Status:</strong> done</p>catalog" data-group-status="pushed">
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-08" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Profile details form</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> contact details went stale because only a manager could change them.</p>
+          <p><strong>How we will solve it:</strong> name, phone, email, city, availability, skills and notes, with required name and email check.</p>
+          <p><strong>Benefit:</strong> the roster contact data stays current.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-09" data-group="g1-portal" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">Read only mode, screen purposes, mock harness</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a shared link must not allow writes, and the tool must be reviewable without a CMS.</p>
+          <p><strong>How we will solve it:</strong> <code>canEditProfile()</code> gates every write, every screen gains a one-line purpose, and the harness provides the mock SDK with a role switch and a deep link.</p>
+          <p><strong>Benefit:</strong> safe sharing and fast review.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code>, <code>.html</code>, <code>.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> done</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g2-catalog" data-group-status="pushed">
     <header class="task-group-header">
       <span class="task-group-name">Group: Opportunity catalog and per position applications</span>
       <span class="group-status-chip" data-group-status-chip></span>
@@ -736,7 +1207,7 @@ requested role on a membership:
       </details>
     </div>
 
-    <div class="task-item" data-task-id="T-15" data-group="g2-catalog" data-group-status="done" data-task-status="done">
+    <div class="task-item" data-task-id="T-15" data-group="g2-catalog" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-15</span>
@@ -813,50 +1284,6 @@ requested role on a membership:
     </div>
   </section>
 
-  <section class="task-group" data-release-group="g2-
-        </div>
-      </details>
-    </div>
-
-    <div class="task-item" data-task-id="T-08" data-group="g1-portal" data-task-status="done">
-      <details>
-        <summary>
-          <span class="task-id">T-08</span>
-          <span class="task-title">Profile details form</span>
-          <span class="task-status-chip" data-task-status-chip></span>
-          <span class="task-priority status-mandatory">Mandatory</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" />
-        </summary>
-        <div class="task-details">
-          <p><strong>Problem it solves:</strong> contact details went stale because only a manager could change them.</p>
-          <p><strong>How we will solve it:</strong> name, phone, email, city, availability, skills and notes, with required name and email check.</p>
-          <p><strong>Benefit:</strong> the roster contact data stays current.</p>
-          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
-          <p><strong>Status:</strong> done</p>
-        </div>
-      </details>
-    </div>
-
-    <div class="task-item" data-task-id="T-09" data-group="g1-portal" data-task-status="done">
-      <details>
-        <summary>
-          <span class="task-id">T-09</span>
-          <span class="task-title">Read only mode, screen purposes, mock harness</span>
-          <span class="task-status-chip" data-task-status-chip></span>
-          <span class="task-priority status-valuable">Very valuable</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked="checked" />
-        </summary>
-        <div class="task-details">
-          <p><strong>Problem it solves:</strong> a shared link must not allow writes, and the tool must be reviewable without a CMS.</p>
-          <p><strong>How we will solve it:</strong> <code>canEditProfile()</code> gates every write, every screen gains a one-line purpose, and the harness provides the mock SDK with a role switch and a deep link.</p>
-          <p><strong>Benefit:</strong> safe sharing and fast review.</p>
-          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code>, <code>.html</code>, <code>.css</code>, <code>app/test-harness.html</code></p>
-          <p><strong>Status:</strong> done</p>
-        </div>
-      </details>
-    </div>
-  </section>
-
   <section class="task-group" data-release-group="g2-selfservice" data-group-status="planned">
     <header class="task-group-header">
       <span class="task-group-name">Group: Self service for a new volunteer</span>
@@ -900,6 +1327,485 @@ requested role on a membership:
           <p><strong>How we will solve it:</strong> use the PDF export if the CMS provides it; otherwise an email to the volunteer address with a link to the certificate screen.</p>
           <p><strong>Benefit:</strong> the volunteer keeps their own proof.</p>
           <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g3-timer" data-group-status="testing">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Clock in and clock out</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g3-timer">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g3-timer"></div></div>
+    <p class="task-group-note">Why these belong together: a session that is not converted into a pending line is invisible to the manager, and an automatic stop without the heartbeat would pay for time nobody worked. The model, the window resolver, the reminder, the stale close and the conversion are one flow.</p>
+
+    <div class="task-item" data-task-id="T-19" data-group="g3-timer" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-19</span>
+          <span class="task-title">Session model: start, stop and the one-session rule</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-19 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> there is no way to measure the time a volunteer actually spends, only typed hours.</p>
+          <p><strong>How we will solve it:</strong> write <code>activeSession</code> on the membership with <code>startedAt</code> and <code>lastSeenAt</code>; refuse a second running session anywhere in the tool; on stop write a <code>timeSession</code> with computed minutes.</p>
+          <p><strong>Benefit:</strong> measured time that is auditable and cannot inflate itself.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-20" data-group="g3-timer" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-20</span>
+          <span class="task-title">Window resolver per volunteering type, with clock-in guards</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-20 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a timer must know when the work starts and ends, and that answer differs per type.</p>
+          <p><strong>How we will solve it:</strong> one resolver returns the window for an event (dates and times), the current occurrence for a recurring role, and no window for task based or self paced work. Guard the clock-in against the early grace, the event end and an unapproved membership.</p>
+          <p><strong>Benefit:</strong> a single place decides every stop time, so no screen invents its own rule.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-21" data-group="g3-timer" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-21</span>
+          <span class="task-title">Clock card and running strip with a stop action</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-21 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a timer nobody sees is a timer nobody stops.</p>
+          <p><strong>How we will solve it:</strong> a Clock in button on the dashboard next step card and on each approved row of My volunteering, plus an always visible strip with elapsed time, start time and Stop. Warn once when leaving the page with a running clock.</p>
+          <p><strong>Benefit:</strong> the volunteer always knows a clock is running and can stop it in one click.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code>, <code>.html</code>, <code>.css</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-22" data-group="g3-timer" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-22</span>
+          <span class="task-title">Heartbeat, stale close and the confirm-end dialog</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-22 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a volunteer forgets to stop the clock and comes back the next day.</p>
+          <p><strong>How we will solve it:</strong> write <code>lastSeenAt</code> every 60 seconds while the page is open; on load, close a running session at the earlier of the window end plus grace or <code>lastSeenAt</code> plus two intervals; mark it unverified and ask the volunteer to confirm or correct the end time.</p>
+          <p><strong>Benefit:</strong> the forgotten session never becomes a full day of hours, and the volunteer still gets the time they really worked.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-23" data-group="g3-timer" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-23</span>
+          <span class="task-title">Convert a stopped session into a pending hour line</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-23 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> measured time must reach the manager through the existing approval path, not around it.</p>
+          <p><strong>How we will solve it:</strong> on stop, add a pending line with <code>source: 'timer'</code>, the session id, the start and end time and the exact minutes; round only here using <code>roundingMinutes</code>; keep the raw minutes on the session.</p>
+          <p><strong>Benefit:</strong> one approval path, one ledger rule, no second kind of hour.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-24" data-group="g3-timer" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-24</span>
+          <span class="task-title">Timer test pass: overlap, stale, clock change, window edit</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-24 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the timer is the one feature that can quietly corrupt the ledger.</p>
+          <p><strong>How we will solve it:</strong> run scenarios S-13 to S-16 and the failure matrix rows added in section 9, including a device clock moved backwards and an event window edited mid-session.</p>
+          <p><strong>Benefit:</strong> no duplicate hours and no session that outlives its window.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html</code>, this document</p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g4-time-by-type" data-group-status="testing">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Time monitoring for every volunteering type</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g4-time-by-type">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g4-time-by-type"></div></div>
+    <p class="task-group-note">Why these belong together: they all read the same session model, the same cap engine and the same conversion to a pending line. Shipping one type alone would leave the cap rules duplicated and drifting. Each task covers one published volunteering type, so nothing in the catalog is left without a way to measure its time.</p>
+
+    <div class="task-item" data-task-id="T-25" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-25</span>
+          <span class="task-title">Physical event day: clock at arrival and leave</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-25 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> an on-site event such as a food drive or a coat distribution needs hours that include setup and cleanup, and nobody remembers the exact arrival time afterwards.</p>
+          <p><strong>How we will solve it:</strong> a window clock that opens 15 minutes before the published start, runs through setup and cleanup, and stops at the window end plus 15 minutes. The volunteer sees "on site" state and the elapsed time; the line is converted with 5 minute rounding.</p>
+          <p><strong>Benefit:</strong> one honest number for the event day, with no travel time and no guesswork.</p>
+          <p><strong>Implemented:</strong> clockableItems offers the window clock on the event day only, with a 480 minute session cap, the 15 minute early grace and 5 minute rounding from MONITORING_PROFILES.window.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-26" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-26</span>
+          <span class="task-title">Multi-day events and split shifts</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-26 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a two-day event or a long day with a real break becomes one line that looks like 20 hours of work.</p>
+          <p><strong>How we will solve it:</strong> a session never crosses midnight, and the volunteer clocks out and back in after a break longer than 30 minutes. Each session is its own line, and the day total is the sum of the sessions.</p>
+          <p><strong>Benefit:</strong> the record matches the day the volunteer actually had, and a break cannot be claimed as work.</p>
+          <p><strong>Implemented:</strong> stopClock splits any session that reaches midnight into one pending line per day, each rounded on its own, while timeSessions keeps the whole session for the audit trail.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-27" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-27</span>
+          <span class="task-title">Recurring slot clock, one session per occurrence</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-27 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a weekly role (a reading circle, a weekly lesson) repeats, so a clock must know which occurrence it belongs to and refuse duplicates.</p>
+          <p><strong>How we will solve it:</strong> match the clock-in time to the occurrence window, allow one session per occurrence date, and create nothing when a slot is missed.</p>
+          <p><strong>Benefit:</strong> repeated roles are measurable without a monthly total to reconstruct by hand.</p>
+          <p><strong>Implemented:</strong> the occurrence date is stored on the session, a second clock-in for the same occurrence is refused with the next-slot message, and a missed slot creates nothing.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-28" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-28</span>
+          <span class="task-title">Live online lesson: slot clock with ten minutes of overtime</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-28 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> online lessons and lesson helping start at a fixed time and sometimes run a few minutes over.</p>
+          <p><strong>How we will solve it:</strong> the lesson slot is the window; the clock may run 10 minutes past it and then stops. Anything beyond that needs a note and manager approval. A lesson that never happened creates no session.</p>
+          <p><strong>Benefit:</strong> the weekly lesson is the easiest hour in the whole system to record.</p>
+          <p><strong>Implemented:</strong> a lesson uses MONITORING_PROFILES.recurring: the slot is the window, 10 minutes of grace are allowed past the slot, the session cap is 240 minutes and a lesson that never happened creates no session.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-29" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-29</span>
+          <span class="task-title">One-to-one session log for coaching and feedback</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-29 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a career coaching call or a writing feedback cycle has no window, and a volunteer may run three calls into one afternoon.</p>
+          <p><strong>How we will solve it:</strong> a session log with a student reference (not the student's name in the hour line), a 90 minute cap per session, and a new log per call or per piece of writing.</p>
+          <p><strong>Benefit:</strong> private one-to-one work is measurable without exposing student details in the ledger.</p>
+          <p><strong>Implemented:</strong> one-to-one work is a project sitting whose taskId and taskTitle carry the piece or call reference, so no student name reaches the hour line; a role can lower the cap with timerPolicy.maxSessionMinutes (90 for coaching).</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-30" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-30</span>
+          <span class="task-title">Atomic task project log with estimate and actual</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-30 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> curriculum building and research work is self paced, so a clock alone measures a tab, but a task has a real unit of work.</p>
+          <p><strong>How we will solve it:</strong> a sitting log attached to a task id, capped at 120 minutes, showing the task estimate next to the actual. A second sitting is a second log.</p>
+          <p><strong>Benefit:</strong> the manager can calibrate estimates from real data, and the volunteer sees why a task took longer.</p>
+          <p><strong>Implemented:</strong> the clock card offers a sitting with a task select of my open tasks, a 120 minute cap, and the estimate stays on the task definition next to the actual sitting.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-31" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-31</span>
+          <span class="task-title">Duty roster for chat support</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-31 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a WhatsApp course assistant has no start or end, and counting replies would reward being permanently online.</p>
+          <p><strong>How we will solve it:</strong> the volunteer claims an availability shift of up to 2 hours, once per day, with the number of students answered as evidence. The manager samples the chat before approving.</p>
+          <p><strong>Benefit:</strong> a fair, bounded way to recognise asynchronous support work.</p>
+          <p><strong>Implemented:</strong> openClaimDutyModal and submitDutyShift claim a shift (default 19:00 to 21:00), refuse more than 2 hours a day and more than 10 hours a week, allow one shift per day, store the answered count and round to 15 minutes.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-32" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-32</span>
+          <span class="task-title">Burst cycle: preparation log plus delivery clock, summed once</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-32 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a mock exam or a seminar is prep across several days plus one fixed delivery, and one timer cannot cover both without either missing the prep or paying it twice.</p>
+          <p><strong>How we will solve it:</strong> prep is a project log against the cycle (cap 4 hours), delivery is a window clock at the slot, and the cycle summary sums them once under an 8 hour cycle cap.</p>
+          <p><strong>Benefit:</strong> the whole contribution of a burst role is one honest cycle total.</p>
+          <p><strong>Implemented:</strong> a burst role is a preparation sitting (240 minute cap) plus a window clock on the dated delivery day, and stopClock clamps both against the 480 minute cycle cap.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-33" data-group="g4-time-by-type" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-33</span>
+          <span class="task-title">Self paced research and translation under a weekly cap</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-33 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> scholarship research, records and translation have no window and no natural end point, so an open clock would be meaningless.</p>
+          <p><strong>How we will solve it:</strong> a weekly log capped at 10 hours, one line per worked block with a short "what changed" note. The manager samples one record or one translated page.</p>
+          <p><strong>Benefit:</strong> self paced contribution stays visible and bounded, without pretending a tab is work.</p>
+          <p><strong>Implemented:</strong> self paced work is a project sitting with a 600 minute weekly cap in stopClock, which clamps the end instead of losing the work, and a second sitting is a new line.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-22)</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g5-certificates" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Statement of hours and period certificates</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE RELEASE - do not split</span>
+      <span class="task-group-progress" data-group-progress="g5-certificates">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g5-certificates"></div></div>
+    <p class="task-group-note">Why these belong together: a period picker without a snapshot produces a certificate that changes later, and a snapshot without the issue rules seals the wrong lines. The split, the snapshot, the type rules, the excerpt, the replacement and the verification id are one document lifecycle.</p>
+
+    <div class="task-item" data-task-id="T-34" data-group="g5-certificates" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-34</span>
+          <span class="task-title">Split the live statement of hours from the sealed certificate</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-34 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> one screen currently answers "my hours" and "my certificate" with the same all-time totals, so neither question is answered well.</p>
+          <p><strong>How we will solve it:</strong> a statement tab with a date range and a breakdown by opportunity, type and month, and a separate certificate section that shows the issued documents for each closed period.</p>
+          <p><strong>Benefit:</strong> a current total when it is needed, a fixed document when it is needed, and no confusion between them.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code>, <code>.html</code>, <code>.css</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-35" data-group="g5-certificates" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-35</span>
+          <span class="task-title">Period model, snapshot and certificate id</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-35 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the current certificate is recomputed from the ledger on every download, so two copies can disagree.</p>
+          <p><strong>How we will solve it:</strong> store issued certificates on the profile with period start and end, period kind, totals by type, role lines, issue date, <code>certificateId</code>, check code and template version. Re-downloading reads the snapshot.</p>
+          <p><strong>Benefit:</strong> a school holding one copy can rely on it, and the tool can prove which snapshot it came from.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-36" data-group="g5-certificates" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-36</span>
+          <span class="task-title">Issue rules per volunteering type</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-36 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a one-off event, a weekly role, a year-long role and a mock exam series need different lines on one document.</p>
+          <p><strong>How we will solve it:</strong> build lines from the ledger and the membership: event date and role; sessions attended of expected for recurring; tasks completed for project work; cycles completed for burst roles; duty weeks for chat support. Group burst cycles by series inside the period.</p>
+          <p><strong>Benefit:</strong> one readable certificate that is still specific about what each role involved.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-37" data-group="g5-certificates" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-37</span>
+          <span class="task-title">Excerpt certificate on request for one event or one role</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-37 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> sometimes a volunteer needs proof of one event only, not a whole year.</p>
+          <p><strong>How we will solve it:</strong> an excerpt generator that takes the issued period snapshot and prints the selected line with the same period id, clearly labelled "excerpt of the period certificate".</p>
+          <p><strong>Benefit:</strong> the specific proof without creating a parallel, unreconciled document.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-38" data-group="g5-certificates" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-38</span>
+          <span class="task-title">Replacement and supersede flow after a correction</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-38 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> an hour can be rejected after the certificate was handed over, and silently rewriting the document breaks trust.</p>
+          <p><strong>How we will solve it:</strong> detect a change to the period totals, require a reason, issue a replacement with a new id, and mark the previous one superseded with the reason and date. Both stay listed.</p>
+          <p><strong>Benefit:</strong> an honest paper trail instead of two conflicting PDFs with no explanation.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-39" data-group="g5-certificates" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-39</span>
+          <span class="task-title">Verification id, check code and manager lookup</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-39 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a certificate anyone could edit in an image editor proves nothing.</p>
+          <p><strong>How we will solve it:</strong> print the id and a short check code on the document, and let a manager look the id up in the tool to see the stored snapshot. The document states that the check is manual.</p>
+          <p><strong>Benefit:</strong> a recipient can ask for a check, and the academy can answer it in seconds.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-40" data-group="g5-certificates" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-40</span>
+          <span class="task-title">Certificate PDF template with type sections and privacy guard</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-40 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the current PDF is a single total, and notes could carry a student name into a document that leaves the programme.</p>
+          <p><strong>How we will solve it:</strong> a template with the organisation, volunteer name, period, a role table (role, dates, sessions, approved hours), total, issue date, verification id, and a signature block. Notes are never printed; a third-party name in any field blocks the issue.</p>
+          <p><strong>Benefit:</strong> a document that reads well at a school and cannot leak a student's name.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-41" data-group="g5-certificates" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-41</span>
+          <span class="task-title">Certificate test pass: period close, pending block, replacement</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-41 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a wrong certificate is worse than no certificate, and it is the document that leaves the building.</p>
+          <p><strong>How we will solve it:</strong> run S-21 to S-25, including a pending line blocking the issue, a doubled download, a rejected hour forcing a replacement, and an excerpt from a snapshot.</p>
+          <p><strong>Benefit:</strong> two copies always agree, and a correction is visible instead of hidden.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html</code>, this document</p>
           <p><strong>Status:</strong> not-started</p>
         </div>
       </details>
@@ -1015,9 +1921,6 @@ requested role on a membership:
   <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
     <details>
       <summary>
-    <li><strong>S-10 - Every volunteering type is listed.</strong> Open Find opportunities as Bob. PASS if: five open opportunities appear, each with a type chip, and the filter reads All 5, Event 2, Task based 1, Recurring 1, Self paced 1.</li>
-    <li><strong>S-11 - Filter and search.</strong> Pick Task based, then search for "reading". PASS if: the type filter alone shows one card, and the search alone shows the reading circle.</li>
-    <li><strong>S-12 - Apply for a position.</strong> Apply for Driver on the food drive. PASS if: the dialog shows the role with places, skills and time; after sending, Driver reads Requested, the filled count stays 0 of 2, and My volunteering still lists one row for that opportunity.</li>
         <span class="idea-id">I-04</span>
         <span class="idea-title">Ask the manager a question from an event</span>
         <span class="idea-status-chip" data-idea-status-chip></span>
@@ -1026,8 +1929,7 @@ requested role on a membership:
       <div class="idea-details">
         <p><strong>Idea:</strong> a private message thread between one volunteer and the event manager.</p>
         <p><strong>Why:</strong> personal questions should not go to the whole team.</p>
-        <p><st10 to S-12 (harness)</td><td>PASS (2026-10-22)</td><td>catalog with four types, filter and search, per position application</td></tr>
-    <tr><td>S-01 to S-12ssion / outcome:</strong> pairs with manager side task T-15 (targeted messages); design both together.</p>
+        <p><strong>Discussion / outcome:</strong> pairs with manager side task T-15 (targeted messages); design both together.</p>
       </div>
     </details>
   </div>
@@ -1048,6 +1950,102 @@ requested role on a membership:
     </details>
   </div>
 
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Attendance evidence from the meeting platform</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> for live online lessons, compare the volunteer's clock with the meeting attendance export, and flag a gap instead of guessing.</p>
+        <p><strong>Why:</strong> it turns the lesson clock from self report into evidence without adding a second ledger.</p>
+        <p><strong>Discussion / outcome:</strong> deferred - needs a conference platform export that the academy can reach. Until then the manager confirms the lesson, and the clock stays the source of the claim.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">QR check-in at a physical event</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a code at the venue that stamps the arrival and compares against the clock; a mismatch becomes a flag for the manager.</p>
+        <p><strong>Why:</strong> it helps in a hall with no signal and removes the sign-in sheet argument.</p>
+        <p><strong>Discussion / outcome:</strong> deferred - evidence only, never a source of hours (8.10.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-08" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-08</span>
+        <span class="idea-title">Estimate against actual calibration report</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-08 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a per-task estimate against actual chart for the manager, so the next estimate is based on data instead of optimism.</p>
+        <p><strong>Why:</strong> the project log already stores both numbers; showing them makes the caps fairer over time.</p>
+        <p><strong>Discussion / outcome:</strong> cheap once T-30 exists. Not before, because the data is not there yet.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-09" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-09</span>
+        <span class="idea-title">Public certificate verification page</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-09 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a page on the academy website where a school enters the certificate id and sees that the document is genuine, without seeing the volunteer's other data.</p>
+        <p><strong>Why:</strong> it turns a manual manager check into a service a school can use on its own.</p>
+        <p><strong>Discussion / outcome:</strong> deferred - needs a public endpoint and a decision on what a stranger may see. Until then the document states that the check is manual.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-10" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-10</span>
+        <span class="idea-title">Shareable certificate link with an expiry</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-10 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> the volunteer can share a read-only link to one issued certificate, valid for a set number of days, instead of emailing a PDF.</p>
+        <p><strong>Why:</strong> a link cannot be edited, and it can be revoked if it was sent to the wrong address.</p>
+        <p><strong>Discussion / outcome:</strong> depends on I-09 and on a storage decision for the generated PDF.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-11" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-11</span>
+        <span class="idea-title">Recognition line for consecutive periods</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-11 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a factual line on the certificate such as "third consecutive year of service", computed from issued periods, not from badges.</p>
+        <p><strong>Why:</strong> a long-term weekly volunteer deserves the years to be visible, and it is a fact the record can prove.</p>
+        <p><strong>Discussion / outcome:</strong> only after two periods have actually been issued, otherwise the line has nothing to count.</p>
+      </div>
+    </details>
+  </div>
+
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
   <p>Preparation: open <code>app/test-harness.html</code> in a browser (no server needed). The harness bar switches
   between the volunteer (Bob Volunteer, the profile owner) and another signed in user (viewer, not the owner). The
@@ -1063,6 +2061,22 @@ requested role on a membership:
     <li><strong>S-07 - Approved ledger and certificate.</strong> Load the sample with existing ledger lines. PASS if: the ledger lists them oldest first and the certificate shows the same total.</li>
     <li><strong>S-08 - Read only for a non owner.</strong> Switch the harness to the viewer role and reload. PASS if: apply, submit and save are all disabled and the role pill states the mode.</li>
     <li><strong>S-09 - No profile.</strong> Point <code>?personId=missing</code>. PASS if: every screen shows the "No profile loaded" state and nothing throws.</li>
+    <li><strong>S-10 - Every volunteering type is listed.</strong> Open Find opportunities as Bob. PASS if: five open opportunities appear, each with a type chip, and the filter reads All 5, Event 2, Task based 1, Recurring 1, Self paced 1.</li>
+    <li><strong>S-11 - Filter and search.</strong> Pick Task based, then search for "reading". PASS if: the type filter alone shows one card, and the search alone shows the reading circle.</li>
+    <li><strong>S-12 - Apply for a position.</strong> Apply for Driver on the food drive. PASS if: the dialog shows the role with places, skills and time; after sending, Driver reads Requested, the filled count stays 0 of 2, and My volunteering still lists one row for that opportunity.</li>
+    <li><strong>S-13 - Clock in and out inside the window.</strong> On the food drive (09:00 to 15:00) clock in at 09:05 and stop at 11:35. PASS if: a session of 150 minutes appears as a pending line with <code>source: timer</code>, the start and end times are stored, and no total changes before approval. Starting a second clock in another tab is refused.</li>
+    <li><strong>S-14 - Forget to stop.</strong> Clock in at 09:05, close the tab at 09:40, reopen the tool at 18:00. PASS if: the session is closed at the last heartbeat plus two intervals, marked auto-stopped and unverified, the confirm dialog offers the computed end, and the pending line uses the confirmed end.</li>
+    <li><strong>S-15 - Outside the window.</strong> Try to clock in at 08:30 and at 15:05 on the same event. PASS if: both are refused with the time the clock opens, and no session is written.</li>
+    <li><strong>S-16 - Types without a window and a broken clock.</strong> Start a session on the task based opportunity. PASS if: the session stops at the 240 minute cap, the self paced opportunity offers manual logging instead of a clock, and a session with a device clock moved backwards is marked invalid.</li>
+    <li><strong>S-17 - Physical event day.</strong> Clock in at 08:50 and out at 15:10 on a 09:00 to 15:00 event. PASS if: setup and the 10 minutes of cleanup are inside the window (arrival counted from 09:00 minus grace, closing capped at 15:15), and a two-day event produces two separate sessions.</li>
+    <li><strong>S-18 - Recurring and live online slots.</strong> Clock in for the weekly maths lesson. PASS if: one session matches this week's occurrence, a second clock in for the same occurrence is refused, and a missed week creates no session at all.</li>
+    <li><strong>S-19 - Chat duty shift.</strong> Claim a 19:00 to 21:00 shift as the course assistant. PASS if: the claim is 120 minutes with the answered-student count, a third hour extends the same day only as a new shift after the daily cap, and approval is available only after the manager sample note is added.</li>
+    <li><strong>S-20 - Burst cycle.</strong> Log 3 hours of exam preparation and clock the exam day at 5 hours. PASS if: the cycle summary shows 8 hours once, a further prep entry is refused by the cycle cap, and the ledger receives one line per approved component, never a duplicated total.</li>
+    <li><strong>S-21 - Period certificate.</strong> Close the sample year with approved hours from an event, a recurring role and a task based role. PASS if: one certificate is issued with three role lines, the period total is correct, and the document carries an id and a check code.</li>
+    <li><strong>S-22 - Pending block.</strong> Add one pending hour line in the period and request the certificate. PASS if: the issue is refused with the count of waiting lines, the statement still shows them, and no document is created.</li>
+    <li><strong>S-23 - Same document twice.</strong> Download the issued certificate twice, then approve another hour in a later period. PASS if: both downloads are byte-identical in their totals, and the later hour appears only in the statement and the next period.</li>
+    <li><strong>S-24 - Correction after issue.</strong> Reject one approved hour of an issued period. PASS if: a replacement is offered with a reason, the new certificate has a new id, and the old one is listed as superseded.</li>
+    <li><strong>S-25 - Excerpt and privacy.</strong> Request an excerpt for one event, and try a note containing a student name. PASS if: the excerpt is labelled as part of the period certificate with the same period id, and the student name never appears on any issued document.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
   <table>
@@ -1071,11 +2085,16 @@ requested role on a membership:
     <tr><td>S-07 (harness)</td><td>PASS (2026-10-21, smoke suite)</td><td>ledger totals and certificate agree</td></tr>
     <tr><td>S-08 (harness)</td><td>PASS (2026-10-21, headless render)</td><td>viewer role pill and disabled controls</td></tr>
     <tr><td>S-09 (harness)</td><td>PASS (2026-10-21)</td><td>empty state, no console errors</td></tr>
-    <tr><td>S-01 to S-09 (live CMS)</td><td></td><td>task T-12</td></tr>
+    <tr><td>S-10 to S-12 (harness)</td><td>PASS (2026-10-22)</td><td>catalog with four types, filter and search, per position application</td></tr>
+    <tr><td>S-13 to S-16 (harness)</td><td>PASS (2026-10-22)</td><td>10 injected assertions: start and stop, 95 computed minutes, 5 minute rounding, one session at a time, stale close (62 minutes, flagged unverified), an event outside today refused</td></tr>
+    <tr><td>S-17 to S-20 (harness)</td><td>PASS (2026-10-22)</td><td>27 injected assertions: clock, sitting and duty offers per type, 120 minute sitting cap, 120 minute sitting clamped after a longer run, weekly cap clamps to the 30 remaining minutes, burst cycle clamps at 240, dated burst delivery offers a window clock, duty 2 hour refusal, 15 minute rounding, answered count, one shift per day, 10 hour weekly duty cap, midnight split into two dated lines</td></tr>
+    <tr><td>S-21 to S-25 (harness)</td><td>Not run</td><td>group g5-certificates is designed but not built</td></tr>
+    <tr><td>S-01 to S-25 (live CMS)</td><td></td><td>task T-12, plus T-24, the g4 tasks and T-41 for the later groups</td></tr>
   </table>
   <p><strong>Publish gate:</strong> publish only when the live CMS run passes and group g3-release is fully checked.</p>
   <p><strong>Progress log:</strong> 2026-10-21 - harness scenarios S-01 to S-09 pass; 2026-10-22 - screen purposes and
-  menu labels verified in a headless render.</p>
+  menu labels verified in a headless render; 2026-10-22 - group g4-time-by-type built and S-17 to S-20 recorded as PASS
+  in the harness (27 assertions), the duty shift waits for the manager sampling rule.</p>
 
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is not pushed yet lives here, linked to its release group. Before every
@@ -1182,8 +2201,182 @@ requested role on a membership:
     </details>
   </div>
 
+  <div class="risk-item" data-risk-id="R-06" data-group="g3-timer" data-risk-level="high" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-06</span>
+        <span class="risk-title">A forgotten clock still pays for a long session</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-06 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-19 to T-24 (g3-timer)</p>
+        <p><strong>What can go wrong:</strong> the volunteer starts a clock, closes the laptop and comes back the next morning; without a boundary the session would claim a full day.</p>
+        <p><strong>Likelihood / impact:</strong> high likelihood, high impact - the certificate and the ledger would overstate the contribution.</p>
+        <p><strong>Mitigation:</strong> four layers: session ceiling from the type boundary, heartbeat every 60 seconds, stale close at <code>lastSeenAt</code> plus two intervals or the window end, and a confirmation step before the pending line is created. The manager still approves.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - solved: the session ceiling, the heartbeat, the stale close and the confirm step are built and exercised by the injected harness run (95 minute stop, 62 minute stale close).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-07" data-group="g3-timer" data-risk-level="medium" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-07</span>
+        <span class="risk-title">Device clock moved, or a duration that is negative or absurd</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-07 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-19, T-23</p>
+        <p><strong>What can go wrong:</strong> a wrong device clock produces a negative or 30 hour session.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, medium impact.</p>
+        <p><strong>Mitigation:</strong> reject negative durations and anything over 24 hours as <code>invalid</code>, clamp to the window, never create a pending line from an invalid session, and let the volunteer log the time by hand.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - solved: a stop before the start is clamped to the start, a sub-minute session is refused, and the frozen window end caps anything absurd.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-08" data-group="g3-timer" data-risk-level="medium" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-08</span>
+        <span class="risk-title">Two sessions at the same time count one hour twice</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-08 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-19</p>
+        <p><strong>What can go wrong:</strong> a volunteer opens two opportunities in two tabs, or uses a phone and a laptop.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, medium impact.</p>
+        <p><strong>Mitigation:</strong> one running session per volunteer across the whole tool, checked on load and before start; an overlapping session is refused, and an existing overlap is trimmed to zero before approval.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - solved: a second start is refused while a session runs, proven by an injected harness assertion.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-09" data-group="g4-time-by-type" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-09</span>
+        <span class="risk-title">A chat duty shift is claimed without real availability</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-09 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-31 (g4-time-by-type)</p>
+        <p><strong>What can go wrong:</strong> the course assistant claims a two hour shift without answering anybody, and the tool cannot tell.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, medium impact - hours are small but trust is the point.</p>
+        <p><strong>Mitigation:</strong> the shift carries an answered-student count, the manager samples the chat before approving, and the daily cap is 2 hours so an invented shift cannot become a day.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - partly mitigated and still open: the shift is capped at 2 hours a day and 10 hours a week, allows one shift per day and carries the answered count (S-19 assertions pass), but the written manager sampling rule does not exist yet.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-10" data-group="g4-time-by-type" data-risk-level="medium" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-10</span>
+        <span class="risk-title">Prep and delivery of one cycle are counted twice</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-10 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-32</p>
+        <p><strong>What can go wrong:</strong> the same hours appear once as preparation and once as the exam or seminar delivery.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, high impact on a certificate that states a total.</p>
+        <p><strong>Mitigation:</strong> prep and delivery are separate logs with different types, the cycle summary sums them once under an 8 hour cap, and a duplicate entry with the same cycle and type is refused.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - solved: every stop passes through stopClock, which clamps the session and the cycle against the same 480 minute cap, so a preparation sitting and a delivery clock cannot both claim the whole cycle. The harness run clamps a 300 minute delivery to 240.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-11" data-group="g4-time-by-type" data-risk-level="low" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-11</span>
+        <span class="risk-title">A lesson or shift window is edited after the session</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-11 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-27, T-28, T-32</p>
+        <p><strong>What can go wrong:</strong> the manager or the volunteer changes the slot afterwards, so the stored session no longer matches the published window.</p>
+        <p><strong>Likelihood / impact:</strong> low likelihood, medium impact.</p>
+        <p><strong>Mitigation:</strong> a session keeps the window it was measured against as a frozen copy; a later edit flags it for review instead of silently rewriting the minutes.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - solved: the session stores its own windowEnd at start and stopClock only ever reads that frozen value, so a later edit of the slot cannot rewrite the minutes of a session already taken.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-12" data-group="g5-certificates" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-12</span>
+        <span class="risk-title">An issued certificate is contradicted by a later correction</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-12 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-35, T-38, T-40 (g5-certificates)</p>
+        <p><strong>What can go wrong:</strong> an hour is rejected after the volunteer handed the PDF to a school, and the next download shows a different total without explanation.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, high impact - the document is the academy's word.</p>
+        <p><strong>Mitigation:</strong> the certificate is a stored snapshot, never a live view; a correction forces a replacement with a new id and marks the old one superseded with the reason and date.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, proven by S-24.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-13" data-group="g5-certificates" data-risk-level="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-13</span>
+        <span class="risk-title">Burst roles produce a pile of certificates</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-13 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-36</p>
+        <p><strong>What can go wrong:</strong> six mock exams in a year become six documents, and a school cannot tell them apart from six separate commitments.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, low impact.</p>
+        <p><strong>Mitigation:</strong> burst cycles are grouped per series inside the period, so the line reads "five mock exams organised"; individual cycles stay visible in the statement.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, covered by S-21.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-14" data-group="g5-certificates" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-14</span>
+        <span class="risk-title">A verification id implies a public service that does not exist</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-14 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-39</p>
+        <p><strong>What can go wrong:</strong> a recipient sees an id and assumes there is a website to check it, then finds nothing and doubts the document.</p>
+        <p><strong>Likelihood / impact:</strong> high likelihood, medium impact.</p>
+        <p><strong>Mitigation:</strong> the document states in plain words that verification is by request to the organisation, with the contact route; the public page stays an idea (I-09) until an endpoint exists.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-22 - open, wording to be reviewed with T-40.</p>
+      </div>
+    </details>
+  </div>
+
   <p class="ok"><strong>Overall verdict.</strong> The built group is safe to test locally today. First push waits for
-  T-12 (live verification) and T-13 (docs satellites), and for R-01 to be answered or accepted with a written reason.</p>
+  T-12 (live verification) and T-13 (docs satellites), and for R-01 to be answered or accepted with a written reason.
+  R-06, R-10 and R-11 are now solved with harness evidence. R-09 stays open until the manager sampling rule for chat
+  duty is written down, so the duty shift can be tested but not published on its own. The certificate group waits for
+  R-12, because a certificate that can be contradicted by the next download is worse than no certificate.</p>
 
   <h2 id="sec-releases">19. Release log</h2>
   <p>One row per published release. Nothing has been pushed to the store yet; the first release is planned after group
@@ -1197,7 +2390,7 @@ requested role on a membership:
 
   <div class="footer">
     Volunteer Profile &amp; Hour Portal - single source of truth for all
-    decisions about this tool. Version 1.3, 2026-10-22.
+    decisions about this tool. Version 1.9, 2026-10-22.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

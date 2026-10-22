@@ -1,0 +1,366 @@
+{
+  "deals": [
+    {
+      "id": "smp1-bundle-basic",
+      "section": "Bundles",
+      "title": "Bundle: 2 Medium Pizzas + Dessert",
+      "description": "Pick two medium pizzas and one dessert at one fixed price.",
+      "price": 39.99,
+      "image_url": "",
+      "active": true,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp1-g-pizzas", "label": "2 Medium Pizzas", "quantity": 2, "category_ids": ["cat_mains"], "size_label": "Medium (12\")" },
+          { "group_id": "smp1-g-desserts", "label": "1 Dessert", "quantity": 1, "category_ids": ["cat_desserts"] }
+        ]
+      }
+    },
+    {
+      "id": "smp1-bundle-fixed-extra",
+      "section": "Bundles",
+      "title": "Bundle: Pizza + fixed tiramisu",
+      "description": "One pizza and a tiramisu included.",
+      "price": 25.0,
+      "image_url": "",
+      "active": true,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp1-g-pizza", "label": "1 Pizza", "quantity": 1, "category_ids": ["cat_mains"] },
+          { "group_id": "smp1-g-fixed", "label": "Tiramisu", "quantity": 1, "item_ids": ["item_tiramisu"] }
+        ]
+      }
+    },
+    {
+      "id": "smp1-bundle-name-filter",
+      "section": "Bundles",
+      "title": "Bundle: bruschetta + dessert by name filter",
+      "description": "One bruschetta plus a dessert whose name contains Tiramisu.",
+      "price": 16.9,
+      "image_url": "",
+      "active": true,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp1-g-app", "label": "1 Bruschetta", "quantity": 1, "category_ids": ["cat_appetizers"], "name_filter": "Bruschetta" },
+          { "group_id": "smp1-g-tira", "label": "Tiramisu", "quantity": 1, "category_ids": ["cat_desserts"], "name_filter": "Tiramisu" }
+        ]
+      }
+    },
+    {
+      "id": "smp1-min-quantity-sized",
+      "section": "Quantity",
+      "title": "Minimum 2 medium pizzas, per unit",
+      "description": "Any two medium pizzas at a per-unit price.",
+      "price": 15.5,
+      "image_url": "",
+      "active": true,
+      "rule_type": "min_quantity",
+      "rule": { "category_ids": ["cat_mains"], "size_label": "Medium (12\")", "min_quantity": 2 }
+    },
+    {
+      "id": "smp1-min-quantity-any",
+      "section": "Quantity",
+      "title": "Minimum 3 appetizers, any item",
+      "description": "Three appetizers at a per-unit price.",
+      "price": 8.5,
+      "image_url": "",
+      "active": true,
+      "rule_type": "min_quantity",
+      "rule": { "category_ids": ["cat_appetizers"], "min_quantity": 3 }
+    },
+    {
+      "id": "smp1-tiered",
+      "section": "Quantity",
+      "title": "Tiered: dinner party",
+      "description": "Two or three mains at a tier price.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "tiered",
+      "rule": {
+        "item_ids": ["item_margherita", "item_bruschetta", "item_tiramisu"],
+        "tiers": [
+          { "quantity": 2, "price": 22, "label": "2 items for 22" },
+          { "quantity": 3, "price": 30, "label": "3 items for 30" }
+        ]
+      }
+    },
+    {
+      "id": "smp1-two-for-one-same-size",
+      "section": "Buy one get one",
+      "title": "2 for 1 pizza, same size",
+      "description": "The cheaper pizza is free; both picks must share a size.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "two_for_one",
+      "rule": { "required_item_count": 2, "category_ids": ["cat_mains"], "same_size": true }
+    },
+    {
+      "id": "smp1-two-for-one-mixed",
+      "section": "Buy one get one",
+      "title": "2 for 1 appetizers, any item",
+      "description": "The cheaper starter is free; items may differ.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "two_for_one",
+      "rule": { "required_item_count": 2, "category_ids": ["cat_appetizers"], "same_size": false }
+    },
+    {
+      "id": "smp1-percent-restricted",
+      "section": "Discounts",
+      "title": "10% off desserts",
+      "description": "Percent discount restricted to the dessert category.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 10, "category_ids": ["cat_desserts"] }
+    },
+    {
+      "id": "smp1-percent-item",
+      "section": "Discounts",
+      "title": "15% off bruschetta",
+      "description": "Percent discount restricted to one item.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 15, "item_ids": ["item_bruschetta"] }
+    },
+    {
+      "id": "smp1-percent-whole-order",
+      "section": "Discounts",
+      "title": "5% off the whole order",
+      "description": "No restriction - applies to the entire order.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 5 }
+    },
+    {
+      "id": "smp1-subtotal-threshold",
+      "section": "Discounts",
+      "title": "Spend 50, save 10",
+      "description": "A fixed discount over a minimum subtotal.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "subtotal_threshold",
+      "rule": { "min_subtotal": 50, "discount": 10 }
+    },
+    {
+      "id": "smp1-free-delivery-threshold",
+      "section": "Delivery",
+      "title": "Free delivery over 30",
+      "description": "The delivery fee is dropped above the threshold.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_delivery",
+      "rule": { "min_subtotal": 30, "always": false }
+    },
+    {
+      "id": "smp1-free-delivery-always",
+      "section": "Delivery",
+      "title": "Free delivery always",
+      "description": "Delivery is always free.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_delivery",
+      "rule": { "always": true }
+    },
+    {
+      "id": "smp1-free-item-with-purchase",
+      "section": "Buy one get one",
+      "title": "Pizza + free tiramisu",
+      "description": "Buy a pizza and the tiramisu comes free.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_item_with_purchase",
+      "rule": {
+        "groups": [
+          { "group_id": "smp1-g-paid-pizza", "label": "1 Pizza", "quantity": 1, "category_ids": ["cat_mains"], "charge": "paid" },
+          { "group_id": "smp1-g-free-tira", "label": "Tiramisu", "quantity": 1, "item_ids": ["item_tiramisu"], "charge": "free" }
+        ]
+      }
+    },
+    {
+      "id": "smp1-buy-n-get-m",
+      "section": "Buy one get one",
+      "title": "Buy 3 get 1 desserts",
+      "description": "Three paid desserts and one free.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "buy_n_get_m",
+      "rule": { "required_item_count": 3, "free_item_count": 1, "category_ids": ["cat_desserts"], "same_size": false }
+    },
+    {
+      "id": "smp1-volume-bands",
+      "section": "Quantity",
+      "title": "Volume: appetizers by the plate",
+      "description": "Unit price drops at higher quantities.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "volume_pricing",
+      "rule": {
+        "category_ids": ["cat_appetizers"],
+        "bands": [
+          { "min_quantity": 2, "unit_price": 8.0 },
+          { "min_quantity": 4, "unit_price": 7.0 },
+          { "min_quantity": 8, "unit_price": 6.0 }
+        ]
+      }
+    },
+    {
+      "id": "smp1-volume-name-filter",
+      "section": "Quantity",
+      "title": "Volume: tiramisu by name filter",
+      "description": "Unit price drops by band for desserts named Tiramisu.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "volume_pricing",
+      "rule": {
+        "category_ids": ["cat_desserts"],
+        "name_filter": "Tiramisu",
+        "bands": [
+          { "min_quantity": 2, "unit_price": 8.5 },
+          { "min_quantity": 4, "unit_price": 7.5 }
+        ]
+      }
+    },
+    {
+      "id": "smp1-free-modifier",
+      "section": "Modifiers",
+      "title": "Free extra topping",
+      "description": "The cheapest topping option comes free on pizzas.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_modifier",
+      "rule": { "modifier_group_ids": ["mg_toppings"], "option_count": 1, "category_ids": ["cat_mains"] }
+    },
+    {
+      "id": "smp1-scheduled-bundle",
+      "section": "Weekend",
+      "title": "Scheduled: weekend pizza night",
+      "description": "Visible only Friday-Saturday evenings in November.",
+      "price": 34.99,
+      "image_url": "",
+      "active": true,
+      "schedule": { "date_from": "2026-11-01", "date_until": "2026-11-30", "weekdays": [5, 6], "time_from": "17:00", "time_until": "22:00" },
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp1-g-wkd-pizza", "label": "2 Pizzas", "quantity": 2, "category_ids": ["cat_mains"] }
+        ]
+      }
+    },
+    {
+      "id": "smp1-scheduled-time-only",
+      "section": "Happy hour",
+      "title": "Happy hour: 20% off lunch",
+      "description": "Weekday afternoons only.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "schedule": { "weekdays": [1, 2, 3, 4, 5], "time_from": "14:00", "time_until": "17:00" },
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 20, "category_ids": ["cat_lunch"] }
+    },
+    {
+      "id": "smp1-inactive-deal",
+      "section": "Paused",
+      "title": "Inactive: hidden from the website",
+      "description": "The active flag is off, so the website hides this deal.",
+      "price": 19.99,
+      "image_url": "",
+      "active": false,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp1-g-hidden", "label": "1 Pizza", "quantity": 1, "category_ids": ["cat_mains"] }
+        ]
+      }
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "smp1-campaign-category",
+      "title": "Legacy 2x pizza",
+      "description": "Old campaign kept for editing; surfaces as a two-for-one deal.",
+      "required_item_count": 2,
+      "same_size": true,
+      "category_ids": ["cat_mains"],
+      "item_ids": [],
+      "pricing": "most_expensive"
+    },
+    {
+      "id": "smp1-campaign-items",
+      "title": "Legacy starter pair",
+      "description": "Campaign restricted to specific items.",
+      "required_item_count": 2,
+      "same_size": false,
+      "category_ids": [],
+      "item_ids": ["item_bruschetta", "item_lunch_wrap"],
+      "pricing": "most_expensive"
+    }
+  ],
+  "promotions": [
+    { "id": "smp1-promo-free-delivery", "title": "Free delivery over 30", "description": "Downtown area only", "image_url": "" },
+    { "id": "smp1-promo-weekend", "title": "Weekend family bundles", "description": "Fri-Sun", "image_url": "" },
+    { "id": "smp1-promo-loyalty", "title": "Loyalty 10%", "description": "Members only", "image_url": "" },
+    { "id": "smp1-promo-new-menu", "title": "New winter menu", "description": "Available now", "image_url": "" }
+  ],
+  "hero": {
+    "image_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80",
+    "preset_images": [
+      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1600&q=80"
+    ]
+  },
+  "promo_codes": [
+    {
+      "id": "smp1-code-save10",
+      "code": "SAVE10",
+      "title": "10% off everything",
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 10 },
+      "max_uses": 500
+    },
+    {
+      "id": "smp1-code-spend50",
+      "code": "SPEND50",
+      "title": "Save 10 over 50",
+      "rule_type": "subtotal_threshold",
+      "rule": { "min_subtotal": 50, "discount": 10 },
+      "max_uses": 100
+    },
+    {
+      "id": "smp1-code-freedelivery",
+      "code": "FREEDELIVERY",
+      "title": "Free delivery",
+      "rule_type": "free_delivery",
+      "rule": { "always": true },
+      "max_uses": null
+    },
+    {
+      "id": "smp1-code-delivery30",
+      "code": "DELIVERY30",
+      "title": "Free delivery over 30",
+      "rule_type": "free_delivery",
+      "rule": { "min_subtotal": 30, "always": false },
+      "max_uses": 25
+    }
+  ]
+}

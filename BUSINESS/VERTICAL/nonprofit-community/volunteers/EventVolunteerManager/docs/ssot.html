@@ -28,7 +28,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v1.4</span>
+      <span>v1.5</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -72,7 +72,7 @@
     updated to capture the final decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>1.4</td></tr>
+    <tr><th>Document version</th><td>1.5</td></tr>
     <tr><th>Last updated</th><td>2026-10-22</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (EventVolunteerManager).</td></tr>
@@ -366,6 +366,8 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     <tr><td>Task document is missing on first task</td><td>Created on demand with <code>eventId</code> and an empty task list.</td></tr>
     <tr><td><code>requestObjects</code> error mid write</td><td>Error toast, the previous screen state stays, nothing is half written.</td></tr>
     <tr><td>A role is deleted while placements hold it</td><td>The event loses the role; placements keep their own name copy so history reads correctly.</td></tr>
+    <tr><td>The event window is edited while a volunteer clock is running</td><td>The volunteer tool recomputes the session against the new window, clamps it and marks it <code>recomputed</code>; the manager sees the session start and end in the hours screen.</td></tr>
+    <tr><td>The event is closed or cancelled with a running clock</td><td>The session is closed at the window end or at the status change; the worked time is kept as a pending line for approval.</td></tr>
   </table>
 
   <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
@@ -380,6 +382,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     <tr><td>L-07</td><td>No email dispatch of announcements</td><td>Volunteers see messages only when they open the tool</td><td>Idea I-03</td></tr>
     <tr><td>L-08</td><td>Closed message volumes cannot be deleted from inside the tool</td><td>A manager deletes the object in the CMS</td><td>Accepted for now</td></tr>
     <tr><td>L-09</td><td>The event form does not edit the opportunity fields the volunteer catalog reads (type, location mode, commitment, deadline, recurrence)</td><td>A task based, recurring or self paced opportunity has to be created in the CMS</td><td>Task T-19</td></tr>
+    <tr><td>L-10</td><td>The event form does not edit the timer policy, and the hours screen does not yet show session start and end times</td><td>The volunteer clock runs on defaults and a manager cannot see how a timed line was produced</td><td>Task T-20</td></tr>
   </table>
 
   <h2 id="sec-decisions">11. Decision register</h2>
@@ -449,6 +452,12 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
       <td>D-EVM-11</td><td>2026-10-22</td>
       <td>The event object also carries the volunteering offer: <code>opportunityType</code>, <code>locationMode</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code>, <code>recurrence</code> and richer positions (skills, timeCommitment). Positions are the job descriptions a volunteer applies for.</td>
       <td>The volunteer catalog must serve task based, recurring and self paced volunteering, not only dated events. One object type keeps both tools on the same contract; the fields are optional and ignored when empty.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-12</td><td>2026-10-22</td>
+      <td>The event window (<code>startDate</code>, <code>endDate</code>, <code>startTime</code>, <code>endTime</code>) is the boundary the volunteer clock uses for its automatic stop. The event may also carry the timer policy: <code>timerEnabled</code>, <code>earlyGraceMinutes</code>, <code>graceMinutes</code>, <code>maxSessionMinutes</code>, <code>roundingMinutes</code>.</td>
+      <td>Asked how timers can stop themselves. The window already exists here, so the manager tool owns the data that makes the volunteer timer safe; the default policy applies when a field is empty. A clocked line is still approved by the manager like any submitted hour.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
@@ -881,6 +890,27 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
         </div>
       </details>
     </div>
+    <div class="task-item" data-task-id="T-20" data-group="g3-parity" data-task-status="not-started">
+    <details>
+      <summary>
+        <span class="task-id">T-20</span>
+        <span class="task-title">Timer policy on the event form and session detail on the hours screen</span>
+        <span class="task-status-chip" data-task-status-chip></span>
+        <span class="task-priority status-mandatory">Mandatory</span>
+        <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-20 as done" />
+      </summary>
+      <div class="task-details">
+        <p><strong>Problem it solves:</strong> the volunteer clock needs a window and a policy, and a manager needs to see how a timed line was produced before approving it.</p>
+        <p><strong>How we will solve it:</strong> add <code>timerEnabled</code>, <code>earlyGraceMinutes</code>, <code>graceMinutes</code>, <code>maxSessionMinutes</code> and <code>roundingMinutes</code> to the event details screen; show the session start, end, minutes, auto-stop reason and unverified flag next to each pending hour line, and let the manager adjust the line before approval.</p>
+        <p><strong>Benefit:</strong> the automatic stop uses values the manager chose, and a timed line can be checked in seconds.</p>
+        <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>app/EventVolunteerManager.html</code></p>
+        <p><strong>Status:</strong> not-started</p>
+      </div>
+    </details>
+    </div>
+  
+
+
   </section>
 
   <section class="task-group" data-release-group="g4-release" data-group-status="planned">
@@ -1132,7 +1162,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
         <p><strong>Likelihood / impact:</strong> certain with conversations, high impact before the split.</p>
         <p><strong>Mitigation:</strong> messages live in their own type, rotate at 150 per volume, and the event document stays around 12 KB.</p>
         <p><strong>Last re-evaluation:</strong> 2026-10-21 - solved by D-EVM-03 and D-EVM-08.</p>
-      </div>
+      </div>5
     </details>
   </div>
 
@@ -1151,7 +1181,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
         <p><strong>Likelihood / impact:</strong> low likelihood, low impact - the empty state explains it.</p>
         <p><strong>Mitigation:</strong> placements, tasks and hours are separate documents and remain intact.</p>
         <p><strong>Last re-evaluation:</strong> 2026-10-22 - accepted, documented in the failure matrix.</p>
-      </div>
+      </div>5
     </details>
   </div>
 
@@ -1170,7 +1200,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
 
   <div class="footer">
     Event Volunteer Manager - single source of truth for all decisions about
-    this tool. Version 1.4, 2026-10-22.
+    this tool. Version 1.5, 2026-10-22.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

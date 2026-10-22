@@ -1,4 +1,7 @@
 <!-- CDN Dependencies -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
@@ -560,7 +563,7 @@
         <button type="button" class="btn btn-sm btn-ghost" id="menu-import-gloria-btn" title="Import menu from Gloria JSON">📥 Import Gloria</button>
         <button type="button" class="btn btn-sm btn-ghost" id="menu-import-sample-btn" title="Import the bundled sample menu or a pasted menu JSON">📥 Samples</button>
       </div>
-      <div class="items-grid" id="menu-items-grid"><div class="empty-state">Select a category to view items</div></div>
+      <div class="items-grid" id="menu-items-grid"><div class="empty-state">No items yet - click "+ Add Item" to add the first one.</div></div>
     </main>
     <!-- Right Drawer -->
     <aside class="right-panel" id="menu-drawer" style="display:none;">
@@ -942,17 +945,15 @@
       <div class="deal-editor-body">
         <fieldset class="settings-group">
           <legend>Source</legend>
-          <div class="radio-row">
-            <label class="radio-label"><input type="radio" name="menu-import-source" id="menu-import-bundled" checked> Bundled sample file</label>
-            <label class="radio-label"><input type="radio" name="menu-import-source" id="menu-import-paste"> Paste JSON</label>
+          <div class="form-group">
+            <div class="import-file-row">
+              <input type="file" id="menu-import-file-input" accept=".json,application/json" style="display:none;">
+              <button type="button" class="btn btn-sm btn-outline" id="menu-import-file-btn">📂 Choose JSON file</button>
+              <span class="field-hint" id="menu-import-file-name">No file chosen</span>
+            </div>
+            <textarea class="form-input form-textarea" id="menu-import-json" rows="8" placeholder='Paste a JSON object with a "menu" key holding "categories", "items" and "modifier_groups" (or choose a file)'></textarea>
           </div>
-          <div class="form-group" style="margin-top:8px;">
-            <select class="form-input" id="menu-import-file"></select>
-          </div>
-          <div class="form-group" style="margin-top:8px;">
-            <textarea class="form-input form-textarea" id="menu-import-json" rows="8" style="display:none;" placeholder='Paste a JSON object with a "menu" key holding "categories", "items" and "modifier_groups" (or paste those arrays directly)'></textarea>
-          </div>
-          <span class="field-hint">The bundled sample menu is the demo restaurant used by the deals samples (Pizza / Dips / Wings / Drinks + Toppings). Import it first, then import the deals samples without errors.</span>
+          <span class="field-hint">Sample files live in the <code>sampleData</code> folder next to the tool. Pairings: <code>menu-demo.json</code> with <code>deals-demo.json</code>; <code>menu-rich.json</code> / <code>menu-rich-compact.json</code> with <code>deals-rich.json</code>. The ids must match or the deals import is blocked.</span>
         </fieldset>
         <fieldset class="settings-group">
           <legend>Sections to import</legend>
@@ -1041,15 +1042,30 @@
       <div class="card">
         <div class="card-header"><span class="card-icon">🖼️</span> Hero image</div>
         <div class="card-body">
-          <div class="hero-image-preview" id="hero-image-preview"></div>
-          <div class="deal-image-row">
-            <button type="button" class="btn btn-sm btn-outline" id="hero-image-upload">📷 Upload</button>
-            <button type="button" class="btn btn-sm btn-ghost" id="hero-image-clear">✕ Remove</button>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Image URL</label>
-            <input type="text" class="form-input" id="hero-image-url" placeholder="https://...">
-            <span class="field-hint">The website renders this image above the restaurant name.</span>
+          <div class="hero-layout">
+            <div class="hero-preview-col">
+              <div class="hero-image-preview" id="hero-image-preview"></div>
+              <span class="field-hint">The website shows this image above the restaurant name.</span>
+            </div>
+            <div class="hero-options-col">
+              <div class="hero-source">
+                <span class="hero-source-label">Option 1 — Upload</span>
+                <button type="button" class="btn btn-primary" id="hero-image-upload">📷 Upload an image</button>
+                <span class="field-hint">Picks a file from your device. The platform stores it and fills the link box below.</span>
+              </div>
+              <div class="hero-or">or</div>
+              <div class="hero-source">
+                <span class="hero-source-label">Option 2 — Use a link</span>
+                <div class="hero-url-row">
+                  <input type="text" class="form-input" id="hero-image-url" placeholder="https://...">
+                  <button type="button" class="btn btn-outline" id="hero-image-apply">Apply</button>
+                </div>
+                <span class="field-hint">Paste an image link and press Apply (or Enter).</span>
+                <div class="hero-clear-row">
+                  <button type="button" class="btn btn-sm btn-ghost" id="hero-image-clear">✕ Remove current image</button>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="form-group" id="hero-preset-group" style="display:none;">
             <label class="form-label">Presets</label>
@@ -1236,17 +1252,15 @@
     <div class="deal-editor-body">
       <fieldset class="settings-group">
         <legend>Source</legend>
-        <div class="radio-row">
-          <label class="radio-label"><input type="radio" name="deals-import-source" id="deals-import-bundled" checked> Bundled sample file</label>
-          <label class="radio-label"><input type="radio" name="deals-import-source" id="deals-import-paste"> Paste JSON</label>
+        <div class="form-group">
+          <div class="import-file-row">
+            <input type="file" id="deals-import-file-input" accept=".json,application/json" style="display:none;">
+            <button type="button" class="btn btn-sm btn-outline" id="deals-import-file-btn">📂 Choose JSON file</button>
+            <span class="field-hint" id="deals-import-file-name">No file chosen</span>
+          </div>
+          <textarea class="form-input form-textarea" id="deals-import-json" rows="8" placeholder='Paste a JSON object with any of: "deals", "campaigns", "promotions", "hero", "promo_codes" (or choose a file)'></textarea>
         </div>
-        <div class="form-group" style="margin-top:8px;">
-          <select class="form-input" id="deals-import-file"></select>
-        </div>
-        <div class="form-group" style="margin-top:8px;">
-          <textarea class="form-input form-textarea" id="deals-import-json" rows="8" style="display:none;" placeholder='Paste a JSON object with any of: "deals", "campaigns", "promotions", "hero", "promo_codes"'></textarea>
-        </div>
-        <span class="field-hint">The samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings). Import the sample menu first (Menu tab → 📥 Samples), then import the deals - otherwise the import is blocked and the validation errors are shown.</span>
+        <span class="field-hint">Sample files live in the <code>sampleData</code> folder next to the tool. Pairings: <code>deals-demo.json</code> needs <code>menu-demo.json</code>; <code>deals-rich.json</code> needs <code>menu-rich.json</code> or <code>menu-rich-compact.json</code>. Import the matching menu first (Menu tab → 📥 Samples), otherwise the import is blocked.</span>
       </fieldset>
       <fieldset class="settings-group">
         <legend>Sections to import</legend>

@@ -325,6 +325,43 @@ table.vp-table td:first-child { min-width: 200px; }
 }
 .vp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ---------- clock in / clock out ---------- */
+.vp-clock-strip {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 22px;
+  background: #4338ca; color: #fff;
+  font-size: 0.88rem;
+}
+.vp-clock-strip[hidden] { display: none; }
+.vp-clock-dot {
+  width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%;
+  background: #a7f3d0; box-shadow: 0 0 0 4px rgba(167, 243, 208, .22);
+}
+.vp-clock-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vp-clock-elapsed { font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.vp-clock-stop {
+  margin-left: auto; flex: 0 0 auto;
+  font: inherit; font-size: 0.82rem; font-weight: 700;
+  padding: 5px 14px; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 255, 255, .16); color: #fff;
+  border: 1px solid rgba(255, 255, 255, .4);
+}
+.vp-clock-stop:hover { background: rgba(255, 255, 255, .28); }
+.vp-clock-live { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; }
+.vp-clock-list { display: grid; gap: 10px; }
+.vp-clock-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  border: 1px solid var(--vp-line); border-radius: var(--vp-radius-sm);
+  padding: 10px 12px; background: #fff;
+}
+.vp-clock-row-stack { align-items: flex-start; flex-wrap: wrap; }
+.vp-clock-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vp-select-tiny {
+  font-size: 0.82rem; padding: 5px 8px; border-radius: var(--vp-radius-sm);
+  width: auto; max-width: 210px;
+}
+
 /* ---------- opportunity catalog ---------- */
 .vp-filter-bar { display: flex; flex-direction: column; gap: 12px; }
 .vp-filter-search { max-width: 420px; }

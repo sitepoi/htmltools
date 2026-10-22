@@ -53,6 +53,13 @@
     </div>
   </header>
 
+  <div class="vp-clock-strip" id="vpClockStrip" hidden>
+    <span class="vp-clock-dot" aria-hidden="true"></span>
+    <span class="vp-clock-text" id="vpClockText">Clocked in</span>
+    <span class="vp-clock-elapsed" id="vpClockElapsed">0:00</span>
+    <button type="button" class="vp-clock-stop" id="vpClockStopBtn">Stop</button>
+  </div>
+
   <div class="vp-layout">
 
     <nav class="vp-nav" id="vpNav">
@@ -75,6 +82,7 @@
 
       <section class="vp-panel active" id="vpPanelDashboard">
         <p class="vp-lead">Where you stand, and what to do next.</p>
+        <div class="vp-card" id="vpClockCard"></div>
         <div class="vp-stats" id="vpStats"></div>
         <div class="vp-card" id="vpStartCard"></div>
         <div class="vp-card" id="vpUpcomingCard"></div>
@@ -212,6 +220,14 @@ var CURRENT_USERS = {
 var MOCK_VALUE = null;
 var MOCK_READ_ONLY = false;
 
+/* A same-day event so the clock card always has something to offer. */
+function harnessTodayIso() {
+  var today = new Date();
+  var month = String(today.getMonth() + 1).padStart(2, '0');
+  var day = String(today.getDate()).padStart(2, '0');
+  return today.getFullYear() + '-' + month + '-' + day;
+}
+
 function seedDatabase() {
   return {
     'volunteerRegistry-uniconbaseapps': [
@@ -308,6 +324,52 @@ function seedDatabase() {
         } }
       },
       {
+        id: 'evt_today', name: 'Community Kitchen (today)',
+        productData: { data_categoriesBased: {
+          name: 'Community Kitchen (today)', status: 'open', opportunityType: 'event', locationMode: 'onsite',
+          startDate: harnessTodayIso(), endDate: harnessTodayIso(),
+          startTime: '00:00', endTime: '23:59', locationName: 'Community Kitchen', city: 'Vancouver',
+          description: 'A same-day event used to try the clock in and clock out flow.',
+          positions: [{ id: 'pos_kitchen', name: 'Kitchen helper', slots: 4, description: 'Prepare and pack meals.', skills: 'Food handling', timeCommitment: 'Flexible' }],
+          capacity: 10, category: 'Food program'
+        } }
+      },
+      {
+        id: 'evt_chat', name: 'Helpline Chat Duty',
+        productData: { data_categoriesBased: {
+          name: 'Helpline Chat Duty', status: 'open', opportunityType: 'event', locationMode: 'remote',
+          monitoringProfile: 'duty',
+          startDate: harnessTodayIso(), endDate: harnessTodayIso(),
+          startTime: '00:00', endTime: '23:59',
+          description: 'Answer questions on the chat line during an evening shift.',
+          positions: [{ id: 'pos_chat', name: 'Chat host', slots: 6, description: 'Answer questions and pass cases to a manager.', skills: 'Clear writing', timeCommitment: 'Two hour shifts' }],
+          capacity: 6, category: 'Communications'
+        } }
+      },
+      {
+        id: 'evt_exam', name: 'Mock Exam Marker',
+        productData: { data_categoriesBased: {
+          name: 'Mock Exam Marker', status: 'open', opportunityType: 'task', locationMode: 'remote',
+          monitoringProfile: 'burst',
+          description: 'Prepare the marking key, then mark the mock exam papers in the delivery week.',
+          commitment: 'About 8 hours per exam cycle', deadline: '2026-12-15', applicationDeadline: '2026-12-01',
+          positions: [{ id: 'pos_marker', name: 'Marker', slots: 6, description: 'Mark papers against the key.', skills: 'Subject knowledge', timeCommitment: 'Up to 8 hours per cycle' }],
+          capacity: 6, category: 'Education program'
+        } }
+      },
+      {
+        id: 'evt_delivery', name: 'Mock Exam Day (today)',
+        productData: { data_categoriesBased: {
+          name: 'Mock Exam Day (today)', status: 'open', opportunityType: 'event', locationMode: 'onsite',
+          monitoringProfile: 'burst',
+          startDate: harnessTodayIso(), endDate: harnessTodayIso(),
+          startTime: '00:00', endTime: '23:59', locationName: 'Exam Hall', city: 'Vancouver',
+          description: 'The delivery day of a mock exam cycle; preparation is a sitting before it.',
+          positions: [{ id: 'pos_invigilator', name: 'Invigilator', slots: 4, description: 'Run the exam room.', skills: 'Organising', timeCommitment: 'A whole day' }],
+          capacity: 4, category: 'Education program'
+        } }
+      },
+      {
         id: 'evt_past', name: 'Summer Picnic',
         productData: { data_categoriesBased: {
           name: 'Summer Picnic', status: 'closed', opportunityType: 'event', locationMode: 'onsite',
@@ -357,6 +419,58 @@ function seedDatabase() {
         } }
       },
       {
+        id: 'per_bob__evt_today', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_today', eventName: 'Community Kitchen (today)',
+          status: 'approved', source: 'manager',
+          positions: [{ positionId: 'pos_kitchen', name: 'Kitchen helper', status: 'approved' }],
+          appliedAt: '2026-10-20T09:00:00Z',
+          taskLinks: [], pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      },
+      {
+        id: 'per_bob__evt_translate', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_translate', eventName: 'Newsletter Translation (Turkish)',
+          status: 'approved', source: 'manager',
+          positions: [{ positionId: 'pos_translator', name: 'Translator', status: 'approved' }],
+          appliedAt: '2026-10-20T09:00:00Z',
+          taskLinks: [{ taskId: 'tsk_article', title: 'Translate November article', status: 'assigned' }],
+          pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      },
+      {
+        id: 'per_bob__evt_chat', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_chat', eventName: 'Helpline Chat Duty',
+          status: 'approved', source: 'manager',
+          positions: [{ positionId: 'pos_chat', name: 'Chat host', status: 'approved' }],
+          appliedAt: '2026-10-20T09:00:00Z',
+          taskLinks: [], pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      },
+      {
+        id: 'per_bob__evt_exam', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_exam', eventName: 'Mock Exam Marker',
+          status: 'approved', source: 'manager',
+          positions: [{ positionId: 'pos_marker', name: 'Marker', status: 'approved' }],
+          appliedAt: '2026-10-20T09:00:00Z',
+          taskLinks: [{ taskId: 'tsk_key', title: 'Build the marking key', status: 'assigned' }],
+          pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      },
+      {
+        id: 'per_bob__evt_delivery', name: 'Bob Volunteer',
+        productData: { data_categoriesBased: {
+          personId: 'per_bob', personUserId: 'u_bob', eventId: 'evt_delivery', eventName: 'Mock Exam Day (today)',
+          status: 'approved', source: 'manager',
+          positions: [{ positionId: 'pos_invigilator', name: 'Invigilator', status: 'approved' }],
+          appliedAt: '2026-10-20T09:00:00Z',
+          taskLinks: [], pendingHours: [], hoursHistory: [], approvedLedgerIds: [], hoursApprovedTotal: 0
+        } }
+      },
+      {
         id: 'per_carol__evt_food', name: 'Carol Volunteer',
         productData: { data_categoriesBased: {
           personId: 'per_carol', personUserId: 'u_carol', eventId: 'evt_food', eventName: 'Community Food Drive',
@@ -386,6 +500,22 @@ function seedDatabase() {
           eventId: 'evt_coat', eventName: 'Winter Coat Distribution',
           tasks: [{ id: 'tsk_rack', title: 'Set up coat racks', description: '', status: 'open', dueDate: '2026-11-20', estimatedHours: 2, assigneePersonId: '', assigneeName: '' }],
           updatedAt: '2026-10-12T09:00:00Z', updatedBy: 'Alice Manager'
+        } }
+      },
+      {
+        id: 'evt_translate__tasks', name: 'Newsletter Translation tasks',
+        productData: { data_categoriesBased: {
+          eventId: 'evt_translate', eventName: 'Newsletter Translation (Turkish)',
+          tasks: [{ id: 'tsk_article', title: 'Translate November article', description: 'One article, 600 words.', status: 'assigned', dueDate: '2026-11-25', estimatedHours: 2, assigneePersonId: 'per_bob', assigneeName: 'Bob Volunteer' }],
+          updatedAt: '2026-10-21T09:00:00Z', updatedBy: 'Alice Manager'
+        } }
+      },
+      {
+        id: 'evt_exam__tasks', name: 'Mock Exam Marker tasks',
+        productData: { data_categoriesBased: {
+          eventId: 'evt_exam', eventName: 'Mock Exam Marker',
+          tasks: [{ id: 'tsk_key', title: 'Build the marking key', description: 'One key per paper set.', status: 'assigned', dueDate: '2026-12-05', estimatedHours: 3, assigneePersonId: 'per_bob', assigneeName: 'Bob Volunteer' }],
+          updatedAt: '2026-10-21T09:00:00Z', updatedBy: 'Alice Manager'
         } }
       }
     ],

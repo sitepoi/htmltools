@@ -92,7 +92,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.13</span>
+      <span>v0.17</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -141,13 +141,13 @@
     produces it.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.13</td></tr>
+    <tr><th>Document version</th><td>0.17</td></tr>
     <tr><th>Last updated</th><td>2026-10-22</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (RestaurantAndMenuManager).</td></tr>
-    <tr><th>Primary code areas</th><td><code>app/gloria-migration-report-v2.html</code>, <code>app/gloria-migration-report.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/sample-gloria-json.json</code>, <code>app/sample-menu-data-1.json</code>, <code>app/sample-menu-data-2.json</code>, <code>app/sample-deals-data.json</code>, <code>app/sample-deals-broken.json</code>, <code>app/sample-menu-data.json</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Primary code areas</th><td><code>app/gloria-migration-report-v2.html</code>, <code>app/gloria-migration-report.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/test-harness.html</code>, plus the sample data files under <code>app/sampleData/</code> (menu-demo.json, menu-rich.json, menu-rich-compact.json, deals-demo.json, deals-rich.json, gloria-sample.json)</td></tr>
     <tr><th>Explicitly out of scope</th><td>Website rendering and cart behavior, the order detail tool (<code>RestaurantOrderManager</code>), the platform write-back relay, styling decisions, and any field the customer contract does not define.</td></tr>
     <tr><th>Companion documents</th><td><strong>Authoritative companion:</strong> <code>docs/client-data-contract.html</code> (customer-side contract, version 3.3, 2026-10-21). Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
   </table>
@@ -235,7 +235,7 @@
       <td>Sections 20 to 23 - write-back, hero, promotions, campaigns, cache and deals. Authoritative for every key named in this SSOT.</td>
     </tr>
     <tr>
-      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sample-menu-data-1.json"><code>app/sample-menu-data-1.json</code></a>, <a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sample-menu-data-2.json"><code>app/sample-menu-data-2.json</code></a>, <a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sample-gloria-json.json"><code>app/sample-gloria-json.json</code></a></td>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sampleData/menu-rich.json"><code>app/sampleData/menu-rich.json</code></a>, <a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sampleData/menu-rich-compact.json"><code>app/sampleData/menu-rich-compact.json</code></a>, <a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sampleData/gloria-sample.json"><code>app/sampleData/gloria-sample.json</code></a></td>
       <td>Sample menu documents and a sample import payload.</td>
       <td>Whole files. Used to verify that a record without presentation sections still loads.</td>
     </tr>
@@ -652,8 +652,32 @@
     </tr>
     <tr>
       <td>D-RAMM-21</td><td>2026-10-22</td>
-      <td>Sample menu data ships as <code>sample-menu-data.json</code> and imports from the Menu tab (append or replace). Append mode keeps the original ids, so the deals samples' category / item / group references keep matching.</td>
+      <td>Sample menu data lives in <code>app/sampleData/menu-demo.json</code> and imports from the Menu tab (append or replace). Append mode keeps the original ids, so the deals samples' category / item / group references keep matching.</td>
       <td>Owner report: importing the deals samples failed because the demo menu did not exist in the record. The menu sample is the same demo restaurant the deals samples reference, so the two files import as a pair (menu first, then deals).</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-22</td><td>2026-10-22</td>
+      <td>Sample files are paired: each deals sample states the menu it needs, and a parallel <code>deals-rich.json</code> covers the rich restaurant menus (<code>menu-rich.json</code> / <code>menu-rich-compact.json</code>). Deal import reference errors get a pairing tip.</td>
+      <td>Owner report: importing <code>menu-rich.json</code> then <code>deals-demo.json</code> still blocked, because the two files use different ids. The rich deals file only references ids shared by both rich menus, so it validates against either one.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-23</td><td>2026-10-22</td>
+      <td>Sample data no longer ships inside the tool code. The JSON files live only in <code>app/sampleData/</code> with plain names (menu-demo, menu-rich, menu-rich-compact, deals-demo, deals-rich, gloria-sample) and import via pasted JSON or a chosen file.</td>
+      <td>Owner request: keep the code files small and free of demo data. The bundled-file dropdown and fetch loading were removed; both import modals now accept a paste or a .json file picker. The broken-cases sample had already been removed from git, so it is not recreated.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-24</td><td>2026-10-22</td>
+      <td>The app is restyled to a professional indigo-blue theme with the SSOT's Segoe UI font family; the hero editor presents upload and paste-link as two explicit alternatives; the Menu categories panel is compact, wraps full category names and gains an "All categories" row that clears the filter; sample hero data carries real image links.</td>
+      <td>Owner request: the amber/gold palette looked unprofessional, the hero controls did not read as alternatives, long category names were cut off and there was no way back from a category filter.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-25</td><td>2026-10-22</td>
+      <td>The tool uses the SSOT's Inter webfont (Google Fonts) with the same fallback stack (<code>'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif</code>), so the admin tool and the SSOT documents share one typeface. Both the production file and the test harness load the font.</td>
+      <td>Owner request: the SSOT document's font looks better than the app - make the tool use the same font. The SSOT stylesheet uses Inter with a Segoe UI fallback, so the tool's <code>--font</code> now matches it exactly.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
@@ -699,8 +723,12 @@
     <tr><td>12</td><td>Editors for the extended rule types (contract 23.1), the schedule block and the promo codes section</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-21, T-30 to T-42)</td></tr>
     <tr><td>13</td><td>Active-flag label update - the website honors the flag since 2026-10-21</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-41)</td></tr>
     <tr><td>14</td><td>Tabbed deal editor (Basics / Offer rule / Schedule) and fixed modal wiring</td><td><code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-43, T-45)</td></tr>
-    <tr><td>15</td><td>Sample data generator files and the Deals tab import feature</td><td><code>app/sample-deals-data.json</code>, <code>app/sample-deals-broken.json</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-44)</td></tr>
-    <tr><td>16</td><td>Sample menu JSON and the Menu tab import feature (ids kept on append so deal references keep matching)</td><td><code>app/sample-menu-data.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-22, T-46)</td></tr>
+    <tr><td>15</td><td>Sample data generator files and the Deals tab import feature</td><td><code>app/sampleData/deals-demo.json</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-44; folder layout 2026-10-22, T-48)</td></tr>
+    <tr><td>16</td><td>Sample menu JSON and the Menu tab import feature (ids kept on append so deal references keep matching)</td><td><code>app/sampleData/menu-demo.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-22, T-46)</td></tr>
+    <tr><td>17</td><td>Paired deals sample for the rich restaurant menus plus pairing labels and the mismatch tip in both import modals</td><td><code>app/sampleData/deals-rich.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-22, T-47)</td></tr>
+    <tr><td>18</td><td>Sample data moved out of code into <code>app/sampleData/</code> with plain names; imports take pasted JSON or a chosen file</td><td><code>app/sampleData/*.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-22, T-48)</td></tr>
+    <tr><td>19</td><td>Professional blue theme (SSOT fonts), hero redesign (upload / link alternatives) and category panel fixes (full names, All categories reset)</td><td><code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-22, T-49)</td></tr>
+    <tr><td>20</td><td>Tool uses the SSOT's Inter webfont with the same fallback stack in both production and the harness</td><td><code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code> - DONE (2026-10-22, D-RAMM-25)</td></tr>
   </table>
 
     <h2 id="sec-questions">14. Open questions</h2>
@@ -1648,10 +1676,10 @@
         </summary>
         <div class="task-details">
           <p><strong>Problem it solves:</strong> Testing every rule type by hand means creating dozens of deals manually.</p>
-          <p><strong>How we will solve it:</strong> Two JSON files ship with the tool (all valid possibilities; broken save-gate cases). A "Samples" button opens an import modal: bundled file or pasted JSON, section pickers, append (fresh ids) or replace, full validation before applying.</p>
-          <p><strong>Benefit:</strong> One click loads 22 deals, 2 campaigns, 4 promotions, 4 promo codes and a hero - or demos every save-gate failure.</p>
-          <p><strong>Files:</strong> <code>app/sample-deals-data.json</code>, <code>app/sample-deals-broken.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>scripts/ship-cms.js</code> (ships JSON with the tool)</p>
-          <p><strong>Status:</strong> Done 2026-10-21: valid sample imports with 0 errors; broken sample blocks with 6 expected errors.</p>
+          <p><strong>How we will solve it:</strong> Sample JSON files live in <code>app/sampleData/</code> (all valid possibilities). A "Samples" button opens an import modal: pasted JSON or a chosen file, section pickers, append (fresh ids) or replace, full validation before applying.</p>
+          <p><strong>Benefit:</strong> One import loads 22 deals, 2 campaigns, 4 promotions, 4 promo codes and a hero.</p>
+          <p><strong>Files:</strong> <code>app/sampleData/deals-demo.json</code>, <code>app/sampleData/deals-rich.json</code>, <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: valid sample imports with 0 errors. 2026-10-22 (T-48): samples moved to <code>app/sampleData/</code> and are no longer fetched from inside the tool.</p>
         </div>
       </details>
     </div>
@@ -1684,10 +1712,64 @@
         </summary>
         <div class="task-details">
           <p><strong>Problem it solves:</strong> The deals samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings); importing deals into an empty menu blocks with reference errors, and the menu itself had no sample JSON to import.</p>
-          <p><strong>How we will solve it:</strong> A "📥 Samples" button in the Menu toolbar opens an import modal (bundled <code>sample-menu-data.json</code> or pasted JSON) that appends categories / items / modifier groups keeping their ids (so deal references still match) or replaces the whole menu, with structural checks before applying.</p>
-          <p><strong>Benefit:</strong> One click builds the demo restaurant; the deals samples then import with zero validation errors.</p>
-          <p><strong>Files:</strong> <code>app/sample-menu-data.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code></p>
+          <p><strong>How we will solve it:</strong> A "📥 Samples" button in the Menu toolbar opens an import modal (pasted JSON or a chosen .json file) that appends categories / items / modifier groups keeping their ids (so deal references still match) or replaces the whole menu, with structural checks before applying.</p>
+          <p><strong>Benefit:</strong> One import builds the demo restaurant; the deals samples then import with zero validation errors.</p>
+          <p><strong>Files:</strong> <code>app/sampleData/menu-demo.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code></p>
           <p><strong>Status:</strong> Done 2026-10-22: headless test confirms 4 categories / 9 items / 1 modifier group import with ids kept, all 22 sample deals validate with 0 errors afterwards, and a second append imports nothing (id dedupe).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-47" data-group="deals-ux-tools" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-47</span>
+          <span class="task-title">Pair the samples: deals file for the rich restaurant menus + mismatch tip</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-47 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> <code>deals-demo.json</code> only matches the demo menu. Importing the rich restaurant menu (<code>menu-rich.json</code>) and then the demo deals sample blocks with reference errors, and nothing told the owner which files belong together.</p>
+          <p><strong>How we will solve it:</strong> A parallel <code>deals-rich.json</code> references only ids shared by both rich menus (so it validates against <code>menu-rich.json</code> and <code>menu-rich-compact.json</code>); the import modal hints name each pairing; deal import reference errors get a pairing tip.</p>
+          <p><strong>Benefit:</strong> Any sample menu has a matching deals sample and the owner always knows which pair to import.</p>
+          <p><strong>Files:</strong> <code>app/sampleData/deals-rich.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-22: headless test confirms 0 validation errors when importing the new deals file over either rich menu.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-48" data-group="deals-ux-tools" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-48</span>
+          <span class="task-title">Move sample data out of the code into app/sampleData/</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-48 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The sample JSON files were fetched from inside the tool code, growing the code and shipping demo data with the bundle.</p>
+          <p><strong>How we will solve it:</strong> All samples live only in <code>app/sampleData/</code> with plain names (menu-demo, menu-rich, menu-rich-compact, deals-demo, deals-rich, gloria-sample). The bundled-file dropdown and fetch loading were removed; both import modals now accept pasted JSON or a chosen .json file (FileReader into the textarea). The ship bundle no longer carries any sample JSON.</p>
+          <p><strong>Benefit:</strong> Code stays small and demo data stays out of shipped code; the owner copies or chooses a file from <code>sampleData/</code>.</p>
+          <p><strong>Files:</strong> <code>app/sampleData/*.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code>, <code>app/gloria-migration-report-v2.html</code>, <code>scripts/ship-cms.js</code> (no longer stages JSON and cleans the staged code folder)</p>
+          <p><strong>Status:</strong> Done 2026-10-22: no sample data remains in the tool code; paste and file-picker imports verified headlessly; the ship bundle contains only the tool code files.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-49" data-group="deals-ux-tools" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-49</span>
+          <span class="task-title">Professional blue theme, hero redesign and category panel fixes</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-49 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The amber-gold palette and the upload-vs-link hero controls looked unprofessional; long category names were cut off and there was no way back from a category filter.</p>
+          <p><strong>How we will solve it:</strong> Indigo-blue accent palette (the SSOT's colors), the SSOT's Segoe UI font family, a hero editor with two explicit alternatives (Upload / Use a link + Apply), compact category rows that wrap to the full name, and an always-visible "All categories" row that clears the filter. Sample hero data uses real image links.</p>
+          <p><strong>Benefit:</strong> A cleaner, more professional tool that is easier to scan and navigate.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/test-harness.html</code>, <code>app/sampleData/*.json</code></p>
+          <p><strong>Status:</strong> Done 2026-10-22: amber palette colors remain only on semantic warning badges; the hero applies on button click or Enter; category rows wrap to the full name; "All categories" resets the filter.</p>
         </div>
       </details>
     </div>

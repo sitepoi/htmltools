@@ -2803,6 +2803,18 @@ function renderCategories() {
   list.innerHTML = '';
   var categories = data.menu.categories || [];
 
+  /* "All categories" row - clears the category filter */
+  var allEl = document.createElement('div');
+  allEl.className = 'category-item all-cat-item' + (selectedCategoryId ? '' : ' active');
+  allEl.innerHTML =
+    '<span class="drag-handle" style="visibility:hidden;">⋮⋮</span>' +
+    '<span class="all-cat-icon">▤</span>' +
+    '<span class="cat-name">All categories</span>' +
+    '<span class="cat-count">' + (data.menu.items || []).length + '</span>' +
+    '<span class="cat-actions"></span>';
+  allEl.addEventListener('click', function () { selectCategory(null); });
+  list.appendChild(allEl);
+
   categories.forEach(function(cat) {
     /* Migrate old visible boolean to new visibility_mode */
     if (cat.visibility_mode === undefined) {
@@ -4030,7 +4042,12 @@ function renderItems() {
   if (sortBy === 'price_asc') items.sort(function(a, b) { return (a.price || 0) - (b.price || 0); });
   if (sortBy === 'price_desc') items.sort(function(a, b) { return (b.price || 0) - (a.price || 0); });
 
-  if (items.length === 0) { grid.innerHTML = '<div class="empty-state">No items found</div>'; return; }
+  if (items.length === 0) {
+    grid.innerHTML = selectedCategoryId
+      ? '<div class="empty-state">No items in this category yet.<br>Click "+ Add Item" to add the first one.</div>'
+      : '<div class="empty-state">No items yet.<br>Click "+ Add Item" to add the first one.</div>';
+    return;
+  }
 
   var list = document.createElement('div');
   list.className = 'item-list';
@@ -5477,9 +5494,7 @@ function initAllEvents() {
   if (menuImportCancelBtn) menuImportCancelBtn.addEventListener('click', closeMenuImportModal);
   var menuImportCloseBtn = document.getElementById('menu-import-close');
   if (menuImportCloseBtn) menuImportCloseBtn.addEventListener('click', closeMenuImportModal);
-  document.querySelectorAll('input[name="menu-import-source"]').forEach(function (radio) {
-    radio.addEventListener('change', refreshMenuImportMode);
-  });
+  wireJsonFilePicker('menu-import-file-input', 'menu-import-file-btn', 'menu-import-file-name', 'menu-import-json');
 
   /* Menu: Panel Tabs */
   document.querySelectorAll('.panel-tab').forEach(function(tab) {
@@ -6986,10 +7001,7 @@ function wireDealEditor() {
   if (importCancelButton) importCancelButton.addEventListener('click', closeDealsImportModal);
   var importRunButton = document.getElementById('deals-import-run');
   if (importRunButton) importRunButton.addEventListener('click', runDealsImport);
-  var importSourceRadios = document.querySelectorAll('input[name="deals-import-source"]');
-  importSourceRadios.forEach(function (radio) {
-    radio.addEventListener('change', refreshDealsImportMode);
-  });
+  wireJsonFilePicker('deals-import-file-input', 'deals-import-file-btn', 'deals-import-file-name', 'deals-import-json');
 
   var closeButton = document.getElementById('deal-editor-close');
   if (closeButton) closeButton.addEventListener('click', closeDealEditor);
@@ -7734,6 +7746,18 @@ function wirePresentationEditors() {
   if (heroUrlInput) {
     heroUrlInput.addEventListener('input', function () { setHeroImagePreview(heroUrlInput.value.trim()); });
     heroUrlInput.addEventListener('change', function () { saveHeroImageUrl(heroUrlInput.value.trim()); });
+    heroUrlInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        saveHeroImageUrl(heroUrlInput.value.trim());
+      }
+    });
+  }
+  var heroApplyButton = document.getElementById('hero-image-apply');
+  if (heroApplyButton) {
+    heroApplyButton.addEventListener('click', function () {
+      saveHeroImageUrl(heroUrlInput.value.trim());
+    });
   }
   var heroPresetGrid = document.getElementById('hero-preset-grid');
   if (heroPresetGrid) {
@@ -8081,20 +8105,28 @@ function wirePromoCodeEditor() {
 /* ===================================================================== */
 /* SAMPLE DATA IMPORT (deals, campaigns, promotions, hero, promo codes)  */
 /* ===================================================================== */
-var DEAL_SAMPLE_SOURCES = [
-  { id: 'sample-deals-data', label: 'All deal types - valid (22 deals, 2 campaigns, 4 promotions, 4 codes)', file: 'sample-deals-data.json' },
-  { id: 'sample-deals-broken', label: 'Broken cases - save gate demo (6 deals, 1 code)', file: 'sample-deals-broken.json' }
-];
-
-function refreshDealsImportMode() {
-  var bundledRadio = document.getElementById('deals-import-bundled');
-  var textarea = document.getElementById('deals-import-json');
-  var sourceSelect = document.getElementById('deals-import-file');
-  if (!bundledRadio || !textarea || !sourceSelect) return;
-  var isBundled = bundledRadio.checked;
-  textarea.style.display = isBundled ? 'none' : '';
-  sourceSelect.style.display = isBundled ? '' : 'none';
-  document.getElementById('deals-import-errors').style.display = 'none';
+/* Loads a chosen .json file into the import textarea via FileReader. */
+function wireJsonFilePicker(fileInputId, buttonId, fileNameId, textareaId) {
+  var fileInput = document.getElementById(fileInputId);
+  var button = document.getElementById(buttonId);
+  var fileName = document.getElementById(fileNameId);
+  var textarea = document.getElementById(textareaId);
+  if (!fileInput || !button || !fileName || !textarea) return;
+  button.addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () {
+    var file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      textarea.value = String(reader.result || '');
+      fileName.textContent = file.name;
+      tool.notify('Loaded ' + file.name + ' - review the JSON and click Import.', 'info');
+    };
+    reader.onerror = function () {
+      tool.notify('Could not read the selected file.', 'error');
+    };
+    reader.readAsText(file);
+  });
 }
 
 function openDealsImportModal() {
@@ -8105,21 +8137,17 @@ function openDealsImportModal() {
   var modal = document.getElementById('deals-import-modal');
   if (!modal) return;
 
-  var sourceSelect = document.getElementById('deals-import-file');
-  if (sourceSelect) {
-    sourceSelect.innerHTML = DEAL_SAMPLE_SOURCES.map(function (source) {
-      return '<option value="' + esc(source.id) + '">' + esc(source.label) + '</option>';
-    }).join('');
-  }
-  document.getElementById('deals-import-bundled').checked = true;
   document.getElementById('deals-import-json').value = '';
+  var fileInput = document.getElementById('deals-import-file-input');
+  if (fileInput) fileInput.value = '';
+  var fileName = document.getElementById('deals-import-file-name');
+  if (fileName) fileName.textContent = 'No file chosen';
   document.getElementById('deals-import-deals').checked = true;
   document.getElementById('deals-import-campaigns').checked = true;
   document.getElementById('deals-import-promotions').checked = true;
   document.getElementById('deals-import-hero').checked = true;
   document.getElementById('deals-import-promo-codes').checked = true;
   document.getElementById('deals-import-append').checked = true;
-  refreshDealsImportMode();
   modal.style.display = 'flex';
   tool.resize();
 }
@@ -8132,8 +8160,16 @@ function closeDealsImportModal() {
 function showDealsImportErrors(errors) {
   var errorContainer = document.getElementById('deals-import-errors');
   if (!errorContainer) return;
+  var referenceMismatch = errors.some(function (message) {
+    return message.indexOf('no menu items') !== -1 ||
+      message.indexOf('do not exist in the menu') !== -1 ||
+      message.indexOf('category filter matches') !== -1;
+  });
   errorContainer.innerHTML = '<strong>Nothing was imported - fix these first:</strong><br>' +
-    errors.map(esc).join('<br>');
+    errors.map(esc).join('<br>') +
+    (referenceMismatch
+      ? '<br><strong>Tip:</strong> these reference errors usually mean the deals sample and the menu do not match. Import the matching bundled menu first: Menu tab → 📥 Samples, then pick the menu file listed next to the deals file you chose.'
+      : '');
   errorContainer.style.display = '';
 }
 
@@ -8154,7 +8190,6 @@ function runDealsImport() {
   var errorContainer = document.getElementById('deals-import-errors');
   if (errorContainer) errorContainer.style.display = 'none';
 
-  var isBundled = document.getElementById('deals-import-bundled').checked;
   var isReplace = !document.getElementById('deals-import-append').checked;
   var importDeals = document.getElementById('deals-import-deals').checked;
   var importCampaigns = document.getElementById('deals-import-campaigns').checked;
@@ -8224,31 +8259,9 @@ function runDealsImport() {
     closeDealsImportModal();
   }
 
-  if (isBundled) {
-    var sourceSelect = document.getElementById('deals-import-file');
-    var source = DEAL_SAMPLE_SOURCES.find(function (entry) { return entry.id === sourceSelect.value; });
-    if (!source) {
-      showDealsImportErrors(['Choose a bundled sample file.']);
-      return;
-    }
-    fetch(source.file)
-      .then(function (response) {
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        return response.json();
-      })
-      .then(applyImport)
-      .catch(function () {
-        showDealsImportErrors([
-          'Could not load ' + source.file + ' from this environment. Switch to "Paste JSON" and paste the contents of ' +
-          source.file + ' instead (the file ships next to this tool in the app folder).'
-        ]);
-      });
-    return;
-  }
-
   var pastedText = document.getElementById('deals-import-json').value.trim();
   if (!pastedText) {
-    showDealsImportErrors(['Paste a JSON object with at least one of: deals, campaigns, promotions, hero, promo_codes.']);
+    showDealsImportErrors(['Paste a JSON object with at least one of: deals, campaigns, promotions, hero, promo_codes, or choose a JSON file first.']);
     return;
   }
   var parsed;
@@ -8261,22 +8274,7 @@ function runDealsImport() {
   applyImport(parsed);
 }
 
-/* ---- Sample menu import (T-46) ---- */
-var MENU_SAMPLE_SOURCES = [
-  { id: 'sample-menu-data', label: 'Demo menu - Pizza / Dips / Wings / Drinks + Toppings (4 categories, 9 items, 1 modifier group)', file: 'sample-menu-data.json' }
-];
-
-function refreshMenuImportMode() {
-  var bundledRadio = document.getElementById('menu-import-bundled');
-  var textarea = document.getElementById('menu-import-json');
-  var sourceSelect = document.getElementById('menu-import-file');
-  if (!bundledRadio || !textarea || !sourceSelect) return;
-  var isBundled = bundledRadio.checked;
-  textarea.style.display = isBundled ? 'none' : '';
-  sourceSelect.style.display = isBundled ? '' : 'none';
-  var errorContainer = document.getElementById('menu-import-errors');
-  if (errorContainer) errorContainer.style.display = 'none';
-}
+/* ---- Sample menu import (T-46, updated T-48) ---- */
 
 function openMenuImportModal() {
   if (isDealEditingBlocked()) {
@@ -8285,19 +8283,15 @@ function openMenuImportModal() {
   }
   var modal = document.getElementById('menu-import-modal');
   if (!modal) return;
-  var sourceSelect = document.getElementById('menu-import-file');
-  if (sourceSelect) {
-    sourceSelect.innerHTML = MENU_SAMPLE_SOURCES.map(function (source) {
-      return '<option value="' + esc(source.id) + '">' + esc(source.label) + '</option>';
-    }).join('');
-  }
-  document.getElementById('menu-import-bundled').checked = true;
   document.getElementById('menu-import-json').value = '';
+  var fileInput = document.getElementById('menu-import-file-input');
+  if (fileInput) fileInput.value = '';
+  var fileName = document.getElementById('menu-import-file-name');
+  if (fileName) fileName.textContent = 'No file chosen';
   document.getElementById('menu-import-categories').checked = true;
   document.getElementById('menu-import-items').checked = true;
   document.getElementById('menu-import-modifiers').checked = true;
   document.getElementById('menu-import-append').checked = true;
-  refreshMenuImportMode();
   modal.style.display = 'flex';
   tool.resize();
 }
@@ -8323,7 +8317,6 @@ function runMenuImport() {
   var errorContainer = document.getElementById('menu-import-errors');
   if (errorContainer) errorContainer.style.display = 'none';
 
-  var isBundled = document.getElementById('menu-import-bundled').checked;
   var isReplace = !document.getElementById('menu-import-append').checked;
   var importCategories = document.getElementById('menu-import-categories').checked;
   var importItems = document.getElementById('menu-import-items').checked;
@@ -8431,31 +8424,9 @@ function runMenuImport() {
     closeMenuImportModal();
   }
 
-  if (isBundled) {
-    var sourceSelect = document.getElementById('menu-import-file');
-    var source = MENU_SAMPLE_SOURCES.find(function (entry) { return entry.id === sourceSelect.value; });
-    if (!source) {
-      showMenuImportErrors(['Choose a bundled sample file.']);
-      return;
-    }
-    fetch(source.file)
-      .then(function (response) {
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        return response.json();
-      })
-      .then(applyImport)
-      .catch(function () {
-        showMenuImportErrors([
-          'Could not load ' + source.file + ' from this environment. Switch to "Paste JSON" and paste the contents of ' +
-          source.file + ' instead (the file ships next to this tool in the app folder).'
-        ]);
-      });
-    return;
-  }
-
   var pastedText = document.getElementById('menu-import-json').value.trim();
   if (!pastedText) {
-    showMenuImportErrors(['Paste a JSON object with a "menu" key holding categories, items and modifier_groups.']);
+    showMenuImportErrors(['Paste a JSON object with a "menu" key holding categories, items and modifier_groups, or choose a JSON file first.']);
     return;
   }
   var parsed;

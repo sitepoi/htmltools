@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>WhatsApp mesajları - Future Bridge Academy</title>
+	<style>
+		:root {
+			--ink: #0f172a;
+			--muted: #5b6577;
+			--line: #e3e8f0;
+			--paper: #ffffff;
+			--soft: #f5f8fc;
+			--brand: #ff6b35;
+			--navy: #004e89;
+			--deep: #00325a;
+			--ok: #06d6a0;
+			--wa-bar: #075e54;
+			--wa-chat: #efeae2;
+			--wa-bubble: #d9fdd3;
+			--wa-bubble-ink: #111b21;
+			--mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			background: #eef2f7;
+			color: var(--ink);
+			font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+			line-height: 1.6;
+			font-size: 16px;
+		}
+
+		.page {
+			max-width: 1240px;
+			margin: 0 auto;
+			padding: 34px 20px 70px;
+		}
+
+		/* ---------- head ---------- */
+		.head {
+			background: var(--paper);
+			border: 1px solid var(--line);
+			border-radius: 22px;
+			padding: 28px 30px;
+			box-shadow: 0 20px 50px rgba(15, 23, 42, 0.06);
+		}
+
+		.kicker {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			margin: 0 0 12px;
+			font-size: 0.74rem;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--brand);
+		}
+
+		.kicker::before {
+			content: "";
+			width: 26px;
+			height: 2px;
+			border-radius: 2px;
+			background: var(--brand);
+		}
+
+		h1 {
+			margin: 0 0 10px;
+			font-size: clamp(1.7rem, 3vw, 2.3rem);
+			line-height: 1.15;
+			letter-spacing: -0.02em;
+			color: var(--deep);
+		}
+
+		.head p {
+			margin: 0;
+			max-width: 82ch;
+			color: var(--muted);
+		}
+
+		.notes {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 14px;
+			margin-top: 18px;
+		}
+
+		.note {
+			padding: 16px 18px;
+			background: var(--soft);
+			border: 1px solid var(--line);
+			border-radius: 16px;
+		}
+
+		.note h2 {
+			margin: 0 0 6px;
+			font-size: 0.98rem;
+			color: var(--deep);
+		}
+
+		.note p {
+			margin: 0;
+			font-size: 0.9rem;
+			color: var(--muted);
+		}
+
+		.note code,
+		.legend code {
+			font-family: var(--mono);
+			font-size: 0.86em;
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			padding: 1px 5px;
+		}
+
+		.legend {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px 18px;
+			margin-top: 14px;
+			padding-top: 14px;
+			border-top: 1px dashed var(--line);
+			font-size: 0.86rem;
+			color: var(--muted);
+		}
+
+		.legend span {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		/* ---------- tabs ---------- */
+		.tabs {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-top: 26px;
+			padding: 6px;
+			background: var(--paper);
+			border: 1px solid var(--line);
+			border-radius: 999px;
+			box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+			width: fit-content;
+			max-width: 100%;
+		}
+
+		.tab {
+			appearance: none;
+			border: 0;
+			background: transparent;
+			color: var(--navy);
+			font: inherit;
+			font-size: 0.94rem;
+			font-weight: 700;
+			padding: 11px 22px;
+			border-radius: 999px;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			gap: 9px;
+			transition: background 0.18s ease, color 0.18s ease;
+		}
+
+		.tab:hover {
+			background: var(--soft);
+		}
+
+		.tab[aria-selected="true"] {
+			background: var(--deep);
+			color: #fff;
+		}
+
+		.tab:focus-visible {
+			outline: 3px solid rgba(0, 78, 137, 0.35);
+			outline-offset: 2px;
+		}
+
+		.tab .dot {
+			width: 7px;
+			height: 7px;
+			border-radius: 50%;
+			background: var(--brand);
+		}
+
+		.tab[aria-selected="true"] .dot {
+			background: var(--ok);
+		}
+
+		.panel[hidden] {
+			display: none;
+		}
+
+		.panel-intro {
+			margin: 16px 0 0;
+			color: var(--muted);
+			max-width: 82ch;
+			font-size: 0.95rem;
+		}
+
+		/* ---------- section ---------- */
+		.section {
+			margin-top: 26px;
+		}
+
+		.section-head {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			gap: 10px 14px;
+			margin-bottom: 14px;
+		}
+
+		.section-head h2 {
+			margin: 0;
+			font-size: 1.35rem;
+			color: var(--deep);
+		}
+
+		.section-head p {
+			margin: 0;
+			color: var(--muted);
+			font-size: 0.94rem;
+		}
+
+		/* ---------- card ---------- */
+		.card {
+			background: var(--paper);
+			border: 1px solid var(--line);
+			border-radius: 20px;
+			overflow: hidden;
+			margin-bottom: 16px;
+		}
+
+		.card.is-primary {
+			border-color: rgba(255, 107, 53, 0.45);
+			box-shadow: 0 18px 40px rgba(255, 107, 53, 0.12);
+		}
+
+		.card-head {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px 16px;
+			align-items: center;
+			justify-content: space-between;
+			padding: 14px 20px;
+			border-bottom: 1px solid var(--line);
+			background: #fbfdff;
+		}
+
+		.card.is-primary .card-head {
+			background: #fff8f4;
+		}
+
+		.card-title {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin: 0;
+			font-size: 1rem;
+			font-weight: 700;
+			color: var(--deep);
+		}
+
+		.tag {
+			display: inline-block;
+			padding: 3px 9px;
+			border-radius: 999px;
+			font-size: 0.68rem;
+			font-weight: 800;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			background: rgba(0, 78, 137, 0.09);
+			color: var(--navy);
+		}
+
+		.tag-en {
+			background: rgba(255, 107, 53, 0.12);
+			color: #b8451a;
+		}
+
+		.card-tools {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+
+		.count {
+			font-size: 0.8rem;
+			color: var(--muted);
+			font-variant-numeric: tabular-nums;
+		}
+
+		.copy {
+			appearance: none;
+			cursor: pointer;
+			border: 1px solid var(--line);
+			background: #fff;
+			color: var(--navy);
+			font: inherit;
+			font-size: 0.86rem;
+			font-weight: 700;
+			padding: 8px 16px;
+			border-radius: 999px;
+			transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+		}
+
+		.copy:hover,
+		.copy:focus-visible {
+			background: var(--navy);
+			border-color: var(--navy);
+			color: #fff;
+		}
+
+		.copy.is-done {
+			background: var(--ok);
+			border-color: var(--ok);
+			color: #04352a;
+		}
+
+		.card-body {
+			display: grid;
+			grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+			gap: 22px;
+			padding: 20px;
+		}
+
+		.pane-label {
+			margin: 0 0 8px;
+			font-size: 0.72rem;
+			font-weight: 800;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--muted);
+		}
+
+		textarea.raw {
+			display: block;
+			width: 100%;
+			min-height: 260px;
+			resize: vertical;
+			overflow: hidden;
+			padding: 16px;
+			border: 1px solid var(--line);
+			border-radius: 14px;
+			background: #fcfdff;
+			color: var(--ink);
+			font-family: var(--mono);
+			font-size: 0.86rem;
+			line-height: 1.62;
+			tab-size: 2;
+		}
+
+		textarea.raw:focus {
+			outline: 2px solid rgba(0, 78, 137, 0.3);
+			outline-offset: 1px;
+			background: #fff;
+		}
+
+		/* ---------- whatsapp preview ---------- */
+		.phone {
+			border-radius: 16px;
+			overflow: hidden;
+			border: 1px solid #cfd8d0;
+			background: var(--wa-chat);
+			box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+		}
+
+		.wa-bar {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 10px 14px;
+			background: var(--wa-bar);
+			color: #fff;
+		}
+
+		.wa-avatar {
+			width: 30px;
+			height: 30px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: #128c7e;
+			font-size: 0.72rem;
+			font-weight: 800;
+			letter-spacing: 0.04em;
+		}
+
+		.wa-who {
+			display: block;
+			font-size: 0.9rem;
+			font-weight: 700;
+			line-height: 1.2;
+		}
+
+		.wa-status {
+			display: block;
+			font-size: 0.7rem;
+			color: rgba(255, 255, 255, 0.72);
+		}
+
+		.wa-body {
+			padding: 16px 14px 20px;
+			background-image: radial-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+			background-size: 16px 16px;
+			min-height: 300px;
+		}
+
+		.bubble {
+			position: relative;
+			max-width: 100%;
+			padding: 9px 12px 20px;
+			background: var(--wa-bubble);
+			color: var(--wa-bubble-ink);
+			border-radius: 10px 10px 10px 2px;
+			font-size: 0.9rem;
+			line-height: 1.5;
+			white-space: normal;
+			box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+			overflow-wrap: anywhere;
+		}
+
+		.bubble strong {
+			font-weight: 700;
+		}
+
+		.bubble em {
+			font-style: italic;
+		}
+
+		.bubble code {
+			font-family: var(--mono);
+			font-size: 0.86em;
+			background: rgba(0, 0, 0, 0.06);
+			border-radius: 4px;
+			padding: 0 4px;
+		}
+
+		.bubble a {
+			color: #027eb5;
+			text-decoration: underline;
+			word-break: break-all;
+		}
+
+		.bubble .stamp {
+			position: absolute;
+			right: 8px;
+			bottom: 4px;
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+			font-size: 0.66rem;
+			color: rgba(17, 27, 33, 0.45);
+		}
+
+		.bubble .ticks {
+			color: #53bdeb;
+			font-size: 0.72rem;
+			letter-spacing: -1px;
+		}
+
+		.foot {
+			margin-top: 30px;
+			padding: 18px 22px;
+			border-radius: 16px;
+			background: #fff;
+			border: 1px solid var(--line);
+			color: var(--muted);
+			font-size: 0.9rem;
+		}
+
+		@media (max-width: 960px) {
+			.card-body {
+				grid-template-columns: 1fr;
+			}
+
+			.notes {
+				grid-template-columns: 1fr;
+			}
+
+			textarea.raw {
+				min-height: 280px;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div class="page">
+
+		<!-- ============================ HEAD ============================ -->
+		<header class="head">
+			<p class="kicker">Paylaşım metinleri</p>
+			<h1>WhatsApp mesajları</h1>
+			<p>
+				İki sekme var. <strong>Gönüllü mesajları</strong> sekmesi, gönüllü afişini gönderirken yanına
+				ekleyeceğiniz açıklama mesajları için - asıl çalışma alanı burası. <strong>Genel tanıtım</strong>
+				sekmesi ise daha önce yazdığımız ders ve sınav tanıtım mesajlarını saklıyor. Soldaki metni
+				düzenleyebilirsiniz; sağdaki önizleme aynı anda güncellenir.
+			</p>
+
+			<div class="legend">
+				<span><code>*kalın*</code> &#8594; <strong>kalın</strong></span>
+				<span><code>_italik_</code> &#8594; <em>italik</em></span>
+				<span><code>~üstü çizili~</code> &#8594; <s>üstü çizili</s></span>
+				<span><code>```eş aralıklı```</code> &#8594; <code>eş aralıklı</code></span>
+			</div>
+		</header>
+
+		<div class="notes">
+			<div class="note">
+				<h2>Kalın yazı tek yıldızla</h2>
+				<p>
+					WhatsApp'ta kalın yazı <code>*tek yıldız*</code> ile olur. <code>**çift yıldız**</code> kalın
+					yapmaz, mesajda yıldızlar görünür. Bu sayfadaki tüm mesajlar tek yıldız kullanır.
+				</p>
+			</div>
+			<div class="note">
+				<h2>Doldurulacak alanlar</h2>
+				<p>
+					Sadece bazı mesajlarda var: <code>[İSİM]</code>, <code>[ADINIZ]</code>. Grup mesajlarında kişi
+					adı yok, olduğu gibi gönderilebilir.
+				</p>
+			</div>
+			<div class="note">
+				<h2>Afişle gönderim</h2>
+				<p>
+					Önce metni gönderin, afişi hemen ardından ayrı bir mesaj olarak atın. Metin ve görsel aynı
+					mesajda giderse görsel küçük görünür.
+				</p>
+			</div>
+		</div>
+
+		<!-- ============================ TABS ============================ -->
+		<nav class="tabs" role="tablist" aria-label="Mesaj grupları">
+			<button class="tab" id="tab-volunteer" role="tab" aria-selected="true" aria-controls="panel-volunteer">
+				<span class="dot" aria-hidden="true"></span> Gönüllü mesajları
+			</button>
+			<button class="tab" id="tab-general" role="tab" aria-selected="false" aria-controls="panel-general">
+				<span class="dot" aria-hidden="true"></span> Genel tanıtım
+			</button>
+		</nav>
+
+		<!-- ======================= PANEL: VOLUNTEER ======================= -->
+		<div class="panel" id="panel-volunteer" role="tabpanel" aria-labelledby="tab-volunteer">
+			<p class="panel-intro">
+				Gönüllü afişiyle birlikte gidecek mesajlar. Ton kurum diline yakın, yarı resmi: "Değerli arkadaşlar"
+				ile açılıyor, üç ihtiyacı (gönüllü ihtiyacı, daha fazla gence hizmet, gençlerin gönüllü saati) birlikte
+				anlatıyor ve eğitim + profesyonel iş öğrenme vurgusunu taşıyor.
+			</p>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>1 - Afişle birlikte gönderilecek ana mesaj</h2>
+					<p>On rollük afişi gönderdiğinizde yanına ekleyeceğiniz açıklama. Kişiye de gruba da gidebilir.</p>
+				</div>
+
+				<article class="card is-primary">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag">TR</span> Ana açıklama - Türkçe</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-main-tr"></span>
+							<button class="copy" type="button" data-copy="wa-vol-main-tr">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-main-tr" spellcheck="false">
+Değerli arkadaşlar,
+
+Future Bridge Academy olarak gönüllü ağımızı genişletmek, gençlerimize daha fazla hizmet sunabilmek ve gönüllülük yoluyla hem gençlerimizin yetişmesini hem de gençlerin ve yetişkinlerin faaliyetlerimize daha rahat katkı verebilmesini sağlamak için *Future Bridge Gönüllülük sistemini* duyurmak istiyoruz. Ekteki afiş, açık olan *10 gönüllü rolünün* listesidir.
+
+Future Bridge olarak yaptığımız faaliyetlerin tamamı gönüllülerle yürütülen ücretsiz faaliyetlerdi. Bu faaliyetlerin her biri için ihtiyaç duyduğumuz iş tanımlarını çıkardık ve artık bu görevlere gönüllü başvurusu kabul ediyoruz.
+
+*Bu kapsamda üç ihtiyacı birlikte çözmeyi hedefliyoruz:*
+• sistemimizin gönüllü ihtiyacı
+• daha fazla gencimizin hizmet alması
+• hizmet verecek gençlerimizin gönüllü saat toplama ihtiyacı
+
+*Roller ne kadar zaman istiyor?*
+• Çoğu rol haftada 1 saatle başlıyor
+• Bazı roller kendi hızınızda yürütülebilir (örneğin müfredat geliştirme)
+• Sınav organizasyonu dönemsel: sınav başına 6-8 saat
+• Rollerin tamamı Kanada'nın her şehrinden yapılabilir, çoğu online
+
+*Gönüllülerimize ne sağlıyoruz?*
+• Başlamadan önce eğitim
+• Yaptıkları işin yazılı saat kaydı
+• Ne yaptıklarını anlatan referans
+• Üniversite veya burs başvurusu için destek yazısı
+
+Gönüllülük yapacak arkadaşlar hem eğitilecek hem de profesyonel ve ciddi işler öğrenecekler.
+
+İş tanımlarının tamamı ve başvuru: https://futurebridgeacademy.ca/volunteer
+Roller hakkında ayrıntılı bilgi: https://futurebridgeacademy.ca/volunteer-positions
+
+Önümüzdeki günlerde her rol için ayrı bir afiş paylaşacağız. Aklınıza yatan bir rol varsa bize yazın; hangi rolün size uygun olduğunu birlikte belirleyebiliriz.
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">çevrimiçi</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-main-tr"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag tag-en">EN</span> Main explanation - English</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-main-en"></span>
+							<button class="copy" type="button" data-copy="wa-vol-main-en">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-main-en" spellcheck="false">
+Dear friends,
+
+At Future Bridge Academy we want to announce the *Future Bridge Volunteer system*: to grow our volunteer network, to serve more of our young people, and - through volunteering - to help our young people develop while making it easier for both youth and adults to contribute to our activities. The flyer above lists the *10 volunteer roles* that are open.
+
+Everything we have done at Future Bridge so far has been free, and run by volunteers. For each of our activities we have written the job descriptions we need, and we now accept volunteer applications for those roles.
+
+*We are trying to solve three needs together:*
+• our system's need for volunteers
+• more of our young people receiving service
+• our young volunteers' need to collect volunteer hours
+
+*How much time does a role take?*
+• Most roles start at one hour a week
+• Some can be run at your own pace (curriculum building, for example)
+• Exam organisation is seasonal: 6-8 hours per exam
+• All of them can be done from any city in Canada, most of them online
+
+*What we provide to our volunteers:*
+• Training before you start
+• A written record of the work you did
+• A reference describing what you actually did
+• A support letter for a university or scholarship application
+
+Volunteers are trained, and they learn professional, serious work.
+
+All job descriptions and the application: https://futurebridgeacademy.ca/volunteer
+Detailed information about the roles: https://futurebridgeacademy.ca/volunteer-positions
+
+We will share a separate flyer for each role in the coming days. If one of the roles appeals to you, write to us; we can decide together which one suits you.
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">online</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-main-en"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>2 - Grup için kısa sürüm</h2>
+					<p>Üniversite, topluluk ya da meslek grubunda paylaşırken; uzun mesaj okunmuyor.</p>
+				</div>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag">TR</span> Kısa sürüm - Türkçe (grup)</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-short-tr"></span>
+							<button class="copy" type="button" data-copy="wa-vol-short-tr">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-short-tr" spellcheck="false">
+Değerli arkadaşlar,
+
+Future Bridge Academy olarak *Future Bridge Gönüllülük sistemini* duyuruyoruz. Ekteki afişte açık olan 10 gönüllü rolünün iş tanımları yer alıyor.
+
+Faaliyetlerimizin tamamı gönüllülerle yürütülen ücretsiz faaliyetler; her rol için ihtiyaç duyduğumuz iş tanımlarını çıkardık ve artık gönüllü başvurusu kabul ediyoruz. Çoğu rol haftada 1 saat, çoğu online ve Kanada'nın her şehrinden katılabilirsiniz. Gönüllülerimiz eğitim alıyor, yazılı saat kaydı ve referans sahibi oluyor.
+
+Başvuru ve iş tanımları: https://futurebridgeacademy.ca/volunteer
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">çevrimiçi</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-short-tr"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag tag-en">EN</span> Short version - English (group)</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-short-en"></span>
+							<button class="copy" type="button" data-copy="wa-vol-short-en">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-short-en" spellcheck="false">
+Dear friends,
+
+At Future Bridge Academy we are announcing the *Future Bridge Volunteer system*. The flyer above lists the job descriptions for our 10 open volunteer roles.
+
+All of our activities are free and run by volunteers; we have written the job description we need for each role, and we now accept volunteer applications. Most roles start at one hour a week, most are online, and you can join from any city in Canada. Our volunteers are trained and receive a written record of their hours and a reference.
+
+Application and job descriptions: https://futurebridgeacademy.ca/volunteer
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">online</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-short-en"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>3 - Takip mesajı</h2>
+					<p>Afişi gönderdiniz, cevap gelmedi. Baskı kurmadan hatırlatmak için - kişiye gönderilir.</p>
+				</div>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag">TR</span> Takip - Türkçe</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-follow-tr"></span>
+							<button class="copy" type="button" data-copy="wa-vol-follow-tr">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-follow-tr" spellcheck="false">
+Değerli [İSİM],
+
+Geçtiğimiz günlerde gönüllü rollerini paylaşmıştım; aynı şeyi tekrar göndermek istemedim, yalnızca bir noktayı netleştirmek istiyorum: karar vermek için acele yok.
+
+Tek soru şu: haftada 1 saati ayırabilir misiniz? Cevabınız evet ise, hangi rolün size uygun olduğunu birlikte belirleriz; rolleri tek tek incelemek zorunda değilsiniz.
+
+İş tanımları: https://futurebridgeacademy.ca/volunteer-positions
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">çevrimiçi</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-follow-tr"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag tag-en">EN</span> Follow-up - English</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-follow-en"></span>
+							<button class="copy" type="button" data-copy="wa-vol-follow-en">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-follow-en" spellcheck="false">
+Dear [NAME],
+
+I shared the volunteer roles with you recently, and I did not want to send the same thing again - I only want to make one point clear: there is no rush to decide.
+
+The only question is whether you can give one hour a week. If the answer is yes, we will work out together which role suits you; you do not have to review every role on your own.
+
+Job descriptions: https://futurebridgeacademy.ca/volunteer-positions
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">online</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-follow-en"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>4 - Kurumlara: afişi paylaşır mısınız?</h2>
+					<p>Partnerlere giden asıl mesaj: sistemi anlatıyor ve şehirlerinde paylaşmalarını rica ediyor. İletilecek metin bu mesajın içinde değil; onun için 5. bölüm var.</p>
+				</div>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag">TR</span> Kurumlara - Türkçe</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-partner-tr"></span>
+							<button class="copy" type="button" data-copy="wa-vol-partner-tr">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-partner-tr" spellcheck="false">
+Değerli [İSİM],
+
+Future Bridge Academy olarak gönüllü ağımızı genişletmek, gençlerimize daha fazla hizmet sunabilmek ve gönüllülük yoluyla hem gençlerimizin yetişmesini hem de gençlerin ve yetişkinlerin faaliyetlerimize daha rahat katkı verebilmesini sağlamak için *Future Bridge Gönüllülük sistemini* duyurmak istiyoruz.
+
+Future Bridge olarak yaptığımız faaliyetlerin tamamı gönüllülerle yürütülen ücretsiz faaliyetlerdi. Bu faaliyetlerin her biri için ihtiyaç duyduğumuz iş tanımlarını çıkardık ve artık bu görevlere gönüllü başvurusu kabul ediyoruz.
+
+Bu kapsamda üç ihtiyacı birlikte çözmeyi hedefliyoruz: sistemimizin gönüllü ihtiyacı, daha fazla gencimizin hizmet alması ve hizmet verecek gençlerimizin gönüllü saat toplama ihtiyacı. Gönüllülük yapacak olan arkadaşlar hem eğitilecek hem de profesyonel ve ciddi işler öğrenecekler.
+
+Ekteki afişte iş tanımları yer alıyor; her biri hakkında ayrıntılı bilgiyi web sitemizde bulabilirsiniz:
+https://futurebridgeacademy.ca/volunteer
+
+Önümüzdeki günlerde her rol için ayrı bir afiş paylaşacağız.
+
+Rica: bulunduğunuz şehirde bu afişi kendi kanalınızda paylaşır mısınız? Kendi ağınıza gönderebileceğiniz örnek bir metni ayrı bir mesaj olarak hazırladık; dilediğiniz gibi düzenleyip kullanabilirsiniz.
+
+Teşekkürler,
+[ADINIZ] - Future Bridge Academy
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">çevrimiçi</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-partner-tr"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag tag-en">EN</span> Organisations - English</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-partner-en"></span>
+							<button class="copy" type="button" data-copy="wa-vol-partner-en">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-partner-en" spellcheck="false">
+Dear [NAME],
+
+At Future Bridge Academy we want to announce the *Future Bridge Volunteer system*: to grow our volunteer network, to serve more of our young people, and - through volunteering - to help our young people develop while making it easier for both youth and adults to contribute to our activities.
+
+Everything we have done at Future Bridge so far has been free, and run by volunteers. For each of our activities we have written the job descriptions we need, and we now accept volunteer applications for those roles.
+
+We are trying to solve three needs together: our system's need for volunteers, more of our young people receiving service, and our young volunteers' need to collect volunteer hours. Volunteers are trained, and they learn professional, serious work.
+
+The flyer above lists the job descriptions, and detailed information about each one is on our website:
+https://futurebridgeacademy.ca/volunteer
+
+We will share a separate flyer for each role in the coming days.
+
+The ask: could you share this flyer through your own channel in your city? We have also prepared a separate example message for you to send to your own network - feel free to adapt it as you like.
+
+Thank you,
+[YOUR NAME] - Future Bridge Academy
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">online</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-partner-en"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>5 - Partnerlerin kendi ağına göndereceği örnek mesaj</h2>
+					<p>Partnerler 4. bölümdeki mesajı okuduktan sonra bunu kendi ağlarına gönderir; kendilerine göre düzenlemeleri beklenir.</p>
+				</div>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag">TR</span> Örnek iletme mesajı - Türkçe</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-forward-tr"></span>
+							<button class="copy" type="button" data-copy="wa-vol-forward-tr">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-forward-tr" spellcheck="false">
+Değerli arkadaşlar,
+
+Sizinle bir gönüllülük duyurusunu paylaşmak istiyoruz.
+
+Future Bridge Academy, gençlere ücretsiz ders ve deneme sınavı desteği veren bir topluluk programı ve faaliyetlerin tamamı gönüllülerle yürütülüyor. Şu an *10 gönüllü rolü* için başvuru açık.
+
+• Her rol için iş tanımı hazırlandı
+• Gönüllüler başlamadan önce eğitim alıyor
+• Yaptıkları işin yazılı saat kaydı ve referans sahibi oluyorlar
+• Çoğu rol haftada 1 saat, çoğu online; Kanada'nın her şehrinden başvurulabilir
+
+İş tanımları ve başvuru: https://futurebridgeacademy.ca/volunteer
+
+[KURUM ADINIZ] olarak bu duyuruyu sizinle paylaşıyoruz; ilgilenecek kişilere iletmenizi rica ederiz.
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">çevrimiçi</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-forward-tr"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag tag-en">EN</span> Example forwarding message - English</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-vol-forward-en"></span>
+							<button class="copy" type="button" data-copy="wa-vol-forward-en">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-vol-forward-en" spellcheck="false">
+Dear friends,
+
+We would like to share a volunteer announcement with you.
+
+Future Bridge Academy is a community programme that gives young people free lessons and free mock exams, and all of its activities are run by volunteers. *10 volunteer roles* are open for application right now.
+
+• Every role has a written job description
+• Volunteers are trained before they start
+• Volunteers receive a written record of their hours and a reference
+• Most roles start at one hour a week, most are online, and applications are open from any city in Canada
+
+Job descriptions and application: https://futurebridgeacademy.ca/volunteer
+
+[YOUR ORGANISATION NAME] is sharing this announcement with you; please pass it on to anyone who may be interested.
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">online</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-vol-forward-en"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+		</div>
+
+		<!-- ======================== PANEL: GENERAL ======================== -->
+		<div class="panel" id="panel-general" role="tabpanel" aria-labelledby="tab-general" hidden>
+			<p class="panel-intro">
+				Daha önce yazdığımız genel tanıtım mesajları: velilere ve öğrencilere ücretsiz ders ve deneme sınavı
+				duyurusu, kurumlara paylaşım ricası. Gönüllü alımıyla ilgisi yok; ayrı duruyor.
+			</p>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>1 - Velilere</h2>
+					<p>Grup mesajı: çocuğu için ücretsiz ders ve deneme sınavı arayan ailelere. Kişi adı kullanılmaz.</p>
+				</div>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag">TR</span> Velilere - Türkçe (grup)</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-parents-tr"></span>
+							<button class="copy" type="button" data-copy="wa-parents-tr">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-parents-tr" spellcheck="false">
+Merhaba veliler,
+
+Future Bridge Academy olarak çocuklarınız için iki programımız *tamamen ücretsiz*:
+
+*1) Her hafta canlı online matematik dersi*
+• 4-12. sınıflar
+• Ders, çocuğunuzun o hafta okulda gördüğü konu üzerinden işleniyor
+• Katılmak için sınıf ve konu bilgisi yeterli
+
+*2) Ayda bir ücretsiz deneme sınavı*
+• Gerçek sınav düzeninde, yüz yüze
+• Kağıtlar okunuyor, neyin düzeltilmesi gerektiği açıklanıyor
+
+Ücret yok, taahhüt yok. İsteyen bir derse katılıp devam edip etmemeye sonra karar verebilir.
+
+Kayıt: https://futurebridgeacademy.ca/join
+Sınıf ve konuyu yazmanız yeterli; katılım bilgilerini gönderiyoruz.
+
+İhtiyacı olan velilere iletebilirsiniz.
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">çevrimiçi</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-parents-tr"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag tag-en">EN</span> Parents - English (group)</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-parents-en"></span>
+							<button class="copy" type="button" data-copy="wa-parents-en">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-parents-en" spellcheck="false">
+Hello parents,
+
+Two of our programmes are *completely free* for your children:
+
+*1) A live online maths lesson every week*
+• Grades 4-12
+• The lesson follows the topic your child is studying at school that week
+• To join we only need the grade and the topic
+
+*2) A free mock exam every month*
+• In person, run like a real exam
+• Papers are marked and we explain what to fix next
+
+No fee and no commitment. Try one lesson and decide afterwards.
+
+Sign up: https://futurebridgeacademy.ca/join
+Send the grade and the topic and we will send the joining details.
+
+Feel free to forward this to any parent who needs it.
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">online</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-parents-en"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>2 - Gençlere ve öğrencilere</h2>
+					<p>Grup mesajı: ders ve sınav davetini sınıf ya da okul grubunda paylaşmak için. Kişi adı kullanılmaz.</p>
+				</div>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag">TR</span> Öğrencilere - Türkçe (grup)</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-students-tr"></span>
+							<button class="copy" type="button" data-copy="wa-students-tr">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-students-tr" spellcheck="false">
+Merhaba arkadaşlar,
+
+Matematikte takıldığınız konu için *ücretsiz* bir yer var:
+
+• Her hafta canlı online ders (4-12. sınıf)
+• Ders, sınıfınızda o hafta işlenen konudan gidiyor
+• Ayda bir ücretsiz deneme sınavı: gerçek sınav gibi, sonucu ve eksiğiniz yazılı geliyor
+
+Ücret yok, kayıt birkaç dakika sürüyor. Sınıfınızı ve konuyu yazmanız yeterli.
+
+https://futurebridgeacademy.ca/join
+
+Arkadaşlarınızı da ekleyip birlikte katılabilirsiniz.
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">çevrimiçi</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-students-tr"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag tag-en">EN</span> Students - English (group)</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-students-en"></span>
+							<button class="copy" type="button" data-copy="wa-students-en">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-students-en" spellcheck="false">
+Hi everyone,
+
+There is a *free* place to get unstuck in maths:
+
+• A live online lesson every week (grades 4-12)
+• The lesson follows the topic your class is on that week
+• A free mock exam every month: real exam conditions, with your result and what to fix
+
+No fee, and signing up takes a couple of minutes. Just send your grade and the topic.
+
+https://futurebridgeacademy.ca/join
+
+Bring a friend along.
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">online</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-students-en"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>3 - Partnerlere</h2>
+					<p>Tek kişiye gönderilir: afişi kendi kanalında paylaşmasını istediğiniz kurum, öğretmen ve topluluk liderlerine.</p>
+				</div>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag">TR</span> Partnerlere - Türkçe</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-partners-tr"></span>
+							<button class="copy" type="button" data-copy="wa-partners-tr">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-partners-tr" spellcheck="false">
+Merhaba [İSİM],
+
+Future Bridge Academy, ailenin bütçesinden bağımsız olarak öğrencilere ücretsiz destek veren bir topluluk programı. Sizden tek ricamız: aşağıdaki metni ya da ekli afişi kendi kanalınızda paylaşmanız.
+
+*Öğrenciler için ücretsiz:*
+• Her hafta canlı online matematik dersi (4-12. sınıf)
+• Ayda bir yüz yüze deneme sınavı, sonuç ve geri bildirimle
+• Burs süreçleri için seminerler
+
+*Ailelere maliyeti yok, kayıt birkaç dakika.*
+
+Site: https://futurebridgeacademy.ca
+Afiş: [AFİŞ LİNKİ]
+
+Teşekkürler,
+[ADINIZ] - Future Bridge Academy
+
+- - - İletilecek metin - - -
+Matematikte ücretsiz destek: 4-12. sınıflar için her hafta canlı online ders ve ayda bir ücretsiz deneme sınavı. Ücret yok, taahhüt yok. Kayıt: https://futurebridgeacademy.ca/join
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">çevrimiçi</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-partners-tr"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="card-head">
+						<h3 class="card-title"><span class="tag tag-en">EN</span> Partners - English</h3>
+						<div class="card-tools">
+							<span class="count" data-count-for="wa-partners-en"></span>
+							<button class="copy" type="button" data-copy="wa-partners-en">Kopyala</button>
+						</div>
+					</div>
+					<div class="card-body">
+						<div class="pane">
+							<p class="pane-label">Kopyalanacak metin</p>
+							<textarea class="raw" id="wa-partners-en" spellcheck="false">
+Hello [NAME],
+
+Future Bridge Academy is a community programme that supports students for free, whatever a family can afford. All we are asking is that you share the message below, or the attached flyer, through your own channel.
+
+*Free for students:*
+• A live online maths lesson every week (grades 4-12)
+• A free mock exam every month, in person, with results and feedback
+• Seminars on scholarship applications
+
+*No cost to families. Sign up takes a couple of minutes.*
+
+Site: https://futurebridgeacademy.ca
+Flyer: [FLYER LINK]
+
+Thank you,
+[YOUR NAME] - Future Bridge Academy
+
+- - - Message to forward - - -
+Free maths support: a live online lesson every week and a free mock exam every month, for grades 4-12. No fee, no commitment. Sign up: https://futurebridgeacademy.ca/join
+							</textarea>
+						</div>
+						<div class="pane">
+							<p class="pane-label">WhatsApp'ta görünüşü</p>
+							<div class="phone">
+								<div class="wa-bar">
+									<span class="wa-avatar">FB</span>
+									<span>
+										<span class="wa-who">Future Bridge Academy</span>
+										<span class="wa-status">online</span>
+									</span>
+								</div>
+								<div class="wa-body">
+									<div class="bubble" data-preview-for="wa-partners-en"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+		</div>
+
+		<footer class="foot">
+			<strong>Not:</strong> Bu sayfa bir çalışma dosyasıdır. Metinleri burada düzenleyebilir, kopyalayıp
+			WhatsApp'ta paylaşabilirsiniz. Sayfayı kapatınca yaptığınız değişiklikler kaybolur; kalıcı olmasını
+			istiyorsanız dosyayı kaydedin.
+		</footer>
+
+	</div>
+
+	<script>
+		(function () {
+			'use strict';
+
+			/* WhatsApp markup -> HTML. Bold is a SINGLE asterisk, not two. */
+			function escapeHtml(text) {
+				return String(text)
+					.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;')
+					.replace(/"/g, '&quot;');
+			}
+
+			function renderWhatsApp(raw) {
+				var html = escapeHtml(raw);
+
+				html = html.replace(/```([\s\S]+?)```/g, '<code>$1</code>');
+				html = html.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+				html = html.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+				html = html.replace(/~([^~\n]+)~/g, '<s>$1</s>');
+				html = html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+				html = html.replace(/\n/g, '<br>');
+
+				var time = new Date();
+				var stamp = ('0' + time.getHours()).slice(-2) + ':' + ('0' + time.getMinutes()).slice(-2);
+
+				return html + '<span class="stamp">' + stamp + ' <span class="ticks">&#10003;&#10003;</span></span>';
+			}
+
+			function fit(field) {
+				field.style.height = 'auto';
+				field.style.height = Math.max(field.scrollHeight + 4, 260) + 'px';
+			}
+
+			function update(id) {
+				var field = document.getElementById(id);
+				if (!field) return;
+
+				fit(field);
+
+				var preview = document.querySelector('[data-preview-for="' + id + '"]');
+				if (preview) preview.innerHTML = renderWhatsApp(field.value.trim());
+
+				var counter = document.querySelector('[data-count-for="' + id + '"]');
+				if (counter) counter.textContent = field.value.trim().length + ' karakter';
+			}
+
+			function copyField(id, button) {
+				var field = document.getElementById(id);
+				if (!field) return;
+
+				function done() {
+					var original = button.textContent;
+					button.textContent = 'Kopyalandı';
+					button.classList.add('is-done');
+					window.setTimeout(function () {
+						button.textContent = original;
+						button.classList.remove('is-done');
+					}, 1600);
+				}
+
+				var text = field.value.trim();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(text).then(done, function () {
+						field.select();
+						document.execCommand('copy');
+						done();
+					});
+					return;
+				}
+
+				field.select();
+				document.execCommand('copy');
+				done();
+			}
+
+			/* ---------- tabs ---------- */
+			var tabs = [].slice.call(document.querySelectorAll('.tab'));
+
+			function showTab(tab) {
+				tabs.forEach(function (item) {
+					var selected = item === tab;
+					item.setAttribute('aria-selected', selected ? 'true' : 'false');
+					var panel = document.getElementById(item.getAttribute('aria-controls'));
+					if (panel) panel.hidden = !selected;
+				});
+
+				/* textareas inside a hidden panel measure as zero, so size them now */
+				var activePanel = document.getElementById(tab.getAttribute('aria-controls'));
+				if (activePanel) {
+					[].slice.call(activePanel.querySelectorAll('textarea.raw')).forEach(function (field) {
+						update(field.id);
+					});
+				}
+			}
+
+			tabs.forEach(function (tab, index) {
+				tab.addEventListener('click', function () { showTab(tab); });
+
+				tab.addEventListener('keydown', function (event) {
+					if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+					event.preventDefault();
+					var next = event.key === 'ArrowRight'
+						? tabs[(index + 1) % tabs.length]
+						: tabs[(index - 1 + tabs.length) % tabs.length];
+					next.focus();
+					showTab(next);
+				});
+			});
+
+			/* ---------- messages ---------- */
+			var fields = [].slice.call(document.querySelectorAll('textarea.raw'));
+
+			fields.forEach(function (field) {
+				/* the messages are indented inside the markup: drop that indentation */
+				var clean = field.value.replace(/^\n+/, '').split('\n').map(function (line) {
+					return line.replace(/^\t+/, '');
+				}).join('\n').replace(/\s+$/, '');
+				field.value = clean;
+
+				update(field.id);
+				field.addEventListener('input', function () { update(field.id); });
+			});
+
+			[].slice.call(document.querySelectorAll('.copy')).forEach(function (button) {
+				button.addEventListener('click', function () {
+					copyField(button.getAttribute('data-copy'), button);
+				});
+			});
+		})();
+	</script>
+</body>
+
+</html>

@@ -1,21 +1,33 @@
 PAGE GENERATOR RULES
 ====================
 These are the complete, active rules for generating pages for this
-platform. Every rule below is binding — generated HTML, CSS and JS must
-run exactly as described, through the page object schema, the window.gw
-SDK and the platform APIs.
+platform. Every rule below is binding - the generated fragment, its
+styles and its behaviour must run exactly as described, through the page
+object schema, the window.gw SDK and the platform APIs.
 
 ----------------------------------------------------------------------------
 0. WHAT YOU PRODUCE
 ----------------------------------------------------------------------------
-Produce EXACTLY three code parts plus optional metadata, in this layout:
+Produce ONE self-contained HTML fragment file plus optional metadata.
+Markup, styles and behaviour all live in that one file. There is no
+separate CSS file and no separate JS file.
 
-    === HTML ===
-    <section class="shop-home"> ... body fragment ... </section>
-    === CSS ===
-    .shop-home { ... }
-    === JS ===
-    (function () { ... })();
+    === PAGE ===
+    <!-- optional note about the page -->
+    <div class="shop-home">
+      <section class="shop-home-hero"> ... </section>
+      <section class="shop-home-list"> ... </section>
+
+      <style>
+        /* OPTIONAL. One block, inside the root. Scope every selector. */
+        .shop-home { ... }
+      </style>
+
+      <script>
+        /* OPTIONAL. One block, LAST element inside the root. */
+        (function () { ... })();
+      </script>
+    </div>
     === SEO ===
     { "metaTitle": "...", "metaDesc": "...", "schemaItems": [ ... ] }
     === PAGE META ===
@@ -23,24 +35,30 @@ Produce EXACTLY three code parts plus optional metadata, in this layout:
       "data": { "status": "published", "requireAuth": false } }
 
 Mapping to the CMS page object (Section 2):
-- HTML -> data.htmlPage.code.html
-- CSS  -> data.htmlPage.code.css
-- JS   -> data.htmlPage.code.js
+- PAGE -> the page's html content, data.htmlPage.code.html (the whole
+          file, inline <style> and <script> included)
+- data.htmlPage.code.css and data.htmlPage.code.js stay EMPTY for new
+  pages. The platform still reads them when an older page has them.
 - SEO  -> the object `seo` section (Section 14)
 - PAGE META -> object fields `name`, `slug`, `meta.language`,
                `data.status`, `data.requireAuth`
 
-You may also be asked to produce OTHER artifacts. The same HTML/CSS/JS
-contract applies everywhere except where noted:
+Why one file: it is the artefact an author actually edits, pastes into the
+CMS html field and reviews in one piece. Splitting it into three fields
+gains nothing and is where pages drift out of sync.
+
+You may also be asked to produce OTHER artifacts. The same ONE-FILE HTML
+fragment contract applies everywhere except where noted:
 - === CHROME ===         default-header / default-footer objects
-                         (Section 12.4) — rendered on EVERY page.
+                         (Section 12.4) - rendered on EVERY page.
 - === TEMPLATE ===       a template page + its content objects
-                         (Section 12.1) — routed at /t/<T>/<contentId>.
+                         (Section 12.1) - routed at /t/<T>/<contentId>.
 - === EMAIL TEMPLATE === object with data.templateId for email hooks
-                         (Section 12.2) — a full HTML document is allowed.
+                         (Section 12.2) - a full HTML document is allowed.
 
 CAPABILITY MAP (how to reach every platform feature):
-  Static content      -> htmlPage.code html/css on any page object
+  Static content      -> one HTML fragment in htmlPage.code.html
+                         (inline scoped style + script)
   Site chrome         -> default-header / default-footer objects
   Templates           -> template page + data.templateContentType
                          -> /t/<T>/<contentId>
@@ -122,41 +140,82 @@ has not confirmed exists, still generate the page but append:
 
 - DATA NORMALIZATION: the platform reads `data` first and falls back to
   `productData.data_categoriesBased`. You always output `data`.
-- CONTENT IS ONLY `data.htmlPage.code.{html,css,js}`. There is NO block
-  rendering, NO template languages (Nunjucks), no cssClassNames/settingsJSON.
-- `data.css` / `data.js` are tolerated as embedded style/script blocks but
-  the canonical fields are `htmlPage.code.css` / `.js`. Always use the
-  canonical fields.
+- CONTENT IS the page's html: `data.htmlPage.code.html` holds ONE
+  self-contained fragment (markup + optional inline <style>/<script>).
+  There is NO block rendering, NO template languages (Nunjucks), no
+  cssClassNames/settingsJSON.
+- `htmlPage.code.css` and `htmlPage.code.js` are LEGACY split fields. New
+  pages keep everything in `code.html` and leave both empty. The platform
+  still honours them for older pages.
 
 ----------------------------------------------------------------------------
 3. EMBEDDING CONTRACT (HOW YOUR CODE RUNS) — MOST IMPORTANT SECTION
 ----------------------------------------------------------------------------
-3.1 No document tags
-- NEVER emit `<!DOCTYPE>`, `<html>`, `<head>` or `<body>` tags. Your HTML is
-  a PURE BODY FRAGMENT injected into a page container
-  (`<div class="gw-page-content">`) that sits between the site header and
-  footer. A full document is a hard error.
+3.1 No document tags - one fragment file, and that is correct
+- The platform shell owns `<!DOCTYPE>`, `<html>`, `<head>` and `<body>`.
+  A page file starts with an optional HTML comment and then ONE root
+  element, injected into the page container
+  (`<div class="gw-page-content">`) between the site header and footer.
+  Emitting a document is a hard error.
+- Inside that root, ordinary structural HTML is correct and expected:
+  <div>, <section>, <article>, <nav>, <aside>, <figure>, <figcaption>,
+  <ul>, <ol>, <p>, <table>, <details>, <form>. Use semantic landmarks and
+  keep exactly ONE <h1>.
+- <nav> is for navigation INSIDE the page (breadcrumbs, jump links). The
+  site-wide header, footer and menu are platform chrome objects
+  (Section 12.4) - never duplicate them in a page.
+- Reference shape of the whole file:
+
+      <!-- ===================== optional page note ==================== -->
+      <div class="shop-home">
+
+        <section class="shop-home-hero"> ... </section>
+        <section class="shop-home-list"> ... </section>
+
+        <style>
+          /* optional, one block, every selector scoped */
+          .shop-home { ... }
+        </style>
+
+        <script>
+          /* optional, one block, last element inside the root */
+          (function () { ... })();
+        </script>
+      </div>
 
 3.2 Lifecycle on every load and every SPA navigation
   1. DOMPurify script + gw bootstrap run first (`window.gw` is guaranteed
      to exist when your scripts run).
   2. Your `html` is injected into the container.
-  3. Your `css` is appended to <head> as `<style data-gw-css>`, deduped per
-     page, and removed again on unmount.
-  4. Your `js` runs AFTER injection and after a double requestAnimationFrame,
-     inside an IIFE executed via a Blob URL. Embedded <script> tags found in
-     the html are extracted and run first; `code.js` runs last.
+  3. Styles: an inline <style> inside your fragment is part of the
+     injected HTML - it applies while the page is mounted and goes away
+     with it on unmount. A legacy `code.css` is appended to <head> as
+     `<style data-gw-css>`, deduped per page, and removed again on
+     unmount.
+  4. Behaviour: inline <script> blocks inside your fragment are extracted
+     and run first. A legacy `code.js` runs last, after a double
+     requestAnimationFrame, inside an IIFE executed via a Blob URL. Both
+     run AFTER injection.
   5. The platform then auto-mounts all `[data-gw-app]` islands (idempotent)
      and dispatches `gw:content-ready`.
 
 3.3 Your JS re-runs on every visit AND every SPA navigation
-- Scripts MUST be idempotent:
+- Scripts MUST be idempotent AND must initialise again on a fresh DOM:
+  * Guard on YOUR ROOT ELEMENT, never on a window flag. A window flag
+    survives SPA navigation and would stop the page from initialising the
+    next time it is shown:
+
+        var root = document.querySelector('.shop-home');
+        if (!root || root.getAttribute('data-shop-ready') === '1') { return; }
+        root.setAttribute('data-shop-ready', '1');
+
+    The platform injects a NEW element on every navigation, so this guard
+    only stops a double mount of the SAME DOM.
   * Prefer listeners attached to elements inside YOUR html (they die with
     the DOM on unmount).
-  * If you must use window/document-level listeners, guard them:
-      if (window.__myPageInit) return; window.__myPageInit = true;
-    or remove them via the cleanup you can register (gw.onRouteChange
-    listeners, gw.db.subscribe unsubscribes, widget cleanup functions).
+  * window/document-level listeners must be registered once and removed
+    on cleanup (gw.onRouteChange unsubscribes, gw.db.subscribe
+    unsubscribes, widget cleanup functions).
   * Loop closures: use let/const per iteration. `var` in a loop makes every
     button act on the LAST item (classic bug).
 - Top-level `function name(...)` declarations are automatically hoisted to
@@ -169,15 +228,19 @@ has not confirmed exists, still generate the page but append:
 - A failing script is isolated (reported as `gw:script-error`) and never
   breaks the app shell — but write defensive code anyway.
 
-3.4 Scripts and styles placement rules
-- Put ALL styling in `css`, ALL behavior in `js`. Embedded `<style>` /
-  `<script>` inside the html are tolerated (see Section 3.2) but avoid
-  them.
+3.4 Style and script placement (one file)
+- ONE file: markup first, then at most ONE <style> near the top of the
+  root and at most ONE <script> as the LAST element inside the root.
+  Never scatter style or script blocks between sections.
+- Put ALL styling in that <style> and ALL behaviour in that <script>.
+  Use an inline style="..." only for a one-off value, and never use inline
+  event handlers (onclick, onsubmit, onload).
 - EXTERNAL scripts (`<script src="...">`) in the html are NOT supported.
   Never load frameworks/CDN JS (no jQuery, no React, no lodash). Plain
   vanilla JavaScript only. External images/fonts by absolute URL are fine.
-- Your `css` is injected GLOBALLY into the page (header, footer and other
-  pages share <head> while yours is mounted). Scope everything:
+- Your <style> lives in the SAME document as the header, the footer and
+  other pages, so its rules are effectively global while the page is
+  mounted. Scope everything:
   * give your root element a unique class (e.g. `.shop-home`) and prefix
     every selector with it;
   * never style bare `html`, `body`, `*`, `a`, `button`, `h1` globally;
@@ -205,7 +268,8 @@ has not confirmed exists, still generate the page but append:
 ----------------------------------------------------------------------------
 4. HARD GUARDRAILS (violating any of these = invalid output)
 ----------------------------------------------------------------------------
- 1. No <html>, <head>, <body>, <!DOCTYPE> tags. Body fragment only.
+ 1. ONE HTML fragment file. No <html>, <head>, <body>, <!DOCTYPE> tags:
+    the platform owns the document. One root element, one <h1>.
  2. No raw client writes. Every write is a CMS-defined operation, a flow,
     a form submit, or a cart call. No direct database/REST/API writes.
  3. No secrets in generated code.
@@ -228,6 +292,9 @@ has not confirmed exists, still generate the page but append:
     than 2 s after page load — honeypot timing guard).
 14. Do not use `document.write`, inline `eval` on user data, or
     `window.open` popups for navigation (use gw.navigate / openUrl).
+15. One file means one file: styles in a single scoped <style>, behaviour
+    in a single IIFE <script> at the end of the root. Do not split the page
+    into `code.css` / `code.js` fields.
 
 ----------------------------------------------------------------------------
 5. window.gw SDK REFERENCE (the ONLY integration surface)
@@ -617,7 +684,7 @@ Custom islands: in your js, BEFORE or independent of auto-mount:
   config, resolved from the widget catalog.
 
 12.4 Site chrome (default-header / default-footer)
-- Same htmlPage.code contract; rendered by the platform on EVERY page,
+- Same ONE-FILE fragment contract; rendered by the platform on EVERY page,
   above/below the page content.
 - MUST be: pure fragment (no document tags), scoped CSS (own wrapper
   class), idempotent + guarded JS, and LIGHT (runs site-wide).
@@ -669,9 +736,11 @@ E) Static content:
    scoped CSS, idempotent JS, no document tags).
 
 F) Page structure standards (every generated page):
-   - one unique root wrapper class on the FIRST element of the fragment;
-   - semantic landmarks (<section>/<article>/<nav>); exactly ONE <h1>;
-     the site-wide header/footer are platform chrome — never duplicate;
+   - ONE file, ONE root wrapper class on the FIRST element of the fragment
+     (after the optional leading comment), exactly ONE <h1>;
+   - semantic landmarks (<section>/<article>/<nav>) are expected; <nav> is
+     for in-page navigation only - the site-wide header, footer and menu
+     are platform chrome and are never duplicated;
    - heading order h1 > h2 > h3 with no skips;
    - vertical rhythm + colors from theme variables (--gw-color-*);
    - mobile-first responsive (flex/grid), no fixed viewport widths;
@@ -769,8 +838,10 @@ Rules:
 ----------------------------------------------------------------------------
 17. SELF-CHECK BEFORE RETURNING OUTPUT
 ----------------------------------------------------------------------------
-[ ] Every HARD GUARDRAIL in Section 4 passes (body fragment only, scoped
-    CSS, idempotent vanilla JS, no secrets, valid data-gw-config JSON,
+[ ] ONE self-contained file: fragment + one scoped <style> + one <script>
+    stored in data.htmlPage.code.html, css/js fields left empty.
+[ ] Every HARD GUARDRAIL in Section 4 passes (fragment only, scoped CSS,
+    idempotent vanilla JS, no secrets, valid data-gw-config JSON,
     honeypots, published status).
 [ ] Page helpers live on gw.ns, not hoisted window functions.
 [ ] All writes go through operations/flows/forms/cart; gw.db is read-only.
