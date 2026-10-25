@@ -1345,9 +1345,16 @@ function renderAll() {
   var openTasks = tasks().filter(function (task) {
     return ['open', 'assigned', 'in-progress', 'reported-done'].indexOf(task.status) !== -1;
   }).length;
+  var positionRows = (Array.isArray(APP.eventData.positions) ? APP.eventData.positions : []).map(normalizePosition);
+  var filledCounts = filledPerPosition();
+  var openPlaces = positionRows.filter(function (position) {
+    return filledCounts[position.id] === undefined || filledCounts[position.id] < toNumber(position.slots);
+  }).length;
 
   el('etBadgeTeam').textContent = String(APP.relations.length);
   el('etBadgeTeam').className = 'et-nav-badge' + (requestedRelations().length ? ' hot' : '');
+  el('etBadgePositions').textContent = String(positionRows.length);
+  el('etBadgePositions').className = 'et-nav-badge' + (openPlaces ? ' hot' : '');
   el('etBadgeTasks').textContent = String(openTasks);
   el('etBadgeHours').textContent = String(pendingRows().length);
   el('etBadgeHours').className = 'et-nav-badge' + (pendingRows().length ? ' hot' : '');
@@ -1368,6 +1375,7 @@ function renderAll() {
   renderPositions();
 
   el('etAddVolunteerBtn').disabled = !canManage();
+  el('etAddPositionBtn').disabled = !canManage();
   el('etAddTaskBtn').disabled = !canManage();
   el('etNewMessageBtn').disabled = !canManage();
   el('etRotateBtn').disabled = !canManage();
@@ -1784,13 +1792,13 @@ function renderReport() {
 var EVENT_FORM_TABS = [
   { key: 'basics', label: 'Basics' },
   { key: 'when', label: 'When and where' },
-  { key: 'contact', label: 'Contact' },
-  { key: 'positions', label: 'Positions' }
+  { key: 'contact', label: 'Contact' }
 ];
 
 function activeFormTab() {
-  /* The offer used to be a tab of its own and roles used to be called roles. */
-  var requestedTab = APP.formTab === 'roles' ? 'positions' : APP.formTab;
+  /* Old saved tabs: roles became positions, and positions is now a screen of its own. */
+  var requestedTab = APP.formTab;
+  if (requestedTab === 'roles' || requestedTab === 'positions' || requestedTab === 'offer') requestedTab = 'basics';
   for (var tabIndex = 0; tabIndex < EVENT_FORM_TABS.length; tabIndex++) {
     if (EVENT_FORM_TABS[tabIndex].key === requestedTab) return requestedTab;
   }
@@ -1872,10 +1880,6 @@ function renderEventForm() {
   panels.contact = formPanelHead('Who a volunteer calls when they have a question. The first person is the main contact shown in the volunteer catalog.',
     canManage() ? '<button type="button" class="et-btn et-btn-primary" onclick="openContactModal(null)">Add contact</button>' : '')
     + '<div id="etContactList"></div>';
-
-  panels.positions = formPanelHead('Each position is a job definition: what the volunteer does, how many places there are, what kind of offer it is and when it runs. Volunteers apply for a position, not for the event as a whole.',
-    canManage() ? '<button type="button" class="et-btn et-btn-primary" onclick="openPositionModal(null)">Add position</button>' : '')
-    + '<div id="etPositionList"></div>';
 
   var html = '<div class="et-ftabs" role="tablist">' + EVENT_FORM_TABS.map(function (tab) {
     var isActiveTab = tab.key === activeTabKey;
@@ -2981,6 +2985,7 @@ tool.onReady(function (value) {
   el('etAddTaskBtn').addEventListener('click', function () { openTaskModal(null); });
   el('etNewMessageBtn').addEventListener('click', openNewMessageModal);
   el('etRotateBtn').addEventListener('click', openRotateModal);
+  el('etAddPositionBtn').addEventListener('click', function () { openPositionModal(null); });
   el('etExportReportBtn').addEventListener('click', exportReport);
   if (el('etApproveAllBtn')) el('etApproveAllBtn').addEventListener('click', openApproveAllModal);
 

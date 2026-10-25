@@ -92,7 +92,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.22</span>
+      <span>v0.23</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -141,7 +141,7 @@
     produces it.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.22</td></tr>
+    <tr><th>Document version</th><td>0.23</td></tr>
     <tr><th>Last updated</th><td>2026-10-24</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
@@ -821,6 +821,18 @@
       <td>Owner decision. Structured output can be validated and mapped to the contract; free text cannot. A chat layer can be added later without changing this output contract.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-RAMM-41</td><td>2026-10-24</td>
+      <td>The AI capability ships before usage monitoring. The tool does not count, display or block AI calls yet, and no artificial cap is enforced in code while the counter has no trusted home. The 30-calls-per-month allowance stays the target; T-61 and Q-15 stay open.</td>
+      <td>Owner direction: "We can discuss usage monitoring later, the main subject is having the capability." Ships the value now, keeps the metering decision honest instead of faking a counter in the browser.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-42</td><td>2026-10-24</td>
+      <td>An AI draft must carry its own values. Every draft is checked against <code>DEAL_AI_REQUIRED_RULE_KEYS</code> before serialization; a draft that omits a required key is skipped and the missing key is named in the report. Editor defaults in <code>serializeDealDraft()</code> (for example 10 percent for a missing value) are for hand editing only and must never fill an AI draft. Tax templates are state or province base values for 2026-01, always shown in a confirmation before they replace anything, and their note states that local taxes are additional.</td>
+      <td>Owner decision on both points: the AI must not invent numbers, and a tax preset must not silently overwrite a rate the owner typed.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -870,24 +882,25 @@
     <tr><td>18</td><td>Sample data moved out of code into <code>app/sampleData/</code> with plain names; imports take pasted JSON or a chosen file</td><td><code>app/sampleData/*.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-22, T-48)</td></tr>
     <tr><td>19</td><td>Professional blue theme (SSOT fonts), hero redesign (upload / link alternatives) and category panel fixes (full names, All categories reset)</td><td><code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-22, T-49)</td></tr>
     <tr><td>20</td><td>Tool uses the SSOT's Inter webfont with the same fallback stack in both production and the harness</td><td><code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code> - DONE (2026-10-22, D-RAMM-25)</td></tr>
-    <tr><td>21</td><td>Coordinate picker on Address and location, and the delivery map starts at the stored coordinates with a recenter action</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - PENDING (T-59, T-50)</td></tr>
-    <tr><td>22</td><td>US state and Canadian province tax and delivery-fee templates in code, applied on request and never overwriting entered values</td><td><code>app/RestaurantAndMenuManager.js</code> - PENDING (T-51, D-RAMM-32)</td></tr>
-    <tr><td>23</td><td>AI sample generation with a type-selection dialog: inactive drafts, validated, insert-only, with a skipped-type report</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-52)</td></tr>
+    <tr><td>21</td><td>Coordinate picker on Address and location, and the delivery map starts at the stored coordinates with a recenter action</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-10-24, T-59, T-50)</td></tr>
+    <tr><td>22</td><td>US state and Canadian province tax and delivery-fee templates in code, applied on request and never overwriting entered values</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-24, T-51, D-RAMM-32, D-RAMM-42)</td></tr>
+    <tr><td>23</td><td>AI sample generation with a type-selection dialog: inactive drafts, validated, insert-only, with a skipped-type report</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-24, T-52; on-screen report in T-63)</td></tr>
     <tr><td>24</td><td>Menu, category and product edit surfaces verified end to end</td><td><code>app/*</code> - IGNORED (T-54, selling-side surfaces per D-RAMM-30)</td></tr>
     <tr><td>25</td><td>Schedule and visibility verified against the website</td><td><code>app/test-harness.html</code>, website - PENDING (T-55)</td></tr>
     <tr><td>26</td><td>Hero URL and upload verified to be stored and published correctly</td><td><code>app/*</code> - PENDING (T-56)</td></tr>
     <tr><td>27</td><td>Item include/exclude inside a selected category, contract checked first</td><td><code>docs/client-data-contract.html</code>, <code>app/*</code> - PENDING (T-57, D-RAMM-29)</td></tr>
     <tr><td>28</td><td>Montreal pilot: full onboarding with 10+ scripted tests and a findings report</td><td><code>docs/ssot.html</code> section 17 - PENDING (T-58)</td></tr>
     <tr><td>29</td><td>AI suggestion panel with reasons and one-click create</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-60)</td></tr>
-    <tr><td>30</td><td>Monthly AI allowance: "n of 30" in the Deals toolbar and both dialogs, block at 30 of 30 with reset date and upgrade link</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-61, storage Q-15)</td></tr>
-    <tr><td>31</td><td>Compact AI input payload plus the strict JSON output schema, with item cap and no private data</td><td><code>app/RestaurantAndMenuManager.js</code> - PENDING (T-62)</td></tr>
+    <tr><td>30</td><td>Monthly AI allowance: "n of 30" in the Deals toolbar and both dialogs, block at 30 of 30 with reset date and upgrade link</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DEFERRED (2026-10-24, T-61, D-RAMM-41, storage Q-15)</td></tr>
+    <tr><td>31</td><td>Compact AI input payload plus the strict JSON output schema, with item cap and no private data</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-24, T-62)</td></tr>
   </table>
 
         <h2 id="sec-questions">14. Open questions</h2>
   <p>Decision points we resolve together before or during implementation.
   Every answer becomes a dated row in section 11 and is removed from this
   list. Q-01 to Q-14 were answered by 2026-10-24 (D-RAMM-15 to D-RAMM-40).
-  One question remains, about where the AI counter is stored.</p>
+  One question remains, and it is deferred: where the AI counter is stored
+  (D-RAMM-41 keeps it open while the capability ships first).</p>
   <ol>
     <li><strong>Q-15 - Where is the AI call counter stored?</strong>
     The tool is sandboxed: it cannot keep a trustworthy counter in the browser
@@ -900,7 +913,10 @@
     themselves, which is not possible because one call can create several deals.
     Needed: does the platform already expose AI usage per tenant? If not, approve
     option (b) and the contract addition. Recommendation: (a), with (b) as the
-    fallback, treating the stored value as untrusted.</li>
+    fallback, treating the stored value as untrusted.<br />
+    <strong>Deferred on 2026-10-24:</strong> the AI capability ships first
+    (user direction, D-RAMM-41), so the tool does not count or block calls yet.
+    This question is answered when usage monitoring is built.</li>
   </ol>
 
 <h2 id="sec-tasklist">15. Development task list</h2>
@@ -1926,7 +1942,7 @@
     </header>
     <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="settings-locale"></div></div>
     <p class="task-group-note">Why these belong together: both tasks decide how a new restaurant is configured by the platform, and a half-automatic setup is what causes mis-drawn zones and mistyped tax rates.</p>
-    <div class="task-item" data-task-id="T-50" data-group="settings-locale" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-50" data-group="settings-locale" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-50</span>
@@ -1940,11 +1956,11 @@
           <p><strong>How we will solve it:</strong> Read <code>general_info.coordinates</code> and use it when latitude and longitude are finite and are not the placeholder pair. Fall back to the centroid of the first saved zone, then to the current default. Add a "Center on restaurant" button next to the map tools and re-center when the coordinates change. No geocoding is added (D-RAMM-26); the owner sets the point with the picker from T-59.</p>
           <p><strong>Benefit:</strong> Zones are drawn around the real restaurant, so delivery pricing and coverage start correct.</p>
           <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/test-harness.html</code></p>
-          <p><strong>Status:</strong> Not started. Coordinates are the only source of truth (D-RAMM-26).</p>
+          <p><strong>Status:</strong> DONE (2026-10-24). <code>resolveMapCenter()</code> reads <code>general_info.coordinates</code>, ignores the placeholder pair, falls back to the centroid of the first zone and then to the default. A "Center on restaurant" button (<code>zone-center-btn</code>) sits above the delivery map. Coordinates are still the only source of truth (D-RAMM-26).</p>
         </div>
       </details>
     </div>
-    <div class="task-item" data-task-id="T-51" data-group="settings-locale" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-51" data-group="settings-locale" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-51</span>
@@ -1958,11 +1974,11 @@
           <p><strong>How we will solve it:</strong> A data-driven preset keyed by country plus state or province, holding the tax name, the pickup / delivery / in-restaurant rates and the delivery-fee tax rate. When the owner picks a state, show an "Apply the <state> template" action that fills the existing <code>taxation_currency</code> fields. Never overwrite a non-empty table without explicit confirmation, and show the template source and effective date.</p>
           <p><strong>Benefit:</strong> Faster onboarding with fewer tax mistakes, without adding a new document key.</p>
           <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, a template JSON under app/sampleData/</code></p>
-          <p><strong>Status:</strong> Not started. Blocked by Q-09: which states and countries, who maintains the rates, and where the table lives.</p>
+          <p><strong>Status:</strong> DONE (2026-10-24). <code>TAX_TEMPLATES</code> holds 51 United States entries (50 states plus DC, state base rate) and 13 Canadian entries (combined GST, HST and PST), effective <code>2026-01</code>. The action always opens a confirmation that names the template and states whether existing categories are replaced (D-RAMM-42). County, city and special district taxes stay the owner's responsibility and are called out in the template note.</p>
         </div>
       </details>
     </div>
-    <div class="task-item" data-task-id="T-59" data-group="settings-locale" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-59" data-group="settings-locale" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-59</span>
@@ -1976,7 +1992,7 @@
           <p><strong>How we will solve it:</strong> A compact Leaflet map under Address and location with a draggable marker. Clicking the map or dragging the marker writes <code>general_info.coordinates.lat</code> and <code>.lng</code>. Add a "Paste a Google Maps link" field that extracts the latitude and longitude from the link text (no network call), and a reset-to-default action. Show the current values and a short hint that the same point is used by the delivery map and the website.</p>
           <p><strong>Benefit:</strong> The owner sets the location visually once, and every map in the tool and on the website agrees.</p>
           <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/RestaurantAndMenuManager.css, app/test-harness.html</code></p>
-          <p><strong>Status:</strong> Not started. Uses the Leaflet bundle already loaded by the tool; no external calls.</p>
+          <p><strong>Status:</strong> DONE (2026-10-24). Leaflet map under Address and location with a draggable pin, click-to-place, a Google Maps link field that parses <code>@lat,lng</code>, <code>?q=</code>, <code>?ll=</code> and a plain "lat, lng" pair, and a live hint. No geocoding and no network calls (D-RAMM-26).</p>
         </div>
       </details>
     </div>
@@ -1991,7 +2007,7 @@
     </header>
     <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-template-library"></div></div>
     <p class="task-group-note">Why these belong together: one AI input builder feeds both modes, the allowance meters both calls, and the output review tunes the same prompt. Shipping one without the others gives either an unusable button or an unmetered one.</p>
-    <div class="task-item" data-task-id="T-52" data-group="deals-template-library" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-52" data-group="deals-template-library" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-52</span>
@@ -2005,7 +2021,7 @@
           <p><strong>How we will solve it:</strong> A "Generate samples" dialog lists every rule type with a checkbox (bundle, min_quantity, tiered, two_for_one, percentage_discount, subtotal_threshold, free_delivery, free_item_with_purchase, buy_n_get_m, volume_pricing, free_modifier) and shows the AI counter. On confirm, send one AI request built by T-62 with the selected types and the rule shapes, and require strict JSON: an array of deal drafts with no prose. Reject anything that is not valid JSON against that schema. Validate every draft with <code>validateDeal</code>, drop drafts with errors, assign new ids, force <code>active: false</code>, and insert only. Show a summary with the created count per type, every skipped type and its reason, and the AI note per deal. On an AI failure or unusable JSON, show the error and allow a retry; there is no silent fallback and no chat interface (D-RAMM-40).</p>
           <p><strong>Benefit:</strong> Every tenant sees realistic offers built on their own products in one click, and the owner activates only what they like.</p>
           <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/test-harness.html</code></p>
-          <p><strong>Status:</strong> Not started. Model selection is platform configuration (D-RAMM-39).</p>
+          <p><strong>Status:</strong> DONE (2026-10-24). The Deals toolbar action "Generate with AI" opens a dialog with eleven type checkboxes, sends one request through <code>requestDealAiText()</code>, parses strict JSON, checks every draft for the keys the type needs (D-RAMM-42), validates with <code>validateDeal</code>, assigns new ids, forces <code>active: false</code> and inserts only. Created deals are reported in a toast; skipped types and reasons are written to the console until T-63 adds the on-screen report. Model selection is platform configuration (D-RAMM-39).</p>
         </div>
       </details>
     </div>
@@ -2059,11 +2075,11 @@
           <p><strong>How we will solve it:</strong> Show "5 of 30 AI calls used" in the Deals toolbar and in both AI dialogs. Count every submitted AI request once, from both modes (a request that is sent counts, even if the answer is unusable). At 30 of 30 disable both AI actions, show "30 of 30 AI calls used", state that the allowance resets on the first day of the next month, and show an upgrade action when the platform supplies a URL. The counter resets automatically when the calendar month changes, using the restaurant time zone. Storage follows Q-15: platform metering if available, otherwise a documented document section after a contract change. Never use browser storage.</p>
           <p><strong>Benefit:</strong> The free allowance is predictable, visible and cannot be bypassed by reloading or switching devices.</p>
           <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/RestaurantAndMenuManager.css</code></p>
-          <p><strong>Status:</strong> Not started. Behaviour fixed by D-RAMM-38; storage blocked by Q-15.</p>
+          <p><strong>Status:</strong> Deferred on 2026-10-24 - the capability ships first and usage monitoring follows (D-RAMM-41). Behaviour is still fixed by D-RAMM-38; storage still follows Q-15.</p>
         </div>
       </details>
     </div>
-    <div class="task-item" data-task-id="T-62" data-group="deals-template-library" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-62" data-group="deals-template-library" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-62</span>
@@ -2077,7 +2093,25 @@
           <p><strong>How we will solve it:</strong> One module builds both halves. Input: restaurant name and locale, categories (id, name), items (id, name, price, sizes, category, tags, availability), existing deals (rule type, title, rule summary) and the available rule shapes. Cap the item count (for example 150), drop images and long descriptions, truncate deterministically with a note. Output: a strict JSON schema for deal drafts (and a separate one for suggestions in T-60) with required keys matching the contract, no prose allowed. No customer, order, contact or address data is ever included. Both AI modes share this module.</p>
           <p><strong>Benefit:</strong> Both AI modes use the same small, complete and cheap input, and every answer can be validated and mapped to the deal forms.</p>
           <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/test-harness.html</code></p>
-          <p><strong>Status:</strong> Not started.</p>
+          <p><strong>Status:</strong> DONE (2026-10-24). <code>buildDealAiPayload()</code> sends restaurant name and locale, categories, items capped at 150 with an <code>items_truncated</code> flag, modifier groups and a summary of the existing deals, and never any customer, order, contact or address data. <code>buildDealAiPrompt()</code> adds the exact key list for all eleven rule types from <code>DEAL_AI_RULE_GUIDE</code>.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-63" data-group="deals-template-library" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-63</span>
+          <span class="task-title">Show the AI run report inside the dialog</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-63 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> After an AI run the owner only sees a toast with the created count. Which types were created, which were skipped and why is printed to the console, where a shop owner never looks.</p>
+          <p><strong>How we will solve it:</strong> Keep the summary from <code>insertAiDealDrafts()</code> and render it in the dialog after the run: one line per requested type with "created" or the skip reason, plus a "Review the inactive deals" action that closes the dialog and scrolls the deals list. No new AI call and no document change.</p>
+          <p><strong>Benefit:</strong> The owner understands what the AI did and why a type is missing, without opening developer tools.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Not started. The data is already returned by T-52; only the rendering is missing.</p>
         </div>
       </details>
     </div>
@@ -2768,7 +2802,7 @@
 
   <div class="footer">
     Restaurant And Menu Manager - single source of truth for all decisions about this
-    tool. Version 0.22, 2026-10-24.
+    tool. Version 0.23, 2026-10-24.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

@@ -27,6 +27,7 @@
     <nav class="et-nav" id="etNav">
       <button type="button" class="et-nav-btn active" data-view="dashboard">Dashboard</button>
       <button type="button" class="et-nav-btn" data-view="team">Volunteers <span class="et-nav-badge" id="etBadgeTeam">0</span></button>
+      <button type="button" class="et-nav-btn" data-view="positions">Positions <span class="et-nav-badge" id="etBadgePositions">0</span></button>
       <button type="button" class="et-nav-btn" data-view="tasks">Tasks <span class="et-nav-badge" id="etBadgeTasks">0</span></button>
       <button type="button" class="et-nav-btn" data-view="hours">Hours <span class="et-nav-badge" id="etBadgeHours">0</span></button>
       <button type="button" class="et-nav-btn" data-view="messages">Messages <span class="et-nav-badge" id="etBadgeMessages">0</span></button>
@@ -115,13 +116,24 @@
       </section>
 
       <section class="et-panel" id="etPanelEvent">
-        <p class="et-lead">The details of this event, the people volunteers can call, and the positions they can apply for.</p>
+        <p class="et-lead">The details of this event and the people volunteers can call.</p>
         <div class="et-card">
           <div class="et-card-head">
             <h2>Event details</h2>
             <span class="et-count" id="etEventUpdated"></span>
           </div>
           <div class="et-card-body" id="etEventForm"></div>
+        </div>
+      </section>
+
+      <section class="et-panel" id="etPanelPositions">
+        <p class="et-lead">The jobs volunteers can apply for. Each position carries its own offer, schedule, requirements and places.</p>
+        <div class="et-card">
+          <div class="et-card-head">
+            <h2>Positions</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etAddPositionBtn">Add position</button>
+          </div>
+          <div class="et-card-body" id="etPositionList"></div>
         </div>
       </section>
 

@@ -7116,6 +7116,34 @@ function collectDealAiDrafts(parsedPayload) {
   return null;
 }
 
+/* Keys the AI must supply for each rule type. The draft serializer fills friendly
+   defaults for hand editing (for example 10 percent), so AI output is checked
+   against these keys first to make sure nothing is invented on its behalf. */
+var DEAL_AI_REQUIRED_RULE_KEYS = {
+  bundle: ['groups'],
+  min_quantity: ['min_quantity'],
+  tiered: ['item_ids', 'tiers'],
+  two_for_one: ['required_item_count'],
+  percentage_discount: ['percent'],
+  subtotal_threshold: ['min_subtotal', 'discount'],
+  free_delivery: ['always'],
+  free_item_with_purchase: ['groups'],
+  buy_n_get_m: ['required_item_count', 'free_item_count'],
+  volume_pricing: ['bands'],
+  free_modifier: ['modifier_group_ids', 'option_count']
+};
+
+function findMissingAiRuleKeys(ruleType, aiRule) {
+  var requiredKeys = DEAL_AI_REQUIRED_RULE_KEYS[ruleType] || [];
+  var rule = aiRule || {};
+  return requiredKeys.filter(function (requiredKey) {
+    var value = rule[requiredKey];
+    if (value === null || value === undefined) return true;
+    if (Array.isArray(value) && value.length === 0) return true;
+    return false;
+  });
+}
+
 function insertAiDealDrafts(aiDrafts, requestedTypes) {
   var referenceIndex = buildMenuReferenceIndex(data);
   var createdDeals = [];
@@ -7127,6 +7155,12 @@ function insertAiDealDrafts(aiDrafts, requestedTypes) {
     var ruleType = readString(aiDraft.rule_type);
     if (DEAL_RULE_TYPES.indexOf(ruleType) === -1) {
       skippedEntries.push({ type: ruleType || 'unknown', reason: 'unsupported rule type' });
+      return;
+    }
+
+    var missingRuleKeys = findMissingAiRuleKeys(ruleType, aiDraft.rule);
+    if (missingRuleKeys.length > 0) {
+      skippedEntries.push({ type: ruleType, reason: 'the AI omitted ' + missingRuleKeys.join(', ') });
       return;
     }
 
@@ -7325,6 +7359,9 @@ function wireDealEditor() {
   document.querySelectorAll('[data-deal-tab-goto]').forEach(function (gotoButton) {
     gotoButton.addEventListener('click', function () {
       switchDealEditorTab(gotoButton.dataset.dealTabGoto);
+    });
+  });
+
   var addDealButton = document.getElementById('deals-add-btn');
   if (addDealButton) addDealButton.addEventListener('click', function () { openDealEditor(null); });
 

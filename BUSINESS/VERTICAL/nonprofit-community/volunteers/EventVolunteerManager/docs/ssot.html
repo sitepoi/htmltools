@@ -28,7 +28,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v1.10</span>
+      <span>v1.11</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -74,7 +74,7 @@
     updated to capture the final decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>1.10</td></tr>
+    <tr><th>Document version</th><td>1.11</td></tr>
     <tr><th>Last updated</th><td>2026-10-25</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (EventVolunteerManager).</td></tr>
@@ -187,8 +187,9 @@
     <tr><td>C-16</td><td>Several event contacts (name, what they do, phone, email); the first one is the main contact and keeps the single contact fields in step</td><td>renderContacts / openContactModal / saveContacts</td><td>v1.9 (2026-10-25)</td><td>Headless assertions</td></tr>
     <tr><td>C-17</td><td>Every position is a job definition and owns its offer: type, where, commitment, work deadline, application deadline and weekly schedule; the event carries the summary of its positions</td><td>normalizePosition / applyDerivedOfferFields / openPositionModal</td><td>v1.9 (2026-10-25)</td><td>Headless assertions</td></tr>
     <tr><td>C-18</td><td>Places used against places available per position, with an overfill warning, and one-action approval of every waiting hour line</td><td>filledPerPosition / renderPositions / runApproveAllPendingHours</td><td>v1.6 (2026-10-24)</td><td>Headless assertions</td></tr>
-    <tr><td>C-19</td><td>The event details form is split into four tabs (Basics, When and where, Contact, Positions), and every edit is written to the attached event record as it is typed, with no Save or Create action in the tool</td><td>renderEventForm / switchFormTab / scheduleEventAutoSave / saveEventDefinition</td><td>v1.9 (2026-10-25)</td><td>Headless assertions</td></tr>
+    <tr><td>C-19</td><td>The event details form is split into three tabs (Basics, When and where, Contact), and every edit is written to the attached event record as it is typed, with no Save or Create action in the tool</td><td>renderEventForm / switchFormTab / scheduleEventAutoSave / saveEventDefinition</td><td>v1.11 (2026-10-25)</td><td>Headless assertions</td></tr>
     <tr><td>C-20</td><td>A position carries what the volunteer does and what they need: description, requirements, skills and time commitment, next to its offer and schedule</td><td>openPositionModal / renderPositions</td><td>v1.9 (2026-10-25)</td><td>Headless assertions</td></tr>
+    <tr><td>C-21</td><td>Positions are a screen of their own in the left menu, with a badge for the position count and the full table (offer, where, schedule, places, filled, applications close) plus Add position</td><td>etPanelPositions / renderAll badge / renderPositions</td><td>v1.11 (2026-10-25)</td><td>Headless assertions</td></tr>
   </table>
 
   <h2 id="sec-glossary">4. Glossary</h2>
@@ -524,6 +525,12 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
       <td>D-EVM-21</td><td>2026-10-25</td>
       <td>No screen warns about a missing record and no editor refuses to work because of it. The CMS attaches the event record exactly like it attaches any other tool in this codebase, so the tool always behaves as if the record exists: it keeps what is entered in its own state and writes through to the record when one is attached. The "No CMS event record is attached" notice, the side foot line and the guards in the contact and position editors are removed.</td>
       <td>Owner correction: the precaution blocked adding contacts and positions for a situation that does not happen in the CMS, so it only added a warning and a dead end. A tool must not gate its own data entry on a technical detail of the mount. renderPositions also stopped borrowing the "No event loaded" screen inside the event details tab, where it made no sense.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-22</td><td>2026-10-25</td>
+      <td>Positions moved out of the Event details tabs into their own screen in the left menu, next to Volunteers, with a badge for the position count. Event details keeps three tabs: Basics, When and where, Contact. An old saved tab name (positions, roles, offer) opens Basics.</td>
+      <td>Owner question: positions are the largest block of data in the tool, are revisited constantly and belong to the same family as Volunteers and Tasks, while the event fields are set up once.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
@@ -1110,6 +1117,25 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
         </div>
       </details>
     </div>
+    <div class="task-item" data-task-id="T-28" data-group="g3-parity" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-28</span>
+          <span class="task-title">Give positions their own screen in the left menu</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-28 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> positions are the largest block of data in the tool, but they sat in a tab of Event details next to fields that are set up once.</p>
+          <p><strong>How we will solve it:</strong> add a Positions entry to the left menu under Volunteers with a badge, move the table and the Add position action into their own panel, keep three tabs on Event details, and map an old saved tab name to Basics.</p>
+          <p><strong>Benefit:</strong> one click to the work that repeats, a full width table for offer, schedule, places and closing dates, and an Event details form that is only about the event.</p>
+          <p><strong>Implemented:</strong> <code>etPanelPositions</code> holds <code>etPositionList</code> and the Add position button, renderAll sets <code>etBadgePositions</code> to the position count and marks it hot while any position still has places, the form exposes three tabs, and renderPositions reads the state directly so it renders into the panel.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.html</code>, <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-25)</p>
+        </div>
+      </details>
+    </div>
   </section>
 
   <section class="task-group" data-release-group="g4-release" data-group-status="planned">
@@ -1272,7 +1298,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     <li><strong>S-10 - Event details are entered here.</strong> On Event details set a contact and change the offer to Recurring with Saturday 10:00 to 12:00, then save. PASS if: the contact, type, where, commitment and recurrence come back after the reload, and a role keeps its skills and time commitment.</li>
     <li><strong>S-11 - Approve every waiting hour.</strong> With one or more lines waiting press Approve all and confirm. PASS if: the waiting list empties, one ledger record per line is written, and the button disables itself.</li>
     <li><strong>S-12 - Role capacity.</strong> Give a role one place and accept two volunteers into it. PASS if: the role row shows Filled 2 against 1 with an over chip, and a warning names the number of overfilled roles without blocking the save.</li>
-    <li><strong>S-13 - Tabbed event details that write as you type.</strong> Open Event details on a loaded event. PASS if: the form shows four tabs, no Create or Save action is offered, and changing the event fields writes the record without a click. Then open the tool with no record: the form still renders, no warning appears anywhere, a contact and a position can be entered and are kept in the tool, and switching tabs keeps the entered values.</li>
+    <li><strong>S-13 - Tabbed event details that write as you type.</strong> Open Event details on a loaded event. PASS if: the form shows three tabs, no Create or Save action is offered, and changing the event fields writes the record without a click. Then open the tool with no record: the form still renders, no warning appears anywhere, a contact and a position can be entered and are kept in the tool, and switching tabs keeps the entered values.</li>
     <li><strong>S-14 - Positions own the offer, and an event can list several contacts.</strong> PASS if: the Position editor carries the job definition, the offer and the schedule; a saved position keeps its own type, place mode, deadlines and weekly schedule; the event summary becomes mixed when positions differ; a second contact is added and the first one stays the main contact; and Save position writes the record when clicked.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
@@ -1283,7 +1309,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     <tr><td>S-08 (harness)</td><td>PASS (2026-10-21, headless render)</td><td>volunteer role pill and disabled controls</td></tr>
     <tr><td>S-09 (harness)</td><td>PASS (2026-10-21)</td><td>empty state, no console errors</td></tr>
     <tr><td>S-10 to S-12 (harness)</td><td>PASS (2026-10-24)</td><td>20 assertions: contact and offer fields saved and reloaded, recurrence weekday and window, role skills and commitment preserved, Filled column and overfill warning, batch approval clearing the waiting list and writing one ledger record, disabled state</td></tr>
-    <tr><td>S-13 (harness)</td><td>PASS (2026-10-25)</td><td>28 assertions on a loaded event: four tabs, no Create or Save action, contacts and positions inside the form, a second contact saved with the first as main, a position saved with its own offer, schedule, requirements and deadlines, mixed summary, Save position through the button, overfill warning and batch approval; plus 18 assertions with no record: no warning anywhere, both editors open and keep what is entered, the position summary is derived, and nothing is written to the database</td></tr>
+    <tr><td>S-13 (harness)</td><td>PASS (2026-10-25)</td><td>22 assertions on a loaded event: three tabs, no Create or Save action, a Positions entry in the left menu with its badge, the positions table inside its own panel, the screen opening from the menu, a second contact saved with the first as main, a position saved with its own offer and schedule, mixed summary, Save position through the button and batch approval; plus 13 assertions with no record: no warning anywhere, both editors open and keep what is entered, the Positions screen opens empty, the badge follows the count and nothing is written to the database</td></tr>
     <tr><td>S-01 to S-09 (live CMS)</td><td></td><td>task T-17</td></tr>
   </table>
   <p><strong>Publish gate:</strong> publish only when the live CMS run passes and group g4-release is fully checked.</p>
@@ -1429,7 +1455,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
 
   <div class="footer">
     Event Volunteer Manager - single source of truth for all decisions about
-    this tool. Version 1.10, 2026-10-25.
+    this tool. Version 1.11, 2026-10-25.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>
