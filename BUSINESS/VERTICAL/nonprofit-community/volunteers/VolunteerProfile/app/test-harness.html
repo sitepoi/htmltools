@@ -29,6 +29,7 @@
   <strong>VolunteerProfile</strong>
   <button id="thRoleBtn" title="Switch the signed-in role">Role: volunteer</button>
   <button id="thLoadSample" title="Reload the sample data">Load sample</button>
+  <button id="thEmpty" title="Remove every record to see the empty state">Empty data</button>
   <button id="thReset" title="Clear the local test database">Reset data</button>
   <button id="thWide" title="Toggle a narrow container to test responsiveness">Narrow</button>
   <span id="th-status">ready</span>
@@ -36,6 +37,12 @@
 
 <div id="app-container">
   <!-- TOOL HTML START -->
+<!-- VolunteerProfile
+     One tool instance = ONE volunteer profile object (host object).
+     Volunteer sees and maintains their own record; a manager sees any record.
+     Data model: Person (this object) + Event + Membership relation + Event Tasks + Event Messages.
+-->
+
 <div class="vp-app" id="vpApp">
 
   <header class="vp-topbar">
@@ -75,6 +82,7 @@
       <button type="button" class="vp-nav-btn" data-view="messages">Messages <span class="vp-nav-badge" id="vpBadgeMessages">0</span></button>
       <button type="button" class="vp-nav-btn" data-view="certificate">Certificate</button>
       <button type="button" class="vp-nav-btn" data-view="profile">My Profile</button>
+      <button type="button" class="vp-nav-btn" data-view="network" id="vpNavNetwork" hidden>Volunteers <span class="vp-nav-badge" id="vpBadgeNetwork">0</span></button>
       <div class="vp-nav-foot" id="vpNavFoot"></div>
     </nav>
 
@@ -187,6 +195,23 @@
         </div>
       </section>
 
+      <section class="vp-panel" id="vpPanelNetwork">
+        <p class="vp-lead">Acceptance into the volunteer network. Accepting a person here lets them apply; accepting them for one event happens in the event manager tool.</p>
+        <div class="vp-card">
+          <div class="vp-card-head">
+            <h2>Volunteer network</h2>
+            <span class="vp-count" id="vpNetworkCount"></span>
+          </div>
+          <div class="vp-card-body">
+            <div class="vp-filter-chips" id="vpNetworkFilters"></div>
+          </div>
+        </div>
+        <div class="vp-card">
+          <div class="vp-card-head"><h2>People</h2></div>
+          <div class="vp-card-body" id="vpNetworkList"></div>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -203,14 +228,14 @@
 
   <div class="vp-toast" id="vpToast"></div>
 </div>
-  <!-- TOOL HTML END -->
+<!-- TOOL HTML END -->
 </div>
 
 <link rel="stylesheet" href="VolunteerProfile.css">
 
 <script>
 /* ---------------- mock CMS SDK ---------------- */
-var STORAGE_KEY = 'vprofile_test_db_v1';
+var STORAGE_KEY = 'vprofile_test_db_v2';
 var ROLE = (new URLSearchParams(location.search).get('role') || 'volunteer');
 var HOST_PROFILE_ID = 'per_bob';
 var CURRENT_USERS = {
@@ -230,7 +255,7 @@ function harnessTodayIso() {
 
 function seedDatabase() {
   return {
-    'volunteerRegistry-uniconbaseapps': [
+    'volunteer-registry-uniconbaseapps': [
       {
         id: 'per_bob', name: 'Bob Volunteer',
         productData: { data_categoriesBased: {
@@ -261,7 +286,7 @@ function seedDatabase() {
         } }
       }
     ],
-    'vm.events-uniconbaseapps': [
+    'vm-events-uniconbaseapps': [
       {
         id: 'evt_food', name: 'Community Food Drive',
         productData: { data_categoriesBased: {
@@ -379,7 +404,7 @@ function seedDatabase() {
         } }
       }
     ],
-    'vm.eventMemberships-uniconbaseapps': [
+    'vm-event-memberships-uniconbaseapps': [
       {
         id: 'per_bob__evt_food', name: 'Bob Volunteer',
         productData: { data_categoriesBased: {
@@ -481,7 +506,7 @@ function seedDatabase() {
         } }
       }
     ],
-    'vm.eventTasks-uniconbaseapps': [
+    'vm-event-tasks-uniconbaseapps': [
       {
         id: 'evt_food__tasks', name: 'Community Food Drive tasks',
         productData: { data_categoriesBased: {
@@ -519,7 +544,7 @@ function seedDatabase() {
         } }
       }
     ],
-    'vm.eventMessages-uniconbaseapps': [
+    'vm-event-messages-uniconbaseapps': [
       {
         id: 'evt_food__messages', name: 'Community Food Drive messages',
         productData: { data_categoriesBased: {
@@ -538,6 +563,11 @@ function seedDatabase() {
 var STORE = loadStore();
 
 function loadStore() {
+  if (new URLSearchParams(location.search).get('empty') === '1') {
+    var blankStore = emptyDatabase();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(blankStore)); } catch (error) { /* ignore */ }
+    return blankStore;
+  }
   try {
     var raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
@@ -545,6 +575,14 @@ function loadStore() {
   var seeded = seedDatabase();
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded)); } catch (error) { /* ignore */ }
   return seeded;
+}
+
+/* Every type stays present with an empty array, so the tool opens on a real
+   empty database instead of a missing key. */
+function emptyDatabase() {
+  var empty = {};
+  Object.keys(seedDatabase()).forEach(function (type) { empty[type] = []; });
+  return empty;
 }
 
 function saveStore() {
@@ -669,6 +707,12 @@ document.getElementById('thRoleBtn').addEventListener('click', function () {
 
 document.getElementById('thLoadSample').addEventListener('click', function () {
   STORE = seedDatabase();
+  saveStore();
+  location.reload();
+});
+
+document.getElementById('thEmpty').addEventListener('click', function () {
+  STORE = emptyDatabase();
   saveStore();
   location.reload();
 });

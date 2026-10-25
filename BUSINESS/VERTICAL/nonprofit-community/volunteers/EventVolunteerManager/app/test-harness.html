@@ -26,6 +26,7 @@
   <strong>EventVolunteerManager</strong>
   <button id="thRoleBtn" title="Switch the signed-in role">Role: manager</button>
   <button id="thLoadSample" title="Reload the sample data">Load sample</button>
+  <button id="thEmpty" title="Remove every record to see the empty state">Empty data</button>
   <button id="thReset" title="Clear the local test database">Reset data</button>
   <button id="thWide" title="Toggle a narrow container to test responsiveness">Narrow</button>
   <span id="th-status">ready</span>
@@ -33,6 +34,13 @@
 
 <div id="app-container">
   <!-- TOOL HTML START -->
+<!-- EventVolunteerManager
+     One tool instance = ONE event object (host object), held by the CMS.
+     This tool is the only place the event details are written: dates, place, capacity, contact,
+     the volunteering offer type and its roles. It also manages every connection between the event
+     and its volunteers: requests, roles, tasks, hours, messages and the report.
+-->
+
 <div class="et-app" id="etApp">
 
   <header class="et-topbar">
@@ -105,7 +113,10 @@
           <div class="et-card-body" id="etHoursByVolunteer"></div>
         </div>
         <div class="et-card">
-          <div class="et-card-head"><h2>Waiting for approval</h2></div>
+          <div class="et-card-head">
+            <h2>Waiting for approval</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etApproveAllBtn">Approve all</button>
+          </div>
           <div class="et-card-body" id="etHoursPending"></div>
         </div>
         <div class="et-card">
@@ -140,20 +151,13 @@
       </section>
 
       <section class="et-panel" id="etPanelEvent">
-        <p class="et-lead">The event information itself. The event object is created in the CMS; this screen maintains it and its roles.</p>
+        <p class="et-lead">The details of this event, the people volunteers can call, and the positions they can apply for.</p>
         <div class="et-card">
           <div class="et-card-head">
-            <h2>Event definition</h2>
+            <h2>Event details</h2>
             <span class="et-count" id="etEventUpdated"></span>
           </div>
           <div class="et-card-body" id="etEventForm"></div>
-        </div>
-        <div class="et-card">
-          <div class="et-card-head">
-            <h2>Roles</h2>
-            <button type="button" class="et-btn et-btn-outline" id="etAddPositionBtn">Add role</button>
-          </div>
-          <div class="et-card-body" id="etPositionList"></div>
         </div>
       </section>
 
@@ -171,15 +175,31 @@
     </div>
   </div>
 
+  <div class="et-drawer" id="etMemberDrawer">
+    <div class="et-drawer-overlay" id="etMemberDrawerOverlay"></div>
+    <aside class="et-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="etDrawerName">
+      <header class="et-drawer-head">
+        <span class="et-avatar et-avatar-lg" id="etDrawerAvatar">?</span>
+        <div class="et-drawer-id">
+          <h2 id="etDrawerName">Volunteer</h2>
+          <div class="et-cell-sub" id="etDrawerEmail"></div>
+        </div>
+        <button type="button" class="et-modal-close" id="etDrawerClose" title="Close">&times;</button>
+      </header>
+      <div class="et-drawer-body" id="etDrawerBody"></div>
+      <footer class="et-drawer-foot" id="etDrawerFoot"></footer>
+    </aside>
+  </div>
+
   <div class="et-toast" id="etToast"></div>
 </div>
-  <!-- TOOL HTML END -->
+<!-- TOOL HTML END -->
 </div>
 
 <link rel="stylesheet" href="EventVolunteerManager.css">
 
 <script>
-var STORAGE_KEY = 'evm_test_db_v1';
+var STORAGE_KEY = 'evm_test_db_v2';
 var ROLE = (new URLSearchParams(location.search).get('role') || 'manager');
 var HOST_EVENT_ID = 'evt_food';
 var CURRENT_USERS = {
@@ -191,7 +211,7 @@ var MOCK_READ_ONLY = false;
 
 function seedDatabase() {
   return {
-    'volunteerRegistry-uniconbaseapps': [
+    'volunteer-registry-uniconbaseapps': [
       {
         id: 'per_bob', name: 'Bob Volunteer',
         productData: { data_categoriesBased: {
@@ -228,7 +248,7 @@ function seedDatabase() {
         } }
       }
     ],
-    'vm.events-uniconbaseapps': [
+    'vm-events-uniconbaseapps': [
       {
         id: 'evt_food', name: 'Community Food Drive',
         productData: { data_categoriesBased: {
@@ -247,7 +267,7 @@ function seedDatabase() {
         } }
       }
     ],
-    'vm.eventMemberships-uniconbaseapps': [
+    'vm-event-memberships-uniconbaseapps': [
       {
         id: 'per_bob__evt_food', name: 'Bob Volunteer',
         productData: { data_categoriesBased: {
@@ -288,7 +308,7 @@ function seedDatabase() {
         } }
       }
     ],
-    'vm.eventTasks-uniconbaseapps': [
+    'vm-event-tasks-uniconbaseapps': [
       {
         id: 'evt_food__tasks', name: 'Community Food Drive tasks',
         productData: { data_categoriesBased: {
@@ -303,7 +323,7 @@ function seedDatabase() {
         } }
       }
     ],
-    'vm.eventMessages-uniconbaseapps': [
+    'vm-event-messages-uniconbaseapps': [
       {
         id: 'evt_food__messages', name: 'Community Food Drive messages',
         productData: { data_categoriesBased: {
@@ -322,6 +342,11 @@ function seedDatabase() {
 var STORE = loadStore();
 
 function loadStore() {
+  if (new URLSearchParams(location.search).get('empty') === '1') {
+    var blankStore = emptyDatabase();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(blankStore)); } catch (error) { /* ignore */ }
+    return blankStore;
+  }
   try {
     var raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
@@ -329,6 +354,14 @@ function loadStore() {
   var seeded = seedDatabase();
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded)); } catch (error) { /* ignore */ }
   return seeded;
+}
+
+/* Every type stays present with an empty array, so the tool opens on a real
+   empty database instead of a missing key. */
+function emptyDatabase() {
+  var empty = {};
+  Object.keys(seedDatabase()).forEach(function (type) { empty[type] = []; });
+  return empty;
 }
 
 function saveStore() {
@@ -451,6 +484,12 @@ document.getElementById('thRoleBtn').addEventListener('click', function () {
 
 document.getElementById('thLoadSample').addEventListener('click', function () {
   STORE = seedDatabase();
+  saveStore();
+  location.reload();
+});
+
+document.getElementById('thEmpty').addEventListener('click', function () {
+  STORE = emptyDatabase();
   saveStore();
   location.reload();
 });

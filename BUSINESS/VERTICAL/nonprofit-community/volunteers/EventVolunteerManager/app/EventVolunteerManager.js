@@ -4,19 +4,19 @@
    the volunteers linked to it, their roles, tasks, hours, messages, the report and the event information itself.
 
    Object model (5 CMS object types, no array-contains queries):
-     Event          vm.events-uniconbaseapps            (this tool's host object)
-     Membership     vm.eventMemberships-uniconbaseapps  id = personId + '__' + eventId
-     Person         volunteerRegistry-uniconbaseapps
-     Event Tasks    vm.eventTasks-uniconbaseapps         id = eventId + '__tasks'
-     Event Messages vm.eventMessages-uniconbaseapps      id = eventId + '__messages' (+ '#2', '#3' ...)
+     Event          vm-events-uniconbaseapps            (this tool's host object)
+     Membership     vm-event-memberships-uniconbaseapps  id = personId + '__' + eventId
+     Person         volunteer-registry-uniconbaseapps
+     Event Tasks    vm-event-tasks-uniconbaseapps         id = eventId + '__tasks'
+     Event Messages vm-event-messages-uniconbaseapps      id = eventId + '__messages' (+ '#2', '#3' ...)
 */
 
 var DEFAULT_TYPES = {
-  event: 'vm.events-uniconbaseapps',
-  relation: 'vm.eventMemberships-uniconbaseapps',
-  person: 'volunteerRegistry-uniconbaseapps',
-  tasks: 'vm.eventTasks-uniconbaseapps',
-  messages: 'vm.eventMessages-uniconbaseapps'
+  event: 'vm-events-uniconbaseapps',
+  relation: 'vm-event-memberships-uniconbaseapps',
+  person: 'volunteer-registry-uniconbaseapps',
+  tasks: 'vm-event-tasks-uniconbaseapps',
+  messages: 'vm-event-messages-uniconbaseapps'
 };
 
 var LIMITS = {
@@ -32,11 +32,61 @@ var LIMITS = {
   relationNotes: 500
 };
 
+var OPPORTUNITY_TYPES = [
+  { id: 'event', label: 'Fixed event' },
+  { id: 'task', label: 'Task based' },
+  { id: 'recurring', label: 'Recurring' },
+  { id: 'self-paced', label: 'Self paced' }
+];
+
+var LOCATION_MODES = [
+  { id: 'onsite', label: 'On site' },
+  { id: 'remote', label: 'Remote' },
+  { id: 'hybrid', label: 'Hybrid' }
+];
+
+/* Date.getDay() numbering: 0 = Sunday, 1 = Monday ... 6 = Saturday. */
+var WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function optionListHtml(options, selectedValue) {
+  return options.map(function (option) {
+    return '<option value="' + esc(option.id) + '"'
+      + (option.id === selectedValue ? ' selected' : '') + '>' + esc(option.label) + '</option>';
+  }).join('');
+}
+
+function optionLabelOf(options, value) {
+  for (var index = 0; index < options.length; index++) {
+    if (options[index].id === value) return options[index].label;
+  }
+  return value ? String(value) : '-';
+}
+
+function weekdayChoicesHtml(selectedWeekdays, fieldName) {
+  var chosenDays = Array.isArray(selectedWeekdays) ? selectedWeekdays.map(Number) : [];
+  var inputName = fieldName || 'etWeekday';
+  return WEEKDAY_LABELS.map(function (label, index) {
+    var dayNumber = (index + 1) % 7;
+    return '<label class="et-check et-weekday"><input type="checkbox" name="' + inputName + '" value="' + dayNumber + '"'
+      + (chosenDays.indexOf(dayNumber) !== -1 ? ' checked' : '') + '><span>' + label + '</span></label>';
+  }).join('');
+}
+
+function selectedWeekdaysFromForm(fieldName) {
+  var boxes = document.querySelectorAll('input[name="' + (fieldName || 'etWeekday') + '"]');
+  var chosenDays = [];
+  for (var index = 0; index < boxes.length; index++) {
+    if (boxes[index].checked) chosenDays.push(Number(boxes[index].value));
+  }
+  return chosenDays;
+}
+
 var APP = {
   user: null,
   isManager: false,
   readOnly: false,
   view: 'dashboard',
+  formTab: 'basics',
   savedValue: null,
 
   hostObjectId: '',
@@ -118,7 +168,7 @@ function fmtDateTime(value) {
 function statusLabel(status) {
   var labels = {
     draft: 'Draft', open: 'Open', closed: 'Closed', cancelled: 'Cancelled',
-    requested: 'Requested', approved: 'Approved', declined: 'Declined', revoked: 'Revoked', revoked: 'Revoked', revoked: 'Revoked', removed: 'Removed',
+    requested: 'Requested', approved: 'Approved', declined: 'Declined', revoked: 'Revoked', removed: 'Removed',
     open_task: 'Open', assigned: 'Assigned', 'in-progress': 'In progress',
     'reported-done': 'Reported done', confirmed: 'Confirmed', completed: 'Completed',
     pending: 'Pending', rejected: 'Rejected',
@@ -675,15 +725,19 @@ function countLedgerEvents(ledger) {
   return Object.keys(seen).length;
 }
 
-function approvePendingHours(relation, pendingId) {
+function approvePendingHours(relation, pendingId, options) {
   if (!canManage()) return;
+  var settings = options || {};
   var relationRecord = relationDataOf(relation);
   var pending = Array.isArray(relationRecord.pendingHours) ? relationRecord.pendingHours : [];
   var line = null;
   for (var index = 0; index < pending.length; index++) {
     if (pending[index].id === pendingId) { line = pending[index]; break; }
   }
-  if (!line) return;
+  if (!line) {
+    if (settings.done) settings.done('That hour line is no longer waiting.');
+    return;
+  }
 
   var ledgerId = relation.id + ':' + line.id;
   var ledgerLine = {
@@ -698,7 +752,11 @@ function approvePendingHours(relation, pendingId) {
   };
 
   writePersonLedger(relationRecord.personId, ledgerLine, function (personError) {
-    if (personError) { notifyHost('Could not write the hours ledger: ' + personError, 'error'); return; }
+    if (personError) {
+      if (!settings.silent) notifyHost('Could not write the hours ledger: ' + personError, 'error');
+      if (settings.done) settings.done(personError);
+      return;
+    }
 
     var data = simpleCopy(relationRecord);
     data.pendingHours = (data.pendingHours || []).filter(function (entry) { return entry.id !== pendingId; });
@@ -710,12 +768,63 @@ function approvePendingHours(relation, pendingId) {
     data.updatedAt = isoNow();
 
     updateObject(typeRelation(), relation.id, data, personNameById(relationRecord.personId), function (relationError) {
-      if (relationError) notifyHost('Hours approved, but the membership line could not be cleared: ' + relationError, 'warning');
-      else notifyHost('Hours approved.', 'success');
-      closeModal();
-      loadAll();
+      if (!settings.silent) {
+        if (relationError) notifyHost('Hours approved, but the membership line could not be cleared: ' + relationError, 'warning');
+        else notifyHost('Hours approved.', 'success');
+        closeModal();
+        loadAll();
+      }
+      if (settings.done) settings.done(relationError || null);
     });
   });
+}
+
+/* Batch approval reuses the single-line path, re-reading each placement first so
+   several lines on one volunteer cannot overwrite each other. */
+function openApproveAllModal() {
+  if (!canManage()) return;
+  var rows = pendingRows();
+  if (rows.length === 0) { notifyHost('No hour line is waiting for approval.', 'info'); return; }
+
+  openModal('Approve every waiting hour?',
+    '<p><strong>' + rows.length + '</strong> line' + (rows.length === 1 ? '' : 's') + ' for <strong>' + esc(eventName()) + '</strong> will be written to the volunteer records.</p>'
+    + '<div class="et-note">Each line keeps its own ledger id, so approving twice never duplicates an hour.</div>',
+    '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
+    + '<button type="button" class="et-btn et-btn-primary" onclick="closeModal();runApproveAllPendingHours()">Approve all</button>');
+}
+
+function runApproveAllPendingHours() {
+  if (!canManage()) return;
+  var jobs = pendingRows().map(function (row) {
+    return { relationId: row.relation.id, pendingId: row.line.id };
+  });
+  if (jobs.length === 0) return;
+
+  var approvedCount = 0;
+  var failedCount = 0;
+
+  function approveNext() {
+    if (jobs.length === 0) {
+      notifyHost(approvedCount + ' hour line' + (approvedCount === 1 ? '' : 's') + ' approved'
+        + (failedCount ? ', ' + failedCount + ' could not be approved' : '') + '.',
+        failedCount ? 'warning' : 'success');
+      loadAll();
+      return;
+    }
+    var job = jobs.shift();
+    getById(typeRelation(), job.relationId, function (error, freshRelation) {
+      if (error || !freshRelation) { failedCount++; approveNext(); return; }
+      approvePendingHours(freshRelation, job.pendingId, {
+        silent: true,
+        done: function (writeError) {
+          if (writeError) failedCount++; else approvedCount++;
+          approveNext();
+        }
+      });
+    });
+  }
+
+  approveNext();
 }
 
 function rejectPendingHours(relation, pendingId) {
@@ -1012,9 +1121,119 @@ function rotateVolume(done) {
 }
 
 /* ---------------- event definition writes ---------------- */
-function saveEventDefinition(values) {
-  if (!canManage()) return;
-  var data = simpleCopy(APP.eventData);
+/* ---------------- contacts and positions ---------------- */
+function newRecordId(prefix) {
+  return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+}
+
+/* One event can have several people a volunteer may call. The first one is the
+   main contact, and its name, phone and email stay on the event record so the
+   volunteer catalog keeps reading a single set of fields. */
+function contactsOf(data) {
+  var storedRows = Array.isArray(data.contacts) ? data.contacts.filter(Boolean) : [];
+  if (storedRows.length) return storedRows;
+  if (data.contactName || data.contactPhone || data.contactEmail) {
+    return [{
+      id: 'contact_primary',
+      name: data.contactName || '',
+      label: 'Main contact',
+      phone: data.contactPhone || '',
+      email: data.contactEmail || ''
+    }];
+  }
+  return [];
+}
+
+function applyContactFields(data) {
+  var storedRows = contactsOf(data).map(function (contactRow) {
+    return {
+      id: contactRow.id || newRecordId('contact'),
+      name: String(contactRow.name || '').slice(0, 80),
+      label: String(contactRow.label || '').slice(0, 40),
+      phone: String(contactRow.phone || '').slice(0, 40),
+      email: String(contactRow.email || '').slice(0, 160)
+    };
+  });
+  var primaryContact = storedRows[0] || {};
+  data.contacts = storedRows;
+  data.contactName = primaryContact.name || '';
+  data.contactPhone = primaryContact.phone || '';
+  data.contactEmail = primaryContact.email || '';
+  return data;
+}
+
+/* A position is the job definition a volunteer applies for. It owns the offer
+   details: what kind of work it is, where, when, and by when. */
+function normalizePosition(sourceRow) {
+  var row = sourceRow || {};
+  var offerType = ['event', 'task', 'recurring', 'self-paced'].indexOf(String(row.opportunityType)) !== -1
+    ? String(row.opportunityType) : 'event';
+  var whereMode = ['onsite', 'remote', 'hybrid'].indexOf(String(row.locationMode)) !== -1
+    ? String(row.locationMode) : 'onsite';
+  var recurrence = row.recurrence || {};
+  var chosenDays = Array.isArray(recurrence.weekdays) ? recurrence.weekdays.map(Number).filter(function (dayNumber) {
+    return dayNumber >= 0 && dayNumber <= 6;
+  }).slice(0, 7) : [];
+  return {
+    id: row.id || newRecordId('pos'),
+    name: String(row.name || '').slice(0, 60),
+    slots: toNumber(row.slots) || 1,
+    description: String(row.description || '').slice(0, 300),
+    requirements: String(row.requirements || '').slice(0, 300),
+    skills: String(row.skills || '').slice(0, 120),
+    timeCommitment: String(row.timeCommitment || '').slice(0, 120),
+    opportunityType: offerType,
+    locationMode: whereMode,
+    deadline: String(row.deadline || '').slice(0, 10),
+    applicationDeadline: String(row.applicationDeadline || '').slice(0, 10),
+    recurrence: {
+      weekdays: chosenDays,
+      timeFrom: String(recurrence.timeFrom || '').slice(0, 5),
+      timeTo: String(recurrence.timeTo || '').slice(0, 5)
+    }
+  };
+}
+
+/* The volunteer catalog reads the offer from the event record, so the event
+   carries the summary of its positions: one shared type, or "mixed". */
+function applyDerivedOfferFields(data) {
+  var positionRows = (Array.isArray(data.positions) ? data.positions : []).map(normalizePosition);
+  data.positions = positionRows;
+  if (positionRows.length === 0) return data;
+
+  var typeKeys = [], whereKeys = [], commitmentTexts = [];
+  positionRows.forEach(function (row) {
+    if (typeKeys.indexOf(row.opportunityType) === -1) typeKeys.push(row.opportunityType);
+    if (whereKeys.indexOf(row.locationMode) === -1) whereKeys.push(row.locationMode);
+    if (row.timeCommitment && commitmentTexts.indexOf(row.timeCommitment) === -1) commitmentTexts.push(row.timeCommitment);
+  });
+
+  data.opportunityType = typeKeys.length === 1 ? typeKeys[0] : 'mixed';
+  data.locationMode = whereKeys.length === 1 ? whereKeys[0] : 'hybrid';
+  data.commitment = commitmentTexts.join(' / ').slice(0, 120);
+
+  var deadlineDates = positionRows.map(function (row) { return row.deadline; }).filter(Boolean).sort();
+  data.deadline = deadlineDates.length ? deadlineDates[0] : '';
+
+  var closingDates = positionRows.map(function (row) { return row.applicationDeadline; }).filter(Boolean).sort();
+  data.applicationDeadline = closingDates.length ? closingDates[0] : '';
+
+  var scheduledPosition = null;
+  positionRows.forEach(function (row) {
+    if (!scheduledPosition && row.opportunityType === 'recurring' && row.recurrence.weekdays.length) scheduledPosition = row;
+  });
+  positionRows.forEach(function (row) {
+    if (!scheduledPosition && row.recurrence.weekdays.length) scheduledPosition = row;
+  });
+  data.recurrence = scheduledPosition
+    ? scheduledPosition.recurrence
+    : { weekdays: [], timeFrom: '', timeTo: '' };
+  return data;
+}
+
+/* One mapping used by every write: the form values over the stored event data. */
+function eventDataFromForm(values, baseData) {
+  var data = simpleCopy(baseData || {});
   data.name = String(values.name || '').slice(0, 120);
   data.status = values.status || data.status || 'draft';
   data.startDate = values.startDate || '';
@@ -1027,32 +1246,85 @@ function saveEventDefinition(values) {
   data.capacity = toNumber(values.capacity);
   data.description = String(values.description || '').slice(0, LIMITS.eventDescription);
   data.notes = String(values.notes || '').slice(0, LIMITS.eventNotes);
-  data.contactName = String(values.contactName || '').slice(0, 80);
-  data.contactPhone = String(values.contactPhone || '').slice(0, 40);
-  data.contactEmail = String(values.contactEmail || '').slice(0, 160);
-  data.updatedAt = isoNow();
+  if (!Array.isArray(data.positions)) data.positions = [];
 
-  if (!data.name) { notifyHost('The event needs a name.', 'warning'); return; }
+  /* The offer is not chosen on the event: it is the summary of its positions. */
+  applyContactFields(data);
+  applyDerivedOfferFields(data);
+  data.updatedAt = isoNow();
+  return data;
+}
+
+/* Returns an empty string when the data can be written, or the reason it cannot. */
+function validateEventData(data) {
+  if (!data.name) return 'the event needs a name';
   if (data.startDate && data.endDate && data.endDate < data.startDate) {
-    notifyHost('The end date cannot be before the start date.', 'warning');
+    return 'the end date cannot be before the start date';
+  }
+  return '';
+}
+
+/* The CMS owns the event record, so the tool carries no Save button: every
+   editing gesture writes the record that is already attached to the tool. */
+function saveEventDefinition(values, options) {
+  if (!canManage()) return;
+  var isSilentSave = !!(options && options.silent);
+  var data = eventDataFromForm(values, APP.eventData);
+  if (!data.name) data.name = APP.eventData.name || (APP.eventObject ? APP.eventObject.name : '');
+
+  var validationMessage = validateEventData(data);
+  if (validationMessage) {
+    if (isSilentSave) el('etEventUpdated').textContent = 'Not saved - ' + validationMessage;
+    else notifyHost('Could not save: ' + validationMessage + '.', 'warning');
+    return;
+  }
+
+  if (!APP.eventObject) {
+    /* The CMS attaches the record; until it does, the entered details live in the tool state. */
+    APP.eventData = data;
+    el('etEventUpdated').textContent = 'Updated ' + fmtDate(data.updatedAt);
     return;
   }
 
   updateObject(typeEvent(), APP.eventObject.id, data, data.name, function (error) {
-    if (error) { notifyHost('Could not save the event: ' + error, 'error'); return; }
-    notifyHost('Event saved.', 'success');
-    loadAll();
+    if (error) {
+      el('etEventUpdated').textContent = 'Not saved - ' + error;
+      notifyHost('Could not save the event: ' + error, 'error');
+      return;
+    }
+    APP.eventData = data;
+    APP.eventObject.name = data.name;
+    if (APP.eventObject.productData && APP.eventObject.productData.data_categoriesBased) {
+      APP.eventObject.productData.data_categoriesBased = data;
+    }
+    el('etEventName').textContent = eventName();
+    el('etMark').textContent = (eventName() || 'E').charAt(0).toUpperCase();
+    el('etEventUpdated').textContent = 'Saved ' + fmtDate(data.updatedAt);
+    if (!isSilentSave) notifyHost('Event saved.', 'success');
+    renderDashboard();
   });
 }
 
 function savePositions(nextPositions) {
   if (!canManage()) return;
+  /* Keep the last keystrokes of the event form before the positions write reloads the tool. */
+  flushEventFormEdits();
   var data = simpleCopy(APP.eventData);
-  data.positions = nextPositions.slice(0, LIMITS.positions);
+  data.positions = nextPositions.slice(0, LIMITS.positions).map(normalizePosition);
+  applyDerivedOfferFields(data);
   data.updatedAt = isoNow();
-  updateObject(typeEvent(), APP.eventObject.id, data, eventName(), function (error) {
-    if (error) { notifyHost('Could not save the roles: ' + error, 'error'); return; }
-    notifyHost('Roles saved.', 'success');
+
+  if (!APP.eventObject) {
+    APP.eventData = data;
+    notifyHost('Positions saved.', 'success');
+    closeModal();
+    renderAll();
+    return;
+  }
+
+  updateObject(typeEvent(), APP.eventObject.id, data, data.name || eventName(), function (error) {
+    if (error) { notifyHost('Could not save the positions: ' + error, 'error'); return; }
+    notifyHost('Positions saved.', 'success');
     closeModal();
     loadAll();
   });
@@ -1083,7 +1355,7 @@ function renderAll() {
 
   el('etNavFoot').innerHTML = APP.eventObject
     ? 'Approved volunteers: <strong>' + approvedRelations().length + '</strong><br>Waiting: <strong>' + pendingCount + '</strong>'
-    : 'No event object is attached to this tool.';
+    : '';
 
   renderDashboard();
   renderTeam();
@@ -1092,13 +1364,13 @@ function renderAll() {
   renderMessages();
   renderReport();
   renderEventForm();
+  renderContacts();
   renderPositions();
 
   el('etAddVolunteerBtn').disabled = !canManage();
   el('etAddTaskBtn').disabled = !canManage();
   el('etNewMessageBtn').disabled = !canManage();
   el('etRotateBtn').disabled = !canManage();
-  el('etAddPositionBtn').disabled = !canManage();
   el('etExportReportBtn').disabled = !APP.eventObject;
 
   try { tool.resize(); } catch (error) { /* optional */ }
@@ -1130,7 +1402,7 @@ function renderDashboard() {
     requestHtml = '<div class="et-empty">No requests are waiting for a decision.</div>';
   } else {
     requestHtml = '<div class="et-table-wrap"><table class="et-table"><thead><tr>'
-      + '<th>Volunteer</th><th>Network</th><th>Roles asked for</th><th>Applied</th><th></th>'
+      + '<th>Volunteer</th><th>Network</th><th>Positions asked for</th><th>Applied</th><th></th>'
       + '</tr></thead><tbody>';
     requests.forEach(function (relation) {
       var relationRecord = relationDataOf(relation);
@@ -1163,19 +1435,22 @@ function renderDashboard() {
     openTasks.forEach(function (task) {
       openWorkHtml += '<tr><td><div class="et-cell-main">' + esc(task.title) + '</div></td>'
         + '<td>' + esc(task.assigneeName || 'Unassigned') + '</td>'
-        personId = relationRecord.personId;
-    var actionButtons = '';
+        + '<td>' + esc(task.dueDate ? fmtDate(task.dueDate) : '-') + '</td>'
+        + '<td>' + badge(task.status) + '</td></tr>';
+    });
+    pending.forEach(function (row) {
+      openWorkHtml += '<tr><td><div class="et-cell-main">Hours line</div>'
+        + '<div class="et-cell-sub">' + esc(row.line.taskTitle || row.line.note || 'Volunteer hours') + '</div></td>'
+        + '<td>' + esc(personNameById(row.personId)) + '</td>'
+        + '<td>' + esc(fmtDate(row.line.date)) + '</td>'
+        + '<td>' + badge('pending') + '</td></tr>';
+    });
+    openWorkHtml += '</tbody></table></div>';
+  }
+  el('etOpenWorkCard').innerHTML = '<div class="et-card-head"><h2>Open work</h2>'
+    + '<span class="et-count">' + (openTasks.length + pending.length) + '</span></div>'
+    + '<div class="et-card-body flush">' + openWorkHtml + '</div>';
 
-    if (relationRecord.status === 'requested' && canManage()) {
-      actionButtons += '<button type="button" class="et-btn et-btn-tiny et-btn-ok" onclick="event.stopPropagation();openDecideModal(\'' + escJs(relation.id) + '\',\'approved\')">Approve</button>'
-        + '<button type="button" class="et-btn et-btn-tiny et-btn-bad" onclick="event.stopPropagation();openDecideModal(\'' + escJs(relation.id) + '\',\'declined\')">Decline</button>';
-    }
-    actionButtons += '<button type="button" class="et-btn et-btn-tiny et-btn-outline" onclick="event.stopPropagation();openMemberDrawer(\'' + escJs(relation.id) + '\')">'
-      + (canManage() ? 'Manage' : 'Details') + '</button>';
-
-    html += '<tr class="et-row-clickable" onclick="openMemberDrawer(\'' + escJs(relation.id) + '\')">'
-      + '<td>' + personCellHtml(personNameById(personId), personEmailById(personId)) + '</td>'
-      + '<td>' + badge(personNetworkStatus('</div>';
 
   /* activity */
   var activity = [];
@@ -1223,6 +1498,15 @@ function renderDashboard() {
     + '<div class="et-card-body">' + activityHtml + '</div>';
 }
 
+/* Shared empty state: the event form is the way out of it. */
+function noEventStateHtml(message) {
+  return '<div class="et-empty"><strong>No event loaded</strong>' + esc(message || '')
+    + (canManage()
+      ? '<div style="margin-top:10px;"><button type="button" class="et-btn et-btn-primary" onclick="showView(\'event\')">Open Event details</button></div>'
+      : '')
+    + '</div>';
+}
+
 function renderTeam() {
   var rows = APP.relations.slice().sort(function (relationA, relationB) {
     var statusA = relationDataOf(relationA).status === 'requested' ? 0 : 1;
@@ -1232,7 +1516,7 @@ function renderTeam() {
   });
 
   if (!APP.eventObject) {
-    el('etTeamTable').innerHTML = '<div class="et-empty"><strong>No event loaded</strong>Open this tool on an event object.</div>';
+    el('etTeamTable').innerHTML = noEventStateHtml('Fill the event details first, then add volunteers.');
     return;
   }
   if (rows.length === 0) {
@@ -1242,7 +1526,7 @@ function renderTeam() {
   }
 
   var html = '<div class="et-table-wrap"><table class="et-table"><thead><tr>'
-    + '<th>Volunteer</th><th>Network</th><th>Event status</th><th>Roles</th>'
+    + '<th>Volunteer</th><th>Network</th><th>Event status</th><th>Positions</th>'
     + '<th class="et-num">Tasks</th><th class="et-num">Hours</th><th></th>'
     + '</tr></thead><tbody>';
 
@@ -1394,6 +1678,11 @@ function renderHours() {
   }
   el('etHoursPending').innerHTML = pendingHtml;
 
+  if (el('etApproveAllBtn')) {
+    el('etApproveAllBtn').disabled = !canManage() || pending.length === 0;
+    el('etApproveAllBtn').textContent = pending.length > 0 ? 'Approve all (' + pending.length + ')' : 'Approve all';
+  }
+
   var records = hourRecordsOfEvent();
   var recordsHtml = '';
   if (records.length === 0) {
@@ -1464,7 +1753,7 @@ function renderReport() {
     + '</div>';
 
   html += '<div class="et-table-wrap"><table class="et-table"><thead><tr>'
-    + '<th>Volunteer</th><th>Roles</th><th class="et-num">Tasks</th><th class="et-num">Approved h</th><th class="et-num">Pending h</th>'
+    + '<th>Volunteer</th><th>Positions</th><th class="et-num">Tasks</th><th class="et-num">Approved h</th><th class="et-num">Pending h</th>'
     + '</tr></thead><tbody>';
   if (APP.relations.length === 0) {
     html += '<tr><td colspan="5"><div class="et-empty" style="padding:12px;">Nobody is linked to this event.</div></td></tr>';
@@ -1492,16 +1781,121 @@ function renderReport() {
   el('etReportBody').innerHTML = html;
 }
 
-function renderEventForm() {
-  var data = APP.eventData;
-  if (!APP.eventObject) {
-    el('etEventForm').innerHTML = '<div class="et-empty">No event loaded.</div>';
-    return;
-  }
+var EVENT_FORM_TABS = [
+  { key: 'basics', label: 'Basics' },
+  { key: 'when', label: 'When and where' },
+  { key: 'contact', label: 'Contact' },
+  { key: 'positions', label: 'Positions' }
+];
 
+function activeFormTab() {
+  /* The offer used to be a tab of its own and roles used to be called roles. */
+  var requestedTab = APP.formTab === 'roles' ? 'positions' : APP.formTab;
+  for (var tabIndex = 0; tabIndex < EVENT_FORM_TABS.length; tabIndex++) {
+    if (EVENT_FORM_TABS[tabIndex].key === requestedTab) return requestedTab;
+  }
+  return 'basics';
+}
+
+function switchFormTab(tabKey) {
+  APP.formTab = tabKey;
+  var tabButtons = document.querySelectorAll('#etEventForm .et-ftab');
+  for (var buttonIndex = 0; buttonIndex < tabButtons.length; buttonIndex++) {
+    var isActiveButton = tabButtons[buttonIndex].getAttribute('data-ftab') === tabKey;
+    tabButtons[buttonIndex].classList.toggle('active', isActiveButton);
+    tabButtons[buttonIndex].setAttribute('aria-selected', isActiveButton ? 'true' : 'false');
+  }
+  var tabPanels = document.querySelectorAll('#etEventForm .et-fpanel');
+  for (var panelIndex = 0; panelIndex < tabPanels.length; panelIndex++) {
+    tabPanels[panelIndex].classList.toggle('active', tabPanels[panelIndex].getAttribute('data-fpanel') === tabKey);
+  }
+  persist();
+  try { tool.resize(); } catch (error) { /* optional */ }
+}
+
+function formPanelHead(hintHtml, actionHtml) {
+  return '<div class="et-fpanel-head"><span class="et-hint">' + hintHtml + '</span>'
+    + (actionHtml || '') + '</div>';
+}
+
+function renderEventForm() {
+  var data = APP.eventData || {};
   var disabled = canManage() ? '' : ' disabled';
-  el('etEventUpdated').textContent = data.updatedAt ? 'Updated ' + fmtDate(data.updatedAt) : '';
-ember drawer ---------------- */
+  var activeTabKey = activeFormTab();
+
+  el('etEventUpdated').textContent = (APP.eventObject && data.updatedAt)
+    ? 'Updated ' + fmtDate(data.updatedAt) : '';
+
+  var panels = {};
+
+  panels.basics = '<div class="et-field"><label for="etFormName">Event name</label>'
+    + '<input class="et-input" id="etFormName" placeholder="Name of the event" value="' + esc(data.name || '') + '"' + disabled + '></div>'
+    + '<div class="et-field-row">'
+    + '<div class="et-field"><label for="etFormStatus">Status</label>'
+    + '<select class="et-select" id="etFormStatus"' + disabled + '>'
+    + ['draft', 'open', 'closed', 'cancelled'].map(function (status) {
+        return '<option value="' + status + '"' + ((data.status || 'draft') === status ? ' selected' : '') + '>'
+          + esc(statusLabel(status)) + '</option>';
+      }).join('')
+    + '</select></div>'
+    + '<div class="et-field"><label for="etFormCapacity">Capacity</label>'
+    + '<input class="et-input" type="number" min="0" step="1" id="etFormCapacity" value="' + toNumber(data.capacity) + '"' + disabled + '></div>'
+    + '</div>'
+    + '<div class="et-field"><label for="etFormDescription">Description</label>'
+    + '<textarea class="et-textarea" id="etFormDescription"' + disabled + '>' + esc(data.description || '') + '</textarea>'
+    + '<div class="et-hint">Shown to volunteers in the catalog.</div></div>'
+    + '<div class="et-field"><label for="etFormNotes">Internal notes</label>'
+    + '<textarea class="et-textarea" id="etFormNotes"' + disabled + '>' + esc(data.notes || '') + '</textarea>'
+    + '<div class="et-hint">Only the event team sees this.</div></div>';
+
+  panels.when = '<div class="et-field-row">'
+    + '<div class="et-field"><label for="etFormStartDate">Start date</label>'
+    + '<input class="et-input" type="date" id="etFormStartDate" value="' + esc(data.startDate || '') + '"' + disabled + '></div>'
+    + '<div class="et-field"><label for="etFormEndDate">End date</label>'
+    + '<input class="et-input" type="date" id="etFormEndDate" value="' + esc(data.endDate || '') + '"' + disabled + '></div>'
+    + '</div>'
+    + '<div class="et-field-row">'
+    + '<div class="et-field"><label for="etFormStartTime">Start time</label>'
+    + '<input class="et-input" type="time" id="etFormStartTime" value="' + esc(data.startTime || '') + '"' + disabled + '></div>'
+    + '<div class="et-field"><label for="etFormEndTime">End time</label>'
+    + '<input class="et-input" type="time" id="etFormEndTime" value="' + esc(data.endTime || '') + '"' + disabled + '></div>'
+    + '</div>'
+    + '<div class="et-field-row">'
+    + '<div class="et-field"><label for="etFormLocation">Venue</label>'
+    + '<input class="et-input" id="etFormLocation" value="' + esc(data.locationName || '') + '"' + disabled + '></div>'
+    + '<div class="et-field"><label for="etFormCity">City</label>'
+    + '<input class="et-input" id="etFormCity" value="' + esc(data.city || '') + '"' + disabled + '></div>'
+    + '</div>'
+    + '<div class="et-field"><label for="etFormAddress">Address</label>'
+    + '<input class="et-input" id="etFormAddress" value="' + esc(data.address || '') + '"' + disabled + '></div>';
+
+  panels.contact = formPanelHead('Who a volunteer calls when they have a question. The first person is the main contact shown in the volunteer catalog.',
+    canManage() ? '<button type="button" class="et-btn et-btn-primary" onclick="openContactModal(null)">Add contact</button>' : '')
+    + '<div id="etContactList"></div>';
+
+  panels.positions = formPanelHead('Each position is a job definition: what the volunteer does, how many places there are, what kind of offer it is and when it runs. Volunteers apply for a position, not for the event as a whole.',
+    canManage() ? '<button type="button" class="et-btn et-btn-primary" onclick="openPositionModal(null)">Add position</button>' : '')
+    + '<div id="etPositionList"></div>';
+
+  var html = '<div class="et-ftabs" role="tablist">' + EVENT_FORM_TABS.map(function (tab) {
+    var isActiveTab = tab.key === activeTabKey;
+    return '<button type="button" class="et-ftab' + (isActiveTab ? ' active' : '') + '" role="tab" data-ftab="' + tab.key + '"'
+      + ' aria-selected="' + (isActiveTab ? 'true' : 'false') + '"'
+      + ' onclick="switchFormTab(\'' + tab.key + '\')">' + esc(tab.label) + '</button>';
+  }).join('') + '</div>';
+
+  EVENT_FORM_TABS.forEach(function (tab) {
+    html += '<div class="et-fpanel' + (tab.key === activeTabKey ? ' active' : '') + '" data-fpanel="' + tab.key + '" role="tabpanel">'
+      + panels[tab.key] + '</div>';
+  });
+
+  if (!canManage()) html += '<div class="et-note">This event is read only for you.</div>';
+
+  el('etEventForm').innerHTML = html;
+  bindEventFormAutoSave();
+}
+
+/* ---------------- member drawer ---------------- */
 function openMemberDrawer(relationId) {
   if (!relationId) return;
   APP.openRelationId = relationId;
@@ -1557,37 +1951,7 @@ function drawerRevoke() {
 }
 
 function drawerDecline() {
-  changeRelationStatus('declined', 'Request declined. You can approve this person laon the Event details screen first, then come back here.</div>');
-    return;
-  }
-
-  var items = positions.map(function (position) {
-    var slots = toNumber(position.slots);
-    return choiceItemHtml({
-      name: 'etRoleCheck',
-      value: position.id,
-      checked: currentIds.indexOf(position.id) !== -1,
-      title: position.name,
-      subtitle: position.description || 'No description',
-      tag: slots + (slots === 1 ? ' place' : ' places'),
-      search: position.name + ' ' + (position.description || '')
-    });
-  }).join('');
-
-  var body = '<div class="et-picker">'
-    + '<div class="et-picker-toolbar">'
-    + '<span class="et-hint" style="flex:1 1 auto; margin:0;">Tick the roles <strong>' + esc(personNameById(relationDataOf(relation).personId)) + '</strong> works in for this event.</span>'
-    + '<span class="et-picker-count" id="etRoleCount">0 selected</span>'
-    + '</div>'
-    + '<div class="et-picker-list" id="etRoleList">' + items + '</div>'
-    + '<div class="et-hint">Roles are saved on this placement only and marked as approved.</div>'
-    + '</div>';
-
-  openModal('Roles', body,
-    '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
-    + '<button type="button" class="et-btn et-btn-primary" onclick="saveRolesFor(\'' + escJs(relationId) + '\')">Save roles</button>');
-
-  bindChoicePicker('etRoleList', 'etRoleCount
+  changeRelationStatus('declined', 'Request declined. You can approve this person later from the volunteer network.');
 }
 
 function renderMemberDrawer() {
@@ -1612,38 +1976,12 @@ function renderMemberDrawer() {
   el('etDrawerEmail').textContent = personEmail || 'No email on file';
 
   var body = '';
-var items = candidates.map(function (person) {
-      var data = vd(person);
-      var fullName = ((data.firstName || '') + ' ' + (data.lastName || '')).trim() || data.email || person.name || 'Volunteer';
-      var email = data.email || '';
-      return choiceItemHtml({
-        name: 'etAddPerson',
-        value: person.id,
-        checked: false,
-        title: fullName,
-        subtitle: email || 'No email on file',
-        tag: statusLabel(data.status || 'candidate'),
-        search: fullName + ' ' + email
-      });
-    }).join('');
+  var statusButtons = '';
 
-    body = '<div class="et-picker">'
-      + '<div class="et-picker-toolbar">'
-      + '<input class="et-input" id="etPersonSearch" type="search" placeholder="Search by name or email"'
-      + ' oninput="filterChoicePicker(\'etPersonList\', this.value)">'
-      + '<button type="button" class="et-btn et-btn-tiny et-btn-ghost" onclick="selectAllVisibleChoices(\'etPersonList\', \'etPersonCount\')">Select all</button>'
-      + '<span class="et-picker-count" id="etPersonCount">0 selected</span>'
-      + '</div>'
-      + '<div class="et-picker-list" id="etPersonList">' + items + '</div>'
-      + '<div class="et-hint">People added here are approved for this event immediately. Everyone else stays in the volunteer network.</div>'
-      + '</div>';
-  }
-
-  openModal('Add volunteers', body,
-    '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
-    + (candidates.length === 0 ? '' : '<button type="button" class="et-btn et-btn-primary" onclick="confirmAddVolunteers()">Add selected</button>'));
-
-  if (candidates.length > 0) bindChoicePicker('etPersonList', 'etPersonCountrevoke\')">Revoke approval</button>';
+  body += '<div class="et-dsection"><h3>Placement</h3>';
+  if (canManage()) {
+    if (status === 'approved') {
+      statusButtons += '<button type="button" class="et-btn et-btn-tiny et-btn-bad" onclick="armDrawerConfirm(\'revoke\')">Revoke approval</button>';
     }
     if (status === 'requested') {
       statusButtons += '<button type="button" class="et-btn et-btn-tiny et-btn-bad" onclick="armDrawerConfirm(\'decline\')">Decline request</button>';
@@ -1662,9 +2000,9 @@ var items = candidates.map(function (person) {
   body += '</div>';
 
   /* roles */
-  body += '<div class="et-dsection"><h3>Roles</h3>';
+  body += '<div class="et-dsection"><h3>Positions</h3>';
   if (positions.length === 0) {
-    body += '<div class="et-hint">No roles set for this placement.</div>';
+    body += '<div class="et-hint">No position set for this placement.</div>';
   } else {
     body += '<div class="et-role-chips">' + positions.map(function (position) {
       return '<span class="et-role-chip">' + esc(position.name) + '</span>';
@@ -1672,10 +2010,10 @@ var items = candidates.map(function (person) {
   }
   if (canManage()) {
     body += '<div class="et-actions" style="margin-top:10px;">'
-      + '<button type="button" class="et-btn et-btn-tiny et-btn-outline" onclick="drawerOpenRoles()">Change roles</button>'
+      + '<button type="button" class="et-btn et-btn-tiny et-btn-outline" onclick="drawerOpenRoles()">Change positions</button>'
       + '</div>';
     if (positions.length === 0 && (!Array.isArray(APP.eventData.positions) || APP.eventData.positions.length === 0)) {
-      body += '<div class="et-dnote">This event has no roles yet. Add roles on the Event details screen first.</div>';
+      body += '<div class="et-dnote">This event has no positions yet. Add positions on the Event details screen first.</div>';
     }
   }
   body += '</div>';
@@ -1732,78 +2070,216 @@ var items = candidates.map(function (person) {
   el('etDrawerFoot').innerHTML = foot;
 }
 
-/* ---------------- m
-  var html = '<div class="et-field"><label for="etFormName">Event name</label>'
-    + '<input class="et-input" id="etFormName" value="' + esc(data.name || '') + '"' + disabled + '></div>'
-    + '<div class="et-field-row">'
-    + '<div class="et-field"><label for="etFormStatus">Status</label>'
-    + '<select class="et-select" id="etFormStatus"' + disabled + '>'
-    + ['draft', 'open', 'closed', 'cancelled'].map(function (status) {
-      return '<option value="' + status + '"' + ((data.status || 'draft') === status ? ' selected' : '') + '>' + esc(statusLabel(status)) + '</option>';
-    }).join('')
-    + '</select></div>'
-    + '<div class="et-field"><label for="etFormCapacity">Capacity</label>'
-    + '<input class="et-input" type="number" min="0" id="etFormCapacity" value="' + esc(data.capacity || 0) + '"' + disabled + '></div>'
-    + '</div>'
-    + '<div class="et-field-row">'
-    + '<div class="et-field"><label for="etFormStartDate">Start date</label>'
-    + '<input class="et-input" type="date" id="etFormStartDate" value="' + esc(data.startDate || '') + '"' + disabled + '></div>'
-    + '<div class="et-field"><label for="etFormEndDate">End date</label>'
-    + '<input class="et-input" type="date" id="etFormEndDate" value="' + esc(data.endDate || '') + '"' + disabled + '></div>'
-    + '</div>'
-    + '<div class="et-field-row">'
-    + '<div class="et-field"><label for="etFormStartTime">Start time</label>'
-    + '<input class="et-input" type="time" id="etFormStartTime" value="' + esc(data.startTime || '') + '"' + disabled + '></div>'
-    + '<div class="et-field"><label for="etFormEndTime">End time</label>'
-    + '<input class="et-input" type="time" id="etFormEndTime" value="' + esc(data.endTime || '') + '"' + disabled + '></div>'
-    + '</div>'
-    + '<div class="et-field-row">'
-    + '<div class="et-field"><label for="etFormLocation">Venue</label>'
-    + '<input class="et-input" id="etFormLocation" value="' + esc(data.locationName || '') + '"' + disabled + '></div>'
-    + '<div class="et-field"><label for="etFormCity">City</label>'
-    + '<input class="et-input" id="etFormCity" value="' + esc(data.city || '') + '"' + disabled + '></div>'
-    + '</div>'
-    + '<div class="et-field"><label for="etFormAddress">Address</label>'
-    + '<input class="et-input" id="etFormAddress" value="' + esc(data.address || '') + '"' + disabled + '></div>'
-    + '<div class="et-field"><label for="etFormDescription">Description</label>'
-    + '<textarea class="et-textarea" id="etFormDescription" maxlength="1000"' + disabled + '>' + esc(data.description || '') + '</textarea></div>'
-    + '<div class="et-field"><label for="etFormNotes">Internal notes</label>'
-    + '<textarea class="et-textarea" id="etFormNotes" maxlength="1000"' + disabled + '>' + esc(data.notes || '') + '</textarea></div>';
-
-  if (canManage()) {
-    html += '<div class="et-actions"><button type="button" class="et-btn et-btn-primary" onclick="saveEventFromForm()">Save event</button></div>';
-  } else {
-    html += '<div class="et-note">Only an event manager can edit the event definition.</div>';
+/* ---------------- contacts ---------------- */
+function renderContacts() {
+  var contactListNode = el('etContactList');
+  if (!contactListNode) return;
+  var contactRows = contactsOf(APP.eventData);
+  if (contactRows.length === 0) {
+    contactListNode.innerHTML = '<div class="et-empty"><strong>No contact yet</strong>'
+      + 'Add the person a volunteer should call about this event.</div>';
+    return;
   }
 
-  el('etEventForm').innerHTML = html;
+  contactListNode.innerHTML = '<div class="et-contact-list">' + contactRows.map(function (contactRow, contactIndex) {
+    var contactLines = [];
+    if (contactRow.phone) contactLines.push(esc(contactRow.phone));
+    if (contactRow.email) contactLines.push(esc(contactRow.email));
+    return '<div class="et-contact-card">'
+      + '<div class="et-contact-text">'
+      + '<div class="et-cell-main">' + esc(contactRow.name || 'Unnamed contact')
+      + (contactIndex === 0 ? ' <span class="et-badge">Main</span>' : '') + '</div>'
+      + (contactRow.label ? '<div class="et-cell-sub">' + esc(contactRow.label) + '</div>' : '')
+      + '<div class="et-cell-sub">' + (contactLines.length ? contactLines.join(' &middot; ') : 'No phone or email') + '</div>'
+      + '</div>'
+      + (canManage()
+        ? '<div class="et-actions">'
+          + '<button type="button" class="et-btn et-btn-tiny et-btn-outline" onclick="openContactModal(\'' + escJs(contactRow.id) + '\')">Edit</button>'
+          + '<button type="button" class="et-btn et-btn-tiny et-btn-bad" onclick="openDeleteContactModal(\'' + escJs(contactRow.id) + '\')">Remove</button>'
+          + '</div>'
+        : '')
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+function openContactModal(contactId) {
+  if (!canManage()) return;
+  var contactRow = null;
+  contactsOf(APP.eventData).forEach(function (row) { if (row.id === contactId) contactRow = row; });
+
+  var body = '<div class="et-field"><label for="etContactName">Name</label>'
+    + '<input class="et-input" id="etContactName" maxlength="80" value="' + esc(contactRow ? contactRow.name : '') + '"></div>'
+    + '<div class="et-field"><label for="etContactLabel">What they do</label>'
+    + '<input class="et-input" id="etContactLabel" maxlength="40" placeholder="Event lead, site coordinator, first aid" value="'
+    + esc(contactRow ? contactRow.label : '') + '"></div>'
+    + '<div class="et-field-row">'
+    + '<div class="et-field"><label for="etContactPhone">Phone</label>'
+    + '<input class="et-input" id="etContactPhone" maxlength="40" value="' + esc(contactRow ? contactRow.phone : '') + '"></div>'
+    + '<div class="et-field"><label for="etContactEmail">Email</label>'
+    + '<input class="et-input" type="email" id="etContactEmail" maxlength="160" value="' + esc(contactRow ? contactRow.email : '') + '"></div>'
+    + '</div>'
+    + '<div class="et-hint">The first contact in the list is the main one shown to volunteers.</div>';
+
+  openModal(contactRow ? 'Edit contact' : 'Add contact', body,
+    '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
+    + '<button type="button" class="et-btn et-btn-primary" onclick="submitContact('
+    + (contactId ? '\'' + escJs(contactId) + '\'' : 'null') + ')">Save contact</button>');
+}
+
+function submitContact(contactId) {
+  try {
+    var contactName = el('etContactName') ? el('etContactName').value.trim() : '';
+    if (!contactName) { notifyHost('The contact needs a name.', 'warning'); return; }
+
+    var savedContact = {
+      id: contactId || newRecordId('contact'),
+      name: contactName.slice(0, 80),
+      label: el('etContactLabel') ? el('etContactLabel').value.trim().slice(0, 40) : '',
+      phone: el('etContactPhone') ? el('etContactPhone').value.trim().slice(0, 40) : '',
+      email: el('etContactEmail') ? el('etContactEmail').value.trim().slice(0, 160) : ''
+    };
+
+    var nextContacts = contactsOf(APP.eventData).map(function (row) {
+      return { id: row.id || newRecordId('contact'), name: row.name || '', label: row.label || '', phone: row.phone || '', email: row.email || '' };
+    });
+
+    if (contactId) {
+      var wasReplaced = false;
+      nextContacts = nextContacts.map(function (row) {
+        if (row.id !== contactId) return row;
+        wasReplaced = true;
+        return savedContact;
+      });
+      if (!wasReplaced) nextContacts.push(savedContact);
+    } else {
+      nextContacts.push(savedContact);
+    }
+    saveContacts(nextContacts);
+  } catch (error) {
+    notifyHost('Could not save the contact: ' + (error && error.message ? error.message : error), 'error');
+  }
+}
+
+function saveContacts(nextContacts) {
+  if (!canManage()) return;
+  flushEventFormEdits();
+  var data = simpleCopy(APP.eventData);
+  data.contacts = nextContacts;
+  applyContactFields(data);
+  data.updatedAt = isoNow();
+
+  if (!APP.eventObject) {
+    APP.eventData = data;
+    notifyHost('Contacts saved.', 'success');
+    closeModal();
+    renderAll();
+    return;
+  }
+
+  updateObject(typeEvent(), APP.eventObject.id, data, data.name || eventName(), function (error) {
+    if (error) { notifyHost('Could not save the contacts: ' + error, 'error'); return; }
+    notifyHost('Contacts saved.', 'success');
+    closeModal();
+    loadAll();
+  });
+}
+
+function openDeleteContactModal(contactId) {
+  var contactRow = null;
+  contactsOf(APP.eventData).forEach(function (row) { if (row.id === contactId) contactRow = row; });
+  if (!contactRow) return;
+
+  openModal('Remove contact',
+    '<p>Remove <strong>' + esc(contactRow.name || 'this contact') + '</strong> from the event?</p>'
+    + '<div class="et-note">The rest of the contact list stays as it is.</div>',
+    '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
+    + '<button type="button" class="et-btn et-btn-bad" onclick="confirmRemoveContact(\'' + escJs(contactId) + '\')">Remove</button>');
+}
+
+function confirmRemoveContact(contactId) {
+  var remainingContacts = contactsOf(APP.eventData).filter(function (row) { return row.id !== contactId; });
+  saveContacts(remainingContacts);
+}
+
+/* ---------------- positions ---------------- */
+
+/* Approved placements per position, so the position table can warn before the event day. */
+function filledPerPosition() {
+  var counts = {};
+  APP.relations.forEach(function (relation) {
+    var relationRecord = relationDataOf(relation);
+    if (relationRecord.status !== 'approved') return;
+    (Array.isArray(relationRecord.positions) ? relationRecord.positions : []).forEach(function (roleRow) {
+      if (roleRow.status !== 'approved') return;
+      counts[roleRow.positionId] = (counts[roleRow.positionId] || 0) + 1;
+    });
+  });
+  return counts;
+}
+
+function recurrenceSummary(recurrence) {
+  var definedRecurrence = recurrence || {};
+  var chosenDays = Array.isArray(definedRecurrence.weekdays) ? definedRecurrence.weekdays : [];
+  /* Weekday numbers follow Date.getDay(): 0 is Sunday, 1 is Monday. */
+  var dayText = chosenDays.map(function (dayNumber) {
+    return WEEKDAY_LABELS[dayNumber === 0 ? 6 : dayNumber - 1] || '';
+  }).filter(Boolean).join(', ');
+  var timeText = [definedRecurrence.timeFrom, definedRecurrence.timeTo].filter(Boolean).join(' to ');
+  if (!dayText) return timeText;
+  return dayText + (timeText ? ' ' + timeText : '');
 }
 
 function renderPositions() {
-  var positions = Array.isArray(APP.eventData.positions) ? APP.eventData.positions : [];
-  if (!APP.eventObject) {
-    el('etPositionList').innerHTML = '<div class="et-empty">No event loaded.</div>';
-    return;
-  }
+  var positionListNode = el('etPositionList');
+  if (!positionListNode) return;
+
+  var positions = (Array.isArray(APP.eventData.positions) ? APP.eventData.positions : []).map(normalizePosition);
   if (positions.length === 0) {
-    el('etPositionList').innerHTML = '<div class="et-empty"><strong>No roles yet</strong>Add the roles volunteers can apply for.</div>';
+    positionListNode.innerHTML = '<div class="et-empty"><strong>No positions yet</strong>'
+      + 'Add the positions volunteers can apply for.</div>';
     return;
   }
 
+  var filledCounts = filledPerPosition();
   var html = '<div class="et-table-wrap"><table class="et-table"><thead><tr>'
-    + '<th>Role</th><th class="et-num">Places</th><th>Description</th><th></th></tr></thead><tbody>';
+    + '<th>Position</th><th>Offer</th><th class="et-num">Places</th><th class="et-num">Filled</th>'
+    + '<th>Applications close</th><th></th></tr></thead><tbody>';
   positions.forEach(function (position) {
+    var slots = toNumber(position.slots);
+    var filled = filledCounts[position.id] || 0;
+    var isOverfilled = slots > 0 && filled > slots;
+    var scheduleText = position.recurrence.weekdays.length ? recurrenceSummary(position.recurrence) : '';
     html += '<tr>'
-      + '<td><div class="et-cell-main">' + esc(position.name) + '</div></td>'
-      + '<td class="et-num">' + toNumber(position.slots) + '</td>'
-      + '<td>' + esc(position.description || '-') + '</td>'
+      + '<td><div class="et-cell-main">' + esc(position.name) + '</div>';
+    if (position.description) html += '<div class="et-cell-sub">' + esc(position.description) + '</div>';
+    if (position.skills) html += '<div class="et-cell-sub">Skills: ' + esc(position.skills) + '</div>';
+    if (position.requirements) html += '<div class="et-cell-sub">Needs: ' + esc(position.requirements) + '</div>';
+    html += '</td>'
+      + '<td>' + esc(optionLabelOf(OPPORTUNITY_TYPES, position.opportunityType))
+      + '<div class="et-cell-sub">' + esc(optionLabelOf(LOCATION_MODES, position.locationMode))
+      + (position.timeCommitment ? ' &middot; ' + esc(position.timeCommitment) : '') + '</div>'
+      + (scheduleText ? '<div class="et-cell-sub">' + esc(scheduleText) + '</div>' : '')
+      + '</td>'
+      + '<td class="et-num">' + slots + '</td>'
+      + '<td class="et-num">' + filled + (isOverfilled ? ' <span class="et-warn-chip">over</span>' : '') + '</td>'
+      + '<td>' + esc(position.applicationDeadline ? fmtDate(position.applicationDeadline) : '-') + '</td>'
       + '<td><div class="et-actions">'
       + (canManage() ? '<button type="button" class="et-btn et-btn-tiny et-btn-outline" onclick="openPositionModal(\'' + escJs(position.id) + '\')">Edit</button>'
         + '<button type="button" class="et-btn et-btn-tiny et-btn-bad" onclick="openDeletePositionModal(\'' + escJs(position.id) + '\')">Delete</button>' : '')
       + '</div></td></tr>';
   });
   html += '</tbody></table></div>';
-  el('etPositionList').innerHTML = html;
+  if (canManage()) {
+    var overfilledRoles = positions.filter(function (position) {
+      return toNumber(position.slots) > 0 && (filledCounts[position.id] || 0) > toNumber(position.slots);
+    });
+    if (overfilledRoles.length > 0) {
+      html += '<div class="et-note et-note-warn">' + overfilledRoles.length
+        + (overfilledRoles.length === 1 ? ' position has' : ' positions have')
+        + ' more accepted volunteers than places. Raise the places or move someone to another position.</div>';
+    }
+  }
+  positionListNode.innerHTML = html;
 }
 
 /* ---------------- views ---------------- */
@@ -1877,23 +2353,37 @@ function openRolesModal(relationId) {
   var currentIds = current.map(function (position) { return position.positionId; });
 
   if (positions.length === 0) {
-    openModal('Roles', '<div class="et-note">This event has no roles yet. Add roles in Event settings first.</div>');
+    openModal('Positions', '<div class="et-note">This event has no positions yet. Add positions on the Event details screen first.</div>');
     return;
   }
 
-  var body = '<div class="et-field"><label>Roles for ' + esc(personNameById(relationDataOf(relation).personId)) + '</label><div class="et-checks">';
-  positions.forEach(function (position) {
-    body += '<label class="et-check"><input type="checkbox" name="etRoleCheck" value="' + esc(position.id) + '"'
-      + (currentIds.indexOf(position.id) !== -1 ? ' checked' : '') + '>'
-      + '<span><strong>' + esc(position.name) + '</strong>'
-      + (position.description ? '<div class="et-cell-sub">' + esc(position.description) + '</div>' : '')
-      + '</span></label>';
-  });
-  body += '</div></div><div class="et-hint">Roles are saved with status approved for this placement.</div>';
+  var items = positions.map(function (position) {
+    var slots = toNumber(position.slots);
+    return choiceItemHtml({
+      name: 'etRoleCheck',
+      value: position.id,
+      checked: currentIds.indexOf(position.id) !== -1,
+      title: position.name,
+      subtitle: position.description || 'No description',
+      tag: slots + (slots === 1 ? ' place' : ' places'),
+      search: position.name + ' ' + (position.description || '')
+    });
+  }).join('');
 
-  openModal('Roles', body,
+  var body = '<div class="et-picker">'
+    + '<div class="et-picker-toolbar">'
+    + '<span class="et-hint" style="flex:1 1 auto; margin:0;">Tick the positiontions <strong>' + esc(personNameById(relationDataOf(relation).personId)) + '</strong> works in for this event.</span>'
+    + '<span class="et-picker-count" id="etRoleCount">0 selected</span>'
+    + '</div>'
+    + '<div class="et-picker-list" id="etRoleList">' + items + '</div>'
+    + '<div class="et-hint">Positions are saved on this placement only and marked as approved.</div>'
+    + '</div>';
+
+  openModal('Positions', body,
     '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
-    + '<button type="button" class="et-btn et-btn-primary" onclick="saveRolesFor(\'' + escJs(relationId) + '\')">Save roles</button>');
+    + '<button type="button" class="et-btn et-btn-primary" onclick="saveRolesFor(\'' + escJs(relationId) + '\')">Save positions</button>');
+
+  bindChoicePicker('etRoleList', 'etRoleCount');
 }
 
 function saveRolesFor(relationId) {
@@ -1932,20 +2422,38 @@ function openAddVolunteerModal() {
   if (candidates.length === 0) {
     body = '<div class="et-note">Everyone in the volunteer network is already linked to this event.</div>';
   } else {
-    body = '<div class="et-field"><label>Add people to this event</label><div class="et-checks" style="max-height:320px;overflow-y:auto;">';
-    candidates.forEach(function (person) {
+    var items = candidates.map(function (person) {
       var data = vd(person);
-      var full = ((data.firstName || '') + ' ' + (data.lastName || '')).trim() || data.email || person.name;
-      body += '<label class="et-check"><input type="checkbox" name="etAddPerson" value="' + esc(person.id) + '">'
-        + '<span><strong>' + esc(full) + '</strong> <span class="et-cell-sub">' + esc(data.email || '') + '</span>'
-        + '<div class="et-cell-sub">' + esc(statusLabel(data.status || 'candidate')) + '</div></span></label>';
-    });
-    body += '</div></div><div class="et-hint">People added here are approved for this event immediately.</div>';
+      var fullName = ((data.firstName || '') + ' ' + (data.lastName || '')).trim() || data.email || person.name || 'Volunteer';
+      var email = data.email || '';
+      return choiceItemHtml({
+        name: 'etAddPerson',
+        value: person.id,
+        checked: false,
+        title: fullName,
+        subtitle: email || 'No email on file',
+        tag: statusLabel(data.status || 'candidate'),
+        search: fullName + ' ' + email
+      });
+    }).join('');
+
+    body = '<div class="et-picker">'
+      + '<div class="et-picker-toolbar">'
+      + '<input class="et-input" id="etPersonSearch" type="search" placeholder="Search by name or email"'
+      + ' oninput="filterChoicePicker(\'etPersonList\', this.value)">'
+      + '<button type="button" class="et-btn et-btn-tiny et-btn-ghost" onclick="selectAllVisibleChoices(\'etPersonList\', \'etPersonCount\')">Select all</button>'
+      + '<span class="et-picker-count" id="etPersonCount">0 selected</span>'
+      + '</div>'
+      + '<div class="et-picker-list" id="etPersonList">' + items + '</div>'
+      + '<div class="et-hint">People added here are approved for this event immediately. Everyone else stays in the volunteer network.</div>'
+      + '</div>';
   }
 
   openModal('Add volunteers', body,
     '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
-    + '<button type="button" class="et-btn et-btn-primary" onclick="confirmAddVolunteers()">Add selected</button>');
+    + (candidates.length === 0 ? '' : '<button type="button" class="et-btn et-btn-primary" onclick="confirmAddVolunteers()">Add selected</button>'));
+
+  if (candidates.length > 0) bindChoicePicker('etPersonList', 'etPersonCount');
 }
 
 function confirmAddVolunteers() {
@@ -2047,16 +2555,7 @@ function submitTask(taskId) {
   createTask(values);
 }
 
-funct
-  el('etDrawerClose').addEventListener('click', closeMemberDrawer);
-  el('etMemberDrawerOverlay').addEventListener('click', closeMemberDrawer);
-  document.addEventListener('keydown', function (event) {
-    if (event.key !== 'Escape') return;
-    var modal = el('etModal');
-    if (modal && modal.classList.contains('open')) { closeModal(); return; }
-    var drawer = el('etMemberDrawer');
-    if (drawer && drawer.classList.contains('open')) closeMemberDrawer();
-  });ion changeTaskAssignee(taskId, personId) {
+function changeTaskAssignee(taskId, personId) {
   var task = taskById(taskId);
   if (!task) return;
   updateTaskRecord(taskId, {
@@ -2158,53 +2657,112 @@ function confirmRotate() {
   rotateVolume();
 }
 
+/* A position is the job definition. The offer details (type, where, when) belong
+   to the position, not to the event as a whole. */
 function openPositionModal(positionId) {
   if (!canManage()) return;
-  var positions = Array.isArray(APP.eventData.positions) ? APP.eventData.positions : [];
-  var position = null;
-  positions.forEach(function (row) { if (row.id === positionId) position = row; });
 
-  if (positions.length >= LIMITS.positions && !position) {
-    notifyHost('This event already has ' + LIMITS.positions + ' roles.', 'warning');
+  var positions = (Array.isArray(APP.eventData.positions) ? APP.eventData.positions : []).map(normalizePosition);
+  var positionRow = null;
+  positions.forEach(function (row) { if (row.id === positionId) positionRow = row; });
+
+  if (positions.length >= LIMITS.positions && !positionRow) {
+    notifyHost('This event already has ' + LIMITS.positions + ' positions.', 'warning');
     return;
   }
 
-  var body = '<div class="et-field"><label for="etPositionName">Role name</label>'
-    + '<input class="et-input" id="etPositionName" maxlength="60" value="' + esc(position ? position.name : '') + '"></div>'
+  var isNewPosition = !positionRow;
+  var position = positionRow || normalizePosition({});
+  var positionRecurrence = position.recurrence || { weekdays: [], timeFrom: '', timeTo: '' };
+  var body = '<h3 class="et-form-section" style="margin-top:0;padding-top:0;border-top:none;">What the volunteer does</h3>'
+    + '<div class="et-field"><label for="etPositionName">Position name</label>'
+    + '<input class="et-input" id="etPositionName" maxlength="60" placeholder="Sorting crew, Greeter, Driver" value="' + esc(position.name) + '"></div>'
+    + '<div class="et-field-row">'
     + '<div class="et-field"><label for="etPositionSlots">Places</label>'
-    + '<input class="et-input" type="number" min="1" id="etPositionSlots" value="' + esc(position ? toNumber(position.slots) : 1) + '"></div>'
-    + '<div class="et-field"><label for="etPositionDescription">Description</label>'
-    + '<textarea class="et-textarea" id="etPositionDescription" maxlength="300">' + esc(position ? position.description : '') + '</textarea></div>';
+    + '<input class="et-input" type="number" min="1" id="etPositionSlots" value="' + toNumber(position.slots) + '"></div>'
+    + '<div class="et-field"><label for="etPositionCommitment">Time commitment</label>'
+    + '<input class="et-input" id="etPositionCommitment" maxlength="120" placeholder="Two hours every Saturday" value="' + esc(position.timeCommitment) + '"></div>'
+    + '</div>'
+    + '<div class="et-field"><label for="etPositionDescription">What they will do</label>'
+    + '<textarea class="et-textarea" id="etPositionDescription" maxlength="300" placeholder="Sort donations, keep the tables tidy, help visitors">'
+    + esc(position.description) + '</textarea></div>'
+    + '<div class="et-field"><label for="etPositionRequirements">What they need to have</label>'
+    + '<textarea class="et-textarea" id="etPositionRequirements" maxlength="300" placeholder="Closed shoes, a lift to the site, first aid">'
+    + esc(position.requirements) + '</textarea></div>'
+    + '<div class="et-field"><label for="etPositionSkills">Skills wanted</label>'
+    + '<input class="et-input" id="etPositionSkills" maxlength="120" placeholder="Driving licence, cooking" value="' + esc(position.skills) + '">'
+    + '<div class="et-hint">Used when a volunteer matches themselves to a position.</div></div>'
+    + '<h3 class="et-form-section">This position as an offer</h3>'
+    + '<div class="et-field-row">'
+    + '<div class="et-field"><label for="etPositionOfferType">Type</label>'
+    + '<select class="et-select" id="etPositionOfferType">' + optionListHtml(OPPORTUNITY_TYPES, position.opportunityType) + '</select></div>'
+    + '<div class="et-field"><label for="etPositionLocationMode">Where</label>'
+    + '<select class="et-select" id="etPositionLocationMode">' + optionListHtml(LOCATION_MODES, position.locationMode) + '</select></div>'
+    + '</div>'
+    + '<h3 class="et-form-section">When it runs</h3>'
+    + '<div class="et-field-row">'
+    + '<div class="et-field"><label for="etPositionDeadline">Work deadline</label>'
+    + '<input class="et-input" type="date" id="etPositionDeadline" value="' + esc(position.deadline) + '"></div>'
+    + '<div class="et-field"><label for="etPositionApplicationDeadline">Applications close</label>'
+    + '<input class="et-input" type="date" id="etPositionApplicationDeadline" value="' + esc(position.applicationDeadline) + '">'
+    + '<div class="et-hint">Leave empty to keep taking applications until the work starts.</div></div>'
+    + '</div>'
+    + '<div class="et-field"><label>Weekly schedule</label>'
+    + '<div class="et-weekdays">' + weekdayChoicesHtml(positionRecurrence.weekdays, 'etPositionWeekday') + '</div>'
+    + '<div class="et-field-row" style="margin-top:10px;">'
+    + '<div class="et-field"><label for="etPositionTimeFrom">From</label>'
+    + '<input class="et-input" type="time" id="etPositionTimeFrom" value="' + esc(positionRecurrence.timeFrom) + '"></div>'
+    + '<div class="et-field"><label for="etPositionTimeTo">To</label>'
+    + '<input class="et-input" type="time" id="etPositionTimeTo" value="' + esc(positionRecurrence.timeTo) + '"></div>'
+    + '</div>'
+    + '<div class="et-hint">Use this for the Recurring type. Each ticked day becomes one slot a volunteer can clock into, for as long as the event runs.</div></div>';
 
-  openModal(position ? 'Edit role' : 'New role', body,
+  openModal(isNewPosition ? 'New position' : 'Edit position', body,
     '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
-    + '<button type="button" class="et-btn et-btn-primary" onclick="submitPosition(' + (positionId ? '\'' + escJs(positionId) + '\'' : 'null') + ')">Save role</button>');
+    + '<button type="button" class="et-btn et-btn-primary" onclick="submitPosition('
+    + (positionId ? '\'' + escJs(positionId) + '\'' : 'null') + ')">Save position</button>');
 }
 
 function submitPosition(positionId) {
-  var name = el('etPositionName') ? el('etPositionName').value.trim() : '';
-  if (!name) { notifyHost('The role needs a name.', 'warning'); return; }
+  try {
+    var positionName = el('etPositionName') ? el('etPositionName').value.trim() : '';
+    if (!positionName) { notifyHost('The position needs a name.', 'warning'); return; }
 
-  var positions = (Array.isArray(APP.eventData.positions) ? APP.eventData.positions : []).map(function (row) {
-    return { id: row.id, name: row.name, slots: row.slots, description: row.description };
-  });
+    var savedPosition = normalizePosition({
+      id: positionId || newRecordId('pos'),
+      name: positionName,
+      slots: el('etPositionSlots') ? el('etPositionSlots').value : 1,
+      description: el('etPositionDescription') ? el('etPositionDescription').value : '',
+      requirements: el('etPositionRequirements') ? el('etPositionRequirements').value : '',
+      skills: el('etPositionSkills') ? el('etPositionSkills').value : '',
+      timeCommitment: el('etPositionCommitment') ? el('etPositionCommitment').value : '',
+      opportunityType: el('etPositionOfferType') ? el('etPositionOfferType').value : 'event',
+      locationMode: el('etPositionLocationMode') ? el('etPositionLocationMode').value : 'onsite',
+      deadline: el('etPositionDeadline') ? el('etPositionDeadline').value : '',
+      applicationDeadline: el('etPositionApplicationDeadline') ? el('etPositionApplicationDeadline').value : '',
+      recurrence: {
+        weekdays: selectedWeekdaysFromForm('etPositionWeekday'),
+        timeFrom: el('etPositionTimeFrom') ? el('etPositionTimeFrom').value : '',
+        timeTo: el('etPositionTimeTo') ? el('etPositionTimeTo').value : ''
+      }
+    });
 
-  if (positionId) {
-    positions.forEach(function (row) {
-      if (row.id !== positionId) return;
-      row.name = name;
-      row.slots = toNumber(el('etPositionSlots').value);
-      row.description = el('etPositionDescription').value.trim();
-    });
-  } else {
-    positions.push({
-      id: 'pos_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-      name: name,
-      slots: toNumber(el('etPositionSlots').value) || 1,
-      description: el('etPositionDescription').value.trim()
-    });
+    var nextPositions = (Array.isArray(APP.eventData.positions) ? APP.eventData.positions : []).map(normalizePosition);
+    if (positionId) {
+      var wasReplaced = false;
+      nextPositions = nextPositions.map(function (row) {
+        if (row.id !== positionId) return row;
+        wasReplaced = true;
+        return savedPosition;
+      });
+      if (!wasReplaced) nextPositions.push(savedPosition);
+    } else {
+      nextPositions.push(savedPosition);
+    }
+    savePositions(nextPositions);
+  } catch (error) {
+    notifyHost('Could not save the position: ' + (error && error.message ? error.message : error), 'error');
   }
-  savePositions(positions);
 }
 
 function openDeletePositionModal(positionId) {
@@ -2213,22 +2771,22 @@ function openDeletePositionModal(positionId) {
   positions.forEach(function (row) { if (row.id === positionId) position = row; });
   if (!position) return;
 
-  openModal('Delete role',
-    '<p>Delete the role <strong>' + esc(position.name) + '</strong>?</p>'
-    + '<div class="et-note-warn et-note">Volunteers already assigned this role keep their placement record, but the role disappears from the event.</div>',
+  openModal('Delete position',
+    '<p>Delete the position <strong>' + esc(position.name) + '</strong>?</p>'
+    + '<div class="et-note-warn et-note">Volunteers already placed in this position keep their placement record, but the position disappears from the event.</div>',
     '<button type="button" class="et-btn" onclick="closeModal()">Cancel</button>'
     + '<button type="button" class="et-btn et-btn-bad" onclick="confirmDeletePosition(\'' + escJs(positionId) + '\')">Delete</button>');
 }
 
 function confirmDeletePosition(positionId) {
-  var positions = (Array.isArray(APP.eventData.positions) ? APP.eventData.positions : []).filter(function (row) {
+  var remainingPositions = (Array.isArray(APP.eventData.positions) ? APP.eventData.positions : []).filter(function (row) {
     return row.id !== positionId;
   });
-  savePositions(positions);
+  savePositions(remainingPositions);
 }
 
-function saveEventFromForm() {
-  saveEventDefinition({
+function readEventFormValues() {
+  return {
     name: el('etFormName') ? el('etFormName').value.trim() : '',
     status: el('etFormStatus') ? el('etFormStatus').value : 'draft',
     capacity: el('etFormCapacity') ? el('etFormCapacity').value : 0,
@@ -2241,7 +2799,35 @@ function saveEventFromForm() {
     address: el('etFormAddress') ? el('etFormAddress').value.trim() : '',
     description: el('etFormDescription') ? el('etFormDescription').value.trim() : '',
     notes: el('etFormNotes') ? el('etFormNotes').value.trim() : ''
-  });
+  };
+}
+
+var eventAutoSaveTimer = null;
+
+function bindEventFormAutoSave() {
+  var formNode = el('etEventForm');
+  if (!formNode || formNode.getAttribute('data-autosave-bound') === 'yes') return;
+  formNode.setAttribute('data-autosave-bound', 'yes');
+  formNode.addEventListener('input', scheduleEventAutoSave);
+  formNode.addEventListener('change', scheduleEventAutoSave);
+}
+
+/* Typing in the form writes the attached event record shortly after the last
+   keystroke, so the tool needs no Save button of its own. */
+function scheduleEventAutoSave() {
+  if (!canManage()) return;
+  if (eventAutoSaveTimer) clearTimeout(eventAutoSaveTimer);
+  eventAutoSaveTimer = setTimeout(function () {
+    eventAutoSaveTimer = null;
+    saveEventDefinition(readEventFormValues(), { silent: true });
+  }, 700);
+}
+
+/* Moves whatever is typed in the form into the tool state, for the actions
+   that rebuild the form before the next automatic write. */
+function flushEventFormEdits() {
+  if (!canManage() || !el('etFormName')) return;
+  APP.eventData = eventDataFromForm(readEventFormValues(), APP.eventData);
 }
 
 function exportReport() {
@@ -2353,7 +2939,8 @@ tool.declareOutput({
   type: 'object',
   properties: {
     eventObjectId: { type: 'string' },
-    lastView: { type: 'string' }
+    lastView: { type: 'string' },
+    lastFormTab: { type: 'string' }
   }
 });
 
@@ -2364,6 +2951,7 @@ tool.onReady(function (value) {
   try { APP.readOnly = tool.isReadOnly ? !!tool.isReadOnly() : false; } catch (error) { APP.readOnly = false; }
 
   if (APP.savedValue && APP.savedValue.lastView) APP.view = APP.savedValue.lastView;
+  if (APP.savedValue && APP.savedValue.lastFormTab) APP.formTab = APP.savedValue.lastFormTab;
 
   var navButtons = document.querySelectorAll('.et-nav-btn');
   for (var index = 0; index < navButtons.length; index++) {
@@ -2378,13 +2966,23 @@ tool.onReady(function (value) {
     if (event.target === el('etModal')) closeModal();
   });
 
+  el('etDrawerClose').addEventListener('click', closeMemberDrawer);
+  el('etMemberDrawerOverlay').addEventListener('click', closeMemberDrawer);
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    var openModalNode = el('etModal');
+    if (openModalNode && openModalNode.classList.contains('open')) { closeModal(); return; }
+    var openDrawerNode = el('etMemberDrawer');
+    if (openDrawerNode && openDrawerNode.classList.contains('open')) closeMemberDrawer();
+  });
+
   el('etRefreshBtn').addEventListener('click', function () { loadAll(); });
   el('etAddVolunteerBtn').addEventListener('click', openAddVolunteerModal);
   el('etAddTaskBtn').addEventListener('click', function () { openTaskModal(null); });
   el('etNewMessageBtn').addEventListener('click', openNewMessageModal);
   el('etRotateBtn').addEventListener('click', openRotateModal);
-  el('etAddPositionBtn').addEventListener('click', function () { openPositionModal(null); });
   el('etExportReportBtn').addEventListener('click', exportReport);
+  if (el('etApproveAllBtn')) el('etApproveAllBtn').addEventListener('click', openApproveAllModal);
 
   if (tool.onUserChange) {
     tool.onUserChange(function (user) {
@@ -2409,7 +3007,8 @@ function persist() {
   try {
     tool.setValue({
       eventObjectId: APP.eventObject ? APP.eventObject.id : '',
-      lastView: APP.view
+      lastView: APP.view,
+      lastFormTab: APP.formTab
     });
   } catch (error) { /* optional */ }
 }

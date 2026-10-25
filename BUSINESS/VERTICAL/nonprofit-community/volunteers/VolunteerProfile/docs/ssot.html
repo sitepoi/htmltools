@@ -28,7 +28,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v1.9</span>
+      <span>v1.11</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -73,7 +73,7 @@
     capture the final decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>1.9</td></tr>
+    <tr><th>Document version</th><td>1.11</td></tr>
     <tr><th>Last updated</th><td>2026-10-22</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (VolunteerProfile).</td></tr>
@@ -187,6 +187,8 @@
     <tr><td>C-18</td><td>Coloured identity header with large name, contact line, place and network state</td><td>markup + <code>.vp-topbar</code></td><td>v1.4</td><td>Headless render</td></tr>
     <tr><td>C-19</td><td>Clock in and clock out for event and recurring roles: a timestamp session, an automatic stop at the frozen window end, a 60 second heartbeat with a stale close, one session per volunteer, and a clocked line that still needs manager approval</td><td>startClock / stopClock / timerTick / closeStaleSessionOnLoad</td><td>v1.8 (2026-10-22)</td><td>10 injected harness assertions and a headless render</td></tr>
     <tr><td>C-20</td><td>Time measurement for every volunteering type: a window clock, a capped project sitting with an optional task, a duty shift with an answered count, and a burst cycle whose preparation and delivery share one cycle cap</td><td>MONITORING_PROFILES / clockableItems / startClock / stopClock / submitDutyShift</td><td>v1.9 (2026-10-22)</td><td>27 injected harness assertions and a headless render</td></tr>
+    <tr><td>C-22</td><td>Acceptance into the volunteer network: a manager-only Volunteers view with pending/accepted filters, a completeness meter per person, and Accept, Set not active, Accept again, Block and Unblock, with every other write action gated on the accepted status</td><td>renderNetwork / setVolunteerStatus / volunteerAcceptanceIssue</td><td>v1.11 (2026-10-24)</td><td>20 injected harness assertions and a headless render</td></tr>
+    <tr><td>C-21</td><td>First run for a CMS-created profile: one-time account link, an actionable no-profile state, a completeness checklist that points to My Profile, and no clock offered while the volunteer is still a candidate</td><td>maybeLinkProfileToUser / profileCompleteness / profileChecklistHtml / renderClockCard</td><td>v1.10 (2026-10-24)</td><td>14 injected harness assertions and a headless render</td></tr>
   </table>
 
   <h2 id="sec-glossary">4. Glossary</h2>
@@ -213,11 +215,11 @@
   <pre>
 // app/VolunteerProfile.js - the same five types as the manager side
 var DEFAULT_TYPES = {
-  person: 'volunteerRegistry-uniconbaseapps',     // host object
-  relation: 'vm.eventMemberships-uniconbaseapps', // personId + '__' + eventId
-  event: 'vm.events-uniconbaseapps',              // read only
-  tasks: 'vm.eventTasks-uniconbaseapps',          // read only
-  messages: 'vm.eventMessages-uniconbaseapps'     // read only
+  person: 'volunteer-registry-uniconbaseapps',     // host object
+  relation: 'vm-event-memberships-uniconbaseapps', // personId + '__' + eventId
+  event: 'vm-events-uniconbaseapps',              // read only
+  tasks: 'vm-event-tasks-uniconbaseapps',          // read only
+  messages: 'vm-event-messages-uniconbaseapps'     // read only
 };
   </pre>
   <h3>5.3 Structural decisions that follow</h3>
@@ -308,11 +310,11 @@ var DEFAULT_TYPES = {
   <h3>8.2 Type model</h3>
   <table>
     <tr><th>Type</th><th>Scope</th><th>Document = one ...</th><th>Key fields used here</th></tr>
-    <tr><td><code>volunteerRegistry-uniconbaseapps</code></td><td>shared (host)</td><td>volunteer profile</td><td><code>userId</code>, <code>fullName</code>, <code>phone</code>, <code>email</code>, <code>city</code>, <code>availability</code>, <code>skills[]</code>, <code>notes</code>, <code>status</code>, <code>hoursLedger[]</code>, <code>totals</code></td></tr>
-    <tr><td><code>vm.eventMemberships-uniconbaseapps</code></td><td>instance</td><td>placement</td><td><code>personId</code>, <code>eventId</code>, <code>status</code> (requested / approved / declined / removed), <code>positions[]</code>, <code>taskLinks[]</code>, <code>pendingHours[]</code>, <code>hoursHistory[]</code>, <code>hoursApprovedTotal</code>, <code>ledgerCount</code></td></tr>
-    <tr><td><code>vm.events-uniconbaseapps</code></td><td>instance</td><td>opportunity (any volunteering type)</td><td><code>name</code>, <code>status</code>, <code>opportunityType</code> (event / task / recurring / self-paced), <code>locationMode</code> (onsite / remote / hybrid), <code>startDate</code>, <code>endDate</code>, <code>startTime</code>, <code>endTime</code>, <code>locationName</code>, <code>city</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code>, <code>recurrence</code>, <code>capacity</code>, <code>positions[]</code> - read only</td></tr>
-    <tr><td><code>vm.eventTasks-uniconbaseapps</code></td><td>instance</td><td>task list of an event</td><td><code>tasks[]</code> - read only, matched by task id in the placement task row</td></tr>
-    <tr><td><code>vm.eventMessages-uniconbaseapps</code></td><td>instance</td><td>message volume</td><td><code>messages[]</code>, <code>closed</code>, <code>volume</code> - read only, plus <code>readBy[]</code> written through the manager side</td></tr>
+    <tr><td><code>volunteer-registry-uniconbaseapps</code></td><td>shared (host)</td><td>volunteer profile</td><td><code>userId</code>, <code>fullName</code>, <code>phone</code>, <code>email</code>, <code>city</code>, <code>availability</code>, <code>skills[]</code>, <code>notes</code>, <code>status</code>, <code>hoursLedger[]</code>, <code>totals</code></td></tr>
+    <tr><td><code>vm-event-memberships-uniconbaseapps</code></td><td>instance</td><td>placement</td><td><code>personId</code>, <code>eventId</code>, <code>status</code> (requested / approved / declined / removed), <code>positions[]</code>, <code>taskLinks[]</code>, <code>pendingHours[]</code>, <code>hoursHistory[]</code>, <code>hoursApprovedTotal</code>, <code>ledgerCount</code></td></tr>
+    <tr><td><code>vm-events-uniconbaseapps</code></td><td>instance</td><td>opportunity (any volunteering type)</td><td><code>name</code>, <code>status</code>, <code>opportunityType</code> (event / task / recurring / self-paced), <code>locationMode</code> (onsite / remote / hybrid), <code>startDate</code>, <code>endDate</code>, <code>startTime</code>, <code>endTime</code>, <code>locationName</code>, <code>city</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code>, <code>recurrence</code>, <code>capacity</code>, <code>positions[]</code> - read only</td></tr>
+    <tr><td><code>vm-event-tasks-uniconbaseapps</code></td><td>instance</td><td>task list of an event</td><td><code>tasks[]</code> - read only, matched by task id in the placement task row</td></tr>
+    <tr><td><code>vm-event-messages-uniconbaseapps</code></td><td>instance</td><td>message volume</td><td><code>messages[]</code>, <code>closed</code>, <code>volume</code> - read only, plus <code>readBy[]</code> written through the manager side</td></tr>
   </table>
 
   <h3>8.3 Document ids</h3>
@@ -407,7 +409,7 @@ requested role on a membership:
     values. That is what makes "it counted for three days" impossible.
   </div>
   <p><strong>Automatic stop is a computation, not a background job.</strong> The event already carries the window we
-  need (<code>startDate</code>, <code>endDate</code> in <code>vm.events-uniconbaseapps</code>). A recurring
+  need (<code>startDate</code>, <code>endDate</code> in <code>vm-events-uniconbaseapps</code>). A recurring
   opportunity carries <code>recurrence.weekdays</code>, <code>timeFrom</code> and <code>timeTo</code>. The stop time is
   the earlier of: what the volunteer pressed, the window end plus a grace period, or a hard session cap. Every load
   re-evaluates that rule, so a session that was left running is closed correctly whenever the volunteer comes back.</p>
@@ -716,7 +718,7 @@ timer policy on the opportunity (optional, defaults apply when empty)
   <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
   <table>
     <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
-    <tr><td>L-01</td><td>No self registration: the profile must exist before the tool is usable</td><td>A new volunteer needs a manager or the CMS</td><td>Task T-10</td></tr>
+    <tr><td>L-01</td><td>The CMS creates the volunteer profile; the tool does not self-register</td><td>A volunteer cannot start without a CMS-created record, so the tool states who to ask instead of offering a form</td><td>Accepted (D-VP-30)</td></tr>
     <tr><td>L-02</td><td>The certificate cannot be emailed or downloaded as a PDF</td><td>It is printed from the browser</td><td>Task T-11</td></tr>
     <tr><td>L-03</td><td>Withdrawing after approval is not possible here</td><td>Needs the manager</td><td>Accepted (D-VP-06)</td></tr>
     <tr><td>L-04</td><td>No profile photo or identity document upload</td><td>Text details only</td><td>Idea I-02</td></tr>
@@ -910,6 +912,24 @@ timer policy on the opportunity (optional, defaults apply when empty)
       <td>Student privacy outranks detail; a certificate travels to people outside the programme.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-VP-29</td><td>2026-10-24</td>
+      <td>Every CMS object type this tool reads or writes is kebab-case and namespaced: <code>volunteer-registry-uniconbaseapps</code>, <code>vm-events-uniconbaseapps</code>, <code>vm-event-memberships-uniconbaseapps</code>, <code>vm-event-tasks-uniconbaseapps</code>, <code>vm-event-messages-uniconbaseapps</code>. All of them stay tool params, so a CMS can map its own names.</td>
+      <td>Owner convention for CMS object types; the dotted old names were inconsistent with the rest of the platform. No volunteer data existed, so the rename needed no migration.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-30</td><td>2026-10-24</td>
+      <td>The CMS owns volunteer registration: it creates the <code>volunteer-registry-uniconbaseapps</code> object and mounts this tool inside it. The tool never creates a profile; it claims an unlinked record once for the signed-in volunteer, explains a missing record, and shows a completeness checklist.</td>
+      <td>Owner decision: the CMS already handles self registration and imports, so a second registration path inside the tool would duplicate it. The tool still has to make an empty record usable.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VP-31</td><td>2026-10-24</td>
+      <td>Acceptance into the volunteer network is decided in this tool, by a manager, and stored as <code>status</code> on the profile record. Event acceptance stays in <code>EventVolunteerManager</code>.</td>
+      <td>Owner decision: being a volunteer in the system and working one event are two different decisions. The CMS creates the record but does not know the volunteer status, so the acceptance decision belongs to the volunteer tool.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -943,7 +963,7 @@ timer policy on the opportunity (optional, defaults apply when empty)
   <h2 id="sec-questions">14. Open questions</h2>
   <ol>
     <li><strong>Real per-object size limit.</strong> The whole budget assumes 1 MiB; if the store is smaller only the caps in section 8.5 scale.</li>
-    <li><strong>Can a profile be created from the volunteer side?</strong> Blocks self registration (T-10).</li>
+    <li><strong>Can a profile be created from the volunteer side?</strong> Answered (D-VP-30): no. The CMS creates the record; the tool claims an unlinked record and guides the first run.</li>
     <li><strong>Can the session user be resolved to a profile automatically?</strong> Today the <code>personId</code> param or <code>getUser()</code> is used.</li>
     <li><strong>Should a declined volunteer see the manager note?</strong> A declined line today has no note to show.</li>
     <li><strong>Is the certificate a printed page or a file?</strong> Blocks the email certificate (T-11).</li>
@@ -1284,7 +1304,7 @@ timer policy on the opportunity (optional, defaults apply when empty)
     </div>
   </section>
 
-  <section class="task-group" data-release-group="g2-selfservice" data-group-status="planned">
+  <section class="task-group" data-release-group="g2-selfservice" data-group-status="in-progress">
     <header class="task-group-header">
       <span class="task-group-name">Group: Self service for a new volunteer</span>
       <span class="group-status-chip" data-group-status-chip></span>
@@ -1292,23 +1312,44 @@ timer policy on the opportunity (optional, defaults apply when empty)
       <span class="task-group-progress" data-group-progress="g2-selfservice">0/0</span>
     </header>
     <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g2-selfservice"></div></div>
-    <p class="task-group-note">Why these belong together: both remove the manager from a step the volunteer can do alone, and both depend on the same answer about creating a profile object from the tool.</p>
+    <p class="task-group-note">Why these belong together: they are the two decisions and the one hand-over a new volunteer meets. The CMS creates the record, this tool accepts the person into the network and guides the first run, and event acceptance belongs to the event manager tool. The certificate email waits for the sealed snapshot.</p>
 
-    <div class="task-item" data-task-id="T-10" data-group="g2-selfservice" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-10" data-group="g2-selfservice" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-10</span>
-          <span class="task-title">Self registration when no profile exists</span>
+          <span class="task-title">First run for a CMS-created profile, with account linking</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-valuable">Very valuable</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" checked="checked" />
         </summary>
         <div class="task-details">
-          <p><strong>Problem it solves:</strong> today the tool is unusable until someone creates the profile.</p>
-          <p><strong>How we will solve it:</strong> when the session user has no profile, show a short form and create it with status <code>pending review</code>; a manager approves the profile before any application.</p>
-          <p><strong>Benefit:</strong> a volunteer can start without an administrator.</p>
-          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
-          <p><strong>Status:</strong> not-started</p>
+          <p><strong>Problem it solves:</strong> the CMS creates the volunteer object and opens this tool inside it, so the tool must not build its own registration form. What it must handle is the awkward first minute: an empty record, no account link, and a volunteer who does not know what to do next.</p>
+          <p><strong>How we will solve it:</strong> the tool never creates profiles. (1) When the attached profile has no <code>userId</code>, it is claimed once for the signed-in volunteer, and a manager browsing another record only claims it when the email matches. (2) The dashboard start card explains a missing profile, names the signed-in account and says who to ask. (3) A new volunteer sees what is still missing with a completeness bar and a link to My Profile. (4) A candidate is told that clocking opens after approval instead of being offered a clock it cannot use.</p>
+          <p><strong>Benefit:</strong> registration lives in one place (the CMS) while the tool still turns an empty record into a usable, self-service profile.</p>
+          <p><strong>Implemented:</strong> maybeLinkProfileToUser, profileCompleteness, profileChecklistHtml, the dashboard start card and the candidate guard in renderClockCard.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code>, <code>.css</code></p>
+          <p><strong>Status:</strong> done (2026-10-24)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-42" data-group="g2-selfservice" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-42</span>
+          <span class="task-title">Acceptance into the volunteer network, decided in this tool</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-42 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a CMS-created record is not yet a volunteer, and nothing in the new tools ever said who makes that decision. The event manager only decides event placements, so a person could be accepted for one event while the network record stayed unaccepted for ever.</p>
+          <p><strong>How we will solve it:</strong> a manager-only Volunteers view lists every profile with its completeness, filters by pending, accepted and everyone, and offers Accept, Set not active, Accept again, Block and Unblock. The status lives on the profile record and is written by this tool. Event acceptance stays in the event manager tool, which is stated on the panel and in the profile form.</p>
+          <p><strong>Benefit:</strong> one place decides "this person is a volunteer", one place decides "this person works this event", and the volunteer sees a plain "Waiting for acceptance" message until the first decision.</p>
+          <p><strong>Implemented:</strong> loadNetworkPersons, renderNetwork, setNetworkFilter, acceptVolunteer, openBlockVolunteerModal, setVolunteerStatus, volunteerAcceptanceIssue, and the Volunteers nav entry with a pending badge.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code>, <code>.html</code>, <code>.css</code></p>
+          <p><strong>Status:</strong> done (2026-10-24)</p>
         </div>
       </details>
     </div>
@@ -1317,17 +1358,18 @@ timer policy on the opportunity (optional, defaults apply when empty)
       <details>
         <summary>
           <span class="task-id">T-11</span>
-          <span class="task-title">Certificate as a file or by email</span>
+          <span class="task-title">Email the sealed certificate to the volunteer</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-small">Very small thing</span>
           <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" />
         </summary>
         <div class="task-details">
-          <p><strong>Problem it solves:</strong> printing is the only way to keep the certificate.</p>
-          <p><strong>How we will solve it:</strong> use the PDF export if the CMS provides it; otherwise an email to the volunteer address with a link to the certificate screen.</p>
-          <p><strong>Benefit:</strong> the volunteer keeps their own proof.</p>
+          <p><strong>Problem it solves:</strong> printing is the only way to keep the certificate, and the volunteer has nothing to forward to a school.</p>
+          <p><strong>How we will solve it:</strong> after the period snapshot exists (T-35), add "Email it to me" on the certificate screen: export the sealed document, then send it to the address on the profile with <code>requestExportPdf</code> and <code>requestSendEmail</code> when the CMS provides them. Never email a live total.</p>
+          <p><strong>Benefit:</strong> the volunteer keeps their own proof without hunting for a printer.</p>
+          <p><strong>Depends on:</strong> T-35 (snapshot). PDF export and print already exist on the certificate screen.</p>
           <p><strong>Files:</strong> <code>app/VolunteerProfile.js</code></p>
-          <p><strong>Status:</strong> not-started</p>
+          <p><strong>Status:</strong> not-started - waits for the certificate group.</p>
         </div>
       </details>
     </div>
@@ -2060,7 +2102,7 @@ timer policy on the opportunity (optional, defaults apply when empty)
     <li><strong>S-06 - Remove a pending line.</strong> Remove that line. PASS if: the line disappears and the pending count returns to its previous value.</li>
     <li><strong>S-07 - Approved ledger and certificate.</strong> Load the sample with existing ledger lines. PASS if: the ledger lists them oldest first and the certificate shows the same total.</li>
     <li><strong>S-08 - Read only for a non owner.</strong> Switch the harness to the viewer role and reload. PASS if: apply, submit and save are all disabled and the role pill states the mode.</li>
-    <li><strong>S-09 - No profile.</strong> Point <code>?personId=missing</code>. PASS if: every screen shows the "No profile loaded" state and nothing throws.</li>
+    <li><strong>S-09 - No profile.</strong> Point <code>?personId=missing</code>. PASS if: the start card says no profile is linked, names the signed-in account, says who to ask, and nothing throws.</li>
     <li><strong>S-10 - Every volunteering type is listed.</strong> Open Find opportunities as Bob. PASS if: five open opportunities appear, each with a type chip, and the filter reads All 5, Event 2, Task based 1, Recurring 1, Self paced 1.</li>
     <li><strong>S-11 - Filter and search.</strong> Pick Task based, then search for "reading". PASS if: the type filter alone shows one card, and the search alone shows the reading circle.</li>
     <li><strong>S-12 - Apply for a position.</strong> Apply for Driver on the food drive. PASS if: the dialog shows the role with places, skills and time; after sending, Driver reads Requested, the filled count stays 0 of 2, and My volunteering still lists one row for that opportunity.</li>
@@ -2077,6 +2119,8 @@ timer policy on the opportunity (optional, defaults apply when empty)
     <li><strong>S-23 - Same document twice.</strong> Download the issued certificate twice, then approve another hour in a later period. PASS if: both downloads are byte-identical in their totals, and the later hour appears only in the statement and the next period.</li>
     <li><strong>S-24 - Correction after issue.</strong> Reject one approved hour of an issued period. PASS if: a replacement is offered with a reason, the new certificate has a new id, and the old one is listed as superseded.</li>
     <li><strong>S-25 - Excerpt and privacy.</strong> Request an excerpt for one event, and try a note containing a student name. PASS if: the excerpt is labelled as part of the period certificate with the same period id, and the student name never appears on any issued document.</li>
+    <li><strong>S-27 - Network acceptance.</strong> As a manager open Volunteers with one pending profile. PASS if: the pending person is listed first with the completeness meter, Accept turns the row into Accepted and clears the badge, the filters reflect the change, Set not active and Block are reversible, the accepted status is the only one that can apply or clock, and a volunteer never sees the Volunteers view.</li>
+    <li><strong>S-26 - First run for a new volunteer.</strong> Open a profile with no phone, no skills and status candidate. PASS if: the dashboard shows the waiting state, a completeness bar naming the missing fields, a link to My Profile, and no clock actions; an unlinked profile is claimed once by the signed-in volunteer, while a manager with another email does not claim it.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
   <table>
@@ -2088,6 +2132,8 @@ timer policy on the opportunity (optional, defaults apply when empty)
     <tr><td>S-10 to S-12 (harness)</td><td>PASS (2026-10-22)</td><td>catalog with four types, filter and search, per position application</td></tr>
     <tr><td>S-13 to S-16 (harness)</td><td>PASS (2026-10-22)</td><td>10 injected assertions: start and stop, 95 computed minutes, 5 minute rounding, one session at a time, stale close (62 minutes, flagged unverified), an event outside today refused</td></tr>
     <tr><td>S-17 to S-20 (harness)</td><td>PASS (2026-10-22)</td><td>27 injected assertions: clock, sitting and duty offers per type, 120 minute sitting cap, 120 minute sitting clamped after a longer run, weekly cap clamps to the 30 remaining minutes, burst cycle clamps at 240, dated burst delivery offers a window clock, duty 2 hour refusal, 15 minute rounding, answered count, one shift per day, 10 hour weekly duty cap, midnight split into two dated lines</td></tr>
+    <tr><td>S-27 (harness)</td><td>PASS (2026-10-24)</td><td>20 injected assertions: manager list of 3 profiles, pending first with badge 1, Accept stores active, filters update, Set not active, Accept again, Block confirmation then banned, candidate and inactive cannot apply, accepted can apply, view hidden for a volunteer</td></tr>
+    <tr><td>S-26 (harness)</td><td>PASS (2026-10-24)</td><td>14 injected assertions: 100 percent and 75 percent completeness, owner claim, manager no-claim, waiting state, missing-field list, My Profile link, no clock for a candidate, join prompt when no placement, actionable no-profile message</td></tr>
     <tr><td>S-21 to S-25 (harness)</td><td>Not run</td><td>group g5-certificates is designed but not built</td></tr>
     <tr><td>S-01 to S-25 (live CMS)</td><td></td><td>task T-12, plus T-24, the g4 tasks and T-41 for the later groups</td></tr>
   </table>
@@ -2390,7 +2436,7 @@ timer policy on the opportunity (optional, defaults apply when empty)
 
   <div class="footer">
     Volunteer Profile &amp; Hour Portal - single source of truth for all
-    decisions about this tool. Version 1.9, 2026-10-22.
+    decisions about this tool. Version 1.11, 2026-10-24.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

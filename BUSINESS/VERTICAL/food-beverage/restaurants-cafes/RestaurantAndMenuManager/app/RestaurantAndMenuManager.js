@@ -1501,6 +1501,10 @@ function renderGeneralInfo() {
   renderDevices();
   /* Conditional displays */
   handleConditionalDisplays();
+
+  /* Coordinate hint and state/province tax template hint */
+  updateCoordinateHint();
+  renderTaxTemplateHint();
 }
 
 function renderLogoPreview() {
@@ -2526,7 +2530,8 @@ function initZoneMap() {
   var mapEl = document.getElementById('delivery-map');
   if (!mapEl) return;
 
-  zoneMap = L.map('delivery-map', { center: [40.7128, -74.006], zoom: 12, zoomControl: true });
+  var initialMapCenter = resolveMapCenter();
+  zoneMap = L.map('delivery-map', { center: [initialMapCenter.latitude, initialMapCenter.longitude], zoom: 12, zoomControl: true });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19
@@ -2554,6 +2559,7 @@ function initZoneMap() {
   zoneMap.on(L.Draw.Event.DELETED, function() { syncAllZoneLayers(); scheduleSave(); });
 
   loadZonesOnMap();
+  updateRestaurantMarker();
 }
 
 function loadZonesOnMap() {
@@ -5383,9 +5389,32 @@ function initAllEvents() {
     });
   }
 
+  /* General Info: coordinate picker */
+  var openCoordinateMapButton = document.getElementById('gen-coord-open-map-btn');
+  if (openCoordinateMapButton) openCoordinateMapButton.addEventListener('click', openCoordinatePicker);
+  var applyCoordinateLinkButton = document.getElementById('gen-coord-maps-apply');
+  if (applyCoordinateLinkButton) applyCoordinateLinkButton.addEventListener('click', applyCoordinateMapsLink);
+  var coordinateLinkInput = document.getElementById('gen-coord-maps-link');
+  if (coordinateLinkInput) {
+    coordinateLinkInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        applyCoordinateMapsLink();
+      }
+    });
+  }
+
   /* Tax: add category */
   var addTaxBtn = document.getElementById('tax-add-cat');
   if (addTaxBtn) addTaxBtn.addEventListener('click', addTaxCategory);
+
+  /* Tax: state / province template */
+  var taxTemplateButton = document.getElementById('tax-apply-template-btn');
+  if (taxTemplateButton) taxTemplateButton.addEventListener('click', openTaxTemplateConfirm);
+  var taxTemplateApplyButton = document.getElementById('tax-template-apply-btn');
+  if (taxTemplateApplyButton) taxTemplateApplyButton.addEventListener('click', applyTaxTemplate);
+  var taxTemplateCancelButton = document.getElementById('tax-template-cancel-btn');
+  if (taxTemplateCancelButton) taxTemplateCancelButton.addEventListener('click', cancelTaxTemplate);
 
   /* Devices */
   var devConnectBtn = document.getElementById('dev-connect-btn');
@@ -5402,6 +5431,9 @@ function initAllEvents() {
   });
 
   /* Zones: add button */
+  var zoneCenterButton = document.getElementById('zone-center-btn');
+  if (zoneCenterButton) zoneCenterButton.addEventListener('click', centerZoneMapOnRestaurant);
+
   document.getElementById('zone-add-btn').addEventListener('click', function() {
     zoneEditingIndex = -1;
     document.getElementById('zone-form-title').textContent = 'New Delivery Zone';
@@ -5682,6 +5714,7 @@ function initAllEvents() {
 
   /* Deals tab: sub-tabs, list actions, editor and rule editors */
   wireDealEditor();
+  wireDealAiDialog();
 
   /* Campaigns, hero and promotions editors (T-17 to T-20) */
   wirePresentationEditors();
@@ -6966,6 +6999,311 @@ function cancelDeleteDeal() {
   pendingDealDeleteId = null;
 }
 
+/* ===================================================================== */
+/* AI DEAL GENERATION - payload, prompt, parser and insert (T-52, T-62) */
+/* ===================================================================== */
+
+var DEAL_AI_MAX_ITEMS = 150;
+
+/* Compact description of every rule shape, sent to the model. Source of truth:
+   docs/client-data-contract.html version 3.3, section 23. */
+var DEAL_AI_RULE_GUIDE = {
+  bundle: 'groups[] where each group has label, quantity, and either category_ids[] with optional size_label and name_filter, or item_ids[] for a fixed extra. price = fixed total number.',
+  min_quantity: 'category_ids[], optional size_label, min_quantity (whole number >= 2). price = price per unit number.',
+  tiered: 'item_ids[], tiers[] of { quantity, price, label }. price must be null.',
+  two_for_one: 'required_item_count (>= 2), category_ids[], same_size boolean. price must be null.',
+  percentage_discount: 'percent (1 to 100), optional category_ids[] or item_ids[]. price must be null.',
+  subtotal_threshold: 'min_subtotal number, discount number. price must be null.',
+  free_delivery: 'always boolean, optional min_subtotal number. price must be null.',
+  free_item_with_purchase: 'groups[] where each group has label, quantity, charge ("paid" or "free") and category_ids[] or item_ids[]. price must be null.',
+  buy_n_get_m: 'required_item_count (>= 2), free_item_count (>= 1), optional category_ids[] or item_ids[], same_size boolean. price must be null.',
+  volume_pricing: 'category_ids[], optional name_filter, bands[] of { min_quantity, unit_price }. price must be null.',
+  free_modifier: 'modifier_group_ids[], option_count (>= 1), optional category_ids[]. price must be null.'
+};
+
+function buildDealAiPayload() {
+  var referenceIndex = buildMenuReferenceIndex(data);
+  var generalInfo = data.general_info || {};
+  var address = generalInfo.address || {};
+  var allItems = referenceIndex.items;
+  var itemLimit = Math.min(allItems.length, DEAL_AI_MAX_ITEMS);
+
+  var compactItems = [];
+  for (var itemIndex = 0; itemIndex < itemLimit; itemIndex += 1) {
+    var item = allItems[itemIndex];
+    if (!item || !item.id) continue;
+    compactItems.push({
+      id: item.id,
+      name: item.item_name || '',
+      category_id: item.category_id || '',
+      price: (typeof item.price === 'number') ? item.price : null,
+      sizes: (item.sizes || []).map(function (size) {
+        return { label: size.label || '', price: size.price };
+      }),
+      tags: item.tags || [],
+      available: item.availability !== 'out_of_stock' && (item.visibility_mode || 'show') !== 'hide'
+    });
+  }
+
+  return {
+    restaurant: {
+      name: generalInfo.restaurant_name || '',
+      country: address.country || '',
+      state: address.state || '',
+      currency: (data.taxation_currency && data.taxation_currency.currency) || '',
+      timezone: generalInfo.timezone || ''
+    },
+    categories: (data.menu.categories || []).map(function (category) {
+      return { id: category.id, name: category.name };
+    }),
+    items: compactItems,
+    items_truncated: allItems.length > itemLimit,
+    modifier_groups: (data.menu.modifier_groups || []).map(function (group) {
+      return { id: group.id, name: group.group_name, options: (group.options || []).length };
+    }),
+    existing_deals: (data.deals || []).map(function (deal) {
+      return { title: deal.title, rule_type: deal.rule_type, price: deal.price, active: deal.active !== false };
+    })
+  };
+}
+
+function buildDealAiPrompt(requestedTypes) {
+  var payload = buildDealAiPayload();
+  var typeLines = requestedTypes.map(function (ruleType) {
+    return '- ' + ruleType + ': ' + DEAL_AI_RULE_GUIDE[ruleType];
+  }).join('\n');
+
+  return 'You are a restaurant promotion planner. Build realistic, sellable offers from the menu below.\n\n' +
+    'OUTPUT RULES\n' +
+    '- Return ONLY valid JSON, no markdown and no explanation. Shape: {"deals":[ ... ]}\n' +
+    '- Create exactly one deal per requested type.\n' +
+    '- Use ONLY ids that appear in the menu payload. Never invent an item id or a category id.\n' +
+    '- Never pair unrelated products. A discounted or free item must belong with the paid item (a dip with a pizza, not a pizza with a can).\n' +
+    '- Keep prices plausible for this menu: a bundle total below the sum of its parts, volume unit prices that fall as quantity rises, thresholds a normal basket can reach.\n' +
+    '- Do not duplicate an existing deal listed in the payload.\n' +
+    '- Write a title of at most 60 characters, a one-sentence description, and a short section such as "Weekend" or "Family", in the restaurant language.\n' +
+    '- Do not return id, active or image_url; the tool adds them.\n\n' +
+    'DEAL SHAPES\n' + typeLines + '\n\n' +
+    'REQUESTED TYPES\n' + requestedTypes.join(', ') + '\n\n' +
+    'MENU AND EXISTING DEALS (JSON)\n' + JSON.stringify(payload);
+}
+
+function extractDealAiJson(rawText) {
+  var text = String(rawText || '').trim();
+  if (!text) return null;
+
+  var objectStart = text.indexOf('{');
+  var arrayStart = text.indexOf('[');
+  var start = -1;
+  if (objectStart < 0) start = arrayStart;
+  else if (arrayStart < 0) start = objectStart;
+  else start = Math.min(objectStart, arrayStart);
+  if (start < 0) return null;
+
+  var end = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+  if (end <= start) return null;
+
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch (error) {
+    return null;
+  }
+}
+
+function collectDealAiDrafts(parsedPayload) {
+  if (Array.isArray(parsedPayload)) return parsedPayload;
+  if (parsedPayload && Array.isArray(parsedPayload.deals)) return parsedPayload.deals;
+  return null;
+}
+
+function insertAiDealDrafts(aiDrafts, requestedTypes) {
+  var referenceIndex = buildMenuReferenceIndex(data);
+  var createdDeals = [];
+  var skippedEntries = [];
+
+  (aiDrafts || []).forEach(function (aiDraft) {
+    if (!isPlainObject(aiDraft)) return;
+
+    var ruleType = readString(aiDraft.rule_type);
+    if (DEAL_RULE_TYPES.indexOf(ruleType) === -1) {
+      skippedEntries.push({ type: ruleType || 'unknown', reason: 'unsupported rule type' });
+      return;
+    }
+
+    var serializedDeal = serializeDealDraft({
+      title: readString(aiDraft.title),
+      description: readString(aiDraft.description),
+      section: readString(aiDraft.section),
+      image_url: '',
+      active: false,
+      price: aiDraft.price,
+      rule_type: ruleType,
+      rule: isPlainObject(aiDraft.rule) ? aiDraft.rule : {}
+    });
+
+    var validationReport = validateDeal(serializedDeal, referenceIndex);
+    if (validationReport.errors.length > 0) {
+      skippedEntries.push({ type: ruleType, reason: validationReport.errors[0] });
+      return;
+    }
+
+    data.deals.push(serializedDeal);
+    createdDeals.push(serializedDeal);
+  });
+
+  (requestedTypes || []).forEach(function (ruleType) {
+    var wasCreated = createdDeals.some(function (deal) { return deal.rule_type === ruleType; });
+    var wasSkipped = skippedEntries.some(function (entry) { return entry.type === ruleType; });
+    if (!wasCreated && !wasSkipped) {
+      skippedEntries.push({ type: ruleType, reason: 'the AI returned no deal for this type' });
+    }
+  });
+
+  return { created: createdDeals, skipped: skippedEntries };
+}
+
+function requestDealAiText(prompt, onFinished) {
+  if (typeof tool.requestAI !== 'function') {
+    onFinished('AI is not available in this environment.', null);
+    return;
+  }
+
+  var hasFinished = false;
+  function finish(errorMessage, responseText) {
+    if (hasFinished) return;
+    hasFinished = true;
+    onFinished(errorMessage, responseText);
+  }
+
+  try {
+    var maybePromise = tool.requestAI(prompt, '', function (error, responseText) {
+      if (error) { finish(String(error), null); return; }
+      finish(null, responseText);
+    });
+    if (maybePromise && typeof maybePromise.then === 'function') {
+      maybePromise.then(function (response) {
+        var text = (typeof response === 'string') ? response : ((response && response.text) || '');
+        finish(null, text);
+      }).catch(function (error) {
+        finish((error && error.message) || 'AI request failed.', null);
+      });
+    }
+  } catch (error) {
+    finish((error && error.message) || 'AI request failed.', null);
+  }
+}
+
+function setDealAiBusy(isBusy) {
+  var runButton = document.getElementById('deal-ai-run');
+  var cancelButton = document.getElementById('deal-ai-cancel');
+  if (runButton) {
+    runButton.disabled = isBusy;
+    runButton.textContent = isBusy ? 'Generating...' : 'Generate deals';
+  }
+  if (cancelButton) cancelButton.disabled = isBusy;
+}
+
+function showDealAiError(message) {
+  var errorBox = document.getElementById('deal-ai-error');
+  if (!errorBox) { tool.notify(message, 'error'); return; }
+  errorBox.style.display = '';
+  errorBox.textContent = message;
+}
+
+function clearDealAiError() {
+  var errorBox = document.getElementById('deal-ai-error');
+  if (!errorBox) return;
+  errorBox.style.display = 'none';
+  errorBox.textContent = '';
+}
+
+function openDealAiGenerateModal() {
+  if (isDealEditingBlocked()) {
+    tool.notify('This record is read-only.', 'warning');
+    return;
+  }
+  if (typeof tool.requestAI !== 'function') {
+    tool.notify('AI is not configured for this tool yet.', 'warning');
+    return;
+  }
+
+  clearDealAiError();
+  var typeCheckboxes = document.querySelectorAll('#deal-ai-types input[type="checkbox"]');
+  typeCheckboxes.forEach(function (checkbox) { checkbox.checked = true; });
+  var modal = document.getElementById('deal-ai-modal');
+  if (modal) modal.style.display = 'flex';
+  tool.resize();
+}
+
+function closeDealAiGenerateModal() {
+  var modal = document.getElementById('deal-ai-modal');
+  if (modal) modal.style.display = 'none';
+  setDealAiBusy(false);
+}
+
+function runDealAiGeneration() {
+  if (isDealEditingBlocked()) {
+    tool.notify('This record is read-only.', 'warning');
+    return;
+  }
+
+  var checkedBoxes = document.querySelectorAll('#deal-ai-types input[type="checkbox"]:checked');
+  var requestedTypes = Array.prototype.map.call(checkedBoxes, function (checkbox) {
+    return checkbox.value;
+  }).filter(function (ruleType) {
+    return DEAL_RULE_TYPES.indexOf(ruleType) !== -1;
+  });
+
+  if (requestedTypes.length === 0) {
+    tool.notify('Choose at least one deal type.', 'warning');
+    return;
+  }
+
+  clearDealAiError();
+  setDealAiBusy(true);
+
+  requestDealAiText(buildDealAiPrompt(requestedTypes), function (errorMessage, responseText) {
+    setDealAiBusy(false);
+
+    if (errorMessage) {
+      showDealAiError(errorMessage);
+      return;
+    }
+
+    var parsedPayload = extractDealAiJson(responseText);
+    var aiDrafts = collectDealAiDrafts(parsedPayload);
+    if (!aiDrafts) {
+      showDealAiError('The AI did not return usable JSON. Try again.');
+      return;
+    }
+
+    var summary = insertAiDealDrafts(aiDrafts, requestedTypes);
+    closeDealAiGenerateModal();
+    renderDeals();
+    scheduleSave();
+
+    if (summary.created.length === 0) {
+      tool.notify('The AI returned no usable deal. Nothing was added.', 'warning');
+    } else {
+      tool.notify('AI added ' + summary.created.length + ' inactive deal(s) for review.', 'success');
+    }
+    if (summary.skipped.length > 0) {
+      console.warn('[AI DEALS SKIPPED]', summary.skipped);
+    }
+  });
+}
+
+function wireDealAiDialog() {
+  var generateButton = document.getElementById('deals-ai-generate-btn');
+  if (generateButton) generateButton.addEventListener('click', openDealAiGenerateModal);
+  var closeButton = document.getElementById('deal-ai-close');
+  if (closeButton) closeButton.addEventListener('click', closeDealAiGenerateModal);
+  var cancelButton = document.getElementById('deal-ai-cancel');
+  if (cancelButton) cancelButton.addEventListener('click', closeDealAiGenerateModal);
+  var runButton = document.getElementById('deal-ai-run');
+  if (runButton) runButton.addEventListener('click', runDealAiGeneration);
+}
+
 function wireDealEditor() {
   var subTabNav = document.getElementById('deals-subtabs');
   if (subTabNav) {
@@ -6987,9 +7325,6 @@ function wireDealEditor() {
   document.querySelectorAll('[data-deal-tab-goto]').forEach(function (gotoButton) {
     gotoButton.addEventListener('click', function () {
       switchDealEditorTab(gotoButton.dataset.dealTabGoto);
-    });
-  });
-
   var addDealButton = document.getElementById('deals-add-btn');
   if (addDealButton) addDealButton.addEventListener('click', function () { openDealEditor(null); });
 
@@ -7002,6 +7337,9 @@ function wireDealEditor() {
   var importRunButton = document.getElementById('deals-import-run');
   if (importRunButton) importRunButton.addEventListener('click', runDealsImport);
   wireJsonFilePicker('deals-import-file-input', 'deals-import-file-btn', 'deals-import-file-name', 'deals-import-json');
+
+  var aiGenerateButton = document.getElementById('deals-ai-generate-btn');
+  if (aiGenerateButton) aiGenerateButton.addEventListener('click', openDealAiGenerateModal);
 
   var closeButton = document.getElementById('deal-editor-close');
   if (closeButton) closeButton.addEventListener('click', closeDealEditor);
@@ -8437,6 +8775,382 @@ function runMenuImport() {
     return;
   }
   applyImport(parsed);
+}
+
+/* ===================================================================== */
+/* RESTAURANT LOCATION TOOLING (T-59) AND MAP CENTERING (T-50) */
+/* ===================================================================== */
+
+var DEFAULT_MAP_CENTER = [40.7128, -74.006];
+var coordinatePickerMap = null;
+var coordinatePickerMarker = null;
+var restaurantMapMarker = null;
+
+function readRestaurantCoordinates() {
+  var coordinates = (data.general_info && data.general_info.coordinates) || {};
+  var latitude = parseFloat(coordinates.lat);
+  var longitude = parseFloat(coordinates.lng);
+  if (!isFinite(latitude) || !isFinite(longitude)) return null;
+  if (latitude === 0 && longitude === 0) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  return { latitude: latitude, longitude: longitude };
+}
+
+function readFirstZoneCenter() {
+  var zones = (data.delivery_zones && data.delivery_zones.zones) || [];
+  for (var zoneIndex = 0; zoneIndex < zones.length; zoneIndex += 1) {
+    var shapes = zones[zoneIndex].shapes || [];
+    for (var shapeIndex = 0; shapeIndex < shapes.length; shapeIndex += 1) {
+      var shape = shapes[shapeIndex];
+      if (shape.type === 'Circle' && shape.center && shape.center.length === 2) {
+        return { latitude: shape.center[1], longitude: shape.center[0] };
+      }
+      if (shape.coordinates && shape.coordinates[0] && shape.coordinates[0][0]) {
+        var ring = shape.coordinates[0];
+        var latitudeSum = 0;
+        var longitudeSum = 0;
+        ring.forEach(function (point) {
+          longitudeSum += point[0];
+          latitudeSum += point[1];
+        });
+        return { latitude: latitudeSum / ring.length, longitude: longitudeSum / ring.length };
+      }
+    }
+  }
+  return null;
+}
+
+function resolveMapCenter() {
+  return readRestaurantCoordinates() || readFirstZoneCenter() || { latitude: DEFAULT_MAP_CENTER[0], longitude: DEFAULT_MAP_CENTER[1] };
+}
+
+function updateRestaurantMarker() {
+  if (!zoneMap) return;
+  var coordinates = readRestaurantCoordinates();
+  if (!coordinates) {
+    if (restaurantMapMarker) { zoneMap.removeLayer(restaurantMapMarker); restaurantMapMarker = null; }
+    return;
+  }
+  var latlng = [coordinates.latitude, coordinates.longitude];
+  if (!restaurantMapMarker) {
+    restaurantMapMarker = L.circleMarker(latlng, {
+      radius: 7, color: '#ffffff', weight: 2, fillColor: '#4f46e5', fillOpacity: 1
+    }).addTo(zoneMap);
+    restaurantMapMarker.bindTooltip('Restaurant', { direction: 'top', offset: [0, -6] });
+  } else {
+    restaurantMapMarker.setLatLng(latlng);
+  }
+}
+
+function centerZoneMapOnRestaurant() {
+  if (!zoneMap) return;
+  var coordinates = readRestaurantCoordinates();
+  if (!coordinates) {
+    tool.notify('Set the restaurant coordinates in the General tab first.', 'warning');
+    return;
+  }
+  zoneMap.setView([coordinates.latitude, coordinates.longitude], 13);
+  updateRestaurantMarker();
+}
+
+/* ---------- Coordinate picker ---------- */
+function updateCoordinateHint() {
+  var hint = document.getElementById('gen-coord-hint');
+  if (!hint) return;
+  var coordinates = readRestaurantCoordinates();
+  hint.textContent = coordinates
+    ? ('Pinned at ' + coordinates.latitude.toFixed(6) + ', ' + coordinates.longitude.toFixed(6))
+    : 'No point selected yet.';
+}
+
+function setCoordinatePickerMarker(latitude, longitude) {
+  if (!coordinatePickerMap) return;
+  var latlng = [latitude, longitude];
+  if (!coordinatePickerMarker) {
+    coordinatePickerMarker = L.marker(latlng, { draggable: true }).addTo(coordinatePickerMap);
+    coordinatePickerMarker.on('dragend', function () {
+      var position = coordinatePickerMarker.getLatLng();
+      applyPickedCoordinates(position.lat, position.lng, false);
+    });
+  } else {
+    coordinatePickerMarker.setLatLng(latlng);
+  }
+}
+
+function applyPickedCoordinates(latitude, longitude, movePickerMarker) {
+  var latitudeValue = parseFloat(latitude);
+  var longitudeValue = parseFloat(longitude);
+  if (!isFinite(latitudeValue) || !isFinite(longitudeValue)) return;
+  if (latitudeValue < -90 || latitudeValue > 90 || longitudeValue < -180 || longitudeValue > 180) return;
+
+  var roundedLatitude = Math.round(latitudeValue * 1000000) / 1000000;
+  var roundedLongitude = Math.round(longitudeValue * 1000000) / 1000000;
+
+  if (!data.general_info.coordinates) data.general_info.coordinates = { lat: roundedLatitude, lng: roundedLongitude };
+  data.general_info.coordinates.lat = roundedLatitude;
+  data.general_info.coordinates.lng = roundedLongitude;
+
+  var latitudeInput = document.getElementById('gen-coord-lat');
+  var longitudeInput = document.getElementById('gen-coord-lng');
+  if (latitudeInput) latitudeInput.value = roundedLatitude;
+  if (longitudeInput) longitudeInput.value = roundedLongitude;
+
+  if (movePickerMarker) setCoordinatePickerMarker(roundedLatitude, roundedLongitude);
+  updateCoordinateHint();
+  updateRestaurantMarker();
+  scheduleSave();
+}
+
+function openCoordinatePicker() {
+  var mapWrap = document.getElementById('gen-coord-map-wrap');
+  if (!mapWrap) return;
+  mapWrap.style.display = '';
+
+  if (!coordinatePickerMap) {
+    coordinatePickerMap = L.map('gen-coord-map', { center: DEFAULT_MAP_CENTER, zoom: 3, zoomControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    }).addTo(coordinatePickerMap);
+    coordinatePickerMap.on('click', function (event) {
+      applyPickedCoordinates(event.latlng.lat, event.latlng.lng, true);
+    });
+  }
+
+  var coordinates = readRestaurantCoordinates();
+  if (coordinates) {
+    coordinatePickerMap.setView([coordinates.latitude, coordinates.longitude], 14);
+    setCoordinatePickerMarker(coordinates.latitude, coordinates.longitude);
+  } else {
+    coordinatePickerMap.setView(DEFAULT_MAP_CENTER, 3);
+  }
+
+  setTimeout(function () {
+    if (coordinatePickerMap) coordinatePickerMap.invalidateSize();
+    tool.resize();
+  }, 80);
+  updateCoordinateHint();
+}
+
+function parseCoordinatesFromMapsLink(rawText) {
+  var text = String(rawText || '').trim();
+  if (!text) return null;
+  var patterns = [
+    /@(-?\d{1,3}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)/,
+    /[?&]q=(-?\d{1,3}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)/,
+    /[?&]ll=(-?\d{1,3}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)/,
+    /^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/
+  ];
+  for (var patternIndex = 0; patternIndex < patterns.length; patternIndex += 1) {
+    var match = text.match(patterns[patternIndex]);
+    if (!match) continue;
+    var latitude = parseFloat(match[1]);
+    var longitude = parseFloat(match[2]);
+    if (latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
+      return { latitude: latitude, longitude: longitude };
+    }
+  }
+  return null;
+}
+
+function applyCoordinateMapsLink() {
+  var linkInput = document.getElementById('gen-coord-maps-link');
+  if (!linkInput) return;
+  var coordinates = parseCoordinatesFromMapsLink(linkInput.value);
+  if (!coordinates) {
+    tool.notify('That link does not contain coordinates. Paste a Google Maps link or "lat, lng".', 'warning');
+    return;
+  }
+  if (!coordinatePickerMap) openCoordinatePicker();
+  coordinatePickerMap.setView([coordinates.latitude, coordinates.longitude], 14);
+  applyPickedCoordinates(coordinates.latitude, coordinates.longitude, true);
+  linkInput.value = '';
+  tool.notify('Coordinates taken from the link.', 'success');
+}
+
+/* ===================================================================== */
+/* STATE AND PROVINCE TAX TEMPLATES (T-51, D-RAMM-32) */
+/* ===================================================================== */
+
+var TAX_TEMPLATE_EFFECTIVE = '2026-01';
+var pendingTaxTemplate = null;
+
+function usStateTaxTemplate(stateCode, stateName, rate) {
+  return {
+    country: 'US', code: stateCode, label: stateName,
+    taxName: 'Sales Tax (' + stateCode + ')', rate: rate,
+    note: 'State base rate only. County, city and special district taxes are additional and must be confirmed locally.'
+  };
+}
+
+function canadaProvinceTaxTemplate(provinceCode, provinceName, taxName, rate) {
+  return {
+    country: 'CA', code: provinceCode, label: provinceName,
+    taxName: taxName + ' (' + provinceCode + ')', rate: rate,
+    note: 'Combined federal and provincial rate. Confirm the current rate and any local additions before relying on it.'
+  };
+}
+
+var TAX_TEMPLATES = [
+  usStateTaxTemplate('AL', 'Alabama', 4.0),
+  usStateTaxTemplate('AK', 'Alaska', 0),
+  usStateTaxTemplate('AZ', 'Arizona', 5.6),
+  usStateTaxTemplate('AR', 'Arkansas', 6.5),
+  usStateTaxTemplate('CA', 'California', 7.25),
+  usStateTaxTemplate('CO', 'Colorado', 2.9),
+  usStateTaxTemplate('CT', 'Connecticut', 6.35),
+  usStateTaxTemplate('DE', 'Delaware', 0),
+  usStateTaxTemplate('DC', 'District of Columbia', 6.0),
+  usStateTaxTemplate('FL', 'Florida', 6.0),
+  usStateTaxTemplate('GA', 'Georgia', 4.0),
+  usStateTaxTemplate('HI', 'Hawaii', 4.0),
+  usStateTaxTemplate('ID', 'Idaho', 6.0),
+  usStateTaxTemplate('IL', 'Illinois', 6.25),
+  usStateTaxTemplate('IN', 'Indiana', 7.0),
+  usStateTaxTemplate('IA', 'Iowa', 6.0),
+  usStateTaxTemplate('KS', 'Kansas', 6.5),
+  usStateTaxTemplate('KY', 'Kentucky', 6.0),
+  usStateTaxTemplate('LA', 'Louisiana', 4.45),
+  usStateTaxTemplate('ME', 'Maine', 5.5),
+  usStateTaxTemplate('MD', 'Maryland', 6.0),
+  usStateTaxTemplate('MA', 'Massachusetts', 6.25),
+  usStateTaxTemplate('MI', 'Michigan', 6.0),
+  usStateTaxTemplate('MN', 'Minnesota', 6.875),
+  usStateTaxTemplate('MS', 'Mississippi', 7.0),
+  usStateTaxTemplate('MO', 'Missouri', 4.225),
+  usStateTaxTemplate('MT', 'Montana', 0),
+  usStateTaxTemplate('NE', 'Nebraska', 5.5),
+  usStateTaxTemplate('NV', 'Nevada', 6.85),
+  usStateTaxTemplate('NH', 'New Hampshire', 0),
+  usStateTaxTemplate('NJ', 'New Jersey', 6.625),
+  usStateTaxTemplate('NM', 'New Mexico', 4.875),
+  usStateTaxTemplate('NY', 'New York', 4.0),
+  usStateTaxTemplate('NC', 'North Carolina', 4.75),
+  usStateTaxTemplate('ND', 'North Dakota', 5.0),
+  usStateTaxTemplate('OH', 'Ohio', 5.75),
+  usStateTaxTemplate('OK', 'Oklahoma', 4.5),
+  usStateTaxTemplate('OR', 'Oregon', 0),
+  usStateTaxTemplate('PA', 'Pennsylvania', 6.0),
+  usStateTaxTemplate('RI', 'Rhode Island', 7.0),
+  usStateTaxTemplate('SC', 'South Carolina', 6.0),
+  usStateTaxTemplate('SD', 'South Dakota', 4.2),
+  usStateTaxTemplate('TN', 'Tennessee', 7.0),
+  usStateTaxTemplate('TX', 'Texas', 6.25),
+  usStateTaxTemplate('UT', 'Utah', 4.85),
+  usStateTaxTemplate('VT', 'Vermont', 6.0),
+  usStateTaxTemplate('VA', 'Virginia', 4.3),
+  usStateTaxTemplate('WA', 'Washington', 6.5),
+  usStateTaxTemplate('WV', 'West Virginia', 6.0),
+  usStateTaxTemplate('WI', 'Wisconsin', 5.0),
+  usStateTaxTemplate('WY', 'Wyoming', 4.0),
+  canadaProvinceTaxTemplate('AB', 'Alberta', 'GST', 5.0),
+  canadaProvinceTaxTemplate('BC', 'British Columbia', 'GST + PST', 12.0),
+  canadaProvinceTaxTemplate('MB', 'Manitoba', 'GST + RST', 12.0),
+  canadaProvinceTaxTemplate('NB', 'New Brunswick', 'HST', 15.0),
+  canadaProvinceTaxTemplate('NL', 'Newfoundland and Labrador', 'HST', 15.0),
+  canadaProvinceTaxTemplate('NS', 'Nova Scotia', 'HST', 14.0),
+  canadaProvinceTaxTemplate('NT', 'Northwest Territories', 'GST', 5.0),
+  canadaProvinceTaxTemplate('NU', 'Nunavut', 'GST', 5.0),
+  canadaProvinceTaxTemplate('ON', 'Ontario', 'HST', 13.0),
+  canadaProvinceTaxTemplate('PE', 'Prince Edward Island', 'HST', 15.0),
+  canadaProvinceTaxTemplate('QC', 'Quebec', 'GST + QST', 14.975),
+  canadaProvinceTaxTemplate('SK', 'Saskatchewan', 'GST + PST', 11.0),
+  canadaProvinceTaxTemplate('YT', 'Yukon', 'GST', 5.0)
+];
+
+function findTaxTemplate(countryCode, regionCode) {
+  var country = String(countryCode || '').toUpperCase();
+  var region = String(regionCode || '').toUpperCase();
+  if (!country || !region) return null;
+  for (var index = 0; index < TAX_TEMPLATES.length; index += 1) {
+    if (TAX_TEMPLATES[index].country === country && TAX_TEMPLATES[index].code === region) {
+      return TAX_TEMPLATES[index];
+    }
+  }
+  return null;
+}
+
+function readCurrentAddressRegion() {
+  var address = (data.general_info && data.general_info.address) || {};
+  return { country: address.country || '', region: address.state || '' };
+}
+
+function renderTaxTemplateHint() {
+  var hint = document.getElementById('tax-template-hint');
+  if (!hint) return;
+  var address = readCurrentAddressRegion();
+  var template = findTaxTemplate(address.country, address.region);
+  if (!address.country || !address.region) {
+    hint.textContent = 'Select a country and state or province in General to see a template.';
+    return;
+  }
+  hint.textContent = template
+    ? ('Template available: ' + template.taxName + ' at ' + template.rate + '%. Effective ' + TAX_TEMPLATE_EFFECTIVE + '.')
+    : 'No template for this country and region.';
+}
+
+function openTaxTemplateConfirm() {
+  if (tool.isReadOnly && tool.isReadOnly()) {
+    tool.notify('This record is read-only.', 'warning');
+    return;
+  }
+  var address = readCurrentAddressRegion();
+  var template = findTaxTemplate(address.country, address.region);
+  if (!template) {
+    tool.notify('Select a country and state or province in General first.', 'warning');
+    return;
+  }
+
+  pendingTaxTemplate = template;
+  var existingCategories = (data.taxation_currency && data.taxation_currency.tax_categories) || [];
+
+  var nameElement = document.getElementById('tax-template-confirm-name');
+  if (nameElement) nameElement.textContent = template.taxName + ' at ' + template.rate + '%';
+  var noteElement = document.getElementById('tax-template-confirm-note');
+  if (noteElement) noteElement.textContent = template.note;
+  var existingElement = document.getElementById('tax-template-confirm-existing');
+  if (existingElement) {
+    existingElement.textContent = existingCategories.length > 0
+      ? ('This replaces ' + existingCategories.length + ' existing tax categor' + (existingCategories.length === 1 ? 'y' : 'ies') + '.')
+      : 'This creates one tax category.';
+  }
+
+  var modal = document.getElementById('tax-template-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function applyTaxTemplate() {
+  if (!pendingTaxTemplate) return;
+  var template = pendingTaxTemplate;
+  pendingTaxTemplate = null;
+
+  var modal = document.getElementById('tax-template-modal');
+  if (modal) modal.style.display = 'none';
+
+  if (!data.taxation_currency) {
+    data.taxation_currency = { currency: 'USD', tax_mode: 'exclusive', tax_name: 'Tax', tax_categories: [], delivery_fee_tax_rate: 0 };
+  }
+  data.taxation_currency.tax_name = template.taxName;
+  data.taxation_currency.tax_categories = [{
+    name: template.taxName, pickup: template.rate, delivery: template.rate, in_restaurant: template.rate
+  }];
+  data.taxation_currency.delivery_fee_tax_rate = template.rate;
+
+  var nameInput = document.getElementById('tax-name');
+  if (nameInput) nameInput.value = template.taxName;
+  var feeInput = document.getElementById('tax-deliv-fee-rate');
+  if (feeInput) feeInput.value = template.rate;
+
+  renderTaxCategories();
+  renderTaxTemplateHint();
+  scheduleSave();
+  tool.notify('Tax template applied: ' + template.taxName + ' at ' + template.rate + '%.', 'success');
+}
+
+function cancelTaxTemplate() {
+  pendingTaxTemplate = null;
+  var modal = document.getElementById('tax-template-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 /* ===================================================================== */

@@ -76,13 +76,13 @@ const ROLES = [
     slug: 'curriculum-builder',
     name: 'Curriculum builder',
     hours: 'From 1 hour a week · your own pace',
-    lede: 'Build the material one task at a time: take a task from our list, finish it properly, mark it done and take the next. How much you take on is up to you.',
+    lede: 'Work through our task list with the tools we give you: finish one item properly, mark it done, take the next. No subject expertise needed.',
     doing: [
       ['doc', 'Pick one task', 'from our long, ready-made list.'],
       ['check', 'Write or check it', 'to the standard of the tasks around it.'],
       ['chart', 'Mark it done', 'and take the next one when you have time.']
     ],
-    fit: ['Solid in the subject you build for', 'Happy to work from a list, unsupervised']
+    fit: ['Confident with computers and online tools', 'Patient until one task is exactly right']
   },
   {
     slug: 'career-coach',
@@ -118,7 +118,7 @@ const ROLES = [
       ['mic', 'Teach one hour a week', 'to the live online group.'],
       ['chart', 'Find the gap', 'and tell us where it was.']
     ],
-    fit: ['Maths to grade 12 level', 'One fixed weekly slot you can hold']
+    fit: ['Maths from grade 5 to grade 12', 'One fixed weekly slot you can hold']
   },
   {
     slug: 'seminar-presenter-english',
@@ -172,13 +172,13 @@ const ROLES = [
     slug: 'online-lessons-helper',
     name: 'Online lessons helper',
     hours: 'One or more lessons · you choose how many',
-    lede: 'Sit inside the live lesson with the teacher: answer the chat, look after the students who go quiet, and follow up about dates and anything they missed.',
+    lede: 'Do the messages around each lesson and help inside it: let students and parents know it is coming, remind them of the time, and answer them in the chat while it runs.',
     doing: [
-      ['chat', 'Be in the lesson', 'alongside the teacher, every time.'],
-      ['check', 'Watch the quiet ones', 'so nobody is lost inside the hour.'],
-      ['clock', 'Follow up', 'with students and parents about dates.']
+      ['chat', 'Send the reminders', 'that the lesson is happening, and when.'],
+      ['clock', 'Follow it through', 'before the start, at the start, just after.'],
+      ['check', 'Help in the lesson', 'answer students and parents in the chat.']
     ],
-    fit: ['Comfortable in a live online session', 'Good at noticing the student who went quiet']
+    fit: ['Confident messaging students and parents', 'Punctual with reminders, helpful in the chat']
   },
   {
     slug: 'seminar-presenter-other-languages',
@@ -261,23 +261,133 @@ const EXTRA_CSS = `
 
   html[data-format="mobile"] .role-flyer .cta-giant.has-lockup { padding-top: 5mm; padding-bottom: 5mm; }
 
-  /* desktop sheets: the hero and the closing block take the leftover height */
+  /* one sheet only: nothing in a role flyer may start a fresh page */
   @media print {
-    html[data-format="desktop"] .role-flyer .page-1 .hero { flex: 1 1 auto; }
-    html[data-format="desktop"] .role-flyer .cta-giant {
-      flex: 1 1 auto;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-    }
-    /* mobile sheets: proof and the joining strip share sheet 2 with the gold block */
     html[data-format="mobile"] .role-flyer .why,
-    html[data-format="mobile"] .role-flyer .statement,
-    html[data-format="mobile"] .role-flyer .steps-strip { page-break-before: auto; break-before: auto; }
-    html[data-format="mobile"] .role-flyer .leave { page-break-before: always; break-before: page; }
-    html[data-format="mobile"] .role-flyer .statement { min-height: 0; }
-    html[data-format="mobile"] .role-flyer .positions { min-height: 0; }
-    html[data-format="mobile"] .role-flyer .cta-giant { min-height: calc(230mm - 534px); }
-    html[data-format="mobile"] .role-flyer .fit,
-    html[data-format="mobile"] .role-flyer .steps-strip { page-break-inside: avoid; break-inside: avoid; }
+    html[data-format="mobile"] .role-flyer .leave,
+    html[data-format="mobile"] .role-flyer .leave-compact {
+      page-break-before: auto; break-before: auto;
+    }
+    html[data-format="mobile"] .role-flyer .fit { page-break-inside: avoid; break-inside: avoid; }
+  }
+
+  /* =========================================================================
+     RULESET PORT - see FLYER-RULES.md
+     label pill, photo shift, print bake, phone sheet that ends on the footer
+     ========================================================================= */
+  .role-flyer .hero-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 0 0 10px; padding: 7px 15px; border-radius: 999px;
+    background: #fff; color: var(--brand-2-deep);
+    font-size: 11px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.26);
+  }
+  .role-flyer .hero-pill::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-1);
+  }
+  html[data-format="mobile"] .role-flyer .hero-pill { font-size: 10px; padding: 5px 12px; margin-bottom: 8px; }
+  /* one primary action on the narrow sheet, and no ribbon over the face */
+  html[data-format="mobile"] .role-flyer .hero .hero-cta .btn.ghost { display: none; }
+  html[data-format="mobile"] .role-flyer .ribbon { display: none; }
+
+  /* 110% wide, anchored left: the subject sits right of the copy, no gap */
+  .role-flyer .hero-photo {
+    position: absolute; top: 0; left: 0; width: 110%; height: 100%; object-fit: cover;
+  }
+
+  /* =========================================================================
+     ONE PAGE ROLE SHEET
+     Hero, what you would do, who fits, what you leave with, contacts. The
+     five-step strip, the second ticket and the giant closing block were
+     dropped: they repeated the apply action and cost a whole sheet.
+     ========================================================================= */
+  .role-flyer .leave.leave-compact { background: var(--paper); color: var(--ink); padding: 0; }
+  .role-flyer .leave-compact .inner { padding-top: 5mm; padding-bottom: 6mm; }
+  /* one small label instead of the old gold kicker + display heading */
+  .role-flyer .leave-compact .kicker {
+    display: block; margin: 0; font-size: 12px; font-weight: 900;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand-1);
+  }
+  .role-flyer .leave-compact .big-h2 { display: none; }
+  .role-flyer .leave-compact .leave-grid { margin-top: 8px; gap: 8px; }
+  .role-flyer .leave-compact .leave-item {
+    text-align: left; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--paper-soft); padding: 9px 11px;
+  }
+  .role-flyer .leave-compact .leave-ico { display: none; }
+  .role-flyer .leave-compact .leave-item strong { font-size: 12px; color: var(--ink); }
+  .role-flyer .leave-compact .leave-item span { font-size: 10px; color: var(--muted); }
+  html[data-format="mobile"] .role-flyer .leave-compact .leave-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  html[data-format="mobile"] .role-flyer .leave-compact .leave-item { padding: 7px 9px; }
+  html[data-format="mobile"] .role-flyer .leave-compact .leave-item strong { font-size: 11.5px; }
+  html[data-format="mobile"] .role-flyer .leave-compact .leave-item span { font-size: 9.5px; }
+
+  /* phone sheet: every block has to earn its height */
+  html[data-format="mobile"] .role-flyer .hero .hero-inner { padding: 20px 6mm 22px; }
+  html[data-format="mobile"] .role-flyer .hero .hero-cta { margin-top: 12px; }
+  html[data-format="mobile"] .role-flyer .why .inner { padding-top: 3mm; padding-bottom: 3mm; }
+  html[data-format="mobile"] .role-flyer .leave-compact .kicker { font-size: 10.5px; letter-spacing: 0.10em; }
+  html[data-format="mobile"] .role-flyer .reasons { gap: 5px; }
+  html[data-format="mobile"] .role-flyer .reason { padding: 7px 11px; }
+  html[data-format="mobile"] .role-flyer .fit .inner { padding-top: 3mm; padding-bottom: 3mm; }
+  html[data-format="mobile"] .role-flyer .fit-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  html[data-format="mobile"] .role-flyer .fit-item { font-size: 10.5px; }
+  html[data-format="mobile"] .role-flyer .leave-compact .inner { padding-top: 3mm; padding-bottom: 2mm; }
+
+  /* closing bar: stamp + contacts + apply, the same bar the main flyer uses */
+  .role-flyer .foot-one {
+    margin-top: auto;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px 18px; flex-wrap: wrap;
+    padding: 9px 10mm 11px;
+    background: var(--brand-2-deep); color: rgba(255, 255, 255, 0.85);
+  }
+  .role-flyer .foot-one .net-lockup {
+    margin: 0; padding: 5px 12px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.32);
+  }
+  .role-flyer .foot-one .net-lockup b { color: #fff; font-size: 12px; }
+  .role-flyer .foot-one .net-lockup span { color: rgba(255, 255, 255, 0.72); font-size: 7px; }
+  /* a long mail address must be allowed to shrink and wrap, otherwise it runs
+     underneath the apply pill on the A4 bar */
+  .role-flyer .foot-meta {
+    display: flex; flex-direction: column; gap: 1px; font-size: 8.5px; line-height: 1.5;
+    flex: 1 1 200px; min-width: 0;
+  }
+  .role-flyer .foot-meta span,
+  .role-flyer .foot-meta a { overflow-wrap: anywhere; }
+  .role-flyer .foot-meta a { color: var(--brand-3); font-weight: 700; text-decoration: none; }
+  .role-flyer .foot-apply {
+    display: inline-flex; align-items: center;
+    background: var(--brand-3); color: var(--brand-2-deep);
+    font-size: 10px; font-weight: 900; letter-spacing: 0.03em;
+    padding: 8px 15px; border-radius: 999px; text-decoration: none;
+  }
+  html[data-format="mobile"] .role-flyer .foot-one {
+    display: grid; grid-template-columns: 1fr auto; align-items: center;
+    gap: 8px 10px; padding: 10px 6mm 13px;
+  }
+  html[data-format="mobile"] .role-flyer .foot-one .net-lockup { grid-column: 1; grid-row: 1; }
+  html[data-format="mobile"] .role-flyer .foot-apply { grid-column: 2; grid-row: 1; font-size: 10px; padding: 8px 14px; }
+  html[data-format="mobile"] .role-flyer .foot-meta {
+    grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 2px 10px; font-size: 8px;
+  }
+
+  @media print {
+    /* viewers that drop alpha gradients over an image would leave the copy on
+       the bare photo, so the darkening is baked into the bitmap instead */
+    .role-flyer .hero-wash { display: none !important; }
+    .role-flyer .hero-photo { filter: brightness(0.40) saturate(0.92) contrast(1.06); }
+
+    /* the sheet ends on the closing bar; the leftover height is shared as
+       even gaps between blocks instead of one white hole */
+    .role-flyer .page { display: flex; flex-direction: column; justify-content: space-between; }
+    .role-flyer .page > .hero { flex: 0 0 auto; }
+    .role-flyer .page > .leave-compact { flex: 0 0 auto; }
+    .role-flyer .page > .foot-one { margin-top: 0; }
+    html[data-format="mobile"] .role-flyer .page { min-height: 229mm; }
+    html[data-format="mobile"] .role-flyer .page > .fit { flex: 0 0 auto; }
   }
 `;
 
@@ -303,13 +413,6 @@ function renderPage(role) {
   const applyUrl = `${SITE}/volunteer`;
   const { reasons, fitItems } = renderSections(role);
   const photo = photoFor(role.slug);
-  const showsNetwork = SHOW_NETWORK;
-  const ctaText = showsNetwork
-    ? 'Apply for a role, and you join the Future Bridge Volunteer Network when you start.'
-    : 'One form, three minutes. Choose this role and tell us when you are genuinely free.';
-  const ctaLockup = showsNetwork
-    ? `<div class="net-lockup"><b>FBVN</b><span>Future Bridge Volunteer Network</span></div>`
-    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -334,7 +437,7 @@ ${BASE_CSS}
 
 <div class="flyer role-flyer">
 
-  <!-- ============================ PAGE 1 ============================ -->
+  <!-- ============================ SHEET ============================ -->
   <div class="page page-1">
     <div class="topbar">
       <img class="topbar-logo" src="${LOGO}" alt="Future Bridge Academy">
@@ -345,7 +448,7 @@ ${BASE_CSS}
       <img class="hero-photo" src="${photo.src}" alt="" style="object-position:${photo.focus}">
       <div class="hero-wash" aria-hidden="true"></div>
       <div class="inner hero-inner">
-        <p class="kicker gold">Volunteer role</p>
+        <p class="hero-pill">Volunteer role</p>
         <h1 class="hero-title">${role.name}</h1>
         <p class="hero-lede">${role.lede}</p>
         <p class="role-hours">${role.hours}</p>
@@ -377,26 +480,7 @@ ${fitItems}
       </div>
     </section>
 
-    <div class="ticket-wrap">
-      <div class="ticket">
-        <div>
-          <strong class="ticket-strong">Apply in 3 minutes</strong>
-          <span>futurebridgeacademy.ca/volunteer</span>
-        </div>
-        <a class="ticket-btn" href="${applyUrl}">Apply <span>\u2192</span></a>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============================ PAGE 2 ============================ -->
-  <div class="page page-2">
-
-    <div class="topbar">
-      <img class="topbar-logo" src="${LOGO}" alt="Future Bridge Academy">
-      <span class="topbar-tag">Apply<br>today</span>
-    </div>
-
-    <section class="leave">
+    <section class="leave leave-compact">
       <div class="inner">
         <p class="kicker gold">What you leave with</p>
         <h2 class="big-h2 big-h2-light">Proof you can hand to <span class="hl2">anyone.</span></h2>
@@ -429,35 +513,15 @@ ${fitItems}
       </div>
     </section>
 
-    <section class="steps-strip">
-      <div class="inner">
-        <p class="fit-head">How to join</p>
-        <ol class="strip-list">
-          <li>Apply</li>
-          <li>Interview</li>
-          <li>Sample</li>
-          <li>References</li>
-          <li>Decision</li>
-        </ol>
-      </div>
-    </section>
-
-    <section class="cta-giant${showsNetwork ? ' has-lockup' : ''}">
-      <img class="cta-logo" src="${LOGO}" alt="Future Bridge Academy">
-      <h2>Apply for ${role.name}</h2>
-      <p>${ctaText}</p>
-      <a class="btn" href="${applyUrl}">Start my application <span class="arrow">\u2192</span></a>
-      <a class="cta-url-big" href="${roleUrl}">${roleUrl.replace('https://', '')}</a>
-      ${ctaLockup}
-    </section>
-
-    <div class="footer">
-      <div class="inner">
+    <!-- closing bar: stamp, contacts, apply - the last block of the sheet -->
+    <footer class="foot-one">
+      <div class="net-lockup"><b>FBVN</b><span>Future Bridge Volunteer Network</span></div>
+      <div class="foot-meta">
         <span>\u00a9 2026 Future Bridge Academy \u00b7 All rights reserved.</span>
         <span>Questions? <a href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a></span>
-        <span><a href="${SITE}/volunteer-positions">All ten roles \u2192</a></span>
       </div>
-    </div>
+      <a class="foot-apply" href="${applyUrl}">Apply online \u2192</a>
+    </footer>
   </div>
 
 </div>

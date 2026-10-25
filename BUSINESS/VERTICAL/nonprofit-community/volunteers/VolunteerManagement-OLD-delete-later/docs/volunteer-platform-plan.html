@@ -380,7 +380,7 @@
 
   <div class="callout callout-ok">
     <p><strong>Bonus:</strong> the relation type already exists in your data. Today's
-    <code>vm.eventApplications-uniconbaseapps</code> is exactly a person-event relation with a status. This is an
+    <code>vm-event-applications-uniconbaseapps</code> is exactly a person-event relation with a status. This is an
     additive upgrade of an existing object rather than a new concept, which keeps migration cheap.</p>
   </div>
 
@@ -582,7 +582,7 @@
     <tr><td>Relation</td><td>one per person + event</td><td>1 - 20</td><td>Everything that ties one person to one event</td></tr>
   </table>
 
-  <h3 id="person">3.1 Volunteer Profile (person) - <code>volunteerRegistry-uniconbaseapps</code></h3>
+  <h3 id="person">3.1 Volunteer Profile (person) - <code>volunteer-registry-uniconbaseapps</code></h3>
   <table>
     <tr><th>Group</th><th>Fields</th><th>Written by</th><th>Cap</th></tr>
     <tr><td>Identity</td><td><code>firstName, lastName, preferredName, email, emailNormalized, phone, city, photoUrl, languages[]</code></td><td>Volunteer, manager</td><td>-</td></tr>
@@ -597,7 +597,7 @@
   <p>No event arrays, no pending hours, no task list: everything that ties the person to an event lives in the
   relation.</p>
 
-  <h3 id="event">3.2 Volunteer Event - <code>vm.events-uniconbaseapps</code></h3>
+  <h3 id="event">3.2 Volunteer Event - <code>vm-events-uniconbaseapps</code></h3>
   <table>
     <tr><th>Group</th><th>Fields</th><th>Written by</th><th>Cap</th></tr>
     <tr><td>Definition</td><td><code>name, description, status (draft | open | closed | cancelled), startDate, endDate, startTime, endTime, locationName, address, city, contactName, contactPhone, contactEmail, capacity, photoUrl, notes</code></td><td>Manager only</td><td>-</td></tr>
@@ -608,7 +608,7 @@
   no messages</strong>. The event report is computed by joining this document with its relations, its tasks document,
   which the tool loads anyway.</p>
 
-  <h3 id="relation">3.3 Membership (relation) - <code>vm.eventMemberships-uniconbaseapps</code></h3>
+  <h3 id="relation">3.3 Membership (relation) - <code>vm-event-memberships-uniconbaseapps</code></h3>
   <table>
     <tr><th>Field</th><th>Meaning</th><th>Cap</th></tr>
     <tr><td><code>personId</code></td><td>Registry profile id. Indexed, used for "my events".</td><td>-</td></tr>
@@ -627,7 +627,7 @@
   <p><strong>Document id is deterministic:</strong> <code>personId + '__' + eventId</code>. That makes "is this
   person in this event?" a direct get, prevents duplicates by construction, and gives approval ids a stable prefix.</p>
 
-  <h3 id="taskdoc">3.4 Event Tasks - <code>vm.eventTasks-uniconbaseapps</code></h3>
+  <h3 id="taskdoc">3.4 Event Tasks - <code>vm-event-tasks-uniconbaseapps</code></h3>
   <table>
     <tr><th>Field</th><th>Meaning</th><th>Cap</th></tr>
     <tr><td><code>eventId, eventName</code></td><td>Owner event (indexed for the event tool, name copied for lists)</td><td>-</td></tr>
@@ -651,7 +651,7 @@
     "done" in the same minute would rewrite a 120 KB document ten times, and some writes would be lost.</p>
   </div>
 
-  <h3 id="msgdoc">3.5 Event Messages - <code>vm.eventMessages-uniconbaseapps</code></h3>
+  <h3 id="msgdoc">3.5 Event Messages - <code>vm-event-messages-uniconbaseapps</code></h3>
   <table>
     <tr><th>Field</th><th>Meaning</th><th>Cap</th></tr>
     <tr><td><code>eventId, eventName</code></td><td>Owner event</td><td>-</td></tr>

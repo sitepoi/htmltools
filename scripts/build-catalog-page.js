@@ -71,7 +71,6 @@ const TOOL_IDEA_MAP = {
   'GrantPlanner-v1-delete': { idea: 'Grant Impact Reporter', code: 'B-V-04-b' },
   GrantWorkflowManager: { idea: 'Grant Workflow Manager', code: 'B-V-04-b' },
   PledgeAndDonationTracker: { idea: 'Recurring Giving Manager', code: 'B-V-04-c' },
-  VolunteerManagement: { idea: 'Volunteer Hour Tracker & Awards', code: 'B-V-04-d' },
   VolunteerProfile: { idea: 'Volunteer Profile & Hour Portal', code: 'B-V-04-d' },
   EventVolunteerManager: { idea: 'Event Volunteer Manager', code: 'B-V-04-d' },
   BusCompanyWorkOrder: { idea: 'Bus Company Work Orders', code: 'B-V-07-a' },

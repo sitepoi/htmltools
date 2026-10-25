@@ -3,20 +3,20 @@
    Volunteer sees and maintains their own record; a manager sees any record.
 
    Object model (5 CMS object types, no array-contains queries):
-     Person         volunteerRegistry-uniconbaseapps      (this tool's host object)
-     Event          vm.events-uniconbaseapps
-     Membership     vm.eventMemberships-uniconbaseapps    id = personId + '__' + eventId
-     Event Tasks    vm.eventTasks-uniconbaseapps          id = eventId + '__tasks'
-     Event Messages vm.eventMessages-uniconbaseapps       id = eventId + '__messages' (+ '#2', '#3' ...)
+     Person         volunteer-registry-uniconbaseapps      (this tool's host object)
+     Event          vm-events-uniconbaseapps
+     Membership     vm-event-memberships-uniconbaseapps    id = personId + '__' + eventId
+     Event Tasks    vm-event-tasks-uniconbaseapps          id = eventId + '__tasks'
+     Event Messages vm-event-messages-uniconbaseapps       id = eventId + '__messages' (+ '#2', '#3' ...)
 */
 
 /* ---------------- object types ---------------- */
 var DEFAULT_TYPES = {
-  person: 'volunteerRegistry-uniconbaseapps',
-  event: 'vm.events-uniconbaseapps',
-  relation: 'vm.eventMemberships-uniconbaseapps',
-  tasks: 'vm.eventTasks-uniconbaseapps',
-  messages: 'vm.eventMessages-uniconbaseapps'
+  person: 'volunteer-registry-uniconbaseapps',
+  event: 'vm-events-uniconbaseapps',
+  relation: 'vm-event-memberships-uniconbaseapps',
+  tasks: 'vm-event-tasks-uniconbaseapps',
+  messages: 'vm-event-messages-uniconbaseapps'
 };
 
 /* ---------------- state ---------------- */
@@ -34,6 +34,8 @@ var APP = {
   events: [],
   relations: [],
   allRelations: [],
+  persons: [],
+  networkFilter: 'all',
   tasksDocs: [],
   messageDocs: [],
 
@@ -124,7 +126,8 @@ function statusLabel(status) {
     draft: 'Draft', open: 'Open', closed: 'Closed', cancelled: 'Cancelled',
     requested: 'Requested', approved: 'Approved', declined: 'Declined', removed: 'Removed',
     assigned: 'Assigned', 'in-progress': 'In progress', 'reported-done': 'Reported done',
-    confirmed: 'Confirmed', pending: 'Pending', rejected: 'Rejected'
+    confirmed: 'Confirmed', pending: 'Pending', rejected: 'Rejected',
+    candidate: 'Pending acceptance', active: 'Accepted', inactive: 'Not active', banned: 'Blocked'
   };
   return labels[status] || (status ? String(status) : '-');
 }
@@ -255,6 +258,73 @@ function isOwnProfile() {
 
 function canEditProfile() {
   return !APP.readOnly && (APP.isManager || isOwnProfile());
+}
+
+/* A profile created by the CMS can arrive without the account link. Claiming it
+   once keeps the volunteer recognised on a later visit that has no object. */
+function maybeLinkProfileToUser(done) {
+  var finished = done || function () { };
+  var userId = currentUserId();
+  if (!APP.profileObject || !userId || APP.readOnly) { finished(); return; }
+  if (String(APP.profileData.userId || '')) { finished(); return; }
+
+  var signedInEmail = String((APP.user && APP.user.email) || '').toLowerCase();
+  var profileEmail = String(APP.profileData.email || '').toLowerCase();
+  /* A manager browsing somebody else's record must not claim it as their own. */
+  var signedInUserMayClaim = !APP.isManager || (!!signedInEmail && signedInEmail === profileEmail);
+  if (!signedInUserMayClaim) { finished(); return; }
+
+  var next = simpleCopy(APP.profileData);
+  next.userId = userId;
+  next.updatedAt = isoNow();
+  updateObject(typePerson(), APP.profileObject.id, next, personNameOf(APP.profileObject), function (error) {
+    if (!error) APP.profileData.userId = userId;
+    finished();
+  });
+}
+
+/* Self service: the eight details a manager needs to match a volunteer to a role. */
+function profileCompletenessFor(profileData) {
+  var data = profileData || {};
+  var requiredFields = [
+    { key: 'firstName', label: 'first name' },
+    { key: 'lastName', label: 'last name' },
+    { key: 'email', label: 'email' },
+    { key: 'phone', label: 'phone' },
+    { key: 'city', label: 'city' },
+    { key: 'skills', label: 'skills' },
+    { key: 'languages', label: 'languages' },
+    { key: 'availabilityNotes', label: 'availability' }
+  ];
+  var missingFields = [];
+  requiredFields.forEach(function (field) {
+    if (!String(data[field.key] || '').trim()) missingFields.push(field.label);
+  });
+  var filledCount = requiredFields.length - missingFields.length;
+  return {
+    missing: missingFields,
+    filled: filledCount,
+    total: requiredFields.length,
+    percent: Math.round((filledCount / requiredFields.length) * 100)
+  };
+}
+
+function profileCompleteness() {
+  return profileCompletenessFor(APP.profileData);
+}
+
+function profileChecklistHtml() {
+  var completeness = profileCompleteness();
+  if (completeness.missing.length === 0 || !canEditProfile()) return '';
+  return '<div class="vp-checklist">'
+    + '<div class="vp-checklist-head"><strong>Your profile is ' + completeness.percent + '% complete</strong>'
+    + '<span class="vp-count">' + completeness.filled + ' of ' + completeness.total + '</span></div>'
+    + '<div class="vp-checklist-bar"><div class="vp-checklist-fill" style="width:' + completeness.percent + '%"></div></div>'
+    + '<div class="vp-hint">Still missing: ' + esc(completeness.missing.join(', '))
+    + '. A complete profile helps a manager match you to the right role.</div>'
+    + '<div class="vp-actions" style="margin-top:10px;">'
+    + '<button type="button" class="vp-btn vp-btn-outline vp-btn-tiny" onclick="showView(\'profile\')">Open my profile</button>'
+    + '</div></div>';
 }
 
 /* ---------------- data shaping ---------------- */
@@ -423,8 +493,7 @@ function commitmentText(data) {
 /* Header wording for the network state; "approved" alone would read like an
    approved application, which is a different thing. */
 function networkStatusLabel(status) {
-  var labels = { candidate: 'Awaiting approval', active: 'Active', inactive: 'Inactive', banned: 'Blocked' };
-  return labels[status] || statusLabel(status);
+  return statusLabel(status || 'candidate');
 }
 
 function positionsOf(record) {
@@ -653,7 +722,7 @@ function loadAll(done) {
       APP.allRelations = [];
       APP.tasksDocs = [];
       APP.messageDocs = [];
-      finish();
+      loadNetworkPersons(finish);
       return;
     }
 
@@ -661,28 +730,32 @@ function loadAll(done) {
     APP.profileData = vd(profileObject);
     APP.hostObjectId = profileObject.id;
 
-    queryType(typeRelation(), function (relationError, relations) {
-      if (relationError) APP.loadError = 'Memberships could not be loaded: ' + relationError;
-      var profileId = profileObject.id;
-      /* Every membership is kept: the catalog needs slot counts per position,
-         while the volunteer only ever sees and writes their own rows. */
-      APP.allRelations = relations || [];
-      APP.relations = APP.allRelations.filter(function (relation) {
-        return relationData(relation).personId === profileId;
-      });
+    /* A profile created by the CMS may arrive without the account link. Claim
+       it for the signed-in volunteer once, so the next visit recognises them. */
+    maybeLinkProfileToUser(function () {
+      queryType(typeRelation(), function (relationError, relations) {
+        if (relationError) APP.loadError = 'Memberships could not be loaded: ' + relationError;
+        var profileId = profileObject.id;
+        /* Every membership is kept: the catalog needs slot counts per position,
+           while the volunteer only ever sees and writes their own rows. */
+        APP.allRelations = relations || [];
+        APP.relations = APP.allRelations.filter(function (relation) {
+          return relationData(relation).personId === profileId;
+        });
 
-      queryType(typeEvent(), function (eventError, events) {
-        if (eventError) APP.loadError = 'Events could not be loaded: ' + eventError;
-        APP.events = events || [];
+        queryType(typeEvent(), function (eventError, events) {
+          if (eventError) APP.loadError = 'Events could not be loaded: ' + eventError;
+          APP.events = events || [];
 
-        queryType(typeTasks(), function (taskError, tasksDocs) {
-          if (taskError) APP.loadError = 'Event tasks could not be loaded: ' + taskError;
-          APP.tasksDocs = tasksDocs || [];
+          queryType(typeTasks(), function (taskError, tasksDocs) {
+            if (taskError) APP.loadError = 'Event tasks could not be loaded: ' + taskError;
+            APP.tasksDocs = tasksDocs || [];
 
-          queryType(typeMessages(), function (messageError, messageDocs) {
-            if (messageError) APP.loadError = 'Event messages could not be loaded: ' + messageError;
-            APP.messageDocs = messageDocs || [];
-            finish();
+            queryType(typeMessages(), function (messageError, messageDocs) {
+              if (messageError) APP.loadError = 'Event messages could not be loaded: ' + messageError;
+              APP.messageDocs = messageDocs || [];
+              loadNetworkPersons(finish);
+            });
           });
         });
       });
@@ -717,6 +790,18 @@ function loadAll(done) {
   });
 }
 
+/* Managers see the whole network so they can accept a new volunteer;
+   a volunteer only ever loads their own record. */
+function loadNetworkPersons(done) {
+  var finished = done || function () { };
+  if (!APP.isManager) { APP.persons = []; finished(); return; }
+  queryType(typePerson(), function (error, persons) {
+    if (error) APP.loadError = 'Volunteer profiles could not be loaded: ' + error;
+    APP.persons = persons || [];
+    finished();
+  });
+}
+
 /* ---------------- writing: relation ---------------- */
 function saveRelation(relation, data, done) {
   if (!APP.profileObject) return;
@@ -738,6 +823,8 @@ function saveRelation(relation, data, done) {
    manager sees one person with several role requests. */
 function applyToPosition(opportunityId, positionId, note) {
   if (!APP.profileObject) { notifyHost('A volunteer profile is needed before you can apply.', 'warning'); return; }
+  var acceptanceIssue = volunteerAcceptanceIssue();
+  if (acceptanceIssue) { notifyHost(acceptanceIssue, 'warning'); return; }
   var record = eventById(opportunityId);
   if (!record || !opportunityAcceptsApplications(record)) {
     notifyHost('This opportunity is not accepting applications.', 'warning');
@@ -1110,7 +1197,7 @@ function openTasksFor(eventId) {
 function startClock(opportunityId, taskId) {
   if (!APP.profileObject) { notifyHost('A volunteer profile is needed before you can clock in.', 'warning'); return; }
   if (!canWork()) { notifyHost('This view is read only.', 'warning'); return; }
-  if (APP.profileData.status === 'candidate') { notifyHost('A manager has to approve you before you can clock in.', 'warning'); return; }
+  if (APP.profileData.status === 'candidate') { notifyHost('A manager has to accept you into the volunteer network before you can clock in.', 'warning'); return; }
 
   var alreadyRunning = runningSession();
   if (alreadyRunning) {
@@ -1385,6 +1472,12 @@ function renderClockCard() {
   }
 
   var items = clockableItems();
+  if (APP.profileData.status === 'candidate') {
+    card.innerHTML = '<div class="vp-card-head"><h2>Clock in and out</h2></div>'
+      + '<div class="vp-card-body"><div class="vp-empty"><strong>Clocking opens after approval</strong>'
+      + 'A manager approves you into the volunteer network first. Once that is done, this card offers the clock, the sitting and the duty shift.</div></div>';
+    return;
+  }
   var body = '';
   if (items.length === 0) {
     body = '<div class="vp-empty"><strong>Nothing to measure right now</strong>'
@@ -1481,7 +1574,7 @@ function confirmStopClock() {
 function openClaimDutyModal(opportunityId) {
   if (!APP.profileObject) { notifyHost('A volunteer profile is needed before you can claim a shift.', 'warning'); return; }
   if (!canWork()) { notifyHost('This view is read only.', 'warning'); return; }
-  if (APP.profileData.status === 'candidate') { notifyHost('A manager has to approve you before you can claim a shift.', 'warning'); return; }
+  if (APP.profileData.status === 'candidate') { notifyHost('A manager has to accept you into the volunteer network before you can claim a shift.', 'warning'); return; }
 
   var relation = relationForEvent(opportunityId);
   if (!relation || relationData(relation).status !== 'approved') {
@@ -1973,11 +2066,11 @@ function renderAll() {
   renderNavSelection();
 
   el('vpNavFoot').textContent = APP.isManager
-    ? 'Manager view. Network status: ' + statusLabel(networkStatus) + '.'
+    ? 'Manager view. Volunteer status: ' + statusLabel(networkStatus) + '.'
     : 'Your record lives in the volunteer network.';
 
   if (APP.isManager && APP.profileObject) {
-    el('vpNavFoot').innerHTML = 'Manager view - network status: ' + badge(networkStatus);
+    el('vpNavFoot').innerHTML = 'Manager view - ' + badge(networkStatus);
   }
 
   renderDashboard();
@@ -1991,7 +2084,142 @@ function renderAll() {
   renderCertificate();
   renderProfileForm();
 
+  var networkNavButton = el('vpNavNetwork');
+  if (networkNavButton) networkNavButton.hidden = !APP.isManager;
+  renderNetwork();
+
   try { tool.resize(); } catch (error) { /* host resize is optional */ }
+}
+
+/* ---------------- volunteer network (manager acceptance) ---------------- */
+function networkStatusOf(personObject) {
+  return vd(personObject).status || 'candidate';
+}
+
+function networkRows() {
+  var filterId = APP.networkFilter || 'all';
+  var rows = (APP.persons || []).filter(function (personObject) {
+    var status = networkStatusOf(personObject);
+    if (filterId === 'pending') return status === 'candidate';
+    if (filterId === 'active') return status === 'active';
+    return true;
+  });
+  return rows.sort(function (personA, personB) {
+    var pendingA = networkStatusOf(personA) === 'candidate' ? 0 : 1;
+    var pendingB = networkStatusOf(personB) === 'candidate' ? 0 : 1;
+    if (pendingA !== pendingB) return pendingA - pendingB;
+    return personNameOf(personA).localeCompare(personNameOf(personB));
+  });
+}
+
+function renderNetwork() {
+  if (!APP.isManager) return;
+  var listNode = el('vpNetworkList');
+  if (!listNode) return;
+
+  var pendingCount = (APP.persons || []).filter(function (personObject) {
+    return networkStatusOf(personObject) === 'candidate';
+  }).length;
+  var navBadge = el('vpBadgeNetwork');
+  if (navBadge) {
+    navBadge.textContent = String(pendingCount);
+    navBadge.className = 'vp-nav-badge' + (pendingCount > 0 ? ' hot' : '');
+  }
+
+  var filterOptions = [
+    { id: 'all', label: 'Everyone' },
+    { id: 'pending', label: 'Pending acceptance' },
+    { id: 'active', label: 'Accepted' }
+  ];
+  el('vpNetworkFilters').innerHTML = filterOptions.map(function (option) {
+    var isActive = (APP.networkFilter || 'all') === option.id;
+    return '<button type="button" class="vp-filter-chip' + (isActive ? ' active' : '') + '"'
+      + ' onclick="setNetworkFilter(\'' + option.id + '\')">' + esc(option.label) + '</button>';
+  }).join('');
+
+  var rows = networkRows();
+  el('vpNetworkCount').textContent = rows.length + (rows.length === 1 ? ' person' : ' people');
+
+  if (rows.length === 0) {
+    listNode.innerHTML = '<div class="vp-empty">No volunteer profile matches this filter.</div>';
+    return;
+  }
+
+  var html = '<div class="vp-table-wrap"><table class="vp-table"><thead><tr>'
+    + '<th>Volunteer</th><th>City</th><th>Profile</th><th>Status</th><th></th>'
+    + '</tr></thead><tbody>';
+  rows.forEach(function (personObject) {
+    var data = vd(personObject);
+    var status = networkStatusOf(personObject);
+    var completeness = profileCompletenessFor(data);
+    var actions = '';
+    if (status === 'candidate') {
+      actions += '<button type="button" class="vp-btn vp-btn-tiny vp-btn-ok" onclick="acceptVolunteer(\'' + escJs(personObject.id) + '\')">Accept</button>';
+    }
+    if (status === 'active') {
+      actions += '<button type="button" class="vp-btn vp-btn-tiny vp-btn-outline" onclick="setVolunteerStatus(\'' + escJs(personObject.id) + '\',\'inactive\')">Set not active</button>';
+    }
+    if (status === 'inactive') {
+      actions += '<button type="button" class="vp-btn vp-btn-tiny vp-btn-outline" onclick="setVolunteerStatus(\'' + escJs(personObject.id) + '\',\'active\')">Accept again</button>';
+    }
+    if (status !== 'banned') {
+      actions += '<button type="button" class="vp-btn vp-btn-tiny vp-btn-bad" onclick="openBlockVolunteerModal(\'' + escJs(personObject.id) + '\')">Block</button>';
+    } else {
+      actions += '<button type="button" class="vp-btn vp-btn-tiny vp-btn-outline" onclick="setVolunteerStatus(\'' + escJs(personObject.id) + '\',\'candidate\')">Unblock</button>';
+    }
+
+    html += '<tr>'
+      + '<td><div class="vp-cell-main">' + esc(personNameOf(personObject)) + '</div>'
+      + '<div class="vp-cell-sub">' + esc(data.email || 'no email') + '</div></td>'
+      + '<td>' + esc(data.city || '-') + '</td>'
+      + '<td><div class="vp-meter"><div class="vp-meter-bar"><div class="vp-meter-fill" style="width:' + completeness.percent + '%"></div></div>'
+      + '<span class="vp-meter-text">' + completeness.percent + '%</span></div></td>'
+      + '<td>' + badge(status) + '</td>'
+      + '<td><div class="vp-actions">' + actions + '</div></td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  listNode.innerHTML = html;
+}
+
+function setNetworkFilter(filterId) {
+  APP.networkFilter = filterId === 'pending' || filterId === 'active' ? filterId : 'all';
+  renderNetwork();
+}
+
+function acceptVolunteer(personId) {
+  setVolunteerStatus(personId, 'active', 'Volunteer accepted into the network.');
+}
+
+function openBlockVolunteerModal(personId) {
+  if (!APP.isManager) return;
+  openModal('Block this volunteer?',
+    '<p>Blocking stops the person from applying to any opportunity. Approved hours stay on their record.</p>'
+    + '<div class="vp-note">You can undo this from the same list.</div>',
+    '<button type="button" class="vp-btn" onclick="closeModal()">Cancel</button>'
+    + '<button type="button" class="vp-btn vp-btn-primary" onclick="closeModal();setVolunteerStatus(\'' + escJs(personId) + '\',\'banned\')">Block</button>');
+}
+
+/* Acceptance into the volunteer network is this tool's decision. Event
+   placements are accepted in the event manager tool. */
+function setVolunteerStatus(personId, nextStatus, successMessage) {
+  if (!APP.isManager || APP.readOnly) return;
+  var personObject = null;
+  (APP.persons || []).forEach(function (candidatePerson) {
+    if (candidatePerson.id === personId) personObject = candidatePerson;
+  });
+  if (!personObject) { notifyHost('That volunteer record could not be found.', 'warning'); return; }
+
+  var nextData = simpleCopy(vd(personObject));
+  nextData.status = nextStatus;
+  nextData.updatedAt = isoNow();
+
+  updateObject(typePerson(), personId, nextData, personNameOf(personObject), function (error) {
+    if (error) { notifyHost('Could not change the volunteer status: ' + error, 'error'); return; }
+    notifyHost(successMessage || ('Volunteer status set to ' + statusLabel(nextStatus) + '.'), 'success');
+    if (APP.profileObject && APP.profileObject.id === personId) APP.profileData.status = nextStatus;
+    loadAll();
+  });
 }
 
 function renderDashboard() {
@@ -2011,18 +2239,23 @@ function renderDashboard() {
   /* start card: what this person should do next */
   var startHtml = '';
   if (!APP.profileObject) {
-    startHtml = '<div class="vp-empty"><strong>No volunteer profile found</strong>'
-      + 'This tool must be opened on a volunteer profile object, or the signed-in user needs a profile in the volunteer network.'
+    var signedInHint = APP.user && (APP.user.name || APP.user.email)
+      ? 'You are signed in as ' + esc(APP.user.name || APP.user.email) + ', but no volunteer profile is attached to this account. '
+      : '';
+    startHtml = '<div class="vp-empty"><strong>No volunteer profile is linked yet</strong>'
+      + signedInHint
+      + 'Ask ' + esc(orgName()) + ' to create your volunteer profile, or to attach this tool to your profile. Then reload the page.'
       + '</div>';
   } else if (APP.profileData.status === 'candidate') {
-    startHtml = '<div class="vp-empty"><strong>Waiting for network approval</strong>'
-      + 'A manager has to approve you into the volunteer network before you can apply for an opportunity.'
-      + '</div>';
+    startHtml = '<div class="vp-empty"><strong>Waiting for acceptance</strong>'
+      + 'A manager accepts you into the volunteer network before you can apply for an opportunity. '
+      + 'Use the time to complete your details, so the first review is quick.'
+      + '</div>' + profileChecklistHtml();
   } else if (relationsOfProfile().length === 0) {
     startHtml = '<div class="vp-empty"><strong>You have not joined anything yet</strong>'
       + 'Open <em>Find opportunities</em> to see every event, project and role that needs volunteers.'
       + '<div style="margin-top:10px;"><button type="button" class="vp-btn vp-btn-primary" onclick="showView(\'opportunities\')">Find opportunities</button></div>'
-      + '</div>';
+      + '</div>' + profileChecklistHtml();
   } else {
     var nextEventId = '';
     var nextDate = '9999-12-31';
@@ -2264,8 +2497,9 @@ function positionRowHtml(record, position) {
     actionHtml = '<span class="vp-badge vp-badge-closed">Full</span>';
   } else if (!APP.profileObject) {
     actionHtml = '<span class="vp-cell-sub">No profile</span>';
-  } else if (APP.profileData.status === 'candidate') {
-    actionHtml = '<span class="vp-badge vp-badge-requested">Approval pending</span>';
+  } else if (volunteerAcceptanceIssue()) {
+    actionHtml = '<span class="vp-badge vp-badge-requested">'
+      + (APP.profileData.status === 'candidate' ? 'Acceptance pending' : 'Not accepted') + '</span>';
   } else if (!canWork()) {
     actionHtml = '<span class="vp-cell-sub">Read only</span>';
   } else {
@@ -2567,13 +2801,13 @@ function renderProfileForm() {
   var data = APP.profileData;
   var statusField = '';
   if (APP.isManager) {
-    statusField = '<div class="vp-field"><label for="vpProfileStatusSelect">Network status</label>'
+    statusField = '<div class="vp-field"><label for="vpProfileStatusSelect">Volunteer status</label>'
       + '<select class="vp-select" id="vpProfileStatusSelect"' + disabled + '>'
       + ['candidate', 'active', 'inactive', 'banned'].map(function (status) {
         return '<option value="' + status + '"' + ((data.status || 'candidate') === status ? ' selected' : '') + '>'
-          + esc(statusLabel(status === 'active' ? 'approved' : status)) + '</option>';
+          + esc(statusLabel(status)) + '</option>';
       }).join('')
-      + '</select><div class="vp-hint">Only a manager can change the network status.</div></div>';
+      + '</select><div class="vp-hint">Acceptance into the network is a manager decision. Event placements are accepted in the event manager tool.</div></div>';
   }
 
   var html = '<div class="vp-field-row">'
@@ -2610,6 +2844,15 @@ function renderProfileForm() {
 
 function canWork() {
   return !APP.readOnly && (APP.isManager || isOwnProfile());
+}
+
+/* Acceptance into the network is the profile tool's decision, so every write
+   action asks the same question first. */
+function volunteerAcceptanceIssue() {
+  var status = APP.profileData.status || 'candidate';
+  if (status === 'active') return '';
+  if (status === 'candidate') return 'A manager has to accept you into the volunteer network first.';
+  return 'Your volunteer record is ' + statusLabel(status).toLowerCase() + ', so this action is closed. Ask the volunteer team.';
 }
 
 /* ---------------- views, selection ---------------- */

@@ -191,23 +191,11 @@
   }
   .hero .hero-cta { margin-top: 18px; padding-right: 122px; }
   .btn-xl { font-size: 15px; padding: 13px 22px; border-radius: 12px; box-shadow: 0 12px 26px rgba(0,0,0,0.22); }
-  .hero-badge {
-    position: absolute; right: 10mm; bottom: 10mm; z-index: 2;
-    width: 100px; height: 100px; border-radius: 50%;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: var(--brand-1); color: #fff;
-    border: 3px solid rgba(255,255,255,0.9);
-    box-shadow: 0 14px 30px rgba(0,0,0,0.28);
-    transform: rotate(8deg);
-  }
-  .hero-badge strong { font-size: 34px; line-height: 1; letter-spacing: -0.03em; }
-  .hero-badge span { font-size: 8.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px; }
   @media (max-width: 639px) {
     .hero .hero-inner { padding-top: 18px; padding-bottom: 20px; }
     .hero .hero-title { font-size: 27px; max-width: none; }
     .hero .hero-lede { font-size: 12px; }
     .hero .hero-cta { padding-right: 0; }
-    .hero-badge { display: none; }
   }
 
   /* ---- three reasons ---- */
@@ -360,9 +348,19 @@
       radial-gradient(120% 90% at 98% 4%, rgba(255,107,53,0.55) 0%, rgba(255,107,53,0) 62%);
   }
   .hero .hero-inner { position: relative; z-index: 2; padding: 13mm 10mm 13mm; }
-  .hero .hero-title { font-size: 38px; max-width: 88%; }
-  .hero .hero-lede { max-width: 44ch; margin-top: 14px; }
-  .hero .hero-cta { margin-top: 20px; padding-right: 0; }
+  .hero .hero-title { font-size: 36px; max-width: none; }
+  .hero .hero-lede { max-width: 42ch; margin-top: 12px; }
+  .hero .hero-cta { margin-top: 18px; padding-right: 0; }
+
+  /* the first thing a reader must understand: this is about volunteering */
+  .hero-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 0 0 10px; padding: 7px 15px; border-radius: 999px;
+    background: var(--brand-3); color: var(--brand-2-deep);
+    font-size: 11px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.26);
+  }
+  .hero-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-1); }
 
   /* thin colour slash that closes the photo like a printed edge */
   .slash {
@@ -382,8 +380,8 @@
     padding: 7px 0; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
   }
   @media (max-width: 639px) {
-    .ribbon { width: 96px; height: 96px; }
-    .ribbon span { top: 22px; right: -54px; width: 168px; font-size: 7.5px; }
+    .ribbon { width: 78px; height: 78px; }
+    .ribbon span { top: 18px; right: -58px; width: 158px; font-size: 7px; padding: 5px 0; }
     .hero .hero-title { font-size: 28px; max-width: none; }
     .hero .hero-inner { padding: 20px 14px 24px; }
   }
@@ -418,8 +416,14 @@
   /* roles we need most right now: the first rows of the list */
   a.role.is-hot { background: #FFF6E2; box-shadow: inset 4px 0 0 var(--brand-3); }
   a.role.is-hot .role-name { font-weight: 800; }
-  .role-name { font-size: 12px; }
-  .role-time { font-size: 9px; padding: 3px 7px; }
+  .role-name { font-size: 13px; letter-spacing: -0.004em; }
+  .role-time { font-size: 9px; padding: 3px 8px; }
+  /* the arrow says: there is a full job description behind this row */
+  a.role::after {
+    content: "\2192"; flex: 0 0 auto;
+    font-size: 13px; font-weight: 900; line-height: 1;
+    color: var(--brand-1);
+  }
   /* each tile is a link to that role's page on the website */
   a.role { color: var(--ink); text-decoration: none; }
   a.role:hover { box-shadow: 0 10px 20px rgba(16, 42, 67, 0.12); }
@@ -545,13 +549,16 @@
   html[data-format="mobile"] .topbar-tag { font-size: 8px; }
 
   html[data-format="mobile"] .hero { clip-path: none; }
-  html[data-format="mobile"] .hero .hero-inner { padding: 16px 6mm 18px; }
-  html[data-format="mobile"] .hero .hero-title { font-size: 27px; max-width: none; }
-  html[data-format="mobile"] .hero .hero-lede { font-size: 13px; max-width: none; }
-  html[data-format="mobile"] .hero .hero-cta { padding-right: 0; margin-top: 16px; }
+  html[data-format="mobile"] .hero .hero-inner { padding: 12px 6mm 14px; }
+  html[data-format="mobile"] .hero .hero-title { font-size: 21px; max-width: none; }
+  html[data-format="mobile"] .hero .hero-lede { font-size: 12px; max-width: none; margin-top: 8px; }
+  html[data-format="mobile"] .hero .hero-cta { padding-right: 0; margin-top: 12px; }
+  /* the roles list sits right below, so the second button is not needed on a phone sheet */
+  html[data-format="mobile"] .hero .hero-cta .btn.ghost { display: none; }
+  html[data-format="mobile"] .hero-pill { font-size: 8.5px; letter-spacing: 0.13em; padding: 4px 11px; margin-bottom: 6px; }
   html[data-format="mobile"] .btn-xl { font-size: 14px; padding: 12px 18px; }
-  html[data-format="mobile"] .ribbon { width: 96px; height: 96px; }
-  html[data-format="mobile"] .ribbon span { top: 22px; right: -54px; width: 168px; font-size: 7.5px; }
+  html[data-format="mobile"] .ribbon { width: 78px; height: 78px; }
+  html[data-format="mobile"] .ribbon span { top: 18px; right: -58px; width: 158px; font-size: 7px; padding: 5px 0; }
   html[data-format="mobile"] .slash { height: 7px; }
 
   html[data-format="mobile"] .why .inner { padding-top: 5mm; padding-bottom: 5mm; }
@@ -562,9 +569,10 @@
 
   html[data-format="mobile"] .positions .inner { padding-top: 6mm; padding-bottom: 6mm; }
   html[data-format="mobile"] .big-h2 { font-size: 22px; margin-bottom: 10px; }
-  html[data-format="mobile"] .role-grid { grid-template-columns: 1fr; gap: 6px; }
-  html[data-format="mobile"] .role { padding: 6px 11px; gap: 8px; }
-  html[data-format="mobile"] .role-time { display: none; }
+  html[data-format="mobile"] .role-grid { grid-template-columns: 1fr; gap: 5px; }
+  html[data-format="mobile"] .role { padding: 6px 10px; gap: 8px; }
+  html[data-format="mobile"] .role-time { display: inline-block; font-size: 8px; padding: 2px 6px; }
+  html[data-format="mobile"] a.role::after { display: none; }
   html[data-format="mobile"] .role-name { font-size: 12.5px; }
   html[data-format="mobile"] .role-num { width: 20px; height: 20px; font-size: 10px; }
   html[data-format="mobile"] .role-foot { font-size: 11.5px; }
@@ -669,11 +677,10 @@
       <img class="hero-photo" src="https://images.pexels.com/photos/6683675/pexels-photo-6683675.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="">
       <div class="hero-wash" aria-hidden="true"></div>
       <div class="inner hero-inner">
-        <p class="kicker gold">Volunteer with us</p>
-        <h1 class="hero-title">Help a student get further.<span class="hl">Proof that lasts.</span></h1>
+        <p class="hero-pill">Volunteer with us</p>
+        <h1 class="hero-title">Help students in many ways.<span class="hl">Earn volunteer hours +&nbsp;certificate.</span></h1>
         <p class="hero-lede">
-          Free lessons and monthly mock exams, run by volunteers.
-          Ten roles, real students, and a written record of what you gave.
+          Teach, coach, present, organise - ten ways to help, from one hour a week.
         </p>
         <div class="hero-cta">
           <a class="btn btn-xl" href="https://futurebridgeacademy.ca/volunteer">Apply in 3 minutes <span class="arrow">→</span></a>
@@ -703,7 +710,7 @@
           <a class="role" href="https://futurebridgeacademy.ca/volunteer-role-seminar-presenter-other-languages"><span class="role-num">10</span><span class="role-name">Scholarship presenter (other languages)</span><span class="role-time">flexible</span></a>
         </div>
 
-        <p class="role-foot"><strong>Most roles start at one hour a week.</strong> All of them are open now, from any city in Canada.</p>
+        <p class="role-foot"><strong>Most roles start at one hour a week.</strong> Open anywhere in Canada - every role has a job description online.</p>
       </div>
     </section>
 
@@ -720,7 +727,7 @@
             <span class="reason-ico" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.6h6.6L18 8v12.4H7z"/><path d="M13.4 3.6V8H18"/><path d="M9.6 12.4h5.4M9.6 16h3.6"/></svg>
             </span>
-            <p class="reason-txt"><strong>You leave with proof</strong>Hours, reference, support letter.</p>
+            <p class="reason-txt"><strong>You leave with proof</strong>Hours, certificate, reference.</p>
           </div>
           <div class="reason">
             <span class="reason-ico" aria-hidden="true">

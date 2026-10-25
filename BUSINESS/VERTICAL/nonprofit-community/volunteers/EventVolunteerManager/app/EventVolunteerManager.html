@@ -1,7 +1,8 @@
 <!-- EventVolunteerManager
-     One tool instance = ONE event object (host object), created in the CMS.
-     This tool manages the event information and every connection between the event and its volunteers:
-     requests, roles, tasks, hours, messages and the report.
+     One tool instance = ONE event object (host object), held by the CMS.
+     This tool is the only place the event details are written: dates, place, capacity, contact,
+     the volunteering offer type and its roles. It also manages every connection between the event
+     and its volunteers: requests, roles, tasks, hours, messages and the report.
 -->
 
 <div class="et-app" id="etApp">
@@ -76,7 +77,10 @@
           <div class="et-card-body" id="etHoursByVolunteer"></div>
         </div>
         <div class="et-card">
-          <div class="et-card-head"><h2>Waiting for approval</h2></div>
+          <div class="et-card-head">
+            <h2>Waiting for approval</h2>
+            <button type="button" class="et-btn et-btn-primary" id="etApproveAllBtn">Approve all</button>
+          </div>
           <div class="et-card-body" id="etHoursPending"></div>
         </div>
         <div class="et-card">
@@ -111,20 +115,13 @@
       </section>
 
       <section class="et-panel" id="etPanelEvent">
-        <p class="et-lead">The event information itself. The event object is created in the CMS; this screen maintains it and its roles.</p>
+        <p class="et-lead">The details of this event, the people volunteers can call, and the positions they can apply for.</p>
         <div class="et-card">
           <div class="et-card-head">
-            <h2>Event definition</h2>
+            <h2>Event details</h2>
             <span class="et-count" id="etEventUpdated"></span>
           </div>
           <div class="et-card-body" id="etEventForm"></div>
-        </div>
-        <div class="et-card">
-          <div class="et-card-head">
-            <h2>Roles</h2>
-            <button type="button" class="et-btn et-btn-outline" id="etAddPositionBtn">Add role</button>
-          </div>
-          <div class="et-card-body" id="etPositionList"></div>
         </div>
       </section>
 

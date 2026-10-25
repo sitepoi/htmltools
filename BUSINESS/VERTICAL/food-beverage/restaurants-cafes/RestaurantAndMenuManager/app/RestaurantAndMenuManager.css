@@ -2209,3 +2209,31 @@ hr.modal-sep { border: none; border-top: 1px solid var(--slate-100); margin: 12p
 .import-file-row .field-hint { margin: 0; }
 .deal-import-checks { display: flex; flex-wrap: wrap; gap: 10px 18px; }
 .deal-import-checks .radio-label { font-size: 12px; }
+
+/* ===== Location coordinate picker (T-50) ===== */
+.coord-picker-block { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.coord-picker-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.coord-picker-actions .field-hint { margin: 0; }
+.coord-map-wrap { display: flex; flex-direction: column; gap: 8px; }
+#gen-coord-map {
+  height: 240px; border-radius: 10px;
+  border: 1px solid var(--slate-100); background: var(--slate-50);
+}
+.coord-map-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.coord-map-tools .form-input { flex: 1 1 240px; }
+
+/* ===== Delivery map toolbar (T-50) ===== */
+.zone-map-toolbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+
+/* ===== Tax template row (T-59) ===== */
+.tax-template-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.tax-template-row .field-hint { margin: 0; }
+
+/* ===== AI deal generation (T-52, T-62) ===== */
+.deal-ai-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+.deal-ai-types .radio-label { font-size: 12px; }
+
+@media (max-width: 480px) {
+  .deal-ai-types { grid-template-columns: 1fr; }
+  #gen-coord-map { height: 200px; }
+}

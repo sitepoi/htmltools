@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Restaurant &amp; Menu Manager - Deal Types Guide</title>
+	<!-- Inter webfont, same as the SSOT documents; falls back to Segoe UI offline -->
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+	<style>
+		:root {
+			--ink: #0f172a;
+			--text: #1e293b;
+			--muted: #64748b;
+			--accent: #4f46e5;
+			--accent-2: #7c3aed;
+			--line: #e2e8f0;
+			--soft: #f8fafc;
+			--soft-2: #f1f5f9;
+			--green: #15803d;
+			--green-bg: #dcfce7;
+			--amber: #b45309;
+			--amber-bg: #fef3c7;
+			--red: #b91c1c;
+			--red-bg: #fee2e2;
+			--blue-bg: #dbeafe;
+			--blue: #1e40af;
+			--font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+			--mono: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+		}
+
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+
+		html { scroll-behavior: smooth; }
+
+		body {
+			font-family: var(--font);
+			background: #f6f8fb;
+			color: var(--text);
+			line-height: 1.6;
+			display: flex;
+			min-height: 100vh;
+		}
+
+		nav.toc {
+			width: 280px;
+			flex-shrink: 0;
+			background: #ffffff;
+			border-right: 1px solid var(--line);
+			position: sticky;
+			top: 0;
+			height: 100vh;
+			overflow-y: auto;
+			padding: 24px 16px;
+			font-size: 0.82rem;
+		}
+
+		nav.toc .toc-title {
+			font-size: 0.7rem;
+			letter-spacing: .12em;
+			text-transform: uppercase;
+			color: var(--muted);
+			font-weight: 700;
+			margin-bottom: 12px;
+		}
+
+		nav.toc ol { list-style: none; }
+
+		nav.toc a {
+			display: block;
+			color: var(--text);
+			text-decoration: none;
+			padding: 4px 10px;
+			border-radius: 6px;
+		}
+
+		nav.toc a:hover { background: var(--soft-2); }
+
+		nav.toc a.active {
+			background: #eef2ff;
+			color: var(--accent);
+			font-weight: 600;
+		}
+
+		main {
+			flex: 1;
+			min-width: 0;
+			padding: 40px 48px 120px;
+			max-width: 980px;
+		}
+
+		h1 {
+			font-size: 1.9rem;
+			color: var(--ink);
+			letter-spacing: -0.02em;
+			margin-bottom: 4px;
+		}
+
+		.subtitle {
+			color: var(--muted);
+			font-size: 1rem;
+			margin-bottom: 8px;
+		}
+
+		.meta {
+			font-size: 0.9rem;
+			color: var(--muted);
+			border-bottom: 1px solid var(--line);
+			padding-bottom: 16px;
+			margin-bottom: 28px;
+		}
+
+		h2 {
+			font-size: 1.3rem;
+			color: var(--ink);
+			margin: 48px 0 14px;
+			padding-bottom: 8px;
+			border-bottom: 2px solid var(--line);
+			scroll-margin-top: 24px;
+		}
+
+		h3 {
+			font-size: 1.05rem;
+			color: var(--ink);
+			margin: 28px 0 10px;
+			scroll-margin-top: 24px;
+		}
+
+		p { margin: 10px 0; font-size: 1rem; }
+
+		ul, ol { margin: 8px 0 8px 24px; font-size: 1rem; }
+		li { margin: 5px 0; }
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.92rem;
+			margin: 14px 0;
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			overflow: hidden;
+		}
+
+		th {
+			background: var(--soft-2);
+			text-align: left;
+			font-size: 0.92rem;
+			text-transform: uppercase;
+			letter-spacing: .05em;
+			color: var(--muted);
+			padding: 9px 12px;
+			border-bottom: 1px solid var(--line);
+		}
+
+		td {
+			padding: 9px 12px;
+			border-bottom: 1px solid var(--line);
+			vertical-align: top;
+		}
+
+		tr:last-child td { border-bottom: none; }
+
+		.callout {
+			border-radius: 8px;
+			padding: 12px 16px;
+			margin: 14px 0;
+			font-size: 0.93rem;
+		}
+
+		.callout-note {
+			background: var(--blue-bg);
+			color: #1e3a8a;
+			border-left: 4px solid #2563eb;
+		}
+
+		.callout-warn {
+			background: var(--amber-bg);
+			color: #78350f;
+			border-left: 4px solid #d97706;
+		}
+
+		.callout-ok {
+			background: var(--green-bg);
+			color: #14532d;
+			border-left: 4px solid #16a34a;
+		}
+
+		.deal-head {
+			display: flex;
+			align-items: baseline;
+			gap: 12px;
+			flex-wrap: wrap;
+			margin: 34px 0 6px;
+			padding-bottom: 6px;
+			border-bottom: 1px solid var(--line);
+			scroll-margin-top: 24px;
+		}
+
+		.deal-head .deal-num {
+			font-family: var(--mono);
+			font-size: 0.8rem;
+			font-weight: 700;
+			color: var(--accent);
+			background: #eef2ff;
+			border: 1px solid #e0e7ff;
+			padding: 2px 10px;
+			border-radius: 6px;
+		}
+
+		.deal-head h3 { margin: 0; }
+
+		.pill {
+			display: inline-block;
+			padding: 1px 8px;
+			border-radius: 999px;
+			font-size: 0.7rem;
+			font-weight: 700;
+			background: var(--soft-2);
+			color: var(--muted);
+			margin-left: 6px;
+			vertical-align: 2px;
+		}
+
+		.pill-blue { background: #eef2ff; color: var(--accent); }
+		.pill-green { background: var(--green-bg); color: var(--green); }
+		.pill-amber { background: var(--amber-bg); color: var(--amber); }
+
+		.sell-box {
+			background: #eef2ff;
+			border: 1px solid #e0e7ff;
+			border-left: 4px solid var(--accent);
+			border-radius: 8px;
+			padding: 12px 16px;
+			margin: 14px 0;
+			font-size: 0.93rem;
+			color: #312e81;
+		}
+
+		.sell-box .sell-label {
+			display: block;
+			font-size: 0.7rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: .08em;
+			color: var(--accent);
+			margin-bottom: 4px;
+		}
+
+		/* ---------- print button (screen only) ---------- */
+		#print-btn {
+			position: fixed;
+			top: 16px;
+			right: 16px;
+			z-index: 60;
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 10px 16px;
+			background: var(--accent);
+			color: #ffffff;
+			border: none;
+			border-radius: 8px;
+			font-family: var(--font);
+			font-size: 0.9rem;
+			font-weight: 600;
+			cursor: pointer;
+			box-shadow: 0 4px 14px rgba(79, 70, 229, .35);
+		}
+
+		#print-btn:hover { background: #4338ca; }
+		#print-btn svg { display: block; flex-shrink: 0; }
+
+		@media (max-width: 900px) {
+			body { flex-direction: column; }
+			nav.toc { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--line); }
+			main { padding: 24px 18px 80px; }
+		}
+
+		/* ---------- PDF export page layout ---------- */
+		@page {
+			size: A4;
+			margin: 16mm 14mm;
+		}
+
+		@media print {
+			body {
+				display: block;
+				background: #ffffff;
+				color: #000000;
+			}
+
+			nav.toc,
+			#print-btn {
+				display: none !important;
+			}
+
+			main {
+				max-width: none;
+				padding: 0;
+			}
+
+			.meta { border-bottom: none; }
+
+			h1 { font-size: 1.6rem; }
+
+			h2,
+			h3,
+			.deal-head {
+				page-break-after: avoid;
+				break-after: avoid;
+			}
+
+			.deal-head,
+			.callout,
+			.sell-box,
+			table,
+			ul,
+			ol,
+			li,
+			tr {
+				page-break-inside: avoid;
+				break-inside: avoid;
+			}
+
+			a {
+				color: inherit;
+				text-decoration: none;
+			}
+
+			* {
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+			}
+		}
+	</style>
+</head>
+
+<body>
+
+	<nav class="toc">
+		<div class="toc-title">Contents</div>
+		<ol>
+			<li><a href="#overview">1. Overview</a></li>
+			<li><a href="#quickref">2. Quick Reference Table</a></li>
+			<li><a href="#bundle">3. Bundle</a></li>
+			<li><a href="#min-quantity">4. Minimum Quantity</a></li>
+			<li><a href="#tiered">5. Tiered</a></li>
+			<li><a href="#two-for-one">6. Two For One</a></li>
+			<li><a href="#percentage">7. Percentage Discount</a></li>
+			<li><a href="#subtotal">8. Subtotal Threshold</a></li>
+			<li><a href="#free-delivery">9. Free Delivery</a></li>
+			<li><a href="#free-item">10. Free Item With Purchase</a></li>
+			<li><a href="#buy-n-get-m">11. Buy N Get M</a></li>
+			<li><a href="#volume">12. Volume Pricing</a></li>
+			<li><a href="#free-modifier">13. Free Modifier Options</a></li>
+			<li><a href="#schedule">14. Scheduling Any Deal</a></li>
+			<li><a href="#promo-codes">15. Promo Codes</a></li>
+			<li><a href="#campaigns">16. Older Campaigns</a></li>
+			<li><a href="#closing">17. How Deals Sell the Product</a></li>
+		</ol>
+	</nav>
+
+	<button type="button" id="print-btn" title="Export this guide as a PDF" onclick="window.print()">
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<polyline points="6 9 6 2 18 2 18 9"></polyline>
+			<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+			<rect x="6" y="14" width="12" height="8"></rect>
+		</svg>
+		Print / PDF
+	</button>
+
+	<main>
+
+		<h1>Restaurant &amp; Menu Manager - Deal Types Guide</h1>
+		<p class="subtitle">A plain-language marketing handbook: what each deal type does for customers, ready-to-run example offers, when to use each one, and the sales pitch behind it.</p>
+		<p class="meta">Version 2.0 · 2026-10-24 · Written for the marketing team. No technical knowledge needed.</p>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="overview">1. Overview</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>The Deals tab turns a menu from a static price list into a marketing engine. A restaurant owner can put together a customer offer in minutes - no developer, no waiting - and the online ordering checkout applies every offer automatically. This guide explains all <strong>11 deal types</strong>, the optional <strong>schedule</strong> that works on any offer, <strong>promo codes</strong>, and the older <strong>campaigns</strong> that still work.</p>
+
+		<div class="callout callout-note">
+			<strong>One way to think about it.</strong> Every offer in the system is one of three things:
+			<ul>
+				<li><strong>A package</strong> the customer personalizes: bundle, tiered, two for one, free item with purchase, buy N get M.</li>
+				<li><strong>A price rule</strong> the checkout applies automatically: minimum quantity, volume pricing, percentage discount, subtotal threshold.</li>
+				<li><strong>A perk</strong> attached to the order: free delivery, free modifier.</li>
+			</ul>
+		</div>
+
+		<p>Each section below contains:</p>
+		<ul>
+			<li><strong>What it does</strong> - the customer experience in plain words.</li>
+			<li><strong>How it is set up</strong> - what the restaurant owner selects in the Deals tab.</li>
+			<li><strong>Example offer</strong> - a ready-to-run promotion idea.</li>
+			<li><strong>Use cases</strong> - concrete restaurant scenarios.</li>
+			<li><strong>Value to the restaurant</strong> - why it makes the restaurant money or saves it time.</li>
+			<li><strong>Sales angle</strong> - one sentence that sells this capability during a demo.</li>
+		</ul>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="quickref">2. Quick Reference Table</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<table>
+			<tr>
+				<th>Deal type</th>
+				<th>What the customer experiences</th>
+				<th>Best suited for</th>
+				<th>Pricing</th>
+			</tr>
+			<tr><td>Bundle</td><td>Picks N items from groups, pays one fixed total.</td><td>Meal deals, family combos, party packs.</td><td>Fixed total</td></tr>
+			<tr><td>Minimum Quantity</td><td>Buys at least N of an item at a special per-unit price.</td><td>Bulk snacks, drinks by the can, wings by the piece.</td><td>Per unit</td></tr>
+			<tr><td>Tiered</td><td>Chooses a quantity tier, each tier has its own total.</td><td>Catering packs, "small / large" offer ladders.</td><td>Per tier</td></tr>
+			<tr><td>Two For One</td><td>Picks two items, the cheaper one is free.</td><td>Pizza pairs, sandwich duos, happy hour doubles.</td><td>Free cheaper item</td></tr>
+			<tr><td>Percentage Discount</td><td>Gets X% off selected items or the whole order.</td><td>Category sales, slow-day pushes, whole-order promos.</td><td>Automatic</td></tr>
+			<tr><td>Subtotal Threshold</td><td>Spends a minimum and saves a fixed amount.</td><td>"Spend 50, save 10" average-order boosters.</td><td>Automatic</td></tr>
+			<tr><td>Free Delivery</td><td>Pays no delivery fee, above a threshold or always.</td><td>Delivery adoption, zone competition.</td><td>Automatic</td></tr>
+			<tr><td>Free Item With Purchase</td><td>Buys the paid group, gets the free group included.</td><td>"Buy a pizza, get a dip", gift-with-purchase.</td><td>Automatic</td></tr>
+			<tr><td>Buy N Get M</td><td>Buys N items, M more are free.</td><td>"Buy 3 get 1" volume pushes on repeatable items.</td><td>Automatic</td></tr>
+			<tr><td>Volume Pricing</td><td>Unit price drops automatically as quantity rises.</td><td>Wholesale-style bands on wings, cans, desserts.</td><td>Per band</td></tr>
+			<tr><td>Free Modifier Options</td><td>Cheapest topping or extra comes free.</td><td>Pizza toppings, coffee syrups, burger add-ons.</td><td>Automatic</td></tr>
+		</table>
+
+		<div class="callout callout-ok">
+			<strong>Every offer can also be scheduled</strong> (section 14) and switched off at any time, so the same eleven building blocks cover daily deals, weekends, seasons and one-off campaigns.
+		</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 1</span>
+			<h3 id="bundle">Bundle <span class="pill pill-blue">fixed total</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The owner assembles groups (2 pizzas, 4 dips, a fixed dessert). The customer picks the required items from each group inside one popup and pays one fixed total. Groups can be choices the customer makes, or fixed extras that are included automatically.</p>
+
+		<p><strong>How it is set up.</strong> In the Deals tab the owner builds the groups: for example "2 medium pizzas" and "4 dips". The customer picks the required items from each group in a single popup. Fixed extras can also be added in automatically.</p>
+
+		<p><strong>Example offer.</strong> Two medium pizzas + four dips for 29.99. The customer chooses any two medium pizzas and any four dips, and the checkout charges one flat price.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Family meal: any 2 large pizzas + 4 dips + 1 drink for one price.</li>
+			<li>Combo nights: burger + fries + drink as a single-priced combo.</li>
+			<li>Party packs: wings by the platter + sides + dessert, one total.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> Bundles raise the average order value because customers buy a package instead of one item. A fixed total is easy to price against food cost, and the kitchen knows exactly what is included.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Build your own meal deal in one popup, price it as one total, and watch every order grow by two or three items."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 2</span>
+			<h3 id="min-quantity">Minimum Quantity <span class="pill pill-blue">price per unit</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The customer must buy at least N of a matching item, and every unit costs the deal price. This is how restaurants sell "minimum 6 wings at $1 each" or "minimum 10 cans at $1.50". The cart starts at the minimum, and the customer can always add more.</p>
+
+		<p><strong>How it is set up.</strong> The owner picks the products (a whole category or a single item), a minimum quantity, and the special per-unit price. The customer's cart starts at that minimum, and every unit costs the deal price.</p>
+
+		<p><strong>Example offer.</strong> Minimum 10 wings at 1.40 each. The customer can order 10, 12 or 20 - but never fewer than 10.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Wings by the piece with a minimum order ("10 wings, $1.40 each").</li>
+			<li>Drinks by the can for offices ("minimum 12 cans").</li>
+			<li>Bakery boxes where customers pick a minimum number of pastries.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> It moves slow stock in larger quantities while keeping a clear per-unit margin. The minimum protects profitability that a single discounted unit would destroy.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Sell wings, cans and pastries by the piece with a floor that protects your margin - the customer still feels they got a deal."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 3</span>
+			<h3 id="tiered">Tiered <span class="pill pill-blue">price per tier</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The owner defines quantity tiers, each with its own total price and label. The customer picks a tier, sees exactly what is included, and pays that tier's total.</p>
+
+		<p><strong>How it is set up.</strong> The owner defines the ladder in the Deals tab: each tier has a quantity, a total price and a label. The customer sees all tiers side by side and picks one.</p>
+
+		<p><strong>Example offer.</strong> Pizza party: 2 pizzas for 24, or 3 pizzas for 33. The customer chooses the package that fits the group.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Catering ladders: 10 / 20 / 50 lahmacun at stepped totals.</li>
+			<li>Pizza parties: "2 pizzas for 24, 3 for 33" pushes customers one tier up.</li>
+			<li>Dessert trays with small, medium and large packages.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> Tiers upsell themselves: the next tier is always priced so the customer feels the extra quantity is almost free, growing the order while the owner keeps control of each total.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Show three package sizes side by side and let the bigger package sell itself - you set every total."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 4</span>
+			<h3 id="two-for-one">Two For One <span class="pill pill-blue">cheapest item free</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The customer picks two separate products inside the deal popup. The more expensive pick is charged, the cheaper one is free, and both arrive as one cart line showing Paid / FREE rows and a deal discount row in the totals. This is also how older campaign offers appear on the website.</p>
+
+		<p><strong>How it is set up.</strong> The owner chooses which products qualify: optionally one category, and whether both picks must be the same size. The checkout charges the pricier pick and makes the cheaper one free.</p>
+
+		<p><strong>Example offer.</strong> Buy one pizza, get one free: the customer picks any two pizzas of the same size and only pays for the more expensive one.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Pizza nights: "buy one pizza, get one free" on quiet weekdays.</li>
+			<li>Sandwich or wrap duos for office lunch runs.</li>
+			<li>Dessert pairs after a main course.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> It doubles unit movement while the customer pays for the more expensive item, so margin stays above cost. It is the strongest traffic driver in the tool and the classic first promotion every restaurant asks for.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"A buy-one-get-one that handles pairs, sizes and the free-line math by itself - no manual discounts, no staff mistakes."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 5</span>
+			<h3 id="percentage">Percentage Discount <span class="pill pill-green">discount line</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The checkout takes X% off matching products and adds a green discount line to the cart. The scope can be a whole category, specific items, or the entire order.</p>
+
+		<p><strong>How it is set up.</strong> The owner sets the percent and the scope: a whole category, one specific product, or the entire order. The checkout applies the discount and shows it as a green saving line.</p>
+
+		<p><strong>Example offer.</strong> 10% off all pizzas this week - applied automatically to every pizza in the cart.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Category focus: "10% off all pizzas this week".</li>
+			<li>Single item push: clear a slow dish with 15% off.</li>
+			<li>Whole-order events: "5% off everything" during a festival or app launch.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> Percentage discounts steer demand toward categories with the best margin or the most stock, and whole-order discounts lift basket size across the board. The discount line is transparent on the receipt.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Point a discount at a category, one item, or the whole order - and the checkout does the math on every line."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 6</span>
+			<h3 id="subtotal">Subtotal Threshold <span class="pill pill-green">spend X, save Y</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> When the order subtotal reaches a minimum, a fixed amount is taken off. This is the classic "Spend 50, save 10" mechanic that grows average order value.</p>
+
+		<p><strong>How it is set up.</strong> The owner sets a minimum spend and the fixed amount off. When the order reaches the minimum, the saving is applied automatically.</p>
+
+		<p><strong>Example offer.</strong> Spend 50, save 10. The moment the basket reaches 50, the checkout takes 10 off.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Raise the average ticket: "spend 50, save 10".</li>
+			<li>Delivery minimums: encourage orders that make delivery economics work.</li>
+			<li>Seasonal pushes: "spend 80 during December, save 15".</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> The threshold is set above the current average order, so customers add one more item to unlock the saving. The discount is capped and predictable, unlike an open percentage.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Put a target on your average order and let customers pay a little more to unlock the saving - the cap keeps your margin safe."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 7</span>
+			<h3 id="free-delivery">Free Delivery <span class="pill pill-green">fee removed</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The delivery fee is dropped, either always or when the subtotal passes a minimum. The checkout shows "Delivery: Free" instead of the fee row.</p>
+
+		<p><strong>How it is set up.</strong> The owner chooses whether free delivery always applies, or only above a minimum order value. The checkout shows "Delivery: Free" instead of the fee.</p>
+
+		<p><strong>Example offer.</strong> Free delivery on every order over 30 - the fee disappears from the checkout automatically.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Launch delivery: free delivery for the first two weeks.</li>
+			<li>Zone competition: beat a neighbouring restaurant's delivery fee.</li>
+			<li>Weekend minimums: "free delivery over 30" on Fridays.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> Delivery fees are the number one cart abandoner. Removing the fee (above a safe threshold) converts more delivery orders and pushes the subtotal up at the same time.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Kill the fee that makes people abandon the cart - with a minimum that still pays for your driver."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 8</span>
+			<h3 id="free-item">Free Item With Purchase <span class="pill pill-blue">paid + free groups</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The offer has paid items and free items. The customer buys the paid items, and the free items are added automatically at no charge - a digital "gift with purchase".</p>
+
+		<p><strong>How it is set up.</strong> The owner picks a paid group and a free group in the Deals tab. The customer buys the paid items, and the free items are added at no charge.</p>
+
+		<p><strong>Example offer.</strong> Any pizza comes with a free garlic dip - the dip appears in the basket at no cost.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Signature pair: "any pizza gets a free garlic dip".</li>
+			<li>New product launch: free new dessert with every main.</li>
+			<li>Loyalty reward: free drink with a large order.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> The free item is chosen by the owner (usually the cheapest or highest-margin extra), so the giveaway costs cents while feeling generous. It introduces customers to add-ons they will pay for next time.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Give away the dip, not the pizza - a fixed gift with every purchase costs pennies and feels like a bonus."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 9</span>
+			<h3 id="buy-n-get-m">Buy N Get M <span class="pill pill-blue">N paid + M free</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The customer buys N items and M more come free: "buy 3, get 1". The deal popup collects the paid and free items as one cart line, and the cheapest picks become the free ones.</p>
+
+		<p><strong>How it is set up.</strong> The owner sets how many items must be bought and how many come free. The customer picks the paid and free items in one popup, and the cheapest picks become the free ones - which keeps the offer profitable by design.</p>
+
+		<p><strong>Example offer.</strong> Buy 3 portions of wings, get 1 free. The free portion is always the cheapest one in the basket.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Repeatable products: wings, desserts, drinks by the bottle.</li>
+			<li>Bulk encouragement: "buy 4 pastries, get 1" for office orders.</li>
+			<li>Retail-style promos on bottled drinks.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> It multiplies units per order on products where customers rarely stop at one. Because the free item is the cheapest in the basket, the promotion stays profitable by design.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Turn a one-item habit into a five-item order with a buy-N-get-M that never gives away your most expensive product."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 10</span>
+			<h3 id="volume">Volume Pricing <span class="pill pill-blue">quantity bands</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> The unit price drops automatically as the quantity passes each band: 5 wings at $1.00, 10 at $0.90, 20 at $0.80. The customer watches the price improve as they add more.</p>
+
+		<p><strong>How it is set up.</strong> The owner sets quantity bands, each with its own unit price. The unit price drops automatically as the customer adds more, and the customer watches the price improve with every step.</p>
+
+		<p><strong>Example offer.</strong> Wings by the box: 5 for 1.00 each, 10 for 0.90 each, 20 for 0.80 each - the price per wing drops as the box grows.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Wings by the piece with wholesale-style breaks.</li>
+			<li>Drinks by the can for parties and offices.</li>
+			<li>Dessert boxes where the 12-pack must beat the 6-pack.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> Volume pricing is the strongest basket-builder in the tool: the discount only exists in larger quantities, so it never touches single-unit margin. It also mirrors how customers already think about buying "more for less".</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Give a better price only when the order is bigger - the tool moves the price down band by band, automatically."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="deal-head">
+			<span class="deal-num">TYPE 11</span>
+			<h3 id="free-modifier">Free Modifier Options <span class="pill pill-green">cheapest extra free</span></h3>
+		</div>
+
+		<p><strong>What it does.</strong> On matching products, the cheapest selected options from a modifier group (toppings, sauces, syrups) come free. "Free extra topping on any pizza" is the classic example.</p>
+
+		<p><strong>How it is set up.</strong> The owner picks a modifier group (toppings, sauces, syrups) and how many of the cheapest selected options come free, optionally limited to one category.</p>
+
+		<p><strong>Example offer.</strong> One free extra topping on any pizza - choose your favourite, the cheapest one is on the house.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Pizza shops: one free topping on Mondays.</li>
+			<li>Coffee shops: one free syrup shot during afternoon hours.</li>
+			<li>Burger joints: free cheese with every burger for a week.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> Modifiers are the highest-margin part of the menu. Giving the cheapest one away invites customers to add more paid extras, and the owner caps how many options can be free, which keeps the giveaway controlled.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Give the topping away to sell the bacon - one free extra brings customers into the add-ons they actually pay for."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="schedule">14. Scheduling Any Deal</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>Every one of the eleven types can carry a schedule. An offer outside its window simply does not appear on the website, then comes back automatically. The owner can combine all of these:</p>
+		<ul>
+			<li><strong>Date range</strong> - the offer is live only between two dates.</li>
+			<li><strong>Weekdays</strong> - restrict the offer to chosen days, for example Friday and Saturday.</li>
+			<li><strong>Time window</strong> - for example 17:00 to 22:00, in the restaurant's time zone.</li>
+		</ul>
+
+		<p><strong>Example offer.</strong> Weekend pizza night: a pizza bundle for 24.99, live every Friday and Saturday evening from 17:00 to 22:00 during November.</p>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Happy hours: 20% off dips, weekdays 14:00 to 17:00.</li>
+			<li>Weekend specials: pizza bundle Friday and Saturday evenings only.</li>
+			<li>Seasonal campaigns: December dessert deal with a date range.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> The owner plans a whole month of promotions in one session, and the website enforces every window automatically. No staff member has to remember to switch deals on and off.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Plan your whole month tonight: the deals appear and disappear on their own, day by day, hour by hour."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="promo-codes">15. Promo Codes</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>Promo codes are checkout codes customers type at payment time. They are built from three of the deal types: percentage discount, spend-and-save, and free delivery. Every code can carry a usage cap - or none, for unlimited use.</p>
+
+		<table>
+			<tr><th>Code</th><th>What it does</th><th>Usage cap</th></tr>
+			<tr><td>SAVE10</td><td>10% off the whole order</td><td>500 uses</td></tr>
+			<tr><td>SPEND50</td><td>Save 10 when you spend 50</td><td>100 uses</td></tr>
+			<tr><td>FREEDELIVERY</td><td>Free delivery on the order</td><td>Unlimited</td></tr>
+		</table>
+
+		<p><strong>Use cases.</strong></p>
+		<ul>
+			<li>Flyer and social codes: "SAVE10" printed on a flyer.</li>
+			<li>Partner campaigns: a school fundraiser code with 100 uses.</li>
+			<li>Win-back emails: a one-time free delivery code.</li>
+		</ul>
+
+		<p><strong>Value to the restaurant.</strong> Codes let the restaurant run offers outside the menu, measure which channel brought each order, and cap how many times a code can be used. They close the loop between a marketing campaign and the checkout.</p>
+
+		<div class="sell-box"><span class="sell-label">Sales angle</span>"Print a code on your flyer and measure exactly how many orders it brought - with a cap so it can never run away from you."</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="campaigns">16. Older Campaigns</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>Offers created in an older version of the system (like a classic "2x pizza" buy-one-get-one) still work and still appear on the website as normal offer cards. New offers should be created as deals, but older campaigns stay visible and editable during the transition.</p>
+
+		<div class="callout callout-note">
+			<strong>For restaurants moving over.</strong> Older campaigns are the bridge for restaurants coming from a previous system. Once imported, the owner can keep them as they are or turn them into full deals with schedules.
+		</div>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="closing">17. How Deals Sell the Product</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>Deals are not a feature list - they are the visible return on investment. When a salesperson demos the Deals tab, the restaurant owner sees their own menu start making money differently:</p>
+
+		<table>
+			<tr>
+				<th>What the owner sees</th>
+				<th>Why they buy</th>
+			</tr>
+			<tr>
+				<td>An offer composed in minutes, with a live preview of which menu items it will match.</td>
+				<td>No developer, no waiting, no invoice from an agency. Marketing becomes self-service.</td>
+			</tr>
+			<tr>
+				<td>Eleven offer types covering every promotion a restaurant has ever asked for.</td>
+				<td>One system replaces printed vouchers, manual discounts and staff-made mistakes.</td>
+			</tr>
+			<tr>
+				<td>Schedules that switch offers on and off automatically.</td>
+				<td>The owner plans a month of marketing once and the website runs it for them.</td>
+			</tr>
+			<tr>
+				<td>Built-in checks that stop a broken offer from ever going live.</td>
+				<td>No offer can ever undercut the restaurant or point at a product that is not on the menu.</td>
+			</tr>
+			<tr>
+				<td>Promo codes with usage caps.</td>
+				<td>Campaigns become measurable and budget-safe.</td>
+			</tr>
+		</table>
+
+		<p><strong>Demo story.</strong> Start from the owner's real menu. Build a bundle for their signature item, add a weekend schedule, then a "spend 50, save 10" threshold, and finish with a SAVE10 code capped at 500 uses. Five minutes, four offers. That is the pitch.</p>
+
+		<div class="callout callout-ok">
+			<strong>The whole picture.</strong> Deals are part of the same system that already manages the menu, visibility, availability and tax. The restaurant buys one system, and deals are the part that pays for it.
+		</div>
+
+	</main>
+</body>
+
+</html>

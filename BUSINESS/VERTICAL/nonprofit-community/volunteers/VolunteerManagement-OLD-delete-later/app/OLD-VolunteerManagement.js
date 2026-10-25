@@ -29,12 +29,12 @@ function fmtDateTime(d) {
 function isoNow() { return new Date().toISOString(); }
 
 /* ── CMS Type Names (D-VM-02, D-VM-03, D-VM-05) ── */
-var TYPE_REGISTRY     = 'volunteerRegistry-uniconbaseapps'; // shared SSOT - one doc per volunteer profile
-var TYPE_EVENTS       = 'vm.events-uniconbaseapps';         // shared SSOT - one doc per event definition
-var TYPE_APPLICATIONS = 'vm.eventApplications-uniconbaseapps';
-var TYPE_TASKS        = 'vm.eventTasks-uniconbaseapps';
-var TYPE_HOURS        = 'vm.eventHours-uniconbaseapps';
-var TYPE_MESSAGES     = 'vm.eventMessages-uniconbaseapps';
+var TYPE_REGISTRY     = 'volunteer-registry-uniconbaseapps'; // shared SSOT - one doc per volunteer profile
+var TYPE_EVENTS       = 'vm-events-uniconbaseapps';         // shared SSOT - one doc per event definition
+var TYPE_APPLICATIONS = 'vm-event-applications-uniconbaseapps';
+var TYPE_TASKS        = 'vm-event-tasks-uniconbaseapps';
+var TYPE_HOURS        = 'vm-event-hours-uniconbaseapps';
+var TYPE_MESSAGES     = 'vm-event-messages-uniconbaseapps';
 
 /* ── State ── */
 var APP = {
@@ -323,7 +323,7 @@ function reportEventsConfigError() {
         name: 'eventsType',
         label: 'Events Type ID',
         type: 'text',
-        default: 'vm.events-uniconbaseapps',
+        default: 'vm-events-uniconbaseapps',
         hint: 'CMS object type for event definitions (shared events SSOT)',
         reason: 'Cannot load event definitions without this type in settings.allowedObjectTypes.',
         severity: 'goodToHave'
@@ -340,7 +340,7 @@ function reportRegistryConfigError() {
         name: 'registryType',
         label: 'Volunteer Registry Type ID',
         type: 'text',
-        default: 'volunteerRegistry-uniconbaseapps',
+        default: 'volunteer-registry-uniconbaseapps',
         hint: 'CMS object type for volunteer profiles (shared registry SSOT)',
         reason: 'Cannot load the volunteer registry without this type in settings.allowedObjectTypes.',
         severity: 'mandatory'
@@ -3952,7 +3952,7 @@ tool.declareParams([
     name: 'registryType',
     label: 'Volunteer Registry Type ID',
     type: 'text',
-    default: 'volunteerRegistry-uniconbaseapps',
+    default: 'volunteer-registry-uniconbaseapps',
     hint: 'CMS object type for volunteer profiles (shared registry SSOT). Also authorize it in settings.allowedObjectTypes.',
     severity: 'goodToHave'
   },
@@ -3960,7 +3960,7 @@ tool.declareParams([
     name: 'eventsType',
     label: 'Events Type ID',
     type: 'text',
-    default: 'vm.events-uniconbaseapps',
+    default: 'vm-events-uniconbaseapps',
     hint: 'CMS object type for event definitions (shared events SSOT). Also authorize it in settings.allowedObjectTypes.',
     severity: 'goodToHave'
   },

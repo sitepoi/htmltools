@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VolunteerManagement — Test Harness</title>
-<link rel="stylesheet" href="VolunteerManagement.css">
+<link rel="stylesheet" href="OLD-VolunteerManagement.css">
 <style>
 body { padding-top: 28px !important; margin: 0; }
 #th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -292,7 +292,7 @@ body.th-bare #app-container { min-height: 100vh; }
         }
 
         // Seed the full sample set once so the tool is never empty
-        if (!loadObjects('volunteerRegistry-uniconbaseapps').length) {
+        if (!loadObjects('volunteer-registry-uniconbaseapps').length) {
           seedSampleData();
         }
         cb(_value, _fields);
@@ -306,45 +306,45 @@ body.th-bare #app-container { min-height: 100vh; }
     var day = 24 * 60 * 60 * 1000;
     function isoDays(n) { return new Date(Date.now() + n * day).toISOString(); }
 
-    saveObjects('volunteerRegistry-uniconbaseapps', [
+    saveObjects('volunteer-registry-uniconbaseapps', [
       { id: 'reg_vol1', name: 'Bob Volunteer', productData: { data_categoriesBased: { userId: 'usr_vol1', firstName: 'Bob', lastName: 'Volunteer', email: 'bob@example.com', phone: '+1 555 0101', city: 'Springfield', skills: 'Registration, Setup', interests: 'Community events', availabilityNotes: 'Weekends', status: 'active', consentGiven: true, joinedAt: isoDays(-120), updatedAt: nowIso, source: 'public-app', notes: '' } } },
       { id: 'reg_vol2', name: 'Carol Helper', productData: { data_categoriesBased: { userId: 'usr_vol2', firstName: 'Carol', lastName: 'Helper', email: 'carol@example.com', phone: '+1 555 0102', city: 'Springfield', skills: 'Food service, Cleaning', interests: 'Fundraising', availabilityNotes: 'Weekday evenings', status: 'active', consentGiven: true, joinedAt: isoDays(-90), updatedAt: nowIso, source: 'public-app', notes: '' } } },
       { id: 'reg_vol3', name: 'Dave Supporter', productData: { data_categoriesBased: { userId: 'usr_vol3', firstName: 'Dave', lastName: 'Supporter', email: 'dave@example.com', phone: '+1 555 0103', city: 'Riverside', skills: 'Driving, Logistics', interests: 'Youth programs', availabilityNotes: 'Flexible', status: 'candidate', consentGiven: true, joinedAt: isoDays(-60), updatedAt: nowIso, source: 'import', notes: '' } } },
       { id: 'reg_vol4', name: 'Erin Newcomer', productData: { data_categoriesBased: { userId: '', firstName: 'Erin', lastName: 'Newcomer', email: 'erin@example.com', phone: '+1 555 0104', city: 'Springfield', skills: 'Kitchen help, Serving', interests: 'Food programs', availabilityNotes: 'Weekends', status: 'active', consentGiven: true, joinedAt: isoDays(-30), updatedAt: nowIso, source: 'manager', notes: '' } } }
     ]);
 
-    saveObjects('vm.events-uniconbaseapps', [
+    saveObjects('vm-events-uniconbaseapps', [
       { id: 'evt_1', name: 'Community Food Drive', productData: { data_categoriesBased: { name: 'Community Food Drive', description: 'Sorting, packing and handing out food boxes for local families.', status: 'open', capacity: 25, startDate: isoDays(5).slice(0, 10), endDate: isoDays(5).slice(0, 10), startTime: '09:00', endTime: '16:00', locationName: 'Central Community Hall', address: '120 Main Street', city: 'Springfield', contactName: 'Alice Manager', contactPhone: '+1 555 0100', contactEmail: 'alice@example.com', notes: '', createdAt: isoDays(-30), createdBy: 'Alice Manager', updatedAt: nowIso } } },
       { id: 'evt_2', name: 'Winter Coat Distribution', productData: { data_categoriesBased: { name: 'Winter Coat Distribution', description: 'Collecting, sorting and distributing winter coats.', status: 'draft', capacity: 15, startDate: isoDays(40).slice(0, 10), endDate: isoDays(41).slice(0, 10), startTime: '10:00', endTime: '15:00', locationName: 'Riverside Centre', address: '8 River Road', city: 'Riverside', contactName: 'Alice Manager', contactPhone: '', contactEmail: '', notes: 'Venue confirmation pending.', createdAt: isoDays(-10), createdBy: 'Alice Manager', updatedAt: nowIso } } }
     ]);
 
-    saveObjects('vm.eventApplications-uniconbaseapps', [
+    saveObjects('vm-event-applications-uniconbaseapps', [
       { id: 'app_1', name: 'Carol Helper', productData: { data_categoriesBased: { registryProfileId: 'reg_vol2', eventId: 'evt_1', volunteerUserId: 'usr_vol2', status: 'pending', appliedAt: isoDays(-2), notes: 'Happy to help with food service during the event.', reviewedAt: '', reviewedBy: '' } } },
       { id: 'app_2', name: 'Bob Volunteer', productData: { data_categoriesBased: { registryProfileId: 'reg_vol1', eventId: 'evt_1', volunteerUserId: 'usr_vol1', status: 'approved', appliedAt: isoDays(-10), notes: 'Experienced with registration desks.', reviewedAt: isoDays(-8), reviewedBy: 'Alice Manager' } } },
       { id: 'app_3', name: 'Dave Supporter', productData: { data_categoriesBased: { registryProfileId: 'reg_vol3', eventId: 'evt_1', volunteerUserId: 'usr_vol3', status: 'approved', appliedAt: isoDays(-5), notes: 'Can drive the supply van.', reviewedAt: isoDays(-4), reviewedBy: 'Alice Manager' } } }
     ]);
 
-    saveObjects('vm.eventTasks-uniconbaseapps', [
+    saveObjects('vm-event-tasks-uniconbaseapps', [
       { id: 'task_1', name: 'Welcome Desk Setup', productData: { data_categoriesBased: { eventId: 'evt_1', description: 'Set up the welcome and registration desk before doors open.', status: 'in-progress', assignedVolunteerUserId: 'usr_vol1', assignedRegistryProfileId: 'reg_vol1', dueDate: isoDays(1).slice(0, 10) + 'T00:00:00Z', estimatedHours: 3, createdAt: isoDays(-5), completedAt: '' } } },
       { id: 'task_2', name: 'Food Service Shift', productData: { data_categoriesBased: { eventId: 'evt_1', description: 'Serve lunch and keep the dining area tidy.', status: 'assigned', assignedVolunteerUserId: 'usr_vol3', assignedRegistryProfileId: 'reg_vol3', dueDate: isoDays(2).slice(0, 10) + 'T00:00:00Z', estimatedHours: 4, createdAt: isoDays(-4), completedAt: '' } } },
       { id: 'task_3', name: 'Signage and Banners', productData: { data_categoriesBased: { eventId: 'evt_1', description: 'Place directional signage around the venue.', status: 'open', assignedVolunteerUserId: '', assignedRegistryProfileId: '', dueDate: isoDays(3).slice(0, 10) + 'T00:00:00Z', estimatedHours: 2, createdAt: isoDays(-3), completedAt: '' } } },
       { id: 'task_4', name: 'Registration Check-in', productData: { data_categoriesBased: { eventId: 'evt_1', description: 'Check attendees in at the registration desk.', status: 'completed', assignedVolunteerUserId: 'usr_vol1', assignedRegistryProfileId: 'reg_vol1', dueDate: isoDays(-1).slice(0, 10) + 'T00:00:00Z', estimatedHours: 2, createdAt: isoDays(-7), completedAt: isoDays(-1) } } }
     ]);
 
-    saveObjects('vm.eventHours-uniconbaseapps', [
+    saveObjects('vm-event-hours-uniconbaseapps', [
       { id: 'hour_1', name: 'Hours - Registration Check-in', productData: { data_categoriesBased: { eventId: 'evt_1', volunteerUserId: 'usr_vol1', registryProfileId: 'reg_vol1', taskId: 'task_4', taskName: 'Registration Check-in', date: isoDays(-1).slice(0, 10) + 'T00:00:00Z', hoursLogged: 2, description: 'Checked in 80 attendees.', status: 'approved', reviewedBy: 'Alice Manager', reviewedAt: isoDays(-1) } } },
       { id: 'hour_2', name: 'Hours - Welcome Desk Setup', productData: { data_categoriesBased: { eventId: 'evt_1', volunteerUserId: 'usr_vol1', registryProfileId: 'reg_vol1', taskId: 'task_1', taskName: 'Welcome Desk Setup', date: nowIso.slice(0, 10) + 'T00:00:00Z', hoursLogged: 1.5, description: 'Assembled the welcome desk and signage stands.', status: 'pending', reviewedBy: '', reviewedAt: '' } } },
       { id: 'hour_3', name: 'Hours - Food Service Shift', productData: { data_categoriesBased: { eventId: 'evt_1', volunteerUserId: 'usr_vol3', registryProfileId: 'reg_vol3', taskId: 'task_2', taskName: 'Food Service Shift', date: nowIso.slice(0, 10) + 'T00:00:00Z', hoursLogged: 3, description: 'Served the first lunch shift.', status: 'pending', reviewedBy: '', reviewedAt: '' } } }
     ]);
 
-    saveObjects('vm.eventMessages-uniconbaseapps', [
+    saveObjects('vm-event-messages-uniconbaseapps', [
       { id: 'msg_1', name: 'Can I also help with cleanup?', productData: { data_categoriesBased: { fromUserId: 'usr_vol1', fromName: 'Bob Volunteer', fromRole: 'volunteer', toUserId: 'managers', toLabel: 'Event Managers', subject: 'Can I also help with cleanup?', body: 'Hi! My registration shift ends at 2pm - I can stay for the cleanup crew afterwards if you still need people.', sentAt: isoDays(-1), read: false } } },
       { id: 'msg_2', name: 'Welcome briefing', productData: { data_categoriesBased: { fromUserId: 'usr_manager1', fromName: 'Alice Manager', fromRole: 'manager', toUserId: 'all-volunteers', toLabel: 'All Volunteers', subject: 'Welcome briefing', body: 'Thanks everyone for joining! The welcome briefing is on Friday at 5pm at the main hall entrance.', sentAt: isoDays(-2), read: false } } }
     ]);
   }
 
   window.tool._seedSampleData = function() {
-    ['volunteerRegistry-uniconbaseapps', 'vm.events-uniconbaseapps', 'vm.eventApplications-uniconbaseapps', 'vm.eventTasks-uniconbaseapps', 'vm.eventHours-uniconbaseapps', 'vm.eventMessages-uniconbaseapps'].forEach(function(t) {
+    ['volunteer-registry-uniconbaseapps', 'vm-events-uniconbaseapps', 'vm-event-applications-uniconbaseapps', 'vm-event-tasks-uniconbaseapps', 'vm-event-hours-uniconbaseapps', 'vm-event-messages-uniconbaseapps'].forEach(function(t) {
       localStorage.removeItem(storageKey(t));
     });
     seedSampleData();
@@ -422,6 +422,6 @@ body.th-bare #app-container { min-height: 100vh; }
 })();
 </script>
 
-<script src="VolunteerManagement.js"></script>
+<script src="OLD-VolunteerManagement.js"></script>
 </body>
 </html>

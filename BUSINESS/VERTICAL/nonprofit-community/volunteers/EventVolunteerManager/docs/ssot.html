@@ -28,7 +28,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v1.5</span>
+      <span>v1.10</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -65,19 +65,21 @@
     instance is attached to one event CMS object and manages everything that
     happens around that event: the volunteers linked to it, their roles, the
     work, the hours, the messages, the report and the event information
-    itself. The event object is created in the CMS; this tool never creates or
-    deletes it. Every decision made for this tool is logged in section 11 and
+    itself. The CMS creates, stores and saves the event record; this tool edits
+    that record and writes every change as it is typed, so it carries no Save
+    or Create action of its own. Every decision made for this tool is logged in
+    section 11 and
     this document is updated in the same change as the code. When this
     document or the code disagree, this document is the tiebreaker - it is
     updated to capture the final decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>1.5</td></tr>
-    <tr><th>Last updated</th><td>2026-10-22</td></tr>
+    <tr><th>Document version</th><td>1.10</td></tr>
+    <tr><th>Last updated</th><td>2026-10-25</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (EventVolunteerManager).</td></tr>
     <tr><th>Primary code areas</th><td><code>app/EventVolunteerManager.html</code>, <code>app/EventVolunteerManager.css</code>, <code>app/EventVolunteerManager.js</code>, <code>app/test-harness.html</code></td></tr>
-    <tr><th>Explicitly out of scope</th><td>Creating or deleting the event object (CMS owns the object), the volunteer's own record and applications (VolunteerProfile tool), cross event reporting and program level dashboards (future reporting surface), email campaign design.</td></tr>
+    <tr><th>Explicitly out of scope</th><td>Creating or deleting the event object (the CMS owns both and mounts the tool), the volunteer's own record and applications (VolunteerProfile tool), cross event reporting and program level dashboards (future reporting surface), email campaign design.</td></tr>
     <tr><th>Companion documents</th><td>Satellites to be generated from this SSOT: <code>index.html</code> (docs shell), <code>webpage.html</code>, <code>help.html</code>, <code>presentation.html</code>, <code>social.html</code>, <code>updates.html</code></td></tr>
     <tr><th>Paired tool</th><td><code>../VolunteerProfile/docs/ssot.html</code> - the volunteer's own side. Both act on the same membership records.</td></tr>
   </table>
@@ -182,6 +184,11 @@
     <tr><td>C-13</td><td>Read-only mode for volunteers, with every write control disabled and a role pill</td><td>renderAll / canManage</td><td>v1.0</td><td>Headless render</td></tr>
     <tr><td>C-14</td><td>Screen purposes: every screen states in one line what it is for</td><td>markup, <code>.et-lead</code></td><td>v1.1 (2026-10-21)</td><td>Headless render</td></tr>
     <tr><td>C-15</td><td>Renamed from EventTeam to Event Volunteer Manager, folder, files and catalog idea</td><td>folder + catalog</td><td>v1.1</td><td>Catalog rebuild</td></tr>
+    <tr><td>C-16</td><td>Several event contacts (name, what they do, phone, email); the first one is the main contact and keeps the single contact fields in step</td><td>renderContacts / openContactModal / saveContacts</td><td>v1.9 (2026-10-25)</td><td>Headless assertions</td></tr>
+    <tr><td>C-17</td><td>Every position is a job definition and owns its offer: type, where, commitment, work deadline, application deadline and weekly schedule; the event carries the summary of its positions</td><td>normalizePosition / applyDerivedOfferFields / openPositionModal</td><td>v1.9 (2026-10-25)</td><td>Headless assertions</td></tr>
+    <tr><td>C-18</td><td>Places used against places available per position, with an overfill warning, and one-action approval of every waiting hour line</td><td>filledPerPosition / renderPositions / runApproveAllPendingHours</td><td>v1.6 (2026-10-24)</td><td>Headless assertions</td></tr>
+    <tr><td>C-19</td><td>The event details form is split into four tabs (Basics, When and where, Contact, Positions), and every edit is written to the attached event record as it is typed, with no Save or Create action in the tool</td><td>renderEventForm / switchFormTab / scheduleEventAutoSave / saveEventDefinition</td><td>v1.9 (2026-10-25)</td><td>Headless assertions</td></tr>
+    <tr><td>C-20</td><td>A position carries what the volunteer does and what they need: description, requirements, skills and time commitment, next to its offer and schedule</td><td>openPositionModal / renderPositions</td><td>v1.9 (2026-10-25)</td><td>Headless assertions</td></tr>
   </table>
 
   <h2 id="sec-glossary">4. Glossary</h2>
@@ -208,11 +215,11 @@
   <pre>
 // app/EventVolunteerManager.js - five types, one document per write rhythm
 var DEFAULT_TYPES = {
-  event: 'vm.events-uniconbaseapps',              // host object
-  relation: 'vm.eventMemberships-uniconbaseapps', // personId + '__' + eventId
-  person: 'volunteerRegistry-uniconbaseapps',     // names + permanent ledger
-  tasks: 'vm.eventTasks-uniconbaseapps',          // eventId + '__tasks'
-  messages: 'vm.eventMessages-uniconbaseapps'     // eventId + '__messages', then '#2', '#3'
+  event: 'vm-events-uniconbaseapps',              // host object
+  relation: 'vm-event-memberships-uniconbaseapps', // personId + '__' + eventId
+  person: 'volunteer-registry-uniconbaseapps',     // names + permanent ledger
+  tasks: 'vm-event-tasks-uniconbaseapps',          // eventId + '__tasks'
+  messages: 'vm-event-messages-uniconbaseapps'     // eventId + '__messages', then '#2', '#3'
 };
   </pre>
   <h3>5.3 Structural decisions that follow</h3>
@@ -285,11 +292,11 @@ var DEFAULT_TYPES = {
   <h3>8.2 Type model</h3>
   <table>
     <tr><th>Type</th><th>Scope</th><th>Document = one ...</th><th>Key fields</th></tr>
-    <tr><td><code>vm.events-uniconbaseapps</code></td><td>instance (host)</td><td>opportunity</td><td><code>name</code>, <code>status</code> (draft / open / closed / cancelled), <code>opportunityType</code> (event / task / recurring / self-paced), <code>locationMode</code> (onsite / remote / hybrid), <code>startDate</code>, <code>endDate</code>, <code>startTime</code>, <code>endTime</code>, <code>locationName</code>, <code>city</code>, <code>address</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code>, <code>recurrence</code>, <code>capacity</code>, <code>description</code>, <code>notes</code>, <code>positions[]</code></td></tr>
-    <tr><td><code>vm.eventMemberships-uniconbaseapps</code></td><td>instance</td><td>placement</td><td><code>personId</code>, <code>personUserId</code>, <code>eventId</code>, <code>status</code> (requested / approved / declined / removed), <code>positions[]</code>, <code>taskLinks[]</code>, <code>pendingHours[]</code>, <code>hoursHistory[]</code>, <code>hoursApprovedTotal</code>, <code>approvedLedgerIds[]</code></td></tr>
-    <tr><td><code>volunteerRegistry-uniconbaseapps</code></td><td>shared</td><td>volunteer profile</td><td><code>userId</code>, name, contact, skills, <code>status</code>, <code>hoursLedger[]</code>, <code>totals</code></td></tr>
-    <tr><td><code>vm.eventTasks-uniconbaseapps</code></td><td>instance</td><td>task list of this event</td><td><code>eventId</code>, <code>tasks[]</code>, <code>updatedAt</code>, <code>updatedBy</code></td></tr>
-    <tr><td><code>vm.eventMessages-uniconbaseapps</code></td><td>instance</td><td>message volume</td><td><code>eventId</code>, <code>volume</code>, <code>closed</code>, <code>messages[]</code>, <code>lastSentAt</code></td></tr>
+    <tr><td><code>vm-events-uniconbaseapps</code></td><td>instance (host)</td><td>opportunity</td><td><code>name</code>, <code>status</code> (draft / open / closed / cancelled), <code>startDate</code>, <code>endDate</code>, <code>startTime</code>, <code>endTime</code>, <code>locationName</code>, <code>city</code>, <code>address</code>, <code>capacity</code>, <code>description</code>, <code>notes</code>, <code>contacts[]</code>, <code>positions[]</code>; the offer fields <code>opportunityType</code>, <code>locationMode</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code> and <code>recurrence</code> are the summary of the positions</td></tr>
+    <tr><td><code>vm-event-memberships-uniconbaseapps</code></td><td>instance</td><td>placement</td><td><code>personId</code>, <code>personUserId</code>, <code>eventId</code>, <code>status</code> (requested / approved / declined / removed), <code>positions[]</code>, <code>taskLinks[]</code>, <code>pendingHours[]</code>, <code>hoursHistory[]</code>, <code>hoursApprovedTotal</code>, <code>approvedLedgerIds[]</code></td></tr>
+    <tr><td><code>volunteer-registry-uniconbaseapps</code></td><td>shared</td><td>volunteer profile</td><td><code>userId</code>, name, contact, skills, <code>status</code>, <code>hoursLedger[]</code>, <code>totals</code></td></tr>
+    <tr><td><code>vm-event-tasks-uniconbaseapps</code></td><td>instance</td><td>task list of this event</td><td><code>eventId</code>, <code>tasks[]</code>, <code>updatedAt</code>, <code>updatedBy</code></td></tr>
+    <tr><td><code>vm-event-messages-uniconbaseapps</code></td><td>instance</td><td>message volume</td><td><code>eventId</code>, <code>volume</code>, <code>closed</code>, <code>messages[]</code>, <code>lastSentAt</code></td></tr>
   </table>
 
   <h3>8.3 Document ids</h3>
@@ -305,7 +312,11 @@ var DEFAULT_TYPES = {
   <h3>8.4 Event, task and message shapes</h3>
   <pre>
 event:    { name, status, startDate, endDate, startTime, endTime, locationName, city, address,
-            capacity, description, notes, positions: [{ id, name, slots, description }] }
+            capacity, description, notes,
+            contacts: [{ id, name, label, phone, email }],
+            positions: [{ id, name, slots, description, requirements, skills, timeCommitment,
+                          opportunityType, locationMode, deadline, applicationDeadline,
+                          recurrence: { weekdays: [], timeFrom, timeTo } }] }
 
 task:     { id, title, description, status, dueDate, estimatedHours, assigneePersonId, assigneeName,
             createdAt, createdBy, completedAt, completedBy }
@@ -321,8 +332,8 @@ volume:   { eventId, volume, closed, messages: [{ id, fromUserId, fromName, from
   <h3>8.5 Firestore size budget (per document, 1 MB cap)</h3>
   <table>
     <tr><th>Where</th><th>What is stored</th><th>Typical size</th><th>Cap risk</th></tr>
-    <tr><td><code>tool.setValue()</code></td><td>UI preferences only: <code>{ eventObjectId, lastView }</code></td><td>~0.1 KB</td><td>None - records are forbidden here</td></tr>
-    <tr><td>Event document</td><td>definition and up to 20 roles</td><td>~12 KB</td><td>None</td></tr>
+    <tr><td><code>tool.setValue()</code></td><td>UI preferences only: <code>{ eventObjectId, lastView, lastFormTab }</code></td><td>~0.1 KB</td><td>None - records are forbidden here</td></tr>
+    <tr><td>Event document</td><td>definition, up to 20 contacts and up to 20 positions</td><td>~18 KB</td><td>None</td></tr>
     <tr><td>Task document</td><td>up to 200 tasks</td><td>~120 KB</td><td>Low - blocked at the 200 cap</td></tr>
     <tr><td>Message volume</td><td>up to 150 messages, 2,000 characters each</td><td>~250 KB</td><td>Low - rotation keeps it bounded</td></tr>
     <tr><td>Placement</td><td>10 roles, 40 task rows, 60 pending hours, 40 history rows</td><td>~60 KB</td><td>None</td></tr>
@@ -383,6 +394,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     <tr><td>L-08</td><td>Closed message volumes cannot be deleted from inside the tool</td><td>A manager deletes the object in the CMS</td><td>Accepted for now</td></tr>
     <tr><td>L-09</td><td>The event form does not edit the opportunity fields the volunteer catalog reads (type, location mode, commitment, deadline, recurrence)</td><td>A task based, recurring or self paced opportunity has to be created in the CMS</td><td>Task T-19</td></tr>
     <tr><td>L-10</td><td>The event form does not edit the timer policy, and the hours screen does not yet show session start and end times</td><td>The volunteer clock runs on defaults and a manager cannot see how a timed line was produced</td><td>Task T-20</td></tr>
+    <tr><td>L-11</td><td>Positions own the offer, but the volunteer catalog and the volunteer clock still read the event-level summary</td><td>With positions of different types the catalog shows one summary chip (<code>mixed</code>), and the clock windows come from the first scheduled position rather than from the volunteer's own position</td><td>Task T-27</td></tr>
   </table>
 
   <h2 id="sec-decisions">11. Decision register</h2>
@@ -458,6 +470,60 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
       <td>D-EVM-12</td><td>2026-10-22</td>
       <td>The event window (<code>startDate</code>, <code>endDate</code>, <code>startTime</code>, <code>endTime</code>) is the boundary the volunteer clock uses for its automatic stop. The event may also carry the timer policy: <code>timerEnabled</code>, <code>earlyGraceMinutes</code>, <code>graceMinutes</code>, <code>maxSessionMinutes</code>, <code>roundingMinutes</code>.</td>
       <td>Asked how timers can stop themselves. The window already exists here, so the manager tool owns the data that makes the volunteer timer safe; the default policy applies when a field is empty. A clocked line is still approved by the manager like any submitted hour.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-13</td><td>2026-10-24</td>
+      <td>Every CMS object type is kebab-case and namespaced: <code>volunteer-registry-uniconbaseapps</code>, <code>vm-events-uniconbaseapps</code>, <code>vm-event-memberships-uniconbaseapps</code>, <code>vm-event-tasks-uniconbaseapps</code>, <code>vm-event-messages-uniconbaseapps</code>. Each stays a tool param.</td>
+      <td>Owner convention for CMS object types; the dotted old names were inconsistent with the platform. No data existed, so no migration was needed.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-14</td><td>2026-10-24</td>
+      <td>A file splice had merged fragments of several functions and dropped their heads, so <code>app/EventVolunteerManager.js</code> did not parse. Repaired: the dashboard open-work card, the event definition form, the drawer status actions, the searchable roles and add-volunteer pickers, and the task assignee function. The harness markup was re-synced from the tool HTML.</td>
+      <td>Restores the intended behaviour and uses the picker helpers (search, select all, selected count) that the file already carried.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-15</td><td>2026-10-24</td>
+      <td>The event details screen is the single place an event is defined: dates, place, capacity, contact, the volunteering offer and its roles. The CMS only stores the object and mounts the tool.</td>
+      <td>Owner correction: there is no other screen that writes the event, so the copy and the form must both say so. A manager must be able to create a task based, recurring or self paced opportunity without leaving the tool.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-16</td><td>2026-10-24</td>
+      <td>When the tool is mounted with no event object, the event details screen shows the whole definition form in create mode and writes the event record itself (<code>createEventFromForm</code>); every other screen keeps its empty state until that record exists. The tool still never deletes the event.</td>
+      <td>Owner correction: an empty tool told the manager "No event loaded" and offered no way to enter the event, so the only way to start was outside the tool. Creating from the same form keeps one writing place, one validation path and one field set.</td>
+      <td class="status-rejected">Reversed (2026-10-24)</td>
+    </tr>
+    <tr>
+      <td>D-EVM-17</td><td>2026-10-24</td>
+      <td>The CMS owns the event record, its Save button and its lifecycle (D-EVM-15). The tool therefore carries no Create and no Save action: the Event details form is split into five tabs and every edit is written to the attached record shortly after typing. Without an attached record the form still renders, but the values stay with the tool and the head says so.</td>
+      <td>Owner correction: a Create event button on an empty tool and a Save event button beside it duplicate what the CMS form already does. The tool adds the event details to an object that already exists, so it should behave like a field editor, not like a second form. Long single-column forms were also hard to read, and roles belong with the rest of the event.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-18</td><td>2026-10-25</td>
+      <td>The offer belongs to the position, not to the event. Each position stores its own type, where mode, time commitment, work deadline, application deadline and weekly schedule. The event record still carries <code>opportunityType</code>, <code>locationMode</code>, <code>commitment</code>, <code>deadline</code>, <code>applicationDeadline</code> and <code>recurrence</code>, but only as a derived summary: one shared value when every position agrees, otherwise <code>mixed</code> (and <code>hybrid</code> for the place), with the earliest work and closing dates.</td>
+      <td>Owner correction: one event usually runs several different jobs with different schedules, so one offer per event forces a wrong answer. The summary keeps the volunteer catalog and the clock working without a cross-tool change in the same step.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-19</td><td>2026-10-25</td>
+      <td>An event keeps a contact list (<code>contacts[]</code>: name, what they do, phone, email). The first contact is the main contact and is copied into <code>contactName</code>, <code>contactPhone</code> and <code>contactEmail</code> on every write. A record that only has the single fields is read as a one person list.</td>
+      <td>Volunteers need more than one person to call, while the catalog, the report and older records still read one contact. Keeping both shapes avoids migrating existing events.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-20</td><td>2026-10-25</td>
+      <td>"Role" and "position" were the same thing under two names. The manager now says position everywhere in the interface and in new fields; the placement records keep <code>positions[]</code> with <code>positionId</code>, and an old saved tab name is mapped (roles opens Positions).</td>
+      <td>Owner question ("is role what I defined as position?"): one name, one concept. Keeping the stored shape avoids rewriting placements.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-EVM-21</td><td>2026-10-25</td>
+      <td>No screen warns about a missing record and no editor refuses to work because of it. The CMS attaches the event record exactly like it attaches any other tool in this codebase, so the tool always behaves as if the record exists: it keeps what is entered in its own state and writes through to the record when one is attached. The "No CMS event record is attached" notice, the side foot line and the guards in the contact and position editors are removed.</td>
+      <td>Owner correction: the precaution blocked adding contacts and positions for a situation that does not happen in the CMS, so it only added a warning and a dead end. A tool must not gate its own data entry on a technical detail of the mount. renderPositions also stopped borrowing the "No event loaded" screen inside the event details tab, where it made no sense.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
@@ -768,7 +834,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     </div>
   </section>
 
-  <section class="task-group" data-release-group="g3-parity" data-group-status="planned">
+  <section class="task-group" data-release-group="g3-parity" data-group-status="in-progress">
     <header class="task-group-header">
       <span class="task-group-name">Group: Feature parity with the previous tool</span>
       <span class="group-status-chip" data-group-status-chip></span>
@@ -778,21 +844,22 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g3-parity"></div></div>
     <p class="task-group-note">Why these belong together: these are the capabilities the previous tool had and this one does not, all on the same two screens (Volunteers and Hours). They are small, additive and need no model change.</p>
 
-    <div class="task-item" data-task-id="T-12" data-group="g3-parity" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-12" data-group="g3-parity" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-12</span>
           <span class="task-title">Contact details on the event</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-valuable">Very valuable</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Problem it solves:</strong> the old event form had a contact name, phone and email; the new form dropped them.</p>
           <p><strong>How we will solve it:</strong> three fields on the event details form, written to the event document, shown in the header area for the manager.</p>
           <p><strong>Benefit:</strong> a volunteer with a question has a number to call without leaving the tool.</p>
+          <p><strong>Implemented:</strong> The event form gained Contact name, Phone and Email, written by saveEventDefinition and shown on the same screen.</p>
           <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>app/EventVolunteerManager.html</code></p>
-          <p><strong>Status:</strong> not-started</p>
+          <p><strong>Status:</strong> done (2026-10-24)</p>
         </div>
       </details>
     </div>
@@ -854,39 +921,41 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
       </details>
     </div>
 
-    <div class="task-item" data-task-id="T-16" data-group="g3-parity" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-16" data-group="g3-parity" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-16</span>
           <span class="task-title">Role capacity warning against slot counts</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-small">Very small thing</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-16 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-16 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Problem it solves:</strong> a role can be overfilled without anybody noticing.</p>
           <p><strong>How we will solve it:</strong> count placements per role and show places used against places available; warn, do not block, until section 14 question 5 is answered.</p>
           <p><strong>Benefit:</strong> the manager sees the gap before the event day.</p>
+          <p><strong>Implemented:</strong> The role table counts approved placements per role and shows Places against Filled, with an "over" chip and one warning line when a role holds more accepted volunteers than places.</p>
           <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
-          <p><strong>Status:</strong> not-started</p>
+          <p><strong>Status:</strong> done (2026-10-24)</p>
         </div>
       </details>
     </div>
-    <div class="task-item" data-task-id="T-19" data-group="g3-parity" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-19" data-group="g3-parity" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-19</span>
           <span class="task-title">Edit the volunteering offer fields on the event details screen</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-mandatory">Mandatory</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-19 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-19 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Problem it solves:</strong> a manager cannot create a task based, recurring or self paced opportunity from the tool; those records have to be written in the CMS.</p>
           <p><strong>How we will solve it:</strong> add the offer block to the event form - type select, location mode, commitment, deadline, application deadline and a simple weekly recurrence editor - and let a position carry skills and a time commitment.</p>
           <p><strong>Benefit:</strong> one tool creates every kind of volunteering the volunteer catalog can show.</p>
+          <p><strong>Implemented:</strong> The event form now carries the whole offer: type (fixed event, task based, recurring, self paced), where (on site, remote, hybrid), time commitment, work deadline, application deadline and a weekly recurrence with weekday ticks and a time window. A role carries skills and a time commitment, and both are preserved on save.</p>
           <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>app/EventVolunteerManager.html</code></p>
-          <p><strong>Status:</strong> not-started</p>
+          <p><strong>Status:</strong> done (2026-10-24)</p>
         </div>
       </details>
     </div>
@@ -911,6 +980,136 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
   
 
 
+    <div class="task-item" data-task-id="T-21" data-group="g3-parity" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-21</span>
+          <span class="task-title">Approve every waiting hour line in one action</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-21 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> after an event day a manager approves ten lines one dialog at a time.</p>
+          <p><strong>How we will solve it:</strong> an "Approve all" action on the waiting card, with one confirmation that names the line count. It reuses the single-line approval path and re-reads each placement first, so two lines on one volunteer cannot overwrite each other and the ledger id rule still prevents duplicates.</p>
+          <p><strong>Benefit:</strong> the post-event hour flow takes seconds instead of minutes.</p>
+          <p><strong>Implemented:</strong> openApproveAllModal and runApproveAllPendingHours, plus a silent mode on approvePendingHours. The button is disabled and relabelled with the count.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>.html</code></p>
+          <p><strong>Status:</strong> done (2026-10-24)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-22" data-group="g3-parity" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-22</span>
+          <span class="task-title">Reversed - create the event from the details screen when none is loaded</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-22 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Reversed (2026-10-24):</strong> the task was built and then dropped before release. The CMS creates and saves the event record and the tool must not offer a Create or Save action of its own. Superseded by task T-23 and decision D-EVM-17.</p>
+          <p><strong>What it did while it existed:</strong> an empty tool rendered the definition form in create mode with a Create event action, validated the input and wrote the record itself.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> reversed (2026-10-24) - no code remains</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-23" data-group="g3-parity" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-23</span>
+          <span class="task-title">Split the event details into tabs and write changes without a Save button</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-23 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the event form was one long scrolling column that mixed dates, venue, contact, the offer and notes, and it also carried a Save button the CMS already provides.</p>
+          <p><strong>How we will solve it:</strong> group the fields into five tabs (Basics, When and where, Contact, Volunteering offer, Roles) rendered from one field map with unchanged field ids, keep the open tab in the tool value, move the roles table into the Roles tab with its Add role action, and write the record from the form input and change events after a short pause instead of a Save click.</p>
+          <p><strong>Benefit:</strong> each screen is short and readable, roles live next to the rest of the event, and a manager never has to remember to save.</p>
+          <p><strong>Implemented:</strong> renderEventForm builds the tab strip and the five panels (<code>data-ftab</code>, <code>data-fpanel</code>), switchFormTab keeps the open tab and saves it as <code>lastFormTab</code>, bindEventFormAutoSave and scheduleEventAutoSave write 700 ms after the last edit through saveEventDefinition, the head shows Updated, Saved or Not saved with the reason, and the form carries no Create or Save action.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>app/EventVolunteerManager.html</code>, <code>app/EventVolunteerManager.css</code></p>
+          <p><strong>Status:</strong> done (2026-10-24) - the tab set was changed to four tabs in T-24</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-24" data-group="g3-parity" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-24</span>
+          <span class="task-title">Make every volunteering offer a position, not an event setting</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-24 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the event form asked for one offer type, one place and one schedule, but one event usually needs several very different jobs (a driver, a greeter, a sorting crew) with different schedules and commitments.</p>
+          <p><strong>How we will solve it:</strong> remove the Volunteering offer tab, keep Basics, When and where, Contact and Positions, and give each position its own type, where mode, time commitment, work deadline, application deadline and weekly schedule, plus description, requirements and skills. Derive the event-level offer fields from the positions so the volunteer catalog keeps reading the event record.</p>
+          <p><strong>Benefit:</strong> a manager describes real jobs instead of flattening one schedule onto the whole event, and a volunteer applies for the job they can actually do.</p>
+          <p><strong>Implemented:</strong> normalizePosition holds the job definition, applyDerivedOfferFields writes the event summary (one shared type, or <code>mixed</code>), openPositionModal is grouped into what the volunteer does, the offer and when it runs, and renderPositions shows the offer, the schedule and the closing date per position.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>app/EventVolunteerManager.html</code></p>
+          <p><strong>Status:</strong> done (2026-10-25)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-25" data-group="g3-parity" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-25</span>
+          <span class="task-title">Allow several contacts on one event</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-25 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the event form held one contact, so a second person (a site coordinator, a first aid lead) had nowhere to go.</p>
+          <p><strong>How we will solve it:</strong> store a contact list on the event, render it as cards in the Contact tab with Add, Edit and Remove, and keep the first contact in the single <code>contactName</code>, <code>contactPhone</code> and <code>contactEmail</code> fields so the volunteer catalog and the report keep working.</p>
+          <p><strong>Benefit:</strong> volunteers have the right person for the question, and older records without a list still show their single contact.</p>
+          <p><strong>Implemented:</strong> contactsOf reads the list or builds one from the legacy single fields, applyContactFields keeps the main contact in step on every write, and renderContacts, openContactModal, submitContact, saveContacts and confirmRemoveContact manage the list.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code>, <code>app/EventVolunteerManager.css</code></p>
+          <p><strong>Status:</strong> done (2026-10-25)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-26" data-group="g3-parity" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-26</span>
+          <span class="task-title">Fail loudly when a position cannot be written</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-26 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Save role could do nothing at all: with no event record attached the write threw inside the click handler, and a throw in a click handler shows no message, so the button looked dead.</p>
+          <p><strong>How we will solve it:</strong> wrap every submit handler so an unexpected error becomes a visible toast instead of a silent failure, and keep the write path working on whatever data the tool holds.</p>
+          <p><strong>Benefit:</strong> a manager always learns why a position was not saved.</p>
+          <p><strong>Implemented:</strong> both submit handlers catch and report their errors, and the save path was verified by clicking Save position in the harness. The guards that refused a save without an attached record were removed later, see D-EVM-21.</p>
+          <p><strong>Files:</strong> <code>app/EventVolunteerManager.js</code></p>
+          <p><strong>Status:</strong> done (2026-10-25)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-27" data-group="g3-parity" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-27</span>
+          <span class="task-title">Read the position offer in the volunteer catalog and the clock</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-27 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the positions now carry the offer, but the volunteer tool still filters catalog entries and computes clock windows from the event-level summary.</p>
+          <p><strong>How we will solve it:</strong> in the paired VolunteerProfile tool, list the positions of an event as separate cards or as a position picker inside the event, filter by the position offer type, and let the clock read the schedule of the position the volunteer is placed in. Keep the event summary as a fallback for events without positions.</p>
+          <p><strong>Benefit:</strong> a volunteer sees the job they can actually do, and the clock matches the schedule they agreed to.</p>
+          <p><strong>Files:</strong> <code>../VolunteerProfile/app/VolunteerProfile.js</code>, this document and the VolunteerProfile SSOT in one change</p>
+          <p><strong>Status:</strong> not started - needs a decision on how positions appear in the catalog</p>
+        </div>
+      </details>
+    </div>
   </section>
 
   <section class="task-group" data-release-group="g4-release" data-group-status="planned">
@@ -1055,6 +1254,10 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
   <p>Preparation: open <code>app/test-harness.html</code> in a browser (no server needed). The harness bar switches
   between the event manager (Alice Manager, admin) and a volunteer (Bob Volunteer, viewer). The browser console shows
   every notify the mock SDK receives.</p>
+  <p><strong>Harness bar:</strong> Load sample reseeds the sample event; Empty data removes every record and reloads, so
+  the empty state can be reviewed (the same as opening <code>?empty=1</code>); Reset data drops the stored database and
+  reseeds on reload; Narrow tests the narrow layout. The storage key carries a version, so a database written before a
+  type rename is ignored and the sample is seeded again.</p>
   <h3>17.1 Scenarios</h3>
   <ol>
     <li><strong>S-01 - Manager opens the event.</strong> Open the harness as Alice. PASS if: the header shows the event name and its date, five stat cards show live numbers, and Requests to decide lists one pending person.</li>
@@ -1066,6 +1269,11 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     <li><strong>S-07 - Message volume.</strong> Send an announcement, then start a new volume. PASS if: volume 1 reads Closed, volume 2 is Open, and the old message is still readable.</li>
     <li><strong>S-08 - Read only.</strong> Switch the harness to the volunteer role and reload. PASS if: every add, approve and save control is disabled and the role pill reads view only.</li>
     <li><strong>S-09 - No event object.</strong> Point <code>?eventId=missing</code>. PASS if: every screen shows the "No event loaded" state and nothing throws.</li>
+    <li><strong>S-10 - Event details are entered here.</strong> On Event details set a contact and change the offer to Recurring with Saturday 10:00 to 12:00, then save. PASS if: the contact, type, where, commitment and recurrence come back after the reload, and a role keeps its skills and time commitment.</li>
+    <li><strong>S-11 - Approve every waiting hour.</strong> With one or more lines waiting press Approve all and confirm. PASS if: the waiting list empties, one ledger record per line is written, and the button disables itself.</li>
+    <li><strong>S-12 - Role capacity.</strong> Give a role one place and accept two volunteers into it. PASS if: the role row shows Filled 2 against 1 with an over chip, and a warning names the number of overfilled roles without blocking the save.</li>
+    <li><strong>S-13 - Tabbed event details that write as you type.</strong> Open Event details on a loaded event. PASS if: the form shows four tabs, no Create or Save action is offered, and changing the event fields writes the record without a click. Then open the tool with no record: the form still renders, no warning appears anywhere, a contact and a position can be entered and are kept in the tool, and switching tabs keeps the entered values.</li>
+    <li><strong>S-14 - Positions own the offer, and an event can list several contacts.</strong> PASS if: the Position editor carries the job definition, the offer and the schedule; a saved position keeps its own type, place mode, deadlines and weekly schedule; the event summary becomes mixed when positions differ; a second contact is added and the first one stays the main contact; and Save position writes the record when clicked.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
   <table>
@@ -1074,6 +1282,8 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
     <tr><td>S-07 (harness)</td><td>PASS (2026-10-21, smoke suite)</td><td>rotation covered by assertions</td></tr>
     <tr><td>S-08 (harness)</td><td>PASS (2026-10-21, headless render)</td><td>volunteer role pill and disabled controls</td></tr>
     <tr><td>S-09 (harness)</td><td>PASS (2026-10-21)</td><td>empty state, no console errors</td></tr>
+    <tr><td>S-10 to S-12 (harness)</td><td>PASS (2026-10-24)</td><td>20 assertions: contact and offer fields saved and reloaded, recurrence weekday and window, role skills and commitment preserved, Filled column and overfill warning, batch approval clearing the waiting list and writing one ledger record, disabled state</td></tr>
+    <tr><td>S-13 (harness)</td><td>PASS (2026-10-25)</td><td>28 assertions on a loaded event: four tabs, no Create or Save action, contacts and positions inside the form, a second contact saved with the first as main, a position saved with its own offer, schedule, requirements and deadlines, mixed summary, Save position through the button, overfill warning and batch approval; plus 18 assertions with no record: no warning anywhere, both editors open and keep what is entered, the position summary is derived, and nothing is written to the database</td></tr>
     <tr><td>S-01 to S-09 (live CMS)</td><td></td><td>task T-17</td></tr>
   </table>
   <p><strong>Publish gate:</strong> publish only when the live CMS run passes and group g4-release is fully checked.</p>
@@ -1162,7 +1372,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
         <p><strong>Likelihood / impact:</strong> certain with conversations, high impact before the split.</p>
         <p><strong>Mitigation:</strong> messages live in their own type, rotate at 150 per volume, and the event document stays around 12 KB.</p>
         <p><strong>Last re-evaluation:</strong> 2026-10-21 - solved by D-EVM-03 and D-EVM-08.</p>
-      </div>5
+      </div>
     </details>
   </div>
 
@@ -1181,7 +1391,26 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
         <p><strong>Likelihood / impact:</strong> low likelihood, low impact - the empty state explains it.</p>
         <p><strong>Mitigation:</strong> placements, tasks and hours are separate documents and remain intact.</p>
         <p><strong>Last re-evaluation:</strong> 2026-10-22 - accepted, documented in the failure matrix.</p>
-      </div>5
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-06" data-group="g3-parity" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-06</span>
+        <span class="risk-title">Positions own the offer, but the paired volunteer tool still reads the event summary</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-06 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-24, T-27</p>
+        <p><strong>What can go wrong:</strong> an event with different positions shows one <code>mixed</code> chip in the catalog, and the volunteer clock takes its window from the first scheduled position instead of the volunteer's own position.</p>
+        <p><strong>Likelihood / impact:</strong> certain with multi position events, medium impact - the hours land on the right ledger but the window can be wrong.</p>
+        <p><strong>Mitigation:</strong> the summary always takes the earliest deadlines and a scheduled position, the placement stores the chosen <code>positionId</code>, and T-27 changes the catalog and the clock to read the position. Until then a manager should give positions of one event the same schedule or accept the summary window.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-25 - open, recorded with T-27.</p>
+      </div>
     </details>
   </div>
 
@@ -1200,7 +1429,7 @@ EventVolunteerManager ──read/write┤  approve, roles, confirm, reject
 
   <div class="footer">
     Event Volunteer Manager - single source of truth for all decisions about
-    this tool. Version 1.5, 2026-10-22.
+    this tool. Version 1.10, 2026-10-25.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

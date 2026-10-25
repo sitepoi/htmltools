@@ -92,7 +92,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.17</span>
+      <span>v0.22</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -141,8 +141,8 @@
     produces it.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.17</td></tr>
-    <tr><th>Last updated</th><td>2026-10-22</td></tr>
+    <tr><th>Document version</th><td>0.22</td></tr>
+    <tr><th>Last updated</th><td>2026-10-24</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
@@ -244,13 +244,17 @@
       <td>Separate order detail tool that displays a placed order.</td>
       <td>Order line rendering and totals only - deal fields and the discount row (T-21 to T-23).</td>
     </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/docs/deals-guide.html"><code>docs/deals-guide.html</code></a></td>
+      <td>Marketing and sales guide for the deal types, scheduling, promo codes and legacy campaigns. Version 2.0, 2026-10-24.</td>
+      <td>Whole file. Not generated from this SSOT - it is maintained by hand and must be re-checked against <code>docs/client-data-contract.html</code> whenever a rule type, schedule field or promo-code rule changes.</td>
+    </tr>
   </table>
 
   <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
-  <p>The baseline before the deals work: what is already developed, shipped
-  and in effect right now. The deal, campaign, hero and promotion sections
-  are NOT in this table because they do not exist yet - they are the subject
-  of sections 5 to 8 and the tasks from T-01 onward.</p>
+  <p>What is already developed, shipped and in effect right now. The deals,
+  campaigns, hero, promotions and promo-code sections are listed here once
+  they shipped; section 5 keeps the historical evidence that started the work.</p>
   <table>
     <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
     <tr><td>C-01</td><td>Restaurant profile editor: identity, contact, address, coordinates, legal data</td><td><code>app/RestaurantAndMenuManager.js</code> - <code>general_info</code> defaults and renderers</td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
@@ -268,6 +272,9 @@
     <tr><td>C-13</td><td>Campaign editor: list, editor with read-only <code>most_expensive</code> pricing, and the duplicate-as-deal action</td><td><code>app/RestaurantAndMenuManager.js</code> - campaigns section (T-17, T-18)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
     <tr><td>C-14</td><td>Hero editor: direct image upload or URL with preview and clear; preset gallery shown only when the platform supplies presets</td><td><code>app/RestaurantAndMenuManager.js</code> - hero section (T-19)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
     <tr><td>C-15</td><td>Promotions editor: list with drag-to-reorder, image per promotion, and the four-entry storage limit</td><td><code>app/RestaurantAndMenuManager.js</code> - promotions section (T-20)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-16</td><td>Extended deal rule types: <code>percentage_discount</code>, <code>subtotal_threshold</code>, <code>free_delivery</code>, <code>free_item_with_purchase</code>, <code>buy_n_get_m</code>, <code>volume_pricing</code> and <code>free_modifier</code>, with validation and save gate</td><td><code>app/RestaurantAndMenuManager.js</code> - extended rule editors (T-30 to T-42)</td><td>2026-10-21</td><td>D-RAMM-18, contract 3.3</td></tr>
+    <tr><td>C-17</td><td>Optional schedule block on any deal: date range, weekdays and time window</td><td><code>app/RestaurantAndMenuManager.js</code> - schedule editor (T-38)</td><td>2026-10-21</td><td>D-RAMM-18</td></tr>
+    <tr><td>C-18</td><td>Promo codes admin section: normalized code, title, one of three rule types and an optional usage cap</td><td><code>app/RestaurantAndMenuManager.js</code> - promo codes sub-tab (T-40)</td><td>2026-10-21</td><td>D-RAMM-18</td></tr>
   </table>
   <p class="note">Capabilities listed here are in effect and must keep working
   unless a decision in section 11 reverses them.</p>
@@ -300,6 +307,10 @@
   </table>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <p class="note"><strong>Historical record.</strong> This section documents
+  the state before the deals work started (2026-10-21). It is kept for
+  traceability; every bullet below was resolved by T-01 to T-42, and the
+  current behavior is in section 3.</p>
   <h3>5.1 Verified evidence</h3>
   <ul>
     <li>The customer contract (<code>docs/client-data-contract.html</code>, version 3.3, 2026-10-21, sections 21 and 23) defines <code>hero</code>, <code>promotions</code>, <code>campaigns</code>, <code>deals</code> and <code>promo_codes</code> as OPTIONAL top-level sections of the very document this tool publishes.</li>
@@ -395,6 +406,20 @@
     <tr><td>Is a show or hide flag needed on a deal?</td><td>Yes, as an extension: store a boolean <code>active</code> (default true). The website honors it since 2026-10-21, so the editor label now states the deal is hidden when the flag is off - D-RAMM-15, D-RAMM-19.</td></tr>
     <tr><td>How does the owner order deals?</td><td>Drag and drop, inside a section and across sections; the resulting array order is the published order - D-RAMM-16.</td></tr>
     <tr><td>What happens when a referenced category or item is deleted?</td><td>A category that still contains items cannot be deleted, and a category or item used by a deal is blocked with a message naming the deals - D-RAMM-17.</td></tr>
+    <tr><td>How does the tool know where the restaurant is?</td><td>From the stored <code>general_info.coordinates</code>. The tool does not geocode the address; a coordinate picker lets the owner set the point once - D-RAMM-26.</td></tr>
+    <tr><td>How are sample offers produced for a tenant?</td><td>Generated from the tenant's own menu, one per rule type, by a generator inside the tool; created inactive so the owner activates the ones they like. A fixed sample JSON cannot work across tenants because it references item ids - D-RAMM-27.</td></tr>
+    <tr><td>Can the generator write deals without checks?</td><td>No. Generated deals pass the same validation gate, are inserted only, and never modify an existing deal - D-RAMM-28.</td></tr>
+    <tr><td>How should category selection work in a deal rule?</td><td>The owner selects a category, sees its items, and includes or excludes individual items. If contract 3.3 cannot express the exclusions, the contract is extended first - D-RAMM-29.</td></tr>
+    <tr><td>Are the menu cards, hero rendering and cart in scope?</td><td>No. Those are website selling-tool surfaces. This tool stores and publishes the data - D-RAMM-30.</td></tr>
+    <tr><td>Is Stripe in scope?</td><td>No. Card payment belongs to the selling tool and the platform - D-RAMM-31.</td></tr>
+    <tr><td>Where do tax and fee templates come from?</td><td>Shipped in the tool code for all US states and Canadian provinces, state/province level only, with source and effective date. Moving them to the platform can happen later - D-RAMM-32.</td></tr>
+    <tr><td>Is a maximum quantity rule needed?</td><td>No. Only the existing minimums stay. A maximum would limit offers before the domain rules are agreed - D-RAMM-33.</td></tr>
+    <tr><td>Is AI in scope for deal generation?</td><td>Yes, in two modes: generate samples for chosen types, and suggest deals with reasons. Every generated deal is created inactive, validated and insert-only - D-RAMM-34.</td></tr>
+    <tr><td>How many AI calls are free, and with which model?</td><td>30 calls per month per restaurant on DeepSeek V4.1 Flash. The platform default stays DeepSeek V4 Pro - D-RAMM-35. Enforcement is Q-12, model selection is Q-13.</td></tr>
+    <tr><td>What is the Deals tab label?</td><td><code>Deals</code>, as shipped, with five sub-tabs - D-RAMM-36.</td></tr>
+    <tr><td>What happens when the 30 AI calls are used?</td><td>The counter is visible on the Deals page and in both AI dialogs. At 30 of 30 the AI actions are blocked, the dialog explains that the allowance resets on the first day of the next month, and an upgrade action is shown when the platform provides one - D-RAMM-38.</td></tr>
+    <tr><td>How is the AI model chosen?</td><td>By the platform, not by this tool. The tool always calls <code>tool.requestAI</code> with the default routing - D-RAMM-39.</td></tr>
+    <tr><td>What form does AI output take?</td><td>Strict JSON only, rendered as structured results that fill the deal forms. No chat interface - D-RAMM-40.</td></tr>
   </table>
 
   <h2 id="sec-design">8. Solution design</h2>
@@ -466,6 +491,7 @@
     <tr><td>Campaigns</td><td><code>campaigns[]</code></td><td>Legacy list and editor. Pricing read-only. Offers a duplicate-as-deal action.</td></tr>
     <tr><td>Hero</td><td><code>hero</code></td><td>Direct image upload or URL, plus the preset gallery that fills <code>preset_images</code>.</td></tr>
     <tr><td>Promotions</td><td><code>promotions[]</code></td><td>List limited to four entries; Add is disabled at four.</td></tr>
+    <tr><td>Promo Codes</td><td><code>promo_codes[]</code></td><td>List and editor for a normalized code, title, one of the three supported rule types and an optional usage cap (T-40).</td></tr>
   </table>
 
   <h3>8.6 Read, write and publish path</h3>
@@ -515,14 +541,39 @@
   <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
   <table>
     <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
-    <tr><td>L-01</td><td>No scheduling or time window on a deal</td><td>The owner must add and remove a deal manually until T-38 ships.</td><td>Done - T-38 (schedule editor shipped 2026-10-21)</td></tr>
+    <tr><td>L-01</td><td>Scheduling and time windows were missing</td><td>The owner had to add and remove a deal by hand.</td><td>Solved - T-38 shipped 2026-10-21; verified by T-55</td></tr>
     <tr><td>L-02</td><td>No channel targeting</td><td>Every deal appears on every ordering channel; there is no field to restrict it.</td><td>Deferred - D-RAMM-10</td></tr>
-    <tr><td>L-03</td><td>The <code>active</code> flag is stored; the website honors it since 2026-10-21</td><td>A deal marked inactive is hidden from the Deals page. Only the editor label still needs the update (T-41).</td><td>Solved - T-41 (2026-10-21)</td></tr>
+    <tr><td>L-03</td><td>The <code>active</code> flag is stored and the website honors it since 2026-10-21</td><td>A deal marked inactive is hidden from the Deals page and the editor label states it.</td><td>Solved - T-41 (2026-10-21)</td></tr>
     <tr><td>L-04</td><td>No per-deal analytics</td><td>The owner cannot see how often a deal was ordered from this tool.</td><td>Idea I-03</td></tr>
     <tr><td>L-05</td><td>No visual preview of the customer Deals page</td><td>Only a textual match preview exists; the real card layout is seen on the website.</td><td>Idea I-05</td></tr>
     <tr><td>L-06</td><td>Campaign editing is intentionally minimal</td><td>Legacy entries can be edited, but new offers should be created as deals.</td><td>Accepted - D-RAMM-09</td></tr>
-    <tr><td>L-07</td><td>The item-level delete guard is not built yet</td><td>Deleting an item listed in a tiered deal or a fixed extra can still break that deal until T-29 ships.</td><td>Done - T-29 (D-RAMM-17)</td></tr>
+    <tr><td>L-07</td><td>The item-level delete guard was missing</td><td>Deleting an item listed in a tiered deal or a fixed extra could break that deal.</td><td>Solved - T-29 (D-RAMM-17)</td></tr>
     <tr><td>L-08</td><td>No platform write-back relay</td><td>Publishing relies on the existing tool.setValue path only.</td><td>Out of scope - platform task T-43</td></tr>
+    <tr><td>L-09</td><td>The delivery map opens on a hardcoded New York point (<code>[40.7128, -74.006]</code>)</td><td>Every restaurant starts in New York and can draw zones far from its own address.</td><td>Planned - T-50, with the picker from T-59 (D-RAMM-26)</td></tr>
+    <tr><td>L-10</td><td>No province or state tax and fee templates</td><td>Tax rates and the delivery fee rate are typed by hand for every restaurant, which invites costly mistakes during onboarding.</td><td>Planned - T-51, unblocked by D-RAMM-32</td></tr>
+    <tr><td>L-11</td><td>No AI generator or suggestion engine</td><td>Sample deals exist only as fixed JSON tied to one demo menu, so another tenant cannot use them and the owner never sees what is possible.</td><td>Planned - T-52, T-60 (D-RAMM-34)</td></tr>
+    <tr><td>L-12</td><td>A deal rule cannot include or exclude individual items inside a selected category</td><td>The owner can only target whole categories, so a few unwanted items force a smaller category or a hand-built item list.</td><td>Planned - T-57 (D-RAMM-29), after the contract check</td></tr>
+    <tr><td>L-13</td><td>No payment gateway in this tool</td><td>Card payments cannot be taken or tested here; the tool only stores <code>payment_methods</code> switches.</td><td>Out of scope - see 10.1</td></tr>
+    <tr><td>L-14</td><td>No AI usage metering</td><td>The 30 free calls per month cannot be counted, shown or enforced, so a tenant can exhaust the allowance without notice.</td><td>Planned - T-61; behaviour fixed (D-RAMM-38), storage in Q-15</td></tr>
+    <tr><td>L-15</td><td>The tool cannot choose an AI model</td><td>Model routing is platform configuration; the tool always uses whatever the platform selects.</td><td>Accepted - D-RAMM-39</td></tr>
+  </table>
+
+  <h3>10.1 Cross-tool and business items from the 2026-10-24 meeting</h3>
+  <p>These items were raised in the same meeting but are not owned by this
+  tool. They are recorded here so nothing is lost, with the owner named, and
+  they are deliberately <strong>not</strong> listed as tasks in section 15 -
+  a task in this record must be implementable in this tool.</p>
+  <table>
+    <tr><th>Item</th><th>Why it is not this tool</th><th>Owner</th></tr>
+    <tr><td>Stripe (or another) card payment integration and a tested card flow</td><td>Confirmed out of scope (D-RAMM-31): this tool has no backend and no network access; it only stores payment-method switches (D-RAMM-13). Checkout and payment live in the website and the platform.</td><td>Website checkout + platform team</td></tr>
+    <tr><td>Menu item cards, the hero image rendering and the cart in the selling UI</td><td>Website selling-tool surfaces (D-RAMM-30). The reported delay before a new hero appears is a website cache question; this tool only has to store and publish <code>hero.image_url</code> correctly, which T-56 checks.</td><td>Website selling tool</td></tr>
+    <tr><td>Add <code>deepseek-v4.1-flash</code> to the AI model catalogue and route tenants to it</td><td>Confirmed platform configuration (D-RAMM-39). Existing tools call <code>tool.requestAI(prompt, context, callback)</code> with no model argument; nothing is built for this in the tool.</td><td>Platform AI configuration</td></tr>
+    <tr><td>AI upgrade and package purchase flow (pay for the 30 calls, or buy additional packages)</td><td>The tool only shows the counter, blocks at 30 of 30 and links to the platform page when a URL is configured. Charging and packages are commercial and platform work (D-RAMM-38).</td><td>Platform + business</td></tr>
+    <tr><td>Order management and admin authorization errors (heavy background queries, performance)</td><td>This tool issues no database queries; it reads and writes one document through <code>tool.setValue</code>.</td><td>Platform + <code>RestaurantOrderManager</code></td></tr>
+    <tr><td>Pricing and packaging: first dial/feature free, extra charge for the second and third (for example 25 USD)</td><td>A commercial model plus platform entitlements; deciding it here would not change any document field.</td><td>Business + platform (entitlements)</td></tr>
+    <tr><td>Collect pilot feedback, share it with Ticpoi, prepare the Sunday meeting pack</td><td>Project management, not a code change.</td><td>Tema + Ticpoi</td></tr>
+    <tr><td>Monitor real restaurants after onboarding and minimise the order drop</td><td>Post-launch analytics and account management.</td><td>Business</td></tr>
+    <tr><td>Author the 20-30 ready-made offer contents</td><td>Content work shared by both teams; the tool support is T-52.</td><td>Ticpoi + Tema</td></tr>
   </table>
 
   <h2 id="sec-decisions">11. Decision register</h2>
@@ -680,6 +731,96 @@
       <td>Owner request: the SSOT document's font looks better than the app - make the tool use the same font. The SSOT stylesheet uses Inter with a Segoe UI fallback, so the tool's <code>--font</code> now matches it exactly.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-RAMM-26</td><td>2026-10-24</td>
+      <td>The restaurant location is the stored <code>general_info.coordinates</code>. The tool never geocodes the address, and a coordinate picker is added to the Address and location panel.</td>
+      <td>Owner decision. Geocoding would need an external service the tool may not call; one stored point is enough for the zones map, the website and the order tool. The picker removes the need to type two numbers.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-27</td><td>2026-10-24</td>
+      <td>Sample deals are generated inside the tool from the tenant's own menu, one per rule type, and created with <code>active: false</code>. A fixed sample JSON is not used for tenants.</td>
+      <td>Owner decision. A sample file references item ids that only exist in the demo menu, so it cannot be imported elsewhere. The goal is to show possibilities on the owner's own products, and the owner activates what they want.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-28</td><td>2026-10-24</td>
+      <td>Generated deals pass the same validation gate as manual ones, are insert-only, and never modify or delete an existing deal. Whether item selection uses rules or AI is Q-10.</td>
+      <td>Safety first: an unsupervised generator that writes live offers could confuse a tenant. Validation plus inactive-by-default keeps the result harmless until the owner reviews it.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-29</td><td>2026-10-24</td>
+      <td>In a deal rule the owner selects a category, sees its items, and includes or excludes individual items. The editor writes only what the contract can express; if exclusions need a new field, the contract is extended first.</td>
+      <td>Owner decision. Without it the owner must split categories or hand-pick every item. Writing an unsupported field would be silently ignored by the website.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-30</td><td>2026-10-24</td>
+      <td>Menu item cards, hero rendering and cart behavior belong to the website selling tool and are out of scope here. This tool owns storage and publishing of the document only.</td>
+      <td>Owner decision. Mixing a rendering bug into the admin record would keep a task open that this tool cannot fix.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-31</td><td>2026-10-24</td>
+      <td>Stripe and card payment processing are out of scope for this tool.</td>
+      <td>Owner decision. Payment lives in the selling tool and the platform; this tool only stores payment-method switches.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-32</td><td>2026-10-24</td>
+      <td>US state and Canadian province tax and delivery-fee templates ship inside the tool code, at state/province level, each entry carrying its source and effective date. Moving them to a platform parameter is a later option.</td>
+      <td>Owner decision. It unblocks onboarding now without a new service. State level avoids city and county rates that change often and would need a maintained feed.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-33</td><td>2026-10-24</td>
+      <td>No maximum quantity rule is added. Only the existing minimums stay (minimum quantity on a deal, required item count, bundle group quantity).</td>
+      <td>Owner decision. The domain rules for a maximum are not agreed, and an artificial cap would restrict offers without a reason.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-34</td><td>2026-10-24</td>
+      <td>AI deal generation is in scope in two modes: (a) generate samples for the rule types the owner selects in a dialog, and (b) suggest deals with a reason and a timing note, where one click creates the chosen deal. Every generated deal is created inactive, validated with the normal gate, and inserted only.</td>
+      <td>Owner decision. The AI reads the tenant menu, the existing deals and every rule type, so the output fits the real products instead of a demo menu. Inactive-by-default keeps the owner in control.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-35</td><td>2026-10-24</td>
+      <td>Each restaurant gets 30 free AI calls per month. The agreed model is DeepSeek V4.1 Flash, which must be added to the model catalogue; the platform default stays DeepSeek V4 Pro.</td>
+      <td>Owner decision. The allowance bounds cost per tenant. Enforcement after 30 calls and the counter location are Q-12; how the tool selects the model is Q-13.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-36</td><td>2026-10-24</td>
+      <td>The tab label is <code>Deals</code>, with the Deals, Campaigns, Hero, Promotions and Promo Codes sub-tabs.</td>
+      <td>Shipped and accepted by the owner; Q-02 is closed.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-37</td><td>2026-10-24</td>
+      <td>A hero preset gallery is not built now; it is kept as idea I-08.</td>
+      <td>Upload and link cover the need. Presets are only a convenience, and the contract accepts an empty <code>preset_images</code> list.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-38</td><td>2026-10-24</td>
+      <td>Both AI dialogs and the Deals toolbar show the monthly counter ("5 of 30 AI calls used"). At 30 of 30 the AI actions are disabled, the dialog states that the allowance resets on the first day of the next month, and an upgrade action is shown when the platform supplies a URL. Each submitted request counts once.</td>
+      <td>Owner decision. A visible counter turns a silent limit into a known one. Payment, packages and the upgrade page stay on the platform; the tool only displays state and links out.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-39</td><td>2026-10-24</td>
+      <td>The tool does not choose an AI model. Model routing and the addition of <code>deepseek-v4.1-flash</code> are platform configuration.</td>
+      <td>Owner decision. It removes a tool-level dependency and keeps the tool on the existing <code>tool.requestAI</code> call.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-40</td><td>2026-10-24</td>
+      <td>AI output is strict JSON that fills the structured deal forms. There is no conversational interface in either AI mode for now; a chat assistant is idea I-09.</td>
+      <td>Owner decision. Structured output can be validated and mapped to the contract; free text cannot. A chat layer can be added later without changing this output contract.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -729,36 +870,37 @@
     <tr><td>18</td><td>Sample data moved out of code into <code>app/sampleData/</code> with plain names; imports take pasted JSON or a chosen file</td><td><code>app/sampleData/*.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-22, T-48)</td></tr>
     <tr><td>19</td><td>Professional blue theme (SSOT fonts), hero redesign (upload / link alternatives) and category panel fixes (full names, All categories reset)</td><td><code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-22, T-49)</td></tr>
     <tr><td>20</td><td>Tool uses the SSOT's Inter webfont with the same fallback stack in both production and the harness</td><td><code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code> - DONE (2026-10-22, D-RAMM-25)</td></tr>
+    <tr><td>21</td><td>Coordinate picker on Address and location, and the delivery map starts at the stored coordinates with a recenter action</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - PENDING (T-59, T-50)</td></tr>
+    <tr><td>22</td><td>US state and Canadian province tax and delivery-fee templates in code, applied on request and never overwriting entered values</td><td><code>app/RestaurantAndMenuManager.js</code> - PENDING (T-51, D-RAMM-32)</td></tr>
+    <tr><td>23</td><td>AI sample generation with a type-selection dialog: inactive drafts, validated, insert-only, with a skipped-type report</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-52)</td></tr>
+    <tr><td>24</td><td>Menu, category and product edit surfaces verified end to end</td><td><code>app/*</code> - IGNORED (T-54, selling-side surfaces per D-RAMM-30)</td></tr>
+    <tr><td>25</td><td>Schedule and visibility verified against the website</td><td><code>app/test-harness.html</code>, website - PENDING (T-55)</td></tr>
+    <tr><td>26</td><td>Hero URL and upload verified to be stored and published correctly</td><td><code>app/*</code> - PENDING (T-56)</td></tr>
+    <tr><td>27</td><td>Item include/exclude inside a selected category, contract checked first</td><td><code>docs/client-data-contract.html</code>, <code>app/*</code> - PENDING (T-57, D-RAMM-29)</td></tr>
+    <tr><td>28</td><td>Montreal pilot: full onboarding with 10+ scripted tests and a findings report</td><td><code>docs/ssot.html</code> section 17 - PENDING (T-58)</td></tr>
+    <tr><td>29</td><td>AI suggestion panel with reasons and one-click create</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-60)</td></tr>
+    <tr><td>30</td><td>Monthly AI allowance: "n of 30" in the Deals toolbar and both dialogs, block at 30 of 30 with reset date and upgrade link</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-61, storage Q-15)</td></tr>
+    <tr><td>31</td><td>Compact AI input payload plus the strict JSON output schema, with item cap and no private data</td><td><code>app/RestaurantAndMenuManager.js</code> - PENDING (T-62)</td></tr>
   </table>
 
-    <h2 id="sec-questions">14. Open questions</h2>
+        <h2 id="sec-questions">14. Open questions</h2>
   <p>Decision points we resolve together before or during implementation.
   Every answer becomes a dated row in section 11 and is removed from this
-  list. Q-01, Q-03 and Q-05 were answered on 2026-10-21 (D-RAMM-15 to
-  D-RAMM-17).</p>
+  list. Q-01 to Q-14 were answered by 2026-10-24 (D-RAMM-15 to D-RAMM-40).
+  One question remains, about where the AI counter is stored.</p>
   <ol>
-    <li><strong>Q-01 - Where do the hero preset images come from?</strong>
-    A preset is a ready-made hosted image URL the owner can pick with one
-    click, so no upload is needed. <code>hero.image_url</code> is the image
-    shown; <code>hero.preset_images</code> is the list offered in the
-    manager. Contract section 21.1 says the owner picks a preset in the
-    manager tool and the widget falls back to the first
-    <code>preset_images</code> entry, but it never says who supplies those
-    URLs. Options: (a) a fixed list built into the tool, (b) a tool parameter
-    (<code>heroPresetImages</code>) that can differ per tenant, (c) only
-    images the owner uploaded earlier. Recommendation: (b) with a small
-    built-in fallback. Risk of guessing: an empty gallery means only direct
-    uploads work, and a wrong list shows another tenant's photos.</li>
-    <li><strong>Q-02 - What is the tab called and how is it split?</strong>
-    The four contract sections are different things: deals are priced offers
-    the customer builds, campaigns are legacy offers shown as two-for-one
-    cards, the hero is the top image, and promotions are the text and image
-    strip under it. Options: (a) one tab named <code>Deals</code> with four
-    sub-tabs (Deals, Campaigns, Hero, Promotions), (b) the same four
-    sub-tabs under the name <code>Deals &amp; Promotions</code>, (c) two
-    tabs, one for offers (Deals, Campaigns) and one for presentation (Hero,
-    Promotions). Recommendation: (a), because the owner manages all four as
-    one customer-facing surface.</li>
+    <li><strong>Q-15 - Where is the AI call counter stored?</strong>
+    The tool is sandboxed: it cannot keep a trustworthy counter in the browser
+    (it resets per device and can be bypassed), so the count needs a real home.
+    Options: (a) platform metering per tenant, read through an SDK call
+    (preferred if the platform exposes one); (b) a documented admin-only
+    section in the restaurant document, for example
+    <code>ai_usage: { month: "2026-10", calls: 5 }</code>, which needs a contract
+    change and can be edited in the CMS; (c) derive the count from the deals
+    themselves, which is not possible because one call can create several deals.
+    Needed: does the platform already expose AI usage per tenant? If not, approve
+    option (b) and the contract addition. Recommendation: (a), with (b) as the
+    fallback, treating the stored value as untrusted.</li>
   </ol>
 
 <h2 id="sec-tasklist">15. Development task list</h2>
@@ -1775,7 +1917,274 @@
     </div>
   </section>
 
-  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+    <section class="task-group" data-release-group="settings-locale" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Restaurant location and local tax setup</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="settings-locale">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="settings-locale"></div></div>
+    <p class="task-group-note">Why these belong together: both tasks decide how a new restaurant is configured by the platform, and a half-automatic setup is what causes mis-drawn zones and mistyped tax rates.</p>
+    <div class="task-item" data-task-id="T-50" data-group="settings-locale" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-50</span>
+          <span class="task-title">Start the delivery map at the restaurant coordinates</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-50 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The zone map is created with a hardcoded center of <code>[40.7128, -74.006]</code> (New York) at line 2529. Every restaurant opens the map in New York and can draw delivery zones in the wrong city.</p>
+          <p><strong>How we will solve it:</strong> Read <code>general_info.coordinates</code> and use it when latitude and longitude are finite and are not the placeholder pair. Fall back to the centroid of the first saved zone, then to the current default. Add a "Center on restaurant" button next to the map tools and re-center when the coordinates change. No geocoding is added (D-RAMM-26); the owner sets the point with the picker from T-59.</p>
+          <p><strong>Benefit:</strong> Zones are drawn around the real restaurant, so delivery pricing and coverage start correct.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started. Coordinates are the only source of truth (D-RAMM-26).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-51" data-group="settings-locale" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-51</span>
+          <span class="task-title">Add province and state tax and delivery-fee templates</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-51 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Tax categories and the delivery-fee tax rate are typed by hand for every restaurant. A wrong rate is a financial and legal problem, and it slows onboarding.</p>
+          <p><strong>How we will solve it:</strong> A data-driven preset keyed by country plus state or province, holding the tax name, the pickup / delivery / in-restaurant rates and the delivery-fee tax rate. When the owner picks a state, show an "Apply the <state> template" action that fills the existing <code>taxation_currency</code> fields. Never overwrite a non-empty table without explicit confirmation, and show the template source and effective date.</p>
+          <p><strong>Benefit:</strong> Faster onboarding with fewer tax mistakes, without adding a new document key.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, a template JSON under app/sampleData/</code></p>
+          <p><strong>Status:</strong> Not started. Blocked by Q-09: which states and countries, who maintains the rates, and where the table lives.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-59" data-group="settings-locale" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-59</span>
+          <span class="task-title">Add a coordinate picker to the address and location panel</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-59 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Coordinates can only be typed as two numbers. A single wrong digit puts the restaurant in the ocean, and nothing on screen shows the mistake.</p>
+          <p><strong>How we will solve it:</strong> A compact Leaflet map under Address and location with a draggable marker. Clicking the map or dragging the marker writes <code>general_info.coordinates.lat</code> and <code>.lng</code>. Add a "Paste a Google Maps link" field that extracts the latitude and longitude from the link text (no network call), and a reset-to-default action. Show the current values and a short hint that the same point is used by the delivery map and the website.</p>
+          <p><strong>Benefit:</strong> The owner sets the location visually once, and every map in the tool and on the website agrees.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/RestaurantAndMenuManager.css, app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started. Uses the Leaflet bundle already loaded by the tool; no external calls.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="deals-template-library" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: AI deal generation and suggestions</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="deals-template-library">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-template-library"></div></div>
+    <p class="task-group-note">Why these belong together: one AI input builder feeds both modes, the allowance meters both calls, and the output review tunes the same prompt. Shipping one without the others gives either an unusable button or an unmetered one.</p>
+    <div class="task-item" data-task-id="T-52" data-group="deals-template-library" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-52</span>
+          <span class="task-title">AI sample generation with deal-type selection</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-52 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A fixed sample JSON references item ids that only exist in the demo menu. The owner also cannot imagine what their own menu makes possible, and the meeting approved a capable AI for exactly this.</p>
+          <p><strong>How we will solve it:</strong> A "Generate samples" dialog lists every rule type with a checkbox (bundle, min_quantity, tiered, two_for_one, percentage_discount, subtotal_threshold, free_delivery, free_item_with_purchase, buy_n_get_m, volume_pricing, free_modifier) and shows the AI counter. On confirm, send one AI request built by T-62 with the selected types and the rule shapes, and require strict JSON: an array of deal drafts with no prose. Reject anything that is not valid JSON against that schema. Validate every draft with <code>validateDeal</code>, drop drafts with errors, assign new ids, force <code>active: false</code>, and insert only. Show a summary with the created count per type, every skipped type and its reason, and the AI note per deal. On an AI failure or unusable JSON, show the error and allow a retry; there is no silent fallback and no chat interface (D-RAMM-40).</p>
+          <p><strong>Benefit:</strong> Every tenant sees realistic offers built on their own products in one click, and the owner activates only what they like.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started. Model selection is platform configuration (D-RAMM-39).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-53" data-group="deals-template-library" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-53</span>
+          <span class="task-title">Review AI output quality and tune the prompt</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-53 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> AI output can be plausible but wrong for the menu: a free pizza paired with a can, a threshold no basket reaches, a volume price above the single price.</p>
+          <p><strong>How we will solve it:</strong> Run generation for all rule types on the demo menu, the rich menus and the Montreal pilot menu. Score every draft for sense, price sanity, item fit and description quality. Record the failures in section 17, tighten the prompt and the validation rules, and keep a small regression set of menu plus expected-output pairs in the harness.</p>
+          <p><strong>Benefit:</strong> Output stays believable as menus and prompts change, which is the whole point of the feature.</p>
+          <p><strong>Files:</strong> <code>app/sampleData/*.json, app/test-harness.html, docs/ssot.html section 17</code></p>
+          <p><strong>Status:</strong> Not started. Owner: Ticpoi + Tema; output feeds back into T-52.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-60" data-group="deals-template-library" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-60</span>
+          <span class="task-title">Build the AI deal suggestion panel</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-60 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Not every owner wants to generate everything. Mode (b) needs suggestions with a reason so the owner can judge one offer at a time.</p>
+          <p><strong>How we will solve it:</strong> An "AI suggestions" action sends the same compact payload as T-52 plus the existing deals and asks for a strict JSON array of 3 to 5 suggestions. Each suggestion arrives as structured fields: rule type, why it fits this menu, when it works (for example quiet weekdays) and the expected effect. Render them as cards, never as chat text. "Create this deal" inserts the chosen one inactive with a new id through the same validation path. Suggestions are shown in the UI only and are not stored in the document.</p>
+          <p><strong>Benefit:</strong> The owner gets ideas they can understand and act on, one click at a time.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started. Uses the same AI call, JSON schema and allowance as T-52 (D-RAMM-40).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-61" data-group="deals-template-library" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-61</span>
+          <span class="task-title">Show and enforce the monthly AI allowance</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-61 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Each restaurant gets 30 free AI calls per month (D-RAMM-35). Without a visible counter the limit arrives as a surprise, and without enforcement a tenant can spend past it.</p>
+          <p><strong>How we will solve it:</strong> Show "5 of 30 AI calls used" in the Deals toolbar and in both AI dialogs. Count every submitted AI request once, from both modes (a request that is sent counts, even if the answer is unusable). At 30 of 30 disable both AI actions, show "30 of 30 AI calls used", state that the allowance resets on the first day of the next month, and show an upgrade action when the platform supplies a URL. The counter resets automatically when the calendar month changes, using the restaurant time zone. Storage follows Q-15: platform metering if available, otherwise a documented document section after a contract change. Never use browser storage.</p>
+          <p><strong>Benefit:</strong> The free allowance is predictable, visible and cannot be bypassed by reloading or switching devices.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Not started. Behaviour fixed by D-RAMM-38; storage blocked by Q-15.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-62" data-group="deals-template-library" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-62</span>
+          <span class="task-title">Build the compact AI input payload and JSON schema</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-62 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Sending the whole document wastes tokens and money, and the AI only needs names, prices and structure to choose sensible items. Without a declared output schema the answer cannot be consumed by the forms.</p>
+          <p><strong>How we will solve it:</strong> One module builds both halves. Input: restaurant name and locale, categories (id, name), items (id, name, price, sizes, category, tags, availability), existing deals (rule type, title, rule summary) and the available rule shapes. Cap the item count (for example 150), drop images and long descriptions, truncate deterministically with a note. Output: a strict JSON schema for deal drafts (and a separate one for suggestions in T-60) with required keys matching the contract, no prose allowed. No customer, order, contact or address data is ever included. Both AI modes share this module.</p>
+          <p><strong>Benefit:</strong> Both AI modes use the same small, complete and cheap input, and every answer can be validated and mapped to the deal forms.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js, app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="pilot-verification" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Verification and Montreal pilot</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="pilot-verification">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="pilot-verification"></div></div>
+    <p class="task-group-note">Why these belong together: every task here produces evidence about the same surfaces (menu, deals, scheduling, hero and the full onboarding). A fix without the pilot test would leave the finding unproven.</p>
+    <div class="task-item" data-task-id="T-54" data-group="pilot-verification" data-task-status="ignored">
+      <details>
+        <summary>
+          <span class="task-id">T-54</span>
+          <span class="task-title">Verify the menu, category and product edit surfaces</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-54 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The meeting reported gaps in "extra item listing, edit buttons and hero visual areas". The answer on 2026-10-24 places those controls in the website selling tool, not in this admin tool.</p>
+          <p><strong>How we will solve it:</strong> No work in this tool. If a control that belongs to the admin Menu tab is later found broken, re-open this task with the exact screen and step. The selling-tool surfaces are tracked in section 10.1 (D-RAMM-30).</p>
+          <p><strong>Benefit:</strong> Keeps a website rendering issue out of the admin backlog while preserving the finding.</p>
+          <p><strong>Files:</strong> <code>n/a</code></p>
+          <p><strong>Status:</strong> Ignored 2026-10-24: out of scope, the named controls belong to the website selling tool (D-RAMM-30).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-55" data-group="pilot-verification" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-55</span>
+          <span class="task-title">Verify deal scheduling and visibility against the website</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-55 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The schedule editor (T-38) and the active flag (T-41) shipped, but nobody has confirmed the website renders date ranges, weekdays and time windows the same way, or that inactive deals disappear.</p>
+          <p><strong>How we will solve it:</strong> In the harness, author one deal per schedule shape: a date range, selected weekdays, and a time window in the restaurant time zone. On the website confirm the deal appears and disappears at the boundaries, and that <code>active: false</code> removes it from the Deals page without deleting it. Record the observed results in section 17 and fix any mismatch.</p>
+          <p><strong>Benefit:</strong> The scheduling promise in the marketing guide is proven instead of assumed.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html, docs/deals-guide.html, website Deals page</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-56" data-group="pilot-verification" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-56</span>
+          <span class="task-title">Confirm the hero image is stored and published correctly</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-56 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A hero image added in the admin appeared late in the selling UI. That points at a website cache, but we should first prove the admin side stores and publishes the value correctly.</p>
+          <p><strong>How we will solve it:</strong> Set the hero through both paths (upload and link), save, reload, and inspect the stored document: confirm <code>hero.image_url</code> matches what was chosen and that it survives a reload. Then confirm the same value is what the website reads. If the admin side is correct, close this task and leave the delayed render with the website selling tool (section 10.1).</p>
+          <p><strong>Benefit:</strong> Rules out the admin tool as the cause and keeps the published hero trustworthy.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html, app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Not started. Storage check only; rendering and cache belong to the website (D-RAMM-30).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-57" data-group="pilot-verification" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-57</span>
+          <span class="task-title">Add item include and exclude inside a selected category</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-57 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A deal rule can target whole categories only. To leave out two items the owner must split the category or hand-pick every item, which is slow and easy to get wrong.</p>
+          <p><strong>How we will solve it:</strong> When a category is selected in a rule editor, list the items in that category with an include or exclude switch. First check contract 3.3: if the rule shape cannot express exclusions, add the field to the contract (version bump) and update this document before writing code; if it can, resolve the choice to explicit item ids. Apply the same behavior to every rule type whose rule object accepts category filters. Validate that at least one item still matches.</p>
+          <p><strong>Benefit:</strong> Offers match exactly what the owner means without restructuring the menu.</p>
+          <p><strong>Files:</strong> <code>docs/client-data-contract.html, app/RestaurantAndMenuManager.js, app/RestaurantAndMenuManager.html, app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started. The contract check is the first step (D-RAMM-29).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-58" data-group="pilot-verification" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-58</span>
+          <span class="task-title">Run the Montreal pilot with 10+ scripted tests</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-58 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> No real restaurant has been taken through the whole system, so every finding so far comes from fixtures.</p>
+          <p><strong>How we will solve it:</strong> Onboard one real Montreal restaurant: profile, address and coordinates, opening hours, tax, fees, delivery zones, a full menu with photos and modifiers, one deal of each rule type plus a schedule and a promo code, then place test orders for pickup and delivery. Run at least ten scripted checks, log each result in section 17, and turn every failure into a task. Share the findings with Ticpoi before the Sunday meeting.</p>
+          <p><strong>Benefit:</strong> Real evidence about onboarding time and order behavior, before any template is marketed.</p>
+          <p><strong>Files:</strong> <code>docs/ssot.html section 17, app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started. Owner: Tema + Ticpoi; findings feed section 15.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+<h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Future ideas live here until they are decided. We discuss each idea and
   write the outcome inside its details. An agreed idea moves to the task list
   (section 15) with a priority; a rejected idea is marked Ignored with the
@@ -1895,6 +2304,36 @@
         <p><strong>Idea:</strong> Convert every legacy campaign into an equivalent two-for-one deal and empty the campaigns array.</p>
         <p><strong>Why:</strong> Two parallel offer systems are hard to reason about, and campaigns are legacy (D-RAMM-09).</p>
         <p><strong>Discussion / outcome:</strong> Needs a safe rollback story, because the conversion is not lossless for hand-edited campaign fields.</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-08" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-08</span>
+        <span class="idea-title">Hero preset gallery</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-08 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A gallery of ready-made hero images the owner can pick with one click. The contract already accepts the list in <code>hero.preset_images</code>, so only the curated images and the picker are missing.</p>
+        <p><strong>Why:</strong> Upload requires the owner to have a good photo; a preset gives a professional hero in one click, which matters during onboarding.</p>
+        <p><strong>Discussion / outcome:</strong> Deferred on 2026-10-24 (D-RAMM-37). Upload and link cover the need today. Re-open when a curated set of hosted images exists and the tenant-level storage question (full list per record or only the chosen image) is answered.</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-09" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-09</span>
+        <span class="idea-title">Conversational deal assistant</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-09 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Let the owner describe an offer in words ("a family deal for four under 40") and refine it in a short conversation before the deal is created.</p>
+        <p><strong>Why:</strong> Structured generation and suggestions cover most cases, but some owners think in sentences.</p>
+        <p><strong>Discussion / outcome:</strong> Explicitly deferred on 2026-10-24 (D-RAMM-40) - both AI modes return strict JSON only for now. A chat layer can be added later on top of the same JSON output.</p>
       </div>
     </details>
   </div>
@@ -2163,7 +2602,153 @@
   </div>
 
 
-  <p class="ok"><strong>Overall verdict.</strong> It is safe to develop and
+  <div class="risk-item" data-risk-id="R-12" data-group="settings-locale" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-12</span>
+        <span class="risk-title">A tax template applies the wrong rate</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-12 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-51</p>
+        <p><strong>What can go wrong:</strong> The preset table is out of date or covers the wrong province, so a restaurant charges the wrong tax. That is a financial and legal exposure, not a display bug.</p>
+        <p><strong>Likelihood / impact:</strong> Medium likelihood, high impact - the value looks authoritative because the tool filled it in.</p>
+        <p><strong>Mitigation:</strong> Never overwrite values that are already entered; require an explicit apply; show the template source and its effective date; treat the table as dated data that must be reviewed.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-24 - opened with the meeting follow-ups.</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-13" data-group="settings-locale" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-13</span>
+        <span class="risk-title">The map centers on the wrong place</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-13 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-50</p>
+        <p><strong>What can go wrong:</strong> The stored coordinates are the placeholder pair or belong to another branch, so the map opens in the wrong city and the owner draws a zone in the wrong place.</p>
+        <p><strong>Likelihood / impact:</strong> Medium likelihood, medium impact - zones can be saved and priced incorrectly.</p>
+        <p><strong>Mitigation:</strong> Only trust coordinates that differ from the known placeholder, fall back to the first zone centroid, show the current center as text, and keep the manual recenter action.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-24 - opened with the meeting follow-ups.</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-14" data-group="deals-template-library" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-14</span>
+        <span class="risk-title">Inserting a template damages live deals</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-14 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-52</p>
+        <p><strong>What can go wrong:</strong> The generator updates or removes an existing deal instead of inserting new drafts, or it creates duplicates every time the button is pressed.</p>
+        <p><strong>Likelihood / impact:</strong> Low likelihood, high impact - a tenant loses a live offer or drowns in duplicates.</p>
+        <p><strong>Mitigation:</strong> Insert-only with a fresh id, every generated deal inactive, and a confirmation showing the resulting deal count (D-RAMM-28).</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-24 - opened with the meeting follow-ups.</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-15" data-group="pilot-verification" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-15</span>
+        <span class="risk-title">Templates are marketed before the pilot proves them</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-15 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-53, T-58</p>
+        <p><strong>What can go wrong:</strong> The sales team sells packages that have never run on a real restaurant, and the first customer discovers the gaps.</p>
+        <p><strong>Likelihood / impact:</strong> Medium likelihood, medium impact - trust and refunds.</p>
+        <p><strong>Mitigation:</strong> T-53 and T-58 must be done, or their findings accepted, before any template is presented as ready.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-24 - opened with the meeting follow-ups.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-16" data-group="deals-template-library" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-16</span>
+        <span class="risk-title">Generated samples make no sense for the menu</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-16 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-52, T-53</p>
+        <p><strong>What can go wrong:</strong> The generator pairs unrelated products (a free pizza with a can) or sets a threshold no basket can reach. The owner reads it as a broken product.</p>
+        <p><strong>Likelihood / impact:</strong> Medium likelihood, high impact - the feature exists to build trust.</p>
+        <p><strong>Mitigation:</strong> Category-role and price-band selection rules, a skipped-type report, validation before insert, and the T-53 review on real menus before release.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-24 - opened with the generator decision.</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-17" data-group="deals-template-library" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-17</span>
+        <span class="risk-title">AI output is invalid, slow or expensive</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-17 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-52, T-60</p>
+        <p><strong>What can go wrong:</strong> The model returns item ids that do not exist, invents prices, returns prose instead of JSON, or the call is slow and costly, so the button fails or produces unusable drafts.</p>
+        <p><strong>Likelihood / impact:</strong> High likelihood, medium impact - wasted spend and broken drafts.</p>
+        <p><strong>Mitigation:</strong> Strict JSON contract, every draft validated with the same save gate, unknown ids rejected, all deals created inactive and insert-only, a retry path on failure, and the allowance from T-61.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-24 - AI confirmed in scope (D-RAMM-34).</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-18" data-group="deals-template-library" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-18</span>
+        <span class="risk-title">The AI allowance can be bypassed or double counted</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-18 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-61</p>
+        <p><strong>What can go wrong:</strong> The counter lives in the browser or in a field the owner can edit, so two devices or a reload reset the allowance and the tenant spends past the free 30 calls.</p>
+        <p><strong>Likelihood / impact:</strong> Medium likelihood, medium impact - unbounded AI cost.</p>
+        <p><strong>Mitigation:</strong> Prefer platform metering per tenant (Q-15); if the counter must live in the document, keep a dated log and never decrement, and treat the value as untrusted. The counter is visible in two places and the block at 30 of 30 makes an overrun obvious.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-24 - opened with D-RAMM-35.</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-19" data-group="deals-template-library" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-19</span>
+        <span class="risk-title">Restaurant data leaves the platform</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-19 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-52, T-60, T-62</p>
+        <p><strong>What can go wrong:</strong> Menu names, prices and existing deals are sent to an AI provider. If customer or order data is ever added to the payload, or the provider terms do not cover this use, the tenant has a privacy problem.</p>
+        <p><strong>Likelihood / impact:</strong> Low likelihood, high impact - contractual and trust exposure.</p>
+        <p><strong>Mitigation:</strong> The payload builder (T-62) is the only path and never includes customer, order, contact or address data; the provider terms are confirmed before release.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-24 - opened with D-RAMM-34.</p>
+      </div>
+    </details>
+  </div>
+
+<p class="ok"><strong>Overall verdict.</strong> It is safe to develop and
   test this feature locally in the harness: no existing document key changes
   shape and the new sections are optional. It is NOT safe to publish a deal to
   a real tenant until the foundation group and the deal editors group have no
@@ -2183,7 +2768,7 @@
 
   <div class="footer">
     Restaurant And Menu Manager - single source of truth for all decisions about this
-    tool. Version 0.4, 2026-10-21.
+    tool. Version 0.22, 2026-10-24.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

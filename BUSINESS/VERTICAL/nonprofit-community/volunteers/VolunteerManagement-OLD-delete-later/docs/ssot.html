@@ -204,7 +204,7 @@
   reader and every AI sees the same definition.</p>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Volunteer Registry (SSOT)</td><td>The shared CMS type <code>volunteerRegistry-uniconbaseapps</code> holding exactly one profile document per volunteer. Written by the public registration app and by this admin tool; read by both.</td></tr>
+    <tr><td>Volunteer Registry (SSOT)</td><td>The shared CMS type <code>volunteer-registry-uniconbaseapps</code> holding exactly one profile document per volunteer. Written by the public registration app and by this admin tool; read by both.</td></tr>
     <tr><td>Public Registration App</td><td>A separate tool (own folder, own SSOT) where anyone can register as a volunteer. It is the primary writer of the registry.</td></tr>
     <tr><td>Event Instance</td><td>One copy of this tool hosted on one event CMS object. Manages exactly one event.</td></tr>
     <tr><td>Event Application (membership)</td><td>A record linking one registry volunteer to one event, with status pending / approved / rejected / withdrawn.</td></tr>
@@ -245,7 +245,7 @@ var TYPE_MESSAGES   = 'vm.messages-uniconbaseapps';
     <li>Event membership is a separate record that references a registry profile by id - profiles are never duplicated into event data.</li>
     <li>Every record (profile, application, task, hour log, message) is its own Firestore document via <code>tool.requestObjects()</code>; <code>tool.setValue()</code> stores only UI preferences.</li>
     <li>Estimated size budget per document: profile ≤ 2 KB, application ≤ 1 KB, task ≤ 2 KB, hour log ≤ 1 KB, message ≤ 10 KB - all far below the 1 MB per-document limit, so no single record can hit the cap.</li>
-    <li>Type names follow the CMS naming rules: shared = <code>volunteerRegistry-uniconbaseapps</code>; isolated = <code>vm.*-uniconbaseapps</code>.</li>
+    <li>Type names follow the CMS naming rules: shared = <code>volunteer-registry-uniconbaseapps</code>; isolated = <code>vm.*-uniconbaseapps</code>.</li>
     <li>Role gating: managers write everything; volunteers only apply, update their own task status, log their own hours, and message managers.</li>
     <li>Graceful degradation when a CRUD channel is not configured: notify + missing-parameter report, never a broken page.</li>
   </ol>
@@ -255,7 +255,7 @@ var TYPE_MESSAGES   = 'vm.messages-uniconbaseapps';
     <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
     <tr>
       <td><strong>A. Per-event tool + shared registry (SSOT)</strong></td>
-      <td>One tool instance per event object; profiles in shared <code>volunteerRegistry-uniconbaseapps</code>; applications / tasks / hours / messages in instance-scoped <code>vm.*</code> types.</td>
+      <td>One tool instance per event object; profiles in shared <code>volunteer-registry-uniconbaseapps</code>; applications / tasks / hours / messages in instance-scoped <code>vm.*</code> types.</td>
       <td>Yes - identity shared, event data isolated, public app plugs into the same registry.</td>
       <td>Medium - renames the volunteers type and splits profile vs membership fields</td>
       <td class="status-adopted">ADOPTED</td>
@@ -297,20 +297,20 @@ var TYPE_MESSAGES   = 'vm.messages-uniconbaseapps';
   <h2 id="sec-design">8. Solution design</h2>
   <h3>8.1 Core invariant</h3>
   <p class="note"><strong>Invariant REGISTRY-ONLY.</strong> A volunteer profile
-  document exists only in <code>volunteerRegistry-uniconbaseapps</code>.
+  document exists only in <code>volunteer-registry-uniconbaseapps</code>.
   Every other type stores the profile id (<code>registryProfileId</code>) and
   never a copy of name / email / skills.</p>
   <h3>8.2 Type model</h3>
   <table>
     <tr><th>Type</th><th>Scope</th><th>Owner</th><th>Document = one ...</th><th>Key fields</th></tr>
-    <tr><td><code>volunteerRegistry-uniconbaseapps</code></td><td>shared</td><td>Public app + admin tool</td><td>volunteer profile (SSOT)</td><td><code>userId</code>, <code>firstName</code>, <code>lastName</code>, <code>email</code>, <code>phone</code>, <code>city</code>, <code>skills[]</code>, <code>interests[]</code>, <code>availabilityNotes</code>, <code>status</code> (active / inactive / banned), <code>consentGiven</code>, <code>joinedAt</code>, <code>updatedAt</code>, <code>source</code> (public-app / admin / import), <code>notes</code></td></tr>
-    <tr><td><code>vm.eventApplications-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>volunteer → event membership</td><td><code>registryProfileId</code>, <code>volunteerUserId</code>, <code>status</code> (pending / approved / rejected / withdrawn), <code>roleForEvent</code>, <code>appliedAt</code>, <code>reviewedAt</code>, <code>reviewedBy</code>, <code>notes</code></td></tr>
-    <tr><td><code>vm.eventTasks-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>task of this event</td><td><code>description</code>, <code>status</code> (open / assigned / in-progress / completed / cancelled), <code>assignedVolunteerUserId</code>, <code>assignedRegistryProfileId</code>, <code>dueDate</code>, <code>estimatedHours</code>, <code>createdAt</code>, <code>completedAt</code></td></tr>
-    <tr><td><code>vm.eventHours-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>one hour log</td><td><code>volunteerUserId</code>, <code>registryProfileId</code>, <code>taskId</code>, <code>date</code>, <code>hoursLogged</code>, <code>description</code>, <code>status</code> (pending / approved / rejected), <code>reviewedBy</code>, <code>reviewedAt</code></td></tr>
-    <tr><td><code>vm.eventMessages-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>one message</td><td><code>fromUserId</code>, <code>fromName</code>, <code>fromRole</code> (manager / volunteer), <code>toUserId</code>, <code>subject</code>, <code>body</code>, <code>sentAt</code>, <code>read</code></td></tr>
+    <tr><td><code>volunteer-registry-uniconbaseapps</code></td><td>shared</td><td>Public app + admin tool</td><td>volunteer profile (SSOT)</td><td><code>userId</code>, <code>firstName</code>, <code>lastName</code>, <code>email</code>, <code>phone</code>, <code>city</code>, <code>skills[]</code>, <code>interests[]</code>, <code>availabilityNotes</code>, <code>status</code> (active / inactive / banned), <code>consentGiven</code>, <code>joinedAt</code>, <code>updatedAt</code>, <code>source</code> (public-app / admin / import), <code>notes</code></td></tr>
+    <tr><td><code>vm-event-applications-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>volunteer → event membership</td><td><code>registryProfileId</code>, <code>volunteerUserId</code>, <code>status</code> (pending / approved / rejected / withdrawn), <code>roleForEvent</code>, <code>appliedAt</code>, <code>reviewedAt</code>, <code>reviewedBy</code>, <code>notes</code></td></tr>
+    <tr><td><code>vm-event-tasks-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>task of this event</td><td><code>description</code>, <code>status</code> (open / assigned / in-progress / completed / cancelled), <code>assignedVolunteerUserId</code>, <code>assignedRegistryProfileId</code>, <code>dueDate</code>, <code>estimatedHours</code>, <code>createdAt</code>, <code>completedAt</code></td></tr>
+    <tr><td><code>vm-event-hours-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>one hour log</td><td><code>volunteerUserId</code>, <code>registryProfileId</code>, <code>taskId</code>, <code>date</code>, <code>hoursLogged</code>, <code>description</code>, <code>status</code> (pending / approved / rejected), <code>reviewedBy</code>, <code>reviewedAt</code></td></tr>
+    <tr><td><code>vm-event-messages-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>one message</td><td><code>fromUserId</code>, <code>fromName</code>, <code>fromRole</code> (manager / volunteer), <code>toUserId</code>, <code>subject</code>, <code>body</code>, <code>sentAt</code>, <code>read</code></td></tr>
   </table>
   <p>Renames applied: <code>vm.volunteers-uniconbaseapps</code> →
-  <code>vm.eventApplications-uniconbaseapps</code>;
+  <code>vm-event-applications-uniconbaseapps</code>;
   <code>vm.tasks/hours/messages-uniconbaseapps</code> →
   <code>vm.eventTasks/eventHours/eventMessages-uniconbaseapps</code>.
   The old names are retired (test-only data, no migration needed).</p>
@@ -318,11 +318,11 @@ var TYPE_MESSAGES   = 'vm.messages-uniconbaseapps';
   <pre>
 // html-tool field settings - settings.allowedObjectTypes
 [
-  { "mainObjectType": "volunteerRegistry-uniconbaseapps",      "role": "editor", "scope": "shared" },
-  { "mainObjectType": "vm.eventApplications-uniconbaseapps",  "role": "editor", "scope": "instance" },
-  { "mainObjectType": "vm.eventTasks-uniconbaseapps",         "role": "editor", "scope": "instance" },
-  { "mainObjectType": "vm.eventHours-uniconbaseapps",         "role": "editor", "scope": "instance" },
-  { "mainObjectType": "vm.eventMessages-uniconbaseapps",      "role": "editor", "scope": "instance" }
+  { "mainObjectType": "volunteer-registry-uniconbaseapps",      "role": "editor", "scope": "shared" },
+  { "mainObjectType": "vm-event-applications-uniconbaseapps",  "role": "editor", "scope": "instance" },
+  { "mainObjectType": "vm-event-tasks-uniconbaseapps",         "role": "editor", "scope": "instance" },
+  { "mainObjectType": "vm-event-hours-uniconbaseapps",         "role": "editor", "scope": "instance" },
+  { "mainObjectType": "vm-event-messages-uniconbaseapps",      "role": "editor", "scope": "instance" }
 ]
 // settings.toolParams
 { "allowObjectCRUD": "yes", "allowExportPdf": "yes", "allowSendEmail": "yes" }
@@ -339,7 +339,7 @@ var TYPE_MESSAGES   = 'vm.messages-uniconbaseapps';
   </table>
   <h3>8.5 Data flow</h3>
   <pre>
-Public registration app ──write──▶ volunteerRegistry-uniconbaseapps (shared) ◀──read/write── Admin tool (this one)
+Public registration app ──write──▶ volunteer-registry-uniconbaseapps (shared) ◀──read/write── Admin tool (this one)
                                         │  one doc per volunteer
                                         ▼
 Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventHours / eventMessages (instance)
@@ -354,7 +354,7 @@ Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventH
     <tr><th>Caller</th><th>Required change</th></tr>
     <tr><td><code>app/VolunteerManagement.js</code> (type constants)</td><td>Use the 5 type names from 8.2; add <code>registryType</code> param</td></tr>
     <tr><td><code>app/VolunteerManagement.js</code> (register flow)</td><td>Upsert profile in registry, then create event application - never one combined doc</td></tr>
-    <tr><td><code>app/volunteer-import-tool.html</code></td><td>Write rows into <code>volunteerRegistry-uniconbaseapps</code>, not into an event type</td></tr>
+    <tr><td><code>app/volunteer-import-tool.html</code></td><td>Write rows into <code>volunteer-registry-uniconbaseapps</code>, not into an event type</td></tr>
     <tr><td><code>app/test-harness.html</code></td><td>Mock the same 5 types; add registry seed data</td></tr>
     <tr><td>Public registration app (future)</td><td>Adopt the same registry type name and field ids - its SSOT must reference D-VM-02</td></tr>
   </table>
@@ -393,13 +393,13 @@ Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventH
     </tr>
     <tr>
       <td>D-VM-02</td><td>2026-09-29</td>
-      <td>Volunteer master data = one shared registry type <code>volunteerRegistry-uniconbaseapps</code> (scope: shared), written by the future public registration app and read/written by this admin tool. It is the SSOT for volunteer identity.</td>
+      <td>Volunteer master data = one shared registry type <code>volunteer-registry-uniconbaseapps</code> (scope: shared), written by the future public registration app and read/written by this admin tool. It is the SSOT for volunteer identity.</td>
       <td>Exactly one profile per volunteer; both apps share the same pool. Removes per-event duplicate profiles.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
     <tr>
       <td>D-VM-03</td><td>2026-09-29</td>
-      <td>Event operational data lives in four isolated instance-scoped types: <code>vm.eventApplications-uniconbaseapps</code>, <code>vm.eventTasks-uniconbaseapps</code>, <code>vm.eventHours-uniconbaseapps</code>, <code>vm.eventMessages-uniconbaseapps</code>. Each record is its own document.</td>
+      <td>Event operational data lives in four isolated instance-scoped types: <code>vm-event-applications-uniconbaseapps</code>, <code>vm-event-tasks-uniconbaseapps</code>, <code>vm-event-hours-uniconbaseapps</code>, <code>vm-event-messages-uniconbaseapps</code>. Each record is its own document.</td>
       <td>Every document stays far under 1 MB; per-event isolation via instance scope; names follow the isolation naming rule.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
@@ -411,7 +411,7 @@ Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventH
     </tr>
     <tr>
       <td>D-VM-05</td><td>2026-09-29</td>
-      <td>Rename current types: <code>vm.volunteers-uniconbaseapps</code> → <code>vm.eventApplications-uniconbaseapps</code>; <code>vm.tasks/hours/messages-uniconbaseapps</code> → <code>vm.eventTasks/eventHours/eventMessages-uniconbaseapps</code>. Old names are retired without data migration (test-only data).</td>
+      <td>Rename current types: <code>vm.volunteers-uniconbaseapps</code> → <code>vm-event-applications-uniconbaseapps</code>; <code>vm.tasks/hours/messages-uniconbaseapps</code> → <code>vm.eventTasks/eventHours/eventMessages-uniconbaseapps</code>. Old names are retired without data migration (test-only data).</td>
       <td>Separates identity (registry) from event membership (applications); clearer ownership of each type.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
@@ -440,8 +440,8 @@ Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventH
   <h2 id="sec-checklist">13. Implementation checklist</h2>
   <table>
     <tr><th>#</th><th>Change</th><th>File</th></tr>
-    <tr><td>1</td><td>Replace the 4 type constants with the 5 type names from section 8.2; add <code>registryType</code> tool param (default <code>volunteerRegistry-uniconbaseapps</code>)</td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
-    <tr><td>2</td><td>Split register flow: upsert profile into registry, create application in <code>vm.eventApplications-uniconbaseapps</code></td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
+    <tr><td>1</td><td>Replace the 4 type constants with the 5 type names from section 8.2; add <code>registryType</code> tool param (default <code>volunteer-registry-uniconbaseapps</code>)</td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Split register flow: upsert profile into registry, create application in <code>vm-event-applications-uniconbaseapps</code></td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
     <tr><td>3</td><td>Volunteers tab reads registry; approvals / rejections update the application only</td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
     <tr><td>4</td><td>Rename type usages in tasks / hours / messages flows to the new <code>vm.event*</code> names</td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
     <tr><td>5</td><td>Cap message body at 8,000 chars in the UI</td><td><code>app/VolunteerManagement.js</code> + <code>app/VolunteerManagement.html</code> - DONE</td></tr>
@@ -643,7 +643,7 @@ Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventH
         </summary>
         <div class="task-details">
           <p><strong>Problem it solves:</strong> bulk import must not create event-local duplicates.</p>
-          <p><strong>How we will solve it:</strong> import rows → <code>volunteerRegistry-uniconbaseapps</code> with <code>source: 'import'</code> and email dedupe.</p>
+          <p><strong>How we will solve it:</strong> import rows → <code>volunteer-registry-uniconbaseapps</code> with <code>source: 'import'</code> and email dedupe.</p>
           <p><strong>Benefit:</strong> SSOT respected even for bulk loads.</p>
           <p><strong>Files:</strong> <code>app/volunteer-import-tool.html</code></p>
           <p><strong>Status:</strong> not-started</p>
@@ -865,7 +865,7 @@ Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventH
       <td>2026-09-29</td>
       <td>v0.1.8</td>
       <td>647428d</td>
-      <td>5-type model: shared registry <code>volunteerRegistry-uniconbaseapps</code> + 4 instance types <code>vm.event*</code>; registration split (registry upsert + event application); volunteers tab reads registry; approvals on applications with banned guard; manager add-to-event from permitted users; 8,000-char message cap; CSV import wired to the registry; harness seed data (T-01..T-08).</td>
+      <td>5-type model: shared registry <code>volunteer-registry-uniconbaseapps</code> + 4 instance types <code>vm.event*</code>; registration split (registry upsert + event application); volunteers tab reads registry; approvals on applications with banned guard; manager add-to-event from permitted users; 8,000-char message cap; CSV import wired to the registry; harness seed data (T-01..T-08).</td>
     </tr>
     <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
     </tbody>
