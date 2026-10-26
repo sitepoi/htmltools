@@ -1,4 +1,4 @@
-/* build 2026-10-10-4 */
+/* build 2026-10-10-5 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
@@ -8,7 +8,7 @@
 /* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    visible in the UI badge (#tool-build), logged on boot, and stamped as a
    comment at the top of all three files. INCREMENT on EVERY code change. */
-var TOOL_BUILD = '2026-10-10-4';
+var TOOL_BUILD = '2026-10-10-5';
 
 /* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
    element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
@@ -1964,11 +1964,40 @@ var WELCOME_HTML =
     '<p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> 🪄 Guided asks you questions step by step.</p>' +
   '</div>';
 
+function _hasPageCode() {
+  return !!(DB.code.html || DB.code.css || DB.code.js);
+}
+
+/* The chat welcome offers SAMPLE PAGES (template cards + "View all") only
+   while the page is EMPTY. As soon as the page has any html/css/js — AI-done
+   or pasted from outside — those "start something" buttons are pointless and
+   only invite the user to overwrite their work, so they are not rendered. */
+function _welcomeHtml(hasCode) {
+  if (!hasCode) return WELCOME_HTML;
+  return '<div class="chat-welcome">' +
+    '<div class="chat-welcome-icon">🎨</div>' +
+    '<h3>This page already has code</h3>' +
+    '<p>Ask for changes below and I\'ll edit what is there — no sample page needed.</p>' +
+    '<p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> 🪄 Guided asks you questions step by step.</p>' +
+  '</div>';
+}
+
+/* Keeps the STATIC welcome markup (already in WebpageBuilder.html) in sync
+   with the JS render: data-wb-has-code on <body> drives the CSS that hides
+   the template gallery before/without a re-render. */
+function _syncChatStarters(hasCode) {
+  try {
+    if (hasCode) document.body.setAttribute('data-wb-has-code', '1');
+    else document.body.removeAttribute('data-wb-has-code');
+  } catch (e) {}
+}
+
 function renderChatMessages() {
   var box = el('chat-messages');
   if (!box) return;
   if (!DB.chatMessages || !DB.chatMessages.length) {
-    box.innerHTML = WELCOME_HTML;
+    var hasCode = _hasPageCode();
+    box.innerHTML = _welcomeHtml(hasCode);
     renderTemplateGallery(el('template-gallery'));
     var viewAll = el('btn-view-all-templates');
     if (viewAll) viewAll.onclick = openAllTemplates;
@@ -4691,6 +4720,7 @@ function updatePreview() {
   var fw = el('preview-frame-wrap');
   var pe = el('preview-empty');
   var hasContent = !!(html.trim() || css.trim() || js.trim());
+  _syncChatStarters(hasContent); // sample-page starters only while the page is EMPTY
   if (!hasContent) {
     if (fw) fw.classList.remove('has-content');
     if (pe) {
@@ -6188,6 +6218,7 @@ function render(v) {
       try { persist(); } catch (e) {}
     }
     _updatePageWidgetsBtn();
+    try { _syncChatStarters(_hasPageCode()); } catch (e) {}
     if (v.chatCache && typeof v.chatCache === 'object') {
       if (Array.isArray(v.chatCache)) {
         // older shape: bare message array
@@ -6515,6 +6546,7 @@ try { tool.onReady(function(val, fields) {
   switchTab('preview');
   try { renderSections(); } catch (e) {}
   try { if (hasCode) runComplianceChecks(); } catch (e) {}
+  try { _syncChatStarters(hasCode); } catch (e) {}
   loadWidgetCatalog();
   _resize();
 }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReady registration failed: ' + (e && e.message ? e.message : e)); }
@@ -6524,4 +6556,4 @@ try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEB
 try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
 try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
 try { window.__wbJsEnd = true; } catch (e) {}
-/* WEBPAGEBUILDER-JS-END build 2026-10-10-4 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
+/* WEBPAGEBUILDER-JS-END build 2026-10-10-5 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */

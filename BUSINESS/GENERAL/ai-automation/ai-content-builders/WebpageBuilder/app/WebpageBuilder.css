@@ -1,4 +1,4 @@
-/* build 2026-10-10-3 */
+/* build 2026-10-10-5 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Built for UniconHub CMS HTML-tool system.
@@ -181,6 +181,12 @@ code { font-family: var(--font-mono); font-size: 0.875em; background: var(--bg3)
   font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 4px 8px; border-radius: var(--radius-sm);
 }
 .template-view-all button:hover { background: var(--accent-light); }
+
+/* The chat welcome must NOT offer SAMPLE PAGE starters once the page already
+   has html/css/js (build 2026-10-10-5): the JS re-renders the welcome without
+   them, and this rule also hides the static markup on first paint. */
+body[data-wb-has-code] .chat-welcome .template-gallery,
+body[data-wb-has-code] .chat-welcome .template-view-all { display: none !important; }
 
 /* ── Chat message bubbles ── */
 .chat-msg { display: flex; gap: 8px; max-width: 100%; }

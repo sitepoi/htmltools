@@ -1,0 +1,55 @@
+<!-- build 2026-10-25-1 -->
+<div class="roa" id="roa-root">
+  <div class="roa-shell">
+
+    <header class="roa-top">
+      <div class="roa-top-main">
+        <h1 class="roa-title">Orders</h1>
+        <p class="roa-top-sub" id="roa-top-sub">Active orders board</p>
+      </div>
+      <div class="roa-top-actions">
+        <span class="roa-live" id="roa-live"><span class="roa-live-dot"></span>Live</span>
+        <button type="button" class="roa-btn roa-btn-ghost roa-btn-small" id="roa-refresh">Refresh</button>
+      </div>
+    </header>
+
+    <div class="roa-banner roa-banner-readonly" id="roa-readonly" hidden></div>
+    <div class="roa-banner roa-banner-config" id="roa-config" hidden></div>
+
+    <nav class="roa-tabs" id="roa-tabs"></nav>
+
+    <div class="roa-toolbar">
+      <input type="text" class="roa-search" id="roa-search" placeholder="Search order number, customer, phone, table, address">
+      <label class="roa-sortlabel" for="roa-sort">Sort</label>
+      <select class="roa-select" id="roa-sort">
+        <option value="waiting">Longest waiting first</option>
+        <option value="newest">Newest first</option>
+        <option value="total">Highest total first</option>
+      </select>
+    </div>
+
+    <div class="roa-state" id="roa-state" hidden></div>
+
+    <main class="roa-board" id="roa-board"></main>
+
+    <section class="roa-detail" id="roa-detail" hidden></section>
+
+    <footer class="roa-foot">
+      <span class="roa-loaded" id="roa-loaded"></span>
+      <span class="roa-refreshed" id="roa-refreshed"></span>
+      <span class="roa-build" id="roa-build">tool build</span>
+    </footer>
+
+  </div>
+
+  <div class="roa-modal" id="roa-modal" hidden>
+    <div class="roa-modal-card" role="dialog" aria-modal="true">
+      <div class="roa-modal-head">
+        <span class="roa-modal-title" id="roa-modal-title"></span>
+        <button type="button" class="roa-modal-x" data-act="modal-close" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="roa-modal-body" id="roa-modal-body"></div>
+      <div class="roa-modal-foot" id="roa-modal-foot"></div>
+    </div>
+  </div>
+</div>

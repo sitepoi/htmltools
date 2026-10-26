@@ -1,0 +1,2357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PREVIEW - About Us - Polaris Blinds</title>
+<style>
+  /* preview shell only - never ship this */
+  body { margin: 0; padding: 0; background: #faf6ef; }
+  .preview-note { position: fixed; bottom: 14px; right: 14px; z-index: 9999; background: #262019; color: #e7c98f; font: 600 12px/1.4 'Segoe UI', sans-serif; padding: 8px 12px; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+</style>
+</head>
+<body>
+<!--
+  =========================================================================
+  SITE HEADER - central chrome component for the Polaris Blinds website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="pb-header">; no document tags, no libraries
+  - All CSS is scoped under .pb-header so it cannot leak into page content
+  - No <header> / <nav> / <footer> element tags (plain divs + ARIA roles)
+  - Brand = the Polaris logo, loaded from its storage URL
+  - Design tokens (--pb-*) are repeated in every page file so each page is
+    self-contained; keep them in sync when the palette changes
+  - Nav link targets (CMS route form, never .html): / (home), the seven
+    product pages, /about-us, /contact-us. The main button points at
+    /contact-us for a free estimate
+  =========================================================================
+-->
+<div class="pb-header" data-pb-header>
+
+	<!-- ---------- inline icon sprite (no external requests, no library) ---------- -->
+	<svg class="pb-hd-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+		<symbol id="pb-i-phone" viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></symbol>
+		<symbol id="pb-i-mail" viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></symbol>
+		<symbol id="pb-i-instagram" viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></symbol>
+		<symbol id="pb-i-arrow" viewBox="0 0 24 24"><path d="M4.6 12h14" /><path d="m13.4 7 5 5-5 5" /></symbol>
+		<symbol id="pb-i-chevron" viewBox="0 0 24 24"><path d="m7.6 9.8 4.4 4.4 4.4-4.4" /></symbol>
+		<symbol id="pb-i-ruler" viewBox="0 0 24 24"><path d="m4 9 2.4-2.4 4.6 4.6L13.4 8.8 8.8 4.2 11.2 1.8 18.6 9.2a5.2 5.2 0 0 1-7.4 7.4L4 23.2A4 4 0 0 1 4 9z" /></symbol>
+		<symbol id="pb-i-check" viewBox="0 0 24 24"><path d="m5.6 12.4 4 4 8.8-9" /></symbol>
+		<symbol id="pb-i-truck" viewBox="0 0 24 24"><path d="M3 6.4h11v10.2H3z" /><path d="M14 9.8h3.4L20 13v3.6h-6" /><circle cx="7" cy="17.6" r="1.8" /><circle cx="16.6" cy="17.6" r="1.8" /></symbol>
+	</svg>
+
+	<!-- ---------------------- top information strip ---------------------- -->
+	<div class="pb-hd-top">
+		<div class="pb-hd-wrap pb-hd-top-inner">
+			<p class="pb-hd-top-note">Your blinds and lights provider in Calgary and surrounding area</p>
+			<div class="pb-hd-top-links">
+				<a class="pb-hd-top-link" href="tel:+14036121636">
+					<svg class="pb-hd-ico" aria-hidden="true"><use href="#pb-i-phone"></use></svg>
+					+1 403 612 1636
+				</a>
+				<a class="pb-hd-top-link pb-hd-top-mail" href="mailto:info@polarisblinds.ca">
+					<svg class="pb-hd-ico" aria-hidden="true"><use href="#pb-i-mail"></use></svg>
+					info@polarisblinds.ca
+				</a>
+				<a class="pb-hd-top-link pb-hd-top-instagram" href="https://www.instagram.com/polaris_blinds" target="_blank" rel="noopener" aria-label="Polaris Blinds on Instagram">
+					<svg class="pb-hd-ico" aria-hidden="true"><use href="#pb-i-instagram"></use></svg>
+					Instagram
+				</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- ------------------------------ main bar ------------------------------ -->
+	<div class="pb-hd-bar">
+		<div class="pb-hd-wrap pb-hd-bar-inner">
+
+			<a class="pb-hd-brand" data-ic-nav-href="/" href="/" aria-label="Polaris Blinds - home">
+				<img class="pb-hd-logo"
+					src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCORPORATE%2Fpolaris-blinds-logo.png?alt=media&amp;token=2195bf8a-e3bb-4bab-b254-5b9fee64defe"
+					alt="Polaris Blinds - Window Coverings" width="400" height="100"
+					decoding="async" fetchpriority="high">
+			</a>
+
+			<div class="pb-hd-nav" id="pb-hd-menu" role="navigation" aria-label="Main menu">
+				<ul class="pb-hd-list">
+					<li class="pb-hd-item">
+						<a class="pb-hd-link" data-ic-nav-href="/" href="/" data-page="home">Home</a>
+					</li>
+
+					<li class="pb-hd-item pb-hd-item-mega">
+						<button type="button" class="pb-hd-link pb-hd-trigger" aria-expanded="false"
+							aria-controls="pb-mega-products" data-page="products">
+							Products
+							<span class="pb-hd-caret" aria-hidden="true"><svg class="pb-hd-ico"><use href="#pb-i-chevron"></use></svg></span>
+						</button>
+
+						<div class="pb-mega" id="pb-mega-products" role="region" aria-label="Our products">
+							<div class="pb-hd-wrap pb-mega-inner">
+								<div class="pb-mega-grid">
+									<a class="pb-mega-card" data-ic-nav-href="/zebra-blinds" href="/zebra-blinds" data-page="zebra-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-4LFRLD3CYH-polarblinds%2FcontentImage-1716856144134-zebra-blinds-4.jpg?alt=media&amp;token=15cb2d8b-3dcb-4d7c-b3a5-90d0a55e3212"
+											alt="Zebra blinds with alternating sheer and solid bands" width="1772" height="1424">
+										<span class="pb-mega-name">Zebra Blinds</span>
+										<span class="pb-mega-go">Day and night light control <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/honeycomb-blinds" href="/honeycomb-blinds" data-page="honeycomb-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-QEELL6N43T-polarblinds%2FcontentImage-1716856921727-honeycomb-blinds-3.jpg?alt=media&amp;token=2daf3f9b-6bff-44fe-8796-6dc9b5195a10"
+											alt="Honeycomb cellular blinds insulating a window" width="800" height="500">
+										<span class="pb-mega-name">Honeycomb Blinds</span>
+										<span class="pb-mega-go">Insulate and save <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/roller-blinds" href="/roller-blinds" data-page="roller-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-32M4RQPWE6-polarblinds%2FcontentImage-1716857157210-roller-blinds-1.png?alt=media&amp;token=e9024c31-2c16-4afa-a67e-83e25626699f"
+											alt="Sleek roller blinds in a modern living room" width="535" height="444">
+										<span class="pb-mega-name">Roller Blinds</span>
+										<span class="pb-mega-go">Sleek and minimalist <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/fauxwood-blinds" href="/fauxwood-blinds" data-page="fauxwood-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-W22EZ4A7F4-polarblinds%2FcontentImage-1716857337905-fauxwood-blinds-1.jpg?alt=media&amp;token=46415028-0723-49a7-abbb-3cd804309470"
+											alt="Fauxwood blinds with a natural wood finish" width="2400" height="800">
+										<span class="pb-mega-name">Fauxwood Blinds</span>
+										<span class="pb-mega-go">Wood look, made to last <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/vertical-blinds" href="/vertical-blinds" data-page="vertical-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-E9APQX963N-polarblinds%2FcontentImage-1716857490973-vertical-blinds-1.jpg?alt=media&amp;token=8835bfa9-1a96-4f8b-a2dd-8a0713ecc3b9"
+											alt="Vertical blinds for large windows and patio doors" width="2400" height="800">
+										<span class="pb-mega-name">Vertical Blinds</span>
+										<span class="pb-mega-go">Big windows and patio doors <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/silhoutte-blinds" href="/silhoutte-blinds" data-page="silhoutte-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-6KYCWAWNDH-polarblinds%2FcontentImage-1716857678319-silhouette-blinds-1.jpg?alt=media&amp;token=cec3bf88-e2b4-4ef8-af71-3533e9859a69"
+											alt="Silhouette blinds with sheer fabric vanes" width="1250" height="663">
+										<span class="pb-mega-name">Silhouette Blinds</span>
+										<span class="pb-mega-go">Sheer elegance <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/roman-blinds" href="/roman-blinds" data-page="roman-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-NCMQAQGNTW-polarblinds%2FcontentImage-1716856735721-roman-blinds-5.jpg?alt=media&amp;token=7c3a29d2-e866-428a-8265-7bf89fad4a4a"
+											alt="Roman blinds in soft natural fabric" width="1000" height="1000">
+										<span class="pb-mega-name">Roman Blinds</span>
+										<span class="pb-mega-go">Soft folds, classic style <span aria-hidden="true">&rarr;</span></span>
+									</a>
+								</div>
+
+								<div class="pb-mega-side">
+									<p class="pb-mega-side-kicker">Free in-home consultation</p>
+									<p class="pb-mega-side-title">Not sure which blind fits your window?</p>
+									<p class="pb-mega-side-text">We measure, we bring samples, and we help you choose. No
+										obligation, no charge.</p>
+									<a class="pb-mega-side-btn" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">
+										Book an appointment <span aria-hidden="true">&rarr;</span>
+									</a>
+								</div>
+							</div>
+						</div>
+					</li>
+
+					<li class="pb-hd-item">
+						<a class="pb-hd-link" data-ic-nav-href="/about-us" href="/about-us" data-page="about-us">About Us</a>
+					</li>
+					<li class="pb-hd-item">
+						<a class="pb-hd-link" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">Contact Us</a>
+					</li>
+				</ul>
+
+				<a class="pb-hd-cta" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">
+					<svg class="pb-hd-ico" aria-hidden="true"><use href="#pb-i-ruler"></use></svg>
+					Free estimate
+				</a>
+			</div>
+
+			<button type="button" class="pb-hd-burger" aria-expanded="false" aria-controls="pb-hd-menu"
+				aria-label="Open menu">
+				<span class="pb-hd-burger-box" aria-hidden="true">
+					<span></span><span></span><span></span>
+				</span>
+			</button>
+		</div>
+	</div>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.pb-header {
+			--pb-cream: #faf6ef;
+			--pb-paper: #fffdf8;
+			--pb-sand: #efe5d3;
+			--pb-ink: #262019;
+			--pb-espresso: #332a1f;
+			--pb-walnut: #6f4e2e;
+			--pb-gold: #c48b2e;
+			--pb-gold-deep: #a5711f;
+			--pb-gold-soft: #e7c98f;
+			--pb-line: #e6d9c2;
+			position: relative;
+			z-index: 60;
+			width: 100%;
+			background: var(--pb-paper);
+			color: var(--pb-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+			box-shadow: 0 10px 30px -18px rgba(38, 32, 25, 0.35);
+		}
+
+		.pb-header,
+		.pb-header *,
+		.pb-header *::before,
+		.pb-header *::after {
+			box-sizing: border-box;
+		}
+
+		.pb-hd-sprite {
+			position: absolute;
+			width: 0;
+			height: 0;
+			overflow: hidden;
+		}
+
+		.pb-hd-ico {
+			width: 1em;
+			height: 1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		.pb-hd-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		/* ---------- top strip ---------- */
+		.pb-hd-top {
+			background: linear-gradient(90deg, var(--pb-espresso), #4a3a26 70%, var(--pb-walnut));
+			color: #f3e9d8;
+			font-size: 13.5px;
+		}
+
+		.pb-hd-top-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			min-height: 36px;
+		}
+
+		.pb-hd-top-note {
+			margin: 0;
+			letter-spacing: 0.04em;
+		}
+
+		.pb-hd-top-links {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.pb-hd-top-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			color: #f3e9d8;
+			text-decoration: none;
+			letter-spacing: 0.02em;
+		}
+
+		.pb-hd-top-link:hover {
+			color: var(--pb-gold-soft);
+		}
+
+		/* ---------- main bar ---------- */
+		.pb-hd-bar {
+			position: relative;
+			background: var(--pb-paper);
+			border-bottom: 1px solid var(--pb-line);
+		}
+
+		.pb-hd-bar-inner {
+			display: flex;
+			align-items: center;
+			gap: 24px;
+			min-height: 78px;
+		}
+
+		.pb-hd-brand {
+			display: inline-flex;
+			align-items: center;
+			flex: 0 0 auto;
+		}
+
+		.pb-hd-logo {
+			height: 46px;
+			width: auto;
+			display: block;
+		}
+
+		.pb-header.is-compact .pb-hd-logo {
+			height: 40px;
+		}
+
+		.pb-hd-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 24px;
+			flex: 1 1 auto;
+			margin-left: auto;
+		}
+
+		.pb-hd-list {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.pb-hd-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 12px 14px;
+			color: var(--pb-ink);
+			text-decoration: none;
+			font-size: 15px;
+			font-weight: 600;
+			letter-spacing: 0.03em;
+			background: none;
+			border: 0;
+			cursor: pointer;
+			font-family: inherit;
+			position: relative;
+		}
+
+		.pb-hd-link::after {
+			content: '';
+			position: absolute;
+			left: 14px;
+			right: 14px;
+			bottom: 6px;
+			height: 2px;
+			background: var(--pb-gold);
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform 0.25s ease;
+		}
+
+		.pb-hd-link:hover::after,
+		.pb-hd-link.is-active::after {
+			transform: scaleX(1);
+		}
+
+		.pb-hd-link.is-active {
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-hd-caret {
+			display: inline-flex;
+			align-items: center;
+			transition: transform 0.25s ease;
+		}
+
+		.pb-hd-item-mega.is-open .pb-hd-caret {
+			transform: rotate(180deg);
+		}
+
+		.pb-hd-cta {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 11px 20px;
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			font-weight: 700;
+			font-size: 14.5px;
+			letter-spacing: 0.04em;
+			text-decoration: none;
+			border-radius: 999px;
+			box-shadow: 0 8px 18px -10px rgba(165, 113, 31, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			flex: 0 0 auto;
+		}
+
+		.pb-hd-cta:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 12px 22px -10px rgba(165, 113, 31, 0.95);
+		}
+
+		/* ---------- mega menu ---------- */
+		.pb-mega {
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: 100%;
+			background: var(--pb-paper);
+			border-top: 3px solid var(--pb-gold);
+			border-bottom: 1px solid var(--pb-line);
+			box-shadow: 0 30px 50px -30px rgba(38, 32, 25, 0.55);
+			opacity: 0;
+			visibility: hidden;
+			transform: translateY(10px);
+			transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s;
+		}
+
+		.pb-hd-item-mega.is-open .pb-mega,
+		.pb-hd-item-mega:hover .pb-mega,
+		.pb-hd-item-mega:focus-within .pb-mega {
+			opacity: 1;
+			visibility: visible;
+			transform: translateY(0);
+		}
+
+		.pb-mega-inner {
+			display: grid;
+			grid-template-columns: 1fr 250px;
+			gap: 28px;
+			padding-top: 26px;
+			padding-bottom: 26px;
+		}
+
+		.pb-mega-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 16px;
+		}
+
+		.pb-mega-card {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+			text-decoration: none;
+			color: var(--pb-ink);
+			border: 1px solid var(--pb-line);
+			border-radius: 14px;
+			overflow: hidden;
+			background: #fff;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+		}
+
+		.pb-mega-card:hover {
+			transform: translateY(-3px);
+			border-color: var(--pb-gold-soft);
+			box-shadow: 0 16px 28px -18px rgba(38, 32, 25, 0.5);
+		}
+
+		.pb-mega-img {
+			width: 100%;
+			height: 108px;
+			object-fit: cover;
+			display: block;
+		}
+
+		.pb-mega-name {
+			padding: 4px 12px 0;
+			font-weight: 700;
+			font-size: 14.5px;
+		}
+
+		.pb-mega-go {
+			padding: 0 12px 12px;
+			font-size: 12.5px;
+			color: var(--pb-walnut);
+		}
+
+		.pb-mega-side {
+			background:
+				radial-gradient(120% 90% at 100% 0%, rgba(196, 139, 46, 0.16), transparent 60%),
+				var(--pb-cream);
+			border: 1px solid var(--pb-line);
+			border-radius: 14px;
+			padding: 22px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			gap: 8px;
+		}
+
+		.pb-mega-side-kicker {
+			margin: 0;
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-mega-side-title {
+			margin: 0;
+			font-family: Georgia, 'Times New Roman', serif;
+			font-size: 19px;
+			line-height: 1.3;
+			font-weight: 700;
+		}
+
+		.pb-mega-side-text {
+			margin: 0;
+			font-size: 13.5px;
+			color: #6b5d49;
+		}
+
+		.pb-mega-side-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-top: 6px;
+			font-weight: 700;
+			font-size: 14px;
+			color: var(--pb-gold-deep);
+			text-decoration: none;
+		}
+
+		.pb-mega-side-btn:hover {
+			color: var(--pb-ink);
+		}
+
+		/* ---------- burger ---------- */
+		.pb-hd-burger {
+			display: none;
+			margin-left: auto;
+			padding: 10px;
+			background: none;
+			border: 1px solid var(--pb-line);
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		.pb-hd-burger-box {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+			width: 22px;
+		}
+
+		.pb-hd-burger-box span {
+			height: 2px;
+			background: var(--pb-ink);
+			border-radius: 2px;
+			transition: transform 0.25s ease, opacity 0.25s ease;
+		}
+
+		.pb-header.is-menu-open .pb-hd-burger-box span:nth-child(1) {
+			transform: translateY(7px) rotate(45deg);
+		}
+
+		.pb-header.is-menu-open .pb-hd-burger-box span:nth-child(2) {
+			opacity: 0;
+		}
+
+		.pb-header.is-menu-open .pb-hd-burger-box span:nth-child(3) {
+			transform: translateY(-7px) rotate(-45deg);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1080px) {
+			.pb-mega-grid {
+				grid-template-columns: repeat(3, 1fr);
+			}
+
+			.pb-mega-card:nth-child(7) {
+				display: none;
+			}
+		}
+
+		@media (max-width: 920px) {
+			.pb-hd-burger {
+				display: inline-flex;
+			}
+
+			.pb-hd-nav {
+				position: fixed;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				width: min(360px, 88vw);
+				margin: 0;
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				gap: 8px;
+				background: var(--pb-paper);
+				box-shadow: -24px 0 60px rgba(38, 32, 25, 0.35);
+				padding: 74px 22px 26px;
+				overflow-y: auto;
+				transform: translateX(105%);
+				transition: transform 0.3s ease;
+			}
+
+			.pb-header.is-menu-open .pb-hd-nav {
+				transform: translateX(0);
+			}
+
+			.pb-hd-list {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 2px;
+			}
+
+			.pb-hd-link {
+				width: 100%;
+				justify-content: space-between;
+				padding: 13px 12px;
+				border-bottom: 1px solid var(--pb-line);
+				font-size: 16px;
+			}
+
+			.pb-hd-link::after {
+				display: none;
+			}
+
+			.pb-hd-item-mega .pb-mega {
+				position: static;
+				opacity: 1;
+				visibility: visible;
+				transform: none;
+				box-shadow: none;
+				border: 0;
+				display: none;
+			}
+
+			.pb-hd-item-mega.is-open .pb-mega {
+				display: block;
+			}
+
+			.pb-mega-inner {
+				grid-template-columns: 1fr;
+				gap: 14px;
+				padding: 12px 4px 16px;
+			}
+
+			.pb-mega-grid {
+				grid-template-columns: repeat(2, 1fr);
+				gap: 10px;
+			}
+
+			.pb-mega-card:nth-child(7) {
+				display: flex;
+			}
+
+			.pb-mega-img {
+				height: 84px;
+			}
+
+			.pb-hd-cta {
+				justify-content: center;
+				margin-top: 6px;
+			}
+
+			.pb-hd-top-note {
+				display: none;
+			}
+
+			.pb-hd-top-inner {
+				justify-content: center;
+			}
+
+			.pb-hd-top-mail {
+				display: none;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var headerRoot = document.querySelector('.pb-header');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!headerRoot || headerRoot.getAttribute('data-pb-header-ready') === '1') { return; }
+			headerRoot.setAttribute('data-pb-header-ready', '1');
+
+			var burgerButton = headerRoot.querySelector('.pb-hd-burger');
+			var megaItem = headerRoot.querySelector('.pb-hd-item-mega');
+			var megaTrigger = headerRoot.querySelector('.pb-hd-trigger');
+
+			/* ---------------- mobile menu ---------------- */
+			function closeMobileMenu() {
+				if (!headerRoot.classList.contains('is-menu-open')) { return; }
+				headerRoot.classList.remove('is-menu-open');
+				burgerButton.setAttribute('aria-expanded', 'false');
+			}
+
+			function openMobileMenu() {
+				headerRoot.classList.add('is-menu-open');
+				burgerButton.setAttribute('aria-expanded', 'true');
+			}
+
+			burgerButton.addEventListener('click', function () {
+				if (headerRoot.classList.contains('is-menu-open')) { closeMobileMenu(); }
+				else { openMobileMenu(); }
+			});
+
+			/* ---------------- products mega menu (touch and keyboard) ---------------- */
+			if (megaTrigger) {
+				megaTrigger.addEventListener('click', function (event) {
+					var isSmall = window.matchMedia('(max-width: 920px)').matches;
+					if (!isSmall) { return; }
+					event.preventDefault();
+					var isOpen = megaItem.classList.contains('is-open');
+					megaItem.classList.toggle('is-open', !isOpen);
+					megaTrigger.setAttribute('aria-expanded', String(!isOpen));
+				});
+			}
+
+			document.addEventListener('click', function (event) {
+				if (!headerRoot.contains(event.target)) { closeMobileMenu(); }
+			});
+
+			document.addEventListener('keydown', function (event) {
+				if (event.key === 'Escape') { closeMobileMenu(); }
+			});
+
+			/* ---------------- compact bar on scroll ---------------- */
+			var ticking = false;
+
+			function updateBarCompactness() {
+				ticking = false;
+				var isCompact = window.scrollY > 24;
+				headerRoot.classList.toggle('is-compact', isCompact);
+			}
+
+			function requestBarUpdate() {
+				if (ticking) { return; }
+				ticking = true;
+				window.requestAnimationFrame(updateBarCompactness);
+			}
+
+			window.addEventListener('scroll', requestBarUpdate, { passive: true });
+			updateBarCompactness();
+
+			/* ---------------- active page highlight ---------------- */
+			var currentPath = window.location.pathname || '/';
+			var pageLinks = Array.prototype.slice.call(
+				headerRoot.querySelectorAll('a[data-page], button[data-page]')
+			);
+
+			pageLinks.forEach(function (pageLink) {
+				var pageKey = pageLink.getAttribute('data-page');
+				var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+				var productsPaths = [
+					'/zebra-blinds', '/honeycomb-blinds', '/roller-blinds',
+					'/fauxwood-blinds', '/vertical-blinds', '/silhoutte-blinds', '/roman-blinds'
+				];
+				var isActive = currentPath === pagePath ||
+					(pageKey === 'products' && productsPaths.indexOf(currentPath) !== -1);
+				pageLink.classList.toggle('is-active', isActive);
+			});
+		})();
+	</script>
+
+</div>
+
+<!--
+  =========================================================================
+  ABOUT US - fragment for the Polaris Blinds website (route /about-us)
+  - One parent <div class="pb-page pb-about"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .pb-about so nothing leaks
+  - The appointment form follows the platform contract: <form data-gw-form>,
+    hidden honeypot named "gw_hp", [data-gw-form-status] live region
+  - Facts come from the live site copy (mission, why choose, team, connect)
+  - SEO for the CMS page object (slug "about-us"): title "About Polaris
+    Blinds - Calgary Window Covering Experts", description "Polaris Blinds
+    brings European-designed window fashions to Calgary. Learn about our
+    mission, quality promise and team."
+  =========================================================================
+-->
+<div class="pb-page pb-about">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="pb-ab-hero">
+		<div class="pb-ab-wrap pb-ab-hero-grid">
+			<div class="pb-ab-hero-copy pb-ab-reveal">
+				<p class="pb-ab-kicker">About us</p>
+				<h1 class="pb-ab-hero-title">Guiding light for<br><span class="pb-ab-hero-title-accent">your living spaces</span></h1>
+				<p class="pb-ab-hero-lede">
+					Welcome to Polaris Blinds, your trusted source for premium blinds and shades. At Polaris we
+					believe that windows are more than openings to the outside world - they are canvases for
+					creativity and comfort.
+				</p>
+				<ul class="pb-ab-hero-pills">
+					<li>European design</li>
+					<li>Custom assembled</li>
+					<li>Calgary and area</li>
+					<li>Free consultation</li>
+				</ul>
+				<div class="pb-ab-hero-actions">
+					<a class="pb-ab-btn pb-ab-btn-accent" data-ic-nav-href="/contact-us" href="/contact-us">
+						Book a consultation <span aria-hidden="true">&rarr;</span>
+					</a>
+					<a class="pb-ab-btn pb-ab-btn-ghost" href="tel:+14036121636">Call +1 403 612 1636</a>
+				</div>
+			</div>
+
+			<div class="pb-ab-hero-visual pb-ab-reveal" aria-hidden="true">
+				<div class="pb-ab-hero-frame">
+					<img class="pb-ab-hero-img"
+						src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-XPQ4MXYNKT-polarblinds%2FcontentImage-1716844476916-shades-and-blinds.jpg?alt=media&amp;token=206922c7-c668-4b72-839b-031a7f888457"
+						alt="" width="2400" height="800" decoding="async" fetchpriority="high">
+					<span class="pb-ab-hero-frame-edge" aria-hidden="true"></span>
+				</div>
+				<p class="pb-ab-hero-caption">Window fashions, chosen with you</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== STORY ============================== -->
+	<section class="pb-ab-story">
+		<div class="pb-ab-wrap pb-ab-story-grid">
+			<div class="pb-ab-story-visual pb-ab-reveal" aria-hidden="true">
+				<div class="pb-ab-story-frame">
+					<img class="pb-ab-story-img" loading="lazy" decoding="async"
+						src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-NCMQAQGNTW-polarblinds%2FcontentImage-1716848764050-roman-shades-1.jpg?alt=media&amp;token=17379cf1-8c40-4dae-9f4d-f94c572b259c"
+						alt="" width="1000" height="1000">
+				</div>
+			</div>
+			<div class="pb-ab-story-copy pb-ab-reveal">
+				<p class="pb-ab-kicker">Our story</p>
+				<h2 class="pb-ab-sec-title">Every window deserves special attention</h2>
+				<p class="pb-ab-story-text">
+					Our journey began with a passion for transforming living spaces and providing top-notch
+					window solutions. Today we help homes and offices across Calgary dress every window with
+					blinds and shades that fit their style, personality and practical needs.
+				</p>
+				<ul class="pb-ab-story-list">
+					<li><span class="pb-ab-check" aria-hidden="true"></span> European design studios behind every collection</li>
+					<li><span class="pb-ab-check" aria-hidden="true"></span> Custom-assembled to your exact measurements</li>
+					<li><span class="pb-ab-check" aria-hidden="true"></span> A wide range of blinds and shades for every taste</li>
+					<li><span class="pb-ab-check" aria-hidden="true"></span> Guided from first idea to final installation</li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= MISSION ============================= -->
+	<section class="pb-ab-mission">
+		<div class="pb-ab-wrap pb-ab-mission-inner pb-ab-reveal">
+			<p class="pb-ab-mission-kicker">Our mission</p>
+			<blockquote class="pb-ab-mission-quote">
+				To help you create spaces that reflect your style, personality and practical needs - one window
+				at a time.
+			</blockquote>
+			<p class="pb-ab-mission-text">
+				We understand that every room is unique, and every window deserves special attention. That is
+				why we are dedicated to offering a wide range of high-quality blinds and shades that cater to
+				your individual taste and lifestyle.
+			</p>
+		</div>
+	</section>
+
+	<!-- =========================== WHY POLARIS =========================== -->
+	<section class="pb-ab-why">
+		<div class="pb-ab-wrap">
+			<div class="pb-ab-sec-head pb-ab-reveal">
+				<p class="pb-ab-kicker">Why choose Polaris</p>
+				<h2 class="pb-ab-sec-title">Four promises we keep</h2>
+			</div>
+
+			<div class="pb-ab-why-grid">
+				<article class="pb-ab-why-card pb-ab-reveal">
+					<span class="pb-ab-why-num" aria-hidden="true">01</span>
+					<h3 class="pb-ab-why-title">Quality assurance</h3>
+					<p class="pb-ab-why-text">We take pride in the quality of our products. Our blinds and
+						shades are crafted with precision and care, ensuring durability and longevity. When you
+						choose Polaris, you are choosing excellence.</p>
+				</article>
+				<article class="pb-ab-why-card pb-ab-reveal">
+					<span class="pb-ab-why-num" aria-hidden="true">02</span>
+					<h3 class="pb-ab-why-title">Unmatched variety</h3>
+					<p class="pb-ab-why-text">Our collection features a diverse range of blinds and shades to
+						suit every taste and space - classic elegance, modern flair, or something in between.</p>
+				</article>
+				<article class="pb-ab-why-card pb-ab-reveal">
+					<span class="pb-ab-why-num" aria-hidden="true">03</span>
+					<h3 class="pb-ab-why-title">Customer-centric approach</h3>
+					<p class="pb-ab-why-text">Your satisfaction is our top priority. We provide exceptional
+						customer service, from expert advice to hassle-free installation - guiding you every step
+						of the way.</p>
+				</article>
+				<article class="pb-ab-why-card pb-ab-reveal">
+					<span class="pb-ab-why-num" aria-hidden="true">04</span>
+					<h3 class="pb-ab-why-title">Innovation and style</h3>
+					<p class="pb-ab-why-text">Our team stays at the forefront of industry trends and continually
+						updates our offerings so you always get the latest innovations and stylish designs.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== TEAM =============================== -->
+	<section class="pb-ab-team">
+		<div class="pb-ab-wrap pb-ab-team-grid">
+			<div class="pb-ab-team-copy pb-ab-reveal">
+				<p class="pb-ab-kicker">Our team</p>
+				<h2 class="pb-ab-sec-title">Experts who turn vision into reality</h2>
+				<p class="pb-ab-team-text">
+					Behind every great product is a dedicated team - and at Polaris we are no exception. Our
+					experts bring years of experience and a deep passion for design to the table, helping you
+					make informed choices for your window coverings.
+				</p>
+				<p class="pb-ab-team-text">
+					We are not just about blinds and shades; we are about creating inviting and inspiring
+					spaces. Join us on this journey to transform your windows and elevate your living
+					experience.
+				</p>
+				<a class="pb-ab-btn pb-ab-btn-accent" href="#pb-ab-appointment">Make an appointment <span aria-hidden="true">&rarr;</span></a>
+			</div>
+			<div class="pb-ab-team-visual pb-ab-reveal" aria-hidden="true">
+				<div class="pb-ab-team-frame">
+					<img class="pb-ab-team-img" loading="lazy" decoding="async"
+						src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-XPQ4MXYNKT-polarblinds%2FcontentImage-1716844800978-shades-and-best-blinds.png?alt=media&amp;token=a28c5cfa-18de-406d-a5e2-06355b705b73"
+						alt="" width="704" height="531">
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================== SERVICE AREA =========================== -->
+	<section class="pb-ab-area">
+		<img class="pb-ab-area-bg" loading="lazy" decoding="async"
+			src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-A9NXXTK4T7-polarblinds%2FcontentImage-1716845257040-background-calgary.jpg?alt=media&amp;token=6deade98-9c0e-4bbb-a921-8bfef9987ab5"
+			alt="Calgary skyline at golden hour" width="2400" height="800">
+		<div class="pb-ab-area-overlay" aria-hidden="true"></div>
+		<div class="pb-ab-wrap pb-ab-area-inner pb-ab-reveal">
+			<p class="pb-ab-kicker pb-ab-kicker-light">Areas we proudly serve</p>
+			<h2 class="pb-ab-area-title">Calgary and the towns around it</h2>
+			<p class="pb-ab-area-text">We are serving Calgary and the surrounding cities and towns.</p>
+			<ul class="pb-ab-area-chips">
+				<li>Calgary</li>
+				<li>Airdrie</li>
+				<li>Chestermere</li>
+				<li>Cochrane</li>
+				<li>Okotoks</li>
+				<li>High River</li>
+				<li>Strathmore</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- ======================== APPOINTMENT FORM ========================= -->
+	<section class="pb-ab-appointment" id="pb-ab-appointment">
+		<div class="pb-ab-wrap pb-ab-appointment-grid">
+			<div class="pb-ab-appointment-copy pb-ab-reveal">
+				<p class="pb-ab-kicker">Appointment</p>
+				<h2 class="pb-ab-sec-title">Let us bring the samples to you</h2>
+				<p class="pb-ab-appointment-text">
+					Tell us what you are looking for and we will arrange a free in-home consultation - measure,
+					samples and advice, with no obligation.
+				</p>
+				<p class="pb-ab-appointment-phone">Prefer to talk? Call
+					<a href="tel:+14036121636">+1 403 612 1636</a> or write to
+					<a href="mailto:info@polarisblinds.ca">info@polarisblinds.ca</a>.</p>
+			</div>
+
+			<div class="pb-ab-appointment-card pb-ab-reveal">
+				<form class="pb-ab-form" data-gw-form data-gw-form-type="appointment-request"
+					data-gw-cms-object-type="polaris-quote-request-forms-uniconbaseapps">
+					<div class="pb-ab-form-fields">
+						<label class="pb-ab-field">
+							<span class="pb-ab-field-label">Your name <em>required</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="pb-ab-field">
+							<span class="pb-ab-field-label">Email <em>required</em></span>
+							<input type="email" name="email" autocomplete="email" required>
+						</label>
+						<label class="pb-ab-field">
+							<span class="pb-ab-field-label">Phone <em>required</em></span>
+							<input type="tel" name="phone" autocomplete="tel" required>
+						</label>
+						<label class="pb-ab-field">
+							<span class="pb-ab-field-label">What are you interested in?</span>
+							<select name="product">
+								<option value="not-sure">Not sure yet - help me choose</option>
+								<option value="zebra-blinds">Zebra Blinds</option>
+								<option value="honeycomb-blinds">Honeycomb Blinds</option>
+								<option value="roller-blinds">Roller Blinds</option>
+								<option value="fauxwood-blinds">Fauxwood Blinds</option>
+								<option value="vertical-blinds">Vertical Blinds</option>
+								<option value="silhoutte-blinds">Silhouette Blinds</option>
+								<option value="roman-blinds">Roman Blinds</option>
+							</select>
+						</label>
+					</div>
+					<label class="pb-ab-field pb-ab-field-wide">
+						<span class="pb-ab-field-label">Your message <em>optional</em></span>
+						<textarea name="message" rows="4" placeholder="Tell us about your rooms and windows..."></textarea>
+					</label>
+
+					<input class="pb-ab-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+						aria-hidden="true">
+
+					<div class="pb-ab-form-actions">
+						<button class="pb-ab-submit" type="submit">Request my appointment</button>
+						<div class="pb-ab-form-status" data-gw-form-status role="status"></div>
+					</div>
+					<p class="pb-ab-form-consent">We use these details only to arrange your appointment and
+						answer you. We do not pass them to anyone else.</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.pb-about {
+			--pb-cream: #faf6ef;
+			--pb-paper: #fffdf8;
+			--pb-sand: #efe5d3;
+			--pb-ink: #262019;
+			--pb-espresso: #332a1f;
+			--pb-walnut: #6f4e2e;
+			--pb-gold: #c48b2e;
+			--pb-gold-deep: #a5711f;
+			--pb-gold-soft: #e7c98f;
+			--pb-line: #e6d9c2;
+			--pb-display: Georgia, 'Times New Roman', serif;
+			position: relative;
+			width: 100%;
+			background: var(--pb-cream);
+			color: var(--pb-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.pb-about,
+		.pb-about *,
+		.pb-about *::before,
+		.pb-about *::after {
+			box-sizing: border-box;
+		}
+
+		.pb-about img {
+			max-width: 100%;
+		}
+
+		.pb-ab-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.pb-ab-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-ab-kicker-light {
+			color: var(--pb-gold-soft);
+		}
+
+		.pb-ab-sec-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-size: clamp(25px, 3.2vw, 38px);
+			line-height: 1.15;
+			font-weight: 700;
+		}
+
+		.pb-ab-sec-head {
+			margin-bottom: 34px;
+		}
+
+		.pb-ab-check {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			background: var(--pb-gold);
+			flex: 0 0 auto;
+			position: relative;
+		}
+
+		.pb-ab-check::after {
+			content: '';
+			width: 8px;
+			height: 4px;
+			border-left: 2px solid #fff;
+			border-bottom: 2px solid #fff;
+			transform: rotate(-45deg) translate(1px, -1px);
+		}
+
+		.pb-ab-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 13px 24px;
+			border-radius: 999px;
+			font-weight: 700;
+			font-size: 15px;
+			letter-spacing: 0.02em;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+		}
+
+		.pb-ab-btn-accent {
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			box-shadow: 0 14px 26px -14px rgba(165, 113, 31, 0.85);
+		}
+
+		.pb-ab-btn-accent:hover {
+			transform: translateY(-2px);
+		}
+
+		.pb-ab-btn-ghost {
+			border: 1.5px solid var(--pb-line);
+			color: var(--pb-espresso);
+		}
+
+		.pb-ab-btn-ghost:hover {
+			border-color: var(--pb-gold);
+			color: var(--pb-gold-deep);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.pb-ab-hero {
+			padding: 72px 0 84px;
+			background:
+				radial-gradient(90% 110% at 100% 0%, rgba(196, 139, 46, 0.14), transparent 55%),
+				var(--pb-paper);
+		}
+
+		.pb-ab-hero-grid {
+			display: grid;
+			grid-template-columns: 1.02fr 0.98fr;
+			align-items: center;
+			gap: 52px;
+		}
+
+		.pb-ab-hero-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-weight: 700;
+			font-size: clamp(32px, 4.2vw, 52px);
+			line-height: 1.08;
+			text-wrap: balance;
+		}
+
+		.pb-ab-hero-title-accent {
+			color: var(--pb-gold-deep);
+			font-style: italic;
+		}
+
+		.pb-ab-hero-lede {
+			margin: 18px 0 0;
+			font-size: 16.5px;
+			color: #6b5d49;
+			max-width: 540px;
+		}
+
+		.pb-ab-hero-pills {
+			list-style: none;
+			margin: 22px 0 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+		}
+
+		.pb-ab-hero-pills li {
+			padding: 8px 15px;
+			border: 1px solid var(--pb-line);
+			border-radius: 999px;
+			font-size: 13.5px;
+			font-weight: 600;
+			color: var(--pb-espresso);
+			background: var(--pb-cream);
+		}
+
+		.pb-ab-hero-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 14px;
+			margin-top: 28px;
+		}
+
+		.pb-ab-hero-visual {
+			position: relative;
+		}
+
+		.pb-ab-hero-frame {
+			position: relative;
+			border-radius: 22px;
+			overflow: hidden;
+			box-shadow: 0 36px 64px -30px rgba(38, 32, 25, 0.55);
+			aspect-ratio: 4 / 3.4;
+		}
+
+		.pb-ab-hero-img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+		}
+
+		.pb-ab-hero-frame-edge {
+			position: absolute;
+			inset: 13px;
+			border: 1.5px solid rgba(255, 255, 255, 0.65);
+			border-radius: 13px;
+			pointer-events: none;
+		}
+
+		.pb-ab-hero-caption {
+			position: absolute;
+			left: 18px;
+			bottom: -18px;
+			margin: 0;
+			background: var(--pb-paper);
+			border-left: 3px solid var(--pb-gold);
+			border-radius: 10px;
+			box-shadow: 0 16px 30px -16px rgba(38, 32, 25, 0.5);
+			padding: 9px 16px;
+			font-size: 13.5px;
+			font-weight: 600;
+			color: var(--pb-espresso);
+		}
+
+		/* ------------------------------ story ------------------------------ */
+		.pb-ab-story {
+			padding: 72px 0 90px;
+		}
+
+		.pb-ab-story-grid {
+			display: grid;
+			grid-template-columns: 0.95fr 1.05fr;
+			align-items: center;
+			gap: 58px;
+		}
+
+		.pb-ab-story-frame {
+			position: relative;
+			border-radius: 22px;
+			overflow: hidden;
+			box-shadow: 0 32px 58px -28px rgba(38, 32, 25, 0.55);
+		}
+
+		.pb-ab-story-frame::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: 22px;
+			background: linear-gradient(180deg, transparent 60%, rgba(27, 22, 16, 0.4));
+		}
+
+		.pb-ab-story-img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+			aspect-ratio: 4 / 3.4;
+		}
+
+		.pb-ab-story-text {
+			margin: 16px 0 0;
+			color: #6b5d49;
+			font-size: 16.5px;
+		}
+
+		.pb-ab-story-list {
+			list-style: none;
+			margin: 22px 0 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.pb-ab-story-list li {
+			display: flex;
+			align-items: flex-start;
+			gap: 11px;
+			font-weight: 600;
+			font-size: 15.5px;
+			color: var(--pb-espresso);
+		}
+
+		.pb-ab-story-list .pb-ab-check {
+			margin-top: 3px;
+		}
+
+		/* ------------------------------ mission ------------------------------ */
+		.pb-ab-mission {
+			padding: 84px 0;
+			background:
+				radial-gradient(110% 140% at 50% 0%, rgba(196, 139, 46, 0.2), transparent 60%),
+				linear-gradient(150deg, var(--pb-espresso), #241d14);
+			color: #f6eedf;
+		}
+
+		.pb-ab-mission-inner {
+			max-width: 860px;
+			text-align: center;
+		}
+
+		.pb-ab-mission-kicker {
+			margin: 0 0 14px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--pb-gold-soft);
+		}
+
+		.pb-ab-mission-quote {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-size: clamp(24px, 3.4vw, 36px);
+			line-height: 1.3;
+			font-style: italic;
+			color: #fff;
+		}
+
+		.pb-ab-mission-text {
+			margin: 18px auto 0;
+			max-width: 620px;
+			color: #e6d9c2;
+			font-size: 15.5px;
+		}
+
+		/* ------------------------------ why ------------------------------ */
+		.pb-ab-why {
+			padding: 88px 0;
+		}
+
+		.pb-ab-why-grid {
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 20px;
+		}
+
+		.pb-ab-why-card {
+			position: relative;
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-radius: 18px;
+			padding: 28px 28px 30px 88px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+		}
+
+		.pb-ab-why-card:hover {
+			transform: translateY(-5px);
+			border-color: var(--pb-gold-soft);
+			box-shadow: 0 24px 40px -24px rgba(38, 32, 25, 0.5);
+		}
+
+		.pb-ab-why-num {
+			position: absolute;
+			left: 24px;
+			top: 28px;
+			width: 46px;
+			height: 46px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 50%;
+			background: var(--pb-cream);
+			border: 1px solid var(--pb-line);
+			font-family: var(--pb-display);
+			font-size: 17px;
+			font-weight: 700;
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-ab-why-title {
+			margin: 0 0 8px;
+			font-family: var(--pb-display);
+			font-size: 21px;
+			line-height: 1.3;
+		}
+
+		.pb-ab-why-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: #6b5d49;
+		}
+
+		/* ------------------------------ team ------------------------------ */
+		.pb-ab-team {
+			padding: 90px 0;
+			background:
+				repeating-linear-gradient(90deg, rgba(196, 139, 46, 0.04) 0 1px, transparent 1px 44px),
+				var(--pb-paper);
+			border-top: 1px solid var(--pb-line);
+			border-bottom: 1px solid var(--pb-line);
+		}
+
+		.pb-ab-team-grid {
+			display: grid;
+			grid-template-columns: 1.05fr 0.95fr;
+			align-items: center;
+			gap: 58px;
+		}
+
+		.pb-ab-team-text {
+			margin: 16px 0 0;
+			color: #6b5d49;
+			font-size: 16px;
+		}
+
+		.pb-ab-team-copy .pb-ab-btn {
+			margin-top: 28px;
+		}
+
+		.pb-ab-team-frame {
+			position: relative;
+			border-radius: 22px;
+			overflow: hidden;
+			background:
+				radial-gradient(120% 100% at 0% 100%, rgba(196, 139, 46, 0.35), transparent 60%),
+				linear-gradient(140deg, var(--pb-sand), #e2d3b6);
+			padding: 30px 30px 0;
+		}
+
+		.pb-ab-team-img {
+			display: block;
+			width: 100%;
+			height: auto;
+			border-radius: 16px 16px 0 0;
+			filter: drop-shadow(0 22px 30px rgba(38, 32, 25, 0.28));
+		}
+
+		/* ---------------------------- service area ---------------------------- */
+		.pb-ab-area {
+			position: relative;
+			padding: 96px 0;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.pb-ab-area-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+
+		.pb-ab-area-overlay {
+			position: absolute;
+			inset: 0;
+			z-index: -1;
+			background: linear-gradient(100deg, rgba(27, 22, 16, 0.9) 0%, rgba(27, 22, 16, 0.7) 55%, rgba(27, 22, 16, 0.35) 100%);
+		}
+
+		.pb-ab-area-inner {
+			max-width: 640px;
+		}
+
+		.pb-ab-area-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-size: clamp(26px, 3.4vw, 38px);
+			line-height: 1.15;
+			color: #fff;
+		}
+
+		.pb-ab-area-text {
+			margin: 12px 0 0;
+			color: #e6d9c2;
+			font-size: 16px;
+		}
+
+		.pb-ab-area-chips {
+			list-style: none;
+			margin: 20px 0 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+		}
+
+		.pb-ab-area-chips li {
+			padding: 8px 16px;
+			border: 1px solid rgba(231, 201, 143, 0.5);
+			border-radius: 999px;
+			color: #f6eedf;
+			font-size: 14px;
+			background: rgba(231, 201, 143, 0.08);
+			backdrop-filter: blur(4px);
+		}
+
+		/* ---------------------------- appointment ---------------------------- */
+		.pb-ab-appointment {
+			padding: 88px 0 100px;
+		}
+
+		.pb-ab-appointment-grid {
+			display: grid;
+			grid-template-columns: 0.9fr 1.1fr;
+			gap: 54px;
+			align-items: start;
+		}
+
+		.pb-ab-appointment-text {
+			margin: 16px 0 0;
+			color: #6b5d49;
+			font-size: 16.5px;
+		}
+
+		.pb-ab-appointment-phone {
+			margin: 20px 0 0;
+			font-weight: 600;
+			color: var(--pb-espresso);
+		}
+
+		.pb-ab-appointment-phone a {
+			color: var(--pb-gold-deep);
+			text-decoration: none;
+		}
+
+		.pb-ab-appointment-card {
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-top: 4px solid var(--pb-gold);
+			border-radius: 20px;
+			padding: 28px;
+			box-shadow: 0 30px 55px -30px rgba(38, 32, 25, 0.45);
+		}
+
+		.pb-ab-form-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 15px;
+		}
+
+		.pb-ab-field {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+		}
+
+		.pb-ab-field-wide {
+			margin-top: 15px;
+		}
+
+		.pb-ab-field-label {
+			font-size: 13.5px;
+			font-weight: 700;
+			color: var(--pb-espresso);
+		}
+
+		.pb-ab-field-label em {
+			font-style: normal;
+			font-weight: 400;
+			color: #9a8a6e;
+			font-size: 12px;
+		}
+
+		.pb-ab-field input,
+		.pb-ab-field select,
+		.pb-ab-field textarea {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--pb-line);
+			border-radius: 10px;
+			background: #fff;
+			font-family: inherit;
+			font-size: 15px;
+			color: var(--pb-ink);
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.pb-ab-field textarea {
+			resize: vertical;
+		}
+
+		.pb-ab-field input:focus,
+		.pb-ab-field select:focus,
+		.pb-ab-field textarea:focus {
+			outline: none;
+			border-color: var(--pb-gold);
+			box-shadow: 0 0 0 3px rgba(196, 139, 46, 0.18);
+		}
+
+		.pb-ab-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+
+		.pb-ab-form-actions {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			margin-top: 20px;
+			flex-wrap: wrap;
+		}
+
+		.pb-ab-submit {
+			padding: 13px 26px;
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			border: 0;
+			border-radius: 999px;
+			font-family: inherit;
+			font-size: 15px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			cursor: pointer;
+			box-shadow: 0 14px 26px -14px rgba(165, 113, 31, 0.9);
+			transition: transform 0.2s ease;
+		}
+
+		.pb-ab-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.pb-ab-form.gw-busy .pb-ab-submit {
+			opacity: 0.65;
+			cursor: wait;
+		}
+
+		.pb-ab-form-status:empty {
+			display: none;
+		}
+
+		.pb-ab-form-status {
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.pb-ab-form-status.is-ok {
+			color: #2f7d4f;
+		}
+
+		.pb-ab-form-status.is-error {
+			color: #b3422e;
+		}
+
+		.pb-ab-form-consent {
+			margin: 14px 0 0;
+			font-size: 12.5px;
+			color: #9a8a6e;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.pb-ab-reveal {
+			opacity: 0;
+			transform: translateY(24px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.pb-ab-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.pb-about.is-reduced-motion .pb-ab-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.pb-ab-hero-grid,
+			.pb-ab-story-grid,
+			.pb-ab-team-grid,
+			.pb-ab-appointment-grid {
+				grid-template-columns: 1fr;
+				gap: 40px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.pb-ab-why-grid,
+			.pb-ab-form-fields {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.pb-about');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-pb-about-ready') === '1') { return; }
+			pageRoot.setAttribute('data-pb-about-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- appointment form (public form contract) ---------------- */
+			var formApiEndpoint = 'https://polarisblindsca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'polaris-quote-request-forms-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					var fieldType = field.type;
+					if (!field.name || field.disabled) { return; }
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+					if (fieldType === 'checkbox') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+						return;
+					}
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm(form) {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm(form) {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this request. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@polarisblinds.ca.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@polarisblinds.ca.';
+			}
+
+			function sendFormToApi(form, endpoint) {
+				var values = collectFormValues(form);
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm(form);
+				var submitButton = form.querySelector('[type="submit"]');
+
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (parseError) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(form, formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					setFormStatus(form, 'Thank you. Your request is with us and we will get back to you soon.', 'ok');
+				}).catch(function () {
+					setFormStatus(form, formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (forms.length) {
+				var platform = window.gw;
+				var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+				if (usesApi) {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							var endpoint = endpointForForm(form);
+							if (!endpoint || form.classList.contains('gw-busy')) { return; }
+							sendFormToApi(form, endpoint);
+						});
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(pageRoot);
+				} else {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							setFormStatus(form, 'The form service is not connected in this preview.');
+						});
+					});
+				}
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.pb-ab-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>
+
+<!--
+  =========================================================================
+  SITE FOOTER - central chrome component for the Polaris Blinds website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="pb-footer">; no document tags, no libraries
+  - All CSS is scoped under .pb-footer so it cannot leak into page content
+  - No <footer> / <nav> / <header> element tags (plain divs + ARIA roles)
+  - Brand = the Polaris logo loaded from its storage URL; the dark artwork
+    is inverted with a CSS filter so it reads on the dark footer
+  =========================================================================
+-->
+<div class="pb-footer" data-pb-footer>
+
+	<!-- ------------------------ estimate band ------------------------ -->
+	<div class="pb-ft-estimate">
+		<div class="pb-ft-wrap pb-ft-estimate-inner">
+			<div class="pb-ft-estimate-copy">
+				<p class="pb-ft-estimate-kicker">Free in-home consultation</p>
+				<p class="pb-ft-estimate-title">Let us bring the samples to your window.</p>
+				<p class="pb-ft-estimate-text">We measure, show you the fabrics and finishes, and give you a clear
+					quote - no charge and no obligation.</p>
+			</div>
+			<div class="pb-ft-estimate-actions">
+				<a class="pb-ft-btn" data-ic-nav-href="/contact-us" href="/contact-us">Book an appointment</a>
+				<a class="pb-ft-btn-phone" href="tel:+14036121636">+1 403 612 1636</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="pb-ft-main">
+		<div class="pb-ft-wrap">
+			<div class="pb-ft-grid">
+
+				<!-- ------------------------- brand ------------------------- -->
+				<div class="pb-ft-brand">
+					<a class="pb-ft-logo" data-ic-nav-href="/" href="/" aria-label="Polaris Blinds - home">
+						<img class="pb-ft-logo-img"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCORPORATE%2Fpolaris-blinds-logo.png?alt=media&amp;token=2195bf8a-e3bb-4bab-b254-5b9fee64defe"
+							alt="Polaris Blinds - Window Coverings" width="400" height="100"
+							loading="lazy" decoding="async">
+					</a>
+					<p class="pb-ft-mission">
+						Your blinds and lights solutions provider in Calgary. European-designed, custom-assembled
+						window fashions for homes and offices across the area.
+					</p>
+					<a class="pb-ft-instagram" href="https://www.instagram.com/polaris_blinds" target="_blank" rel="noopener">
+						<svg class="pb-ft-ico" aria-hidden="true" viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></svg>
+						Follow us on Instagram
+					</a>
+				</div>
+
+				<!-- ------------------------ products ------------------------ -->
+				<div class="pb-ft-col">
+					<p class="pb-ft-head">Products</p>
+					<ul class="pb-ft-links">
+						<li><a data-ic-nav-href="/zebra-blinds" href="/zebra-blinds">Zebra Blinds</a></li>
+						<li><a data-ic-nav-href="/honeycomb-blinds" href="/honeycomb-blinds">Honeycomb Blinds</a></li>
+						<li><a data-ic-nav-href="/roller-blinds" href="/roller-blinds">Roller Blinds</a></li>
+						<li><a data-ic-nav-href="/fauxwood-blinds" href="/fauxwood-blinds">Fauxwood Blinds</a></li>
+						<li><a data-ic-nav-href="/vertical-blinds" href="/vertical-blinds">Vertical Blinds</a></li>
+						<li><a data-ic-nav-href="/silhoutte-blinds" href="/silhoutte-blinds">Silhouette Blinds</a></li>
+						<li><a data-ic-nav-href="/roman-blinds" href="/roman-blinds">Roman Blinds</a></li>
+					</ul>
+				</div>
+
+				<!-- ------------------------ company ------------------------ -->
+				<div class="pb-ft-col">
+					<p class="pb-ft-head">Company</p>
+					<ul class="pb-ft-links">
+						<li><a data-ic-nav-href="/" href="/">Home</a></li>
+						<li><a data-ic-nav-href="/about-us" href="/about-us">About us</a></li>
+						<li><a data-ic-nav-href="/contact-us" href="/contact-us">Contact us</a></li>
+						<li><a data-ic-nav-href="/contact-us" href="/contact-us">Free estimate</a></li>
+					</ul>
+				</div>
+
+				<!-- ------------------------ contact ------------------------ -->
+				<div class="pb-ft-col pb-ft-col-contact">
+					<p class="pb-ft-head">Get in touch</p>
+					<ul class="pb-ft-contact-list">
+						<li>
+							<a href="tel:+14036121636">+1 403 612 1636</a>
+						</li>
+						<li>
+							<a href="mailto:info@polarisblinds.ca">info@polarisblinds.ca</a>
+						</li>
+					</ul>
+					<p class="pb-ft-areas-head">Serving</p>
+					<p class="pb-ft-areas">Calgary, Airdrie, Chestermere, Cochrane, Okotoks, High River and
+						Strathmore.</p>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+	<!-- --------------------------- bottom bar --------------------------- -->
+	<div class="pb-ft-bottom">
+		<div class="pb-ft-wrap pb-ft-bottom-inner">
+			<p class="pb-ft-copy">
+				&copy; <span class="pb-ft-year">2026</span> Polaris Blinds. All rights reserved.
+			</p>
+			<div class="pb-ft-bottom-side">
+				<p class="pb-ft-legal">Designed and custom-assembled in Europe. Served locally in Calgary.</p>
+				<button type="button" class="pb-ft-top">
+					<span aria-hidden="true">&uarr;</span> Back to top
+				</button>
+			</div>
+		</div>
+	</div>
+
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.pb-footer {
+			--pb-cream: #faf6ef;
+			--pb-paper: #fffdf8;
+			--pb-sand: #efe5d3;
+			--pb-ink: #262019;
+			--pb-espresso: #332a1f;
+			--pb-walnut: #6f4e2e;
+			--pb-gold: #c48b2e;
+			--pb-gold-deep: #a5711f;
+			--pb-gold-soft: #e7c98f;
+			--pb-line: #e6d9c2;
+			position: relative;
+			z-index: 10;
+			width: 100%;
+			color: #efe4d2;
+			background: linear-gradient(160deg, #2b2319 0%, #201a12 100%);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.pb-footer,
+		.pb-footer *,
+		.pb-footer *::before,
+		.pb-footer *::after {
+			box-sizing: border-box;
+		}
+
+		.pb-footer::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background:
+				repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.014) 0 2px, transparent 2px 46px),
+				radial-gradient(90% 70% at 90% 0%, rgba(196, 139, 46, 0.1), transparent 60%);
+			pointer-events: none;
+		}
+
+		.pb-ft-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.pb-ft-ico {
+			width: 1.1em;
+			height: 1.1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		/* ---------- estimate band ---------- */
+		.pb-ft-estimate {
+			background: linear-gradient(120deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+		}
+
+		.pb-ft-estimate-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 24px;
+			padding-top: 26px;
+			padding-bottom: 26px;
+		}
+
+		.pb-ft-estimate-kicker {
+			margin: 0 0 4px;
+			font-size: 12.5px;
+			font-weight: 700;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			opacity: 0.9;
+		}
+
+		.pb-ft-estimate-title {
+			margin: 0;
+			font-family: Georgia, 'Times New Roman', serif;
+			font-size: 24px;
+			font-weight: 700;
+			line-height: 1.25;
+		}
+
+		.pb-ft-estimate-text {
+			margin: 6px 0 0;
+			font-size: 14.5px;
+			max-width: 560px;
+			opacity: 0.95;
+		}
+
+		.pb-ft-estimate-actions {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex: 0 0 auto;
+		}
+
+		.pb-ft-btn {
+			display: inline-flex;
+			align-items: center;
+			padding: 12px 22px;
+			background: var(--pb-espresso);
+			color: #fff;
+			font-weight: 700;
+			font-size: 14.5px;
+			letter-spacing: 0.03em;
+			text-decoration: none;
+			border-radius: 999px;
+			transition: transform 0.2s ease, background 0.2s ease;
+		}
+
+		.pb-ft-btn:hover {
+			transform: translateY(-2px);
+			background: #201a12;
+		}
+
+		.pb-ft-btn-phone {
+			display: inline-flex;
+			align-items: center;
+			padding: 12px 20px;
+			border: 1.5px solid rgba(255, 255, 255, 0.75);
+			color: #fff;
+			font-weight: 700;
+			font-size: 14.5px;
+			text-decoration: none;
+			border-radius: 999px;
+			transition: background 0.2s ease;
+		}
+
+		.pb-ft-btn-phone:hover {
+			background: rgba(255, 255, 255, 0.14);
+		}
+
+		/* ---------- main grid ---------- */
+		.pb-ft-main {
+			padding-top: 54px;
+			padding-bottom: 44px;
+		}
+
+		.pb-ft-grid {
+			display: grid;
+			grid-template-columns: 1.5fr 1fr 0.9fr 1.15fr;
+			gap: 40px;
+		}
+
+		.pb-ft-logo-img {
+			height: 44px;
+			width: auto;
+			display: block;
+			filter: brightness(0) invert(1);
+		}
+
+		.pb-ft-mission {
+			margin: 16px 0 14px;
+			font-size: 14px;
+			color: #d8cbb6;
+			max-width: 340px;
+		}
+
+		.pb-ft-instagram {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			color: var(--pb-gold-soft);
+			font-size: 14px;
+			font-weight: 600;
+			text-decoration: none;
+		}
+
+		.pb-ft-instagram:hover {
+			color: #fff;
+		}
+
+		.pb-ft-head {
+			margin: 0 0 14px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--pb-gold-soft);
+		}
+
+		.pb-ft-links {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.pb-ft-links a {
+			color: #e9ddc8;
+			text-decoration: none;
+			font-size: 14.5px;
+			transition: color 0.18s ease, padding-left 0.18s ease;
+		}
+
+		.pb-ft-links a:hover {
+			color: #fff;
+			padding-left: 4px;
+		}
+
+		.pb-ft-contact-list {
+			list-style: none;
+			margin: 0 0 18px;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.pb-ft-contact-list a {
+			color: #e9ddc8;
+			text-decoration: none;
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.pb-ft-contact-list a:hover {
+			color: #fff;
+		}
+
+		.pb-ft-areas-head {
+			margin: 0 0 6px;
+			font-size: 12.5px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: #a99b83;
+		}
+
+		.pb-ft-areas {
+			margin: 0;
+			font-size: 14px;
+			color: #d8cbb6;
+		}
+
+		/* ---------- bottom bar ---------- */
+		.pb-ft-bottom {
+			border-top: 1px solid rgba(231, 201, 143, 0.16);
+			padding-top: 18px;
+			padding-bottom: 18px;
+		}
+
+		.pb-ft-bottom-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+		}
+
+		.pb-ft-copy {
+			margin: 0;
+			font-size: 13.5px;
+			color: #b3a68e;
+		}
+
+		.pb-ft-bottom-side {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.pb-ft-legal {
+			margin: 0;
+			font-size: 13px;
+			color: #8f8270;
+		}
+
+		.pb-ft-top {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			padding: 8px 14px;
+			background: rgba(255, 255, 255, 0.06);
+			color: #e9ddc8;
+			border: 1px solid rgba(231, 201, 143, 0.25);
+			border-radius: 999px;
+			font-size: 13px;
+			font-family: inherit;
+			cursor: pointer;
+			transition: background 0.2s ease;
+		}
+
+		.pb-ft-top:hover {
+			background: rgba(255, 255, 255, 0.12);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 980px) {
+			.pb-ft-grid {
+				grid-template-columns: 1fr 1fr;
+				gap: 32px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.pb-ft-estimate-inner {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.pb-ft-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.pb-ft-bottom-inner {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.pb-ft-bottom-side {
+				flex-wrap: wrap;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var footerRoot = document.querySelector('.pb-footer');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!footerRoot || footerRoot.getAttribute('data-pb-footer-ready') === '1') { return; }
+			footerRoot.setAttribute('data-pb-footer-ready', '1');
+
+			/* ---------------- current year ---------------- */
+			var yearElement = footerRoot.querySelector('.pb-ft-year');
+			if (yearElement) {
+				yearElement.textContent = String(new Date().getFullYear());
+			}
+
+			/* ---------------- back to top ---------------- */
+			var backToTopButton = footerRoot.querySelector('.pb-ft-top');
+			if (backToTopButton) {
+				backToTopButton.addEventListener('click', function () {
+					if (window.gw && typeof window.gw.navigate === 'function' && window.scrollY === 0) {
+						window.gw.navigate('/');
+					}
+					window.scrollTo({ top: 0, behavior: 'smooth' });
+				});
+			}
+		})();
+	</script>
+
+</div>
+
+<p class="preview-note">Local preview - full pages for the CMS: header / page / footer already separate</p>
+</body>
+</html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restaurant Order Taking App - Test Harness</title>
+<link rel="stylesheet" href="RestaurantOrderTakingApp.css">
+<style>
+  body { padding: 0; margin: 0; background: #eef1f5; }
+  #th-bar { position: fixed; top: 0; left: 0; right: 0; height: 30px; z-index: 9999; background: #0f172a; color: #e6edf5; font-family: system-ui, sans-serif; font-size: 11px; padding: 0 14px; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; overflow-x: auto; }
+  #th-bar strong { color: #f59e0b; letter-spacing: 0.5px; white-space: nowrap; }
+  #th-bar .sep { color: #475569; }
+  #th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui, sans-serif; font-weight: 600; white-space: nowrap; }
+  #th-bar .btn-load { background: #d97706; color: #fff; }
+  #th-bar .btn-new { background: #16a34a; color: #fff; }
+  #th-bar .btn-clear { background: #dc2626; color: #fff; }
+  #th-bar .btn-dump { background: #0d9488; color: #fff; }
+  #th-bar .btn-ro { background: #16a34a; color: #fff; }
+  #th-bar .btn-ro.on { background: #dc2626; }
+  #th-bar .hint { color: #94a3b8; font-size: 10px; white-space: nowrap; }
+  body { padding-top: 30px; }
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>TEST HARNESS - Restaurant Order Taking App</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Orders</button>
+  <button class="btn-new" id="th-new-order">Add Incoming Order</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-dump" id="th-dump">Dump</button>
+  <span class="sep">|</span>
+  <button class="btn-ro" id="th-toggle-ro">RO: OFF</button>
+  <button class="btn-dump" id="th-role">Role: admin</button>
+  <span class="sep">|</span>
+  <span class="hint" id="th-status">Ready</span>
+</div>
+
+<div id="app-container"></div>
+
+<script>
+/* ── Mock window.tool SDK (localStorage-backed object store) ── */
+(function () {
+  var STORE_KEY = 'roa_test_objects';
+  var VALUE_KEY = 'roa_test_value';
+  var listeners = { value: [], readonly: [], user: [] };
+  var _readOnly = false;
+  var _roleIndex = 0;
+  var ROLES = ['admin', 'editor', 'viewer', 'none'];
+
+  var query = {};
+  window.location.search.replace(/^\?/, '').split('&').forEach(function (pair) {
+    if (!pair) return;
+    var bits = pair.split('=');
+    query[decodeURIComponent(bits[0])] = decodeURIComponent(bits[1] || '');
+  });
+
+  function status(msg) {
+    var el = document.getElementById('th-status');
+    if (el) el.textContent = msg;
+  }
+
+  function loadStore() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (err) { return []; }
+  }
+
+  function saveStore(list) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (err) { status('Store save failed'); }
+  }
+
+  function currentUser() {
+    var role = ROLES[_roleIndex];
+    if (role === 'none') return null;
+    var user = { id: 'u-' + role, name: 'Test ' + role, email: role + '@example.com', roles: [role], locale: 'en' };
+    if (role === 'admin') user.effectiveAccess = { isViewer: true, isEditor: true, isManager: true };
+    if (role === 'editor') user.effectiveAccess = { isViewer: true, isEditor: true, isManager: false };
+    if (role === 'viewer') user.effectiveAccess = { isViewer: true, isEditor: false, isManager: false };
+    return user;
+  }
+
+  var delay = 30;
+
+  /* Query-param startup: seed sample, role, read-only */
+  if (query.sample === '1' && !loadStore().length) {
+    saveStore(buildSampleOrders());
+  }
+  if (query.role) {
+    var wantedRoleIndex = ROLES.indexOf(query.role);
+    if (wantedRoleIndex >= 0) _roleIndex = wantedRoleIndex;
+    var roleBtn = document.getElementById('th-role');
+    if (roleBtn) roleBtn.textContent = 'Role: ' + ROLES[_roleIndex];
+  }
+  if (query.ro === '1') {
+    _readOnly = true;
+    var roBtn = document.getElementById('th-toggle-ro');
+    if (roBtn) { roBtn.textContent = 'RO: ON'; roBtn.classList.add('on'); }
+  }
+
+  window.tool = {
+    getValue: function () {
+      try {
+        var raw = localStorage.getItem(VALUE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (err) { return null; }
+    },
+    setValue: function (data) {
+      try { localStorage.setItem(VALUE_KEY, JSON.stringify(data)); } catch (err) { status('setValue failed'); }
+      listeners.value.forEach(function (cb) { try { cb(data); } catch (e) {} });
+    },
+    onValueChange: function (cb) { listeners.value.push(cb); },
+    getFields: function () { return {}; },
+    setField: function () {},
+    setFields: function () {},
+    watchField: function () {},
+    onFieldsChange: function () {},
+    param: function (name, fallback) {
+      var overrides = {
+        allowObjectCRUD: query.crud === 'no' ? 'no' : 'yes',
+        ordersObjectType: 'restaurant-orders',
+        autoRefreshSeconds: query.fast === '1' ? '3' : (query.nopoll === '1' ? '0' : '20'),
+        newOrderNotifications: 'yes',
+        newOrderWarningMinutes: query.warn || '10',
+        restaurantTimezone: query.tz || '',
+        currencyCode: query.currency || ''
+      };
+      if (overrides[name] !== undefined && overrides[name] !== '') return overrides[name];
+      return fallback;
+    },
+    isReadOnly: function () { return _readOnly; },
+    onReadonlyChange: function (cb) { listeners.readonly.push(cb); },
+    getUser: function () { return currentUser(); },
+    onUserChange: function (cb) { listeners.user.push(cb); },
+    getPermittedUsers: function () { return []; },
+    getParentPageUrl: function () { return 'https://demo.uniconhub.com/admin/objects/restaurant-orders/'; },
+    reportValid: function () {},
+    notify: function (message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#6366f1', success: '#10b981', warning: '#f59e0b', error: '#ef4444' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') +
+        ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:420px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function () { toast.remove(); }, 3000);
+    },
+    resize: function () {},
+    declareOutput: function () {},
+    declareParams: function () {},
+    reportMissingParams: function () {},
+    openUrl: function (url) { status('openUrl: ' + url); },
+    openObjectDetail: function (type, objectId) { status('openObjectDetail: ' + type + '/' + objectId); },
+    requestSave: function (cb) { if (cb) cb(null, true); },
+    requestObjects: function (action, params, cb) {
+      setTimeout(function () {
+        var list = loadStore();
+        if (action === 'query') {
+          var out = list.filter(function (o) {
+            return !params.mainObjectType || o.cmsObjectType === params.mainObjectType;
+          });
+          cb(null, { objects: out });
+        } else if (action === 'get') {
+          var found = null;
+          list.forEach(function (o) { if (o.id === params.objectId) found = o; });
+          cb(null, { object: found });
+        } else if (action === 'update') {
+          var target = null;
+          list.forEach(function (o) { if (o.id === params.objectId) target = o; });
+          if (!target) { cb('object not found', null); return; }
+          target.productData = target.productData || {};
+          target.productData.data_categoriesBased = target.productData.data_categoriesBased || {};
+          var patch = params.productData && params.productData.data_categoriesBased ? params.productData.data_categoriesBased : {};
+          Object.keys(patch).forEach(function (key) { target.productData.data_categoriesBased[key] = patch[key]; });
+          target.updated = new Date().toISOString();
+          saveStore(list);
+          cb(null, { ok: true });
+        } else if (action === 'create') {
+          var obj = {
+            id: 'obj-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            name: params.name || 'Object',
+            cmsObjectType: params.mainObjectType,
+            typeId: params.typeId || '',
+            productData: { data_categoriesBased: params.productData ? (params.productData.data_categoriesBased || {}) : {} },
+            created: new Date().toISOString(),
+            updated: new Date().toISOString()
+          };
+          list.push(obj);
+          saveStore(list);
+          cb(null, { object: obj });
+        } else if (action === 'delete') {
+          saveStore(list.filter(function (o) { return o.id !== params.objectId; }));
+          cb(null, { ok: true });
+        } else {
+          cb('unknown action ' + action, null);
+        }
+      }, delay);
+    },
+    onReady: function (cb) { cb(window.tool.getValue(), null); },
+    _dump: function () {
+      console.log('RestaurantOrderTakingApp harness store:', JSON.parse(JSON.stringify(loadStore())));
+      status('Dumped to console');
+    },
+    _setReadOnly: function (v) {
+      _readOnly = v;
+      listeners.readonly.forEach(function (cb) { try { cb(v); } catch (err) {} });
+      var btn = document.getElementById('th-toggle-ro');
+      if (btn) { btn.textContent = v ? 'RO: ON' : 'RO: OFF'; btn.classList.toggle('on', v); }
+    },
+    _cycleRole: function () {
+      _roleIndex = (_roleIndex + 1) % ROLES.length;
+      var user = currentUser();
+      listeners.user.forEach(function (cb) { try { cb(user); } catch (err) {} });
+      var btn = document.getElementById('th-role');
+      if (btn) btn.textContent = 'Role: ' + ROLES[_roleIndex];
+      status('Role: ' + ROLES[_roleIndex]);
+    },
+    _addIncomingOrder: function () {
+      var list = loadStore();
+      list.push(buildIncomingOrder());
+      saveStore(list);
+      status('Incoming order added - auto refresh or Refresh shows it');
+    },
+    _clearStore: function () {
+      saveStore([]);
+      try { localStorage.removeItem(VALUE_KEY); } catch (err) {}
+      status('Store cleared');
+    }
+  };
+
+  /* -------------------------------------------------------- sample data */
+
+  var ORDER_SEQ = 0;
+
+  function minutesAgoIso(minutes) {
+    return new Date(Date.now() - minutes * 60000).toISOString();
+  }
+
+  function hoursAgoIso(hours) {
+    return new Date(Date.now() - hours * 3600000).toISOString();
+  }
+
+  function yesterdayIso() {
+    var d = new Date(Date.now() - 24 * 3600000);
+    return d.toISOString();
+  }
+
+  function orderObject(orderNumber, channel, customer, lines, totals, status, placedAtIso, extra) {
+    ORDER_SEQ += 1;
+    var obj = {
+      id: 'order-' + orderNumber,
+      name: 'Order ' + orderNumber,
+      slug: 'order-' + orderNumber,
+      cmsObjectType: 'restaurant-orders',
+      typeId: 'restaurant-orders',
+      created: placedAtIso,
+      updated: placedAtIso,
+      productData: {
+        data_categoriesBased: {
+          orderNumber: orderNumber,
+          placedAt: placedAtIso,
+          channel: channel,
+          customer: customer,
+          address: extra && extra.address ? extra.address : null,
+          tableNumber: extra && extra.tableNumber ? extra.tableNumber : '',
+          deliveryZone: extra && extra.deliveryZone ? extra.deliveryZone : null,
+          scheduledFor: extra && extra.scheduledFor ? extra.scheduledFor : '',
+          paymentMethod: (extra && extra.paymentMethod) || 'card',
+          paymentDetails: extra && extra.paymentDetails ? extra.paymentDetails : {},
+          lines: lines,
+          totals: totals,
+          status: status,
+          statusChangedAt: (extra && extra.statusChangedAt) || placedAtIso,
+          internalNote: extra && extra.internalNote ? extra.internalNote : ''
+        }
+      }
+    };
+    return obj;
+  }
+
+  function buildSampleOrders() {
+    var list = [];
+
+    list.push(orderObject('EFOC-7711', 'delivery',
+      { fullName: 'Sara Young', phone: '+40 0743 123 567' },
+      [
+        { quantity: 1, itemName: 'Pizza prosciutto', internalName: 'PIZ-PRO', unitPrice: 7.99, modifierEntries: [], instructions: 'No mushrooms please' },
+        { quantity: 2, itemName: 'Pizza prosciutto', internalName: 'PIZ-PRO', unitPrice: 7.99, sizeLabel: 'Medium', modifierEntries: [{ optionName: 'Sweet', groupName: 'Sauce', priceAdjustment: 0.5, quantity: 2 }] }
+      ],
+      { subtotal: 27.99, deliveryFee: 2.0, tax: 2.0, total: 29.56 },
+      'new', minutesAgoIso(52),
+      { address: { street: 'Johnson Drive 127', city: 'Noustan', postal_code: '88946' }, deliveryZone: { name: 'North-East' } }));
+
+    list.push(orderObject('EFOC-7712', 'pickup',
+      { fullName: 'Katheleen Lopes Prado', phone: '+1 555 010 8812' },
+      [
+        { quantity: 1, itemName: 'Margherita', unitPrice: 8.5, modifierEntries: [] }
+      ],
+      { subtotal: 8.5, tax: 0.6, total: 9.1 },
+      'new', minutesAgoIso(3), {}));
+
+    list.push(orderObject('EFOC-7710', 'delivery',
+      { fullName: 'David Prucker', phone: '+1 555 010 7710' },
+      [
+        { quantity: 3, itemName: 'Chicken wings', unitPrice: 6.0, modifierEntries: [{ optionName: 'Spicy', groupName: 'Heat', priceAdjustment: 0, quantity: 3 }] }
+      ],
+      { subtotal: 18.0, deliveryFee: 2.0, tax: 1.4, total: 21.4 },
+      'accepted', minutesAgoIso(18),
+      { address: { street: 'King Street No. 34B', city: 'New York', postal_code: '10001' }, statusChangedAt: minutesAgoIso(17), acceptedAt: minutesAgoIso(17) }));
+
+    list.push(orderObject('EFOC-7709', 'on-premise',
+      { fullName: '', name: '' },
+      [
+        { quantity: 2, itemName: 'House salad', unitPrice: 4.5, modifierEntries: [] },
+        { quantity: 1, itemName: 'Ribeye steak', unitPrice: 19.9, modifierEntries: [{ optionName: 'Medium rare', groupName: 'Doneness', priceAdjustment: 0, quantity: 1 }] }
+      ],
+      { subtotal: 28.9, tax: 2.02, total: 30.92 },
+      'accepted', minutesAgoIso(7),
+      { tableNumber: '7', statusChangedAt: minutesAgoIso(6), acceptedAt: minutesAgoIso(6) }));
+
+    list.push(orderObject('EFOC-7708', 'delivery',
+      { fullName: 'Carla Geidt', phone: '+1 555 010 7708' },
+      [
+        { quantity: 1, itemName: 'Veggie burger', unitPrice: 7.2, modifierEntries: [] }
+      ],
+      { subtotal: 7.2, deliveryFee: 2.0, tax: 0.64, total: 9.84 },
+      'in-preparation', minutesAgoIso(12),
+      { address: { street: 'Lakeview Ave 4', city: 'New York' }, statusChangedAt: minutesAgoIso(10) }));
+
+    list.push(orderObject('EFOC-7707', 'pickup',
+      { fullName: 'Marco Silva', phone: '+1 555 010 7707' },
+      [
+        { quantity: 1, itemName: 'Pasta carbonara', unitPrice: 11.9, modifierEntries: [] }
+      ],
+      { subtotal: 11.9, tax: 0.83, total: 12.73 },
+      'in-preparation', minutesAgoIso(5),
+      { statusChangedAt: minutesAgoIso(4) }));
+
+    list.push(orderObject('EFOC-7706', 'delivery',
+      { fullName: 'Emma Clarke', phone: '+1 555 010 7706' },
+      [
+        { quantity: 2, itemName: 'Tiramisu', unitPrice: 5.5, modifierEntries: [] }
+      ],
+      { subtotal: 11.0, deliveryFee: 2.0, tax: 0.91, total: 13.91 },
+      'ready', minutesAgoIso(40),
+      { address: { street: 'King Street No. 34B', city: 'New York' }, statusChangedAt: minutesAgoIso(10) }));
+
+    list.push(orderObject('EFOC-7705', 'pickup',
+      { fullName: 'Liam Turner', phone: '+1 555 010 7705' },
+      [
+        { quantity: 1, itemName: 'Pizza diavola', unitPrice: 9.5, modifierEntries: [] }
+      ],
+      { subtotal: 9.5, tax: 0.67, total: 10.17 },
+      'completed', hoursAgoIso(2), { statusChangedAt: hoursAgoIso(1) }));
+
+    list.push(orderObject('EFOC-7704', 'delivery',
+      { fullName: 'Olivia Brown', phone: '+1 555 010 7704' },
+      [
+        { quantity: 1, itemName: 'Soup of the day', unitPrice: 4.9, modifierEntries: [] }
+      ],
+      { subtotal: 4.9, deliveryFee: 2.0, tax: 0.48, total: 7.38 },
+      'declined', hoursAgoIso(1), { statusChangedAt: hoursAgoIso(1) }));
+
+    /* yesterday - a finished order that must NOT appear on the board */
+    list.push(orderObject('EFOC-7703', 'pickup',
+      { fullName: 'Noah Wilson', phone: '+1 555 010 7703' },
+      [{ quantity: 1, itemName: 'Panini', unitPrice: 6.0, modifierEntries: [] }],
+      { subtotal: 6.0, tax: 0.42, total: 6.42 },
+      'completed', yesterdayIso(), { statusChangedAt: yesterdayIso() }));
+
+    /* yesterday - an ACTIVE order stuck in the kitchen, must still appear */
+    list.push(orderObject('EFOC-7702', 'delivery',
+      { fullName: 'Sophia Lee', phone: '+1 555 010 7702' },
+      [{ quantity: 1, itemName: 'Burger classic', unitPrice: 8.2, modifierEntries: [] }],
+      { subtotal: 8.2, deliveryFee: 2.0, tax: 0.71, total: 10.91 },
+      'in-preparation', yesterdayIso(), { statusChangedAt: yesterdayIso() }));
+
+    return list;
+  }
+
+  function buildIncomingOrder() {
+    ORDER_SEQ += 1;
+    var number = 'EFOC-' + (8000 + ORDER_SEQ);
+    return orderObject(number, 'pickup',
+      { fullName: 'Walk-in Customer', phone: '+1 555 010 9900' },
+      [{ quantity: 2, itemName: 'Lemonade', unitPrice: 3.0, modifierEntries: [] }],
+      { subtotal: 6.0, tax: 0.42, total: 6.42 },
+      'new', new Date().toISOString(), {});
+  }
+})();
+
+/* ── Harness bar buttons ── */
+(function () {
+  document.getElementById('th-load-sample').onclick = function () {
+    var list = buildSampleOrders();
+    localStorage.setItem('roa_test_objects', JSON.stringify(list));
+    document.getElementById('th-status').textContent = 'Sample orders seeded';
+  };
+  document.getElementById('th-new-order').onclick = function () {
+    window.tool._addIncomingOrder();
+  };
+  document.getElementById('th-clear').onclick = function () {
+    window.tool._clearStore();
+    document.getElementById('th-status').textContent = 'Store cleared - reload to see the empty board';
+  };
+  document.getElementById('th-dump').onclick = function () {
+    window.tool._dump();
+  };
+  document.getElementById('th-toggle-ro').onclick = function () {
+    window.tool._setReadOnly(!window.tool.isReadOnly());
+  };
+  document.getElementById('th-role').onclick = function () {
+    window.tool._cycleRole();
+  };
+})();
+</script>
+
+<script>
+/* ── Tool HTML loader (fetch with embedded fallback for file://) ── */
+var EMBEDDED_HTML = "\u003c!-- build 2026-10-25-1 -->\r\n\u003cdiv class=\"roa\" id=\"roa-root\">\r\n  \u003cdiv class=\"roa-shell\">\r\n\r\n    \u003cheader class=\"roa-top\">\r\n      \u003cdiv class=\"roa-top-main\">\r\n        \u003ch1 class=\"roa-title\">Orders\u003c/h1>\r\n        \u003cp class=\"roa-top-sub\" id=\"roa-top-sub\">Active orders board\u003c/p>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-top-actions\">\r\n        \u003cspan class=\"roa-live\" id=\"roa-live\">\u003cspan class=\"roa-live-dot\">\u003c/span>Live\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-btn roa-btn-ghost roa-btn-small\" id=\"roa-refresh\">Refresh\u003c/button>\r\n      \u003c/div>\r\n    \u003c/header>\r\n\r\n    \u003cdiv class=\"roa-banner roa-banner-readonly\" id=\"roa-readonly\" hidden>\u003c/div>\r\n    \u003cdiv class=\"roa-banner roa-banner-config\" id=\"roa-config\" hidden>\u003c/div>\r\n\r\n    \u003cnav class=\"roa-tabs\" id=\"roa-tabs\">\u003c/nav>\r\n\r\n    \u003cdiv class=\"roa-toolbar\">\r\n      \u003cinput type=\"text\" class=\"roa-search\" id=\"roa-search\" placeholder=\"Search order number, customer, phone, table, address\">\r\n      \u003clabel class=\"roa-sortlabel\" for=\"roa-sort\">Sort\u003c/label>\r\n      \u003cselect class=\"roa-select\" id=\"roa-sort\">\r\n        \u003coption value=\"waiting\">Longest waiting first\u003c/option>\r\n        \u003coption value=\"newest\">Newest first\u003c/option>\r\n        \u003coption value=\"total\">Highest total first\u003c/option>\r\n      \u003c/select>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"roa-state\" id=\"roa-state\" hidden>\u003c/div>\r\n\r\n    \u003cmain class=\"roa-board\" id=\"roa-board\">\u003c/main>\r\n\r\n    \u003csection class=\"roa-detail\" id=\"roa-detail\" hidden>\u003c/section>\r\n\r\n    \u003cfooter class=\"roa-foot\">\r\n      \u003cspan class=\"roa-loaded\" id=\"roa-loaded\">\u003c/span>\r\n      \u003cspan class=\"roa-refreshed\" id=\"roa-refreshed\">\u003c/span>\r\n      \u003cspan class=\"roa-build\" id=\"roa-build\">tool build\u003c/span>\r\n    \u003c/footer>\r\n\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"roa-modal\" id=\"roa-modal\" hidden>\r\n    \u003cdiv class=\"roa-modal-card\" role=\"dialog\" aria-modal=\"true\">\r\n      \u003cdiv class=\"roa-modal-head\">\r\n        \u003cspan class=\"roa-modal-title\" id=\"roa-modal-title\">\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-modal-x\" data-act=\"modal-close\" aria-label=\"Close\">&#10005;\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-modal-body\" id=\"roa-modal-body\">\u003c/div>\r\n      \u003cdiv class=\"roa-modal-foot\" id=\"roa-modal-foot\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\u003c/div>\r\n";
+
+(function () {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+  var inlineMode = /[?&]inlinejs=1/.test(window.location.search);
+
+  function loadExternalJS() {
+    status.textContent = 'Loading JS (external)...';
+    var script = document.createElement('script');
+    script.src = 'RestaurantOrderTakingApp.js';
+    script.onload = function () { status.textContent = 'Ready (external JS)'; };
+    script.onerror = function () { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function loadInlineJS() {
+    status.textContent = 'Loading JS (inline mode)...';
+    fetch('RestaurantOrderTakingApp.js')
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (code) {
+        var script = document.createElement('script');
+        script.textContent = code;
+        document.body.appendChild(script);
+        status.textContent = 'Ready (inline mode)';
+      })
+      .catch(function () {
+        status.textContent = 'Inline fetch failed - falling back to external';
+        loadExternalJS();
+      });
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    if (inlineMode) loadInlineJS();
+    else loadExternalJS();
+    var qs = /[?&](detail|accept)=1/.exec(window.location.search);
+    if (qs) {
+      setTimeout(function () {
+        var selector = qs[1] === 'detail' ? '.roa-card[data-id]' : '[data-act="accept"]';
+        var target = document.querySelector(selector);
+        if (target) target.click();
+      }, 1500);
+    }
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function () {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2500);
+
+  fetch('RestaurantOrderTakingApp.html')
+    .then(function (resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function (html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function () { /* fallback timer handles it */ });
+})();
+</script>
+</body>
+</html>

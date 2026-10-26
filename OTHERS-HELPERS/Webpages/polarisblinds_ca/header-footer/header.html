@@ -1,0 +1,743 @@
+<!--
+  =========================================================================
+  SITE HEADER - central chrome component for the Polaris Blinds website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="pb-header">; no document tags, no libraries
+  - All CSS is scoped under .pb-header so it cannot leak into page content
+  - No <header> / <nav> / <footer> element tags (plain divs + ARIA roles)
+  - Brand = the Polaris logo, loaded from its storage URL
+  - Design tokens (--pb-*) are repeated in every page file so each page is
+    self-contained; keep them in sync when the palette changes
+  - Nav link targets (CMS route form, never .html): / (home), the seven
+    product pages, /about-us, /contact-us. The main button points at
+    /contact-us for a free estimate
+  =========================================================================
+-->
+<div class="pb-header" data-pb-header>
+
+	<!-- ---------- inline icon sprite (no external requests, no library) ---------- -->
+	<svg class="pb-hd-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+		<symbol id="pb-i-phone" viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></symbol>
+		<symbol id="pb-i-mail" viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></symbol>
+		<symbol id="pb-i-instagram" viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></symbol>
+		<symbol id="pb-i-arrow" viewBox="0 0 24 24"><path d="M4.6 12h14" /><path d="m13.4 7 5 5-5 5" /></symbol>
+		<symbol id="pb-i-chevron" viewBox="0 0 24 24"><path d="m7.6 9.8 4.4 4.4 4.4-4.4" /></symbol>
+		<symbol id="pb-i-ruler" viewBox="0 0 24 24"><path d="m4 9 2.4-2.4 4.6 4.6L13.4 8.8 8.8 4.2 11.2 1.8 18.6 9.2a5.2 5.2 0 0 1-7.4 7.4L4 23.2A4 4 0 0 1 4 9z" /></symbol>
+		<symbol id="pb-i-check" viewBox="0 0 24 24"><path d="m5.6 12.4 4 4 8.8-9" /></symbol>
+		<symbol id="pb-i-truck" viewBox="0 0 24 24"><path d="M3 6.4h11v10.2H3z" /><path d="M14 9.8h3.4L20 13v3.6h-6" /><circle cx="7" cy="17.6" r="1.8" /><circle cx="16.6" cy="17.6" r="1.8" /></symbol>
+	</svg>
+
+	<!-- ---------------------- top information strip ---------------------- -->
+	<div class="pb-hd-top">
+		<div class="pb-hd-wrap pb-hd-top-inner">
+			<p class="pb-hd-top-note">Your blinds and lights provider in Calgary and surrounding area</p>
+			<div class="pb-hd-top-links">
+				<a class="pb-hd-top-link" href="tel:+14036121636">
+					<svg class="pb-hd-ico" aria-hidden="true"><use href="#pb-i-phone"></use></svg>
+					+1 403 612 1636
+				</a>
+				<a class="pb-hd-top-link pb-hd-top-mail" href="mailto:info@polarisblinds.ca">
+					<svg class="pb-hd-ico" aria-hidden="true"><use href="#pb-i-mail"></use></svg>
+					info@polarisblinds.ca
+				</a>
+				<a class="pb-hd-top-link pb-hd-top-instagram" href="https://www.instagram.com/polaris_blinds" target="_blank" rel="noopener" aria-label="Polaris Blinds on Instagram">
+					<svg class="pb-hd-ico" aria-hidden="true"><use href="#pb-i-instagram"></use></svg>
+					Instagram
+				</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- ------------------------------ main bar ------------------------------ -->
+	<div class="pb-hd-bar">
+		<div class="pb-hd-wrap pb-hd-bar-inner">
+
+			<a class="pb-hd-brand" data-ic-nav-href="/" href="/" aria-label="Polaris Blinds - home">
+				<img class="pb-hd-logo"
+					src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCORPORATE%2Fpolaris-blinds-logo.png?alt=media&amp;token=2195bf8a-e3bb-4bab-b254-5b9fee64defe"
+					alt="Polaris Blinds - Window Coverings" width="400" height="100"
+					decoding="async" fetchpriority="high">
+			</a>
+
+			<div class="pb-hd-nav" id="pb-hd-menu" role="navigation" aria-label="Main menu">
+				<ul class="pb-hd-list">
+					<li class="pb-hd-item">
+						<a class="pb-hd-link" data-ic-nav-href="/" href="/" data-page="home">Home</a>
+					</li>
+
+					<li class="pb-hd-item pb-hd-item-mega">
+						<button type="button" class="pb-hd-link pb-hd-trigger" aria-expanded="false"
+							aria-controls="pb-mega-products" data-page="products">
+							Products
+							<span class="pb-hd-caret" aria-hidden="true"><svg class="pb-hd-ico"><use href="#pb-i-chevron"></use></svg></span>
+						</button>
+
+						<div class="pb-mega" id="pb-mega-products" role="region" aria-label="Our products">
+							<div class="pb-hd-wrap pb-mega-inner">
+								<div class="pb-mega-grid">
+									<a class="pb-mega-card" data-ic-nav-href="/zebra-blinds" href="/zebra-blinds" data-page="zebra-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-4LFRLD3CYH-polarblinds%2FcontentImage-1716856144134-zebra-blinds-4.jpg?alt=media&amp;token=15cb2d8b-3dcb-4d7c-b3a5-90d0a55e3212"
+											alt="Zebra blinds with alternating sheer and solid bands" width="1772" height="1424">
+										<span class="pb-mega-name">Zebra Blinds</span>
+										<span class="pb-mega-go">Day and night light control <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/honeycomb-blinds" href="/honeycomb-blinds" data-page="honeycomb-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-QEELL6N43T-polarblinds%2FcontentImage-1716856921727-honeycomb-blinds-3.jpg?alt=media&amp;token=2daf3f9b-6bff-44fe-8796-6dc9b5195a10"
+											alt="Honeycomb cellular blinds insulating a window" width="800" height="500">
+										<span class="pb-mega-name">Honeycomb Blinds</span>
+										<span class="pb-mega-go">Insulate and save <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/roller-blinds" href="/roller-blinds" data-page="roller-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-32M4RQPWE6-polarblinds%2FcontentImage-1716857157210-roller-blinds-1.png?alt=media&amp;token=e9024c31-2c16-4afa-a67e-83e25626699f"
+											alt="Sleek roller blinds in a modern living room" width="535" height="444">
+										<span class="pb-mega-name">Roller Blinds</span>
+										<span class="pb-mega-go">Sleek and minimalist <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/fauxwood-blinds" href="/fauxwood-blinds" data-page="fauxwood-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-W22EZ4A7F4-polarblinds%2FcontentImage-1716857337905-fauxwood-blinds-1.jpg?alt=media&amp;token=46415028-0723-49a7-abbb-3cd804309470"
+											alt="Fauxwood blinds with a natural wood finish" width="2400" height="800">
+										<span class="pb-mega-name">Fauxwood Blinds</span>
+										<span class="pb-mega-go">Wood look, made to last <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/vertical-blinds" href="/vertical-blinds" data-page="vertical-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-E9APQX963N-polarblinds%2FcontentImage-1716857490973-vertical-blinds-1.jpg?alt=media&amp;token=8835bfa9-1a96-4f8b-a2dd-8a0713ecc3b9"
+											alt="Vertical blinds for large windows and patio doors" width="2400" height="800">
+										<span class="pb-mega-name">Vertical Blinds</span>
+										<span class="pb-mega-go">Big windows and patio doors <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/silhoutte-blinds" href="/silhoutte-blinds" data-page="silhoutte-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-6KYCWAWNDH-polarblinds%2FcontentImage-1716857678319-silhouette-blinds-1.jpg?alt=media&amp;token=cec3bf88-e2b4-4ef8-af71-3533e9859a69"
+											alt="Silhouette blinds with sheer fabric vanes" width="1250" height="663">
+										<span class="pb-mega-name">Silhouette Blinds</span>
+										<span class="pb-mega-go">Sheer elegance <span aria-hidden="true">&rarr;</span></span>
+									</a>
+									<a class="pb-mega-card" data-ic-nav-href="/roman-blinds" href="/roman-blinds" data-page="roman-blinds">
+										<img class="pb-mega-img" loading="lazy" decoding="async"
+											src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-NCMQAQGNTW-polarblinds%2FcontentImage-1716856735721-roman-blinds-5.jpg?alt=media&amp;token=7c3a29d2-e866-428a-8265-7bf89fad4a4a"
+											alt="Roman blinds in soft natural fabric" width="1000" height="1000">
+										<span class="pb-mega-name">Roman Blinds</span>
+										<span class="pb-mega-go">Soft folds, classic style <span aria-hidden="true">&rarr;</span></span>
+									</a>
+								</div>
+
+								<div class="pb-mega-side">
+									<p class="pb-mega-side-kicker">Free in-home consultation</p>
+									<p class="pb-mega-side-title">Not sure which blind fits your window?</p>
+									<p class="pb-mega-side-text">We measure, we bring samples, and we help you choose. No
+										obligation, no charge.</p>
+									<a class="pb-mega-side-btn" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">
+										Book an appointment <span aria-hidden="true">&rarr;</span>
+									</a>
+								</div>
+							</div>
+						</div>
+					</li>
+
+					<li class="pb-hd-item">
+						<a class="pb-hd-link" data-ic-nav-href="/about-us" href="/about-us" data-page="about-us">About Us</a>
+					</li>
+					<li class="pb-hd-item">
+						<a class="pb-hd-link" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">Contact Us</a>
+					</li>
+				</ul>
+
+				<a class="pb-hd-cta" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">
+					<svg class="pb-hd-ico" aria-hidden="true"><use href="#pb-i-ruler"></use></svg>
+					Free estimate
+				</a>
+			</div>
+
+			<button type="button" class="pb-hd-burger" aria-expanded="false" aria-controls="pb-hd-menu"
+				aria-label="Open menu">
+				<span class="pb-hd-burger-box" aria-hidden="true">
+					<span></span><span></span><span></span>
+				</span>
+			</button>
+		</div>
+	</div>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.pb-header {
+			--pb-cream: #faf6ef;
+			--pb-paper: #fffdf8;
+			--pb-sand: #efe5d3;
+			--pb-ink: #262019;
+			--pb-espresso: #332a1f;
+			--pb-walnut: #6f4e2e;
+			--pb-gold: #c48b2e;
+			--pb-gold-deep: #a5711f;
+			--pb-gold-soft: #e7c98f;
+			--pb-line: #e6d9c2;
+			position: relative;
+			z-index: 60;
+			width: 100%;
+			background: var(--pb-paper);
+			color: var(--pb-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+			box-shadow: 0 10px 30px -18px rgba(38, 32, 25, 0.35);
+		}
+
+		.pb-header,
+		.pb-header *,
+		.pb-header *::before,
+		.pb-header *::after {
+			box-sizing: border-box;
+		}
+
+		.pb-hd-sprite {
+			position: absolute;
+			width: 0;
+			height: 0;
+			overflow: hidden;
+		}
+
+		.pb-hd-ico {
+			width: 1em;
+			height: 1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		.pb-hd-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		/* ---------- top strip ---------- */
+		.pb-hd-top {
+			background: linear-gradient(90deg, var(--pb-espresso), #4a3a26 70%, var(--pb-walnut));
+			color: #f3e9d8;
+			font-size: 13.5px;
+		}
+
+		.pb-hd-top-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			min-height: 36px;
+		}
+
+		.pb-hd-top-note {
+			margin: 0;
+			letter-spacing: 0.04em;
+		}
+
+		.pb-hd-top-links {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.pb-hd-top-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			color: #f3e9d8;
+			text-decoration: none;
+			letter-spacing: 0.02em;
+		}
+
+		.pb-hd-top-link:hover {
+			color: var(--pb-gold-soft);
+		}
+
+		/* ---------- main bar ---------- */
+		.pb-hd-bar {
+			position: relative;
+			background: var(--pb-paper);
+			border-bottom: 1px solid var(--pb-line);
+		}
+
+		.pb-hd-bar-inner {
+			display: flex;
+			align-items: center;
+			gap: 24px;
+			min-height: 78px;
+		}
+
+		.pb-hd-brand {
+			display: inline-flex;
+			align-items: center;
+			flex: 0 0 auto;
+		}
+
+		.pb-hd-logo {
+			height: 46px;
+			width: auto;
+			display: block;
+		}
+
+		.pb-header.is-compact .pb-hd-logo {
+			height: 40px;
+		}
+
+		.pb-hd-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 24px;
+			flex: 1 1 auto;
+			margin-left: auto;
+		}
+
+		.pb-hd-list {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.pb-hd-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 12px 14px;
+			color: var(--pb-ink);
+			text-decoration: none;
+			font-size: 15px;
+			font-weight: 600;
+			letter-spacing: 0.03em;
+			background: none;
+			border: 0;
+			cursor: pointer;
+			font-family: inherit;
+			position: relative;
+		}
+
+		.pb-hd-link::after {
+			content: '';
+			position: absolute;
+			left: 14px;
+			right: 14px;
+			bottom: 6px;
+			height: 2px;
+			background: var(--pb-gold);
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform 0.25s ease;
+		}
+
+		.pb-hd-link:hover::after,
+		.pb-hd-link.is-active::after {
+			transform: scaleX(1);
+		}
+
+		.pb-hd-link.is-active {
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-hd-caret {
+			display: inline-flex;
+			align-items: center;
+			transition: transform 0.25s ease;
+		}
+
+		.pb-hd-item-mega.is-open .pb-hd-caret {
+			transform: rotate(180deg);
+		}
+
+		.pb-hd-cta {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 11px 20px;
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			font-weight: 700;
+			font-size: 14.5px;
+			letter-spacing: 0.04em;
+			text-decoration: none;
+			border-radius: 999px;
+			box-shadow: 0 8px 18px -10px rgba(165, 113, 31, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			flex: 0 0 auto;
+		}
+
+		.pb-hd-cta:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 12px 22px -10px rgba(165, 113, 31, 0.95);
+		}
+
+		/* ---------- mega menu ---------- */
+		.pb-mega {
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: 100%;
+			background: var(--pb-paper);
+			border-top: 3px solid var(--pb-gold);
+			border-bottom: 1px solid var(--pb-line);
+			box-shadow: 0 30px 50px -30px rgba(38, 32, 25, 0.55);
+			opacity: 0;
+			visibility: hidden;
+			transform: translateY(10px);
+			transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s;
+		}
+
+		.pb-hd-item-mega.is-open .pb-mega,
+		.pb-hd-item-mega:hover .pb-mega,
+		.pb-hd-item-mega:focus-within .pb-mega {
+			opacity: 1;
+			visibility: visible;
+			transform: translateY(0);
+		}
+
+		.pb-mega-inner {
+			display: grid;
+			grid-template-columns: 1fr 250px;
+			gap: 28px;
+			padding-top: 26px;
+			padding-bottom: 26px;
+		}
+
+		.pb-mega-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 16px;
+		}
+
+		.pb-mega-card {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+			text-decoration: none;
+			color: var(--pb-ink);
+			border: 1px solid var(--pb-line);
+			border-radius: 14px;
+			overflow: hidden;
+			background: #fff;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+		}
+
+		.pb-mega-card:hover {
+			transform: translateY(-3px);
+			border-color: var(--pb-gold-soft);
+			box-shadow: 0 16px 28px -18px rgba(38, 32, 25, 0.5);
+		}
+
+		.pb-mega-img {
+			width: 100%;
+			height: 108px;
+			object-fit: cover;
+			display: block;
+		}
+
+		.pb-mega-name {
+			padding: 4px 12px 0;
+			font-weight: 700;
+			font-size: 14.5px;
+		}
+
+		.pb-mega-go {
+			padding: 0 12px 12px;
+			font-size: 12.5px;
+			color: var(--pb-walnut);
+		}
+
+		.pb-mega-side {
+			background:
+				radial-gradient(120% 90% at 100% 0%, rgba(196, 139, 46, 0.16), transparent 60%),
+				var(--pb-cream);
+			border: 1px solid var(--pb-line);
+			border-radius: 14px;
+			padding: 22px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			gap: 8px;
+		}
+
+		.pb-mega-side-kicker {
+			margin: 0;
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-mega-side-title {
+			margin: 0;
+			font-family: Georgia, 'Times New Roman', serif;
+			font-size: 19px;
+			line-height: 1.3;
+			font-weight: 700;
+		}
+
+		.pb-mega-side-text {
+			margin: 0;
+			font-size: 13.5px;
+			color: #6b5d49;
+		}
+
+		.pb-mega-side-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-top: 6px;
+			font-weight: 700;
+			font-size: 14px;
+			color: var(--pb-gold-deep);
+			text-decoration: none;
+		}
+
+		.pb-mega-side-btn:hover {
+			color: var(--pb-ink);
+		}
+
+		/* ---------- burger ---------- */
+		.pb-hd-burger {
+			display: none;
+			margin-left: auto;
+			padding: 10px;
+			background: none;
+			border: 1px solid var(--pb-line);
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		.pb-hd-burger-box {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+			width: 22px;
+		}
+
+		.pb-hd-burger-box span {
+			height: 2px;
+			background: var(--pb-ink);
+			border-radius: 2px;
+			transition: transform 0.25s ease, opacity 0.25s ease;
+		}
+
+		.pb-header.is-menu-open .pb-hd-burger-box span:nth-child(1) {
+			transform: translateY(7px) rotate(45deg);
+		}
+
+		.pb-header.is-menu-open .pb-hd-burger-box span:nth-child(2) {
+			opacity: 0;
+		}
+
+		.pb-header.is-menu-open .pb-hd-burger-box span:nth-child(3) {
+			transform: translateY(-7px) rotate(-45deg);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1080px) {
+			.pb-mega-grid {
+				grid-template-columns: repeat(3, 1fr);
+			}
+
+			.pb-mega-card:nth-child(7) {
+				display: none;
+			}
+		}
+
+		@media (max-width: 920px) {
+			.pb-hd-burger {
+				display: inline-flex;
+			}
+
+			.pb-hd-nav {
+				position: fixed;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				width: min(360px, 88vw);
+				margin: 0;
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				gap: 8px;
+				background: var(--pb-paper);
+				box-shadow: -24px 0 60px rgba(38, 32, 25, 0.35);
+				padding: 74px 22px 26px;
+				overflow-y: auto;
+				transform: translateX(105%);
+				transition: transform 0.3s ease;
+			}
+
+			.pb-header.is-menu-open .pb-hd-nav {
+				transform: translateX(0);
+			}
+
+			.pb-hd-list {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 2px;
+			}
+
+			.pb-hd-link {
+				width: 100%;
+				justify-content: space-between;
+				padding: 13px 12px;
+				border-bottom: 1px solid var(--pb-line);
+				font-size: 16px;
+			}
+
+			.pb-hd-link::after {
+				display: none;
+			}
+
+			.pb-hd-item-mega .pb-mega {
+				position: static;
+				opacity: 1;
+				visibility: visible;
+				transform: none;
+				box-shadow: none;
+				border: 0;
+				display: none;
+			}
+
+			.pb-hd-item-mega.is-open .pb-mega {
+				display: block;
+			}
+
+			.pb-mega-inner {
+				grid-template-columns: 1fr;
+				gap: 14px;
+				padding: 12px 4px 16px;
+			}
+
+			.pb-mega-grid {
+				grid-template-columns: repeat(2, 1fr);
+				gap: 10px;
+			}
+
+			.pb-mega-card:nth-child(7) {
+				display: flex;
+			}
+
+			.pb-mega-img {
+				height: 84px;
+			}
+
+			.pb-hd-cta {
+				justify-content: center;
+				margin-top: 6px;
+			}
+
+			.pb-hd-top-note {
+				display: none;
+			}
+
+			.pb-hd-top-inner {
+				justify-content: center;
+			}
+
+			.pb-hd-top-mail {
+				display: none;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var headerRoot = document.querySelector('.pb-header');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!headerRoot || headerRoot.getAttribute('data-pb-header-ready') === '1') { return; }
+			headerRoot.setAttribute('data-pb-header-ready', '1');
+
+			var burgerButton = headerRoot.querySelector('.pb-hd-burger');
+			var megaItem = headerRoot.querySelector('.pb-hd-item-mega');
+			var megaTrigger = headerRoot.querySelector('.pb-hd-trigger');
+
+			/* ---------------- mobile menu ---------------- */
+			function closeMobileMenu() {
+				if (!headerRoot.classList.contains('is-menu-open')) { return; }
+				headerRoot.classList.remove('is-menu-open');
+				burgerButton.setAttribute('aria-expanded', 'false');
+			}
+
+			function openMobileMenu() {
+				headerRoot.classList.add('is-menu-open');
+				burgerButton.setAttribute('aria-expanded', 'true');
+			}
+
+			burgerButton.addEventListener('click', function () {
+				if (headerRoot.classList.contains('is-menu-open')) { closeMobileMenu(); }
+				else { openMobileMenu(); }
+			});
+
+			/* ---------------- products mega menu (touch and keyboard) ---------------- */
+			if (megaTrigger) {
+				megaTrigger.addEventListener('click', function (event) {
+					var isSmall = window.matchMedia('(max-width: 920px)').matches;
+					if (!isSmall) { return; }
+					event.preventDefault();
+					var isOpen = megaItem.classList.contains('is-open');
+					megaItem.classList.toggle('is-open', !isOpen);
+					megaTrigger.setAttribute('aria-expanded', String(!isOpen));
+				});
+			}
+
+			document.addEventListener('click', function (event) {
+				if (!headerRoot.contains(event.target)) { closeMobileMenu(); }
+			});
+
+			document.addEventListener('keydown', function (event) {
+				if (event.key === 'Escape') { closeMobileMenu(); }
+			});
+
+			/* ---------------- compact bar on scroll ---------------- */
+			var ticking = false;
+
+			function updateBarCompactness() {
+				ticking = false;
+				var isCompact = window.scrollY > 24;
+				headerRoot.classList.toggle('is-compact', isCompact);
+			}
+
+			function requestBarUpdate() {
+				if (ticking) { return; }
+				ticking = true;
+				window.requestAnimationFrame(updateBarCompactness);
+			}
+
+			window.addEventListener('scroll', requestBarUpdate, { passive: true });
+			updateBarCompactness();
+
+			/* ---------------- active page highlight ---------------- */
+			var currentPath = window.location.pathname || '/';
+			var pageLinks = Array.prototype.slice.call(
+				headerRoot.querySelectorAll('a[data-page], button[data-page]')
+			);
+
+			pageLinks.forEach(function (pageLink) {
+				var pageKey = pageLink.getAttribute('data-page');
+				var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+				var productsPaths = [
+					'/zebra-blinds', '/honeycomb-blinds', '/roller-blinds',
+					'/fauxwood-blinds', '/vertical-blinds', '/silhoutte-blinds', '/roman-blinds'
+				];
+				var isActive = currentPath === pagePath ||
+					(pageKey === 'products' && productsPaths.indexOf(currentPath) !== -1);
+				pageLink.classList.toggle('is-active', isActive);
+			});
+		})();
+	</script>
+
+</div>

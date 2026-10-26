@@ -1,0 +1,1932 @@
+<!--
+  =========================================================================
+  HOME PAGE - fragment for the Polaris Blinds website (route /)
+  - Everything lives inside ONE parent <div class="pb-page pb-home"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .pb-home so nothing leaks into the CMS
+  - Exactly one <h1>, semantic sections, mobile-first responsive layout
+  - The quote form follows the platform contract: <form data-gw-form>, hidden
+    honeypot named "gw_hp", [data-gw-form-status] live region, and a submit
+    handler that POSTs once to the CMS public form endpoint
+  - Signature animation: a slat curtain lifts away from the hero on load, and
+    the light-control demo lets visitors tilt the slats themselves
+  - SEO for the CMS page object (slug "home-page"): title "Polaris Blinds -
+    Blinds and Shades in Calgary | Free Estimate", description "Polaris Blinds
+    offers zebra, honeycomb, roller, fauxwood, vertical, silhouette and roman
+    blinds in Calgary and surrounding area. Free in-home consultation."
+  - CMS CONFIG NEEDED: create form destinations
+    "polaris-quote-request-forms-uniconbaseapps" for the quote forms and
+    "polaris-contact-us-forms-uniconbaseapps" for the contact page, and put
+    https://www.polarisblinds.ca on the CMS origin allowlist
+  =========================================================================
+-->
+<div class="pb-page pb-home">
+
+	<!-- =============================== HERO =============================== -->
+	<section class="pb-hm-hero">
+		<div class="pb-hm-hero-bg" aria-hidden="true"></div>
+
+		<div class="pb-hm-wrap pb-hm-hero-grid">
+			<div class="pb-hm-hero-copy">
+				<p class="pb-hm-kicker pb-hm-kicker-light">
+					<span class="pb-hm-kicker-rule" aria-hidden="true"></span>
+					Polaris Blinds and Lights - Calgary
+				</p>
+				<h1 class="pb-hm-hero-title">
+					The very blinds you will<br>
+					<span class="pb-hm-hero-title-accent">fall in love with</span>
+				</h1>
+				<p class="pb-hm-hero-lede">
+					Polaris window fashions are designed and custom-assembled in Europe, and our products are
+					available across Canada through professionally trained dealers and designers. We are confident
+					you will love them.
+				</p>
+				<div class="pb-hm-hero-actions">
+					<a class="pb-hm-btn pb-hm-btn-gold" data-ic-nav-href="/contact-us" href="/contact-us">
+						Get a free estimate
+						<span class="pb-hm-btn-arrow" aria-hidden="true">&rarr;</span>
+					</a>
+					<a class="pb-hm-btn pb-hm-btn-ghost" data-ic-nav-href="/zebra-blinds" href="/zebra-blinds">
+						Explore the collection
+					</a>
+				</div>
+				<ul class="pb-hm-hero-trust">
+					<li><span class="pb-hm-check" aria-hidden="true"></span> Free in-home consultation</li>
+					<li><span class="pb-hm-check" aria-hidden="true"></span> Designed in Europe</li>
+					<li><span class="pb-hm-check" aria-hidden="true"></span> Custom assembled for your window</li>
+				</ul>
+			</div>
+
+			<div class="pb-hm-hero-visual" aria-hidden="true">
+				<div class="pb-hm-hero-frame">
+					<img class="pb-hm-hero-img"
+						src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-XPQ4MXYNKT-polarblinds%2FcontentImage-1716844476916-shades-and-blinds.jpg?alt=media&amp;token=206922c7-c668-4b72-839b-031a7f888457"
+						alt="" width="2400" height="800" decoding="async" fetchpriority="high">
+					<span class="pb-hm-hero-frame-edge" aria-hidden="true"></span>
+				</div>
+				<div class="pb-hm-hero-badge pb-hm-hero-badge-top">
+					<strong>7 collections</strong>
+					<span>One perfect match</span>
+				</div>
+				<div class="pb-hm-hero-badge pb-hm-hero-badge-bottom">
+					<strong>Free</strong>
+					<span>In-home measure and consult</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="pb-hm-hero-curtain" aria-hidden="true">
+			<span></span><span></span><span></span><span></span>
+			<span></span><span></span><span></span><span></span>
+			<span></span><span></span><span></span><span></span>
+		</div>
+	</section>
+
+	<!-- ============================= MARQUEE ============================== -->
+	<div class="pb-hm-marquee" aria-hidden="true">
+		<div class="pb-hm-marquee-track">
+			<span>Zebra Blinds</span><em></em>
+			<span>Honeycomb Blinds</span><em></em>
+			<span>Roller Blinds</span><em></em>
+			<span>Fauxwood Blinds</span><em></em>
+			<span>Vertical Blinds</span><em></em>
+			<span>Silhouette Blinds</span><em></em>
+			<span>Roman Blinds</span><em></em>
+			<span>Zebra Blinds</span><em></em>
+			<span>Honeycomb Blinds</span><em></em>
+			<span>Roller Blinds</span><em></em>
+			<span>Fauxwood Blinds</span><em></em>
+			<span>Vertical Blinds</span><em></em>
+			<span>Silhouette Blinds</span><em></em>
+			<span>Roman Blinds</span><em></em>
+		</div>
+	</div>
+
+	<!-- ============================ PRODUCTS ============================= -->
+	<section class="pb-hm-products" id="pb-hm-products">
+		<div class="pb-hm-wrap">
+			<div class="pb-hm-sec-head pb-hm-reveal">
+				<p class="pb-hm-kicker">Our collection</p>
+				<h2 class="pb-hm-sec-title">Seven ways to dress a window</h2>
+				<p class="pb-hm-sec-sub">From day-and-night zebra shades to soft roman folds - pick a style below,
+					then tell us your window and we will do the rest.</p>
+			</div>
+
+			<div class="pb-hm-product-grid">
+				<a class="pb-hm-product pb-hm-reveal" data-ic-nav-href="/zebra-blinds" href="/zebra-blinds">
+					<span class="pb-hm-product-media">
+						<img loading="lazy" decoding="async"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-4LFRLD3CYH-polarblinds%2FcontentImage-1716856144134-zebra-blinds-4.jpg?alt=media&amp;token=15cb2d8b-3dcb-4d7c-b3a5-90d0a55e3212"
+							alt="Zebra blinds with alternating sheer and solid bands" width="1772" height="1424">
+						<span class="pb-hm-product-shade" aria-hidden="true"></span>
+						<span class="pb-hm-product-go" aria-hidden="true">View details &rarr;</span>
+					</span>
+					<span class="pb-hm-product-body">
+						<strong class="pb-hm-product-name">Zebra Blinds</strong>
+						<span class="pb-hm-product-desc">Sheer and solid bands for day-night light control</span>
+					</span>
+				</a>
+
+				<a class="pb-hm-product pb-hm-reveal" data-ic-nav-href="/honeycomb-blinds" href="/honeycomb-blinds">
+					<span class="pb-hm-product-media">
+						<img loading="lazy" decoding="async"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-QEELL6N43T-polarblinds%2FcontentImage-1716856921727-honeycomb-blinds-3.jpg?alt=media&amp;token=2daf3f9b-6bff-44fe-8796-6dc9b5195a10"
+							alt="Honeycomb cellular blinds insulating a window" width="800" height="500">
+						<span class="pb-hm-product-shade" aria-hidden="true"></span>
+						<span class="pb-hm-product-go" aria-hidden="true">View details &rarr;</span>
+					</span>
+					<span class="pb-hm-product-body">
+						<strong class="pb-hm-product-name">Honeycomb Blinds</strong>
+						<span class="pb-hm-product-desc">Air-trapping cells that insulate and hush a room</span>
+					</span>
+				</a>
+
+				<a class="pb-hm-product pb-hm-reveal" data-ic-nav-href="/roller-blinds" href="/roller-blinds">
+					<span class="pb-hm-product-media">
+						<img loading="lazy" decoding="async"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-32M4RQPWE6-polarblinds%2FcontentImage-1716857157210-roller-blinds-1.png?alt=media&amp;token=e9024c31-2c16-4afa-a67e-83e25626699f"
+							alt="Sleek roller blinds in a modern living room" width="535" height="444">
+						<span class="pb-hm-product-shade" aria-hidden="true"></span>
+						<span class="pb-hm-product-go" aria-hidden="true">View details &rarr;</span>
+					</span>
+					<span class="pb-hm-product-body">
+						<strong class="pb-hm-product-name">Roller Blinds</strong>
+						<span class="pb-hm-product-desc">Clean lines and effortless operation</span>
+					</span>
+				</a>
+
+				<a class="pb-hm-product pb-hm-reveal" data-ic-nav-href="/fauxwood-blinds" href="/fauxwood-blinds">
+					<span class="pb-hm-product-media">
+						<img loading="lazy" decoding="async"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-W22EZ4A7F4-polarblinds%2FcontentImage-1716857337905-fauxwood-blinds-1.jpg?alt=media&amp;token=46415028-0723-49a7-abbb-3cd804309470"
+							alt="Fauxwood blinds with a natural wood finish" width="2400" height="800">
+						<span class="pb-hm-product-shade" aria-hidden="true"></span>
+						<span class="pb-hm-product-go" aria-hidden="true">View details &rarr;</span>
+					</span>
+					<span class="pb-hm-product-body">
+						<strong class="pb-hm-product-name">Fauxwood Blinds</strong>
+						<span class="pb-hm-product-desc">The wood look that shrugs off moisture</span>
+					</span>
+				</a>
+
+				<a class="pb-hm-product pb-hm-reveal" data-ic-nav-href="/vertical-blinds" href="/vertical-blinds">
+					<span class="pb-hm-product-media">
+						<img loading="lazy" decoding="async"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-E9APQX963N-polarblinds%2FcontentImage-1716857490973-vertical-blinds-1.jpg?alt=media&amp;token=8835bfa9-1a96-4f8b-a2dd-8a0713ecc3b9"
+							alt="Vertical blinds for large windows and patio doors" width="2400" height="800">
+						<span class="pb-hm-product-shade" aria-hidden="true"></span>
+						<span class="pb-hm-product-go" aria-hidden="true">View details &rarr;</span>
+					</span>
+					<span class="pb-hm-product-body">
+						<strong class="pb-hm-product-name">Vertical Blinds</strong>
+						<span class="pb-hm-product-desc">Patio doors and wide windows, covered in style</span>
+					</span>
+				</a>
+
+				<a class="pb-hm-product pb-hm-reveal" data-ic-nav-href="/silhoutte-blinds" href="/silhoutte-blinds">
+					<span class="pb-hm-product-media">
+						<img loading="lazy" decoding="async"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-6KYCWAWNDH-polarblinds%2FcontentImage-1716857678319-silhouette-blinds-1.jpg?alt=media&amp;token=cec3bf88-e2b4-4ef8-af71-3533e9859a69"
+							alt="Silhouette blinds with sheer fabric vanes" width="1250" height="663">
+						<span class="pb-hm-product-shade" aria-hidden="true"></span>
+						<span class="pb-hm-product-go" aria-hidden="true">View details &rarr;</span>
+					</span>
+					<span class="pb-hm-product-body">
+						<strong class="pb-hm-product-name">Silhouette Blinds</strong>
+						<span class="pb-hm-product-desc">Sheer vanes that turn light into decor</span>
+					</span>
+				</a>
+
+				<a class="pb-hm-product pb-hm-reveal" data-ic-nav-href="/roman-blinds" href="/roman-blinds">
+					<span class="pb-hm-product-media">
+						<img loading="lazy" decoding="async"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-NCMQAQGNTW-polarblinds%2FcontentImage-1716856735721-roman-blinds-5.jpg?alt=media&amp;token=7c3a29d2-e866-428a-8265-7bf89fad4a4a"
+							alt="Roman blinds in soft natural fabric" width="1000" height="1000">
+						<span class="pb-hm-product-shade" aria-hidden="true"></span>
+						<span class="pb-hm-product-go" aria-hidden="true">View details &rarr;</span>
+					</span>
+					<span class="pb-hm-product-body">
+						<strong class="pb-hm-product-name">Roman Blinds</strong>
+						<span class="pb-hm-product-desc">Soft fabric folds with timeless charm</span>
+					</span>
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ======================= LIGHT CONTROL DEMO ======================== -->
+	<section class="pb-hm-light">
+		<div class="pb-hm-wrap pb-hm-light-grid">
+			<div class="pb-hm-light-copy pb-hm-reveal">
+				<p class="pb-hm-kicker">Try it yourself</p>
+				<h2 class="pb-hm-sec-title">How much light do you want?</h2>
+				<p class="pb-hm-light-text">
+					Every Polaris blind gives you a range, not an on-off switch. Drag the control and watch the
+					slats tilt - this is the feeling you get on your own window.
+				</p>
+				<div class="pb-hm-light-hints">
+					<span class="pb-hm-light-hint">&#9728;&#65039; Bright morning</span>
+					<span class="pb-hm-light-hint">&#127769; Quiet evening</span>
+				</div>
+				<div class="pb-hm-light-control">
+					<label class="pb-hm-light-label" for="pb-hm-light-slider">Tilt the slats</label>
+					<input class="pb-hm-light-slider" id="pb-hm-light-slider" type="range" min="0" max="100"
+						value="45" step="1">
+					<p class="pb-hm-light-readout" id="pb-hm-light-readout" aria-live="polite">Half open - a soft, balanced glow</p>
+				</div>
+			</div>
+
+			<div class="pb-hm-light-stage pb-hm-reveal" aria-hidden="true">
+				<div class="pb-hm-light-window" id="pb-hm-light-window">
+					<div class="pb-hm-light-sky"></div>
+					<div class="pb-hm-light-sun"></div>
+					<div class="pb-hm-light-glare"></div>
+					<div class="pb-hm-light-slats">
+						<span></span><span></span><span></span><span></span><span></span><span></span>
+						<span></span><span></span><span></span><span></span><span></span><span></span>
+					</div>
+					<div class="pb-hm-light-sill"></div>
+				</div>
+				<div class="pb-hm-light-cord" aria-hidden="true"></div>
+			</div>
+		</div>
+	</section>
+
+	<!-- =========================== WHY POLARIS =========================== -->
+	<section class="pb-hm-why">
+		<div class="pb-hm-wrap">
+			<div class="pb-hm-sec-head pb-hm-reveal">
+				<p class="pb-hm-kicker">Why Polaris</p>
+				<h2 class="pb-hm-sec-title">Confidence comes with the box</h2>
+				<p class="pb-hm-sec-sub">Every window covering is designed in Europe, custom-assembled for your
+					window, and backed by a team that measures and fits it for you.</p>
+			</div>
+
+			<div class="pb-hm-why-grid">
+				<article class="pb-hm-why-card pb-hm-reveal">
+					<span class="pb-hm-why-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.6" /><path d="M12 2.8v4" /><path d="M12 17.2v4" /><path d="M2.8 12h4" /><path d="M17.2 12h4" /></svg>
+					</span>
+					<h3 class="pb-hm-why-title">Designed in Europe</h3>
+					<p class="pb-hm-why-text">Polaris window fashions come from European design studios, where
+						craftsmanship and clean lines are the standard, not the upgrade.</p>
+				</article>
+
+				<article class="pb-hm-why-card pb-hm-reveal">
+					<span class="pb-hm-why-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M4 9 2.6 14h3.6L4.8 17.4h2.2l1.4-3.4H12v8.4a2 2 0 0 1-2 2H5" /><path d="M12 9v-3a4 4 0 0 1 8 0v3" /></svg>
+					</span>
+					<h3 class="pb-hm-why-title">Custom assembled</h3>
+					<p class="pb-hm-why-text">Made to the exact width, height and finish your window needs - never
+						a compromise size off a shelf.</p>
+				</article>
+
+				<article class="pb-hm-why-card pb-hm-reveal">
+					<span class="pb-hm-why-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M3 6.4h11v10.2H3z" /><path d="M14 9.8h3.4L20 13v3.6h-6" /><circle cx="7" cy="17.6" r="1.8" /><circle cx="16.6" cy="17.6" r="1.8" /></svg>
+					</span>
+					<h3 class="pb-hm-why-title">Nationwide dealers</h3>
+					<p class="pb-hm-why-text">Polaris products are available across Canada at professionally
+						trained dealers and designers.</p>
+				</article>
+
+				<article class="pb-hm-why-card pb-hm-reveal">
+					<span class="pb-hm-why-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="m4 9 2.4-2.4 4.6 4.6L13.4 8.8 8.8 4.2l2.4-2.4 7.4 7.4a5.2 5.2 0 0 1-7.4 7.4L4 23.2A4 4 0 0 1 4 9z" /></svg>
+					</span>
+					<h3 class="pb-hm-why-title">We measure for you</h3>
+					<p class="pb-hm-why-text">Free in-home consultation: we visit, measure, and bring the samples
+						so the choice is easy and the fit is exact.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ SHOWCASE ============================= -->
+	<section class="pb-hm-showcase">
+		<div class="pb-hm-wrap pb-hm-showcase-grid">
+			<div class="pb-hm-showcase-visual pb-hm-reveal" aria-hidden="true">
+				<div class="pb-hm-showcase-bg"></div>
+				<img class="pb-hm-showcase-img" loading="lazy" decoding="async"
+					src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-XPQ4MXYNKT-polarblinds%2FcontentImage-1716844800978-shades-and-best-blinds.png?alt=media&amp;token=a28c5cfa-18de-406d-a5e2-06355b705b73"
+					alt="" width="704" height="531">
+			</div>
+			<div class="pb-hm-showcase-copy pb-hm-reveal">
+				<p class="pb-hm-kicker">Made to be lived with</p>
+				<h2 class="pb-hm-sec-title">Designed to fall in love with, built to keep its promise</h2>
+				<p class="pb-hm-showcase-text">
+					From the first measure to the final click of the bottom rail, every Polaris blind is made to
+					feel right: smooth operation, true colour, and fabrics that keep their shape.
+				</p>
+				<ul class="pb-hm-showcase-list">
+					<li><span class="pb-hm-check" aria-hidden="true"></span> Cords, cordless and motorized options</li>
+					<li><span class="pb-hm-check" aria-hidden="true"></span> Fabrics for filtering, dimming or darkening</li>
+					<li><span class="pb-hm-check" aria-hidden="true"></span> Child-safe designs for family homes</li>
+					<li><span class="pb-hm-check" aria-hidden="true"></span> Colours and finishes to match your decor</li>
+				</ul>
+				<div class="pb-hm-showcase-actions">
+					<a class="pb-hm-btn pb-hm-btn-dark" data-ic-nav-href="/about-us" href="/about-us">More about Polaris</a>
+					<a class="pb-hm-text-link" data-ic-nav-href="/contact-us" href="/contact-us">Book a consultation &rarr;</a>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================== SERVICE AREA =========================== -->
+	<section class="pb-hm-area">
+		<img class="pb-hm-area-bg" loading="lazy" decoding="async"
+			src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-A9NXXTK4T7-polarblinds%2FcontentImage-1716845257040-background-calgary.jpg?alt=media&amp;token=6deade98-9c0e-4bbb-a921-8bfef9987ab5"
+			alt="Calgary skyline at golden hour" width="2400" height="800">
+		<div class="pb-hm-area-overlay" aria-hidden="true"></div>
+		<div class="pb-hm-wrap pb-hm-area-inner">
+			<div class="pb-hm-area-copy pb-hm-reveal">
+				<p class="pb-hm-kicker pb-hm-kicker-light">Areas we proudly serve</p>
+				<h2 class="pb-hm-area-title">Calgary and the towns around it</h2>
+				<p class="pb-hm-area-text">We are serving Calgary and the surrounding cities and towns.</p>
+				<ul class="pb-hm-area-chips">
+					<li>Calgary</li>
+					<li>Airdrie</li>
+					<li>Chestermere</li>
+					<li>Cochrane</li>
+					<li>Okotoks</li>
+					<li>High River</li>
+					<li>Strathmore</li>
+				</ul>
+				<a class="pb-hm-btn pb-hm-btn-gold" data-ic-nav-href="/contact-us" href="/contact-us">
+					Make your appointment now
+					<span class="pb-hm-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- =========================== QUOTE FORM ============================ -->
+	<section class="pb-hm-quote" id="pb-hm-quote">
+		<div class="pb-hm-wrap pb-hm-quote-grid">
+			<div class="pb-hm-quote-copy pb-hm-reveal">
+				<p class="pb-hm-kicker">Free estimate</p>
+				<h2 class="pb-hm-sec-title">Tell us about your window</h2>
+				<p class="pb-hm-quote-text">
+					Send the details and we will come back with ideas, samples and a clear quote. Prefer to talk
+					it through? Call us.
+				</p>
+				<div class="pb-hm-quote-contacts">
+					<a class="pb-hm-quote-contact" href="tel:+14036121636">
+						<span class="pb-hm-quote-contact-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></svg>
+						</span>
+						<strong>+1 403 612 1636</strong>
+						<span>Call or text us</span>
+					</a>
+					<a class="pb-hm-quote-contact" href="mailto:info@polarisblinds.ca">
+						<span class="pb-hm-quote-contact-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></svg>
+						</span>
+						<strong>info@polarisblinds.ca</strong>
+						<span>We reply to every message</span>
+					</a>
+				</div>
+			</div>
+
+			<div class="pb-hm-quote-form-card pb-hm-reveal">
+				<form class="pb-hm-form" data-gw-form data-gw-form-type="quote-request"
+					data-gw-cms-object-type="polaris-quote-request-forms-uniconbaseapps">
+					<div class="pb-hm-form-fields">
+						<label class="pb-hm-field">
+							<span class="pb-hm-field-label">Your name <em>required</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="pb-hm-field">
+							<span class="pb-hm-field-label">Email <em>required</em></span>
+							<input type="email" name="email" autocomplete="email" required>
+						</label>
+						<label class="pb-hm-field">
+							<span class="pb-hm-field-label">Phone <em>required</em></span>
+							<input type="tel" name="phone" autocomplete="tel" required>
+						</label>
+						<label class="pb-hm-field">
+							<span class="pb-hm-field-label">Which product interests you?</span>
+							<select name="product">
+								<option value="not-sure">Not sure yet - help me choose</option>
+								<option value="zebra-blinds">Zebra Blinds</option>
+								<option value="honeycomb-blinds">Honeycomb Blinds</option>
+								<option value="roller-blinds">Roller Blinds</option>
+								<option value="fauxwood-blinds">Fauxwood Blinds</option>
+								<option value="vertical-blinds">Vertical Blinds</option>
+								<option value="silhoutte-blinds">Silhouette Blinds</option>
+								<option value="roman-blinds">Roman Blinds</option>
+							</select>
+						</label>
+					</div>
+					<label class="pb-hm-field pb-hm-field-wide">
+						<span class="pb-hm-field-label">Tell us about your windows <em>optional</em></span>
+						<textarea name="message" rows="4" placeholder="Room, window size, what you are looking for..."></textarea>
+					</label>
+
+					<!-- honeypot: hidden from view and from screen readers, never a real field -->
+					<input class="pb-hm-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+						aria-hidden="true">
+
+					<div class="pb-hm-form-actions">
+						<button class="pb-hm-submit" type="submit">Request my free estimate</button>
+						<div class="pb-hm-form-status" data-gw-form-status role="status"></div>
+					</div>
+					<p class="pb-hm-form-consent">We use these details only to prepare your estimate and answer
+						you. We do not pass them to anyone else.</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- =============================== FAQ =============================== -->
+	<section class="pb-hm-faq">
+		<div class="pb-hm-wrap pb-hm-faq-wrap">
+			<div class="pb-hm-sec-head pb-hm-reveal">
+				<p class="pb-hm-kicker">Questions, answered</p>
+				<h2 class="pb-hm-sec-title">Before you ask us</h2>
+			</div>
+
+			<div class="pb-hm-faq-list pb-hm-reveal">
+				<details class="pb-hm-faq-item">
+					<summary class="pb-hm-faq-question">Is the consultation really free?</summary>
+					<p class="pb-hm-faq-answer">Yes. We visit your home, measure the windows and bring samples at
+						no charge, with no obligation to order.</p>
+				</details>
+				<details class="pb-hm-faq-item">
+					<summary class="pb-hm-faq-question">Do you install the blinds?</summary>
+					<p class="pb-hm-faq-answer">Yes. Our service covers measure, fitting and installation, so the
+						finish is exactly right.</p>
+				</details>
+				<details class="pb-hm-faq-item">
+					<summary class="pb-hm-faq-question">Can I get cordless or motorized options?</summary>
+					<p class="pb-hm-faq-answer">Yes. Cordless designs are available for child-safe homes, and
+						motorized operation is offered on several collections.</p>
+				</details>
+				<details class="pb-hm-faq-item">
+					<summary class="pb-hm-faq-question">Which areas do you serve?</summary>
+					<p class="pb-hm-faq-answer">Calgary and the surrounding area: Airdrie, Chestermere, Cochrane,
+						Okotoks, High River and Strathmore.</p>
+				</details>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.pb-home {
+			--pb-cream: #faf6ef;
+			--pb-paper: #fffdf8;
+			--pb-sand: #efe5d3;
+			--pb-ink: #262019;
+			--pb-espresso: #332a1f;
+			--pb-walnut: #6f4e2e;
+			--pb-gold: #c48b2e;
+			--pb-gold-deep: #a5711f;
+			--pb-gold-soft: #e7c98f;
+			--pb-line: #e6d9c2;
+			--pb-display: Georgia, 'Times New Roman', serif;
+			position: relative;
+			width: 100%;
+			background: var(--pb-cream);
+			color: var(--pb-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.pb-home,
+		.pb-home *,
+		.pb-home *::before,
+		.pb-home *::after {
+			box-sizing: border-box;
+		}
+
+		.pb-home img {
+			max-width: 100%;
+		}
+
+		.pb-hm-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.pb-hm-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--pb-gold-deep);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.pb-hm-kicker-rule {
+			display: inline-block;
+			width: 34px;
+			height: 2px;
+			background: var(--pb-gold);
+		}
+
+		.pb-hm-kicker-light {
+			color: var(--pb-gold-soft);
+		}
+
+		.pb-hm-sec-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-size: clamp(26px, 3.4vw, 40px);
+			line-height: 1.15;
+			font-weight: 700;
+			color: var(--pb-ink);
+		}
+
+		.pb-hm-sec-sub {
+			margin: 12px 0 0;
+			max-width: 640px;
+			color: #6b5d49;
+			font-size: 16.5px;
+		}
+
+		.pb-hm-sec-head {
+			margin-bottom: 36px;
+		}
+
+		.pb-hm-check {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			background: var(--pb-gold);
+			flex: 0 0 auto;
+			position: relative;
+		}
+
+		.pb-hm-check::after {
+			content: '';
+			width: 8px;
+			height: 4px;
+			border-left: 2px solid #fff;
+			border-bottom: 2px solid #fff;
+			transform: rotate(-45deg) translate(1px, -1px);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.pb-hm-hero {
+			position: relative;
+			padding: 84px 0 96px;
+			color: #f6eedf;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.pb-hm-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			background:
+				radial-gradient(110% 130% at 12% 0%, rgba(196, 139, 46, 0.28), transparent 55%),
+				radial-gradient(90% 90% at 100% 100%, rgba(111, 78, 46, 0.5), transparent 60%),
+				linear-gradient(155deg, #332a1f 0%, #241d14 60%, #1b1610 100%);
+		}
+
+		.pb-hm-hero-bg::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.016) 0 2px, transparent 2px 44px);
+		}
+
+		.pb-hm-hero-grid {
+			display: grid;
+			grid-template-columns: 1.05fr 0.95fr;
+			align-items: center;
+			gap: 48px;
+		}
+
+		.pb-hm-hero-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-weight: 700;
+			font-size: clamp(34px, 4.6vw, 58px);
+			line-height: 1.08;
+			color: #fff;
+			text-wrap: balance;
+		}
+
+		.pb-hm-hero-title-accent {
+			color: var(--pb-gold-soft);
+			font-style: italic;
+		}
+
+		.pb-hm-hero-lede {
+			margin: 20px 0 0;
+			max-width: 540px;
+			font-size: 17px;
+			color: #e6d9c2;
+		}
+
+		.pb-hm-hero-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 14px;
+			margin-top: 30px;
+		}
+
+		.pb-hm-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 26px;
+			border-radius: 999px;
+			font-weight: 700;
+			font-size: 15.5px;
+			letter-spacing: 0.02em;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+		}
+
+		.pb-hm-btn-gold {
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			box-shadow: 0 14px 26px -14px rgba(196, 139, 46, 0.85);
+		}
+
+		.pb-hm-btn-gold:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 18px 30px -14px rgba(196, 139, 46, 0.95);
+		}
+
+		.pb-hm-btn-ghost {
+			border: 1.5px solid rgba(231, 201, 143, 0.55);
+			color: #f6eedf;
+		}
+
+		.pb-hm-btn-ghost:hover {
+			border-color: var(--pb-gold-soft);
+			background: rgba(231, 201, 143, 0.08);
+			transform: translateY(-2px);
+		}
+
+		.pb-hm-btn-dark {
+			background: var(--pb-espresso);
+			color: #fff;
+		}
+
+		.pb-hm-btn-dark:hover {
+			transform: translateY(-2px);
+			background: #241d14;
+		}
+
+		.pb-hm-btn-arrow {
+			transition: transform 0.2s ease;
+		}
+
+		.pb-hm-btn:hover .pb-hm-btn-arrow {
+			transform: translateX(4px);
+		}
+
+		.pb-hm-hero-trust {
+			list-style: none;
+			margin: 30px 0 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px 22px;
+			font-size: 14.5px;
+			color: #e6d9c2;
+		}
+
+		.pb-hm-hero-trust li {
+			display: inline-flex;
+			align-items: center;
+			gap: 9px;
+		}
+
+		.pb-hm-hero-visual {
+			position: relative;
+		}
+
+		.pb-hm-hero-frame {
+			position: relative;
+			border-radius: 22px;
+			overflow: hidden;
+			box-shadow: 0 40px 70px -30px rgba(0, 0, 0, 0.65);
+			aspect-ratio: 4 / 4.4;
+		}
+
+		.pb-hm-hero-img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+		}
+
+		.pb-hm-hero-frame-edge {
+			position: absolute;
+			inset: 14px;
+			border: 1.5px solid rgba(231, 201, 143, 0.5);
+			border-radius: 14px;
+			pointer-events: none;
+		}
+
+		.pb-hm-hero-badge {
+			position: absolute;
+			display: flex;
+			flex-direction: column;
+			background: var(--pb-paper);
+			color: var(--pb-ink);
+			padding: 12px 18px;
+			border-radius: 14px;
+			box-shadow: 0 20px 40px -18px rgba(0, 0, 0, 0.6);
+			border-left: 3px solid var(--pb-gold);
+		}
+
+		.pb-hm-hero-badge strong {
+			font-family: var(--pb-display);
+			font-size: 19px;
+			line-height: 1.2;
+		}
+
+		.pb-hm-hero-badge span {
+			font-size: 12.5px;
+			color: #6b5d49;
+		}
+
+		.pb-hm-hero-badge-top {
+			top: 26px;
+			left: -18px;
+			animation: pb-hm-badge-float 5.5s ease-in-out infinite;
+		}
+
+		.pb-hm-hero-badge-bottom {
+			bottom: 30px;
+			right: -14px;
+			animation: pb-hm-badge-float 6.5s ease-in-out 0.8s infinite;
+		}
+
+		@keyframes pb-hm-badge-float {
+			0%, 100% { transform: translateY(0); }
+			50% { transform: translateY(-9px); }
+		}
+
+		/* ------- slat curtain that lifts away on load ------- */
+		.pb-hm-hero-curtain {
+			position: absolute;
+			inset: 0;
+			z-index: 2;
+			display: flex;
+			flex-direction: column;
+			pointer-events: none;
+		}
+
+		.pb-hm-hero-curtain span {
+			flex: 1 1 0;
+			background: linear-gradient(180deg, #4a3a26, #332a1f);
+			border-bottom: 1px solid rgba(231, 201, 143, 0.22);
+			transform-origin: top;
+			animation: pb-hm-slat-lift 0.55s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+			animation-delay: calc(0.045s * var(--pb-slat-index, 0));
+			transform: scaleY(1);
+		}
+
+		.pb-hm-hero-curtain span:nth-child(1) { --pb-slat-index: 11; }
+		.pb-hm-hero-curtain span:nth-child(2) { --pb-slat-index: 10; }
+		.pb-hm-hero-curtain span:nth-child(3) { --pb-slat-index: 9; }
+		.pb-hm-hero-curtain span:nth-child(4) { --pb-slat-index: 8; }
+		.pb-hm-hero-curtain span:nth-child(5) { --pb-slat-index: 7; }
+		.pb-hm-hero-curtain span:nth-child(6) { --pb-slat-index: 6; }
+		.pb-hm-hero-curtain span:nth-child(7) { --pb-slat-index: 5; }
+		.pb-hm-hero-curtain span:nth-child(8) { --pb-slat-index: 4; }
+		.pb-hm-hero-curtain span:nth-child(9) { --pb-slat-index: 3; }
+		.pb-hm-hero-curtain span:nth-child(10) { --pb-slat-index: 2; }
+		.pb-hm-hero-curtain span:nth-child(11) { --pb-slat-index: 1; }
+		.pb-hm-hero-curtain span:nth-child(12) { --pb-slat-index: 0; }
+
+		@keyframes pb-hm-slat-lift {
+			to { transform: scaleY(0); opacity: 0; }
+		}
+
+		/* ----------------------------- marquee ----------------------------- */
+		.pb-hm-marquee {
+			position: relative;
+			background: linear-gradient(90deg, #f4ecdd 0%, #fbf7f0 50%, #f1e7d3 100%);
+			border-top: 1px solid var(--pb-line);
+			border-bottom: 1px solid var(--pb-line);
+			overflow: hidden;
+			padding: 14px 0;
+		}
+
+		.pb-hm-marquee-track {
+			display: flex;
+			align-items: center;
+			gap: 26px;
+			width: max-content;
+			animation: pb-hm-marquee-scroll 28s linear infinite;
+		}
+
+		.pb-hm-marquee-track span {
+			font-family: var(--pb-display);
+			font-size: 19px;
+			font-weight: 700;
+			letter-spacing: 0.06em;
+			color: var(--pb-espresso);
+			white-space: nowrap;
+		}
+
+		.pb-hm-marquee-track em {
+			width: 9px;
+			height: 9px;
+			border-radius: 50%;
+			background: var(--pb-gold);
+			flex: 0 0 auto;
+		}
+
+		@keyframes pb-hm-marquee-scroll {
+			from { transform: translateX(0); }
+			to { transform: translateX(-50%); }
+		}
+
+		/* ---------------------------- products ---------------------------- */
+		.pb-hm-products {
+			padding: 88px 0 70px;
+		}
+
+		.pb-hm-product-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 22px;
+		}
+
+		.pb-hm-product {
+			display: flex;
+			flex-direction: column;
+			text-decoration: none;
+			color: var(--pb-ink);
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-radius: 18px;
+			overflow: hidden;
+			transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+		}
+
+		.pb-hm-product:first-child {
+			grid-column: span 2;
+			grid-row: span 2;
+		}
+
+		.pb-hm-product:nth-child(6) {
+			grid-column: span 2;
+		}
+
+		.pb-hm-product:hover {
+			transform: translateY(-6px);
+			border-color: var(--pb-gold-soft);
+			box-shadow: 0 26px 44px -24px rgba(38, 32, 25, 0.55);
+		}
+
+		.pb-hm-product-media {
+			position: relative;
+			display: block;
+			overflow: hidden;
+			aspect-ratio: 4 / 3;
+		}
+
+		.pb-hm-product:first-child .pb-hm-product-media {
+			aspect-ratio: auto;
+			flex: 1 1 auto;
+			min-height: 300px;
+		}
+
+		.pb-hm-product-media img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+			transition: transform 0.5s ease;
+		}
+
+		.pb-hm-product:hover .pb-hm-product-media img {
+			transform: scale(1.06);
+		}
+
+		.pb-hm-product-shade {
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(180deg, transparent 55%, rgba(27, 22, 16, 0.72));
+		}
+
+		.pb-hm-product-go {
+			position: absolute;
+			left: 16px;
+			bottom: 12px;
+			color: var(--pb-gold-soft);
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			opacity: 0;
+			transform: translateY(8px);
+			transition: opacity 0.25s ease, transform 0.25s ease;
+		}
+
+		.pb-hm-product:hover .pb-hm-product-go {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.pb-hm-product-body {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			padding: 15px 17px 17px;
+		}
+
+		.pb-hm-product-name {
+			font-family: var(--pb-display);
+			font-size: 19px;
+			line-height: 1.25;
+			color: var(--pb-ink);
+		}
+
+		.pb-hm-product:first-child .pb-hm-product-name {
+			font-size: 24px;
+		}
+
+		.pb-hm-product-desc {
+			font-size: 13.5px;
+			color: #6b5d49;
+		}
+
+		/* --------------------------- light demo --------------------------- */
+		.pb-hm-light {
+			padding: 90px 0;
+			background:
+				radial-gradient(80% 120% at 100% 0%, rgba(196, 139, 46, 0.12), transparent 55%),
+				var(--pb-paper);
+			border-top: 1px solid var(--pb-line);
+			border-bottom: 1px solid var(--pb-line);
+		}
+
+		.pb-hm-light-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			align-items: center;
+			gap: 60px;
+		}
+
+		.pb-hm-light-text {
+			margin: 16px 0 0;
+			color: #6b5d49;
+			font-size: 16.5px;
+			max-width: 520px;
+		}
+
+		.pb-hm-light-hints {
+			display: flex;
+			gap: 10px;
+			margin-top: 20px;
+			flex-wrap: wrap;
+		}
+
+		.pb-hm-light-hint {
+			padding: 7px 14px;
+			border: 1px solid var(--pb-line);
+			border-radius: 999px;
+			font-size: 13px;
+			color: var(--pb-walnut);
+			background: var(--pb-cream);
+		}
+
+		.pb-hm-light-control {
+			margin-top: 28px;
+			max-width: 460px;
+		}
+
+		.pb-hm-light-label {
+			display: block;
+			font-weight: 700;
+			font-size: 14px;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			color: var(--pb-espresso);
+			margin-bottom: 10px;
+		}
+
+		.pb-hm-light-slider {
+			width: 100%;
+			accent-color: var(--pb-gold);
+			height: 26px;
+			cursor: pointer;
+		}
+
+		.pb-hm-light-readout {
+			margin: 8px 0 0;
+			font-size: 14.5px;
+			color: var(--pb-walnut);
+		}
+
+		.pb-hm-light-stage {
+			position: relative;
+			display: flex;
+			justify-content: center;
+		}
+
+		.pb-hm-light-window {
+			position: relative;
+			width: min(430px, 100%);
+			aspect-ratio: 16 / 11;
+			border: 12px solid var(--pb-espresso);
+			border-bottom-width: 18px;
+			border-radius: 12px;
+			overflow: hidden;
+			box-shadow: 0 34px 60px -28px rgba(38, 32, 25, 0.6);
+			background: #dce9f2;
+		}
+
+		.pb-hm-light-sky {
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(180deg, #a9cce6 0%, #dff0f7 55%, #f2e9d8 100%);
+		}
+
+		.pb-hm-light-sun {
+			position: absolute;
+			top: 12%;
+			left: 16%;
+			width: 64px;
+			height: 64px;
+			border-radius: 50%;
+			background: radial-gradient(circle, #fff7dc 0%, #ffd98a 60%, rgba(255, 217, 138, 0) 72%);
+		}
+
+		.pb-hm-light-glare {
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(180deg, rgba(255, 232, 170, 0.85), rgba(255, 214, 130, 0.55));
+			opacity: 0.45;
+			transition: opacity 0.15s linear;
+		}
+
+		.pb-hm-light-slats {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			flex-direction: column;
+			justify-content: space-evenly;
+			padding: 8% 0;
+			perspective: 700px;
+		}
+
+		.pb-hm-light-slats span {
+			height: 9%;
+			min-height: 9px;
+			background: linear-gradient(180deg, #f6efe3, #d9cbb2);
+			border-radius: 2px;
+			box-shadow: 0 3px 6px rgba(38, 32, 25, 0.3);
+			transform: rotateX(var(--pb-slat-tilt, 45deg));
+			transform-origin: center;
+			transition: transform 0.15s linear;
+		}
+
+		.pb-hm-light-sill {
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			height: 6%;
+			background: linear-gradient(180deg, #e8dcc3, #c9b892);
+		}
+
+		.pb-hm-light-cord {
+			position: absolute;
+			right: -26px;
+			top: 0;
+			bottom: 0;
+			width: 3px;
+			background: repeating-linear-gradient(180deg, #d9cbb2 0 8px, #a08c66 8px 16px);
+			border-radius: 3px;
+			transform: rotate(4deg);
+		}
+
+		/* ------------------------------ why ------------------------------ */
+		.pb-hm-why {
+			padding: 88px 0;
+		}
+
+		.pb-hm-why-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 20px;
+		}
+
+		.pb-hm-why-card {
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-radius: 18px;
+			padding: 26px 24px;
+			position: relative;
+			overflow: hidden;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.pb-hm-why-card::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 4px;
+			height: 0;
+			background: linear-gradient(180deg, var(--pb-gold), var(--pb-gold-deep));
+			transition: height 0.35s ease;
+		}
+
+		.pb-hm-why-card:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 24px 40px -24px rgba(38, 32, 25, 0.5);
+		}
+
+		.pb-hm-why-card:hover::before {
+			height: 100%;
+		}
+
+		.pb-hm-why-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 52px;
+			height: 52px;
+			border-radius: 14px;
+			background: var(--pb-cream);
+			border: 1px solid var(--pb-line);
+			color: var(--pb-gold-deep);
+			margin-bottom: 16px;
+		}
+
+		.pb-hm-why-icon svg {
+			width: 26px;
+			height: 26px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.pb-hm-why-title {
+			margin: 0 0 8px;
+			font-family: var(--pb-display);
+			font-size: 20px;
+			line-height: 1.3;
+		}
+
+		.pb-hm-why-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: #6b5d49;
+		}
+
+		/* ---------------------------- showcase ---------------------------- */
+		.pb-hm-showcase {
+			padding: 90px 0;
+			background:
+				repeating-linear-gradient(90deg, rgba(196, 139, 46, 0.05) 0 1px, transparent 1px 46px),
+				var(--pb-paper);
+			border-top: 1px solid var(--pb-line);
+			border-bottom: 1px solid var(--pb-line);
+		}
+
+		.pb-hm-showcase-grid {
+			display: grid;
+			grid-template-columns: 0.95fr 1.05fr;
+			align-items: center;
+			gap: 64px;
+		}
+
+		.pb-hm-showcase-visual {
+			position: relative;
+		}
+
+		.pb-hm-showcase-bg {
+			position: absolute;
+			inset: 8% -6% -6% 8%;
+			background:
+				radial-gradient(120% 100% at 0% 100%, rgba(196, 139, 46, 0.35), transparent 60%),
+				linear-gradient(140deg, var(--pb-sand), #e2d3b6);
+			border-radius: 26px;
+		}
+
+		.pb-hm-showcase-img {
+			position: relative;
+			display: block;
+			width: 100%;
+			height: auto;
+			border-radius: 20px;
+			filter: drop-shadow(0 30px 40px rgba(38, 32, 25, 0.28));
+		}
+
+		.pb-hm-showcase-text {
+			margin: 16px 0 0;
+			color: #6b5d49;
+			font-size: 16.5px;
+		}
+
+		.pb-hm-showcase-list {
+			list-style: none;
+			margin: 22px 0 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.pb-hm-showcase-list li {
+			display: flex;
+			align-items: center;
+			gap: 11px;
+			font-weight: 600;
+			font-size: 15.5px;
+			color: var(--pb-espresso);
+		}
+
+		.pb-hm-showcase-actions {
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 22px;
+			margin-top: 30px;
+		}
+
+		.pb-hm-text-link {
+			color: var(--pb-gold-deep);
+			font-weight: 700;
+			font-size: 15px;
+			text-decoration: none;
+		}
+
+		.pb-hm-text-link:hover {
+			color: var(--pb-ink);
+		}
+
+		/* --------------------------- service area --------------------------- */
+		.pb-hm-area {
+			position: relative;
+			padding: 110px 0;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.pb-hm-area-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+
+		.pb-hm-area-overlay {
+			position: absolute;
+			inset: 0;
+			z-index: -1;
+			background: linear-gradient(100deg, rgba(27, 22, 16, 0.92) 0%, rgba(27, 22, 16, 0.72) 55%, rgba(27, 22, 16, 0.35) 100%);
+		}
+
+		.pb-hm-area-inner {
+			display: flex;
+			justify-content: flex-start;
+		}
+
+		.pb-hm-area-copy {
+			max-width: 600px;
+		}
+
+		.pb-hm-area-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-size: clamp(28px, 3.6vw, 42px);
+			line-height: 1.15;
+			color: #fff;
+		}
+
+		.pb-hm-area-text {
+			margin: 14px 0 0;
+			color: #e6d9c2;
+			font-size: 16.5px;
+		}
+
+		.pb-hm-area-chips {
+			list-style: none;
+			margin: 22px 0 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+		}
+
+		.pb-hm-area-chips li {
+			padding: 8px 16px;
+			border: 1px solid rgba(231, 201, 143, 0.5);
+			border-radius: 999px;
+			color: #f6eedf;
+			font-size: 14px;
+			background: rgba(231, 201, 143, 0.08);
+			backdrop-filter: blur(4px);
+		}
+
+		.pb-hm-area .pb-hm-btn {
+			margin-top: 28px;
+		}
+
+		/* ---------------------------- quote form ---------------------------- */
+		.pb-hm-quote {
+			padding: 90px 0;
+		}
+
+		.pb-hm-quote-grid {
+			display: grid;
+			grid-template-columns: 0.9fr 1.1fr;
+			gap: 56px;
+			align-items: start;
+		}
+
+		.pb-hm-quote-text {
+			margin: 16px 0 0;
+			color: #6b5d49;
+			font-size: 16.5px;
+		}
+
+		.pb-hm-quote-contacts {
+			display: flex;
+			flex-direction: column;
+			gap: 14px;
+			margin-top: 26px;
+		}
+
+		.pb-hm-quote-contact {
+			display: grid;
+			grid-template-columns: 46px auto;
+			grid-template-rows: auto auto;
+			column-gap: 14px;
+			align-items: center;
+			text-decoration: none;
+			color: var(--pb-ink);
+		}
+
+		.pb-hm-quote-contact-icon {
+			grid-row: span 2;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 46px;
+			height: 46px;
+			border-radius: 12px;
+			background: var(--pb-cream);
+			border: 1px solid var(--pb-line);
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-hm-quote-contact-icon svg {
+			width: 22px;
+			height: 22px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.pb-hm-quote-contact strong {
+			font-size: 16px;
+			line-height: 1.3;
+		}
+
+		.pb-hm-quote-contact span {
+			font-size: 13px;
+			color: #6b5d49;
+		}
+
+		.pb-hm-quote-form-card {
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-top: 4px solid var(--pb-gold);
+			border-radius: 20px;
+			padding: 30px;
+			box-shadow: 0 30px 55px -30px rgba(38, 32, 25, 0.45);
+		}
+
+		.pb-hm-form-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 16px;
+		}
+
+		.pb-hm-field {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+		}
+
+		.pb-hm-field-wide {
+			margin-top: 16px;
+		}
+
+		.pb-hm-field-label {
+			font-size: 13.5px;
+			font-weight: 700;
+			color: var(--pb-espresso);
+		}
+
+		.pb-hm-field-label em {
+			font-style: normal;
+			font-weight: 400;
+			color: #9a8a6e;
+			font-size: 12px;
+		}
+
+		.pb-hm-field input,
+		.pb-hm-field select,
+		.pb-hm-field textarea {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--pb-line);
+			border-radius: 10px;
+			background: #fff;
+			font-family: inherit;
+			font-size: 15px;
+			color: var(--pb-ink);
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.pb-hm-field textarea {
+			resize: vertical;
+		}
+
+		.pb-hm-field input:focus,
+		.pb-hm-field select:focus,
+		.pb-hm-field textarea:focus {
+			outline: none;
+			border-color: var(--pb-gold);
+			box-shadow: 0 0 0 3px rgba(196, 139, 46, 0.18);
+		}
+
+		.pb-hm-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+
+		.pb-hm-form-actions {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			margin-top: 22px;
+			flex-wrap: wrap;
+		}
+
+		.pb-hm-submit {
+			padding: 14px 28px;
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			border: 0;
+			border-radius: 999px;
+			font-family: inherit;
+			font-size: 15.5px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			cursor: pointer;
+			box-shadow: 0 14px 26px -14px rgba(196, 139, 46, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.pb-hm-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.pb-hm-form.gw-busy .pb-hm-submit {
+			opacity: 0.65;
+			cursor: wait;
+		}
+
+		.pb-hm-form-status:empty {
+			display: none;
+		}
+
+		.pb-hm-form-status {
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.pb-hm-form-status.is-ok {
+			color: #2f7d4f;
+		}
+
+		.pb-hm-form-status.is-error {
+			color: #b3422e;
+		}
+
+		.pb-hm-form-consent {
+			margin: 14px 0 0;
+			font-size: 12.5px;
+			color: #9a8a6e;
+		}
+
+		/* ------------------------------- faq ------------------------------- */
+		.pb-hm-faq {
+			padding: 0 0 96px;
+		}
+
+		.pb-hm-faq-wrap {
+			max-width: 860px;
+		}
+
+		.pb-hm-faq-list {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.pb-hm-faq-item {
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-radius: 14px;
+			overflow: hidden;
+			transition: border-color 0.2s ease;
+		}
+
+		.pb-hm-faq-item[open] {
+			border-color: var(--pb-gold-soft);
+		}
+
+		.pb-hm-faq-question {
+			padding: 18px 22px;
+			font-weight: 700;
+			font-size: 16px;
+			cursor: pointer;
+			list-style: none;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+		}
+
+		.pb-hm-faq-question::-webkit-details-marker {
+			display: none;
+		}
+
+		.pb-hm-faq-question::after {
+			content: '+';
+			font-size: 22px;
+			color: var(--pb-gold-deep);
+			transition: transform 0.25s ease;
+			flex: 0 0 auto;
+		}
+
+		.pb-hm-faq-item[open] .pb-hm-faq-question::after {
+			transform: rotate(45deg);
+		}
+
+		.pb-hm-faq-answer {
+			margin: 0;
+			padding: 0 22px 20px;
+			color: #6b5d49;
+			font-size: 15px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.pb-hm-reveal {
+			opacity: 0;
+			transform: translateY(26px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.pb-hm-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.pb-home.is-reduced-motion .pb-hm-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		.pb-home.is-reduced-motion .pb-hm-hero-curtain {
+			display: none;
+		}
+
+		.pb-home.is-reduced-motion .pb-hm-marquee-track,
+		.pb-home.is-reduced-motion .pb-hm-hero-badge {
+			animation: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.pb-hm-hero-grid {
+				grid-template-columns: 1fr;
+				gap: 44px;
+			}
+
+			.pb-hm-hero {
+				padding: 64px 0 80px;
+			}
+
+			.pb-hm-product-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.pb-hm-product:first-child {
+				grid-column: span 1;
+				grid-row: span 1;
+			}
+
+			.pb-hm-product:first-child .pb-hm-product-media {
+				aspect-ratio: 4 / 3;
+				min-height: 0;
+				flex: none;
+			}
+
+			.pb-hm-product:nth-child(6) {
+				grid-column: span 1;
+			}
+
+			.pb-hm-why-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.pb-hm-light-grid,
+			.pb-hm-showcase-grid,
+			.pb-hm-quote-grid {
+				grid-template-columns: 1fr;
+				gap: 44px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.pb-hm-product-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.pb-hm-form-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.pb-hm-why-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.pb-hm-hero-trust {
+				flex-direction: column;
+				gap: 9px;
+			}
+
+			.pb-hm-hero-badge-top {
+				left: 8px;
+			}
+
+			.pb-hm-hero-badge-bottom {
+				right: 8px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.pb-home');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-pb-home-ready') === '1') { return; }
+			pageRoot.setAttribute('data-pb-home-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- quote form (public form contract) ----------------
+			   One POST of JSON to the CMS public form endpoint, then read the
+			   status and show a message. There is no second call and no read
+			   access. While the endpoint is still a placeholder the page falls
+			   back to the platform bind, and in a local preview it says the
+			   service is not connected instead of losing what the visitor typed. */
+			var formApiEndpoint = 'https://polarisblindsca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'polaris-quote-request-forms-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					var fieldType = field.type;
+					if (!field.name || field.disabled) { return; }
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+					if (fieldType === 'checkbox') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+						return;
+					}
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm(form) {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				/* an empty value or an unreplaced placeholder means "not configured" */
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm(form) {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this request. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@polarisblinds.ca.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@polarisblinds.ca.';
+			}
+
+			function sendFormToApi(form, endpoint) {
+				var values = collectFormValues(form);
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm(form);
+				var submitButton = form.querySelector('[type="submit"]');
+
+				/* the honeypot travels at the root of the payload, never inside values */
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (parseError) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(form, formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					setFormStatus(form, 'Thank you. Your request is with us and we will get back to you soon.', 'ok');
+				}).catch(function () {
+					setFormStatus(form, formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (forms.length) {
+				var platform = window.gw;
+				var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+				if (usesApi) {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							var endpoint = endpointForForm(form);
+							if (!endpoint || form.classList.contains('gw-busy')) { return; }
+							sendFormToApi(form, endpoint);
+						});
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(pageRoot);
+				} else {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							setFormStatus(form, 'The form service is not connected in this preview.');
+						});
+					});
+				}
+			}
+
+			/* ---------------- light control demo ---------------- */
+			var lightWindow = pageRoot.querySelector('#pb-hm-light-window');
+			var lightSlider = pageRoot.querySelector('#pb-hm-light-slider');
+			var lightReadout = pageRoot.querySelector('#pb-hm-light-readout');
+
+			if (lightWindow && lightSlider) {
+				function applyLightTilt(tiltValue) {
+					var tiltNumber = Number(tiltValue);
+					/* slats hang at 90 (open) and close down to 0 */
+					var slatAngle = 90 - tiltNumber * 0.9;
+					lightWindow.style.setProperty('--pb-slat-tilt', slatAngle + 'deg');
+
+					var glare = lightWindow.querySelector('.pb-hm-light-glare');
+					if (glare) {
+						glare.style.opacity = String(0.05 + tiltNumber * 0.008);
+					}
+
+					if (lightReadout) {
+						if (tiltNumber <= 15) {
+							lightReadout.textContent = 'Closed tight - a calm, dim room';
+						} else if (tiltNumber <= 45) {
+							lightReadout.textContent = 'Half open - a soft, balanced glow';
+						} else if (tiltNumber <= 80) {
+							lightReadout.textContent = 'Mostly open - daylight fills the room';
+						} else {
+							lightReadout.textContent = 'Wide open - the full view, nothing in the way';
+						}
+					}
+				}
+
+				lightSlider.addEventListener('input', function (event) {
+					applyLightTilt(event.target.value);
+				});
+
+				applyLightTilt(lightSlider.value);
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.pb-hm-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

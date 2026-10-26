@@ -1,0 +1,934 @@
+<!--
+  =========================================================================
+  CONTACT US - fragment for the Polaris Blinds website (route /contact-us)
+  - One parent <div class="pb-page pb-contact"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .pb-contact so nothing leaks
+  - The form follows the platform contract: <form data-gw-form>, a hidden
+    honeypot named "gw_hp", a [data-gw-form-status] live region, and a submit
+    handler that POSTs once to the CMS public form endpoint
+  - SEO for the CMS page object (slug "contact-us"): title "Contact Polaris
+    Blinds - Calgary Blinds, Free Estimate", description "Contact Polaris
+    Blinds in Calgary for a free in-home consultation, samples and a clear
+    quote. Call +1 403 612 1636 or send us a message."
+  =========================================================================
+-->
+<div class="pb-page pb-contact">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="pb-ct-hero">
+		<div class="pb-ct-hero-bar" aria-hidden="true"></div>
+		<div class="pb-ct-wrap pb-ct-hero-inner">
+			<p class="pb-ct-kicker pb-ct-kicker-light">Contact us</p>
+			<h1 class="pb-ct-hero-title">Let's dress your windows<br><span class="pb-ct-hero-title-accent">together</span></h1>
+			<p class="pb-ct-hero-lede">
+				Questions about a product, a measure, or a project? Send us a message and we will get back to
+				you. Prefer to talk it through right away? Call us.
+			</p>
+			<ul class="pb-ct-hero-pills">
+				<li>Free consultation</li>
+				<li>Calgary and area</li>
+				<li>Samples brought to you</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- ========================= CONTACT + FORM ========================= -->
+	<section class="pb-ct-main">
+		<div class="pb-ct-wrap pb-ct-main-grid">
+			<div class="pb-ct-form-col">
+				<div class="pb-ct-sec-head pb-ct-reveal">
+					<p class="pb-ct-kicker">Send a message</p>
+					<h2 class="pb-ct-sec-title">Tell us what you need</h2>
+					<p class="pb-ct-sec-sub">Everything goes to the same inbox, so nothing gets lost. We reply
+						to every message.</p>
+				</div>
+
+				<form class="pb-ct-form pb-ct-reveal" data-gw-form data-gw-form-type="contact-message"
+					data-gw-cms-object-type="polaris-contact-us-forms-uniconbaseapps">
+					<div class="pb-ct-form-fields">
+						<label class="pb-ct-field">
+							<span class="pb-ct-field-label">Your name <em>required</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="pb-ct-field">
+							<span class="pb-ct-field-label">Email <em>required</em></span>
+							<input type="email" name="email" autocomplete="email" required>
+						</label>
+						<label class="pb-ct-field">
+							<span class="pb-ct-field-label">Phone <em>required</em></span>
+							<input type="tel" name="phone" autocomplete="tel" required>
+						</label>
+						<label class="pb-ct-field">
+							<span class="pb-ct-field-label">What is this about?</span>
+							<select name="topic">
+								<option value="estimate">A free estimate</option>
+								<option value="product">A question about a product</option>
+								<option value="installation">Measure and installation</option>
+								<option value="appointment">Book an appointment</option>
+								<option value="something-else">Something else</option>
+							</select>
+						</label>
+					</div>
+					<label class="pb-ct-field pb-ct-field-wide">
+						<span class="pb-ct-field-label">Your message <em>required</em></span>
+						<textarea name="message" rows="5" required></textarea>
+					</label>
+
+					<!-- honeypot: hidden from view and from screen readers, never a real field -->
+					<input class="pb-ct-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+						aria-hidden="true">
+
+					<div class="pb-ct-form-actions">
+						<button class="pb-ct-submit" type="submit">Send message</button>
+						<div class="pb-ct-form-status" data-gw-form-status role="status"></div>
+					</div>
+					<p class="pb-ct-form-consent">We use these details only to answer you and arrange your
+						visit. We do not pass them to anyone else.</p>
+				</form>
+			</div>
+
+			<aside class="pb-ct-side pb-ct-reveal">
+				<p class="pb-ct-kicker">Reach us directly</p>
+				<h3 class="pb-ct-side-title">Prefer to talk or write?</h3>
+
+				<div class="pb-ct-side-cards">
+					<a class="pb-ct-side-card" href="tel:+14036121636">
+						<span class="pb-ct-side-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></svg>
+						</span>
+						<strong>+1 403 612 1636</strong>
+						<span>Call us for a quick answer</span>
+					</a>
+					<a class="pb-ct-side-card" href="mailto:info@polarisblinds.ca">
+						<span class="pb-ct-side-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></svg>
+						</span>
+						<strong>info@polarisblinds.ca</strong>
+						<span>Write to us any time</span>
+					</a>
+					<a class="pb-ct-side-card" href="https://www.instagram.com/polaris_blinds" target="_blank" rel="noopener">
+						<span class="pb-ct-side-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></svg>
+						</span>
+						<strong>@polaris_blinds</strong>
+						<span>Follow our work on Instagram</span>
+					</a>
+				</div>
+
+				<div class="pb-ct-side-areas">
+					<p class="pb-ct-side-areas-head">Serving</p>
+					<p class="pb-ct-side-areas-text">Calgary, Airdrie, Chestermere, Cochrane, Okotoks, High
+						River and Strathmore.</p>
+				</div>
+			</aside>
+		</div>
+	</section>
+
+	<!-- ========================= WHAT HAPPENS NEXT ======================== -->
+	<section class="pb-ct-next">
+		<div class="pb-ct-wrap">
+			<div class="pb-ct-sec-head pb-ct-reveal">
+				<p class="pb-ct-kicker">What happens next</p>
+				<h2 class="pb-ct-sec-title">Three easy steps</h2>
+			</div>
+
+			<div class="pb-ct-next-grid">
+				<article class="pb-ct-next-step pb-ct-reveal">
+					<span class="pb-ct-next-num" aria-hidden="true">1</span>
+					<h3 class="pb-ct-next-title">You reach out</h3>
+					<p class="pb-ct-next-text">Send the form, call, or write an email. Tell us roughly what you
+						are after - or just that you are not sure yet.</p>
+				</article>
+				<article class="pb-ct-next-step pb-ct-reveal">
+					<span class="pb-ct-next-num" aria-hidden="true">2</span>
+					<h3 class="pb-ct-next-title">We talk and measure</h3>
+					<p class="pb-ct-next-text">We call you back, and if you like, visit your home with samples
+						to measure the windows - free of charge.</p>
+				</article>
+				<article class="pb-ct-next-step pb-ct-reveal">
+					<span class="pb-ct-next-num" aria-hidden="true">3</span>
+					<h3 class="pb-ct-next-title">You get a clear quote</h3>
+					<p class="pb-ct-next-text">You receive a clear quote and a fitting date. You decide - there
+						is never any obligation.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================== SERVICE AREA =========================== -->
+	<section class="pb-ct-area">
+		<img class="pb-ct-area-bg" loading="lazy" decoding="async"
+			src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCMS_CONTENT%2FMEDIA%2F150-media-library-XLC9Z6-polarblinds%2F2024-05-27-A9NXXTK4T7-polarblinds%2FcontentImage-1716845257040-background-calgary.jpg?alt=media&amp;token=6deade98-9c0e-4bbb-a921-8bfef9987ab5"
+			alt="Calgary skyline at golden hour" width="2400" height="800">
+		<div class="pb-ct-area-overlay" aria-hidden="true"></div>
+		<div class="pb-ct-wrap pb-ct-area-inner pb-ct-reveal">
+			<p class="pb-ct-kicker pb-ct-kicker-light">Areas we proudly serve</p>
+			<h2 class="pb-ct-area-title">Calgary and the towns around it</h2>
+			<ul class="pb-ct-area-chips">
+				<li>Calgary</li>
+				<li>Airdrie</li>
+				<li>Chestermere</li>
+				<li>Cochrane</li>
+				<li>Okotoks</li>
+				<li>High River</li>
+				<li>Strathmore</li>
+			</ul>
+			<a class="pb-ct-btn pb-ct-btn-gold" href="tel:+14036121636">
+				Make your appointment now <span aria-hidden="true">&rarr;</span>
+			</a>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.pb-contact {
+			--pb-cream: #faf6ef;
+			--pb-paper: #fffdf8;
+			--pb-sand: #efe5d3;
+			--pb-ink: #262019;
+			--pb-espresso: #332a1f;
+			--pb-walnut: #6f4e2e;
+			--pb-gold: #c48b2e;
+			--pb-gold-deep: #a5711f;
+			--pb-gold-soft: #e7c98f;
+			--pb-line: #e6d9c2;
+			--pb-display: Georgia, 'Times New Roman', serif;
+			position: relative;
+			width: 100%;
+			background: var(--pb-cream);
+			color: var(--pb-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.pb-contact,
+		.pb-contact *,
+		.pb-contact *::before,
+		.pb-contact *::after {
+			box-sizing: border-box;
+		}
+
+		.pb-contact img {
+			max-width: 100%;
+		}
+
+		.pb-ct-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.pb-ct-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-ct-kicker-light {
+			color: var(--pb-gold-soft);
+		}
+
+		.pb-ct-sec-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-size: clamp(25px, 3.2vw, 38px);
+			line-height: 1.15;
+			font-weight: 700;
+		}
+
+		.pb-ct-sec-sub {
+			margin: 12px 0 0;
+			max-width: 620px;
+			color: #6b5d49;
+			font-size: 16px;
+		}
+
+		.pb-ct-sec-head {
+			margin-bottom: 30px;
+		}
+
+		.pb-ct-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 13px 24px;
+			border-radius: 999px;
+			font-weight: 700;
+			font-size: 15px;
+			letter-spacing: 0.02em;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.pb-ct-btn-gold {
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			box-shadow: 0 14px 26px -14px rgba(165, 113, 31, 0.85);
+		}
+
+		.pb-ct-btn-gold:hover {
+			transform: translateY(-2px);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.pb-ct-hero {
+			position: relative;
+			padding: 76px 0 88px;
+			background:
+				radial-gradient(90% 120% at 100% 0%, rgba(196, 139, 46, 0.3), transparent 55%),
+				linear-gradient(150deg, #332a1f, #1b1610);
+			color: #f6eedf;
+			overflow: hidden;
+		}
+
+		.pb-ct-hero::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.016) 0 2px, transparent 2px 44px);
+			pointer-events: none;
+		}
+
+		/* signature: a golden rail line draws itself along the top */
+		.pb-ct-hero-bar {
+			position: absolute;
+			top: 0;
+			left: 0;
+			height: 6px;
+			width: 100%;
+			background: linear-gradient(90deg, var(--pb-gold-soft), var(--pb-gold));
+			transform-origin: left;
+			animation: pb-ct-rail-draw 1.2s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+		}
+
+		@keyframes pb-ct-rail-draw {
+			from { transform: scaleX(0); }
+			to { transform: scaleX(1); }
+		}
+
+		.pb-ct-hero-inner {
+			max-width: 760px;
+		}
+
+		.pb-ct-hero-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-weight: 700;
+			font-size: clamp(32px, 4.4vw, 54px);
+			line-height: 1.1;
+			color: #fff;
+		}
+
+		.pb-ct-hero-title-accent {
+			color: var(--pb-gold-soft);
+			font-style: italic;
+		}
+
+		.pb-ct-hero-lede {
+			margin: 18px 0 0;
+			font-size: 16.5px;
+			color: #e6d9c2;
+			max-width: 580px;
+		}
+
+		.pb-ct-hero-pills {
+			list-style: none;
+			margin: 22px 0 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+		}
+
+		.pb-ct-hero-pills li {
+			padding: 8px 16px;
+			border: 1px solid rgba(231, 201, 143, 0.5);
+			border-radius: 999px;
+			font-size: 14px;
+			background: rgba(231, 201, 143, 0.08);
+		}
+
+		/* ------------------------------ main ------------------------------ */
+		.pb-ct-main {
+			padding: 80px 0 40px;
+		}
+
+		.pb-ct-main-grid {
+			display: grid;
+			grid-template-columns: 1.15fr 0.85fr;
+			gap: 54px;
+			align-items: start;
+		}
+
+		.pb-ct-form {
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-top: 4px solid var(--pb-gold);
+			border-radius: 20px;
+			padding: 28px;
+			box-shadow: 0 30px 55px -30px rgba(38, 32, 25, 0.45);
+		}
+
+		.pb-ct-form-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 15px;
+		}
+
+		.pb-ct-field {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+		}
+
+		.pb-ct-field-wide {
+			margin-top: 15px;
+		}
+
+		.pb-ct-field-label {
+			font-size: 13.5px;
+			font-weight: 700;
+			color: var(--pb-espresso);
+		}
+
+		.pb-ct-field-label em {
+			font-style: normal;
+			font-weight: 400;
+			color: #9a8a6e;
+			font-size: 12px;
+		}
+
+		.pb-ct-field input,
+		.pb-ct-field select,
+		.pb-ct-field textarea {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--pb-line);
+			border-radius: 10px;
+			background: #fff;
+			font-family: inherit;
+			font-size: 15px;
+			color: var(--pb-ink);
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.pb-ct-field textarea {
+			resize: vertical;
+		}
+
+		.pb-ct-field input:focus,
+		.pb-ct-field select:focus,
+		.pb-ct-field textarea:focus {
+			outline: none;
+			border-color: var(--pb-gold);
+			box-shadow: 0 0 0 3px rgba(196, 139, 46, 0.18);
+		}
+
+		.pb-ct-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+
+		.pb-ct-form-actions {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			margin-top: 20px;
+			flex-wrap: wrap;
+		}
+
+		.pb-ct-submit {
+			padding: 13px 26px;
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			border: 0;
+			border-radius: 999px;
+			font-family: inherit;
+			font-size: 15px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			cursor: pointer;
+			box-shadow: 0 14px 26px -14px rgba(165, 113, 31, 0.9);
+			transition: transform 0.2s ease;
+		}
+
+		.pb-ct-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.pb-ct-form.gw-busy .pb-ct-submit {
+			opacity: 0.65;
+			cursor: wait;
+		}
+
+		.pb-ct-form-status:empty {
+			display: none;
+		}
+
+		.pb-ct-form-status {
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.pb-ct-form-status.is-ok {
+			color: #2f7d4f;
+		}
+
+		.pb-ct-form-status.is-error {
+			color: #b3422e;
+		}
+
+		.pb-ct-form-consent {
+			margin: 14px 0 0;
+			font-size: 12.5px;
+			color: #9a8a6e;
+		}
+
+		/* ------------------------------ side ------------------------------ */
+		.pb-ct-side-title {
+			margin: 0 0 20px;
+			font-family: var(--pb-display);
+			font-size: 22px;
+			line-height: 1.3;
+		}
+
+		.pb-ct-side-cards {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.pb-ct-side-card {
+			display: grid;
+			grid-template-columns: 46px auto;
+			grid-template-rows: auto auto;
+			column-gap: 14px;
+			align-items: center;
+			text-decoration: none;
+			color: var(--pb-ink);
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-radius: 14px;
+			padding: 16px;
+			transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.pb-ct-side-card:hover {
+			border-color: var(--pb-gold-soft);
+			transform: translateY(-3px);
+			box-shadow: 0 18px 30px -20px rgba(38, 32, 25, 0.45);
+		}
+
+		.pb-ct-side-icon {
+			grid-row: span 2;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 46px;
+			height: 46px;
+			border-radius: 12px;
+			background: var(--pb-cream);
+			border: 1px solid var(--pb-line);
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-ct-side-icon svg {
+			width: 22px;
+			height: 22px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.pb-ct-side-card strong {
+			font-size: 15.5px;
+			line-height: 1.3;
+		}
+
+		.pb-ct-side-card span {
+			font-size: 13px;
+			color: #6b5d49;
+		}
+
+		.pb-ct-side-areas {
+			margin-top: 22px;
+			background:
+				radial-gradient(100% 140% at 100% 0%, rgba(196, 139, 46, 0.14), transparent 60%),
+				var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-radius: 14px;
+			padding: 18px;
+		}
+
+		.pb-ct-side-areas-head {
+			margin: 0 0 6px;
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--pb-gold-deep);
+		}
+
+		.pb-ct-side-areas-text {
+			margin: 0;
+			font-size: 14px;
+			color: #6b5d49;
+		}
+
+		/* ------------------------------ next steps ------------------------------ */
+		.pb-ct-next {
+			padding: 50px 0 90px;
+		}
+
+		.pb-ct-next-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 20px;
+		}
+
+		.pb-ct-next-step {
+			position: relative;
+			background: var(--pb-paper);
+			border: 1px solid var(--pb-line);
+			border-radius: 18px;
+			padding: 28px 24px 28px 88px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.pb-ct-next-step:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 22px 36px -22px rgba(38, 32, 25, 0.5);
+		}
+
+		.pb-ct-next-num {
+			position: absolute;
+			left: 22px;
+			top: 28px;
+			width: 48px;
+			height: 48px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 50%;
+			background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+			color: #fff;
+			font-family: var(--pb-display);
+			font-size: 20px;
+			font-weight: 700;
+		}
+
+		.pb-ct-next-title {
+			margin: 0 0 7px;
+			font-family: var(--pb-display);
+			font-size: 20px;
+			line-height: 1.3;
+		}
+
+		.pb-ct-next-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: #6b5d49;
+		}
+
+		/* ---------------------------- service area ---------------------------- */
+		.pb-ct-area {
+			position: relative;
+			padding: 96px 0;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.pb-ct-area-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+
+		.pb-ct-area-overlay {
+			position: absolute;
+			inset: 0;
+			z-index: -1;
+			background: linear-gradient(100deg, rgba(27, 22, 16, 0.9) 0%, rgba(27, 22, 16, 0.7) 55%, rgba(27, 22, 16, 0.35) 100%);
+		}
+
+		.pb-ct-area-inner {
+			max-width: 640px;
+		}
+
+		.pb-ct-area-title {
+			margin: 0;
+			font-family: var(--pb-display);
+			font-size: clamp(26px, 3.4vw, 38px);
+			line-height: 1.15;
+			color: #fff;
+		}
+
+		.pb-ct-area-chips {
+			list-style: none;
+			margin: 20px 0 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+		}
+
+		.pb-ct-area-chips li {
+			padding: 8px 16px;
+			border: 1px solid rgba(231, 201, 143, 0.5);
+			border-radius: 999px;
+			color: #f6eedf;
+			font-size: 14px;
+			background: rgba(231, 201, 143, 0.08);
+			backdrop-filter: blur(4px);
+		}
+
+		.pb-ct-area .pb-ct-btn {
+			margin-top: 26px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.pb-ct-reveal {
+			opacity: 0;
+			transform: translateY(24px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.pb-ct-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.pb-contact.is-reduced-motion .pb-ct-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		.pb-contact.is-reduced-motion .pb-ct-hero-bar {
+			animation: none;
+			transform: scaleX(1);
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.pb-ct-main-grid {
+				grid-template-columns: 1fr;
+				gap: 40px;
+			}
+
+			.pb-ct-next-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.pb-ct-form-fields {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.pb-contact');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-pb-contact-ready') === '1') { return; }
+			pageRoot.setAttribute('data-pb-contact-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- contact form (public form contract) ---------------- */
+			var formApiEndpoint = 'https://polarisblindsca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'polaris-contact-us-forms-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					var fieldType = field.type;
+					if (!field.name || field.disabled) { return; }
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+					if (fieldType === 'checkbox') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+						return;
+					}
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm(form) {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm(form) {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this message. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@polarisblinds.ca.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@polarisblinds.ca.';
+			}
+
+			function sendFormToApi(form, endpoint) {
+				var values = collectFormValues(form);
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm(form);
+				var submitButton = form.querySelector('[type="submit"]');
+
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (parseError) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(form, formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					setFormStatus(form, 'Thank you. Your message is with us and we will get back to you soon.', 'ok');
+				}).catch(function () {
+					setFormStatus(form, formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (forms.length) {
+				var platform = window.gw;
+				var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+				if (usesApi) {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							var endpoint = endpointForForm(form);
+							if (!endpoint || form.classList.contains('gw-busy')) { return; }
+							sendFormToApi(form, endpoint);
+						});
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(pageRoot);
+				} else {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							setFormStatus(form, 'The form service is not connected in this preview.');
+						});
+					});
+				}
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.pb-ct-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>
