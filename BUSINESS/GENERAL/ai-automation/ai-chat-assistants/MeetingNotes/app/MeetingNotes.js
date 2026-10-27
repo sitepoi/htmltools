@@ -1,4 +1,4 @@
-/* js build 2026-10-19-1 */
+/* js build 2026-10-26-1 */
 // ── Meeting Notes - meeting minutes tool for the UniconHub CMS html-tool system ──
 // Class prefix mtn-. Everything is stored in tool.setValue() (no requestObjects).
 // Value shape:
@@ -10,7 +10,7 @@
   'use strict'
 
   // ── tool build (shown in the header badge + boot log) ──
-  var TOOL_BUILD = '2026-10-19-1'
+  var TOOL_BUILD = '2026-10-26-1'
   console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...')
 
   // ── small helpers ──
@@ -772,6 +772,7 @@
 
   // ── per-subject timer + progress bar (Meeting Mode) ──
   var _timerState = {}
+  var _resetTimeArmed = 0
   function timerStateFor(subjectId) {
     if (!_timerState[subjectId]) {
       var subject = subjectById(subjectId)
@@ -908,7 +909,8 @@
       (canWrite()
         ? '<div class="mtn-proj-timer-controls">' +
           '<button type="button" class="mtn-btn mtn-btn-soft" data-act="timer-start" id="mtn-proj-timer-start">' + (state.running ? 'Pause' : 'Start') + '</button>' +
-          '<button type="button" class="mtn-btn mtn-btn-ghost" data-act="timer-reset">Reset</button>' +
+          '<button type="button" class="mtn-btn mtn-btn-ghost" data-act="timer-reset" title="Reset the countdown to the planned duration">Reset timer</button>' +
+          '<button type="button" class="mtn-btn mtn-btn-ghost" data-act="timer-spent-reset" title="Zero the accumulated spent time for this subject">Reset spent</button>' +
           '<span class="mtn-proj-timer-quick">' + quickButtons + '</span>' +
           '</div>'
         : '') +
@@ -1232,7 +1234,7 @@
       var element = byId(id)
       if (element) element.disabled = !writable
     })
-    var buttons = byId('mtn-app').querySelectorAll('[data-act="add-subject"], [data-act="add-task"]')
+    var buttons = byId('mtn-app').querySelectorAll('[data-act="add-subject"], [data-act="add-task"], [data-act="reset-meeting-time"]')
     buttons.forEach(function (button) { button.disabled = !writable })
     var writerOnlyElements = byId('mtn-app').querySelectorAll('[data-writer-only="1"]')
     writerOnlyElements.forEach(function (element) { element.style.display = writable ? '' : 'none' })
@@ -2083,6 +2085,33 @@
           setState.remainingMs = setMinutes * 60000
           renderProjectionBody()
         }
+        break
+      case 'timer-spent-reset':
+        if (!canWrite() || !_projectionOpen || _projectionWaiting) break
+        var spentResetSubject = DB.subjects[_projectionIndex]
+        if (!spentResetSubject) break
+        spentResetSubject.spentMs = 0
+        persistSoon()
+        renderTimerDisplay(spentResetSubject, timerStateFor(spentResetSubject.id))
+        renderChipTimes()
+        renderSubjects()
+        renderMeetingMeta()
+        tryNotify('Spent time for "' + (spentResetSubject.title || 'untitled subject') + '" reset to 0.', 'success')
+        break
+      case 'reset-meeting-time':
+        if (!canWrite()) break
+        var resetTimeArmed = Date.now() - _resetTimeArmed < 8000
+        if (!resetTimeArmed) {
+          _resetTimeArmed = Date.now()
+          tryNotify('This zeros every subject spent time and the break time. Click Reset time again to confirm.', 'warning')
+          break
+        }
+        _resetTimeArmed = 0
+        for (var rti = 0; rti < DB.subjects.length; rti++) DB.subjects[rti].spentMs = 0
+        DB.meeting.waitingMs = 0
+        persistSoon()
+        renderAll()
+        tryNotify('Meeting time tracking reset - spent and break time are now zero.', 'success')
         break
       case 'task-status-cycle':
         if (canWrite()) cycleTaskStatus(taskId)
