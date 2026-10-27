@@ -44,26 +44,29 @@ size-report.html (1 MB budget proof), SHIP-CMS-PLAN.md (root).
   - Screenshots tab: upload, list (name/url/size/time), copy URL,
     Insert into doc (img with the storage URL at the cursor).
   - Live size meter (warn 800 KB, block 950 KB).
-- T2 Create object type `tool-code-versions` in tools-applicationstore
+- T2 Create object type `tool-code-versions-uniconbaseapps` in tools-applicationstore
   (exact fields in section 4).
 - T3 Set the HtmlToolLibraryItem field settings:
   - allowObjectCRUD: 'yes'
   - allowUpload: 'yes'
   - allowedObjectTypes:
-    { mainObjectType: "<website page type>", role: 'editor', scope: 'shared', targetCollection: 'public' }
-    { mainObjectType: "<social content type>", role: 'editor', scope: 'shared', targetCollection: 'public' }
-    { mainObjectType: "tool-code-versions", role: 'editor', scope: 'shared', targetCollection: 'public' }
+    { mainObjectType: "website-builder-uniconbaseapps", role: 'editor', scope: 'shared', targetCollection: 'public' }
+    { mainObjectType: "tool-social-content-uniconbaseapps", role: 'editor', scope: 'shared', targetCollection: 'public' }
+    { mainObjectType: "tool-code-versions-uniconbaseapps", role: 'editor', scope: 'shared', targetCollection: 'public' }
 - T4 (later) AppStoreItem update: every tool card links to its published
   pages (webpage / help / updates / presentation) and shows social status.
 
 ## 2. Website application (website-builder-uniconbaseapps - EXISTS - configure)
 
-- W1 The object type (folder) where tool pages live: the FULL taxonomy
-  hierarchy from folder-hierarchy-import.json is imported and used as-is
-  (no manual folders ever). Each tool record lives in its leaf
-  subcategory folder; HtmlToolLibraryItem creates every document in the
-  SAME leaf folder (reads the record's typeId, overridable via the
-  docsFolderTypeId param).
+- W1 The folders where tool pages live are INSIDE the website-builder
+  app and are NOT shared with other apps (the tool record's own leaf
+  folder belongs to tools-applicationstore). HtmlToolLibraryItem writes
+  each document into the folder from the docsFolderTypeMap param -
+  defaults: webpage/updates/presentation -> www.uniconhub.com,
+  help -> help.uniconhub.com; a key without an entry falls back to the
+  docsFolderTypeId override, then to the app's default folder. The two
+  folders must exist in the website-builder app WITH the page category
+  configured (an unconfigured folder shows no Data panel for its objects).
 - W2 Field contract (confirmed by the user): every object carries the
   html-tool field `webpageContentWithBuilder` whose value is the saved
   value of the WebpageBuilder tool ({ code:{html,css,js}, seo, pageMeta,
@@ -81,7 +84,7 @@ size-report.html (1 MB budget proof), SHIP-CMS-PLAN.md (root).
 ## 3. Social application (NEW - create)
 
 - S1 Create the application (suggested name: "Tool Social").
-- S2 Create object type `social-content` (exact fields in section 4).
+- S2 Create object type `tool-social-content-uniconbaseapps` (exact fields in section 4).
 - S3 (later) social media connectors (WhatsApp, X, LinkedIn, Instagram,
   Facebook) consume objects with status "ready" and write postedAt when
   published. No website page involved.
@@ -89,14 +92,14 @@ size-report.html (1 MB budget proof), SHIP-CMS-PLAN.md (root).
 
 ## 4. New object type fields (exact lists for the CMS team)
 
-tool-code-versions (inside tools-applicationstore):
+tool-code-versions-uniconbaseapps (inside tools-applicationstore):
   toolSlug (text), toolName (text), versionNumber (number),
   htmlCode (text), cssCode (text), jsCode (text), note (text),
   pushedAt (text), pushedBy (text)
   Usage: ONE object per push; the tool keeps the newest 20 per toolSlug
   and deletes the rest. The tool's own 1 MB object never holds history.
 
-social-content (inside the Social application):
+tool-social-content-uniconbaseapps (inside the Social application):
   name (text), slug (text), toolSlug (text),
   platform (select: whatsapp | x | linkedin | instagram | facebook),
   message (text), linkUrl (text), imageUrl (text), hashtags (text),
@@ -108,7 +111,7 @@ social-content (inside the Social application):
 - Website page: mainObjectType + real field ids (name, slug, meta,
   status, htmlPage, seo) + folder/typeId for tool pages.
 - Social: mainObjectType + real field ids + folder/typeId.
-- Versions: mainObjectType (or confirm "tool-code-versions") + field ids
+- Versions: mainObjectType (confirmed: tool-code-versions-uniconbaseapps) + field ids
   + folder/typeId.
 - Per type: role / scope / targetCollection entries for
   allowedObjectTypes.
@@ -215,10 +218,10 @@ types, two tables.
 | mainObjectType | app | table | folder (om_object_types) | purpose |
 | --- | --- | --- | --- | --- |
 | html-tool-library-item-uniconbaseapps | tools-applicationstore | om_private_objects | taxonomy leaf (the tool's own leaf) | ONE record per tool: code (html/css/js), doc drafts, screenshot URLs, schema, targets |
-| tool-code-versions | tools-applicationstore | om_private_objects | single "code versions" folder | ONE object per push; newest 20 per tool |
+| tool-code-versions-uniconbaseapps | tools-applicationstore | om_private_objects | single "code versions" folder | ONE object per push; newest 20 per tool |
 | tool-published-listing | tools-applicationstore | om_objects | single "published listings" folder | ONE card per PUBLISHED tool for the public site catalog: name, slug, shortDesc, tags, screenshotUrl, page links, version, publishedAt (NO code) - optional until the public site shows a tools catalog |
-| <website page type> | website-builder-uniconbaseapps | om_objects | tool-pages root > taxonomy copy > leaf | FOUR objects per tool: webpage / help / updates / presentation - each carrying webpageContentWithBuilder |
-| social-content | Tool Social | om_private_objects (until the site shows feeds) | single "social content" folder | per-platform posts (whatsapp / x / linkedin / instagram / facebook), status ready-posted |
+| website-builder-uniconbaseapps | website-builder-uniconbaseapps | om_objects | tool-pages root > taxonomy copy > leaf | FOUR objects per tool: webpage / help / updates / presentation - each carrying webpageContentWithBuilder |
+| tool-social-content-uniconbaseapps | Tool Social | om_private_objects (until the site shows feeds) | single "social content" folder | per-platform posts (whatsapp / x / linkedin / instagram / facebook), status ready-posted |
 
 Platform-owned types already used by tools stay as they are
 (ai-chat-sessions-uniconbaseapps, webpagebuilder-history-uniconbaseapps)
@@ -228,7 +231,7 @@ and belong in om_private_objects.
 
 - om_objects = content the PUBLIC WEBSITE serves through the public API.
   The CMS may publish these (fragment-page and collection sources).
-  Current members: <website page type>, tool-published-listing.
+  Current members: website-builder-uniconbaseapps, tool-published-listing.
 - om_private_objects = everything else (raw code, snapshots, chats,
   social until needed). The public API must NEVER serve this table.
 - The STORE UI (applicationstore.uniconhub.com) shows private tool
@@ -242,7 +245,7 @@ and belong in om_private_objects.
     tools-applicationstore
       <imported taxonomy from folder-hierarchy-import.json>
         leaf subcategory (one per tool)  -> the tool record
-      code versions                      -> tool-code-versions objects
+      code versions                      -> tool-code-versions-uniconbaseapps objects
       published listings                 -> tool-published-listing objects
 
     website-builder-uniconbaseapps
@@ -251,7 +254,7 @@ and belong in om_private_objects.
           leaf subcategory               -> 4 doc objects per tool
 
     Tool Social
-      social content                     -> social-content objects (filter by toolSlug)
+      social content                     -> tool-social-content-uniconbaseapps objects (filter by toolSlug)
 
 Rules: taxonomy folders are created ONLY by importing
 folder-hierarchy-import.json (the CMS rule). code versions / published
@@ -271,16 +274,16 @@ listings / social content are single fixed folders, NOT taxonomy copies.
 | actor | type | role | scope |
 | --- | --- | --- | --- |
 | HtmlToolLibraryItem | html-tool-library-item | instance (own record) | - |
-| HtmlToolLibraryItem | <website page type> | editor | shared, targetCollection public |
-| HtmlToolLibraryItem | tool-code-versions | editor | shared |
+| HtmlToolLibraryItem | website-builder-uniconbaseapps | editor | shared, targetCollection public |
+| HtmlToolLibraryItem | tool-code-versions-uniconbaseapps | editor | shared |
 | HtmlToolLibraryItem | tool-published-listing | editor | shared, public |
-| HtmlToolLibraryItem | social-content | editor | shared |
-| WebpageBuilder | <website page type> | editor (own app) | - |
-| public website | <website page type> + registered collections | viewer (READ ONLY) | public |
-| social connectors | social-content | viewer/editor | internal |
+| HtmlToolLibraryItem | tool-social-content-uniconbaseapps | editor | shared |
+| WebpageBuilder | website-builder-uniconbaseapps | editor (own app) | - |
+| public website | website-builder-uniconbaseapps + registered collections | viewer (READ ONLY) | public |
+| social connectors | tool-social-content-uniconbaseapps | viewer/editor | internal |
 | store UI | everything in tools-applicationstore | platform | internal |
 
-### 9.7 Doc object contract (add to the <website page type> field list)
+### 9.7 Doc object contract (add to the website-builder-uniconbaseapps field list)
 
 name (text), slug (text - also mirrored in pageMeta.slug), status
 (draft | published - owned by the CMS Publish action; the tool leaves

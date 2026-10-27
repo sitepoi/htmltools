@@ -60,9 +60,15 @@
     metaTitle: 'Meta title', metaDesc: 'Meta description', metaKeywords: 'Meta keywords',
     metaRobots: 'Meta robots', ogTitle: 'OG title', ogDesc: 'OG description', ogImage: 'OG image URL'
   };
-  var DEFAULT_PAGE_TARGET_TYPE = 'htl-demo-pages-uniconbaseapps';
-  var DEFAULT_SOCIAL_TARGET_TYPE = 'htl-demo-social-uniconbaseapps';
-  var DEFAULT_VERSIONS_TARGET_TYPE = 'htl-demo-versions-uniconbaseapps';
+  var DEFAULT_PAGE_TARGET_TYPE = 'website-builder-uniconbaseapps';
+  var DEFAULT_SOCIAL_TARGET_TYPE = 'tool-social-content-uniconbaseapps';
+  var DEFAULT_VERSIONS_TARGET_TYPE = 'tool-code-versions-uniconbaseapps';
+  var DEFAULT_DOCS_FOLDER_TYPE_MAP = {
+    webpage: 'www.uniconhub.com',
+    updates: 'www.uniconhub.com',
+    presentation: 'www.uniconhub.com',
+    help: 'help.uniconhub.com'
+  };
   var VERSION_LIMIT = 20;
   var SHOTS_LIMIT = 50;
   var SCHEMA_FIELDS = ['toolParams', 'toolOutputSchema'];
@@ -95,6 +101,11 @@
   var _activeSchemaTab = {};
   var _activeDocPart = {};
   var _ownTypeId = '';
+  var _ownRecordName = '';
+  var _docsMemory = {};
+  var _docLoadBusy = {};
+  var _docReloadArmed = {};
+  var _docReloadArmTimers = {};
 
   /* --------------------------------------------------------
      Small helpers
@@ -214,25 +225,12 @@
       }
       var savedDocs = savedDraft ? savedDraft.docs : null;
       if (savedDocs && typeof savedDocs === 'object') {
-        FRAGMENT_DOCS.forEach(function (docKey) {
+        DOC_KEYS.forEach(function (docKey) {
           var savedDoc = savedDocs[docKey];
           if (savedDoc && typeof savedDoc === 'object') {
-            normalized.draft.docs[docKey].html = String(savedDoc.html || '');
-            normalized.draft.docs[docKey].css = String(savedDoc.css || '');
-            normalized.draft.docs[docKey].js = String(savedDoc.js || '');
-            if (savedDoc.seo && typeof savedDoc.seo === 'object') {
-              SEO_FIELDS.forEach(function (seoField) {
-                normalized.draft.docs[docKey].seo[seoField] = String(savedDoc.seo[seoField] || '');
-              });
-            }
             normalized.draft.docs[docKey].target = normalizeDocTarget(savedDoc.target);
           }
         });
-        var savedSocial = savedDocs.social;
-        if (savedSocial && typeof savedSocial === 'object') {
-          normalized.draft.docs.social.contentHtml = String(savedSocial.contentHtml || '');
-          normalized.draft.docs.social.target = normalizeDocTarget(savedSocial.target);
-        }
       }
       var savedShots = savedDraft ? savedDraft.shots : null;
       if (Array.isArray(savedShots)) {
@@ -251,9 +249,9 @@
   function defaultDocs() {
     var docs = {};
     FRAGMENT_DOCS.forEach(function (docKey) {
-      docs[docKey] = { html: '', css: '', js: '', seo: defaultSeo(), target: null };
+      docs[docKey] = { target: null };
     });
-    docs.social = { contentHtml: '', target: null };
+    docs.social = { target: null };
     return docs;
   }
   function normalizeDocTarget(target) {
@@ -265,9 +263,20 @@
       objectId: target.objectId,
       name: typeof target.name === 'string' ? target.name : '',
       slug: typeof target.slug === 'string' ? target.slug : '',
+      folderTypeId: typeof target.folderTypeId === 'string' ? target.folderTypeId : '',
       pushedAt: typeof target.pushedAt === 'string' ? target.pushedAt : '',
       pushedSignature: typeof target.pushedSignature === 'string' ? target.pushedSignature : ''
     };
+  }
+  function docMemory(docKey) {
+    if (!_docsMemory[docKey]) {
+      if (docKey === 'social') {
+        _docsMemory[docKey] = { contentHtml: '', loaded: false, dirty: false };
+      } else {
+        _docsMemory[docKey] = { html: '', css: '', js: '', seo: defaultSeo(), loaded: false, dirty: false };
+      }
+    }
+    return _docsMemory[docKey];
   }
   /* --------------------------------------------------------
      Persist (staged draft in this tool's own value)
@@ -785,6 +794,7 @@
   -------------------------------------------------------- */
   function toolSlugOf() {
     var rawName = String(DB.draft.toolName || '').trim();
+    if (!rawName) rawName = String(_ownRecordName || '').trim();
     if (!rawName) return 'unnamed-tool';
     var normalized = rawName.normalize ? rawName.normalize('NFKD') : rawName;
     normalized = normalized.replace(/[\u0300-\u036f]/g, '');
@@ -793,19 +803,42 @@
     var slug = normalized.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     return slug || 'unnamed-tool';
   }
+  var _legacyTypeNoticeShown = false;
+  function legacyToCurrentType(typeName) {
+    if (!typeName) return '';
+    var mapped = {
+      'htl-demo-pages-uniconbaseapps': DEFAULT_PAGE_TARGET_TYPE,
+      'htl-demo-social-uniconbaseapps': DEFAULT_SOCIAL_TARGET_TYPE,
+      'htl-demo-versions-uniconbaseapps': DEFAULT_VERSIONS_TARGET_TYPE
+    }[typeName];
+    if (mapped) {
+      if (!_legacyTypeNoticeShown) {
+        _legacyTypeNoticeShown = true;
+        logDiagnostics('doc-target-type', 'mapped legacy demo type ' + typeName + ' -> ' + mapped);
+      }
+      return mapped;
+    }
+    return typeName;
+  }
   function docTargetType(docKey) {
     var configured = docKey === 'social'
       ? readParam('socialTargetType', DEFAULT_SOCIAL_TARGET_TYPE)
       : readParam('pageTargetType', DEFAULT_PAGE_TARGET_TYPE);
-    return configured || (docKey === 'social' ? DEFAULT_SOCIAL_TARGET_TYPE : DEFAULT_PAGE_TARGET_TYPE);
+    return legacyToCurrentType(configured) || (docKey === 'social' ? DEFAULT_SOCIAL_TARGET_TYPE : DEFAULT_PAGE_TARGET_TYPE);
   }
   function versionsTargetType() {
-    return readParam('versionsTargetType', DEFAULT_VERSIONS_TARGET_TYPE) || DEFAULT_VERSIONS_TARGET_TYPE;
+    return legacyToCurrentType(readParam('versionsTargetType', DEFAULT_VERSIONS_TARGET_TYPE)) || DEFAULT_VERSIONS_TARGET_TYPE;
   }
-  function leafTypeIdOf() {
-    var configured = readParam('docsFolderTypeId', '');
-    if (configured && String(configured).trim()) return String(configured).trim();
-    return _ownTypeId || '';
+  function leafTypeIdOf(docKey) {
+    var folderMap = safeJsonObject(readParam('docsFolderTypeMap', JSON.stringify(DEFAULT_DOCS_FOLDER_TYPE_MAP)));
+    if (docKey) {
+      var mappedFolder = String(folderMap[docKey] || '').trim();
+      if (mappedFolder) return mappedFolder;
+    }
+    var singleOverride = String(readParam('docsFolderTypeId', '') || '').trim();
+    if (singleOverride) return singleOverride;
+    if (docKey === 'versions') return _ownTypeId || '';
+    return '';
   }
   function objectsApiAvailable() {
     return typeof tool.requestObjects === 'function';
@@ -828,8 +861,7 @@
     return null;
   }
   function contentSignature(docKey) {
-    var doc = DB.draft.docs[docKey];
-    if (!doc) return '';
+    var doc = docMemory(docKey);
     if (docKey === 'social') return JSON.stringify({ contentHtml: String(doc.contentHtml || '') });
     var seo = {};
     SEO_FIELDS.forEach(function (seoField) { if (doc.seo[seoField]) seo[seoField] = doc.seo[seoField]; });
@@ -848,13 +880,13 @@
     return map;
   }
   function docDisplayName(docKey) {
-    return String(DB.draft.toolName || 'Tool').trim() + ' - ' + DOC_LABELS[docKey];
+    return String(DB.draft.toolName || _ownRecordName || 'Tool').trim() + ' - ' + DOC_LABELS[docKey];
   }
   function docSlugOf(docKey) {
     return toolSlugOf() + '-' + docKey;
   }
   function pageBuilderValue(docKey) {
-    var doc = DB.draft.docs[docKey];
+    var doc = docMemory(docKey);
     var seo = {};
     SEO_FIELDS.forEach(function (seoField) { if (doc.seo[seoField]) seo[seoField] = doc.seo[seoField]; });
     var pageStatusValue = String(readParam('pageStatus', '') || '').trim();
@@ -881,7 +913,7 @@
     return { name: docDisplayName(docKey), payload: payload };
   }
   function buildSocialDcb(docKey) {
-    var doc = DB.draft.docs.social;
+    var doc = docMemory('social');
     var fieldMap = socialFieldMap();
     var payload = {};
     if (fieldMap.name) payload[fieldMap.name] = docDisplayName(docKey);
@@ -907,10 +939,10 @@
     }
     return JSON.stringify({ html: String(code.html || ''), css: String(code.css || ''), js: String(code.js || ''), seo: seo });
   }
-  function applyPageObjectToDoc(docKey, cmsObject) {
+  function applyPageObjectToMemory(docKey, cmsObject) {
     var dcb = objectDcb(cmsObject);
     var fieldMap = pageFieldMap();
-    var doc = DB.draft.docs[docKey];
+    var doc = docMemory(docKey);
     var builderValue = fieldMap.webpageContentWithBuilder ? dcb[fieldMap.webpageContentWithBuilder] : null;
     if (builderValue && typeof builderValue === 'object') {
       if (builderValue.code && typeof builderValue.code === 'object') {
@@ -925,47 +957,129 @@
       }
     }
   }
-  function applySocialObjectToDoc(docKey, cmsObject) {
+  function applySocialObjectToMemory(docKey, cmsObject) {
     var dcb = objectDcb(cmsObject);
     var fieldMap = socialFieldMap();
     if (fieldMap.contentHtml && typeof dcb[fieldMap.contentHtml] === 'string') {
-      DB.draft.docs.social.contentHtml = dcb[fieldMap.contentHtml];
+      docMemory(docKey).contentHtml = dcb[fieldMap.contentHtml];
     }
+  }
+  function legacySignatureOf(docKey, savedDoc) {
+    if (docKey === 'social') return JSON.stringify({ contentHtml: String(savedDoc.contentHtml || '') });
+    var seo = {};
+    if (savedDoc.seo && typeof savedDoc.seo === 'object') {
+      SEO_FIELDS.forEach(function (seoField) { if (savedDoc.seo[seoField]) seo[seoField] = savedDoc.seo[seoField]; });
+    }
+    return JSON.stringify({ html: String(savedDoc.html || ''), css: String(savedDoc.css || ''), js: String(savedDoc.js || ''), seo: seo });
+  }
+  function migrateLegacyDocContent(rawValue) {
+    var legacyDocs = rawValue && rawValue.draft && rawValue.draft.docs;
+    if (!legacyDocs || typeof legacyDocs !== 'object') return;
+    DOC_KEYS.forEach(function (docKey) {
+      var savedDoc = legacyDocs[docKey];
+      if (!savedDoc || typeof savedDoc !== 'object') return;
+      var hasContent = docKey === 'social'
+        ? (typeof savedDoc.contentHtml === 'string' && savedDoc.contentHtml !== '')
+        : (typeof savedDoc.html === 'string' && savedDoc.html !== '');
+      if (!hasContent) return;
+      var target = normalizeDocTarget(savedDoc.target);
+      if (target && target.pushedSignature && target.pushedSignature === legacySignatureOf(docKey, savedDoc)) {
+        logDiagnostics('doc-migrate-' + docKey, 'content already saved in ' + target.objectType + ' ' + target.objectId + ' - removed from this record');
+        return;
+      }
+      var memory = docMemory(docKey);
+      if (docKey === 'social') {
+        memory.contentHtml = String(savedDoc.contentHtml || '');
+      } else {
+        memory.html = String(savedDoc.html || '');
+        memory.css = String(savedDoc.css || '');
+        memory.js = String(savedDoc.js || '');
+        if (savedDoc.seo && typeof savedDoc.seo === 'object') {
+          SEO_FIELDS.forEach(function (seoField) {
+            memory.seo[seoField] = String(savedDoc.seo[seoField] || '');
+          });
+        }
+      }
+      memory.loaded = true;
+      memory.dirty = true;
+      logDiagnostics('doc-migrate-' + docKey, 'content kept in memory (not saved to its object yet) - click Save document to move it out of this record');
+    });
   }
   function userNameOf() {
     var user = _user || getUserSafe();
     return (user && (user.name || user.id)) || 'user';
   }
 
-  function pushDoc(docKey) {
-    if (!canWrite()) { notify('Read-only - pushing is disabled.', 'warning'); return; }
+  function openDoc(docKey) {
+    var memory = docMemory(docKey);
+    if (memory.loaded) return;
+    var target = DB.draft.docs[docKey].target || null;
+    if (!target || !target.objectId) { memory.loaded = true; refreshDocPaneValues(); return; }
+    if (!objectsApiAvailable() || _docLoadBusy[docKey]) { refreshDocPaneValues(); return; }
+    _docLoadBusy[docKey] = true;
+    var objectType = legacyToCurrentType(target.objectType) || docTargetType(docKey);
+    logDiagnostics('doc-open-' + docKey, 'loading ' + objectType + ' ' + target.objectId);
+    tool.requestObjects('get', { mainObjectType: objectType, objectId: target.objectId }, function (getError, getResult) {
+      _docLoadBusy[docKey] = false;
+      if (getError) {
+        memory.loaded = true;
+        logDiagnostics('doc-open-' + docKey, 'get error: ' + getError);
+        refreshDocPaneValues();
+        return;
+      }
+      var cmsObject = getResult && getResult.object ? getResult.object : null;
+      if (!cmsObject) { memory.loaded = true; refreshDocPaneValues(); return; }
+      if (docKey === 'social') applySocialObjectToMemory(docKey, cmsObject);
+      else applyPageObjectToMemory(docKey, cmsObject);
+      memory.loaded = true;
+      memory.dirty = false;
+      var currentTarget = DB.draft.docs[docKey].target || {};
+      DB.draft.docs[docKey].target = {
+        objectType: objectType,
+        objectId: cmsObject.id || cmsObject._id,
+        name: cmsObject.name || '',
+        slug: currentTarget.slug || docSlugOf(docKey),
+        folderTypeId: currentTarget.folderTypeId || '',
+        pushedAt: cmsObject.updated || new Date().toISOString(),
+        pushedSignature: remoteSignature(docKey, cmsObject)
+      };
+      persist();
+      refreshDocPaneValues();
+      logDiagnostics('doc-open-' + docKey, 'loaded ' + objectType + ' ' + (cmsObject.id || '?'));
+    });
+  }
+
+  function saveDoc(docKey) {
+    if (!canWrite()) { notify('Read-only - saving is disabled.', 'warning'); return; }
     if (!objectsApiAvailable()) {
-      logDiagnostics('doc-push-' + docKey, 'requestObjects missing - allowObjectCRUD off');
+      logDiagnostics('doc-save-' + docKey, 'requestObjects missing - allowObjectCRUD off');
       notify('Object API is unavailable here (allowObjectCRUD off).', 'warning');
       return;
     }
     var objectType = docTargetType(docKey);
     var slug = docSlugOf(docKey);
-    var leafTypeId = leafTypeIdOf();
+    var leafTypeId = leafTypeIdOf(docKey);
     var built = docKey === 'social' ? buildSocialDcb(docKey) : buildPageDcb(docKey);
     var signature = contentSignature(docKey);
-    var doc = DB.draft.docs[docKey];
-    var target = doc.target || null;
-    logDiagnostics('doc-push-' + docKey, 'pushing to ' + objectType + ' folder=' + (leafTypeId || 'default') + ' slug=' + slug);
+    var memory = docMemory(docKey);
+    var target = DB.draft.docs[docKey].target || null;
+    logDiagnostics('doc-save-' + docKey, 'saving to ' + objectType + ' folder=' + (leafTypeId || 'default') + ' slug=' + slug + ' target=' + (target && target.objectId ? target.objectId + (target.folderTypeId ? ' @' + target.folderTypeId : ' @?') : 'none'));
 
-    function finishPush(cmsObject) {
-      doc.target = {
+    function finishSave(cmsObject) {
+      DB.draft.docs[docKey].target = {
         objectType: objectType,
         objectId: cmsObject.id || cmsObject._id,
         name: built.name,
         slug: slug,
+        folderTypeId: leafTypeId,
         pushedAt: new Date().toISOString(),
         pushedSignature: signature
       };
+      memory.dirty = false;
       _docPushArmed[docKey] = false;
       persist();
       renderDocStatus(docKey);
-      notify(DOC_LABELS[docKey] + ' pushed (' + (docKey === 'social' ? 'social object' : 'page object with SEO') + ').', 'success');
+      notify(DOC_LABELS[docKey] + ' saved to its own ' + (docKey === 'social' ? 'social object' : 'page object (with SEO)') + '.', 'success');
     }
 
     function performWrite(existingObject) {
@@ -975,92 +1089,154 @@
           _docPushArmed[docKey] = true;
           clearTimeout(_docPushArmTimers[docKey]);
           _docPushArmTimers[docKey] = setTimeout(function () { _docPushArmed[docKey] = false; }, 8000);
-          logDiagnostics('doc-push-' + docKey, 'target changed outside - click Push again to overwrite');
-          notify('The ' + DOC_LABELS[docKey] + ' object changed outside the editor. Click Push again within 8 seconds to overwrite.', 'warning');
+          logDiagnostics('doc-save-' + docKey, 'target changed outside - click Save again to overwrite');
+          notify('The ' + DOC_LABELS[docKey] + ' object changed outside the editor. Click Save again within 8 seconds to overwrite.', 'warning');
           return;
         }
         tool.requestObjects('update', { mainObjectType: objectType, objectId: existingObject.id, productData: { data_categoriesBased: built.payload } }, function (updateError) {
           if (updateError) {
-            logDiagnostics('doc-push-' + docKey, 'update error: ' + updateError);
-            notify('Push failed: ' + updateError, 'error');
+            logDiagnostics('doc-save-' + docKey, 'update error: ' + updateError);
+            notify('Save failed: ' + updateError, 'error');
             return;
           }
-          finishPush(existingObject);
+          finishSave(existingObject);
         });
       } else {
         var createParams = { mainObjectType: objectType, name: built.name, productData: { data_categoriesBased: built.payload } };
         if (leafTypeId) createParams.typeId = leafTypeId;
         tool.requestObjects('create', createParams, function (createError, createResult) {
           if (createError || !createResult || !createResult.object) {
-            logDiagnostics('doc-push-' + docKey, 'create error: ' + (createError || 'no object returned'));
-            notify('Push failed: ' + (createError || 'no object returned'), 'error');
+            logDiagnostics('doc-save-' + docKey, 'create error: ' + (createError || 'no object returned'));
+            notify('Save failed: ' + (createError || 'no object returned'), 'error');
             return;
           }
-          finishPush(createResult.object);
+          finishSave(createResult.object);
         });
       }
     }
 
-    if (target && target.objectId) {
-      tool.requestObjects('get', { mainObjectType: objectType, objectId: target.objectId }, function (getError, getResult) {
-        if (getError) { notify('Push lookup failed: ' + getError, 'error'); return; }
-        performWrite(getResult && getResult.object ? getResult.object : null);
-      });
-    } else {
+    function lookupBySlugThenWrite() {
       var queryParams = { mainObjectType: objectType };
-      if (leafTypeIdOf()) queryParams.typeId = leafTypeIdOf();
+      var lookupFolderTypeId = leafTypeIdOf(docKey);
+      if (lookupFolderTypeId) queryParams.typeId = lookupFolderTypeId;
       tool.requestObjects('query', queryParams, function (queryError, queryResult) {
-        if (queryError) { notify('Push lookup failed: ' + queryError, 'error'); return; }
+        if (queryError) {
+          logDiagnostics('doc-save-' + docKey, 'slug lookup failed - creating a new object: ' + queryError);
+          performWrite(null);
+          return;
+        }
         var objects = (queryResult && queryResult.objects) || [];
         performWrite(findObjectBySlug(objects, slug));
       });
     }
+
+    if (target && target.objectId) {
+      var storedFolderTypeId = target.folderTypeId || '';
+      if (leafTypeId && storedFolderTypeId !== leafTypeId) {
+        rehomeDocObject(docKey, target, leafTypeId, built, slug, signature, memory);
+        return;
+      }
+      tool.requestObjects('get', { mainObjectType: objectType, objectId: target.objectId }, function (getError, getResult) {
+        if (getError) {
+          logDiagnostics('doc-save-' + docKey, 'get on target failed (' + getError + ') - falling back to slug lookup');
+          lookupBySlugThenWrite();
+          return;
+        }
+        performWrite(getResult && getResult.object ? getResult.object : null);
+      });
+    } else {
+      lookupBySlugThenWrite();
+    }
   }
 
-  function pullDoc(docKey) {
-    if (!canWrite()) { notify('Read-only - pulling is disabled.', 'warning'); return; }
+  function rehomeDocObject(docKey, oldTarget, newFolderTypeId, built, slug, signature, memory) {
+    var objectType = docTargetType(docKey);
+    logDiagnostics('doc-save-' + docKey, 'folder changed (' + (oldTarget.folderTypeId || 'default') + ' -> ' + newFolderTypeId + ') - creating the document in the new folder');
+    var createParams = { mainObjectType: objectType, name: built.name, productData: { data_categoriesBased: built.payload }, typeId: newFolderTypeId };
+    tool.requestObjects('create', createParams, function (createError, createResult) {
+      if (createError || !createResult || !createResult.object) {
+        logDiagnostics('doc-save-' + docKey, 're-home create error: ' + (createError || 'no object returned'));
+        notify('Save failed: ' + (createError || 'no object returned'), 'error');
+        return;
+      }
+      var newObject = createResult.object;
+      tool.requestObjects('delete', { mainObjectType: objectType, objectId: oldTarget.objectId }, function (deleteError) {
+        if (deleteError) logDiagnostics('doc-save-' + docKey, 'old object delete failed (manual cleanup needed): ' + deleteError);
+        DB.draft.docs[docKey].target = {
+          objectType: objectType,
+          objectId: newObject.id || newObject._id,
+          name: built.name,
+          slug: slug,
+          folderTypeId: newFolderTypeId,
+          pushedAt: new Date().toISOString(),
+          pushedSignature: signature
+        };
+        memory.dirty = false;
+        _docPushArmed[docKey] = false;
+        persist();
+        renderDocStatus(docKey);
+        notify(DOC_LABELS[docKey] + ' saved into folder ' + newFolderTypeId + '.' + (deleteError ? ' The old object in the previous folder stays - delete it manually.' : ' The old object in the previous folder was removed.'), 'success');
+      });
+    });
+  }
+
+  function reloadDoc(docKey) {
+    if (!canWrite()) { notify('Read-only - reloading is disabled.', 'warning'); return; }
     if (!objectsApiAvailable()) {
-      logDiagnostics('doc-pull-' + docKey, 'requestObjects missing - allowObjectCRUD off');
+      logDiagnostics('doc-reload-' + docKey, 'requestObjects missing - allowObjectCRUD off');
       notify('Object API is unavailable here (allowObjectCRUD off).', 'warning');
       return;
     }
+    var memory = docMemory(docKey);
+    if (memory.dirty && !_docReloadArmed[docKey]) {
+      _docReloadArmed[docKey] = true;
+      clearTimeout(_docReloadArmTimers[docKey]);
+      _docReloadArmTimers[docKey] = setTimeout(function () { _docReloadArmed[docKey] = false; }, 8000);
+      notify('Reload discards unsaved changes in ' + DOC_LABELS[docKey] + ' - click Reload again within 8 seconds to confirm.', 'warning');
+      return;
+    }
+    _docReloadArmed[docKey] = false;
     var objectType = docTargetType(docKey);
     var slug = docSlugOf(docKey);
     var target = DB.draft.docs[docKey].target || null;
-    logDiagnostics('doc-pull-' + docKey, 'pulling from ' + objectType + ' folder=' + (leafTypeIdOf() || 'default') + ' slug=' + slug);
+    logDiagnostics('doc-reload-' + docKey, 'reloading from ' + objectType + ' folder=' + (leafTypeIdOf(docKey) || 'default') + ' slug=' + slug);
 
     function applyObject(cmsObject) {
       if (!cmsObject) {
-        notify('No ' + DOC_LABELS[docKey] + ' object found with slug "' + slug + '". Push it first to create it.', 'warning');
+        notify('No ' + DOC_LABELS[docKey] + ' object found with slug "' + slug + '". Save it first to create it.', 'warning');
         return;
       }
-      if (docKey === 'social') applySocialObjectToDoc(docKey, cmsObject);
-      else applyPageObjectToDoc(docKey, cmsObject);
+      if (docKey === 'social') applySocialObjectToMemory(docKey, cmsObject);
+      else applyPageObjectToMemory(docKey, cmsObject);
+      memory.loaded = true;
+      memory.dirty = false;
       DB.draft.docs[docKey].target = {
         objectType: objectType,
         objectId: cmsObject.id || cmsObject._id,
         name: cmsObject.name || '',
         slug: slug,
+        folderTypeId: (target && target.folderTypeId) ? target.folderTypeId : leafTypeIdOf(docKey),
         pushedAt: cmsObject.updated || new Date().toISOString(),
         pushedSignature: remoteSignature(docKey, cmsObject)
       };
       _docPushArmed[docKey] = false;
       persist();
       refreshDocPaneValues();
-      logDiagnostics('doc-pull-' + docKey, 'loaded ' + objectType + ' ' + (cmsObject.id || '?'));
-      notify(DOC_LABELS[docKey] + ' loaded from the target object.', 'success');
+      logDiagnostics('doc-reload-' + docKey, 'loaded ' + objectType + ' ' + (cmsObject.id || '?'));
+      notify(DOC_LABELS[docKey] + ' loaded from its object.', 'success');
     }
 
     if (target && target.objectId) {
       tool.requestObjects('get', { mainObjectType: objectType, objectId: target.objectId }, function (getError, getResult) {
-        if (getError) { notify('Pull failed: ' + getError, 'error'); return; }
+        if (getError) { notify('Reload failed: ' + getError, 'error'); return; }
         applyObject(getResult && getResult.object ? getResult.object : null);
       });
     } else {
       var queryParams = { mainObjectType: objectType };
-      if (leafTypeIdOf()) queryParams.typeId = leafTypeIdOf();
+      var lookupFolderTypeId = leafTypeIdOf(docKey);
+      if (lookupFolderTypeId) queryParams.typeId = lookupFolderTypeId;
       tool.requestObjects('query', queryParams, function (queryError, queryResult) {
-        if (queryError) { notify('Pull failed: ' + queryError, 'error'); return; }
+        if (queryError) { notify('Reload failed: ' + queryError, 'error'); return; }
         var objects = (queryResult && queryResult.objects) || [];
         applyObject(findObjectBySlug(objects, slug));
       });
@@ -1073,12 +1249,12 @@
     parts.push('<div class="htl-doc-head">'
       + '<div class="htl-doc-head-main">'
       + '<span class="htl-doc-title">' + DOC_LABELS[docKey] + ' document</span>'
-      + '<span class="htl-doc-subline">Push writes this document to a CMS object of type <code>' + escHtml(docTargetType(docKey)) + '</code> (slug <code>' + escHtml(docSlugOf(docKey)) + '</code>). Pull loads the saved object content back into the editor.</span>'
+      + '<span class="htl-doc-subline" id="htl-doc-subline-' + docKey + '">Save writes this document to a CMS object of type <code>' + escHtml(docTargetType(docKey)) + '</code> (slug <code>' + escHtml(docSlugOf(docKey)) + '</code>). Reload reads the saved object content back into the editor.</span>'
       + '</div>'
-      + '<span class="htl-doc-status" id="htl-doc-status-' + docKey + '">Not pushed yet</span>'
+      + '<span class="htl-doc-status" id="htl-doc-status-' + docKey + '">New document - not saved yet</span>'
       + '<span class="htl-doc-actions">'
-      + '<button class="htl-btn htl-btn-primary htl-btn-sm" data-act="doc-push" data-doc="' + docKey + '" title="Create or update the ' + escHtml(docTargetType(docKey)) + ' object with this document">⇪ Push</button>'
-      + '<button class="htl-btn htl-btn-ghost htl-btn-sm" data-act="doc-pull" data-doc="' + docKey + '" title="Load the saved content from the ' + escHtml(docTargetType(docKey)) + ' object into the editor">⇩ Pull</button>'
+      + '<button class="htl-btn htl-btn-primary htl-btn-sm" data-act="doc-save" data-doc="' + docKey + '" title="Create or update the ' + escHtml(docTargetType(docKey)) + ' object with this document">⇪ Save document</button>'
+      + '<button class="htl-btn htl-btn-ghost htl-btn-sm" data-act="doc-reload" data-doc="' + docKey + '" title="Load the saved content from the ' + escHtml(docTargetType(docKey)) + ' object into the editor">↻ Reload from object</button>'
       + '</span></div>');
     var partDefinitions = isSocial
       ? [['preview', 'Preview'], ['content', 'HTML']]
@@ -1210,6 +1386,7 @@
     setActiveDocPart(_activeDocKey);
     renderTargetSummary();
     refreshDocPaneValues();
+    openDoc(_activeDocKey);
   }
   function renderTargetSummary() {
     var pageElement = $('htl-target-page-type');
@@ -1219,12 +1396,18 @@
     if (pageElement) pageElement.textContent = docTargetType('webpage');
     if (socialElement) socialElement.textContent = docTargetType('social');
     if (versionsElement) versionsElement.textContent = versionsTargetType();
-    if (leafElement) leafElement.textContent = leafTypeIdOf() || '(not detected - docsFolderTypeId param not set and this record has no folder)';
+    if (leafElement) {
+      var folderParts = DOC_KEYS.concat(['versions']).map(function (folderKey) {
+        var resolvedFolder = leafTypeIdOf(folderKey);
+        return folderKey + ' → ' + (resolvedFolder || '(app default)');
+      });
+      leafElement.textContent = folderParts.join(' · ');
+    }
     var noteElement = $('htl-doc-object-note');
     if (noteElement) {
       noteElement.textContent = objectsApiAvailable()
-        ? 'Object API available - Push creates the document in the tool leaf folder above (the CMS hierarchy folder where this record lives).'
-        : 'Object API NOT available here (allowObjectCRUD off) - Push/Pull stay disabled until the field settings allow it.';
+        ? 'Object API available - Save writes each document into its own CMS object in the tool leaf folder above (the CMS hierarchy folder where this record lives).'
+        : 'Object API NOT available here (allowObjectCRUD off) - Save/Reload stay disabled until the field settings allow it.';
     }
   }
   function updateDocEditorMeta(docKey, part) {
@@ -1246,8 +1429,11 @@
   }
   function refreshDocPaneValues() {
     DOC_KEYS.forEach(function (docKey) {
-      var doc = DB.draft.docs[docKey];
-      if (!doc) return;
+      var doc = docMemory(docKey);
+      var subline = $('htl-doc-subline-' + docKey);
+      if (subline) {
+        subline.innerHTML = 'Save writes this document to a CMS object of type <code>' + escHtml(docTargetType(docKey)) + '</code> (slug <code>' + escHtml(docSlugOf(docKey)) + '</code>). Reload reads the saved object content back into the editor.';
+      }
       if (docKey === 'social') {
         var socialTextarea = $('htl-doc-social-content');
         if (socialTextarea && document.activeElement !== socialTextarea) socialTextarea.value = doc.contentHtml;
@@ -1271,15 +1457,16 @@
     var statusElement = $('htl-doc-status-' + docKey);
     if (!statusElement) return;
     var target = DB.draft.docs[docKey].target;
+    var memory = docMemory(docKey);
     if (target && target.objectId) {
-      var dirty = contentSignature(docKey) !== (target.pushedSignature || '');
+      var dirty = memory.dirty || contentSignature(docKey) !== (target.pushedSignature || '');
       statusElement.textContent = target.objectType + ' · ' + target.objectId
-        + ' · pushed ' + (target.pushedAt ? formatDateTime(target.pushedAt) : '?')
-        + (dirty ? ' · modified' : '');
+        + ' · saved ' + (target.pushedAt ? formatDateTime(target.pushedAt) : '?')
+        + (dirty ? ' · not saved' : '');
       statusElement.className = 'htl-doc-status' + (dirty ? ' dirty' : ' ok');
     } else {
-      statusElement.textContent = 'Not pushed yet';
-      statusElement.className = 'htl-doc-status';
+      statusElement.textContent = memory.dirty ? 'New - modified, not saved yet' : 'New document - not saved yet';
+      statusElement.className = 'htl-doc-status' + (memory.dirty ? ' dirty' : '');
     }
   }
   function handleDocInput(event) {
@@ -1289,8 +1476,7 @@
     if (!fieldPath) return;
     var pieces = fieldPath.split('.');
     var docKey = pieces[0];
-    var doc = DB.draft.docs[docKey];
-    if (!doc) return;
+    var doc = docMemory(docKey);
     if (pieces[1] === 'seo' && pieces[2]) {
       doc.seo[pieces[2]] = element.value;
     } else {
@@ -1299,16 +1485,16 @@
       clearTimeout(_docGutterTimers[docKey + '-' + pieces[1]]);
       _docGutterTimers[docKey + '-' + pieces[1]] = setTimeout(function () { updateDocGutter(docKey, pieces[1]); }, 160);
     }
+    doc.dirty = true;
     renderDocStatus(docKey);
-    persist();
   }
   function handleDocActionClick(event) {
     var button = event.target && event.target.closest ? event.target.closest('[data-act]') : null;
     if (!button) return;
     var action = button.getAttribute('data-act');
     var docKey = button.getAttribute('data-doc');
-    if (action === 'doc-push' && docKey) pushDoc(docKey);
-    else if (action === 'doc-pull' && docKey) pullDoc(docKey);
+    if (action === 'doc-save' && docKey) saveDoc(docKey);
+    else if (action === 'doc-reload' && docKey) reloadDoc(docKey);
     else if (action === 'doc-preview' && docKey) { _activeDocKey = docKey; renderDocPreview(); }
   }
   function handleDocPartClick(event) {
@@ -1320,8 +1506,7 @@
     setActiveDocPart(docKey, button.getAttribute('data-doc-part'));
   }
   function buildDocPreviewDoc(docKey) {
-    var doc = DB.draft.docs[docKey];
-    if (!doc) return { doc: '', jsSyntaxError: null };
+    var doc = docMemory(docKey);
     if (docKey === 'social') {
       var socialHtml = String(doc.contentHtml || '');
       if (!socialHtml.trim()) {
@@ -1511,7 +1696,8 @@
           pushedBy: userNameOf()
         } }
       };
-      if (leafTypeIdOf()) createParams.typeId = leafTypeIdOf();
+      var versionsFolderTypeId = leafTypeIdOf('versions');
+      if (versionsFolderTypeId) createParams.typeId = versionsFolderTypeId;
       tool.requestObjects('create', createParams, function (createError, createResult) {
         if (createError || !createResult || !createResult.object) {
           logDiagnostics('version-snapshot', 'create error: ' + (createError || 'no object returned'));
@@ -1700,12 +1886,13 @@
     textarea.value = textarea.value.slice(0, start) + snippet + textarea.value.slice(end);
     var caret = start + snippet.length;
     textarea.selectionStart = textarea.selectionEnd = caret;
-    if (docKey === 'social') DB.draft.docs.social.contentHtml = textarea.value;
-    else DB.draft.docs[docKey].html = textarea.value;
+    var doc = docMemory(docKey);
+    if (docKey === 'social') doc.contentHtml = textarea.value;
+    else doc.html = textarea.value;
+    doc.dirty = true;
     updateDocEditorMeta(docKey, docKey === 'social' ? 'content' : 'html');
     updateDocGutter(docKey, docKey === 'social' ? 'content' : 'html');
     renderDocStatus(docKey);
-    persist();
     notify('Image inserted into ' + DOC_LABELS[docKey] + '.', 'success');
   }
   function removeShot(shotId) {
@@ -1748,7 +1935,7 @@
     var label = kilobytes >= 1024 ? (kilobytes / 1024).toFixed(2) + ' MB' : Math.round(kilobytes) + ' KB';
     meterElement.textContent = label;
     meterElement.className = 'htl-size-meter' + (bytes >= 950 * 1024 ? ' danger' : (bytes >= 800 * 1024 ? ' warn' : ''));
-    meterElement.title = bytes + ' bytes in the stored value - the Firestore object limit is 1 MB';
+    meterElement.title = bytes + ' bytes in the stored value (code + metadata) - documents live in their own objects';
   }
 
   /* --------------------------------------------------------
@@ -1853,6 +2040,7 @@
   tool.onReady(function (value, readyFields) {
     logDiagnostics('ready', 'tool API keys: ' + Object.keys(tool || {}).join(', '));
     logDiagnostics('ready-value', JSON.stringify(value).slice(0, 300));
+    _ownRecordName = String((readyFields && readyFields.name) || '');
     var ownTypeIdSource = (readyFields && readyFields.typeId) ? readyFields.typeId : '';
     if (!ownTypeIdSource) {
       try {
@@ -1873,7 +2061,7 @@
           toolDisplayMode: { type: 'string' }, toolHeight: { type: 'string' }, toolAutoHeight: { type: 'string' },
           toolParams: { type: 'string' }, toolOutputSchema: { type: 'string' }, toolValidationEnabled: { type: 'string' },
           toolCategories: { type: 'array' }, toolTags: { type: 'array' },
-          docs: { type: 'object', description: 'Draft documents: webpage/help/updates/presentation as fragments with SEO, social as contentHtml, plus their push targets.' },
+          docs: { type: 'object', description: 'Per-document target references only - document content lives in separate CMS objects.' },
           shots: { type: 'array', description: 'Screenshot metadata - storage URLs only, never file bytes.' }
         }
       });
@@ -1892,19 +2080,23 @@
         },
         {
           name: 'pageTargetType', label: 'Page Target Object Type', type: 'text', default: DEFAULT_PAGE_TARGET_TYPE, severity: 'goodToHave',
-          hint: 'CMS object type of the website app pages (WebpageBuilder shape). Used by webpage, help, updates and presentation. Placeholder until the real type exists.'
+          hint: 'Object type of the website pages - website-builder-uniconbaseapps, one WebpageBuilder page per object. Used by webpage, help, updates and presentation.'
         },
         {
           name: 'socialTargetType', label: 'Social Target Object Type', type: 'text', default: DEFAULT_SOCIAL_TARGET_TYPE, severity: 'goodToHave',
-          hint: 'CMS object type of the social application objects. Placeholder until the real type exists.'
+          hint: 'Object type of the social content objects.'
         },
         {
           name: 'versionsTargetType', label: 'Versions Target Object Type', type: 'text', default: DEFAULT_VERSIONS_TARGET_TYPE, severity: 'goodToHave',
           hint: 'CMS object type holding code snapshots - one object per push, newest 20 kept per tool.'
         },
         {
+          name: 'docsFolderTypeMap', label: 'Docs Folder Type Map', type: 'text', default: JSON.stringify(DEFAULT_DOCS_FOLDER_TYPE_MAP), severity: 'goodToHave',
+          hint: 'JSON map: document key -> leaf folder (typeId) inside the TARGET application where that document is created. Keys: webpage, help, updates, presentation, social, versions. Empty per key = app default folder. Default: webpage/updates/presentation -> www.uniconhub.com, help -> help.uniconhub.com.'
+        },
+        {
           name: 'docsFolderTypeId', label: 'Docs Folder ID Override', type: 'text', default: '', severity: 'goodToHave',
-          hint: 'Optional leaf folder (typeId) where the documents and versions are created. Empty = use the folder of this record from the CMS hierarchy.'
+          hint: 'Optional single leaf folder (typeId) used for every document key that has no entry in docsFolderTypeMap.'
         },
         {
           name: 'pageTargetFieldMap', label: 'Page Target Field Map', type: 'text', default: '', severity: 'goodToHave',
@@ -1928,6 +2120,7 @@
     _previewMockValue = parseJsonLenient(readParam('previewMockValue', '{}')) || {};
     _previewMockParams = parseJsonLenient(readParam('previewMockParams', '{}')) || {};
 
+    migrateLegacyDocContent(value);
     DB = normalize(value);
     _readOnly = !!tool.isReadOnly();
     wireEvents();

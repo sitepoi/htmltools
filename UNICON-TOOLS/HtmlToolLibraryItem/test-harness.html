@@ -22,7 +22,7 @@
         <div class="htl-logo-mark">T</div>
         <div>
           <h1>HTML Tool Item Editor</h1>
-          <p>Details, code and documents of one CMS html-tool, kept in this tool's own saved value</p>
+          <p>Details and code of one CMS html-tool - documents are saved into their own CMS objects</p>
         </div>
       </div>
       <div class="htl-header-actions">
@@ -342,10 +342,10 @@
   }
   function seedObjects() {
     var store = objectStore();
-    if (!store['htl-demo-pages-uniconbaseapps']) {
-      store['htl-demo-pages-uniconbaseapps'] = [{
+    if (!store['website-builder-uniconbaseapps']) {
+      store['website-builder-uniconbaseapps'] = [{
         id: 'obj-page-webpage', _id: 'obj-page-webpage',
-        cmsObjectType: 'htl-demo-pages-uniconbaseapps', typeId: 'demo-pages',
+        cmsObjectType: 'website-builder-uniconbaseapps', typeId: 'demo-pages',
         name: 'Brand Set Generator - Webpage', slug: 'brand-set-generator-webpage',
         contentId: 'seed-page', meta: {}, permissions: {},
         created: new Date().toISOString(), updated: new Date().toISOString(),
@@ -370,10 +370,10 @@
         } }
       }];
     }
-    if (!store['htl-demo-versions-uniconbaseapps']) {
-      store['htl-demo-versions-uniconbaseapps'] = [{
+    if (!store['tool-code-versions-uniconbaseapps']) {
+      store['tool-code-versions-uniconbaseapps'] = [{
         id: 'obj-version-1', _id: 'obj-version-1',
-        cmsObjectType: 'htl-demo-versions-uniconbaseapps', typeId: 'demo-versions',
+        cmsObjectType: 'tool-code-versions-uniconbaseapps', typeId: 'demo-versions',
         name: 'Brand Set Generator - v1', slug: 'brand-set-generator-v1',
         contentId: 'seed-version', meta: {}, permissions: {},
         created: new Date().toISOString(), updated: new Date().toISOString(),
@@ -426,16 +426,11 @@
     draft: {
       toolName: 'Brand Set Generator',
       docs: {
-        webpage: {
-          html: '<div class="wp-demo"><header class="wp-demo-hero"><h1>Brand Set Generator</h1><p>Build a complete brand identity kit in minutes.</p><a class="wp-demo-cta" href="#">Try it now</a></header><section class="wp-demo-grid"><article><h2>Logos</h2><p>Primary, stacked and mark lockups.</p></article><article><h2>Social covers</h2><p>Every platform size, one click.</p></article></section></div>',
-          css: '.wp-demo { font-family: Segoe UI, Arial, sans-serif; color: #0f172a; padding: 24px; }\n.wp-demo-hero { background: linear-gradient(135deg, #4f46e5, #9333ea); color: #fff; padding: 36px; border-radius: 16px; }\n.wp-demo-cta { color: #fff; }\n.wp-demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }\n.wp-demo-grid article { border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; }',
-          js: '(function () { var hero = document.querySelector(".wp-demo-hero"); if (hero) hero.setAttribute("data-ready", "yes"); })();',
-          seo: { metaTitle: 'Brand Set Generator - brand kit builder', metaDesc: 'Logos, social covers and brand guidelines from one profile.', metaKeywords: 'brand, logo, design', metaRobots: 'index, follow', ogTitle: 'Brand Set Generator', ogDesc: 'Complete brand identity kit.', ogImage: 'https://storage.example.test/shots/dashboard-desktop.png' }
-        },
-        help: { html: '<div class="wp-help"><h1>How to use Brand Set Generator</h1><ol><li>Enter your company profile</li><li>Pick a logo style</li><li>Download the kit</li></ol></div>', css: '.wp-help { font-family: Segoe UI, Arial, sans-serif; padding: 24px; }', js: '', seo: { metaTitle: 'Brand Set Generator - help' } },
-        updates: { html: '<div class="wp-updates"><h1>Updates</h1><ul><li>v1.2 - social cover templates</li><li>v1.1 - favicon export</li></ul></div>', css: '.wp-updates { font-family: Segoe UI, Arial, sans-serif; padding: 24px; }', js: '', seo: { metaTitle: 'Brand Set Generator - updates' } },
-        presentation: { html: '<div class="wp-pres"><h1>Brand Set Generator</h1><p>Slides here.</p></div>', css: '.wp-pres { font-family: Segoe UI, Arial, sans-serif; padding: 24px; }', js: '', seo: { metaTitle: 'Brand Set Generator - presentation' } },
-        social: { contentHtml: '<!DOCTYPE html><html><head><title>Social kit</title></head><body><h1>Share Brand Set Generator</h1><p>WhatsApp: Build your brand kit...</p></body></html>' }
+        webpage: { target: { objectType: 'website-builder-uniconbaseapps', objectId: 'obj-page-webpage', slug: 'brand-set-generator-webpage', pushedAt: new Date().toISOString(), pushedSignature: '' } },
+        help: { target: null },
+        updates: { target: null },
+        presentation: { target: null },
+        social: { target: null }
       },
       shots: [{ id: 'shot-1', name: 'dashboard-desktop.png', url: 'https://storage.example.test/shots/dashboard-desktop.png', size: 90112, uploadedAt: new Date().toISOString() }]
     }

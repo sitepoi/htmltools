@@ -48,7 +48,7 @@ change. Registry entry schema:
     "tokenId": "pw-read-appstore-toolpages"
   },
   "source": {
-    "mainObjectType": "<website page type>",
+    "mainObjectType": "website-builder-uniconbaseapps",
     "folderIds": ["tool-pages-root"],
     "recursive": true,
     "filters": { "status": "published" }
@@ -172,14 +172,16 @@ All changes take effect without redeploying the website.
 
 1. Tool pages
    - tenant: applicationstore.uniconhub.com
-   - mainObjectType: <website page type> (website-builder application)
+   - mainObjectType: website-builder-uniconbaseapps (the page type
+     WebpageBuilder writes)
    - folderIds: "tool pages" root, recursive
    - rendererKind: fragment-page
    - bodyField: webpageContentWithBuilder
    - filters: status = published
 2. General website pages
    - tenant: cms.uniconhub.com
-   - mainObjectType: <website page type of that tenant>
+   - mainObjectType: website-builder-uniconbaseapps (the page type of
+     that tenant)
    - folderIds: the general pages folders
    - rendererKind: fragment-page
 3. Products (future)

@@ -33,7 +33,7 @@ One tool record (HtmlToolLibraryItem instance)
       |     updates doc      ->  data.htmlPage.code.{html,css,js} + seo
       |     presentation doc ->  data.htmlPage.code.{html,css,js} + seo
       +-- social application objects .... structured social content (NOT a page)
-      +-- tool-code-versions objects .... code snapshots, max 20 per tool
+      +-- tool-code-versions-uniconbaseapps objects .... code snapshots, max 20 per tool
 ```
 
 Every target object carries a stable identification so a re-push UPDATES
@@ -101,15 +101,19 @@ saved value of the WebpageBuilder tool (verified read-only from its code - the
   push writes them into the seo object inside the builder value.
 - Slugs: <toolSlug>-webpage / <toolSlug>-help / <toolSlug>-updates /
   <toolSlug>-presentation (also stored in pageMeta.slug for lookup).
-- The FOLDER to write into is the tool record's OWN leaf folder: the CMS
-  hierarchy is imported from folder-hierarchy-import.json (never edited
-  manually) and every tool record sits in its leaf subcategory. The tool
-  reads its own folder id from the object document (typeId) and creates
-  every document + version snapshot in that SAME leaf folder
-  (requestObjects create with typeId; queries scoped by typeId).
-  Param docsFolderTypeId overrides the folder when needed. The folder
-  placement strategy for the website-builder app is under discussion -
-  see cms-apps-todo.md section 7.
+- FOLDER PLACEMENT (2026-10-26, user-confirmed): folders are per
+  application and NOT shared across apps, so the record's own leaf folder
+  (tools-applicationstore) must NOT be used for page documents. Page docs
+  use the docsFolderTypeMap param - defaults: webpage/updates/presentation
+  -> www.uniconhub.com, help -> help.uniconhub.com. A key
+  with no map entry falls back to the single docsFolderTypeId override,
+  then to the target app's default folder. Version snapshots keep using
+  the record's own leaf folder (typeId) unless overridden.
+  RE-HOME: each doc target remembers the folder it was created in
+  (target.folderTypeId). When the configured folder changes, the next
+  Save creates the document in the new folder and deletes the old object
+  (logged in the Logs tab). See cms-apps-todo.md section 7 for the
+  placement history.
 - create: requestObjects('create', { mainObjectType, name, productData:
   { data_categoriesBased: { webpageContentWithBuilder: <value above> } } }).
 - update: requestObjects('update', { mainObjectType, objectId,
@@ -171,8 +175,8 @@ inside the tool's own 1 MB object):
 - CMS field settings the admin must set:
   settings.allowObjectCRUD: 'yes'
   settings.allowedObjectTypes: [
-    { mainObjectType: "<website page type>", role: 'editor', scope: 'shared', targetCollection: 'public' },
-    { mainObjectType: "<social type>",       role: 'editor', scope: 'shared', targetCollection: 'public' },
+    { mainObjectType: "website-builder-uniconbaseapps", role: 'editor', scope: 'shared', targetCollection: 'public' },
+    { mainObjectType: "tool-social-content-uniconbaseapps",       role: 'editor', scope: 'shared', targetCollection: 'public' },
     { mainObjectType: "<versions type>",     role: 'editor', scope: 'shared', targetCollection: 'public' }
   ]
   settings.allowUpload: 'yes'   (for screenshots)
@@ -187,7 +191,7 @@ inside the tool's own 1 MB object):
 3. SOCIAL is not a website page - it gets its own application; social
    media integrations come later.
 4. Code versioning: push updates the tool record in place AND snapshots
-   the code into a separate cmsObjectType (tool-code-versions); return to
+   the code into a separate cmsObjectType (tool-code-versions-uniconbaseapps); return to
    any older version; auto-delete everything older than the newest 20.
 5. Auto generation + auto push from the repo: the repo docs pipeline
    (docs:generate) produces the content and the push goes through the
@@ -229,3 +233,79 @@ repo auto-push.
   (the existing auto-commit stays exactly as today).
 - The existing diagnostics panel logs every requestObjects call
   (action, type, objectId, ok/error) so CMS-side issues stay debuggable.
+
+## 9. V2 - Documents FULLY external (2026-10-26, pending user go-ahead)
+
+User decision: tool code can approach 1 MB, so NO document content may
+live in the tool record. Every document must be its own Firestore
+document in another cmsObjectType. This section replaces the "drafts in
+tool value" part of sections 2 and 3.
+
+### 9.1 New storage model
+
+Tool record value (the ONLY 1 MB budget for code):
+  { version, draft: { toolName, toolIcon, ..., toolHtmlCode, toolCssCode,
+    toolJsCode, toolParams, toolOutputSchema, ..., toolCategories,
+    toolTags, shots (URL metadata only),
+    docs: {
+      webpage:      { target: {objectType, objectId, slug, pushedAt, pushedSignature} },
+      help:         { target: ... },
+      updates:      { target: ... },
+      presentation: { target: ... },
+      social:       { target: ... }
+    } } }
+  NO html/css/js/seo/contentHtml for docs anymore. Only the small
+  target reference per doc.
+
+Separate Firestore documents (one object each, each with its own 1 MB):
+  - webpage      -> website-builder page object (website-builder-uniconbaseapps)
+  - help         -> website-builder page object
+  - updates      -> website-builder page object
+  - presentation -> website-builder page object
+  - social       -> social object (tool-social-content-uniconbaseapps)
+  - code snapshots -> versions objects (already separate, newest 20)
+
+### 9.2 Editor behavior
+
+- Doc content is IN-MEMORY only (module variable). It is loaded from
+  the target object when the doc tab opens (one get), edited in memory,
+  and written back by Save (create on first save, update afterwards).
+- Save = the existing push flow (create/update + external-change arm
+  guard). Buttons renamed: "Save document" and "Reload from object".
+- Doc status chip: "New - not saved yet" / "Saved <time>" /
+  "modified - not saved" / "object changed outside".
+- Unsaved edits are NOT persisted anywhere until Save (no draft buffer
+  in the record - that is the whole point). A dirty flag warns on doc
+  switch and unload.
+- Preview + SEO inputs keep working from memory.
+
+### 9.3 Size meter
+
+Now measures code + metadata only. Documents no longer affect the
+record budget; each doc can grow toward its own 1 MB object.
+
+### 9.4 Migration of existing records (one-time, in normalize)
+
+- Doc has a target and content equals pushedSignature: content is
+  already in the object - drop it from the record value on next save.
+- Doc has a target and content differs: keep it as the in-memory
+  "modified" state until Save (writes object) or Reload (discards),
+  then drop from the value.
+- Doc has no target: keep content until the first Save creates the
+  object, then drop it.
+After one Save per doc the record shrinks to code + metadata only.
+
+### 9.5 Verification plan
+
+- Smoke suite rewrite for the doc flows (load-from-object, save creates,
+  save updates, external-change arm, no doc content in setValue).
+- Harness: seed the 5 doc objects in the object store; the sample value
+  carries only targets.
+- node --check, htl-check, headless screenshots of the Docs tab.
+
+### 9.6 Open decisions (answer before implementation)
+
+1. No draft buffer at all (strict) - typing a doc and reloading before
+   Save loses it. OK?
+2. Rename Push/Pull to Save/Reload - OK?
+3. Auto-load the doc from its object when the doc tab opens - OK?

@@ -1,0 +1,212 @@
+<!-- build 2026-10-25-1 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Site Setup Guide — test harness</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #0f1117; color: #e6e9f2; }
+  .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 9px 12px; background: #171b24; border-bottom: 1px solid #2a3140; }
+  .bar h1 { font-size: 13px; margin: 0; font-weight: 700; }
+  .bar .sp { flex: 1 1 auto; }
+  .bar label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #b3bbcb; }
+  .bar button { font: inherit; font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 7px; border: 1px solid #2a3140; background: #1e2431; color: #e6e9f2; cursor: pointer; }
+  .bar button:hover { border-color: #8b8cf7; }
+  .status { font-size: 11px; color: #8b93a4; }
+  .status b { color: #46c98a; }
+  #frame { width: 100%; height: calc(100vh - 47px); border: 0; background: #fff; display: block; }
+  .log { position: fixed; bottom: 8px; left: 8px; right: 8px; max-height: 22vh; overflow: auto; background: rgba(10,12,18,.94); border: 1px solid #2a3140; border-radius: 8px; padding: 7px 9px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: #9aa4b8; display: none; }
+  .log.on { display: block; }
+  .log .err { color: #ff8a8a; }
+  .log .ok { color: #46c98a; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1>🧭 Site Setup Guide — harness</h1>
+  <span class="status" id="status">loading…</span>
+  <span class="sp"></span>
+  <label><input type="checkbox" id="mock" checked /> mock tool SDK</label>
+  <label><input type="checkbox" id="showlog" /> console</label>
+  <button id="reload" type="button">↻ Reload</button>
+</div>
+
+<iframe id="frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups"></iframe>
+<div class="log" id="log"></div>
+
+<script>
+/* ── Harness config ───────────────────────────────────────────────────────
+   The harness reproduces the CMS contract EXACTLY: the HTML field markup, the
+   CSS field in a <style>, the JS field inlined into ONE <script> (that is what
+   the CMS tokenizer does). Two switches:
+     • mock tool SDK  — on = behaves like the CMS (onReady/value/read-only),
+                        off = the standalone boot path (no window.tool).
+     • console        — shows in-frame console output + errors. */
+(function () {
+  'use strict';
+
+  var BUILD = '2026-10-25-1';
+  var frame = document.getElementById('frame');
+  var logBox = document.getElementById('log');
+  var statusEl = document.getElementById('status');
+  var mockBox = document.getElementById('mock');
+  var showLog = document.getElementById('showlog');
+
+  var HARNESS_KEY = 'sitesetupguide_harness_value';
+
+  function addLog(kind, text) {
+    var line = document.createElement('div');
+    if (kind === 'err') line.className = 'err';
+    else if (kind === 'ok') line.className = 'ok';
+    line.textContent = text;
+    logBox.appendChild(line);
+    logBox.scrollTop = logBox.scrollHeight;
+    if (kind === 'err') { logBox.classList.add('on'); showLog.checked = true; }
+  }
+  showLog.addEventListener('change', function () { logBox.classList.toggle('on', showLog.checked); });
+
+  function loadFile(path) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', path, true);
+      xhr.onload = function () {
+        if (xhr.status === 200 || xhr.status === 0) resolve(xhr.responseText);
+        else reject(new Error(path + ' -> HTTP ' + xhr.status));
+      };
+      xhr.onerror = function () { reject(new Error(path + ' -> network error (open this harness from a local server or the same folder)')); };
+      xhr.send();
+    });
+  }
+
+  /* Tokenizer safety checks — the CMS kills the whole tool when the inline JS
+     contains a raw script-closing sequence or an unpaired raw comment opener. */
+  function checkInlineSafety(js) {
+    var problems = [];
+    if (/<\/script/i.test(js)) problems.push('raw script-closing sequence found');
+    var openers = (js.match(/<!--/g) || []).length;
+    var closers = (js.match(/-->/g) || []).length;
+    if (openers !== closers) problems.push('unpaired raw HTML comment opener (use \\u003C!-- )');
+    return problems;
+  }
+
+  function mockScript() {
+    if (!mockBox.checked) return '';
+    return [
+      '(function () {',
+      '  var W = window;',
+      '  var KEY = "' + HARNESS_KEY + '";',
+      '  var value = null;',
+      '  try { var raw = W.localStorage.getItem(KEY); value = raw ? JSON.parse(raw) : null; } catch (e) {}',
+      '  var readyCbs = [], valueCbs = [], roCbs = [];',
+      '  var readOnly = false;',
+      '  W.tool = {',
+      '    onReady: function (cb) {',
+      '      readyCbs.push(cb);',
+      '      setTimeout(function () { cb(value, {}); }, 0);',
+      '    },',
+      '    onValueChange: function (cb) { valueCbs.push(cb); },',
+      '    onReadonlyChange: function (cb) { roCbs.push(cb); },',
+      '    onFieldsChange: function () {},',
+      '    getValue: function () { return value; },',
+      '    setValue: function (v) {',
+      '      if (readOnly) return;',
+      '      value = v;',
+      '      try { W.localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {}',
+      '      console.log("[HARNESS] setValue " + JSON.stringify(v));',
+      '    },',
+      '    isReadOnly: function () { return readOnly; },',
+      '    setReadOnly: function (ro) { readOnly = !!ro; roCbs.forEach(function (cb) { try { cb(readOnly); } catch (e) {} }); },',
+      '    param: function (_n, d) { return d; },',
+      '    declareParams: function (p) { console.log("[HARNESS] declareParams " + JSON.stringify(p)); },',
+      '    reportMissingParams: function (p) { console.log("[HARNESS] reportMissingParams " + JSON.stringify(p)); },',
+      '    notify: function (m) { console.log("[HARNESS] notify " + m); },',
+      '    resize: function () {},',
+      '    getUser: function () { return { id: "harness-user", roles: ["admin"] }; },',
+      '    getParentPageUrl: function () { return location.origin + location.pathname; },',
+      '    openUrl: function (u) { console.log("[HARNESS] openUrl " + u); },',
+      '    requestSave: function (cb) { if (cb) cb(null, { ok: true }); }',
+      '  };',
+      '  var send = function (list) { list.forEach(function (cb) { try { cb(value); } catch (e) {} }); };',
+      '  W.__harnessSetValue = function (v) { value = v; send(valueCbs); };',
+      '  W.__harnessSetReadOnly = function (ro) { W.tool.setReadOnly(ro); };',
+      '  try { parent.postMessage({ h: "ready" }, "*"); } catch (e) {}',
+      '})();'
+    ].join('\n');
+  }
+
+  function srcdoc(html, css, js) {
+    var mock = mockScript();
+    return [
+      '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />',
+      '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+      '<style>' + css + '</style>',
+      '</head><body>',
+      html,
+      mock ? '<script>' + mock + '<\/script>' : '',
+      '<script>' + js + '<\/script>',
+      '</body></html>'
+    ].join('\n');
+  }
+
+  function relayFrameConsole() {
+    /* The iframe is sandboxed without same-origin, so its console cannot be
+       read directly — the injected capture script overrides console and
+       reports through postMessage instead. */
+    window.addEventListener('message', function (e) {
+      var d = e.data;
+      if (!d || typeof d !== 'object' || d.h !== 'guidec') return;
+      addLog(d.err ? 'err' : (d.ok ? 'ok' : ''), String(d.msg));
+    });
+  }
+
+  function captureScript() {
+    return [
+      '(function () {',
+      '  function send(kind, args) {',
+      '    try {',
+      '      var msg = Array.prototype.slice.call(args).map(function (a) {',
+      '        if (typeof a === "string") return a;',
+      '        try { return JSON.stringify(a); } catch (e) { return String(a); }',
+      '      }).join(" ");',
+      '      parent.postMessage({ h: "guidec", kind: kind, msg: msg, err: kind === "err", ok: kind === "log" }, "*");',
+      '    } catch (e) {}',
+      '  }',
+      '  ["log", "info", "warn"].forEach(function (k) {',
+      '    var orig = console[k];',
+      '    console[k] = function () { send("log", arguments); if (orig) orig.apply(console, arguments); };',
+      '  });',
+      '  var oe = console.error;',
+      '  console.error = function () { send("err", arguments); if (oe) oe.apply(console, arguments); };',
+      '  window.addEventListener("error", function (e) {',
+      '    parent.postMessage({ h: "guidec", msg: "JS ERROR: " + (e.message || "?") + " @" + (e.lineno || 0), err: true }, "*");',
+      '  });',
+      '})();'
+    ].join('\n');
+  }
+
+  function build() {
+    statusEl.textContent = 'loading…';
+    logBox.innerHTML = '';
+    Promise.all([loadFile('SiteSetupGuide.html'), loadFile('SiteSetupGuide.css'), loadFile('SiteSetupGuide.js')])
+      .then(function (parts) {
+        var problems = checkInlineSafety(parts[2]);
+        var doc = srcdoc(parts[0], parts[1], captureScript() + '\n' + parts[2]);
+        frame.srcdoc = doc;
+        statusEl.innerHTML = 'harness build <b>' + BUILD + '</b> · mock ' + (mockBox.checked ? 'ON' : 'OFF') + ' · inline JS ' + parts[2].split('\n').length + ' lines'
+          + (problems.length ? ' · <span style="color:#ff8a8a">⚠ ' + problems.join(', ') + '</span>' : ' · <span style="color:#46c98a">tokenizer-safe</span>');
+        addLog('', 'srcdoc built (' + (mockBox.checked ? 'with' : 'without') + ' tool mock)');
+      })
+      .catch(function (err) { statusEl.textContent = 'FAILED: ' + err.message; addLog('err', err.message); });
+  }
+
+  document.getElementById('reload').addEventListener('click', build);
+  mockBox.addEventListener('change', build);
+  relayFrameConsole();
+  build();
+})();
+</script>
+</body>
+</html>

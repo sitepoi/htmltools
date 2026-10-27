@@ -1,0 +1,496 @@
+<!-- build 2026-10-25-1 -->
+<div id="sg-boot-banner" role="alert">⚠ Site Setup Guide JS is not running — update and re-save the JS block in the CMS Tool Builder (it must end with SITESETUPGUIDE-JS-END).</div>
+
+<div id="sg-app" class="sg-app">
+
+  <header class="sg-header">
+    <div class="sg-header-main">
+      <div class="sg-logo" aria-hidden="true">🧭</div>
+      <div>
+        <h1>Site Setup Guide</h1>
+        <p class="sg-sub">Domain → site folder → pages → header/footer — the exact place of every setting, with an FAQ.</p>
+      </div>
+    </div>
+    <div class="sg-header-side">
+      <span class="sg-build" id="sg-build" title="Tool code build — increments on every change">build …</span>
+      <button class="sg-btn sg-btn-ghost" id="sg-theme" type="button" title="Switch light / dark">🌓</button>
+    </div>
+  </header>
+
+  <div class="sg-toolbar">
+    <label class="sg-search">
+      <span aria-hidden="true">🔍</span>
+      <input type="search" id="sg-search" placeholder="Search: domain, header, footer, preview, slug, widget…" autocomplete="off" />
+    </label>
+    <button class="sg-btn sg-btn-ghost" id="sg-clear-search" type="button" title="Clear the search">✕</button>
+    <span class="sg-search-count" id="sg-search-count"></span>
+  </div>
+
+  <nav class="sg-tabs" id="sg-tabs" aria-label="Guide sections">
+    <button class="sg-tab is-active" type="button" data-sg-tab="overview">🧱 How it fits</button>
+    <button class="sg-tab" type="button" data-sg-tab="domain">🌐 Domain</button>
+    <button class="sg-tab" type="button" data-sg-tab="chrome">🧩 Header &amp; footer</button>
+    <button class="sg-tab" type="button" data-sg-tab="settings">⚙️ Site settings</button>
+    <button class="sg-tab" type="button" data-sg-tab="pages">📄 Pages</button>
+    <button class="sg-tab" type="button" data-sg-tab="widgets">🔌 Widgets</button>
+    <button class="sg-tab" type="button" data-sg-tab="checklist">✅ Checklist</button>
+    <button class="sg-tab" type="button" data-sg-tab="faq">❓ FAQ</button>
+  </nav>
+
+  <main class="sg-main" id="sg-main">
+
+    <!-- ══════════════ OVERVIEW ══════════════ -->
+    <section class="sg-panel is-active" data-sg-panel="overview">
+      <h2 class="sg-h2">The whole platform in five boxes</h2>
+      <p class="sg-lead">Everything about a website hangs off <b>one</b> idea: <b>a site is a FOLDER</b>. The folder owns the domain, the site-wide settings and the header/footer objects; the pages live inside it.</p>
+
+      <div class="sg-flow">
+        <div class="sg-flow-box">
+          <div class="sg-flow-num">1</div>
+          <h3>Application</h3>
+          <p>The installed website app. It declares the object types (pages, widgets) and the folder settings form.</p>
+          <p class="sg-where">Where: App Designer / App Settings</p>
+        </div>
+        <div class="sg-flow-arrow" aria-hidden="true">→</div>
+        <div class="sg-flow-box sg-flow-key">
+          <div class="sg-flow-num">2</div>
+          <h3>Site folder</h3>
+          <p><b>The website itself.</b> Holds the domain list, the language, the preview secret, theme, code slots — and the chrome objects.</p>
+          <p class="sg-where">Where: folder editor → “Website / Domain”</p>
+        </div>
+        <div class="sg-flow-arrow" aria-hidden="true">→</div>
+        <div class="sg-flow-box">
+          <div class="sg-flow-num">3</div>
+          <h3>Pages</h3>
+          <p>Normal content objects inside the folder tree. One object = one page, routed by its <code>slug</code>.</p>
+          <p class="sg-where">Where: the folder’s object list</p>
+        </div>
+      </div>
+      <div class="sg-flow sg-flow-second">
+        <div class="sg-flow-box">
+          <div class="sg-flow-num">4</div>
+          <h3>Chrome objects</h3>
+          <p><code>default-header</code> and <code>default-footer</code> — reserved-slug objects in the site folder, rendered around <b>every</b> page of that site.</p>
+          <p class="sg-where">Where: the folder’s object list (reserved slugs)</p>
+        </div>
+        <div class="sg-flow-arrow" aria-hidden="true">+</div>
+        <div class="sg-flow-box">
+          <div class="sg-flow-num">5</div>
+          <h3>Widgets</h3>
+          <p>Islands you drop into a page (<code>data-gw-app</code>). They come from the store catalog or from this site’s own widget objects.</p>
+          <p class="sg-where">Where: page code + Add-ons → Widgets</p>
+        </div>
+      </div>
+
+      <h2 class="sg-h2">Three rules that prevent 90% of the confusion</h2>
+      <div class="sg-grid">
+        <article class="sg-card">
+          <h3>1 · One folder = one website</h3>
+          <p>Two domains on one folder = one site answering on both. Two <b>different</b> headers/footers = two folders (two sites).</p>
+        </article>
+        <article class="sg-card">
+          <h3>2 · Settings live on the folder, code lives in objects</h3>
+          <p>Domain, language, theme, shared CSS, head/body code → <b>folder</b>. Page content, header/footer, widgets → <b>objects</b>. A page builder tool can never write folder settings.</p>
+        </article>
+        <article class="sg-card">
+          <h3>3 · Reserved slugs are not pages</h3>
+          <p><code>home-page</code>, <code>default-header</code>, <code>default-footer</code>, <code>default-settings</code> are looked up by slug by the platform. Never use them for a normal page.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ══════════════ DOMAIN ══════════════ -->
+    <section class="sg-panel" data-sg-panel="domain">
+      <h2 class="sg-h2">Connect a folder to a domain</h2>
+      <p class="sg-lead">Two halves: <b>DNS</b> (done once, at your domain registrar) and <b>binding the hostname to the folder</b> (done in the CMS, per site).</p>
+
+      <ol class="sg-steps">
+        <li>
+          <h3>Point the domain at the platform</h3>
+          <p>At your registrar, add the DNS records the platform gave you for the public website deployment (typically an <code>A</code>/<code>ALIAS</code> record for the bare domain and a <code>CNAME</code> for <code>www</code>). This step never happens inside the CMS.</p>
+        </li>
+        <li>
+          <h3>Open the site folder in the CMS</h3>
+          <p>Folders live in the app’s folder tree. The site folder is the one that owns the site (its descendants are its pages).</p>
+          <p class="sg-where">Folder list → <b>Edit</b> on the site folder</p>
+        </li>
+        <li>
+          <h3>Fill the “Website / Domain” section</h3>
+          <p>This is the folder config section the website app declares (storage key <code>websiteConfig</code>). It is the <b>only</b> place the renderer reads the domain from.</p>
+        </li>
+        <li>
+          <h3>Add every hostname, then choose the canonical one</h3>
+          <p><code>hostNames</code> = all hosts this site answers on. <code>primaryHost</code> = the one used for canonical URLs, sitemap and hreflang.</p>
+        </li>
+        <li>
+          <h3>Save, then open the domain in a browser</h3>
+          <p>The platform resolves <b>host → tenant → site folder</b> whose <code>hostNames</code> contains it, then renders the page whose slug matches the path.</p>
+        </li>
+        <li>
+          <h3>Create the home page</h3>
+          <p>A page object with slug <code>home-page</code> renders at <code>/</code>. Without it the domain resolves but shows “no page”.</p>
+        </li>
+      </ol>
+
+      <h2 class="sg-h2">What <code>hostNames</code> accepts</h2>
+      <div class="sg-table-wrap">
+        <table class="sg-table">
+          <thead><tr><th>Rule</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td>Hostname only — no protocol, no path</td><td><code>example.com</code> not <code>https://example.com/</code></td></tr>
+            <tr><td>Lowercase; a trailing dot is stripped</td><td><code>Example.COM</code> → <code>example.com</code></td></tr>
+            <tr><td>Spaces are rejected</td><td>Paste one hostname per row</td></tr>
+            <tr><td>Wildcards are allowed</td><td><code>*.example.com</code></td></tr>
+            <tr><td>Several hosts = one site</td><td><code>example.com</code>, <code>www.example.com</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sg-snippet">
+        <div class="sg-snippet-head">
+          <span>Paste-ready field values (site folder)</span>
+          <button class="sg-btn sg-btn-sm" type="button" data-sg-copy="hosts-json">📋 Copy</button>
+        </div>
+        <pre id="hosts-json">{
+  "hostNames": ["example.com", "www.example.com"],
+  "primaryHost": "example.com",
+  "defaultLanguage": "en",
+  "previewSecret": "put-a-long-random-string-here"
+}</pre>
+      </div>
+
+      <div class="sg-note sg-note-warn">
+        <b>Two sites, one domain?</b> A hostname may belong to only one site folder. If a domain “jumps” to the wrong site, check that it is not still listed in another folder’s <code>hostNames</code>.
+      </div>
+      <div class="sg-note">
+        <b>Preview secret is not optional.</b> Draft pages are reachable only with <code>?gw-preview=&lt;previewSecret&gt;</code>. No secret = no way to look at a draft before publishing.
+      </div>
+    </section>
+
+    <!-- ══════════════ CHROME ══════════════ -->
+    <section class="sg-panel" data-sg-panel="chrome">
+      <h2 class="sg-h2">Share a header and footer across pages</h2>
+      <p class="sg-lead">The header and footer are <b>site chrome</b>: two reserved-slug objects in the site folder, rendered by the platform around every page of that site. There is no per-page switch — and no need for one.</p>
+
+      <div class="sg-grid">
+        <article class="sg-card sg-card-key">
+          <h3><code>default-header</code></h3>
+          <p>Rendered above every page of the site. Same code contract as a page: <code>data.htmlPage.code.html</code> (one self-contained fragment, optional inline style/script).</p>
+        </article>
+        <article class="sg-card sg-card-key">
+          <h3><code>default-footer</code></h3>
+          <p>Rendered below every page of the site. Keep it light — it runs site-wide, on every navigation.</p>
+        </article>
+      </div>
+
+      <h2 class="sg-h2">Chrome rules (or the site breaks)</h2>
+      <div class="sg-table-wrap">
+        <table class="sg-table">
+          <thead><tr><th>Must</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Fragment only — no <code>&lt;html&gt;</code>/<code>&lt;head&gt;</code>/<code>&lt;body&gt;</code></td><td>It is injected inside the page shell, not loaded as a document.</td></tr>
+            <tr><td>Wrap everything in your own class (<code>.site-chrome-header</code>) and prefix every CSS rule with it</td><td>Your CSS shares the document with every page, so unscoped rules leak into pages.</td></tr>
+            <tr><td>Nav links: <code>&lt;a data-ic-nav-href="/shop" href="/shop"&gt;</code></td><td>Keeps in-app navigation client-side; the plain <code>href</code> stays for SEO and fallback.</td></tr>
+            <tr><td>JS idempotent and guarded, no top-level <code>await</code></td><td>Scripts re-run on every SPA navigation.</td></tr>
+            <tr><td>Never define <code>gw-*</code> classes</td><td>The <code>gw-</code> prefix belongs to the platform shell and built-in widgets.</td></tr>
+            <tr><td>Stay light</td><td>Chrome is on every page: no big images, no heavy libraries.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="sg-h2">“I want it on some pages, not all”</h2>
+      <div class="sg-table-wrap">
+        <table class="sg-table">
+          <thead><tr><th>You want</th><th>Do this</th></tr></thead>
+          <tbody>
+            <tr><td>Same header/footer on <b>every</b> page of the site</td><td><code>default-header</code> / <code>default-footer</code> in the site folder — the only supported “default”.</td></tr>
+            <tr><td>A <b>different</b> header/footer for a group of pages</td><td>Make a second <b>site folder</b> (own domain or subdomain, own chrome + own settings).</td></tr>
+            <tr><td>A block on <b>one</b> page only</td><td>Put it inside the page fragment itself.</td></tr>
+            <tr><td>A reusable block on <b>several</b> pages, configured per page</td><td>Use a <b>widget / island</b> (<code>data-gw-app</code> + per-page config).</td></tr>
+            <tr><td>Translated chrome</td><td>Sibling chrome objects sharing one <code>contentId</code>, each with its own <code>meta.language</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sg-note">
+        <b>Where do I edit them?</b> In the site folder’s object list — the objects whose slug is <code>default-header</code> / <code>default-footer</code>. Author them with the code-object builder tool (WebsiteSharedSourceBuilder), or paste the same object shape from any other tool.
+      </div>
+      <div class="sg-note sg-note-warn">
+        <b>Retired concept:</b> there is no “optional shared block” list inside a page any more (<code>data.sections</code> is ignored). Per-page shared blocks = widgets; site-wide shared blocks = chrome.
+      </div>
+    </section>
+
+    <!-- ══════════════ SITE SETTINGS ══════════════ -->
+    <section class="sg-panel" data-sg-panel="settings">
+      <h2 class="sg-h2">Site-wide settings (on the folder)</h2>
+      <p class="sg-lead">All of these live in <code>data.websiteConfig</code> on the <b>site folder</b>. They are folder fields — no object, no page and no builder tool can write them; only the folder editor can.</p>
+
+      <div class="sg-table-wrap">
+        <table class="sg-table">
+          <thead><tr><th>Field</th><th>What it does</th><th>Remember</th></tr></thead>
+          <tbody>
+            <tr><td><code>hostNames</code></td><td>Every domain this site answers on.</td><td>Hostname only. Required — no hostNames, no site.</td></tr>
+            <tr><td><code>primaryHost</code></td><td>Canonical host for SEO, sitemap, hreflang.</td><td>Pick one, usually without <code>www</code>.</td></tr>
+            <tr><td><code>defaultLanguage</code></td><td>Language when an object has none.</td><td>Defaults to <code>en</code>. Empty <code>meta.language</code> falls back to this.</td></tr>
+            <tr><td><code>previewSecret</code></td><td>Key for previewing drafts.</td><td>Critical. Open drafts with <code>?gw-preview=…</code>.</td></tr>
+            <tr><td><code>currency</code></td><td>Money formatting for the site.</td><td>Used by <code>gw.formatCurrency()</code> in pages.</td></tr>
+            <tr><td><code>theme</code></td><td>Colours exposed as <code>--gw-color-*</code> variables.</td><td>Pages should use the variables, never hard-coded brand colours.</td></tr>
+            <tr><td><code>sharedCss</code></td><td>Site-level stylesheet injected before page CSS.</td><td>Admin-owned. Pages may use its classes.</td></tr>
+            <tr><td><code>headCode</code></td><td>Markup injected in <code>&lt;head&gt;</code>.</td><td>Analytics/verification tags live here — never in page code.</td></tr>
+            <tr><td><code>bodyStartCode</code></td><td>Markup right after <code>&lt;body&gt;</code> opens.</td><td>GTM-style snippets.</td></tr>
+            <tr><td><code>bodyEndCode</code></td><td>Markup before <code>&lt;/body&gt;</code>.</td><td>Pixel/chat widgets.</td></tr>
+            <tr><td><code>plugins</code></td><td>Platform plugin ids (e.g. analytics).</td><td>Configured by the platform, not by pages.</td></tr>
+            <tr><td><code>webSettings</code></td><td>Extra site flags the renderer passes through.</td><td>Optional.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sg-snippet">
+        <div class="sg-snippet-head">
+          <span>Minimal working site config</span>
+          <button class="sg-btn sg-btn-sm" type="button" data-sg-copy="sitecfg-json">📋 Copy</button>
+        </div>
+        <pre id="sitecfg-json">{
+  "hostNames": ["example.com", "www.example.com"],
+  "primaryHost": "example.com",
+  "defaultLanguage": "en",
+  "previewSecret": "long-random-string",
+  "currency": "EUR",
+  "theme": { "colors": { "primary": "#4f46e5" } }
+}</pre>
+      </div>
+
+      <div class="sg-note">
+        <b>Why can’t a page tool change this?</b> The domain must be known <i>before</i> any object is looked up, so site identity has to sit on the folder. Tools write their own value (and, where the CMS allows it, a few declared fields of their parent object) — never folder config.
+      </div>
+    </section>
+
+    <!-- ══════════════ PAGES ══════════════ -->
+    <section class="sg-panel" data-sg-panel="pages">
+      <h2 class="sg-h2">Pages, slugs and publishing</h2>
+      <p class="sg-lead">A page is an object inside the site folder tree. Its <code>slug</code> decides the URL; its status decides whether anyone can see it.</p>
+
+      <div class="sg-table-wrap">
+        <table class="sg-table">
+          <thead><tr><th>Slug / route</th><th>URL</th></tr></thead>
+          <tbody>
+            <tr><td><code>home-page</code></td><td><code>/</code></td></tr>
+            <tr><td><code>about</code></td><td><code>/about</code></td></tr>
+            <tr><td>object of a registered type</td><td><code>/&lt;type&gt;/&lt;id&gt;</code> (object detail page)</td></tr>
+            <tr><td>template page <code>tours</code></td><td><code>/t/tours/&lt;contentId&gt;</code></td></tr>
+            <tr><td><code>app-&lt;appId&gt;</code></td><td><code>/app/&lt;appId&gt;/…</code> (app capability page)</td></tr>
+            <tr><td colspan="2"><b>Not pages:</b> <code>default-settings</code>, <code>default-header</code>, <code>default-footer</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="sg-h2">Publishing a page</h2>
+      <ol class="sg-steps sg-steps-compact">
+        <li><h3>Generate or paste the page code</h3><p>One self-contained fragment: markup + at most one scoped <code>&lt;style&gt;</code> + at most one <code>&lt;script&gt;</code>, no document tags.</p></li>
+        <li><h3>Save the tool value</h3><p>The builder stores the page inside its own field value — that is normal and expected.</p></li>
+        <li><h3>Check the object status in the CMS list</h3><p>That status is the publish gate: a disabled/hidden record is not rendered on the live site.</p></li>
+        <li><h3>Look at it on the real domain</h3><p>Drafts only render with <code>?gw-preview=&lt;previewSecret&gt;</code>. Publish the record, then open <code>https://&lt;host&gt;/&lt;slug&gt;</code>.</p></li>
+        <li><h3>Add it to navigation</h3><p>Links are plain <code>&lt;a data-ic-nav-href="/about" href="/about"&gt;</code> — in the page, or in <code>default-header</code> if it belongs in the site menu.</p></li>
+      </ol>
+
+      <div class="sg-note sg-note-warn">
+        <b>Nothing appears on the domain?</b> In this order: (1) is the hostname in <code>hostNames</code>? (2) does the object live in <b>that</b> folder tree? (3) is the record enabled? (4) is the slug right (<code>home-page</code> for <code>/</code>)? (5) DNS still propagating?
+      </div>
+    </section>
+
+    <!-- ══════════════ WIDGETS ══════════════ -->
+    <section class="sg-panel" data-sg-panel="widgets">
+      <h2 class="sg-h2">Widgets (islands)</h2>
+      <p class="sg-lead">Widgets are the reusable building blocks <b>inside</b> a page: a menu, a cart, a slot picker, a photo gallery. A page embeds a reference; it never contains the widget’s code.</p>
+
+      <div class="sg-snippet">
+        <div class="sg-snippet-head">
+          <span>How a page embeds a widget</span>
+          <button class="sg-btn sg-btn-sm" type="button" data-sg-copy="island-html">📋 Copy</button>
+        </div>
+        <pre id="island-html">&lt;div data-gw-app="menu"
+     data-gw-config='{"cmsObjectType":"menu-items","folder":"menu","priceField":"price"}'&gt;&lt;/div&gt;</pre>
+      </div>
+
+      <div class="sg-grid">
+        <article class="sg-card">
+          <h3>① Shared catalog</h3>
+          <p>The application store catalog (<code>website-html-tool-library-applicationstore</code>) — the same widgets for every tenant.</p>
+        </article>
+        <article class="sg-card">
+          <h3>② This site’s own widgets</h3>
+          <p>Objects of type <code>website-html-tools-local-uniconbaseapps</code>. Your own widgets, only for this site. On a name clash the site-local widget wins.</p>
+        </article>
+      </div>
+
+      <div class="sg-note">
+        <b>Never copy widget code into a page.</b> Embed the island and let the platform mount it; config must be valid JSON (<code>data-gw-config</code>) and islands are never nested.
+      </div>
+    </section>
+
+    <!-- ══════════════ CHECKLIST ══════════════ -->
+    <section class="sg-panel" data-sg-panel="checklist">
+      <h2 class="sg-h2">New website checklist</h2>
+      <p class="sg-lead">In order. Your ticks are saved with this page — come back any time.</p>
+      <div class="sg-check-list" id="sg-check-list">
+        <label class="sg-check"><input type="checkbox" data-sg-check="c1" /><span><b>1.</b> Site folder exists (or create it) — one folder per website</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c2" /><span><b>2.</b> DNS points the domain at the platform</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c3" /><span><b>3.</b> Folder → “Website / Domain” → <code>hostNames</code> lists every host</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c4" /><span><b>4.</b> <code>primaryHost</code> set (canonical, usually without <code>www</code>)</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c5" /><span><b>5.</b> <code>defaultLanguage</code> set, <code>previewSecret</code> generated</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c6" /><span><b>6.</b> Theme colours + <code>sharedCss</code> configured (or intentionally empty)</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c7" /><span><b>7.</b> <code>headCode</code> / <code>bodyStartCode</code> / <code>bodyEndCode</code> — analytics only, nothing else</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c8" /><span><b>8.</b> <code>default-header</code> object created and enabled</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c9" /><span><b>9.</b> <code>default-footer</code> object created and enabled</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c10" /><span><b>10.</b> Home page object with slug <code>home-page</code>, enabled</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c11" /><span><b>11.</b> Every other page has a slug, a language and an enabled status</span></label>
+        <label class="sg-check"><input type="checkbox" data-sg-check="c12" /><span><b>12.</b> Opened the real domain and clicked through the navigation</span></label>
+      </div>
+      <div class="sg-check-actions">
+        <span class="sg-check-progress" id="sg-check-progress">0 / 12 done</span>
+        <button class="sg-btn sg-btn-ghost sg-btn-sm" type="button" id="sg-check-reset">Reset ticks</button>
+      </div>
+      <p class="sg-readonly-note" id="sg-readonly-note" hidden>Read-only mode: ticks work in this view but will not be saved.</p>
+    </section>
+
+    <!-- ══════════════ FAQ ══════════════ -->
+    <section class="sg-panel" data-sg-panel="faq">
+      <h2 class="sg-h2">FAQ — the settings nobody remembers</h2>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>How do I connect a domain to a folder?</summary>
+        <div class="sg-faq-body">
+          <p>Add the domain to the <b>site folder’s</b> “Website / Domain” section, field <code>hostNames</code> (hostname only, no <code>https://</code>, no path). Set <code>primaryHost</code> to the canonical one. That is the whole binding — the platform resolves host → tenant → the folder whose <code>hostNames</code> contains it.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Do I also have to touch DNS?</summary>
+        <div class="sg-faq-body">
+          <p>Yes, once: at the registrar, point the domain at the public website deployment (A/ALIAS for the bare domain, CNAME for <code>www</code>). Without DNS the folder binding exists but the domain never reaches the platform.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Where exactly is the “Website / Domain” section defined?</summary>
+        <div class="sg-faq-body">
+          <p>The website app declares it in App Designer as its folder config section (storage key <code>websiteConfig</code>). The folder editor renders those fields. If the section is missing in the folder editor, the app declaration is missing — that is an app-configuration problem, not a folder problem.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Why does my domain show the wrong website?</summary>
+        <div class="sg-faq-body">
+          <p>The same hostname is listed in more than one folder’s <code>hostNames</code>. Keep each host in exactly one site folder, and make sure the folder you expect is the one that owns it.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Where do I set the header and footer for all pages?</summary>
+        <div class="sg-faq-body">
+          <p>Two objects in the site folder: <code>default-header</code> and <code>default-footer</code>. The platform renders them around every page of that site automatically. There is no per-page switch.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Can I use a header on only some pages?</summary>
+        <div class="sg-faq-body">
+          <p>Not through chrome. Options: (a) put it in the page fragment for a one-off page; (b) use a widget for a block that repeats with per-page config; (c) create a second site folder with its own chrome when a whole group of pages needs a different shell.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Header shows up but the links do a full page reload — why?</summary>
+        <div class="sg-faq-body">
+          <p>The links are missing <code>data-ic-nav-href</code>. Write them as <code>&lt;a data-ic-nav-href="/shop" href="/shop"&gt;</code> so the router intercepts the click; keep the plain <code>href</code> for SEO and fallback.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>My page CSS is leaking into other pages / the header — what happened?</summary>
+        <div class="sg-faq-body">
+          <p>Page and chrome CSS share one document. Give the root fragment a unique class and prefix <b>every</b> rule with it; never style bare <code>html</code>, <code>body</code>, <code>*</code>, <code>a</code>, <code>h1</code>. And never define <code>gw-*</code> classes — that prefix is the platform’s.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>How do I preview a draft before publishing?</summary>
+        <div class="sg-faq-body">
+          <p>Open the URL with the site’s preview secret: <code>https://&lt;host&gt;/&lt;slug&gt;?gw-preview=&lt;previewSecret&gt;</code>. If drafts still 404, <code>previewSecret</code> is empty on the folder.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>What is <code>primaryHost</code> for?</summary>
+        <div class="sg-faq-body">
+          <p>Canonical URLs, sitemap entries and hreflang. It should be the host you want indexed — pick one and stick to it (usually the non-<code>www</code> form).</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>How do I make a second site (different domain, different chrome)?</summary>
+        <div class="sg-faq-body">
+          <p>Create another site folder with its own <code>websiteConfig</code> (its own <code>hostNames</code>, theme, chrome objects). Pages of the two sites never mix: a folder tree is a site.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Where do analytics scripts go?</summary>
+        <div class="sg-faq-body">
+          <p>In the folder’s <code>headCode</code> / <code>bodyStartCode</code> / <code>bodyEndCode</code> (or the platform plugin settings). Never inside page or chrome code, and never as an external <code>&lt;script src&gt;</code> inside a page.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Why is my page not at <code>/</code>?</summary>
+        <div class="sg-faq-body">
+          <p>Only the object with slug <code>home-page</code> renders at <code>/</code>. Any other slug becomes <code>/&lt;slug&gt;</code>. Check for a second <code>home-page</code> in the same tree as well.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>How do translations work?</summary>
+        <div class="sg-faq-body">
+          <p>One object per language, all sharing the same <code>contentId</code>, each with its own <code>meta.language</code> and its own slug. An empty language falls back to the folder’s <code>defaultLanguage</code>. There are no <code>/en/</code> prefixes.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Can a page tool change the folder settings for me?</summary>
+        <div class="sg-faq-body">
+          <p>No. A tool writes its own value (and, where the CMS allows, a few declared fields of its parent object). Folder settings such as <code>hostNames</code>, <code>theme</code> or <code>previewSecret</code> are folder-only by design — the domain has to be known before any object is loaded.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>I changed the domain but the site kept the old one — where is it cached?</summary>
+        <div class="sg-faq-body">
+          <p>Check, in order: the folder’s <code>hostNames</code> (old value still listed?), <code>primaryHost</code>, and any other folder that still claims the old host. Then reload with a hard refresh — pages are server-rendered and cached by host.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>Widget appears as an empty box — why?</summary>
+        <div class="sg-faq-body">
+          <p>Usually one of: the island name does not match a catalog/site-local widget, <code>data-gw-config</code> is not valid JSON, or the widget object is disabled. Spacing/sizing can also come from the page CSS overriding the wrapper.</p>
+        </div>
+      </details>
+
+      <details class="sg-faq" data-sg-faq>
+        <summary>What should never be in a page or chrome?</summary>
+        <div class="sg-faq-body">
+          <p>Secrets and keys, <code>&lt;html&gt;</code>/<code>&lt;head&gt;</code>/<code>&lt;body&gt;</code> tags, external script libraries, unscoped CSS, <code>gw-*</code> class definitions, and analytics snippets (those belong to the folder).</p>
+        </div>
+      </details>
+    </section>
+
+    <p class="sg-empty" id="sg-empty" hidden>No match for that search. Try “domain”, “header”, “preview”, “slug” or “widget”.</p>
+  </main>
+
+  <footer class="sg-footer">
+    <span>Everything here is a place to click, not a thing to memorise — the checklist keeps your progress.</span>
+    <span class="sg-footer-build" id="sg-footer-build"></span>
+  </footer>
+
+  <div class="sg-toast" id="sg-toast" role="status" aria-live="polite" hidden></div>
+</div>
