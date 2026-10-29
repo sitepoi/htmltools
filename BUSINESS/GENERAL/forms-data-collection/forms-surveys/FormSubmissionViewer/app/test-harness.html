@@ -22,7 +22,7 @@
 	#th-log p { margin: 0 0 2px; }
 	#app-container { padding: 0; }
 	@media (max-width: 760px) {
-		body { padding-top: 96px; }
+		body { padding-top: 132px; }
 	}
 </style>
 </head>
@@ -31,6 +31,7 @@
 	<strong>HARNESS - FormSubmissionViewer</strong><span class="sep">|</span>
 	<span class="hint">Record:</span>
 	<select id="th-record">
+		<option value="cms-envelope">Real CMS object (objectData envelope)</option>
 		<option value="trial-exam">Full trial exam record</option>
 		<option value="trial-exam-no-consent">Trial exam, no phone, no consent</option>
 		<option value="career-fair">Career fair entry</option>
@@ -77,7 +78,7 @@
 		'u-editor': { id: 'u-editor', name: 'Eddie Editor', email: 'eddie@example.org', roles: ['viewer', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } }
 	};
 	var state = {
-		recordKey: query.get('record') || 'trial-exam',
+		recordKey: query.get('record') || 'cms-envelope',
 		userId: query.get('role') === 'editor' ? 'u-editor' : (query.get('role') === 'viewer' ? 'u-viewer' : (localStorage.getItem(STORAGE_KEY + '_user') || 'u-viewer')),
 		value: null,
 		readyCallback: null,
@@ -201,6 +202,55 @@
    ───────────────────────────────────────────────────────────────────── */
 (function () {
 	window.FSV_RECORDS = {
+		'cms-envelope': {
+			title: 'Real CMS object (objectData envelope)',
+			fields: {
+				id: '2026-10-29-96ZZ9AMTKF-ibap',
+				_id: '2026-10-29-96ZZ9AMTKF-ibap',
+				cmsObjectType: 'form-submissions-uniconbaseapps',
+				typeId: '2026-11-07-vancouver-cemc-trial-exam-registration-466EDE-ibap',
+				name: 'Form Submissions (2026-11-07-vancouver-cemc-trial-exam-registration) - 2026-10-29 10:44:49',
+				contentId: '',
+				slug: 'form-submissions-uniconbaseapps-20261029104449552-39ZQW7-ibap',
+				blocks: [],
+				aiChat: {},
+				objectData: {
+					data_categoriesBased: {
+						handledAt: '',
+						receivedAt: '2026-10-29T10:44:49.552Z',
+						cmsObjectType: 'form-submissions-uniconbaseapps',
+						senderEmail: 'test4@test.com',
+						submittedAt: '2026-10-29T10:44:45.292Z',
+						handledBy: '',
+						page: '/2026-11-07-vancouver-cemc-trial-exam-registration',
+						notes: '',
+						values: {
+							area: 'Greater Vancouver',
+							city: 'Vancouver',
+							email: 'test4@test.com',
+							exam_date: '2026-11-07',
+							exam: 'CEMC Trial Exam',
+							student_name: 'student 4',
+							phone: '(604) 704-9914',
+							venue_city: 'New Westminster',
+							consent: 'yes',
+							parent_name: 'test 4',
+							student_grade: 'Grade 7'
+						},
+						submissionKind: 'public-form',
+						objectStatus: '',
+						ipHash: 'ea5009349076bc58a4ba2b66a7a9e1a4161646e6c4955e46b9540a343208a6b4',
+						status: 'new',
+						userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36',
+						formTypeId: '2026-11-07-vancouver-cemc-trial-exam-registration'
+					}
+				},
+				meta: { status: 'enabled', language: '' },
+				seo: {},
+				permissions: [],
+				categories: []
+			}
+		},
 		'trial-exam': {
 			title: 'Full trial exam record',
 			fields: {
@@ -430,7 +480,7 @@
 	var maskCheckbox = document.getElementById('th-mask');
 	var status = document.getElementById('th-status');
 
-	recordSelect.value = window.tool._tools ? (new URLSearchParams(window.location.search).get('record') || 'trial-exam') : 'trial-exam';
+	recordSelect.value = window.tool._tools ? (new URLSearchParams(window.location.search).get('record') || 'cms-envelope') : 'cms-envelope';
 	if (window.localStorage.getItem('fsv_harness_value_user') === 'u-editor') { userSelect.value = 'u-editor'; }
 
 	recordSelect.addEventListener('change', function () {

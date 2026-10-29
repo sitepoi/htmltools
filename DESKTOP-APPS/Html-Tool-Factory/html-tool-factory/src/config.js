@@ -16,6 +16,11 @@ const APP_ROOT = path.resolve(__dirname, '..')
 // The idea list SSOT: the JSON catalog, not the generated catalog-data.js.
 const DEFAULT_CATALOG_PATH = path.resolve(APP_ROOT, '..', '..', '..', 'UNICON-TOOLS', 'tools-catalog', 'tool-ideas-catalog.json')
 
+// The build of the factory itself. It is served to the dashboard so a page left
+// open across a change can say so instead of quietly showing old markup. Keep it
+// equal to the document version in docs/ssot.html (a source check enforces it).
+const APP_BUILD = '0.12.2'
+
 const BUILT_IN_DEFAULTS = {
   host: '127.0.0.1',
   port: 4173,
@@ -253,8 +258,37 @@ function loadConfig(options) {
   return normalizeConfig(withEnvironment)
 }
 
+// Where the model name actually comes from, in the order the client resolves it:
+// the per stage override (models.planner / models.coder) wins, then the provider
+// default. A settings screen that only shows the default is a lie, so the
+// overrides are named here whenever they differ from it.
+function modelSummary(configValue) {
+  const models = configValue.models || {}
+  const provider = configValue.provider
+  const endpointModel = provider === 'unicon-gateway'
+    ? String(configValue.uniconGateway.model || '')
+    : provider === 'ollama'
+      ? String(configValue.ollama.model || '')
+      : String(configValue.openaiCompatible.model || '')
+  const planner = String(models.planner || '')
+  const coder = String(models.coder || '')
+  const overrides = []
+  if (planner && planner !== endpointModel) overrides.push('planner: ' + planner)
+  if (coder && coder !== endpointModel) overrides.push('coder: ' + coder)
+  return {
+    endpointModel: endpointModel || 'no model set',
+    planner: planner || endpointModel,
+    coder: coder || endpointModel,
+    overrides,
+    // One line a human can read: "deepseek-flash (planner: deepseek-v4-pro, coder: deepseek-v4-pro)"
+    text: (endpointModel || 'no model set') +
+      (overrides.length ? ' (' + overrides.join(', ') + ')' : '')
+  }
+}
+
 function describeProvider(config) {
   const provider = config.provider
+  const models = modelSummary(config)
   if (provider === 'unicon-gateway') {
     const hasBaseUrl = Boolean(config.uniconGateway.baseUrl)
     const hasKey = Boolean(config.uniconGateway.apiKey)
@@ -263,8 +297,9 @@ function describeProvider(config) {
       label: 'Unicon Gateway',
       configured: hasBaseUrl && hasKey,
       detail: hasBaseUrl
-        ? config.uniconGateway.defaultProvider + ' / ' + config.uniconGateway.model + (hasKey ? '' : ' - no API key saved yet')
-        : 'Base URL is empty'
+        ? config.uniconGateway.defaultProvider + ' / ' + models.text + (hasKey ? '' : ' - no API key saved yet')
+        : 'Base URL is empty',
+      models
     }
   }
   if (provider === 'openai-compatible') {
@@ -272,9 +307,8 @@ function describeProvider(config) {
       provider,
       label: 'OpenAI compatible',
       configured: Boolean(config.openaiCompatible.baseUrl && config.openaiCompatible.apiKey),
-      detail: config.openaiCompatible.baseUrl
-        ? (config.openaiCompatible.model || 'no model set')
-        : 'Base URL is empty'
+      detail: config.openaiCompatible.baseUrl ? models.text : 'Base URL is empty',
+      models
     }
   }
   if (provider === 'ollama') {
@@ -282,14 +316,16 @@ function describeProvider(config) {
       provider,
       label: 'Local Ollama',
       configured: Boolean(config.ollama.host),
-      detail: config.ollama.host + ' / ' + config.ollama.model
+      detail: config.ollama.host + ' / ' + models.text,
+      models
     }
   }
   return {
     provider: 'mock',
     label: 'Dry run (mock AI)',
     configured: true,
-    detail: 'No network calls, deterministic answers'
+    detail: 'No network calls, deterministic answers',
+    models
   }
 }
 
@@ -351,10 +387,12 @@ function saveLocalConfig(patchValue) {
 
 module.exports = {
   APP_ROOT,
+  APP_BUILD,
   DEFAULT_CATALOG_PATH,
   loadConfig,
   normalizeConfig,
   describeProvider,
+  modelSummary,
   publicConfigView,
   saveLocalConfig,
   mergeDeep

@@ -1,0 +1,251 @@
+<!-- html build 2025-01-06-5 -->
+<div class="ajdw-app" id="ajdw-app-root">
+  <header class="ajdw-header ajdw-controls">
+    <h1 class="ajdw-title">AI Job Description Writer</h1>
+    <div class="ajdw-build-badge" id="ajdw-build-badge" data-tool-build="2025-01-06-5">build 2025-01-06-5</div>
+    <div class="ajdw-storage-alert ajdw-controls" id="ajdw-storage-alert" role="alert" hidden>
+      <p class="ajdw-storage-alert-text" id="ajdw-storage-alert-text">Workspace storage is full. Download a JSON backup to keep this draft.</p>
+      <div class="ajdw-storage-alert-actions">
+        <button class="ajdw-button ajdw-button--small" id="ajdw-storage-backup" type="button">Download JSON backup</button>
+        <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-storage-prune" type="button" hidden>Delete old versions</button>
+      </div>
+      <p class="ajdw-status ajdw-storage-alert-status" id="ajdw-storage-alert-status" role="status" aria-live="polite"></p>
+    </div>
+  </header>
+  <!-- Developer checks run in app/test-harness.html, outside the shipped page. -->
+  <div class="ajdw-layout" id="ajdw-layout">
+    <div class="ajdw-column ajdw-column--brief">
+      <form class="ajdw-form ajdw-controls" id="ajdw-role-brief-form" action="#" method="get" novalidate>
+        <h2 class="ajdw-form-title">Role brief</h2>
+        <p class="ajdw-hint" id="ajdw-required-hint">Fields marked <span class="ajdw-required-mark">*</span> are required before Generate draft. Everything else is optional.</p>
+        <div class="ajdw-form-grid">
+          <div class="ajdw-field">
+            <label class="ajdw-label" for="ajdw-role-title">Role title <span class="ajdw-required-mark" aria-hidden="true">*</span></label>
+            <input class="ajdw-input" id="ajdw-role-title" name="roleTitle" type="text" required aria-required="true" aria-describedby="ajdw-required-hint">
+          </div>
+          <div class="ajdw-field">
+            <label class="ajdw-label" for="ajdw-department">Department <span class="ajdw-required-mark" aria-hidden="true">*</span></label>
+            <input class="ajdw-input" id="ajdw-department" name="department" type="text" required aria-required="true" aria-describedby="ajdw-required-hint">
+          </div>
+          <div class="ajdw-field">
+            <label class="ajdw-label" for="ajdw-location">Location <span class="ajdw-required-mark" aria-hidden="true">*</span></label>
+            <input class="ajdw-input" id="ajdw-location" name="location" type="text" required aria-required="true" aria-describedby="ajdw-required-hint">
+          </div>
+          <div class="ajdw-field">
+            <label class="ajdw-label" for="ajdw-employment-type">Employment type <span class="ajdw-required-mark" aria-hidden="true">*</span></label>
+            <select class="ajdw-select" id="ajdw-employment-type" name="employmentType" required aria-required="true" aria-describedby="ajdw-required-hint">
+              <option value="">Select type</option>
+              <option value="full-time">Full-time</option>
+              <option value="part-time">Part-time</option>
+              <option value="contract">Contract</option>
+              <option value="temporary">Temporary</option>
+              <option value="internship">Internship</option>
+            </select>
+          </div>
+          <div class="ajdw-field">
+            <label class="ajdw-label" for="ajdw-seniority">Seniority</label>
+            <select class="ajdw-select" id="ajdw-seniority" name="seniority">
+              <option value="">Select seniority</option>
+              <option value="entry">Entry</option>
+              <option value="mid">Mid</option>
+              <option value="senior">Senior</option>
+              <option value="lead">Lead</option>
+              <option value="manager">Manager</option>
+              <option value="executive">Executive</option>
+            </select>
+          </div>
+          <div class="ajdw-field">
+            <label class="ajdw-label" for="ajdw-salary">Salary (optional)</label>
+            <input class="ajdw-input" id="ajdw-salary" name="salary" type="text" placeholder="e.g. $70,000 - $90,000">
+          </div>
+        </div>
+        <div class="ajdw-field ajdw-field--wide">
+          <label class="ajdw-label" for="ajdw-summary">Brief summary (source for AI) <span class="ajdw-required-mark" aria-hidden="true">*</span></label>
+          <textarea class="ajdw-textarea" id="ajdw-summary" name="summary" rows="3" required aria-required="true" aria-describedby="ajdw-summary-help ajdw-required-hint"></textarea>
+          <p class="ajdw-hint" id="ajdw-summary-help">Rough notes are fine.</p>
+        </div>
+        <div class="ajdw-field ajdw-field--wide">
+          <label class="ajdw-label" for="ajdw-duties">Duties</label>
+          <textarea class="ajdw-textarea" id="ajdw-duties" name="duties" rows="5" placeholder="One item per line" aria-describedby="ajdw-duties-help"></textarea>
+          <p class="ajdw-hint" id="ajdw-duties-help">One item per line, or separate items with commas or semicolons. Short action-led bullets work best.</p>
+          <p class="ajdw-count ajdw-hint" id="ajdw-duties-count" data-ajdw-count="0" role="status" aria-live="polite" aria-atomic="true">0 items</p>
+        </div>
+        <div class="ajdw-field ajdw-field--wide">
+          <label class="ajdw-label" for="ajdw-requirements">Requirements</label>
+          <textarea class="ajdw-textarea" id="ajdw-requirements" name="requirements" rows="5" placeholder="One item per line" aria-describedby="ajdw-requirements-help"></textarea>
+          <p class="ajdw-hint" id="ajdw-requirements-help">One item per line, or separate items with commas or semicolons. Short action-led bullets work best.</p>
+          <p class="ajdw-count ajdw-hint" id="ajdw-requirements-count" data-ajdw-count="0" role="status" aria-live="polite" aria-atomic="true">0 items</p>
+        </div>
+        <div class="ajdw-field ajdw-field--wide">
+          <label class="ajdw-label" for="ajdw-company-context">Company context</label>
+          <textarea class="ajdw-textarea" id="ajdw-company-context" name="companyContext" rows="3"></textarea>
+        </div>
+        <div class="ajdw-field ajdw-field--wide">
+          <label class="ajdw-label" for="ajdw-tone">Tone</label>
+          <input class="ajdw-input" id="ajdw-tone" name="tone" type="text" placeholder="e.g. professional, warm, direct">
+        </div>
+        <div class="ajdw-example ajdw-controls" id="ajdw-example-panel">
+          <div class="ajdw-actions ajdw-actions--example">
+            <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-clear-form" type="button">Clear form</button>
+            <button class="ajdw-button ajdw-button--small" id="ajdw-load-example" type="button">Load example brief</button>
+          </div>
+          <div class="ajdw-example-confirm" id="ajdw-example-confirm" hidden>
+            <p class="ajdw-example-question" id="ajdw-example-question">Replace the current brief with the example?</p>
+            <div class="ajdw-actions">
+              <button class="ajdw-button ajdw-button--small" id="ajdw-example-replace" type="button">Yes, replace</button>
+              <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-example-keep" type="button">Keep my brief</button>
+            </div>
+          </div>
+        </div>
+        <p class="ajdw-status ajdw-form-error" id="ajdw-form-error" role="alert" aria-live="assertive" hidden></p>
+        <p class="ajdw-status" id="ajdw-status" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div class="ajdw-error-boundary ajdw-controls" id="ajdw-error-boundary" role="alert" aria-live="assertive" hidden>
+          <p class="ajdw-error-boundary-text" id="ajdw-error-boundary-text">Something went wrong. Your saved draft and preview are unchanged.</p>
+          <div class="ajdw-actions">
+            <button class="ajdw-button ajdw-button--small" id="ajdw-error-boundary-retry" type="button">Try again</button>
+            <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-error-boundary-dismiss" type="button">Dismiss</button>
+          </div>
+        </div>
+        <section class="ajdw-checklist ajdw-controls" id="ajdw-checklist" aria-labelledby="ajdw-checklist-title">
+          <h3 class="ajdw-checklist-title" id="ajdw-checklist-title">Before you can generate</h3>
+          <p class="ajdw-checklist-count" id="ajdw-checklist-count" role="status" aria-live="polite" aria-atomic="true">0 of 5 required fields complete</p>
+          <ul class="ajdw-checklist-list" id="ajdw-checklist-list">
+            <li class="ajdw-checklist-item" data-ajdw-check="roleTitle" data-ajdw-complete="0"><span class="ajdw-checklist-mark">Needed</span><span class="ajdw-checklist-name">Role title</span><span class="ajdw-chip ajdw-chip--required">Required</span></li>
+            <li class="ajdw-checklist-item" data-ajdw-check="summary" data-ajdw-complete="0"><span class="ajdw-checklist-mark">Needed</span><span class="ajdw-checklist-name">Summary</span><span class="ajdw-chip ajdw-chip--required">Required</span></li>
+            <li class="ajdw-checklist-item" data-ajdw-check="duties" data-ajdw-complete="0"><span class="ajdw-checklist-mark">Needed</span><span class="ajdw-checklist-name">Duties</span><span class="ajdw-chip ajdw-chip--required">Required</span></li>
+            <li class="ajdw-checklist-item" data-ajdw-check="requirements" data-ajdw-complete="0"><span class="ajdw-checklist-mark">Needed</span><span class="ajdw-checklist-name">Requirements</span><span class="ajdw-chip ajdw-chip--required">Required</span></li>
+            <li class="ajdw-checklist-item" data-ajdw-check="companyContext" data-ajdw-complete="0"><span class="ajdw-checklist-mark">Needed</span><span class="ajdw-checklist-name">Company context</span><span class="ajdw-chip ajdw-chip--required">Required</span></li>
+          </ul>
+          <p class="ajdw-hint ajdw-checklist-hint">Generate draft unlocks when all five are filled. Department, Location, Employment type, Seniority, Salary and Tone stay optional context.</p>
+        </section>
+        <div class="ajdw-actions">
+          <button class="ajdw-button" id="ajdw-generate-button" type="submit" disabled aria-disabled="true" title="Fill the 4 required fields first">Generate draft</button>
+          <section class="ajdw-ready" id="ajdw-ready" aria-labelledby="ajdw-ready-title">
+            <h3 class="ajdw-ready-title" id="ajdw-ready-title">Ready to generate</h3>
+            <p class="ajdw-ready-count" id="ajdw-ready-count" role="status" aria-live="polite" aria-atomic="true">0 of 4 required fields complete</p>
+            <ul class="ajdw-ready-list" id="ajdw-ready-list">
+              <li class="ajdw-ready-item" id="ajdw-ready-role-title" data-ajdw-ready="roleTitle" data-ajdw-ready-state="missing"><span class="ajdw-ready-name">Role title</span> <span class="ajdw-ready-state">missing</span></li>
+              <li class="ajdw-ready-item" id="ajdw-ready-summary" data-ajdw-ready="summary" data-ajdw-ready-state="missing"><span class="ajdw-ready-name">Summary</span> <span class="ajdw-ready-state">missing</span></li>
+              <li class="ajdw-ready-item" id="ajdw-ready-duties" data-ajdw-ready="duties" data-ajdw-ready-state="missing"><span class="ajdw-ready-name">Duties</span> <span class="ajdw-ready-state">missing</span></li>
+              <li class="ajdw-ready-item" id="ajdw-ready-requirements" data-ajdw-ready="requirements" data-ajdw-ready-state="missing"><span class="ajdw-ready-name">Requirements</span> <span class="ajdw-ready-state">missing</span></li>
+            </ul>
+            <p class="ajdw-ready-done" id="ajdw-ready-done" hidden>All required fields complete</p>
+          </section>
+          <button class="ajdw-button ajdw-button--retry" id="ajdw-retry-button" type="button" hidden>Retry generation</button>
+          <button class="ajdw-button ajdw-button--ghost" id="ajdw-check-draft" type="button">Check draft</button>
+        </div>
+        <p class="ajdw-hint ajdw-ai-disclosure" id="ajdw-ai-disclosure">Your brief is sent to a third-party AI provider only when you click Generate draft. Nothing leaves this browser before that click.</p>
+        <div class="ajdw-reqline ajdw-controls" id="ajdw-reqline">
+          <p class="ajdw-status ajdw-req-count" id="ajdw-req-count" role="status" aria-live="polite" aria-atomic="true">Required fields: 0 of 7 complete</p>
+          <ul class="ajdw-req-chips" id="ajdw-req-chips" aria-label="Missing required fields"></ul>
+        </div>
+      </form>
+    </div>
+    <div class="ajdw-column ajdw-column--workspace">
+      <main class="ajdw-main" id="ajdw-main" aria-live="polite">
+        <div class="ajdw-empty-state" id="ajdw-empty-state">
+          <p class="ajdw-empty-state-lead">No draft yet. Here is your first step.</p>
+          <p>1. Fill in Role title, Department, Location, Employment type, and Summary in the Role brief form.</p>
+          <p>2. Select Generate draft to build editable sections and advert variants.</p>
+        </div>
+      </main>
+      <div class="ajdw-actions ajdw-editor-toolbar ajdw-controls" id="ajdw-editor-toolbar">
+        <p class="ajdw-status ajdw-editor-status" id="ajdw-editor-status" role="status" aria-live="polite" hidden>
+          <span class="ajdw-editor-status-text" id="ajdw-editor-status-text"></span>
+          <button class="ajdw-button ajdw-button--small ajdw-button--ghost ajdw-undo-button" id="ajdw-undo-remove" type="button" hidden>Undo remove</button>
+        </p>
+        <button class="ajdw-button ajdw-button--small ajdw-button--ghost ajdw-add-section-open" id="ajdw-add-section-open" type="button" aria-controls="ajdw-add-section-bar" aria-expanded="false">Add section</button>
+      </div>
+      <div class="ajdw-add-section-bar ajdw-controls" id="ajdw-add-section-bar" hidden>
+        <label class="ajdw-label" for="ajdw-add-section-name">New section name</label>
+        <input class="ajdw-input" id="ajdw-add-section-name" name="addSectionName" type="text" placeholder="e.g. Benefits" aria-describedby="ajdw-add-section-error">
+        <div class="ajdw-actions">
+          <button class="ajdw-button ajdw-button--small" id="ajdw-add-section-confirm" type="button">Add section</button>
+          <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-add-section-cancel" type="button">Cancel</button>
+        </div>
+        <p class="ajdw-status ajdw-form-error" id="ajdw-add-section-error" role="alert" aria-live="assertive" hidden></p>
+      </div>
+      <section class="ajdw-check-panel ajdw-controls" id="ajdw-check-panel" aria-labelledby="ajdw-check-title" hidden>
+        <h2 class="ajdw-check-title" id="ajdw-check-title">Inclusive language and readability</h2>
+        <p class="ajdw-check-grade" id="ajdw-check-grade">Readability grade: not checked yet</p>
+        <p class="ajdw-status ajdw-check-status" id="ajdw-check-status" role="status" aria-live="polite">Run Check draft to see biased terms and long sentences.</p>
+        <ul class="ajdw-check-list" id="ajdw-check-list"></ul>
+      </section>
+      <section class="ajdw-preview" id="ajdw-preview" aria-labelledby="ajdw-preview-title" hidden>
+        <h2 class="ajdw-preview-title" id="ajdw-preview-title">Assembled preview</h2>
+        <div class="ajdw-tabs ajdw-controls" id="ajdw-preview-tabs" role="tablist" aria-label="Preview views">
+          <button class="ajdw-tab ajdw-tab--active" id="ajdw-tab-jd" type="button" role="tab" aria-selected="true" aria-controls="ajdw-preview-body" data-ajdw-tab="jd">Job description</button>
+          <button class="ajdw-tab" id="ajdw-tab-standard" type="button" role="tab" aria-selected="false" aria-controls="ajdw-preview-body" data-ajdw-tab="standard">Standard advert</button>
+          <button class="ajdw-tab" id="ajdw-tab-short" type="button" role="tab" aria-selected="false" aria-controls="ajdw-preview-body" data-ajdw-tab="short">Short advert</button>
+          <button class="ajdw-tab" id="ajdw-tab-social" type="button" role="tab" aria-selected="false" aria-controls="ajdw-preview-body" data-ajdw-tab="social">Social</button>
+        </div>
+        <p class="ajdw-preview-meta ajdw-controls" id="ajdw-preview-meta" aria-live="polite"></p>
+        <p class="ajdw-advert-limit ajdw-controls" id="ajdw-advert-limit" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+        <div class="ajdw-preview-body" id="ajdw-preview-body" role="tabpanel" tabindex="0"></div>
+        <section class="ajdw-readiness ajdw-controls" id="ajdw-readiness" aria-labelledby="ajdw-readiness-title">
+          <h3 class="ajdw-readiness-title" id="ajdw-readiness-title">Before you export</h3>
+          <p class="ajdw-status ajdw-readiness-status" id="ajdw-readiness-status" role="status" aria-live="polite">Ready to export - no blockers found</p>
+          <ul class="ajdw-readiness-list" id="ajdw-readiness-list" hidden></ul>
+        </section>
+        <div class="ajdw-export-row ajdw-controls" id="ajdw-export-row">
+          <label class="ajdw-label" for="ajdw-export-format">Format</label>
+          <select class="ajdw-select" id="ajdw-export-format" name="exportFormat">
+            <option value="text" selected>Text</option>
+            <option value="markdown">Markdown</option>
+            <option value="html">HTML</option>
+          </select>
+          <button class="ajdw-button ajdw-button--small" id="ajdw-copy-button" type="button">Copy</button>
+          <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-download-txt" type="button">Download .txt</button>
+          <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-download-md" type="button">Download .md</button>
+          <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-download-html" type="button">Download .html</button>
+        </div>
+        <textarea class="ajdw-textarea ajdw-copy-fallback ajdw-controls" id="ajdw-copy-fallback" rows="4" readonly aria-label="Copy manually" hidden></textarea>
+        <p class="ajdw-status ajdw-export-status ajdw-controls" id="ajdw-export-status" role="status" aria-live="polite">Pick a tab, then copy or download the current view.</p>
+        <div class="ajdw-import ajdw-controls" id="ajdw-import-panel">
+          <h3 class="ajdw-export-title" id="ajdw-import-title">Import JSON backup</h3>
+          <p class="ajdw-status ajdw-import-status" id="ajdw-import-status" role="status" aria-live="polite">Choose a backup file to see what will be overwritten before anything changes.</p>
+          <div class="ajdw-export-controls" id="ajdw-import-controls">
+            <label class="ajdw-export-label" for="ajdw-import-file">Backup file</label>
+            <input class="ajdw-file-input" id="ajdw-import-file" type="file" accept=".json,application/json">
+            <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-import-choose" type="button">Choose file</button>
+          </div>
+          <div class="ajdw-import-diff" id="ajdw-import-diff" hidden>
+            <h4 class="ajdw-section-title" id="ajdw-import-diff-title">Review before applying</h4>
+            <ul class="ajdw-import-diff-list" id="ajdw-import-diff-list"></ul>
+            <div class="ajdw-actions">
+              <button class="ajdw-button ajdw-button--small" id="ajdw-import-apply" type="button">Apply import</button>
+              <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-import-cancel" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="ajdw-versions ajdw-controls" id="ajdw-versions">
+          <h3 class="ajdw-export-title" id="ajdw-versions-title">Versions</h3>
+          <p class="ajdw-status ajdw-versions-status" id="ajdw-versions-status" role="status" aria-live="polite">Snapshots use a stable draft ID, so similar role titles never overwrite each other.</p>
+          <div class="ajdw-import-json ajdw-controls" id="ajdw-import-json">
+            <button class="ajdw-button ajdw-button--small ajdw-button--ghost" id="ajdw-import-json-button" type="button">Import JSON</button>
+            <input class="ajdw-import-json-file" id="ajdw-import-json-file" type="file" accept=".json" aria-label="Import JSON backup file">
+            <span class="ajdw-hint ajdw-import-json-hint">Accepts .json backups saved by JD Studio.</span>
+          </div>
+          <ul class="ajdw-version-list" id="ajdw-version-list"></ul>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<section class="ajdw-export-bar ajdw-controls" id="ajdw-export-bar" aria-labelledby="ajdw-export-title">
+  <h2 class="ajdw-export-title" id="ajdw-export-title">Copy or download</h2>
+  <p class="ajdw-saved-line" id="ajdw-saved-line" role="status" aria-live="polite">Not saved yet · autosave runs as you type</p>
+  <p class="ajdw-status ajdw-save-status" id="ajdw-save-status" role="status" aria-live="polite">Drafts save automatically to this tool's storage. Reload the page to restore your last saved draft.</p>
+  <div class="ajdw-export-controls" id="ajdw-export-controls">
+    <label class="ajdw-export-label" for="ajdw-export-format-bar">Export format</label>
+    <select class="ajdw-export-format" id="ajdw-export-format-bar">
+      <option value="text" selected>Text</option>
+      <option value="markdown">Markdown</option>
+      <option value="html">HTML</option>
+    </select>
+    <button class="ajdw-button" id="ajdw-copy-result" type="button">Copy result</button>
+    <button class="ajdw-button" id="ajdw-download-result" type="button">Download result</button>
+  </div>
+  <p class="ajdw-status ajdw-export-status" id="ajdw-export-status-bar" role="status" aria-live="polite">Copy or download the current draft as Text, Markdown, or HTML.</p>
+</section>

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="app-build" content="0.12.2">
 <title>Application Factory</title>
 <link rel="stylesheet" href="app.css">
 </head>
@@ -18,6 +19,7 @@
       </span>
     </div>
     <div class="topbar-right">
+      <span id="buildWarning" class="build-warning" hidden></span>
       <span id="providerChip" class="chip chip-neutral">Provider: loading</span>
       <button id="btnSettings" class="btn btn-ghost" type="button">Settings</button>
     </div>
@@ -289,6 +291,16 @@
       <div class="settings-group" data-provider="ollama">
         <label class="field"><span>Ollama host</span><input id="setOllamaHost" type="text" placeholder="http://localhost:11434"></label>
         <label class="field"><span>Model</span><input id="setOllamaModel" type="text" placeholder="deepseek-r1:14b"></label>
+      </div>
+
+      <h4>Model per stage</h4>
+      <p class="muted tiny">Leave a field blank to use the provider model above. Anything typed here overrides it for
+        every call of that kind, which is why the provider chip names both models.</p>
+      <div class="field-grid">
+        <label class="field"><span>Planner (research, plan, risks, usability, ideas)</span>
+          <input id="setPlannerModel" type="text" placeholder="same as the provider model"></label>
+        <label class="field"><span>Coder (apply the tasks)</span>
+          <input id="setCoderModel" type="text" placeholder="same as the provider model"></label>
       </div>
 
       <h4>Limits</h4>

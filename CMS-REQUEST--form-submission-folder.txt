@@ -5,6 +5,22 @@ Target: sitepoicms (public form intake + form-type definition). Scope: a
 generic capability. No website-specific code in the CMS, no new object type
 required, and no change to any published page.
 
+ANSWERED AND IMPLEMENTED 2026-10-29 (D-WFLOW-44, T-48).
+  Shipped contract, section 8.9 of webpage-widget-flow-ssot.html:
+    1. the write names its folder - body.object.typeId, or the sibling
+       body.folder = { name } (top-level, find-or-create) or
+       body.folder = { tree: [{ name }, ...] } (max depth 5, max 10 nodes);
+    2. else the app's defaultFolderStructure.folders[0];
+    3. else a top-level YYYY-MM folder.
+  Folder resolution runs BEFORE the permission and folder-allowlist checks, the
+  declaration is consumed (never stored), and folders are created only as part
+  of a successful object create. Error names: FOLDER_TREE_INVALID,
+  INVALID_FOLDER_TARGET.
+  Website side, done: the trial exam page sends
+    folder: { name: "2026-11-07-vancouver-cemc-trial-exam-registration" }
+  next to values (data-gw-form-folder on the form element). Nothing else in this
+  document is outstanding; it is kept as the record of the original request.
+
 WHY THIS EXISTS (the problem)
 ─────────────────────────────
 Every public website form posts to one destination application:

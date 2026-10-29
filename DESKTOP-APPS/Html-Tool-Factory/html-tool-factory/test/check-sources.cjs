@@ -93,6 +93,15 @@ if (fs.existsSync(ssotPath)) {
   check('the application SSOT avoids emoji', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(ssotText))
   check('the application SSOT has a white background',
     ssotText.includes('--paper: #ffffff') || ssotText.includes('_docs/assets/ssot.css'))
+  // The build stamp is what tells an open dashboard that it is stale, so it has
+  // to agree with the document and with the page.
+  const { APP_BUILD } = require('../src/config')
+  const documentVersion = (ssotText.match(/<th>Document version<\/th><td>([^<]+)<\/td>/) || [])[1]
+  check('the build stamp equals the SSOT document version', documentVersion === APP_BUILD,
+    'document ' + documentVersion + ' / code ' + APP_BUILD)
+  const pageBuild = (htmlText.match(/<meta name="app-build" content="([^"]+)">/) || [])[1]
+  check('the dashboard page carries the same build stamp', pageBuild === APP_BUILD,
+    'page ' + pageBuild + ' / code ' + APP_BUILD)
 } else {
   check('the application SSOT exists', false, ssotPath)
 }

@@ -338,6 +338,30 @@ Settings are written to `config.local.json` (gitignored). The API never returns 
 only a masked form. The application never reads the repository `.env` files on its own;
 export variables or type values into Settings instead.
 
+### There are two places a model name lives
+
+This is the one setting that surprises people, so it is worth stating plainly:
+
+| Setting | What it does |
+| --- | --- |
+| `openaiCompatible.model` (or `uniconGateway.model`, `ollama.model`) | the **provider default**, used by any call that names no model |
+| `models.planner` | overrides it for research, plan, risk review, risk resolution, usability and product improvement |
+| `models.coder` | overrides it for the apply stage, the only stage that writes code |
+
+The client resolves `request.model || providerDefault`, so **an override wins silently**.
+A configuration with `"openaiCompatible": { "model": "deepseek-flash" }` and
+`"models": { "coder": "deepseek-v4-pro" }` really calls `deepseek-v4-pro` for every patch
+while the endpoint default stays `deepseek-flash`. That is a useful setup (plan cheap,
+code strong), which is why it exists, but it must never be a mystery:
+
+- the provider chip shows both: `OpenAI compatible - deepseek-flash (planner: deepseek-v4-pro, coder: deepseek-v4-pro)`
+- **Settings** has a *Model per stage* section: leave the fields blank to use the provider model
+- every AI log line names the model that answered: `OpenAI compatible answered apply-tasks with deepseek-v4-pro (attempt 1, 3 210 tokens reported)`
+- the start of every run logs the resolved models once: `Models in use: deepseek-flash (coder: deepseek-v4-pro) - the stage override wins over the provider default`
+
+`GET /api/state` exposes the same information as `provider.models`
+(`endpointModel`, `planner`, `coder`, `overrides`).
+
 ### Adding a DeepSeek key
 
 Two ways, both end up in the same place.

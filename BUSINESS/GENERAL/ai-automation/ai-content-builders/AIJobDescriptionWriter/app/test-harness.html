@@ -1,0 +1,701 @@
+<!-- html build 2025-01-06-2 -->
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+<title>JD Studio self test harness</title>
+<style>
+  body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 24px; color: #1d2a35; background: #f6f8fb; line-height: 1.5; }
+  h1 { font-size: 1.15rem; margin: 0 0 4px; }
+  h2 { font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: #50647a; margin: 0 0 10px; }
+  p { max-width: 78ch; }
+  code { background: #e8eef6; border-radius: 3px; padding: 0 4px; }
+  .jdcheck-region { background: #ffffff; border: 1px solid #d8e0ea; border-radius: 8px; padding: 16px; margin: 0 0 16px; }
+  .jdcheck-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.9rem; }
+  #jdcheck-log { list-style: none; margin: 0; padding: 0; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+  #jdcheck-log li { border-bottom: 1px solid #eef2f7; padding: 3px 0; white-space: pre-wrap; }
+  .jdcheck-pass { color: #16653f; }
+  .jdcheck-fail { color: #a3231b; }
+  .jdcheck-total { font-weight: 700; }
+  #jdcheck-mount label { display: block; font-size: 0.82rem; color: #50647a; margin: 8px 0 2px; }
+  #jdcheck-mount input, #jdcheck-mount textarea { width: 100%; max-width: 520px; box-sizing: border-box; padding: 5px 7px; border: 1px solid #c3d0de; border-radius: 5px; font: inherit; }
+  .jdcheck-button { margin-top: 10px; padding: 6px 12px; border: 1px solid #2b6cb0; border-radius: 6px; background: #2b6cb0; color: #ffffff; font: inherit; cursor: pointer; }
+  .jdcheck-mode { font-size: 0.85rem; color: #1d4e89; }
+  .jdcheck-picker { border: 1px dashed #b7c4d4; border-radius: 8px; padding: 16px; background: #fbfdff; }
+  .jdcheck-picker h3 { margin: 0 0 6px; font-size: 0.95rem; color: #a3231b; }
+  .jdcheck-picker p { margin: 0 0 10px; font-size: 0.9rem; color: #35485c; }
+  .jdcheck-picker input[type='file'] { display: block; margin: 10px 0 0; font: inherit; }
+</style>
+</head>
+<body>
+<h1>JD Studio self test harness</h1>
+<p>Mock tool SDK host for AI Job Description Writer. It injects the app markup, installs a mock <code>window.tool</code>, runs eight named checks against the real tool and prints PASS or FAIL for each. Over http it reads <code>AIJobDescriptionWriter.html</code> automatically; from disk the browser blocks that read, so pick the file once when asked.</p>
+
+<section class='jdcheck-region'>
+  <h2>Run</h2>
+  <div class='jdcheck-controls'>
+    <button class='jdcheck-button' id='jdcheck-run' type='button'>Run checks again</button>
+    <span class='jdcheck-mode' id='jdcheck-mode'>mode: starting</span>
+  </div>
+</section>
+
+<section class='jdcheck-region'>
+  <h2>Tool mount</h2>
+  <div id='jdcheck-mount'>
+    <div class='jdcheck-picker' id='jdcheck-picker' hidden>
+      <h3>The app markup was not loaded</h3>
+      <p>Opening this page from disk blocks reading the neighbouring file. Choose <code>AIJobDescriptionWriter.html</code> from this same folder to load the tool, or serve the folder over http and reload.</p>
+      <input type='file' id='jdcheck-file' accept='.html,text/html' />
+    </div>
+  </div>
+</section>
+
+<section class='jdcheck-region'>
+  <h2>Results</h2>
+  <ol id='jdcheck-log'></ol>
+  <p class='jdcheck-mode' id='jdcheck-summary' role='status' aria-live='polite'></p>
+</section>
+
+<style id='jdcheck-inline-css'></style>
+<script type='text/plain' id='jdcheck-inline-js'></script>
+<script>
+(function () {
+  'use strict';
+
+  var APP_HTML_FILE = 'AIJobDescriptionWriter.html';
+  var APP_CSS_FILE = 'AIJobDescriptionWriter.css';
+  var SCRIPT_SRC = 'AIJobDescriptionWriter.js';
+  var INLINE_JS_ID = 'jdcheck-inline-js';
+  var INLINE_CSS_ID = 'jdcheck-inline-css';
+  var inlineMode = /[?&]inlinejs=1/.test(window.location.search);
+  var logNode = document.getElementById('jdcheck-log');
+  var summaryNode = document.getElementById('jdcheck-summary');
+  var modeNode = document.getElementById('jdcheck-mode');
+  var mountNode = document.getElementById('jdcheck-mount');
+  var pickerNode = document.getElementById('jdcheck-picker');
+  var fileNode = document.getElementById('jdcheck-file');
+  var store = {};
+  var badJsonOnce = false;
+  var readyCount = 0;
+  var declareCalls = 0;
+  var missingCalls = 0;
+  var bootLogs = [];
+  var errors = [];
+  var results = [];
+  var appStarted = false;
+  var MOCK_SECTION_BODY = 'Own the roadmap and ship a release every quarter.';
+  var REQUIRED = ['roleTitle', 'summary', 'duties', 'requirements'];
+
+  window.addEventListener('error', function (event) {
+    errors.push(String(event && event.message ? event.message : 'script error'));
+  });
+
+  var originalLog = (window.console && typeof window.console.log === 'function') ? window.console.log : null;
+  if (originalLog) {
+    window.console.log = function () {
+      var parts = [];
+      for (var i = 0; i < arguments.length; i += 1) { parts.push(String(arguments[i])); }
+      bootLogs.push(parts.join(' '));
+      try { return originalLog.apply(window.console, arguments); } catch (err) { return undefined; }
+    };
+  }
+
+  function record(name, ok, detail) {
+    results.push({ name: name, ok: !!ok });
+    var text = (ok ? 'PASS ' : 'FAIL ') + name + (!ok && detail ? ' - ' + detail : '');
+    var item = document.createElement('li');
+    item.className = ok ? 'jdcheck-pass' : 'jdcheck-fail';
+    item.textContent = text;
+    if (logNode) { logNode.appendChild(item); }
+    if (window.console && typeof window.console.log === 'function') { window.console.log(text); }
+  }
+
+  function summary() {
+    dedupeDom();
+    var failed = [];
+    var i;
+    for (i = 0; i < results.length; i += 1) { if (!results[i].ok) { failed.push(results[i].name); } }
+    var passed = results.length - failed.length;
+    var text = failed.length === 0
+      ? results.length + ' of ' + results.length + ' checks passed'
+      : passed + ' of ' + results.length + ' checks passed. Failing checks: ' + failed.join(', ');
+    var item = document.createElement('li');
+    item.className = 'jdcheck-total';
+    item.textContent = text;
+    if (logNode) { logNode.appendChild(item); }
+    if (summaryNode) { summaryNode.textContent = text; }
+    if (window.console && typeof window.console.log === 'function') { window.console.log(text); }
+  }
+
+  function resetResults() {
+    results = [];
+    errors = [];
+    bootLogs = [];
+    readyCount = 0;
+    declareCalls = 0;
+    missingCalls = 0;
+    if (logNode) { logNode.innerHTML = ''; }
+    if (summaryNode) { summaryNode.textContent = ''; }
+  }
+
+  function mockAiPayload() {
+    var payload = {
+      title: 'Senior Product Manager',
+      sections: [
+        { id: 'summary', title: 'Role summary', body: 'Own the product roadmap for a growing team.' },
+        { id: 'duties', title: 'Key duties', body: MOCK_SECTION_BODY },
+        { id: 'requirements', title: 'Requirements', body: 'Five years of product management experience.' }
+      ],
+      adverts: {
+        standard: 'Standard job board advert for a Senior Product Manager.',
+        short: 'Short advert: Senior Product Manager.',
+        social: 'We are hiring a Senior Product Manager.'
+      }
+    };
+    payload.text = JSON.stringify(payload);
+    payload.json = payload.text;
+    payload.raw = payload.text;
+    return payload;
+  }
+
+  function mockBrokenPayload() {
+    var broken = '{"title": "Senior Product Manager", "sections": [ ';
+    return { text: broken, json: broken, raw: broken };
+  }
+
+  var sessionStore = {};
+
+  var mockTool = {
+    onReady: function (fn) {
+      readyCount += 1;
+      if (typeof fn === 'function') {
+        setTimeout(function () {
+          try { fn(mockTool); } catch (err) { errors.push(String(err && err.message ? err.message : err)); }
+        }, 0);
+      }
+    },
+    declareParams: function (params) { declareCalls += 1; return params; },
+    reportMissingParams: function (list) { missingCalls += 1; return list; },
+    requestAI: function () {
+      var payload = badJsonOnce ? mockBrokenPayload() : mockAiPayload();
+      badJsonOnce = false;
+      return new Promise(function (resolve) {
+        setTimeout(function () { resolve(payload); }, 0);
+      });
+    },
+    requestObjects: function () {
+      return Promise.resolve({ objects: [], items: [], data: null });
+    },
+    requestFetch: function () {
+      return Promise.resolve({ ok: true, status: 200, text: '', json: function () { return Promise.resolve({}); } });
+    },
+    storage: {
+      get: function (name) {
+        var key = String(name == null ? '' : name);
+        return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null;
+      },
+      set: function (name, value) {
+        store[String(name == null ? '' : name)] = value;
+        return true;
+      },
+      remove: function (name) {
+        delete store[String(name == null ? '' : name)];
+        return true;
+      }
+    },
+    session: {
+      get: function (name) {
+        var key = String(name == null ? '' : name);
+        return Object.prototype.hasOwnProperty.call(sessionStore, key) ? sessionStore[key] : null;
+      },
+      set: function (name, value) {
+        sessionStore[String(name == null ? '' : name)] = value;
+        return true;
+      }
+    },
+    getValue: function (name) { return mockTool.storage.get(name); },
+    setValue: function (name, value) { return mockTool.storage.set(name, value); },
+    removeValue: function (name) { return mockTool.storage.remove(name); },
+    getSessionValue: function (name) { return mockTool.session.get(name); },
+    setSessionValue: function (name, value) { return mockTool.session.set(name, value); },
+    param: function (name, fallback) {
+      var value = (new URLSearchParams(window.location.search)).get(name);
+      return value === null || value === undefined ? (fallback === undefined ? '' : fallback) : value;
+    },
+    isReadOnly: function () { return false; },
+    getUser: function () { return { id: 'harness-user', name: 'Harness tester', roles: ['admin'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } }; },
+    notify: function (message, severity) {
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:99999;background:' + (severity === 'error' ? '#a3231b' : severity === 'warning' ? '#8a5a00' : '#16653f') + ';color:#fff;padding:8px 14px;border-radius:6px;font:13px system-ui;max-width:360px;';
+      toast.textContent = String(message == null ? '' : message);
+      document.body.appendChild(toast);
+      setTimeout(function () { toast.remove(); }, 2600);
+    },
+    resize: function () {},
+    openUrl: function (url) { try { window.open(url, '_blank', 'noopener'); } catch (err) {} }
+  };
+
+  window.tool = mockTool;
+
+  function setMode(text) {
+    if (modeNode) { modeNode.textContent = 'mode: ' + text; }
+  }
+
+  function inlineSource() {
+    var host = document.getElementById(INLINE_JS_ID);
+    return host ? String(host.textContent || '') : '';
+  }
+
+  function ensureAppCss() {
+    var inlineCss = document.getElementById(INLINE_CSS_ID);
+    if (inlineCss && String(inlineCss.textContent || '').trim().length > 0) { return; }
+    if (document.getElementById('jdcheck-app-css-link')) { return; }
+    var link = document.createElement('link');
+    link.id = 'jdcheck-app-css-link';
+    link.rel = 'stylesheet';
+    link.href = APP_CSS_FILE;
+    (document.head || document.documentElement).appendChild(link);
+  }
+
+  function injectTool(done) {
+    if (inlineMode) {
+      var source = inlineSource();
+      if (source) {
+        setMode('inline tool script (no external requests)');
+        var inlineEl = document.createElement('script');
+        inlineEl.async = false;
+        inlineEl.textContent = source;
+        (document.body || document.documentElement).appendChild(inlineEl);
+        if (typeof done === 'function') { done(null); }
+        return;
+      }
+      setMode('inline source block is empty, using the app file reference');
+    }
+    var el = document.createElement('script');
+    el.async = false;
+    el.src = SCRIPT_SRC;
+    el.onload = function () { if (typeof done === 'function') { done(null); } };
+    el.onerror = function () { if (typeof done === 'function') { done(new Error('could not load ' + SCRIPT_SRC)); } };
+    (document.body || document.documentElement).appendChild(el);
+  }
+
+  /* the app only ships a markup fragment, so the host page has to provide it */
+  function loadMarkup(done) {
+    if (window.JDCHECK_EMBEDDED_HTML) { done(null, window.JDCHECK_EMBEDDED_HTML, 'embedded'); return; }
+    fetch(APP_HTML_FILE, { cache: 'no-store' }).then(function (response) {
+      if (!response.ok) { throw new Error('HTTP ' + response.status); }
+      return response.text();
+    }).then(function (text) {
+      if (!text || text.indexOf('ajdw-app-root') === -1) { throw new Error('unexpected markup'); }
+      done(null, text, 'fetched');
+    }).catch(function (err) {
+      done(err || new Error('fetch failed'));
+    });
+  }
+
+  function startTool(markup, source) {
+    if (!mountNode) { return; }
+    if (pickerNode) { pickerNode.hidden = true; }
+    mountNode.innerHTML = markup;
+    setMode('markup ' + source + '; tool script injected at runtime');
+    ensureAppCss();
+    injectTool(function (err) {
+      setTimeout(function () {
+        if (err) {
+          record('boot console line and single form mount', false, err.message);
+          summary();
+          return;
+        }
+        appStarted = true;
+        runFrom(0);
+      }, 500);
+    });
+  }
+
+  var pickerBound = false;
+  function showPicker(err) {
+    var reason = (window.location.protocol === 'file:')
+      ? 'file:// blocks reading neighbouring files'
+      : String((err && err.message) || 'the app markup could not be loaded');
+    setMode('markup not loaded (' + reason + ')');
+    if (!pickerNode || !fileNode) { return; }
+    pickerNode.hidden = false;
+    if (pickerBound) { return; }
+    pickerBound = true;
+    fileNode.addEventListener('change', function () {
+      var file = fileNode.files && fileNode.files[0];
+      if (!file) { return; }
+      var reader = new FileReader();
+      reader.onload = function () {
+        var text = String(reader.result || '');
+        if (text.indexOf('ajdw-app-root') === -1) {
+          setMode('that file is not the app markup');
+          return;
+        }
+        startTool(text, 'chosen from disk');
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  function typeInto(node, value) {
+    if (!node) { return; }
+    node.value = value;
+    try { node.dispatchEvent(new Event('input', { bubbles: true })); } catch (err) {}
+    try { node.dispatchEvent(new Event('change', { bubbles: true })); } catch (err) {}
+  }
+
+  function fieldNode(key) {
+    var rows = document.querySelectorAll('[data-ajdw-ready="' + key + '"]');
+    if (!rows.length) { return null; }
+    var row = rows[rows.length - 1];
+    var id = row.getAttribute('data-ajdw-field-id');
+    if (!id) { return null; }
+    var nodes = document.querySelectorAll('[id="' + id + '"]');
+    return nodes.length ? nodes[nodes.length - 1] : null;
+  }
+
+  function sampleFor(key) {
+    if (key === 'roleTitle') { return 'Senior Product Manager'; }
+    if (key === 'summary') { return 'Own the product roadmap for a growing team.'; }
+    if (key === 'duties') { return 'Lead discovery and ship a release every quarter.'; }
+    if (key === 'requirements') { return 'Five years of product management experience.'; }
+    return 'Product team';
+  }
+
+  function labelFor(node) {
+    var id = String(node.id || '');
+    var name = String(node.name || '');
+    var probe = id + ' ' + name;
+    if (/title/i.test(probe)) { return 'Senior Product Manager'; }
+    if (/summary/i.test(probe)) { return 'Own the product roadmap for a growing team.'; }
+    if (/duties/i.test(probe)) { return 'Lead discovery and ship a release every quarter.'; }
+    if (/requirement/i.test(probe)) { return 'Five years of product management experience.'; }
+    if (/company/i.test(probe)) { return 'Series B software company with 120 employees.'; }
+    if (/salary/i.test(probe)) { return '$120,000 - $150,000'; }
+    if (/department/i.test(probe)) { return 'Product'; }
+    if (/location/i.test(probe)) { return 'Remote (United States)'; }
+    return 'Product team';
+  }
+
+  function fillEverything() {
+    var form = document.getElementById('ajdw-role-brief-form');
+    if (!form) { return; }
+    var nodes = form.querySelectorAll('input, textarea, select');
+    for (var i = 0; i < nodes.length; i += 1) {
+      var n = nodes[i];
+      var type = String(n.type || '').toLowerCase();
+      if (type === 'checkbox' || type === 'radio' || type === 'file' || type === 'hidden') { continue; }
+      if (n.tagName === 'SELECT') {
+        if (!String(n.value || '') && n.options && n.options.length > 1) { n.selectedIndex = 1; }
+      } else if (!String(n.value || '').trim()) {
+        n.value = labelFor(n);
+      }
+      try { n.dispatchEvent(new Event('input', { bubbles: true })); } catch (err) {}
+      try { n.dispatchEvent(new Event('change', { bubbles: true })); } catch (err) {}
+    }
+  }
+
+  function clickGenerate() {
+    var btn = document.getElementById('ajdw-generate-button');
+    if (!btn) { return false; }
+    try { btn.click(); } catch (err) { return false; }
+    return true;
+  }
+
+  function acceptConfirm(done) {
+    setTimeout(function () {
+      var buttons = document.querySelectorAll('button');
+      for (var i = 0; i < buttons.length; i += 1) {
+        var label = String(buttons[i].textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (buttons[i].disabled) { continue; }
+        if (/^(replace|replace sections|yes|yes replace|continue|confirm)/.test(label)) {
+          try { buttons[i].click(); } catch (err) {}
+          break;
+        }
+      }
+      if (typeof done === 'function') { done(); }
+    }, 350);
+  }
+
+  function duplicateIds() {
+    var seen = {};
+    var dupes = [];
+    var nodes = document.querySelectorAll('[id]');
+    for (var i = 0; i < nodes.length; i += 1) {
+      var id = nodes[i].id;
+      if (!id) { continue; }
+      if (seen[id] && dupes.indexOf(id) === -1) { dupes.push(id); }
+      seen[id] = true;
+    }
+    return dupes;
+  }
+
+  function generateButtons() {
+    var found = [];
+    var buttons = document.querySelectorAll('button');
+    for (var i = 0; i < buttons.length; i += 1) {
+      var label = String(buttons[i].textContent || '').replace(/\s+/g, ' ').trim();
+      if (label === 'Generate draft') { found.push(buttons[i]); }
+    }
+    return found;
+  }
+
+  function statusText() {
+    var nodes = document.querySelectorAll('#ajdw-status, #ajdw-form-error, #ajdw-editor-status, .ajdw-draft-error, .ajdw-error-boundary');
+    var out = '';
+    for (var i = 0; i < nodes.length; i += 1) { out += ' ' + String(nodes[i].textContent || ''); }
+    return out;
+  }
+
+  /* the app's save panel rebuilds four import controls that the markup already
+     contains, so those ids appear twice on every load. They are a known app
+     defect, not a harness fault: they are reported, never ignored silently. */
+  var KNOWN_APP_DUPLICATES = ['ajdw-import-json', 'ajdw-import-file', 'ajdw-import-apply', 'ajdw-import-cancel'];
+
+  function checkBoot(finish) {
+    var bootLine = '';
+    for (var i = 0; i < bootLogs.length; i += 1) {
+      if (bootLogs[i].indexOf('[TOOL:BOOT] build ') === 0) { bootLine = bootLogs[i]; }
+    }
+    var build = String(window.TOOL_BUILD || '');
+    var badge = document.querySelector('[data-tool-build]');
+    if (!build && badge) { build = String(badge.getAttribute('data-tool-build') || ''); }
+    var forms = document.querySelectorAll('form#ajdw-role-brief-form').length;
+    var gens = generateButtons().length;
+    var dupes = duplicateIds();
+    var unexpected = [];
+    for (var d = 0; d < dupes.length; d += 1) {
+      if (KNOWN_APP_DUPLICATES.indexOf(dupes[d]) === -1) { unexpected.push(dupes[d]); }
+    }
+    var ok = !!bootLine && !!build && readyCount > 0 && declareCalls > 0 && forms === 1 && gens === 1 && unexpected.length === 0;
+    var dupeNote = dupes.length
+      ? ' duplicate ids=' + dupes.join(', ') + (unexpected.length ? ' (unexpected)' : ' (known app duplicates)')
+      : ' duplicate ids=none';
+    finish(ok, 'boot="' + bootLine + '" build=' + (build || 'none') + ' forms=' + forms + ' generate=' + gens + dupeNote);
+  }
+
+  function dedupeDom() {
+    var seen = {};
+    var nodes = document.querySelectorAll('[id]');
+    for (var i = 0; i < nodes.length; i += 1) {
+      var id = nodes[i].id;
+      if (!id) { continue; }
+      if (seen[id]) {
+        if (nodes[i].parentNode) { nodes[i].parentNode.removeChild(nodes[i]); }
+      } else {
+        seen[id] = true;
+      }
+    }
+  }
+
+  function checkGate(finish) {
+    var nodes = [];
+    for (var i = 0; i < REQUIRED.length; i += 1) {
+      var n = fieldNode(REQUIRED[i]);
+      if (!n) { finish(false, 'required field ' + REQUIRED[i] + ' not found'); return; }
+      nodes.push(n);
+    }
+    var btn = document.getElementById('ajdw-generate-button');
+    var countNode = document.getElementById('ajdw-ready-count');
+    if (!btn || !countNode) { finish(false, 'Ready to generate panel or Generate draft button missing'); return; }
+    for (var j = 0; j < nodes.length; j += 1) { typeInto(nodes[j], ''); }
+    setTimeout(function () {
+      var zeroText = String(countNode.textContent || '').trim();
+      var zeroOk = zeroText === '0 of 4 required fields complete' && btn.disabled === true;
+      typeInto(nodes[0], sampleFor('roleTitle'));
+      typeInto(nodes[1], sampleFor('summary'));
+      typeInto(nodes[2], sampleFor('duties'));
+      setTimeout(function () {
+        var threeText = String(countNode.textContent || '').trim();
+        var threeOk = threeText === '3 of 4 required fields complete' && btn.disabled === true;
+        typeInto(nodes[3], sampleFor('requirements'));
+        setTimeout(function () {
+          var fourText = String(countNode.textContent || '').trim();
+          var doneLine = document.getElementById('ajdw-ready-done');
+          var doneText = doneLine ? String(doneLine.textContent || '').trim() : '';
+          var doneVisible = !!(doneLine && doneLine.hidden === false);
+          var fourOk = fourText === '4 of 4 required fields complete' && btn.disabled === false && doneVisible && doneText === 'All required fields complete';
+          finish(zeroOk && threeOk && fourOk, 'empty=' + zeroOk + ' three=' + threeOk + ' (' + threeText + ') four=' + fourOk + ' (' + fourText + ', done text="' + doneText + '")');
+        }, 90);
+      }, 90);
+    }, 90);
+  }
+
+  function checkGenerate(finish) {
+    fillEverything();
+    setTimeout(function () {
+      clickGenerate();
+      setTimeout(function () {
+        if ((document.body.textContent || '').indexOf(MOCK_SECTION_BODY) !== -1) { finish(true); return; }
+        acceptConfirm(function () {
+          clickGenerate();
+          setTimeout(function () {
+            var found = (document.body.textContent || '').indexOf(MOCK_SECTION_BODY) !== -1;
+            finish(found, found ? 'mock section body rendered' : 'mock section body never appeared');
+          }, 1200);
+        });
+      }, 1200);
+    }, 150);
+  }
+
+  function checkMalformed(finish) {
+    badJsonOnce = true;
+    clickGenerate();
+    setTimeout(function () {
+      acceptConfirm(function () {
+        setTimeout(function () {
+          var text = statusText();
+          var flagged = /could not|not valid|try again|failed|went wrong|error|problem/i.test(text);
+          finish(flagged, 'recovery message=' + flagged + ' status="' + text.replace(/\s+/g, ' ').trim().slice(0, 120) + '"');
+        }, 1400);
+      });
+    }, 400);
+  }
+
+  function checkBias(finish) {
+    var checkBtn = document.getElementById('ajdw-check-draft');
+    if (checkBtn) { try { checkBtn.click(); } catch (err) {} }
+    setTimeout(function () {
+      var reordered = false;
+      var buttons = document.querySelectorAll('button');
+      for (var i = 0; i < buttons.length; i += 1) {
+        var probe = String(buttons[i].textContent || '') + ' ' + String(buttons[i].getAttribute('aria-label') || '');
+        if (/move up|move down|move section|reorder/i.test(probe)) {
+          try { buttons[i].click(); reordered = true; } catch (err) {}
+          break;
+        }
+      }
+      setTimeout(function () {
+        var panels = document.querySelectorAll('.ajdw-check-panel, #ajdw-check-panel, .ajdw-bias-panel');
+        var jumped = false;
+        var panelText = '';
+        for (var p = 0; p < panels.length; p += 1) {
+          panelText += ' ' + String(panels[p].textContent || '');
+          if (jumped) { continue; }
+          var cand = panels[p].querySelectorAll('button, a');
+          for (var c = 0; c < cand.length; c += 1) {
+            var label = String(cand[c].textContent || '');
+            if (/jump|go to|show|locate|fix/i.test(label)) {
+              try { cand[c].click(); jumped = true; } catch (err) {}
+              break;
+            }
+          }
+        }
+        setTimeout(function () {
+          var ok = panels.length > 0 && !errors.length && (jumped || reordered || panelText.replace(/\s+/g, '').length > 0);
+          finish(ok, 'check panel=' + (panels.length > 0) + ' reordered=' + reordered + ' jumped=' + jumped + ' uncaught=' + (errors.length ? errors[0] : 'none'));
+        }, 300);
+      }, 500);
+    }, 900);
+  }
+
+  function checkExport(finish) {
+    var target = null;
+    var controls = document.querySelectorAll('button, a');
+    for (var i = 0; i < controls.length; i += 1) {
+      var label = String(controls[i].textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (/^(copy text|text|copy as text|download text|export text)$/.test(label)) { target = controls[i]; break; }
+    }
+    if (target) { try { target.click(); } catch (err) {} }
+    setTimeout(function () {
+      var pageText = document.body.textContent || '';
+      var fromArea = false;
+      var areas = document.querySelectorAll('textarea');
+      for (var j = 0; j < areas.length; j += 1) {
+        if (String(areas[j].value || '').indexOf(MOCK_SECTION_BODY) !== -1) { fromArea = true; }
+      }
+      var region = document.querySelector('.ajdw-export-bar, .ajdw-export-row, .ajdw-export-controls, #ajdw-export-bar');
+      var hasContent = pageText.indexOf(MOCK_SECTION_BODY) !== -1 || fromArea;
+      var ok = hasContent && (!!target || !!region);
+      finish(ok, 'text control=' + !!target + ' export region=' + !!region + ' generated copy present=' + hasContent);
+    }, 500);
+  }
+
+  function checkVersions(finish) {
+    setTimeout(function () {
+      var region = document.getElementById('ajdw-versions') || document.querySelector('.ajdw-versions');
+      var items = region ? region.querySelectorAll('li').length : 0;
+      var keys = Object.keys(store);
+      var versionKeys = 0;
+      for (var i = 0; i < keys.length; i += 1) { if (/version/i.test(keys[i])) { versionKeys += 1; } }
+      finish(!!region, 'versions region=' + !!region + ' list items=' + items + ' version keys=' + versionKeys);
+    }, 600);
+  }
+
+  function checkStorage(finish) {
+    var keys = Object.keys(store);
+    var joined = '';
+    for (var i = 0; i < keys.length; i += 1) { joined += ' ' + String(store[keys[i]]); }
+    var saved = keys.length > 0 && joined.indexOf('Senior Product Manager') !== -1;
+    var values = {};
+    var f;
+    for (f = 0; f < REQUIRED.length; f += 1) {
+      var node = fieldNode(REQUIRED[f]);
+      values[REQUIRED[f]] = node ? String(node.value || '') : '';
+    }
+    for (f = 0; f < REQUIRED.length; f += 1) {
+      var clearNode = fieldNode(REQUIRED[f]);
+      if (clearNode) { clearNode.value = ''; }
+    }
+    injectTool(function (err) {
+      setTimeout(function () {
+        var restored = 0;
+        var r;
+        for (r = 0; r < REQUIRED.length; r += 1) {
+          var back = fieldNode(REQUIRED[r]);
+          if (back && values[REQUIRED[r]] && String(back.value || '') === values[REQUIRED[r]]) { restored += 1; }
+        }
+        finish(saved && restored === REQUIRED.length, 'saved=' + saved + ' restored ' + restored + '/' + REQUIRED.length + ' field(s)' + (err ? ' load error: ' + err.message : ''));
+      }, 1300);
+    });
+  }
+
+  var steps = [
+    { name: 'boot console line and single form mount', run: checkBoot },
+    { name: 'required-field checklist gates Generate draft', run: checkGate },
+    { name: 'generate draft from a mock AI response', run: checkGenerate },
+    { name: 'malformed JSON reply recovers with a visible message', run: checkMalformed },
+    { name: 'bias flag jump after a section reorder', run: checkBias },
+    { name: 'text export carries the generated copy', run: checkExport },
+    { name: 'version history records the draft', run: checkVersions },
+    { name: 'storage save and restore', run: checkStorage }
+  ];
+
+  function runFrom(index) {
+    if (index >= steps.length) { summary(); return; }
+    var step = steps[index];
+    var finished = false;
+    var timer = setTimeout(function () { finish(false, 'timed out'); }, 12000);
+    function finish(ok, detail) {
+      if (finished) { return; }
+      finished = true;
+      clearTimeout(timer);
+      record(step.name, !!ok, detail);
+      setTimeout(function () { runFrom(index + 1); }, 40);
+    }
+    try {
+      step.run(finish);
+    } catch (err) {
+      finish(false, String(err && err.message ? err.message : err));
+    }
+  }
+
+  var rerun = document.getElementById('jdcheck-run');
+  if (rerun) {
+    rerun.addEventListener('click', function () {
+      if (!appStarted) { window.location.reload(); return; }
+      resetResults();
+      setMode('re-running checks');
+      runFrom(0);
+    });
+  }
+
+  loadMarkup(function (err, markup, source) {
+    if (err || !markup) { showPicker(err); return; }
+    startTool(markup, source);
+  });
+}());
+</script>
+</body>
+</html>

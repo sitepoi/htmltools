@@ -64,7 +64,7 @@
     the code disagree, this document is the tiebreaker.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.12.0</td></tr>
+    <tr><th>Document version</th><td>0.12.2</td></tr>
     <tr><th>Last updated</th><td>2026-10-29</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The factory application in <code>DESKTOP-APPS/Html-Tool-Factory/html-tool-factory</code></td></tr>
@@ -166,6 +166,8 @@
     <tr><td>C-33</td><td>The batches are computed at planning time and written into the SSOT, so the shape of the iteration is visible before the first call</td><td><code>src/stages/planTasks.js</code>, <code>ui/app.js</code></td><td>0.12.0</td></tr>
     <tr><td>C-34</td><td>Real tokens when the provider reports them, an estimate otherwise, and every number says which it is</td><td><code>src/ai/client.js</code>, <code>src/pipeline.js</code>, <code>src/stages/applyTasks.js</code>, <code>ui/app.js</code></td><td>0.12.0</td></tr>
     <tr><td>C-35</td><td>The restart dialog shows the run id with a copy button and the tool path as clickable segments, each one opening that folder in the file manager; the confirmation is the last six characters</td><td><code>src/server.js</code>, <code>ui/app.js</code>, <code>ui/index.html</code></td><td>0.12.0</td></tr>
+    <tr><td>C-36</td><td>The model actually used is never hidden: the provider chip, the AI log lines, the run start and Settings all name the endpoint default and the per stage overrides</td><td><code>src/config.js</code>, <code>src/ai/client.js</code>, <code>src/pipeline.js</code>, <code>ui/app.js</code></td><td>0.12.1</td></tr>
+    <tr><td>C-37</td><td>A build stamp travels from the server to the page, and the dashboard says "Reload needed" when the open page or the running server is older than the other</td><td><code>src/config.js</code>, <code>src/server.js</code>, <code>ui/index.html</code>, <code>ui/app.js</code></td><td>0.12.2</td></tr>
   </table>
 
   <h2 id="sec-glossary">4. Glossary</h2>
@@ -321,7 +323,8 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     <tr><td>D-HTF-32</td><td>2026-10-29</td><td>Every depth checklist item has an observable marker (file plus regular expression) and is audited after every test run; a closed item whose marker is missing is reopened with a reason.</td><td>Without a marker the checklist is a claim, not evidence. A tool must not report finished on a capability nobody can see.</td><td class="status-adopted">Adopted</td></tr>
     <tr><td>D-HTF-33</td><td>2026-10-29</td><td>The model conversation is watched live: deltas travel over the existing event stream, are kept in memory only, are capped per call, and a finished call is kept in a short history.</td><td>An operator who cannot see the call cannot tell a slow model from a hung one, and a token by token log on disk would grow the run folder without adding evidence. Keeping the deltas in memory keeps the archive clean while the dashboard stays readable.</td><td class="status-adopted">Adopted</td></tr>
     <tr><td>D-HTF-34</td><td>2026-10-29</td><td>A batch is always computed with a dry run first, then validated against the prospective content in a temporary file, then diffed; only then is it written. A whole file rewrite is allowed at 80 points or more. The review gate is a per run option, waits with a bounded poll, and a rejection never writes, never spends a retry, and stops the remaining batches.</td><td>One code path for both modes: supervised and automatic differ only in whether a human answer is awaited, so a reviewed batch is never a different, less tested path. Rejection is treated as a decision, not a failure, because charging the model's retry budget for the operator's choice would make the next iteration look worse than it is.</td><td class="status-adopted">Adopted</td></tr>
-    <tr><td>D-HTF-35</td><td>2026-10-29</td><td>A destructive confirmation asks for the last six characters of the run id (or the whole id), never for a forty character string, and the path is shown as clickable segments that open the folder. The server derives both from the run record, so the dashboard cannot ask it to open an arbitrary path.</td><td>Typing an id nobody can see is a copy exercise, not a confirmation, and a single unbroken path is unreadable and scrolls out of the dialog. Six characters still prove the operator looked at the run, and the trail makes the folder reachable in one click without widening what the server will open.</td><td class="status-adopted">Adopted</td></tr>  </table>
+    <tr><td>D-HTF-35</td><td>2026-10-29</td><td>A destructive confirmation asks for the last six characters of the run id (or the whole id), never for a forty character string, and the path is shown as clickable segments that open the folder. The server derives both from the run record, so the dashboard cannot ask it to open an arbitrary path.</td><td>Typing an id nobody can see is a copy exercise, not a confirmation, and a single unbroken path is unreadable and scrolls out of the dialog. Six characters still prove the operator looked at the run, and the trail makes the folder reachable in one click without widening what the server will open.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-36</td><td>2026-10-29</td><td>A model name has exactly two levels: the provider default and the per stage override (<code>models.planner</code>, <code>models.coder</code>). The override wins, and that fact is shown in the provider chip, in every AI log line ("answered apply-tasks with ..."), once at the start of every run, and as two editable fields in Settings.</td><td>Running a strong model for code and a cheaper one for planning is the right setup, so the override stays. What must not stay is the surprise: an operator who changes the endpoint model and sees no effect has no way to find the second setting, and a log that only says "answered" hides which model spent the tokens.</td><td class="status-adopted">Adopted</td></tr>  </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
   <ol>
@@ -1332,12 +1335,14 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
       <tr><td>2026-10-29</td><td>0.10.0</td><td>The factory can be watched while it works: the run carries a now marker naming the batch and the tasks in progress, and every model call is streamed to the new AI stream tab as it is written, with a history of the finished calls kept in memory. 152 self test checks and 63 source checks.</td></tr>
       <tr><td>2026-10-29</td><td>0.11.0</td><td>T-03 and T-04 shipped: a batch of 80 points or more may rewrite a whole file, and every batch is now computed with a dry run, validated against its prospective content and diffed before it is written. With review each batch on, the operator sees that diff and approves or rejects it; a rejection writes nothing, costs no retry and stops the remaining batches. 172 self test checks and 64 source checks.</td></tr>
       <tr><td>2026-10-29</td><td>0.12.0</td><td>T-05 and T-06 shipped: the planner writes the batches into the SSOT so the iteration is visible before it costs anything, and every batch and step records real provider tokens with the provenance shown next to the points. The restart dialog now shows the run id with a copy button and the tool path as clickable segments that open that folder, and it confirms on the last six characters. 181 self test checks and 66 source checks.</td></tr>
+      <tr><td>2026-10-29</td><td>0.12.1</td><td>The model actually used is no longer a mystery: the provider chip names the endpoint model and every stage override, each AI log line names the model that answered, the start of a run logs the resolved models, and Settings has a Model per stage section for the two overrides. 186 self test checks.</td></tr>
+      <tr><td>2026-10-29</td><td>0.12.2</td><td><code>APP_BUILD</code> is sent with the state and printed into the page; when the two differ the dashboard shows "Reload needed" with the reason instead of silently showing old markup or talking to an old server. A source check keeps the build stamp equal to the document version. 186 self test checks and 68 source checks.</td></tr>
     </tbody>
   </table>
 
   <div class="footer">
     HTML Tool Factory - single source of truth for every decision about this
-    builder. Version 0.12.0, 2026-10-29. Keep in sync with the code.
+    builder. Version 0.12.2, 2026-10-29. Keep in sync with the code.
   </div>
   </div><!-- /#view-document -->
 

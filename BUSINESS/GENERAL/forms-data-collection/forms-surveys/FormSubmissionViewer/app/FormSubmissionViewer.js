@@ -1,4 +1,4 @@
-/* js build 2026-10-27-1 */
+/* js build 2026-10-29-3 */
 /* ───────────────────────────────────────────────────────────────────────
    FormSubmissionViewer
    One form submission, read as a dossier: every answer, who sent it, when,
@@ -13,7 +13,7 @@
 (function () {
 	'use strict';
 
-	var TOOL_BUILD = '2026-10-27-1';
+	var TOOL_BUILD = '2026-10-29-3';
 	console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' FormSubmissionViewer');
 
 	var toolApi = (typeof window !== 'undefined' && window.tool) ? window.tool : null;
@@ -33,7 +33,21 @@
 	var SHELL_FIELD_KEYS = [
 		'id', '_id', 'contentId', 'name', 'slug', 'cmsObjectType', 'typeId', 'parentId',
 		'tenantId', 'permissions', 'created', 'updated', 'createdAt', 'updatedAt', 'meta',
-		'productData', 'objectData', 'seo', 'blocks', 'values', '_parentObjectId'
+		'productData', 'objectData', 'data_categoriesBased', 'seo', 'blocks', 'aiChat',
+		'categories', 'values', '_parentObjectId'
+	];
+
+	/* the submission envelope the CMS stores beside the answers, inside
+	   objectData.data_categoriesBased (or productData.data_categoriesBased):
+	     { values: {...answers}, formTypeId, page, submittedAt, receivedAt,
+	       senderEmail, status, submissionKind, handledAt, handledBy, notes,
+	       objectStatus, ipHash, userAgent }
+	   These are record facts, not answers, so they never land in the answer
+	   sections. Anything else found in the envelope is kept as an answer. */
+	var ENVELOPE_FIELD_KEYS = [
+		'values', 'formTypeId', 'page', 'submittedAt', 'receivedAt', 'senderEmail',
+		'cmsObjectType', 'submissionKind', 'objectStatus', 'status', 'handledAt',
+		'handledBy', 'notes', 'ipHash', 'userAgent'
 	];
 
 	/* these three travel with the answers but are shown in the record card */
@@ -63,8 +77,18 @@
 		phone: ['M6 3h4l2 5-3 2a12 12 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z'],
 		copy: ['M9 9h10v11H9z', 'M5 15V4h10'],
 		code: ['M9 8l-4 4 4 4', 'M15 8l4 4-4 4'],
-		print: ['M7 8V3h10v5', 'M5 8h14v8h-3v5H8v-5H5z']
+		print: ['M7 8V3h10v5', 'M5 8h14v8h-3v5H8v-5H5z'],
+		person: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4.5 20.5a7.5 7.5 0 0 1 15 0'],
+		calendar: ['M4 6.5h16V20H4z', 'M8 3.5v4M16 3.5v4M4 11h16'],
+		shield: ['M12 3l8 3v5.5c0 4.6-3.3 7.7-8 8.5-4.7-.8-8-3.9-8-8.5V6z', 'M9 12l2.2 2.2L15.5 10'],
+		list: ['M9 6h11M9 12h11M9 18h11', 'M4 6h.01M4 12h.01M4 18h.01'],
+		inbox: ['M4 13l2.5-7h11L20 13v6H4z', 'M4 13h5l1.5 2h3L15 13h5'],
+		clock: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 7.5V12l3 1.8'],
+		layers: ['M12 3l9 5-9 5-9-5z', 'M3 13l9 5 9-5']
 	};
+
+	var SECTION_TONES = { person: 'accent', contact: 'teal', event: 'violet', consents: 'amber', answers: 'slate' };
+	var SECTION_ICONS = { person: 'person', contact: 'mail', event: 'calendar', consents: 'shield', answers: 'list' };
 
 	var PRINT_STYLESHEET = [
 		'@page { size: A4 portrait; margin: 16mm; }',
@@ -297,9 +321,32 @@
 
 	function applyAccentColor() {
 		var root = document.getElementById('fsv-root');
-		if (root && root.style && typeof root.style.setProperty === 'function') {
-			root.style.setProperty('--fsv-accent', paramState.accentColor);
+		if (!root || !root.style || typeof root.style.setProperty !== 'function') { return; }
+		root.style.setProperty('--fsv-accent', paramState.accentColor);
+		var shades = accentShadesOf(paramState.accentColor);
+		if (!shades) { return; }
+		root.style.setProperty('--fsv-accent-soft', shades.soft);
+		root.style.setProperty('--fsv-accent-line', shades.line);
+		root.style.setProperty('--fsv-accent-ink', shades.ink);
+	}
+
+	/* one accent colour is enough: the tints are derived here so a tenant
+	   colour reaches the tiles, chips and hover states as well */
+	function accentShadesOf(hexColor) {
+		var value = String(hexColor || '').replace('#', '');
+		if (value.length === 3) {
+			value = value.charAt(0) + value.charAt(0) + value.charAt(1) + value.charAt(1) + value.charAt(2) + value.charAt(2);
 		}
+		if (value.length !== 6) { return null; }
+		var red = parseInt(value.slice(0, 2), 16);
+		var green = parseInt(value.slice(2, 4), 16);
+		var blue = parseInt(value.slice(4, 6), 16);
+		if (isNaN(red) || isNaN(green) || isNaN(blue)) { return null; }
+		return {
+			soft: 'rgba(' + red + ', ' + green + ', ' + blue + ', 0.09)',
+			line: 'rgba(' + red + ', ' + green + ', ' + blue + ', 0.24)',
+			ink: 'rgb(' + Math.round(red * 0.62) + ', ' + Math.round(green * 0.62) + ', ' + Math.round(blue * 0.62) + ')'
+		};
 	}
 
 	/* ── reading the record ────────────────────────────────────────── */
@@ -308,6 +355,10 @@
 		var bag = {};
 		Object.keys(source).forEach(function (key) { bag[key] = source[key]; });
 		return bag;
+	}
+
+	function hasKey(bag, key) {
+		return Object.prototype.hasOwnProperty.call(bag, key);
 	}
 
 	function recordValueBag(fields) {
@@ -321,39 +372,67 @@
 
 	function dataCategoriesBag(fields) {
 		var candidates = [];
-		if (isPlainObject(fields.productData) && isPlainObject(fields.productData.data_categoriesBased)) {
-			candidates.push(fields.productData.data_categoriesBased);
-		}
 		if (isPlainObject(fields.objectData) && isPlainObject(fields.objectData.data_categoriesBased)) {
 			candidates.push(fields.objectData.data_categoriesBased);
 		}
+		if (isPlainObject(fields.productData) && isPlainObject(fields.productData.data_categoriesBased)) {
+			candidates.push(fields.productData.data_categoriesBased);
+		}
+		if (isPlainObject(fields.data_categoriesBased)) {
+			candidates.push(fields.data_categoriesBased);
+		}
 		var index;
 		for (index = 0; index < candidates.length; index += 1) {
-			if (Object.keys(candidates[index]).length > 0) { return copyBag(candidates[index]); }
+			if (Object.keys(candidates[index]).length > 0) { return candidates[index]; }
 		}
 		return null;
 	}
 
 	function readSubmission(fields) {
 		var record = (fields && typeof fields === 'object') ? fields : {};
-		var values = recordValueBag(record);
-		if (Object.keys(values).length === 0) {
-			var fallbackBag = dataCategoriesBag(record);
-			if (fallbackBag) { values = fallbackBag; }
+		var envelope = dataCategoriesBag(record);
+		var values = {};
+
+		/* the CMS shape: answers in envelope.values, envelope facts beside them */
+		if (envelope) {
+			if (isPlainObject(envelope.values)) { values = copyBag(envelope.values); }
+			Object.keys(envelope).forEach(function (key) {
+				if (key === 'values') { return; }
+				if (ENVELOPE_FIELD_KEYS.indexOf(key) !== -1) { return; }
+				if (!hasKey(values, key)) { values[key] = envelope[key]; }
+			});
 		}
+
+		/* older shapes: answers at fields.values, or flattened on the record */
+		if (Object.keys(values).length === 0) { values = recordValueBag(record); }
+
+		var envelopeData = envelope || {};
 		var recordMeta = isPlainObject(record.meta) ? record.meta : {};
 		var submission = {
 			record: record,
 			values: values,
-			formTypeId: firstText([values.formTypeId, record.formTypeId, recordMeta.formTypeId]),
-			pagePath: firstText([values.page, record.page, recordMeta.page]),
-			submittedAt: firstText([values.submittedAt, record.created, record.createdAt, record.updated]),
+			envelope: envelopeData,
+			formTypeId: firstText([envelopeData.formTypeId, values.formTypeId, record.formTypeId, recordMeta.formTypeId]),
+			pagePath: firstText([envelopeData.page, values.page, record.page, recordMeta.page]),
+			submittedAt: firstText([envelopeData.submittedAt, values.submittedAt, envelopeData.receivedAt,
+				record.created, record.createdAt, recordMeta.created, record.updated]),
+			receivedAt: firstText([envelopeData.receivedAt]),
+			senderEmail: firstText([envelopeData.senderEmail]),
+			status: firstText([envelopeData.status]),
+			objectStatus: firstText([envelopeData.objectStatus]),
+			submissionKind: firstText([envelopeData.submissionKind]),
+			handledBy: firstText([envelopeData.handledBy]),
+			handledAt: firstText([envelopeData.handledAt]),
+			notes: firstText([envelopeData.notes]),
+			ipHash: firstText([envelopeData.ipHash]),
+			userAgent: firstText([envelopeData.userAgent]),
+			recordName: firstText([record.name]),
 			recordId: firstText([record.id, record._id]),
 			contentId: firstText([record.contentId]),
 			typeId: firstText([record.typeId]),
-			sourceType: firstText([record.cmsObjectType]),
-			created: firstText([record.created, record.createdAt]),
-			updated: firstText([record.updated, record.updatedAt])
+			sourceType: firstText([record.cmsObjectType, envelopeData.cmsObjectType]),
+			created: firstText([record.created, record.createdAt, recordMeta.created, recordMeta.createdAt]),
+			updated: firstText([record.updated, record.updatedAt, recordMeta.updated, recordMeta.updatedAt])
 		};
 		return submission;
 	}
@@ -732,6 +811,33 @@
 
 	/* ── value rendering ───────────────────────────────────────────── */
 
+	function sectionToneOf(groupKey) {
+		return SECTION_TONES[groupKey] || 'slate';
+	}
+
+	function sectionIconOf(groupKey) {
+		return SECTION_ICONS[groupKey] || 'list';
+	}
+
+	function statusToneOf(statusText) {
+		var value = String(statusText || '').trim().toLowerCase();
+		if (!value) { return ''; }
+		if (/new|open|pending|received|unread/.test(value)) { return 'is-new'; }
+		if (/progress|review|handling|assigned|waiting/.test(value)) { return 'is-progress'; }
+		if (/done|handled|closed|complete|resolved|approved|sent/.test(value)) { return 'is-done'; }
+		if (/spam|blocked|rejected|failed|invalid/.test(value)) { return 'is-blocked'; }
+		return '';
+	}
+
+	function initialsOf(nameText) {
+		var words = String(nameText === null || nameText === undefined ? '' : nameText).trim().split(/\s+/)
+			.filter(function (word) { return Boolean(word); });
+		if (words.length === 0) { return '?'; }
+		var firstLetter = words[0].charAt(0);
+		var lastLetter = words.length > 1 ? words[words.length - 1].charAt(0) : '';
+		return (firstLetter + lastLetter).toUpperCase();
+	}
+
 	function buildLinkValue(url, text, title) {
 		var link = createElement('a', 'fsv-link', text);
 		link.setAttribute('href', url);
@@ -839,7 +945,16 @@
 
 	function buildSectionCard(group) {
 		var card = createElement('section', 'fsv-card fsv-section');
-		card.appendChild(createElement('h2', 'fsv-card-title', group.title));
+		var head = createElement('div', 'fsv-section-head');
+		var iconWrap = createElement('span', 'fsv-section-icon fsv-tone-' + sectionToneOf(group.key));
+		iconWrap.setAttribute('aria-hidden', 'true');
+		iconWrap.appendChild(iconNode(sectionIconOf(group.key)));
+		head.appendChild(iconWrap);
+		head.appendChild(createElement('h2', 'fsv-card-title', group.title));
+		if (group.fields.length > 0) {
+			head.appendChild(createElement('span', 'fsv-count', group.fields.length));
+		}
+		card.appendChild(head);
 		var fieldsWrap = createElement('div', 'fsv-fields');
 		if (group.fields.length === 0) {
 			fieldsWrap.appendChild(createElement('p', 'fsv-empty-note fsv-consent-missing', 'Email opt-in: not given'));
@@ -882,25 +997,35 @@
 		}
 		var nameModel = personNameModelOf(models);
 		var chipModel = personChipModelOf(models, nameModel);
+
 		var head = createElement('div', 'fsv-identity-head');
+		var avatar = createElement('div', 'fsv-avatar' + (nameModel ? '' : ' fsv-avatar-empty'),
+			initialsOf(nameModel ? nameModel.textValue : ''));
+		avatar.setAttribute('aria-hidden', 'true');
+		head.appendChild(avatar);
+
+		var main = createElement('div', 'fsv-identity-main');
+		var nameRow = createElement('div', 'fsv-identity-name-row');
 		if (nameModel) {
-			head.appendChild(createElement('p', 'fsv-person-name', String(nameModel.textValue).trim()));
+			nameRow.appendChild(createElement('p', 'fsv-person-name', String(nameModel.textValue).trim()));
 		} else {
-			head.appendChild(createElement('p', 'fsv-person-name fsv-person-name-muted', 'Name not provided'));
+			nameRow.appendChild(createElement('p', 'fsv-person-name fsv-person-name-muted', 'Name not provided'));
 		}
 		if (chipModel) {
-			head.appendChild(createElement('span', 'fsv-chip', String(chipModel.textValue).trim()));
+			nameRow.appendChild(createElement('span', 'fsv-chip', String(chipModel.textValue).trim()));
 		}
-		card.appendChild(head);
+		main.appendChild(nameRow);
 
 		var emailModel = firstModelOfType(models, 'email');
 		var phoneModel = firstModelOfType(models, 'phone');
 		if (emailModel || phoneModel) {
 			var contactLine = createElement('div', 'fsv-identity-contact');
-			if (emailModel) { contactLine.appendChild(buildEmailValue(emailModel)); }
-			if (phoneModel) { contactLine.appendChild(buildPhoneValue(phoneModel)); }
-			card.appendChild(contactLine);
+			if (emailModel) { contactLine.appendChild(buildContactPill(emailModel)); }
+			if (phoneModel) { contactLine.appendChild(buildContactPill(phoneModel)); }
+			main.appendChild(contactLine);
 		}
+		head.appendChild(main);
+		card.appendChild(head);
 
 		var personFields = models.filter(function (model) { return model.group === 'person'; });
 		var pairFields = personFields.filter(function (model) {
@@ -921,28 +1046,103 @@
 	}
 
 	function buildSubline(submission) {
-		var subline = createElement('p', 'fsv-subline');
+		var wrapper = createElement('div', 'fsv-subline-block');
 		var submittedHuman = humanDateText(submission.submittedAt);
 		if (submittedHuman) {
-			subline.appendChild(createElement('span', 'fsv-subline-item', submittedHuman));
+			wrapper.appendChild(createElement('p', 'fsv-subline', submittedHuman));
 		}
 		if (submission.pagePath) {
+			var pageLine = createElement('p', 'fsv-pagepath');
 			if (paramState.websiteBaseUrl) {
 				var base = paramState.websiteBaseUrl.replace(/\/+$/, '');
 				var path = submission.pagePath.charAt(0) === '/' ? submission.pagePath : '/' + submission.pagePath;
-				var pageLink = buildLinkValue(base + path, submission.pagePath, 'Open ' + base + path);
-				pageLink.className = 'fsv-link fsv-subline-item';
-				subline.appendChild(pageLink);
+				pageLine.appendChild(buildLinkValue(base + path, submission.pagePath, 'Open ' + base + path));
 			} else {
-				subline.appendChild(createElement('span', 'fsv-subline-item', submission.pagePath));
+				pageLine.appendChild(createElement('span', '', submission.pagePath));
 			}
+			wrapper.appendChild(pageLine);
 		}
-		if (subline.childNodes.length === 0) { return null; }
-		return subline;
+		if (wrapper.childNodes.length === 0) { return null; }
+		return wrapper;
 	}
 
-	function buildViewOptions() {
-		var row = createElement('div', 'fsv-view-options');
+	function buildContactPill(model) {
+		var pill = createElement('span', 'fsv-contact-pill');
+		pill.appendChild(iconNode(model.type === 'email' ? 'mail' : 'phone'));
+		pill.appendChild(model.type === 'email' ? buildEmailValue(model) : buildPhoneValue(model));
+		return pill;
+	}
+
+	function buildStatusPill(statusText) {
+		var text = String(statusText || '').trim();
+		if (!text) { return null; }
+		var tone = statusToneOf(text);
+		var pill = createElement('span', 'fsv-status-pill' + (tone ? ' ' + tone : ''));
+		pill.appendChild(createElement('span', 'fsv-status-dot'));
+		pill.appendChild(createElement('span', 'fsv-status-text', text));
+		return pill;
+	}
+
+	function buildKicker() {
+		var kicker = createElement('p', 'fsv-kicker');
+		kicker.appendChild(createElement('span', 'fsv-kicker-dot'));
+		kicker.appendChild(createElement('span', '', 'Form submission'));
+		return kicker;
+	}
+
+	function shortSourceLabelOf(sourceType) {
+		var value = String(sourceType || '').trim()
+			.replace(/-uniconbaseapps$/i, '')
+			.replace(/-applicationstore$/i, '');
+		if (!value) { return ''; }
+		return humanizeWords(value);
+	}
+
+	/* "Thursday 29 October 2026, 10:44" -> main + time line */
+	function datePartsOf(valueText) {
+		var human = humanDateText(valueText);
+		if (!human) { return { main: '', sub: '' }; }
+		var commaIndex = human.indexOf(', ');
+		if (commaIndex === -1) { return { main: human, sub: '' }; }
+		return { main: human.slice(0, commaIndex), sub: human.slice(commaIndex + 2) };
+	}
+
+	function buildStatTile(labelText, iconName, mainText, subText) {
+		var tile = createElement('div', 'fsv-stat');
+		var head = createElement('div', 'fsv-stat-head');
+		head.appendChild(createElement('span', 'fsv-stat-label', labelText));
+		var iconWrap = createElement('span', 'fsv-stat-icon');
+		iconWrap.setAttribute('aria-hidden', 'true');
+		iconWrap.appendChild(iconNode(iconName));
+		head.appendChild(iconWrap);
+		tile.appendChild(head);
+		tile.appendChild(createElement('span', 'fsv-stat-value' + (mainText ? '' : ' fsv-stat-empty'), mainText || 'Not recorded'));
+		if (subText) { tile.appendChild(createElement('span', 'fsv-stat-sub', subText)); }
+		return tile;
+	}
+
+	function buildStatsStrip(submission, models) {
+		var strip = createElement('div', 'fsv-stats');
+		var submitted = datePartsOf(submission.submittedAt);
+		var received = datePartsOf(submission.receivedAt);
+		strip.appendChild(buildStatTile('Submitted', 'clock', submitted.main, submitted.sub));
+		strip.appendChild(buildStatTile('Received', 'inbox', received.main, received.sub));
+		strip.appendChild(buildStatTile('Answers', 'list', models.length === 1 ? '1 field' : models.length + ' fields', ''));
+		strip.appendChild(buildStatTile('Source', 'layers', shortSourceLabelOf(submission.sourceType), ''));
+		return strip;
+	}
+
+	function buildToolbar(submission) {
+		var toolbar = createElement('div', 'fsv-toolbar');
+		var badges = createElement('div', 'fsv-toolbar-badges');
+		var statusPill = buildStatusPill(submission.status);
+		if (statusPill) { badges.appendChild(statusPill); }
+		if (timestampsShowUpdate(submission)) {
+			badges.appendChild(createElement('span', 'fsv-updated-chip', 'Updated after submission'));
+		}
+		if (badges.childNodes.length > 0) { toolbar.appendChild(badges); }
+
+		var options = createElement('div', 'fsv-view-options');
 		var label = createElement('label', 'fsv-switch');
 		var input = document.createElement('input');
 		input.type = 'checkbox';
@@ -955,9 +1155,10 @@
 		});
 		label.appendChild(input);
 		label.appendChild(createElement('span', 'fsv-switch-text', 'Hide contact details'));
-		row.appendChild(label);
-		row.appendChild(createElement('span', 'fsv-switch-note', 'The raw data block always shows the true values, because it is the audit trail.'));
-		return row;
+		options.appendChild(label);
+		options.appendChild(createElement('span', 'fsv-switch-note', 'The raw block keeps the true values.'));
+		toolbar.appendChild(options);
+		return toolbar;
 	}
 
 	function buildActionBar(submission, models) {
@@ -985,14 +1186,14 @@
 		var header = createElement('header', 'fsv-letterhead');
 		var top = createElement('div', 'fsv-letterhead-top');
 		var identityColumn = createElement('div', 'fsv-letterhead-id');
-		identityColumn.appendChild(createElement('p', 'fsv-kicker', 'Form submission'));
+		identityColumn.appendChild(buildKicker());
 		identityColumn.appendChild(createElement('h1', 'fsv-title', formLabelOf(submission)));
 		var subline = buildSubline(submission);
 		if (subline) { identityColumn.appendChild(subline); }
 		top.appendChild(identityColumn);
 		top.appendChild(buildActionBar(submission, models));
 		header.appendChild(top);
-		header.appendChild(buildViewOptions());
+		header.appendChild(buildToolbar(submission));
 		return header;
 	}
 
@@ -1008,7 +1209,7 @@
 
 	function buildMetaRow(labelText, valueText, options) {
 		var settings = options || {};
-		var row = createElement('div', 'fsv-meta-row');
+		var row = createElement('div', 'fsv-meta-row' + (settings.wide ? ' fsv-meta-row-wide' : ''));
 		row.appendChild(createElement('span', 'fsv-label', labelText));
 		var valueWrap = createElement('div', 'fsv-meta-value');
 		if (valueText) {
@@ -1034,6 +1235,45 @@
 		return row;
 	}
 
+	/* only rows that carry a value are returned, so the card never fills up
+	   with "Not provided" lines. Everything is still in the raw block. */
+	function metadataRowsOf(submission) {
+		var rows = [];
+		function addRow(labelText, valueText, options) {
+			if (!String(valueText === null || valueText === undefined ? '' : valueText).trim()) { return; }
+			rows.push({ label: labelText, value: valueText, options: options || {} });
+		}
+		addRow('Record name', submission.recordName);
+		addRow('Record ID', submission.recordId, { mono: true, copy: true, truncate: true });
+		addRow('Form type ID', submission.formTypeId, { mono: true });
+		addRow('Source application', submission.sourceType, { mono: true });
+		addRow('Folder type ID', submission.typeId, { mono: true });
+		addRow('Content ID', submission.contentId, { mono: true });
+		addRow('Submitted at', submission.submittedAt, { mono: true });
+		addRow('Received at', submission.receivedAt, { mono: true });
+		addRow('Status', submission.status);
+		addRow('Submission kind', submission.submissionKind);
+		addRow('Sender email', submission.senderEmail
+			? (uiState.ui.maskContacts ? maskEmailText(String(submission.senderEmail).toLowerCase()) : submission.senderEmail)
+			: '', { mono: false });
+		addRow('Handled by', submission.handledBy);
+		addRow('Handled at', submission.handledAt, { mono: true });
+		addRow('Notes', submission.notes, { wide: true });
+		addRow('Created', submission.created, { mono: true });
+		addRow('Updated', submission.updated, { mono: true });
+		return rows;
+	}
+
+	function buildTechnicalDetails(submission) {
+		var details = createElement('details', 'fsv-tech');
+		details.appendChild(createElement('summary', 'fsv-tech-summary', 'Technical details'));
+		var grid = createElement('div', 'fsv-meta-grid');
+		if (submission.ipHash) { grid.appendChild(buildMetaRow('IP hash', submission.ipHash, { mono: true })); }
+		if (submission.userAgent) { grid.appendChild(buildMetaRow('User agent', submission.userAgent, { mono: true, wide: true })); }
+		details.appendChild(grid);
+		return details;
+	}
+
 	function buildMetadataCard(submission) {
 		var details = createElement('details', 'fsv-card fsv-meta-card');
 		details.open = window.innerWidth > 720;
@@ -1044,25 +1284,29 @@
 		}
 		details.appendChild(summary);
 
+		var rows = metadataRowsOf(submission);
 		var grid = createElement('div', 'fsv-meta-grid');
-		grid.appendChild(buildMetaRow('Record ID', submission.recordId, { mono: true, copy: true, truncate: true }));
-		grid.appendChild(buildMetaRow('Form type ID', submission.formTypeId, { mono: true }));
-		grid.appendChild(buildMetaRow('Source application', submission.sourceType, { mono: true }));
-		grid.appendChild(buildMetaRow('Content ID', submission.contentId, { mono: true }));
-		grid.appendChild(buildMetaRow('Folder type ID', submission.typeId, { mono: true }));
-		grid.appendChild(buildMetaRow('Submitted at', submission.submittedAt, { mono: true }));
-		grid.appendChild(buildMetaRow('Created', submission.created, { mono: true }));
-		grid.appendChild(buildMetaRow('Updated', submission.updated, { mono: true }));
-
-		var pageOptions = { mono: true };
-		if (submission.pagePath && paramState.websiteBaseUrl) {
-			var base = paramState.websiteBaseUrl.replace(/\/+$/, '');
-			var path = submission.pagePath.charAt(0) === '/' ? submission.pagePath : '/' + submission.pagePath;
-			pageOptions.linkUrl = base + path;
+		rows.forEach(function (row) {
+			grid.appendChild(buildMetaRow(row.label, row.value, row.options));
+		});
+		if (submission.pagePath) {
+			var pageOptions = { mono: true };
+			if (paramState.websiteBaseUrl) {
+				var base = paramState.websiteBaseUrl.replace(/\/+$/, '');
+				var path = submission.pagePath.charAt(0) === '/' ? submission.pagePath : '/' + submission.pagePath;
+				pageOptions.linkUrl = base + path;
+			}
+			grid.appendChild(buildMetaRow('Page path', submission.pagePath, pageOptions));
 		}
-		grid.appendChild(buildMetaRow('Page path', submission.pagePath, pageOptions));
 
-		details.appendChild(grid);
+		if (rows.length === 0 && !submission.pagePath) {
+			details.appendChild(createElement('p', 'fsv-empty-note', 'This object carried no record metadata.'));
+		} else {
+			details.appendChild(grid);
+		}
+		if (submission.ipHash || submission.userAgent) {
+			details.appendChild(buildTechnicalDetails(submission));
+		}
 		return details;
 	}
 
@@ -1211,12 +1455,38 @@
 
 	/* ── labels for the document title and the summary ──────────────── */
 
+	function humanizeWords(text) {
+		return String(text || '').split(/[-_\s]+/).filter(function (word) { return Boolean(word); }).map(function (word) {
+			var lowerWord = word.toLowerCase();
+			if (ACRONYM_WORDS[lowerWord]) { return ACRONYM_WORDS[lowerWord]; }
+			if (/^\d+$/.test(lowerWord)) { return lowerWord; }
+			return lowerWord.charAt(0).toUpperCase() + lowerWord.slice(1);
+		}).join(' ');
+	}
+
+	/* 2026-11-07-vancouver-cemc-trial-exam-registration becomes
+	   "7 November 2026 - Vancouver CEMC Trial Exam Registration" */
+	function humanizeIdentifier(text) {
+		var value = String(text || '').trim();
+		if (!value) { return ''; }
+		var dateMatch = /^(\d{4})-(\d{2})-(\d{2})-(.+)$/.exec(value);
+		if (dateMatch) {
+			var dateText = humanDateText(dateMatch[1] + '-' + dateMatch[2] + '-' + dateMatch[3]);
+			var restText = humanizeWords(dateMatch[4]);
+			if (dateText && restText) { return dateText + ' - ' + restText; }
+			return dateText || restText;
+		}
+		return humanizeWords(value);
+	}
+
 	function formLabelOf(submission) {
 		if (submission.formTypeId && paramState.formTypeLabels[submission.formTypeId] !== undefined) {
 			var configuredLabel = String(paramState.formTypeLabels[submission.formTypeId]).trim();
 			if (configuredLabel) { return configuredLabel; }
 		}
-		if (submission.formTypeId) { return submission.formTypeId; }
+		var humanizedLabel = humanizeIdentifier(submission.formTypeId);
+		if (humanizedLabel) { return humanizedLabel; }
+		if (submission.recordName) { return submission.recordName; }
 		return 'Submission';
 	}
 
@@ -1327,10 +1597,11 @@
 
 	function buildPrintLetterhead(submission) {
 		var submittedHuman = humanDateTimeText(submission.submittedAt);
-		var headMeta = submittedHuman ? 'Submitted ' + escapeHtml(submittedHuman) : 'Submitted date not recorded';
+		var headLines = [submittedHuman ? 'Submitted ' + escapeHtml(submittedHuman) : 'Submitted date not recorded'];
+		if (submission.status) { headLines.push('Status: ' + escapeHtml(submission.status)); }
 		return '<div class="print-head"><div><p class="print-brand">' + escapeHtml(paramState.brandName) +
 			'</p><h1 class="print-title">' + escapeHtml(formLabelOf(submission)) + '</h1></div>' +
-			'<div class="print-head-meta">' + headMeta + '</div></div>';
+			'<div class="print-head-meta">' + headLines.join('<br>') + '</div></div>';
 	}
 
 	function buildPrintIdentity(models) {
@@ -1403,21 +1674,16 @@
 	}
 
 	function buildPrintMetadata(submission) {
-		var rows = [
-			['Record ID', submission.recordId],
-			['Form type ID', submission.formTypeId],
-			['Source application', submission.sourceType],
-			['Content ID', submission.contentId],
-			['Folder type ID', submission.typeId],
-			['Submitted at', submission.submittedAt],
-			['Created', submission.created],
-			['Updated', submission.updated],
-			['Page path', submission.pagePath]
-		];
+		var rows = [];
+		metadataRowsOf(submission).forEach(function (row) {
+			rows.push([row.label, row.value]);
+		});
+		if (submission.pagePath) { rows.push(['Page path', submission.pagePath]); }
+		if (rows.length === 0) { return ''; }
 		var parts = ['<table class="print-meta-table">'];
 		rows.forEach(function (row) {
 			parts.push('<tr><th>' + escapeHtml(row[0]) + '</th><td class="print-mono">' +
-				escapeHtml(row[1] || 'Not provided') + '</td></tr>');
+				escapeHtml(row[1]) + '</td></tr>');
 		});
 		parts.push('</table>');
 		return parts.join('');
@@ -1499,6 +1765,10 @@
 
 	function paintEmptyState(host) {
 		var box = createElement('div', 'fsv-empty-state');
+		var iconWrap = createElement('span', 'fsv-empty-icon');
+		iconWrap.setAttribute('aria-hidden', 'true');
+		iconWrap.appendChild(iconNode('inbox'));
+		box.appendChild(iconWrap);
 		box.appendChild(createElement('p', 'fsv-empty-title', 'No submission selected'));
 		box.appendChild(createElement('p', 'fsv-empty-text',
 			'This tool shows one form submission. Open a submission from the form application folder to see its details.'));
@@ -1507,6 +1777,10 @@
 
 	function paintErrorState(host, error) {
 		var box = createElement('div', 'fsv-empty-state fsv-error-state');
+		var iconWrap = createElement('span', 'fsv-empty-icon fsv-empty-icon-error');
+		iconWrap.setAttribute('aria-hidden', 'true');
+		iconWrap.appendChild(iconNode('shield'));
+		box.appendChild(iconWrap);
 		box.appendChild(createElement('p', 'fsv-empty-title', 'This submission could not be displayed'));
 		box.appendChild(createElement('p', 'fsv-empty-text',
 			'The record loaded, but the viewer hit a problem while building the page. Copy the technical details and send them to your administrator.'));
@@ -1524,6 +1798,7 @@
 		var documentWrap = createElement('div', 'fsv-doc' + (hasPaintedOnce ? '' : ' fsv-first-paint'));
 		if (paramState.warnings.length > 0) { documentWrap.appendChild(buildWarningLine(paramState.warnings)); }
 		documentWrap.appendChild(buildLetterhead(submission, models));
+		documentWrap.appendChild(buildStatsStrip(submission, models));
 		documentWrap.appendChild(buildIdentityCard(submission, models));
 		var sectionsArea = buildSectionsArea(submission, models);
 		if (sectionsArea) { documentWrap.appendChild(sectionsArea); }

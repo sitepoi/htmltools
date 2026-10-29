@@ -433,17 +433,53 @@ Service endpoints (for hand-rolled UI beyond the built-in widgets)
   absolute; left: -9999px; }). Filled honeypots are silently dropped.
 - Status element `[data-gw-form-status]` shows busy text ("Submitting…")
   automatically; the form gets class .gw-busy while submitting.
-- Submit payload (JSON): { formTypeId?, submittedAt, gw_hp,
-  values: {<name>: <value string>} }. Files present -> multipart FormData.
-- Events: gw:form-success / gw:form-error / gw:form-invalid (bubble —
+- Submit payload (JSON): {
+    cmsObjectType?,   // destination application; omitted -> form-submission-uniconbaseapps
+    formTypeId?,      // stored LABEL only, never a destination
+    page?, submittedAt?, gw_hp?,
+    typeId?,          // OPTIONAL existing folder id (wins over folder)
+    folder?,          // OPTIONAL { name } or { tree: [{ name }, ...] }
+    objectName?,      // OPTIONAL final object name, used as written (wins)
+    nameTemplate?,    // OPTIONAL name rendered from values, {{student_name}}
+    values: {<name>: <value string>}   // REQUIRED, flat text map
+  }
+  Files present -> multipart FormData.
+- FOLDER TARGET (section 8.10, D-PFI-26/27): the form may name its folder.
+  `typeId` (existing id) or `folder.name` (find-or-create a TOP-LEVEL folder,
+  server slugifies) or `folder.tree` (find-or-create a path, max depth 5 and
+  max 10 nodes). Send typeId and folder TOGETHER when the id may be stale: the
+  id is used when it resolves, otherwise the name is find-or-created. Resolution runs BEFORE the permission checks and the resolved
+  id becomes the object's typeId; the declaration itself is consumed, never
+  stored. WITHOUT a folder the record is stored UNFILED and stays invisible in
+  the application's object list, which lists strictly per folder. A malformed
+  declaration answers 400 INVALID_FOLDER_TARGET / FOLDER_TREE_INVALID; a folder
+  that cannot be created still stores the record (200 without folderId).
+  `objectType` is the platform's folder word and is IGNORED.
+- OBJECT NAME (same section, D-PFI-30): the form may also NAME the record, so
+  the object list reads "Ada Yilmaz" instead of a timestamp. Two keys, siblings
+  of values, never inside values:
+    nameTemplate: '{{student_name}}'      // rendered by the CMS from values
+    objectName:   'Fixed name'            // final text, wins over the template
+  Placeholders resolve against the submitted values; an unknown placeholder
+  renders empty. Send ONE of the two per form. Precedence: objectName, then
+  nameTemplate, then the application's formIntake.nameTemplate, then the
+  default `<application> (<formTypeId>) - <receivedAt>`. The object id and
+  slug never change, so a wrong name is cosmetic and can be edited in the CMS.
+- Answers: 200 {ok, id, folderId} accepted (folderId empty = stored unfiled);
+  400 validation/disabled/malformed folder; 403 ORIGIN_NOT_ALLOWED; 405; 413;
+  429 RATE_LIMIT_EXCEEDED; 500 STORAGE_FAILED. Only 200 means accepted and
+  there is NO read access, so never call a read endpoint to confirm.
+- Events: gw:form-success / gw:form-error / gw:form-invalid (bubble -
   listen on the form or window).
-- Server guardrails (design for them): origin check, hashed-IP rate limit,
+- Server guardrails (design for them): origin allowlist, hashed-IP rate limit,
   JSON body <= 256 KB, multipart <= 10 MB, honeypot, min fill time 2 s,
-  optional reCAPTCHA (site setting).
-- formTypeId links to a CMS `form-type-definition` object that defines the
-  destination table + server hooks. The page can never set destination
-  table or hooks. If the form must land somewhere specific, emit a
-  `=== CMS CONFIG NEEDED ===` note for the CMS author.
+  optional reCAPTCHA (site setting). The fill-time check only runs when the page
+  sends `renderedAt` (or `gw_render_ts`, epoch ms); without it the check is
+  skipped. When the destination declares formIntake.renderTimestampSecret the
+  page must also send `gw_render_sig` (hex HMAC-SHA256 of the timestamp).
+- `cmsObjectType` is the ONLY destination key. `formTypeId` is a label with no
+  form-type definition behind it; a page can never set destination tables or
+  server hooks.
 - Do not put honeypot-looking names on real fields.
 
 ----------------------------------------------------------------------------

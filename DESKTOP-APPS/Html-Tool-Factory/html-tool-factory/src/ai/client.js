@@ -372,6 +372,14 @@ function createAiClient(options) {
     return computeTimeout(inputChars, attempt, limits.requestTimeoutMs, limits.maxRequestTimeoutMs)
   }
 
+  // The model a call really uses when the stage names none: the provider default.
+  function defaultModelFor(provider) {
+    if (provider === 'unicon-gateway') return config.uniconGateway.model || 'default'
+    if (provider === 'ollama') return config.ollama.model || 'default'
+    const models = config.models || {}
+    return config.openaiCompatible.model || models.coder || models.planner || 'default'
+  }
+
   function createTimeoutSignal(timeoutMs) {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -454,10 +462,13 @@ function createAiClient(options) {
         live.end(run.id, callId, { ok: true, text })
         recordUsage(estimatedInputChars, text.length)
         const realTokens = recordProviderUsage(reportedUsage)
-        logEvent('ai', providerInfo.label + ' answered ' + stage + ' (attempt ' + attempt + ', ' +
+        // The model is named on every answer: the endpoint default and the per
+        // stage override are two different settings and the log must not blur them.
+        logEvent('ai', providerInfo.label + ' answered ' + stage + ' with ' +
+          (modelName || defaultModelFor(provider)) + ' (attempt ' + attempt + ', ' +
           (realTokens ? realTokens + ' tokens reported' : '~' +
             estimateTokens(estimatedInputChars + text.length) + ' tokens estimated') + ')', { stage })
-        return { text, provider, model: modelName || 'default', tokens: realTokens }
+        return { text, provider, model: modelName || defaultModelFor(provider), tokens: realTokens }
       } catch (error) {
         live.end(run.id, callId, { ok: false, error: String((error && error.message) || error) })
         lastError = error

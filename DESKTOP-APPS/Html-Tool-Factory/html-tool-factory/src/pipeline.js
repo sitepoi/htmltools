@@ -5,6 +5,7 @@
 // paused/stopped, or a hard error happens.
 
 const { createAiClient, BudgetExceededError } = require('./ai/client')
+const { modelSummary } = require('./config')
 const path = require('path')
 const { Workspace } = require('./code/workspace')
 const ssotModel = require('./ssot/model')
@@ -174,6 +175,16 @@ function createPipeline(dependencies) {
         message: (STAGE_BY_ID.get(stageId) || {}).title || stageId
       })
 
+      // Name the models at the start of a run. The per stage override is a
+      // second setting that silently wins over the provider default, so it is
+      // recorded in the log instead of being discovered by surprise.
+      if (stageId === 'select-idea') {
+        const models = modelSummary(config)
+        logEvent('info', 'Models in use: ' + models.text +
+          (models.overrides.length
+            ? ' - the stage override wins over the provider default, see Settings.'
+            : ' - taken from the provider settings.'))
+      }
       context = buildContext(run, logEvent)
       if (stageId === 'plan-tasks' && !run.iterationStartedAt) {
         run.iterationStartedAt = nowIso()

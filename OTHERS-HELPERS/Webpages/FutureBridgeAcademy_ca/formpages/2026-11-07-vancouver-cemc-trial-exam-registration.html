@@ -18,15 +18,34 @@
        uses it unless that page names a specific application of its own. A page
        with its own cmsObjectType keeps it (contact-us-forms-uniconbaseapps,
        apply-position-forms-uniconbaseapps, event-entry-registraton-uniconbaseapps).
-     - FOLDER: a public page CANNOT choose the folder. The endpoint takes one
-       destination application (cmsObjectType) plus a label (formTypeId), and the
-       platform rules state that the page may never set the destination table,
-       the folder or the server hooks - the CMS form-type definition owns them.
-       So the label here is kept IDENTICAL to the folder name and to the page
-       slug (2026-11-07-vancouver-cemc-trial-exam-registration): if the CMS maps
-       this formTypeId to the folder of the same name, nothing has to change in
-       this file for the next city or date. The request to the CMS side is in
-       CMS-REQUEST--form-submission-folder.txt at the workspace root.
+     - FOLDER ROUTING (webpage-widget-flow-ssot.html section 8.10, D-PFI-26/27,
+       applied 29 Oct 2026): the form channel accepts the same folder keys as the
+       keyed write path, resolved BEFORE the permission checks by the shared
+       router and stamped as the object's typeId:
+         typeId             a folder id that already exists (wins)
+         folder: { name }   find-or-create a TOP-LEVEL folder (server slugifies)
+         folder: { tree }   find-or-create a path, max depth 5 / 10 nodes
+       This page sends BOTH keys, so the CMS can match an existing folder or
+       create it: data-gw-form-folder-id (empty until the folder exists, then the
+       real id) becomes payload.typeId, and data-gw-form-folder
+       ("2026-11-07-vancouver-cemc-trial-exam-registration") becomes
+       payload.folder = { name }. The CMS uses the id when it exists and falls
+       back to the name, which is find-or-created and reused afterwards. The
+       declaration is consumed by the CMS and is NOT stored on the object.
+       Without a folder a submission is stored but INVISIBLE in the app's object
+       list, which lists strictly per folder; a malformed declaration answers
+       400 INVALID_FOLDER_TARGET / FOLDER_TREE_INVALID; a folder that cannot be
+       created still stores the record, unfiled, and answers 200 without
+       folderId. Set data-gw-form-folder-id instead when the folder already
+       exists and you know its id.
+     - OBJECT NAME (same section, D-PFI-30): the form also names the record. This
+       page sets data-gw-form-name-template="{{student_name}}", so the CMS renders
+       the name from the submitted values and the object list shows "Ada Yilmaz"
+       inside the folder above instead of a timestamp. data-gw-form-object-name
+       (a fixed literal) wins over the template if it is ever set; the object id
+       and slug are never changed by either key. Neither key is sent when both
+       attributes are empty, and the CMS then falls back to the application's
+       formIntake.nameTemplate or its own default name.
      - Fields: parent_name, student_name, student_grade, email, phone (optional),
        consent (optional email opt-in). Five hidden fields record WHICH exam the
        registration belongs to (exam, exam_date, city, area, venue_city) so a city
@@ -52,8 +71,18 @@
                                          string identifies the page, the label and
                                          the target folder)
        4. the five hidden inputs      -> exam, exam_date, city, area, venue_city
-       5. the Google Maps directions link (destination = the new address)
-       6. formDefaultCmsObjectType    -> form-submissions-uniconbaseapps unless the
+       5. data-gw-form-folder         -> the SAME string again: it is the folder
+                                         name the CMS creates or matches for this
+                                         instance under the destination app
+          data-gw-form-folder-id      -> paste the real folder id once the folder
+                                         exists; empty is ignored. Both travel in
+                                         the payload, the id wins when it resolves
+       5b. data-gw-form-name-template -> the CMS object name, rendered from the
+                                         answers: {{student_name}}. Use
+                                         data-gw-form-object-name for a fixed text
+                                         (it wins over the template).
+       6. the Google Maps directions link (destination = the new address)
+       7. formDefaultCmsObjectType    -> form-submissions-uniconbaseapps unless the
                                          CMS gives that city or exam its own
                                          application object
      Keep the root class .fba-trial and the fba-trial-* prefix so every instance
@@ -149,8 +178,18 @@
 		<div class="fba-wrap">
 			<div class="fba-trial-layout">
 
+				<!-- Folder target (section 8.10, D-PFI-27). Both are sent; the CMS uses
+				     the id when it exists and otherwise creates or matches the name:
+				       data-gw-form-folder-id  -> payload.typeId  (paste the folder id here)
+				       data-gw-form-folder     -> payload.folder = { name }
+				     Leave the id empty until the folder exists; empty is ignored.
+				     Object name (D-PFI-30): the template is rendered by the CMS from the
+				     answers, so the record is titled with the student name. -->
 				<form class="fba-trial-form" data-gw-form
-					data-gw-form-type="2026-11-07-vancouver-cemc-trial-exam-registration" novalidate>
+					data-gw-form-type="2026-11-07-vancouver-cemc-trial-exam-registration"
+					data-gw-form-folder-id=""
+					data-gw-form-folder="2026-11-07-vancouver-cemc-trial-exam-registration"
+					data-gw-form-name-template="{{student_name}}" novalidate>
 					<div class="fba-trial-form-head">
 						<h2>Register for this exam</h2>
 						<p>One form per student. It takes under a minute.</p>
@@ -1151,6 +1190,54 @@
 			return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
 		}
 
+		/* Section 8.10 of webpage-widget-flow-ssot.html, D-PFI-27: the form channel
+		   accepts the same folder keys as the keyed write path -
+		     typeId            a flat folder ID that already exists (wins)
+		     folder.name       find-or-create a TOP-LEVEL folder in cmsObjectType
+		     folder.tree[]     find-or-create a path, max depth 5 / 10 nodes
+		   The CMS uses the id when it exists and falls back to the name when it does
+		   not, so BOTH are sent when an id is configured: a stale or unknown id can
+		   never lose the folder because the name creates or matches it. The CMS
+		   consumes the declaration, stamps the resolved id as the object's typeId and
+		   never stores the declaration itself. Empty values and the UI sentinel
+		   'default-one-folder' are not sent, so the three-level fallback (app
+		   defaultFolderStructure, then a YYYY-MM folder) applies. */
+		function folderNameForForm(form) {
+			var rawFolderName = form.getAttribute('data-gw-form-folder');
+			var folderName = rawFolderName === null ? '' : String(rawFolderName).trim();
+			if (!folderName || folderName === 'default-one-folder') { return ''; }
+			return folderName.slice(0, 120);
+		}
+
+		function folderIdForForm(form) {
+			var rawFolderId = form.getAttribute('data-gw-form-folder-id');
+			var folderId = rawFolderId === null ? '' : String(rawFolderId).trim();
+			if (!folderId || folderId === 'default-one-folder') { return ''; }
+			/* an unreplaced placeholder means "not configured yet" */
+			if (folderId.indexOf('<') !== -1 || folderId.indexOf('{{') !== -1) { return ''; }
+			return folderId.slice(0, 160);
+		}
+
+		/* Object name, section 8.10 / D-PFI-30: objectName (final text) wins;
+		   nameTemplate is rendered by the CMS from the submitted values, so
+		   {{student_name}} becomes the name this visitor typed. Neither key is
+		   sent when both are empty - the CMS then uses the application's
+		   formIntake.nameTemplate or its own default. The object id and slug are
+		   never affected by either key. */
+		function objectNameForForm(form) {
+			var rawObjectName = form.getAttribute('data-gw-form-object-name');
+			var objectName = rawObjectName === null ? '' : String(rawObjectName).trim();
+			if (!objectName) { return ''; }
+			return objectName.slice(0, 200);
+		}
+
+		function nameTemplateForForm(form) {
+			var rawNameTemplate = form.getAttribute('data-gw-form-name-template');
+			var nameTemplate = rawNameTemplate === null ? '' : String(rawNameTemplate).trim();
+			if (!nameTemplate) { return ''; }
+			return nameTemplate.slice(0, 200);
+		}
+
 		function formErrorMessage(statusCode) {
 			if (statusCode === 400) {
 				return 'We could not accept this registration. Please check the fields and try again.';
@@ -1168,6 +1255,10 @@
 			var values = collectFormValues(form);
 			var honeypotValue = values.gw_hp || values.website || values.company || '';
 			var cmsObjectType = cmsObjectTypeForForm(form);
+			var targetFolderName = folderNameForForm(form);
+			var targetFolderId = folderIdForForm(form);
+			var targetObjectName = objectNameForForm(form);
+			var targetNameTemplate = nameTemplateForForm(form);
 			var submitButton = form.querySelector('[type="submit"]');
 
 			/* the honeypot travels at the root of the payload, never inside values */
@@ -1184,6 +1275,20 @@
 			};
 
 			if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+			/* the folder target travels at the root, as a SIBLING of values.
+			   BOTH are sent when an id is configured: the CMS uses the id when it
+			   exists and falls back to the name (create or match) when it does not. */
+			if (targetFolderId) { payload.typeId = targetFolderId; }
+			if (targetFolderName) { payload.folder = { name: targetFolderName }; }
+
+			/* object name: the literal objectName wins, otherwise the template the
+			   CMS renders from values (student name in this form) */
+			if (targetObjectName) {
+				payload.objectName = targetObjectName;
+			} else if (targetNameTemplate) {
+				payload.nameTemplate = targetNameTemplate;
+			}
 
 			form.classList.add('gw-busy');
 			form.setAttribute('aria-busy', 'true');
@@ -1208,6 +1313,15 @@
 				if (!accepted) {
 					setFormStatus(form, formErrorMessage(result.status), 'error');
 					return;
+				}
+
+				/* 200 { ok, id, folderId }. An empty folderId means the CMS stored the
+				   submission UNFILED (the folder could not be created), so it will not
+				   appear in the application's object list. Console only: the visitor
+				   does not need to know, the administrator does. */
+				if ((targetFolderId || targetFolderName) && result.body && !result.body.folderId) {
+					window.console.warn('[FORM] Stored without a folder: the answer carried no folderId. ' +
+						'Check the folder declaration, the destination application and its formIntake settings.');
 				}
 
 				form.reset();

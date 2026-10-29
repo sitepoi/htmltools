@@ -41,6 +41,7 @@ PROCEDURE
       page: '/contact',                    // OPTIONAL
       submittedAt: new Date().toISOString(), // OPTIONAL
       gw_hp: '',                           // honeypot, keep empty
+      folder: { name: '2026-11-07-vancouver-cemc-trial-exam-registration' }, // OPTIONAL, see FIELD RULES
       values: {                            // REQUIRED
         name: 'Ada',
         email: 'ada@example.com',
@@ -52,9 +53,15 @@ PROCEDURE
 
 2. THE ANSWER
 -------------
-  200  {"ok":true,"id":"..."}    stored (or silently dropped as spam)
-  400  {"ok":false,"error":...} validation problem, invalid destination
+  200  {"ok":true,"id":"...","folderId":"..."}  stored (or silently dropped as spam).
+       An empty/absent folderId means the record was stored UNFILED: the folder
+       could not be created, so it will not appear in the application's object
+       list. The submission itself is not lost.
+  400  {"ok":false,"error":...} validation problem, invalid destination, or a
+       malformed folder declaration (INVALID_FOLDER_TARGET / FOLDER_TREE_INVALID)
   403  {"ok":false,"error":"ORIGIN_NOT_ALLOWED"}
+  405  method not allowed (POST only)
+  413  body too large
   429  {"ok":false,"error":"RATE_LIMIT_EXCEEDED"}
   500  {"ok":false,"error":"STORAGE_FAILED"}
 
@@ -80,6 +87,53 @@ FIELD RULES
 
   gw_hp          optional honeypot. It must stay empty. A non-empty value
                  means a bot: the answer is 200 and NOTHING is stored.
+
+  folder         optional. The folder the record belongs to (form channel,
+                 same keys as the keyed write path, D-PFI-26/27, in force
+                 since 29 Oct 2026). Send it as a sibling of values, never
+                 inside values:
+
+                   typeId: 'existing-folder-id'              // wins, no creation
+                   folder: { name: 'my-form-folder' }        // top-level folder
+                   folder: { tree: [{ name: 'a' }, { name: 'b' }] }  // a/b
+
+                 Both may be sent TOGETHER and that is the resilient pattern: the
+                 CMS uses typeId when it resolves and falls back to folder.name
+                 (find-or-create) when it does not - so a page can carry an id it
+                 hopes is current and still land in the right folder if the id is
+                 stale, unknown or empty.
+
+                 name creates the folder if it does not exist (the server
+                 slugifies the name and generates the id) and reuses it when
+                 it does; tree is find-or-created node by node from the app
+                 root, max depth 5 and max 10 nodes, otherwise 400
+                 FOLDER_TREE_INVALID. 'default-one-folder' is a UI sentinel and
+                 is never a valid target. The declaration is consumed by the
+                 CMS and is NOT stored on the object.
+                 Why it matters: without a folder the object is still stored but
+                 the CMS object manager lists strictly per folder, so the record
+                 is invisible in the app UI. Omit folder only when the app
+                 declares defaultFolderStructure or the platform fallback
+                 (top-level YYYY-MM folder) is acceptable.
+
+  nameTemplate   optional. The NAME of the stored object, rendered by the CMS
+                 from the submitted values (D-PFI-30, 29 Oct 2026):
+
+                   nameTemplate: '{{student_name}}'
+                   nameTemplate: '{{student_name}} - {{exam}}'
+
+                 Placeholders are the field names inside values; an unknown one
+                 renders empty. The record then shows that text in the object
+                 list, inside its folder, instead of a timestamp.
+
+  objectName     optional. Final name as written; it WINS over nameTemplate.
+                 Use it only for a fixed title that does not depend on the
+                 answers. Send one of the two keys, not both.
+
+                 Precedence: objectName > nameTemplate > the application's
+                 formIntake.nameTemplate > the default
+                 `<application> (<formTypeId>) - <receivedAt>`.
+                 Neither key touches the object id or slug.
 
   values         required. A flat object of fieldName: textValue.
                  Every value is stored as text.
@@ -199,6 +253,21 @@ WHERE THIS IS WIRED IN THIS REPO
   not name a more specific one. registration-forms-uniconbaseapps does not exist
   and must not be used. Always send cmsObjectType explicitly so the platform
   default is never relied on.
+
+  FOLDER ROUTING (29 Oct 2026): the trial exam registration page is the first
+  form that names its folder - it sends
+  folder: { name: "2026-11-07-vancouver-cemc-trial-exam-registration" } from the
+  form attribute data-gw-form-folder, so every submission of that page lands in
+  that folder (created on first use) instead of an invisible folder-less state.
+  Add the same attribute to any other form that needs its own folder; leave it
+  out to use the app default structure or the platform YYYY-MM fallback.
+
+  OBJECT NAMING (29 Oct 2026): the same page now names the record too - it sends
+  nameTemplate: "{{student_name}}" from the form attribute
+  data-gw-form-name-template, so each submission shows the student name inside
+  that folder instead of a timestamp. Rename an attribute to change the naming:
+  data-gw-form-name-template for a template over the answers,
+  data-gw-form-object-name for one fixed title (it wins over the template).
 
   Still open: the site origin allowlist. Checked on 17 Oct 2026 - a preflight
   from https://futurebridgeacademy.ca answers 403 ORIGIN_NOT_ALLOWED while the

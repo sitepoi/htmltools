@@ -7,7 +7,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const { APP_ROOT, loadConfig } = require('../src/config')
+const { APP_ROOT, loadConfig, describeProvider, modelSummary } = require('../src/config')
 const { RunStore, isValidRunId } = require('../src/state')
 const { unifiedDiff } = require('../src/code/diff')
 const { createPipeline } = require('../src/pipeline')
@@ -759,6 +759,66 @@ async function checkCostReporting() {
     previewBatches.map((batch) => batch.points).join(','))
 }
 
+// Where the model name comes from: the per stage override wins over the provider
+// default, so the dashboard and the log have to say both.
+async function checkModelResolution() {
+  process.stdout.write('\nWhich model is actually used\n')
+  const config = loadConfig({
+    localConfigPath: path.join(OUTPUT_DIRECTORY, 'missing-config.json'),
+    skipEnvironment: true
+  })
+  config.provider = 'openai-compatible'
+  config.openaiCompatible.baseUrl = 'http://127.0.0.1:9/unused'
+  config.openaiCompatible.apiKey = 'test'
+  config.openaiCompatible.model = 'flash-endpoint'
+  config.models = { planner: 'pro-stage', coder: 'pro-stage' }
+
+  const summary = modelSummary(config)
+  check('the model summary names the stage override',
+    summary.planner === 'pro-stage' && summary.coder === 'pro-stage' && summary.overrides.length === 2,
+    JSON.stringify(summary))
+  check('the provider description shows the endpoint model and the override',
+    /flash-endpoint/.test(describeProvider(config).detail) && /pro-stage/.test(describeProvider(config).detail),
+    describeProvider(config).detail)
+
+  const originalFetch = global.fetch
+  const logged = []
+  let sentModel = ''
+  global.fetch = async (url, options) => {
+    sentModel = JSON.parse(options.body).model
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] })
+    }
+  }
+  const run = {
+    id: 'model-resolution-run',
+    options: { provider: 'openai-compatible' },
+    counters: { aiCalls: 0, inputChars: 0, outputChars: 0, apiPromptTokens: 0, apiCompletionTokens: 0 }
+  }
+  try {
+    const client = createAiClient({
+      config,
+      run,
+      logEvent: (type, message) => { if (type === 'ai') logged.push(message) }
+    })
+    await client.chat({ stage: 'apply-tasks', system: 's', user: 'u', model: config.models.coder })
+  } finally {
+    global.fetch = originalFetch
+  }
+  check('the stage override is the model in the request', sentModel === 'pro-stage', sentModel)
+  check('the log line names the model that answered',
+    logged.some((line) => /with pro-stage/.test(line)), logged.join(' | '))
+
+  const cleared = Object.assign({}, config, { models: { planner: '', coder: '' } })
+  const clearedSummary = modelSummary(cleared)
+  check('an empty override falls back to the provider model',
+    clearedSummary.planner === 'flash-endpoint' && clearedSummary.overrides.length === 0,
+    JSON.stringify(clearedSummary))
+}
+
 async function checkFullLoop() {
   process.stdout.write('\nFull loop with the mock provider\n')
   hub.setQuiet(true)
@@ -959,6 +1019,7 @@ async function main() {
   await checkLiveView()
   await checkEditGates()
   await checkCostReporting()
+  await checkModelResolution()
   const loopResult = await checkFullLoop()
 
   process.stdout.write('\n' + passed + ' checks passed, ' + failures.length + ' failed.\n')

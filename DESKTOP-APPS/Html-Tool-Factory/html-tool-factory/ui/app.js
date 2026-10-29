@@ -32,7 +32,7 @@ function byId(id) {
 
 function cacheElements() {
   ;[
-    'providerChip', 'btnSettings', 'btnNewRun', 'runsList', 'runsCount', 'catalogLine',
+    'providerChip', 'buildWarning', 'btnSettings', 'btnNewRun', 'runsList', 'runsCount', 'catalogLine',
     'newRunPanel', 'ideaSearch', 'ideasList', 'inputIdeaName', 'inputIndustryFocus',
     'inputIterations', 'inputTasksPerIteration', 'inputReviewEachBatch', 'btnCreateRun', 'btnCreateRunIdle',
     'btnCancelNew', 'newRunError',
@@ -48,7 +48,7 @@ function cacheElements() {
     'settingsModal', 'btnCloseSettings', 'btnSaveSettings', 'settingsStatus',
     'setProvider', 'setGatewayUrl', 'setGatewayKey', 'setGatewayHost', 'setGatewayProvider',
     'setGatewayModel', 'setOpenAiUrl', 'setOpenAiKey', 'setOpenAiModel', 'setOllamaHost',
-    'setOllamaModel', 'setMaxCalls', 'setMaxChars', 'settingsPath'
+    'setOllamaModel', 'setPlannerModel', 'setCoderModel', 'setMaxCalls', 'setMaxChars', 'settingsPath'
   ].forEach((id) => { elements[id] = byId(id) })
 }
 
@@ -130,6 +130,7 @@ async function boot() {
     state.stageTitles = statePayload.stageTitles || {}
     state.catalog = statePayload.catalog
     renderProvider()
+    renderBuildStatus(statePayload.build)
     renderCatalogLine()
     fillSettingsForm()
   } catch (error) {
@@ -138,6 +139,20 @@ async function boot() {
   }
   await loadRuns()
   if (state.runs.length) selectRun(state.runs[0].id)
+}
+
+// A page left open across a change shows old markup and looks broken: say so
+// instead of letting the operator hunt for a field that is really there.
+function renderBuildStatus(serverBuild) {
+  const meta = document.querySelector('meta[name="app-build"]')
+  const pageBuild = meta ? meta.getAttribute('content') : ''
+  const same = Boolean(serverBuild) && pageBuild === serverBuild
+  if (same) return
+  const reason = !serverBuild
+    ? 'the server is running older code - restart it'
+    : 'this page is older than the server (' + pageBuild + ' vs ' + serverBuild + ') - press Ctrl+R'
+  elements.buildWarning.textContent = 'Reload needed: ' + reason + '.'
+  elements.buildWarning.hidden = false
 }
 
 function renderProvider() {
@@ -1354,6 +1369,10 @@ function fillSettingsForm() {
   elements.setOpenAiModel.value = config.openaiCompatible.model || ''
   elements.setOllamaHost.value = config.ollama.host || ''
   elements.setOllamaModel.value = config.ollama.model || ''
+  // The stage overrides are the ones that silently win over the provider model,
+  // so they are shown as their own fields instead of being hidden in the file.
+  elements.setPlannerModel.value = (config.models && config.models.planner) || ''
+  elements.setCoderModel.value = (config.models && config.models.coder) || ''
   elements.setMaxCalls.value = config.limits.maxAiCallsPerRun
   elements.setMaxChars.value = config.limits.maxTotalCharsPerRun
   elements.setGatewayKey.value = ''
@@ -1406,6 +1425,10 @@ async function saveSettings() {
     ollama: {
       host: elements.setOllamaHost.value.trim(),
       model: elements.setOllamaModel.value.trim()
+    },
+    models: {
+      planner: elements.setPlannerModel.value.trim(),
+      coder: elements.setCoderModel.value.trim()
     },
     limits: {
       maxAiCallsPerRun: Number(elements.setMaxCalls.value) || 80,

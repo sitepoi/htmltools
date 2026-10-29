@@ -8,7 +8,7 @@ const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
 
-const { APP_ROOT, loadConfig, publicConfigView, saveLocalConfig, describeProvider } = require('./config')
+const { APP_ROOT, loadConfig, publicConfigView, saveLocalConfig, describeProvider, APP_BUILD } = require('./config')
 const { hub, readEvents } = require('./log')
 const { RunStore, isValidRunId } = require('./state')
 const { createPipeline, STAGE_SEQUENCE } = require('./pipeline')
@@ -231,6 +231,9 @@ async function handleApi(request, response, urlObject) {
       stageTitles: STAGE_TITLES,
       catalog: catalogInfo,
       runsDirectory: store.runsDirectory,
+      // The page compares this with its own build stamp and says so when the
+      // browser is showing older markup than the server it talks to.
+      build: APP_BUILD,
       now: nowIso()
     })
     return
