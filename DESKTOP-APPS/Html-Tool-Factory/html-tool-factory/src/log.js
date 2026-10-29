@@ -38,6 +38,14 @@ class EventHub extends EventEmitter {
     this.emit('event', record)
     return record
   }
+
+  // Live model output goes to the connected dashboards only. It is never
+  // appended to events.jsonl (a token by token log would flood the file) and
+  // never printed, so watching the model costs nothing on disk.
+  emitLive(record) {
+    this.emit('event', Object.assign({ at: nowIso() }, record))
+    return record
+  }
 }
 
 const hub = new EventHub()

@@ -71,6 +71,10 @@
             <span>Tasks per iteration</span>
             <input id="inputTasksPerIteration" type="number" min="1" max="12" value="4">
           </label>
+          <label class="field field-check">
+            <span>Review</span>
+            <label class="inline-check"><input id="inputReviewEachBatch" type="checkbox"> Hold each batch for my approval</label>
+          </label>
         </div>
 
         <div class="panel-actions">
@@ -100,6 +104,7 @@
             <button id="btnPreview" class="btn btn-ghost" type="button">Preview app</button>
             <button id="btnOpenDocs" class="btn btn-ghost" type="button">Open docs</button>
             <button id="btnPause" class="btn btn-quiet" type="button">Pause</button>
+            <button id="btnReview" class="btn btn-quiet" type="button" title="Hold every batch after its patch is computed and before it is written">Review each batch: off</button>
             <button id="btnStop" class="btn btn-danger" type="button">Stop</button>
             <button id="btnRestart" class="btn btn-danger" type="button">Restart tool</button>
             <button id="btnDelete" class="btn btn-quiet" type="button">Delete</button>
@@ -107,6 +112,33 @@
         </div>
 
         <div id="stageTrack" class="stage-track"></div>
+
+        <div id="runNow" class="run-now" hidden>
+          <span class="run-now-dot"></span>
+          <span id="runNowText" class="run-now-text">-</span>
+          <button id="btnOpenLive" class="btn btn-quiet" type="button">Watch the AI</button>
+        </div>
+
+        <div id="reviewPanel" class="review-panel" hidden>
+          <div class="review-head">
+            <strong>Review before writing</strong>
+            <span id="reviewMeta" class="muted tiny"></span>
+          </div>
+          <div id="reviewFiles" class="muted tiny"></div>
+          <details class="review-diff">
+            <summary>The patch</summary>
+            <pre id="reviewDiff"></pre>
+          </details>
+          <div class="review-actions">
+            <label class="field">
+              <span>Note (optional)</span>
+              <input id="reviewNote" type="text" placeholder="Why you reject it, or what to change">
+            </label>
+            <button id="btnApproveBatch" class="btn btn-primary" type="button">Approve and write</button>
+            <button id="btnRejectBatch" class="btn btn-danger" type="button">Reject</button>
+          </div>
+          <p id="reviewError" class="error-line" hidden></p>
+        </div>
 
         <div class="run-stats">
           <div class="stat">
@@ -140,6 +172,7 @@
           <button class="tab" data-tab="features" type="button">Features</button>
           <button class="tab" data-tab="ideas" type="button">Ideas</button>
           <button class="tab" data-tab="chat" type="button">Chat</button>
+          <button class="tab" data-tab="live" type="button">AI stream</button>
           <button class="tab" data-tab="tests" type="button">Checks</button>
           <button class="tab" data-tab="files" type="button">Files</button>
           <button class="tab" data-tab="events" type="button">Live log</button>
@@ -153,6 +186,7 @@
           <div id="tab-features" class="tab-pane"></div>
           <div id="tab-ideas" class="tab-pane"></div>
           <div id="tab-chat" class="tab-pane"></div>
+          <div id="tab-live" class="tab-pane"></div>
           <div id="tab-tests" class="tab-pane"></div>
           <div id="tab-files" class="tab-pane"></div>
           <div id="tab-events" class="tab-pane">
@@ -190,10 +224,21 @@
     <div class="modal-body">
       <p><strong>This deletes the generated tool folder</strong> and every backup of it, then starts the
         same idea again from the first stage.</p>
-      <p id="restartTarget" class="mono tiny muted"></p>
+      <div class="path-block">
+        <span class="path-label">Tool folder</span>
+        <div id="restartTrail" class="path-trail"></div>
+        <span class="muted tiny">Click any part of the path to open that folder in the file manager.</span>
+      </div>
+      <div class="path-block">
+        <span class="path-label">Run id</span>
+        <div class="run-id-line">
+          <code id="restartRunId" class="run-id"></code>
+          <button id="btnCopyRunId" class="btn btn-quiet" type="button">Copy</button>
+        </div>
+      </div>
       <label class="field">
-        <span>Type the run id to confirm</span>
-        <input id="restartConfirmText" type="text" autocomplete="off" spellcheck="false" />
+        <span id="restartConfirmLabel">Type the last 6 characters of the run id to confirm</span>
+        <input id="restartConfirmText" type="text" autocomplete="off" spellcheck="false" placeholder="6 characters" />
       </label>
       <p id="restartError" class="error-line" hidden></p>
       <div class="run-actions">

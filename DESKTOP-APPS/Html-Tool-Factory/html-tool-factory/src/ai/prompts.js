@@ -401,11 +401,17 @@ function applyBatchPrompt(request) {
     '',
     'Return JSON:',
     '{ "summary": "one line, what changed", "completed": ["T-01"],',
-    '  "ops": [ { "op": "create|replace|append|delete", "file": "relative/path.ext",',
+    '  "ops": [ { "op": "create|replace|append|overwrite|delete", "file": "relative/path.ext",',
     '  "find": "only for replace", "content": "only where needed" } ], "notes": "" }',
     '',
     'Rules:',
     '- "create" fails when the file exists; use "replace" with a "find" anchor that exists exactly once.',
+    request.allowOverwrite
+      ? '- "overwrite" replaces a whole file and is allowed for this batch (' + totalPoints +
+        ' points). Use it when a file is being rebuilt; send its complete new content.'
+      : '- "overwrite" is not allowed for this batch (' + totalPoints +
+        ' points, the threshold is ' + (request.overwriteMinPoints || 80) +
+        '): use "replace" with an anchor or "append".',
     '- Cover every task above in the same ops list. One replace per region is better than many tiny appends.',
     '- Keep existing behaviour and existing ids/class names unless a task says otherwise.',
     '- Plain, dependency free HTML/CSS/JS. No framework, no build step, no CDN, no TypeScript.',

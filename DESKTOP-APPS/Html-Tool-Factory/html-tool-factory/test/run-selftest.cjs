@@ -11,12 +11,15 @@ const { APP_ROOT, loadConfig } = require('../src/config')
 const { RunStore, isValidRunId } = require('../src/state')
 const { unifiedDiff } = require('../src/code/diff')
 const { createPipeline } = require('../src/pipeline')
-const { hub } = require('../src/log')
+const { hub, readEvents } = require('../src/log')
 const { Workspace } = require('../src/code/workspace')
 const { applyOps } = require('../src/code/patch')
 const { validateText, validateFiles } = require('../src/code/validate')
 const { parseJsonLoose } = require('../src/ai/parse')
-const { computeTimeout } = require('../src/ai/client')
+const { computeTimeout, createAiClient, readServerSentEvents, readJsonLines } = require('../src/ai/client')
+const { applyBatchPrompt } = require('../src/ai/prompts')
+const { sleep } = require('../src/util')
+const live = require('../src/live')
 const { loadIdeaCatalog } = require('../src/idea/catalog')
 const { recordDevelopment } = require('../src/idea/writeBack')
 const ssotModel = require('../src/ssot/model')
@@ -27,6 +30,8 @@ const { contractFiles } = require('../src/tool/scaffold')
 const scoring = require('../src/ssot/scoring')
 const chatService = require('../src/chat/service')
 const probes = require('../src/agent/probes')
+const { normalizeIncomingTasks } = require('../src/stages/shared')
+const { auditChecklist } = require('../src/code/capabilityAudit')
 
 const OUTPUT_DIRECTORY = path.join(APP_ROOT, 'selftest-output')
 const RUNS_DIRECTORY = path.join(OUTPUT_DIRECTORY, 'runs')
@@ -393,12 +398,370 @@ async function checkChatAndProbes() {
     web: { enabled: true, allowHosts: ['example.com'] }
   })
   check('only https is allowed', notHttps.ok === false && /https/i.test(notHttps.text), notHttps.text)
+
+  // T-02: a capability that is only claimed must be reopened.
+  const auditWorkspace = new Workspace(path.join(base, 'audit-tool'))
+  auditWorkspace.writeText('app/AuditTool.js',
+    'function setStatus(text) { return text }\ntool.onReady(function () { setStatus("ready") })\n')
+  auditWorkspace.writeText('app/AuditTool.html',
+    '<div role="status" id="at-status"></div>\n<label for="at-a">A</label>\n')
+  auditWorkspace.writeText('app/AuditTool.css', '@media (max-width: 600px) { }\n@media print { }\n')
+  auditWorkspace.writeText('app/test-harness.html', 'console.log("[TOOL:TEST] harness check ran")\n')
+  const auditSsot = ssotModel.createSsot({ name: 'Audit Tool' })
+  ssotModel.ensureChecklist(auditSsot)
+  const auditItem = (id) => auditSsot.checklist.find((item) => item.id === id)
+  ;['CL-01', 'CL-05', 'CL-09', 'CL-10'].forEach((id) => { auditItem(id).status = 'done' })
+  const auditOutcome = auditChecklist(auditWorkspace, auditSsot, { toolName: 'AuditTool' })
+  check('the audit keeps a capability that is visible in the files',
+    auditItem('CL-01').status === 'done' && auditItem('CL-09').status === 'done' &&
+    auditItem('CL-10').status === 'done', auditOutcome.reopened.join(' | '))
+  check('the audit reopens a capability that was only claimed',
+    auditItem('CL-05').status === 'todo' && /CL-05/.test(auditOutcome.reopened.join(' ')),
+    auditOutcome.reopened.join(' | '))
+  check('the audit explains why it reopened an item',
+    /missing in js/i.test(String(auditItem('CL-05').reopenReason || '')),
+    String(auditItem('CL-05').reopenReason || ''))
+}
+
+// Watching the model work: the live buffer, the stream parsers, and the fact
+// that a real call reports its text while it is being written.
+async function checkLiveView() {
+  process.stdout.write('\nLive view of the model calls\n')
+  const runId = 'live-selftest-run'
+  live.clear(runId)
+
+  const callId = live.begin(runId, { stage: 'apply-tasks', model: 'test-model', inputChars: 120 })
+  live.delta(runId, callId, '{"summary"')
+  live.delta(runId, callId, ':"two files"}')
+  const expectedText = '{"summary":"two files"}'
+  const during = live.snapshot(runId)
+  check('the live view shows the running call',
+    Boolean(during.current) && during.current.text === expectedText, JSON.stringify(during.current && during.current.text))
+  check('the live view counts the characters that arrived',
+    Boolean(during.current) && during.current.chars === expectedText.length,
+    String(during.current && during.current.chars))
+  live.end(runId, callId, { ok: true, text: '{"summary":"two files"}' })
+  const after = live.snapshot(runId)
+  check('a finished call moves into the history',
+    after.current === null && after.history.length === 1 && after.history[0].state === 'done',
+    JSON.stringify(after.history.map((call) => call.state)))
+  check('the history keeps the whole answer',
+    after.history[0].text === '{"summary":"two files"}', after.history[0].text)
+  live.end(runId, 'c-never-started', { ok: true, text: 'ignored' })
+  check('a stale call id cannot close a newer call', live.snapshot(runId).history.length === 1)
+  live.clear(runId)
+
+  // The parsers are what turn a provider stream into text and deltas.
+  const pieces = []
+  const sseBody = [
+    'data: {"choices":[{"delta":{"content":"{\\"a\\":"}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"1}"}}]}\n\n',
+    ': keep-alive\n\n',
+    'data: [DONE]\n\n'
+  ]
+  const sseResponse = {
+    headers: { get: () => 'text/event-stream; charset=utf-8' },
+    body: {
+      getReader: () => {
+        let index = 0
+        return {
+          read: async () => (index < sseBody.length
+            ? { done: false, value: Buffer.from(sseBody[index++], 'utf8') }
+            : { done: true, value: undefined }),
+          releaseLock: () => {}
+        }
+      }
+    }
+  }
+  const sseText = await readServerSentEvents(sseResponse, (piece) => pieces.push(piece), null)
+  check('the stream parser rebuilds the answer from the deltas',
+    sseText === '{"a":1}' && pieces.join('') === '{"a":1}', sseText + ' / ' + pieces.join('|'))
+  check('the stream parser reports every piece as it arrives', pieces.length === 2, String(pieces.length))
+
+  const ndjsonResponse = {
+    headers: { get: () => 'application/x-ndjson' },
+    body: {
+      getReader: () => {
+        const lines = ['{"message":{"content":"hel"}}\n', '{"message":{"content":"lo"},"done":true}\n']
+        let index = 0
+        return {
+          read: async () => (index < lines.length
+            ? { done: false, value: Buffer.from(lines[index++], 'utf8') }
+            : { done: true, value: undefined }),
+          releaseLock: () => {}
+        }
+      }
+    }
+  }
+  const ndjsonText = await readJsonLines(ndjsonResponse, null, null)
+  check('the Ollama line parser rebuilds the answer', ndjsonText === 'hello', ndjsonText)
+
+  // A real client call must publish the answer to the live view, so the mock
+  // provider is used: same code path as a network call minus the network.
+  const seen = []
+  const listener = (event) => {
+    if (event.runId === 'live-client-run' && /^live/.test(String(event.type))) {
+      seen.push(event.type + (event.delta ? ':' + event.delta.length : ''))
+    }
+  }
+  hub.on('event', listener)
+  const clientConfig = loadConfig({
+    localConfigPath: path.join(OUTPUT_DIRECTORY, 'missing-config.json'),
+    skipEnvironment: true
+  })
+  clientConfig.provider = 'mock'
+  const clientRun = {
+    id: 'live-client-run',
+    options: { provider: 'mock' },
+    counters: { aiCalls: 0, inputChars: 0, outputChars: 0 }
+  }
+  const client = createAiClient({ config: clientConfig, run: clientRun, logEvent: () => {} })
+  await client.chat({ stage: 'plan-tasks', system: 's', user: 'Plan the tasks for a quote tool' })
+  hub.removeListener('event', listener)
+  const clientLive = live.snapshot('live-client-run')
+  check('a model call publishes its answer to the live view',
+    clientLive.history.length === 1 && clientLive.history[0].chars > 10,
+    JSON.stringify(clientLive.history.map((call) => call.chars)))
+  check('the live view streams before the call ends',
+    seen.includes('live') && seen.some((entry) => entry.startsWith('live-delta')), seen.join(', '))
+  live.clear('live-client-run')
+}
+
+// T-03 and T-04: a whole file rewrite only for a large batch, and a batch may
+// wait for the operator before a single byte is written.
+async function checkEditGates() {
+  process.stdout.write('\nRewrite gate and review gate\n')
+  hub.setQuiet(true)
+  const base = path.join(OUTPUT_DIRECTORY, 'edit-gates')
+  fs.rmSync(base, { recursive: true, force: true })
+
+  const workspace = new Workspace(path.join(base, 'tool'))
+  workspace.writeText('app/GateTool.js', 'var a = 1;\n')
+  const blocked = applyOps(workspace, [{ op: 'overwrite', file: 'app/GateTool.js', content: 'var a = 2;\n' }])
+  check('a whole file rewrite is refused when the points gate does not allow it', !blocked.ok,
+    blocked.ok ? 'it was accepted' : '')
+  check('the refusal names the threshold instead of a vague error',
+    /80 points/.test(String((blocked.problems[0] || {}).message || '')),
+    String((blocked.problems[0] || {}).message || '').slice(0, 90))
+  check('the refused rewrite leaves the file untouched', workspace.readText('app/GateTool.js') === 'var a = 1;\n')
+
+  const allowed = applyOps(workspace, [{ op: 'overwrite', file: 'app/GateTool.js', content: 'var a = 3;\n' }],
+    { allowOverwrite: true })
+  check('a whole file rewrite is applied when the gate allows it',
+    allowed.ok && workspace.readText('app/GateTool.js') === 'var a = 3;\n')
+
+  const dry = applyOps(workspace, [{ op: 'overwrite', file: 'app/GateTool.js', content: 'var a = 4;\n' }],
+    { allowOverwrite: true, dryRun: true })
+  check('a dry run reports the change without writing it',
+    dry.ok && dry.dryRun === true && workspace.readText('app/GateTool.js') === 'var a = 3;\n')
+  check('a dry run still carries before and after for the diff',
+    dry.changed[0].before === 'var a = 3;\n' && dry.changed[0].after === 'var a = 4;\n')
+
+  const promptSsot = ssotModel.createSsot({ name: 'Gate Tool' })
+  const promptTasks = [{ id: 'T-01', title: 'Rebuild the panel', points: 90, files: ['app/GateTool.js'], acceptance: [] }]
+  const offered = applyBatchPrompt({
+    ssot: promptSsot, tasks: promptTasks, batchId: 'B1', workspace, attempt: 1,
+    toolName: 'GateTool', toolPrefix: 'gt-', allowOverwrite: true, overwriteMinPoints: 80
+  })
+  check('the prompt offers the rewrite to a large batch', /is allowed for this batch/.test(offered.user))
+  const withheld = applyBatchPrompt({
+    ssot: promptSsot, tasks: promptTasks, batchId: 'B1', workspace, attempt: 1,
+    toolName: 'GateTool', toolPrefix: 'gt-', allowOverwrite: false, overwriteMinPoints: 80
+  })
+  check('the prompt withholds the rewrite from a small batch', /is not allowed for this batch/.test(withheld.user))
+
+  // The review gate needs a running stage, so the mock loop drives it end to end.
+  const config = loadConfig({
+    localConfigPath: path.join(base, 'missing-config.json'),
+    skipEnvironment: true
+  })
+  config.provider = 'mock'
+  config.openBrowser = false
+  config.catalog = { writeBack: false }
+  config.target = { mode: 'run', root: '', overwrite: true }
+  config.limits.maxIterations = 1
+  config.limits.maxTasksPerIteration = 2
+  config.limits.maxAiCallsPerRun = 40
+  config.limits.maxTotalCharsPerRun = 900000
+  config.review = { eachBatch: false, timeoutMs: 20000, pollMs: 60 }
+  config.stream = { enabled: false }
+
+  const store = new RunStore(path.join(base, 'runs'))
+  const pipeline = createPipeline({ store, config, hub })
+
+  // Answers every review request the run makes, so a multi batch iteration does
+  // not stop on the second batch.
+  async function answerReviews(runId, decision, note) {
+    let answered = 0
+    let sawPending = null
+    for (let round = 0; round < 800; round += 1) {
+      await sleep(20)
+      const current = store.readReview(runId)
+      if (!sawPending && current && current.request) sawPending = current.request
+      if (current && current.request && !current.decision) {
+        answered += 1
+        current.decision = decision
+        current.note = note
+        current.decidedAt = new Date().toISOString()
+        store.writeReview(runId, current)
+        continue
+      }
+      const latest = store.loadRun(runId)
+      if (!latest || latest.status !== 'running') break
+    }
+    return { answered, pending: sawPending }
+  }
+
+  function makeRun(name) {
+    return store.createRun({
+      idea: { id: 'B-G-01-a', name, purpose: 'Exercise the review gate' },
+      maxIterations: 1,
+      maxTasksPerIteration: 2,
+      reviewEachBatch: true
+    })
+  }
+
+  const approveRun = makeRun('Review Gate Approved')
+  const approveLoop = pipeline.startLoop(approveRun.id)
+  const approveResult = await answerReviews(approveRun.id, 'approve', 'approved by the self test')
+  const approved = await approveLoop
+  check('a batch waits for the operator before it is written',
+    Boolean(approveResult.pending) && (approveResult.pending.files || []).length > 0,
+    approveResult.pending ? approveResult.pending.files.join(', ') : 'no review request')
+  check('the review request carries the diff',
+    Boolean(approveResult.pending) && String(approveResult.pending.diff || '').length > 20,
+    String((approveResult.pending || {}).diff || '').slice(0, 60))
+  check('an approved batch is written and the run continues',
+    approveResult.answered > 0 && Boolean(approved) && approved.counters.tasksDone > 0,
+    approveResult.answered + ' review(s), tasks done ' + (approved && approved.counters.tasksDone))
+  const approvedSsot = store.readSsot(approveRun.id)
+  const approvedStep = (approvedSsot.steps || []).find((step) => step.stage === 'apply-tasks')
+  check('an approved batch is recorded as done',
+    (approvedStep && approvedStep.tasks || []).some((batch) => batch.status === 'done'),
+    (approvedStep && approvedStep.tasks || []).map((batch) => batch.status).join(','))
+  check('the review file is cleared after the decision', !store.readReview(approveRun.id))
+  check('the run record no longer shows a pending review', !approved.pendingReview)
+
+  const rejectRun = makeRun('Review Gate Rejected')
+  const rejectLoop = pipeline.startLoop(rejectRun.id)
+  const rejectResult = await answerReviews(rejectRun.id, 'reject', 'not the change I asked for')
+  const rejected = await rejectLoop
+  const rejectedSsot = store.readSsot(rejectRun.id)
+  const rejectedStep = (rejectedSsot.steps || []).find((step) => step.stage === 'apply-tasks')
+  const rejectedBatch = (rejectedStep && rejectedStep.tasks || []).find((batch) => batch.status === 'rejected')
+  check('a rejected batch is recorded as rejected, not as a failure',
+    Boolean(rejectedBatch), (rejectedStep && rejectedStep.tasks || []).map((batch) => batch.status).join(','))
+  const rejectedTasks = (rejectedSsot.tasks || []).filter((task) => (rejectedBatch && rejectedBatch.tasks || [])
+    .some((entry) => entry.id === task.id))
+  check('a rejected batch leaves its tasks open', rejectedTasks.every((task) => task.status !== 'done'),
+    rejectedTasks.map((task) => task.id + ':' + task.status).join(','))
+  check('a rejection does not spend a retry',
+    rejectedTasks.every((task) => Number(task.retries || 0) === 0 && Number(task.attempts || 0) === 0),
+    rejectedTasks.map((task) => task.id + ' retries ' + (task.retries || 0)).join(','))
+  check('a rejected batch reports why in the task problems',
+    rejectedTasks.every((task) => (task.lastProblems || []).some((line) => /rejected/i.test(line))),
+    JSON.stringify(rejectedTasks.slice(0, 1).map((task) => task.lastProblems)))
+  check('the run ends with the rejected work still open',
+    Boolean(rejected) && ['paused', 'error'].includes(rejected.status),
+    rejected ? rejected.status : 'no run')
+  check('a rejection stops the rest of the batches', rejectResult.answered === 1,
+    rejectResult.answered + ' review(s)')
+}
+
+async function checkCostReporting() {
+  process.stdout.write('\nReal tokens and the batch preview\n')
+  hub.setQuiet(true)
+
+  // A provider that reports usage: those numbers must land in the counters.
+  const originalFetch = global.fetch
+  const config = loadConfig({
+    localConfigPath: path.join(OUTPUT_DIRECTORY, 'missing-config.json'),
+    skipEnvironment: true
+  })
+  config.provider = 'openai-compatible'
+  config.openaiCompatible.baseUrl = 'http://127.0.0.1:9/unused'
+  config.openaiCompatible.apiKey = 'test'
+  config.openaiCompatible.model = 'usage-test'
+  config.stream = { enabled: false }
+  const run = {
+    id: 'usage-run',
+    options: { provider: 'openai-compatible' },
+    counters: { aiCalls: 0, inputChars: 0, outputChars: 0, apiPromptTokens: 0, apiCompletionTokens: 0 }
+  }
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => 'application/json' },
+    json: async () => ({
+      choices: [{ message: { content: '{"ok":true}' } }],
+      usage: { prompt_tokens: 120, completion_tokens: 40, total_tokens: 160 }
+    })
+  })
+  const client = createAiClient({ config, run, logEvent: () => {} })
+  let answer = null
+  try {
+    answer = await client.chat({ stage: 'cost-check', system: 's', user: 'u' })
+  } finally {
+    global.fetch = originalFetch
+  }
+  check('a reported token count is stored on the run',
+    run.counters.apiPromptTokens === 120 && run.counters.apiCompletionTokens === 40,
+    JSON.stringify({ prompt: run.counters.apiPromptTokens, completion: run.counters.apiCompletionTokens }))
+  check('the call returns the reported total', answer && answer.tokens === 160, String(answer && answer.tokens))
+
+  // A streaming answer can carry usage in its last frames.
+  const streamedUsage = []
+  const sseWithUsage = {
+    headers: { get: () => 'text/event-stream' },
+    body: {
+      getReader: () => {
+        const chunks = [
+          'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n',
+          'data: {"choices":[{"delta":{}}],"usage":{"prompt_tokens":30,"completion_tokens":5}}\n\n',
+          'data: [DONE]\n\n'
+        ]
+        let index = 0
+        return {
+          read: async () => (index < chunks.length
+            ? { done: false, value: Buffer.from(chunks[index++], 'utf8') }
+            : { done: true, value: undefined }),
+          releaseLock: () => {}
+        }
+      }
+    }
+  }
+  const streamedText = await readServerSentEvents(sseWithUsage, null, null, (usage) => streamedUsage.push(usage))
+  check('a streamed answer reports its usage on the last frame',
+    streamedText === 'hi' && streamedUsage.length === 1 && streamedUsage[0].prompt_tokens === 30,
+    JSON.stringify(streamedUsage))
+
+  // T-06: the plan is written before the first call of the apply stage.
+  const previewSsot = ssotModel.createSsot({ name: 'Plan Preview Tool' })
+  ssotModel.ensureChecklist(previewSsot)
+  const previewTasks = [
+    { title: 'Small change', kind: 'code', files: ['app/PlanPreviewTool.js'], acceptance: [], points: 25 },
+    { title: 'Another small change', kind: 'code', files: ['app/PlanPreviewTool.js'], acceptance: [], points: 30 },
+    { title: 'A large rebuild', kind: 'code', files: ['app/PlanPreviewTool.html'], acceptance: [], points: 90 }
+  ]
+  normalizeIncomingTasks(previewSsot, previewTasks, 'plan-preview', { toolName: 'PlanPreviewTool' })
+  scoring.applyPoints(previewSsot)
+  const previewQueue = ssotModel.todoTasks(previewSsot).slice(0, 5)
+  const previewBatches = scoring.buildBatches(previewQueue, {
+    targetPoints: 100,
+    maxBatchPoints: 130,
+    maxTasksPerBatch: 6
+  })
+  check('the batches can be computed before any call is made',
+    previewBatches.length >= 2 && previewBatches.every((batch) => batch.tasks.length > 0),
+    previewBatches.map((batch) => batch.id + ':' + batch.points).join(', '))
+  check('a batch that fills the target is planned on its own',
+    previewBatches.some((batch) => batch.points >= 90 && batch.tasks.length === 1),
+    previewBatches.map((batch) => batch.points).join(','))
 }
 
 async function checkFullLoop() {
   process.stdout.write('\nFull loop with the mock provider\n')
   hub.setQuiet(true)
-
   fs.rmSync(OUTPUT_DIRECTORY, { recursive: true, force: true })
 
   const loopIterations = Number(process.env.APP_FACTORY_SELFTEST_ITERATIONS) || 1
@@ -522,6 +885,21 @@ async function checkFullLoop() {
   check('the apply step records which tasks it coded',
     Boolean(applyStep && Array.isArray(applyStep.tasks) && applyStep.tasks.length),
     applyStep ? JSON.stringify((applyStep.tasks || []).length) : 'no step')
+  // T-06: the batches are known before the apply stage spends anything.
+  check('the plan is written into the SSOT before the batches run',
+    Boolean(ssot.plan) && Array.isArray(ssot.plan.batches) && ssot.plan.batches.length > 0,
+    ssot.plan ? ssot.plan.batches.map((batch) => batch.id + ':' + batch.points).join(',') : 'no plan')
+  check('the plan names the tasks of every batch',
+    Boolean(ssot.plan) && ssot.plan.batches.every((batch) => (batch.tasks || []).length > 0),
+    JSON.stringify(ssot.plan && ssot.plan.batches.map((batch) => batch.tasks.length)))
+  check('the plan records the batching targets it used',
+    Boolean(ssot.plan && ssot.plan.targets && ssot.plan.targets.pointsPerPrompt),
+    JSON.stringify(ssot.plan && ssot.plan.targets))
+  // T-05: the batch tokens say whether they are real or estimated.
+  check('every batch token count states its provenance',
+    (applyStep && applyStep.tasks || []).every((batch) =>
+      !batch.tokens || typeof batch.tokensMeasured === 'boolean'),
+    (applyStep && applyStep.tasks || []).map((batch) => String(batch.tokensMeasured)).join(','))
   check('the batches stay close to the 100 point target',
     (applyStep && applyStep.tasks || []).every((batch) => Number(batch.points) <= 130),
     (applyStep && applyStep.tasks || []).map((batch) => batch.points).join(','))
@@ -533,6 +911,24 @@ async function checkFullLoop() {
     (applyStep && applyStep.tasks || []).filter((batch) => batch.status === 'done')
       .every((batch) => Boolean(batch.checkpoint)),
     (applyStep && applyStep.tasks || []).map((batch) => batch.checkpoint).join(','))
+  check('the tool is executed as a recorded check',
+    (ssot.tests || []).some((test) => test.name === 'harness: dom_smoke' && test.ok),
+    (ssot.tests || []).map((test) => test.name).join(', '))
+  check('the capability audit records what it checked',
+    (ssot.audit || []).length > 0, (ssot.audit || []).length + ' entry(ies)')
+  // The dashboard has to be able to say which task is in progress: the apply
+  // stage broadcasts the batch and its task ids while it works.
+  const loopEvents = readEvents(finished.directory)
+  const nowEvents = loopEvents.filter((event) => event.type === 'now' && event.now && (event.now.taskIds || []).length)
+  check('the run broadcasts which task is in progress',
+    nowEvents.length > 0, loopEvents.filter((event) => event.type === 'now').length + ' now event(s)')
+  check('the in progress event names the batch and its tasks',
+    nowEvents.every((event) => Boolean(event.now.batchId) && event.now.taskIds.length > 0),
+    JSON.stringify(nowEvents.slice(0, 1).map((event) => event.now)))
+  check('the now marker is cleared when the stage ends', !finished.now, JSON.stringify(finished.now))
+  check('a claimed capability that is missing in the files is reopened',
+    (ssot.checklist || []).every((item) => item.status !== 'done' || !item.reopenReason),
+    (ssot.checklist || []).filter((item) => item.reopenReason).map((item) => item.id).join(','))
   check('the SSOT document shows the task points', ssotPage.includes('Points:'))
   check('the definition is written before the plan',
     (ssot.definition.jobs || []).length >= 4 && Boolean(ssot.definition.summary),
@@ -560,6 +956,9 @@ async function main() {
   checkUnitBehaviour()
   await checkContract()
   await checkChatAndProbes()
+  await checkLiveView()
+  await checkEditGates()
+  await checkCostReporting()
   const loopResult = await checkFullLoop()
 
   process.stdout.write('\n' + passed + ' checks passed, ' + failures.length + ' failed.\n')

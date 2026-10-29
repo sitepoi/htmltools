@@ -64,7 +64,7 @@
     the code disagree, this document is the tiebreaker.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.9.1</td></tr>
+    <tr><th>Document version</th><td>0.12.0</td></tr>
     <tr><th>Last updated</th><td>2026-10-29</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The factory application in <code>DESKTOP-APPS/Html-Tool-Factory/html-tool-factory</code></td></tr>
@@ -122,6 +122,7 @@
     <tr><td><code>src/knowledge/contextPack.js</code></td><td>Repository knowledge and lessons</td><td>Whole file</td></tr>
     <tr><td><code>src/ai/prompts.js</code></td><td>Every prompt and its JSON contract</td><td>Whole file</td></tr>
     <tr><td><code>src/state.js</code></td><td>Run persistence, restart and continue</td><td>Whole file</td></tr>
+    <tr><td><code>src/live.js</code></td><td>Live view of the model calls</td><td>Whole file: the running call, its deltas and the history</td></tr>
     <tr><td><code>src/server.js</code></td><td>HTTP API and static dashboard</td><td>Run routes and the settings routes</td></tr>
     <tr><td><code>ui/app.js</code></td><td>Dashboard</td><td>Timeline, tasks, actions</td></tr>
     <tr><td><code>test/run-selftest.cjs</code>, <code>test/check-sources.cjs</code></td><td>Verification</td><td>Whole files</td></tr>
@@ -156,6 +157,15 @@
     <tr><td>C-24</td><td>No progress stop instead of burning the iteration budget</td><td><code>src/pipeline.js</code></td><td>0.9.0</td></tr>
     <tr><td>C-25</td><td>Delete guard limited to BUSINESS and PERSONAL tool folders</td><td><code>src/state.js</code></td><td>0.9.0</td></tr>
     <tr><td>C-26</td><td>Adaptive AI timeout with a clear abort message and bounded tool output</td><td><code>src/ai/client.js</code>, <code>src/stages/shared.js</code></td><td>0.9.1</td></tr>
+    <tr><td>C-27</td><td>The tool is executed on every iteration and before and after every batch; a batch that stops it booting is reverted</td><td><code>src/agent/probes.js</code>, <code>src/stages/runTests.js</code>, <code>src/stages/applyTasks.js</code></td><td>0.9.2</td></tr>
+    <tr><td>C-28</td><td>Capability audit: a closed checklist item whose marker is missing in the files is reopened</td><td><code>src/code/capabilityAudit.js</code>, <code>src/ssot/model.js</code></td><td>0.9.2</td></tr>
+    <tr><td>C-29</td><td>Which task is in progress: the run carries a now marker (stage, batch, task ids, attempt) that the dashboard shows in one line</td><td><code>src/pipeline.js</code>, <code>src/stages/applyTasks.js</code>, <code>ui/app.js</code></td><td>0.10.0</td></tr>
+    <tr><td>C-30</td><td>The model answers are streamed to the dashboard while they are written, with a history of the finished calls and nothing written to disk for the view</td><td><code>src/live.js</code>, <code>src/ai/client.js</code>, <code>ui/app.js</code></td><td>0.10.0</td></tr>
+    <tr><td>C-31</td><td>A batch of 80 points or more may rewrite a whole file, and the prompt says so; a smaller batch is refused with the threshold named</td><td><code>src/code/patch.js</code>, <code>src/ai/prompts.js</code>, <code>src/stages/applyTasks.js</code></td><td>0.11.0</td></tr>
+    <tr><td>C-32</td><td>Every batch is computed, validated and diffed before it is written; with review on, the operator approves or rejects it in the dashboard</td><td><code>src/stages/applyTasks.js</code>, <code>src/state.js</code>, <code>src/server.js</code>, <code>ui/app.js</code></td><td>0.11.0</td></tr>
+    <tr><td>C-33</td><td>The batches are computed at planning time and written into the SSOT, so the shape of the iteration is visible before the first call</td><td><code>src/stages/planTasks.js</code>, <code>ui/app.js</code></td><td>0.12.0</td></tr>
+    <tr><td>C-34</td><td>Real tokens when the provider reports them, an estimate otherwise, and every number says which it is</td><td><code>src/ai/client.js</code>, <code>src/pipeline.js</code>, <code>src/stages/applyTasks.js</code>, <code>ui/app.js</code></td><td>0.12.0</td></tr>
+    <tr><td>C-35</td><td>The restart dialog shows the run id with a copy button and the tool path as clickable segments, each one opening that folder in the file manager; the confirmation is the last six characters</td><td><code>src/server.js</code>, <code>ui/app.js</code>, <code>ui/index.html</code></td><td>0.12.0</td></tr>
   </table>
 
   <h2 id="sec-glossary">4. Glossary</h2>
@@ -307,7 +317,11 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     <tr><td>D-HTF-28</td><td>2026-10-29</td><td>An iteration that closes with zero tasks done and zero depth items closed stops the run with <code>NO_PROGRESS</code>.</td><td>Repeating failing calls until the budget is gone is worse than stopping with a reason.</td><td class="status-adopted">Adopted</td></tr>
     <tr><td>D-HTF-29</td><td>2026-10-29</td><td>Restart may only delete a folder whose path starts with BUSINESS or PERSONAL and is at least three segments deep.</td><td>A configuration mistake must not be able to remove a sibling app or the repository root.</td><td class="status-adopted">Adopted</td></tr>
     <tr><td>D-HTF-30</td><td>2026-10-29</td><td>Points are an estimate, the tokens of a batch are measured, and both are shown together.</td><td>The estimate drives the packing; the measurement calibrates it.</td><td class="status-adopted">Adopted</td></tr>
-    <tr><td>D-HTF-31</td><td>2026-10-29</td><td>The request timeout scales with the prompt size and with the retry (base plus 6 ms per input character, 50 percent more per attempt, capped by <code>limits.maxRequestTimeoutMs</code>), and an abort is logged with its timeout and prompt size.</td><td>A fixed three minute limit aborted legitimate large batches and the log only said "operation was aborted", which looked like a dead tool.</td><td class="status-adopted">Adopted</td></tr>  </table>
+    <tr><td>D-HTF-31</td><td>2026-10-29</td><td>The request timeout scales with the prompt size and with the retry (base plus 6 ms per input character, 50 percent more per attempt, capped by <code>limits.maxRequestTimeoutMs</code>), and an abort is logged with its timeout and prompt size.</td><td>A fixed three minute limit aborted legitimate large batches and the log only said "operation was aborted", which looked like a dead tool.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-32</td><td>2026-10-29</td><td>Every depth checklist item has an observable marker (file plus regular expression) and is audited after every test run; a closed item whose marker is missing is reopened with a reason.</td><td>Without a marker the checklist is a claim, not evidence. A tool must not report finished on a capability nobody can see.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-33</td><td>2026-10-29</td><td>The model conversation is watched live: deltas travel over the existing event stream, are kept in memory only, are capped per call, and a finished call is kept in a short history.</td><td>An operator who cannot see the call cannot tell a slow model from a hung one, and a token by token log on disk would grow the run folder without adding evidence. Keeping the deltas in memory keeps the archive clean while the dashboard stays readable.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-34</td><td>2026-10-29</td><td>A batch is always computed with a dry run first, then validated against the prospective content in a temporary file, then diffed; only then is it written. A whole file rewrite is allowed at 80 points or more. The review gate is a per run option, waits with a bounded poll, and a rejection never writes, never spends a retry, and stops the remaining batches.</td><td>One code path for both modes: supervised and automatic differ only in whether a human answer is awaited, so a reviewed batch is never a different, less tested path. Rejection is treated as a decision, not a failure, because charging the model's retry budget for the operator's choice would make the next iteration look worse than it is.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-35</td><td>2026-10-29</td><td>A destructive confirmation asks for the last six characters of the run id (or the whole id), never for a forty character string, and the path is shown as clickable segments that open the folder. The server derives both from the run record, so the dashboard cannot ask it to open an arbitrary path.</td><td>Typing an id nobody can see is a copy exercise, not a confirmation, and a single unbroken path is unreadable and scrolls out of the dialog. Six characters still prove the operator looked at the run, and the trail makes the folder reachable in one click without widening what the server will open.</td><td class="status-adopted">Adopted</td></tr>  </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
   <ol>
@@ -361,24 +375,24 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     </div>
   </div>
 
-  <section class="task-group" data-release-group="HTF-1" data-group-status="planned">
+  <section class="task-group" data-release-group="HTF-1" data-group-status="pushed">
     <header class="task-group-header">
       <span class="task-group-name">Group: verification gap - 165 points</span>
       <span class="group-status-chip" data-group-status-chip></span>
-      <span class="task-group-badge">ONE PUSH - do not split</span>
-      <span class="task-group-progress" data-group-progress="HTF-1">0/2</span>
+      <span class="task-group-badge">SHIPPED - 2026-10-29</span>
+      <span class="task-group-progress" data-group-progress="HTF-1">2/2</span>
     </header>
     <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-1"></div></div>
     <p class="task-group-note">Why these belong together: the audit only means something once the harness checks can actually run.</p>
 
-    <div class="task-item" data-task-id="T-01" data-group="HTF-1" data-task-status="in-progress">
+    <div class="task-item" data-task-id="T-01" data-group="HTF-1" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-01</span>
           <span class="task-title">Run the generated harness checks headlessly after every batch</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-mandatory">Mandatory</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Points:</strong> 100 of 100 - one prompt on its own.</p>
@@ -386,19 +400,19 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
           <p><strong>How we will solve it:</strong> Add a tiny DOM shim in <code>src/code/domSmoke.js</code> (getElementById, createElement, addEventListener, querySelector, textContent) and evaluate the tool script inside it, then read the <code>[TOOL:TEST]</code> lines the harness prints.</p>
           <p><strong>Benefit:</strong> The depth checklist item "in tool self test" becomes verified, not claimed.</p>
           <p><strong>Files:</strong> <code>src/code/domSmoke.js</code>, <code>src/stages/runTests.js</code></p>
-          <p><strong>Status:</strong> in progress</p>
+          <p><strong>Status:</strong> DONE - the probe lives in <code>src/agent/probes.js</code> (vm plus a fake DOM), it runs inside run-tests and before and after every batch, and a regression that stops the tool from booting reverts the batch.</p>
         </div>
       </details>
     </div>
 
-    <div class="task-item" data-task-id="T-02" data-group="HTF-1" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-02" data-group="HTF-1" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-02</span>
           <span class="task-title">Fail the run when a closed checklist item is not visible in the markup</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-mandatory">Mandatory</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Points:</strong> 65 of 100 - pairs with T-01 in one prompt.</p>
@@ -406,30 +420,30 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
           <p><strong>How we will solve it:</strong> For each checklist item define one observable marker (a labelled input, a <code>role="status"</code> node, a disabled button while busy) and check it in the html and js.</p>
           <p><strong>Benefit:</strong> Depth becomes auditable instead of declared.</p>
           <p><strong>Files:</strong> <code>src/ssot/model.js</code>, <code>src/stages/runTests.js</code></p>
-          <p><strong>Status:</strong> not started</p>
+          <p><strong>Status:</strong> DONE - every checklist item carries an observable marker (file plus regular expression); the audit runs in run-tests and reopens any closed item whose marker is missing, so the run cannot report finished on an unbuilt capability.</p>
         </div>
       </details>
     </div>
   </section>
 
-  <section class="task-group" data-release-group="HTF-2" data-group-status="planned">
+  <section class="task-group" data-release-group="HTF-2" data-group-status="pushed">
     <header class="task-group-header">
       <span class="task-group-name">Group: editing quality - 135 points</span>
       <span class="group-status-chip" data-group-status-chip></span>
-      <span class="task-group-badge">RELATED - do not split</span>
-      <span class="task-group-progress" data-group-progress="HTF-2">0/2</span>
+      <span class="task-group-badge">SHIPPED - 2026-10-29</span>
+      <span class="task-group-progress" data-group-progress="HTF-2">2/2</span>
     </header>
     <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-2"></div></div>
     <p class="task-group-note">Why these belong together: both change how a batch edits a file, and a rewrite without review is dangerous.</p>
 
-    <div class="task-item" data-task-id="T-03" data-group="HTF-2" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-03" data-group="HTF-2" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-03</span>
           <span class="task-title">Allow a whole file rewrite for tasks that score above 80</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-valuable">Very valuable</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Points:</strong> 80 of 100.</p>
@@ -437,19 +451,19 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
           <p><strong>How we will solve it:</strong> Accept an op <code>{ "op": "overwrite" }</code> only when the task points are above the threshold, still validated and still rolled back on failure.</p>
           <p><strong>Benefit:</strong> Fewer wasted attempts on large changes.</p>
           <p><strong>Files:</strong> <code>src/code/patch.js</code>, <code>src/ai/prompts.js</code></p>
-          <p><strong>Status:</strong> not started</p>
+          <p><strong>Status:</strong> DONE - <code>overwrite</code> is its own operation, allowed only when the batch points reach <code>apply.overwriteMinPoints</code> (80); otherwise the refusal names the threshold and points at <code>replace</code> or <code>append</code>. The prompt tells the model which of the two rules is in force for that batch, and the rewrite still goes through validation and the boot probe. The patch layer also gained a dry run, which is what makes the review gate possible.</p>
         </div>
       </details>
     </div>
 
-    <div class="task-item" data-task-id="T-04" data-group="HTF-2" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-04" data-group="HTF-2" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-04</span>
           <span class="task-title">Review a batch diff before it is written</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-optional">Optional - needs decision</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Points:</strong> 55 of 100 - with T-03 in one prompt.</p>
@@ -457,30 +471,30 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
           <p><strong>How we will solve it:</strong> A run option <code>review.eachBatch</code> that pauses after the patch is computed and asks for approve or reject in the dashboard.</p>
           <p><strong>Benefit:</strong> Half automatic, half supervised, same code path.</p>
           <p><strong>Files:</strong> <code>src/stages/applyTasks.js</code>, <code>ui/app.js</code></p>
-          <p><strong>Status:</strong> not started</p>
+          <p><strong>Status:</strong> DONE - the patch is computed with a dry run, validated in a temporary file and diffed before anything is written. With <code>review.eachBatch</code> on, the request lands in <code>review.json</code> and in <code>run.pendingReview</code>, the dashboard shows the diff with Approve and Reject, and the stage waits (bounded, and ended by Stop or Pause). Approve writes the batch as usual; Reject writes nothing, returns the tasks to the queue without spending a retry, records the batch as <code>rejected</code> and stops the remaining batches.</p>
         </div>
       </details>
     </div>
   </section>
 
-  <section class="task-group" data-release-group="HTF-3" data-group-status="planned">
+  <section class="task-group" data-release-group="HTF-3" data-group-status="pushed">
     <header class="task-group-header">
       <span class="task-group-name">Group: cost insight - 80 points</span>
       <span class="group-status-chip" data-group-status-chip></span>
-      <span class="task-group-badge">RELATED - do not split</span>
-      <span class="task-group-progress" data-group-progress="HTF-3">0/2</span>
+      <span class="task-group-badge">SHIPPED - 2026-10-29</span>
+      <span class="task-group-progress" data-group-progress="HTF-3">2/2</span>
     </header>
     <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-3"></div></div>
     <p class="task-group-note">Why these belong together: both read the same per batch usage data.</p>
 
-    <div class="task-item" data-task-id="T-05" data-group="HTF-3" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-05" data-group="HTF-3" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-05</span>
           <span class="task-title">Show real tokens per batch and per iteration in the dashboard</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-valuable">Very valuable</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Points:</strong> 45 of 100.</p>
@@ -488,19 +502,19 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
           <p><strong>How we will solve it:</strong> Record the token delta around each batch in <code>step.tasks[n].tokens</code> and render it next to the points.</p>
           <p><strong>Benefit:</strong> Calibrates the scorer and makes the budget concrete.</p>
           <p><strong>Files:</strong> <code>src/stages/applyTasks.js</code>, <code>ui/app.js</code></p>
-          <p><strong>Status:</strong> not started</p>
+          <p><strong>Status:</strong> DONE - the client now asks for <code>stream_options.include_usage</code>, parses the usage of a streamed or a plain answer, and stores it in <code>counters.apiPromptTokens</code> and <code>apiCompletionTokens</code> (Ollama counters are mapped too). Every batch and every step stores <code>tokens</code> plus <code>tokensMeasured</code>, preferring the reported number and falling back to characters divided by four. The Tasks tab shows a "What each batch cost" table (points next to tokens, with a reported or est. chip) and the run header shows the reported total. A provider that rejects <code>stream_options</code> is retried once without it.</p>
         </div>
       </details>
     </div>
 
-    <div class="task-item" data-task-id="T-06" data-group="HTF-3" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-06" data-group="HTF-3" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-06</span>
           <span class="task-title">Preview the planned batches before the first call</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-small">Very small thing</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked="checked" />
         </summary>
         <div class="task-details">
           <p><strong>Points:</strong> 35 of 100 - with T-05 in one prompt.</p>
@@ -508,7 +522,7 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
           <p><strong>How we will solve it:</strong> After planning, write the batches into the SSOT and show them on the Tasks tab.</p>
           <p><strong>Benefit:</strong> The operator sees the shape of the iteration before it costs anything.</p>
           <p><strong>Files:</strong> <code>src/stages/planTasks.js</code>, <code>ui/app.js</code></p>
-          <p><strong>Status:</strong> not started</p>
+          <p><strong>Status:</strong> DONE - the planner computes the same batches the apply stage will build (same queue slice, same targets) and writes <code>ssot.plan</code> with the batch ids, points, tasks and targets, plus a log line. The Tasks tab renders it as "Planned batches" above the task table, so the shape of the iteration is visible before the first call.</p>
         </div>
       </details>
     </div>
@@ -882,6 +896,51 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
           <p><strong>Points:</strong> 30 of 100.</p>
           <p><strong>Result:</strong> the DOM smoke output ends with a line saying that layout, CSS and the visual result are not verified, so a green probe is never mistaken for a working screen.</p>
           <p><strong>Files:</strong> <code>src/agent/probes.js</code></p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-10" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: watch the factory work - 170 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">SHIPPED - 2026-10-29</span>
+      <span class="task-group-progress" data-group-progress="HTF-10">2/2</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-10"></div></div>
+    <p class="task-group-note">Why these belong together: both answer the operator question "what is it doing right now", one about the work item and one about the model call.</p>
+
+    <div class="task-item" data-task-id="T-23" data-group="HTF-10" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-23</span>
+          <span class="task-title">Show which task is in progress, not just which stage</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-23 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 70 of 100.</p>
+          <p><strong>Result:</strong> <code>run.now</code> holds the stage, the batch id, the task ids and the attempt; <code>context.setNow</code> writes it and broadcasts a <code>now</code> event; the dashboard shows one line above the tabs and a banner on the Tasks tab, and clears the marker when the stage ends.</p>
+          <p><strong>Files:</strong> <code>src/pipeline.js</code>, <code>src/stages/applyTasks.js</code>, <code>ui/index.html</code>, <code>ui/app.js</code>, <code>ui/app.css</code></p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-24" data-group="HTF-10" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-24</span>
+          <span class="task-title">Stream the AI answers to the dashboard while they are written</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-24 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 100 of 100.</p>
+          <p><strong>Result:</strong> <code>src/live.js</code> keeps the running call and a history of twelve finished calls in memory; the client requests <code>stream: true</code> from the openai compatible provider and Ollama, parses the deltas, and falls back to one JSON body when a provider ignores the flag; the idle watchdog aborts only a silent stream; the AI stream tab shows the text as it arrives, the note of a retry, and the finished calls. Nothing of this view is written to the run folder.</p>
+          <p><strong>Files:</strong> <code>src/live.js</code>, <code>src/ai/client.js</code>, <code>src/log.js</code>, <code>src/server.js</code>, <code>ui/app.js</code></p>
         </div>
       </details>
     </div>
@@ -1269,12 +1328,16 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
       <tr><td>2026-10-29</td><td>0.8.0</td><td>Backlog aligned with the editor agent comparison: review stage, batch checkpoints, approval policy, operator notes, curated conventions, context compaction, best of three plans, sibling reference tools, screenshots and recorded test evidence are now decided and tracked as tasks.</td></tr>
       <tr><td>2026-10-29</td><td>0.9.0</td><td>Risk register closed: batch checkpoints with drift aware restore, real tokens per batch, no progress stop, delete guard limited to the taxonomy, honest probe limits. 129 self test checks and 59 source checks.</td></tr>
       <tr><td>2026-10-29</td><td>0.9.1</td><td>Adaptive request timeout so a large batch is not aborted at three minutes, an abort now logs its timeout and prompt size, and tool output is capped before the final answer. 133 self test checks.</td></tr>
+      <tr><td>2026-10-29</td><td>0.9.2</td><td>T-01 and T-02 shipped: the tool is executed in a fake DOM on every iteration and around every batch (a batch that breaks the boot is reverted), and the capability audit reopens any closed checklist item whose marker is missing in the files. 139 self test checks.</td></tr>
+      <tr><td>2026-10-29</td><td>0.10.0</td><td>The factory can be watched while it works: the run carries a now marker naming the batch and the tasks in progress, and every model call is streamed to the new AI stream tab as it is written, with a history of the finished calls kept in memory. 152 self test checks and 63 source checks.</td></tr>
+      <tr><td>2026-10-29</td><td>0.11.0</td><td>T-03 and T-04 shipped: a batch of 80 points or more may rewrite a whole file, and every batch is now computed with a dry run, validated against its prospective content and diffed before it is written. With review each batch on, the operator sees that diff and approves or rejects it; a rejection writes nothing, costs no retry and stops the remaining batches. 172 self test checks and 64 source checks.</td></tr>
+      <tr><td>2026-10-29</td><td>0.12.0</td><td>T-05 and T-06 shipped: the planner writes the batches into the SSOT so the iteration is visible before it costs anything, and every batch and step records real provider tokens with the provenance shown next to the points. The restart dialog now shows the run id with a copy button and the tool path as clickable segments that open that folder, and it confirms on the last six characters. 181 self test checks and 66 source checks.</td></tr>
     </tbody>
   </table>
 
   <div class="footer">
     HTML Tool Factory - single source of truth for every decision about this
-    builder. Version 0.9.0, 2026-10-29. Keep in sync with the code.
+    builder. Version 0.12.0, 2026-10-29. Keep in sync with the code.
   </div>
   </div><!-- /#view-document -->
 

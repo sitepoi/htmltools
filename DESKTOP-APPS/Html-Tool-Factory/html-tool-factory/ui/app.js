@@ -18,7 +18,10 @@ const state = {
   activeTab: 'timeline',
   eventSource: null,
   pollingTimer: null,
-  lastEventKey: ''
+  lastEventKey: '',
+  // The answer the model is writing right now. Deltas arrive over the event
+  // stream, so the text below is the operator's own copy of the call.
+  live: { current: null, text: '', history: [], notes: [], openCallId: '' }
 }
 
 const elements = {}
@@ -31,12 +34,15 @@ function cacheElements() {
   ;[
     'providerChip', 'btnSettings', 'btnNewRun', 'runsList', 'runsCount', 'catalogLine',
     'newRunPanel', 'ideaSearch', 'ideasList', 'inputIdeaName', 'inputIndustryFocus',
-    'inputIterations', 'inputTasksPerIteration', 'btnCreateRun', 'btnCreateRunIdle',
+    'inputIterations', 'inputTasksPerIteration', 'inputReviewEachBatch', 'btnCreateRun', 'btnCreateRunIdle',
     'btnCancelNew', 'newRunError',
     'runPanel', 'runTitle', 'runStatus', 'runStage', 'runIteration', 'runIdea', 'runToolFolder',
+    'runNow', 'runNowText', 'btnOpenLive', 'btnReview',
+    'reviewPanel', 'reviewMeta', 'reviewFiles', 'reviewDiff', 'reviewNote',
+    'btnApproveBatch', 'btnRejectBatch', 'reviewError',
     'btnStart', 'btnStep', 'btnPreview', 'btnOpenDocs', 'btnPause', 'btnStop', 'btnDelete', 'stageTrack',
     'btnContinue', 'btnRestart', 'restartModal', 'btnCancelRestart', 'btnConfirmRestart',
-    'restartConfirmText', 'restartTarget', 'restartError',
+    'restartConfirmText', 'restartTrail', 'restartRunId', 'restartConfirmLabel', 'btnCopyRunId', 'restartError',
     'statAiCalls', 'statTokens', 'statTasks', 'statChecks', 'statSummary', 'runError',
     'runTabs', 'btnOpenSsot', 'eventStream', 'emptyPanel',
     'settingsModal', 'btnCloseSettings', 'btnSaveSettings', 'settingsStatus',
@@ -200,10 +206,46 @@ async function refreshRun() {
   try {
     const payload = await apiGet('/api/runs/' + encodeURIComponent(state.currentRunId))
     state.payload = payload
+    adoptLive(payload.live)
     renderRun()
   } catch (error) {
     elements.runError.textContent = 'Could not load the run: ' + error.message
     elements.runError.hidden = false
+  }
+}
+
+// The server keeps the running call in memory. Adopting it fills the AI stream
+// after a reload; while deltas are streaming in, the local copy is longer and wins.
+function adoptLive(live) {
+  if (!live) return
+  const current = live.current || null
+  const local = state.live.current
+  if (current) {
+    if (!local || local.callId !== current.callId) {
+      state.live.current = compactCall(current)
+      state.live.text = String(current.text || '')
+    } else if (String(current.text || '').length > state.live.text.length) {
+      state.live.text = String(current.text || '')
+      state.live.current = compactCall(current)
+    }
+  } else if (local) {
+    state.live.current = null
+    state.live.text = ''
+  }
+  if (Array.isArray(live.history)) state.live.history = live.history
+}
+
+function compactCall(call) {
+  return {
+    callId: call.callId,
+    stage: call.stage,
+    model: call.model,
+    provider: call.provider,
+    attempt: call.attempt,
+    state: call.state,
+    chars: call.chars,
+    startedAt: call.startedAt,
+    elapsedMs: call.elapsedMs
   }
 }
 
@@ -244,9 +286,16 @@ function renderRun() {
   const failing = lastIterationTests.filter((test) => test.ok === false).length
   const estimatedTokens = Math.ceil(((run.counters && run.counters.inputChars || 0) +
     (run.counters && run.counters.outputChars || 0)) / 4)
+  // A token count the provider reported is a real number; the character estimate
+  // is only used when nobody reported anything.
+  const reportedTokens = (Number(run.counters && run.counters.apiPromptTokens) || 0) +
+    (Number(run.counters && run.counters.apiCompletionTokens) || 0)
 
   elements.statAiCalls.textContent = formatNumber(run.counters && run.counters.aiCalls)
-  elements.statTokens.textContent = formatNumber(estimatedTokens)
+  elements.statTokens.textContent = formatNumber(reportedTokens || estimatedTokens) + (reportedTokens ? '' : ' est.')
+  elements.statTokens.title = reportedTokens
+    ? 'Reported by the provider for the whole run'
+    : 'Estimated from characters divided by four: this provider reports no token counts'
   elements.statTasks.textContent = doneTasks + ' / ' + tasks.length
   elements.statChecks.textContent = lastIterationTests.length
     ? (lastIterationTests.length - failing) + ' / ' + lastIterationTests.length + ' pass'
@@ -262,10 +311,47 @@ function renderRun() {
   }
 
   renderStageTrack(run)
+  renderNow(run)
+  renderReview(run)
   // The live log is append only while it is open; rebuilding it would fight the
   // event stream and lose the scroll position.
   if (state.activeTab !== 'events' || !byId('tab-events') || byId('tab-events').dataset.rendered !== '1') {
     renderActiveTab()
+  }
+}
+
+// The single line that answers "what is it doing right now": the stage, the
+// iteration, the batch or task it narrowed down to, and whether the model is
+// writing. It is clickable through the button that opens the AI stream.
+function renderNow(run) {
+  if (!elements.runNow) return
+  const current = state.live && state.live.current
+  const now = run && run.now
+  const isActive = Boolean(run) && run.status === 'running'
+  if (!isActive && !current) {
+    elements.runNow.hidden = true
+    return
+  }
+  const parts = []
+  const runStage = (run && run.stage) || ''
+  const stageTitle = state.stageTitles[runStage] || runStage || ''
+  if (stageTitle) parts.push(stageTitle)
+  if (run && run.iteration) parts.push('iteration ' + run.iteration)
+  if (now && now.detail) parts.push(now.detail)
+  else if (now && now.title) parts.push(now.title)
+  if (current) {
+    parts.push(current.state === 'thinking'
+      ? 'waiting for ' + (current.model || 'the model')
+      : 'model writing ' + formatNumber(current.chars) + ' chars')
+  } else if (isActive) {
+    parts.push('working')
+  }
+  const text = parts.filter(Boolean).join(' - ')
+  if (elements.runNowText) elements.runNowText.textContent = text
+  elements.runNow.hidden = !text
+  elements.runNow.className = 'run-now' + (current ? ' is-writing' : '')
+  if (elements.btnOpenLive) {
+    elements.btnOpenLive.textContent = current ? 'Watch the AI' : 'AI stream'
   }
 }
 
@@ -280,8 +366,34 @@ function renderStageTrack(run) {
   }).join('')
 }
 
-// ------------------------------------------------------------------- tabs
+// A batch that waits for the operator: the diff is on screen and nothing is
+// written until Approve is pressed.
+function renderReview(run) {
+  if (!elements.reviewPanel) return
+  const review = run && run.pendingReview
+  if (elements.btnReview) {
+    const on = Boolean(run && run.options && run.options.review && run.options.review.eachBatch)
+    elements.btnReview.textContent = 'Review each batch: ' + (on ? 'on' : 'off')
+    elements.btnReview.className = 'btn ' + (on ? 'btn-ghost' : 'btn-quiet')
+  }
+  if (!review) {
+    elements.reviewPanel.hidden = true
+    return
+  }
+  // A re-render must not wipe a note the operator is typing.
+  const noteValue = elements.reviewNote ? elements.reviewNote.value : ''
+  elements.reviewPanel.hidden = false
+  const stats = review.diffStats || {}
+  elements.reviewMeta.textContent = 'Batch ' + (review.batchId || '') + ' of ' + (review.batchOf || 1) +
+    ' - ' + formatNumber(review.points || 0) + ' points - +' + formatNumber(stats.added || 0) +
+    ' -' + formatNumber(stats.removed || 0) + ' - ' +
+    (review.tasks || []).map((task) => task.id).join(', ')
+  elements.reviewFiles.textContent = (review.files || []).join('  ')
+  if (elements.reviewDiff) elements.reviewDiff.textContent = review.diff || '(no textual change)'
+  if (elements.reviewNote && !noteValue) elements.reviewNote.value = ''
+}
 
+// ------------------------------------------------------------------- tabs
 function renderActiveTab() {
   const ssot = state.payload && state.payload.ssot
   if (!ssot) return
@@ -293,6 +405,7 @@ function renderActiveTab() {
     features: () => renderFeatures(ssot),
     ideas: () => renderIdeas(ssot),
     chat: () => renderChat(ssot, run),
+    live: () => renderLive(ssot, run),
     tests: () => renderTests(ssot),
     files: () => renderFiles(ssot),
     events: () => renderEventsTab()
@@ -303,6 +416,10 @@ function renderActiveTab() {
   if (renderer) pane.innerHTML = renderer()
   if (state.activeTab === 'events') pane.dataset.rendered = '1'
   if (state.activeTab === 'chat') bindChat()
+  if (state.activeTab === 'live') {
+    const streaming = byId('liveText')
+    if (streaming) streaming.scrollTop = streaming.scrollHeight
+  }
   const streamElement = byId('eventStream')
   if (streamElement) {
     elements.eventStream = streamElement
@@ -355,13 +472,85 @@ function renderTasks(ssot, run) {
   const openPoints = tasks
     .filter((task) => task.status !== 'done' && task.status !== 'skipped')
     .reduce((total, task) => total + (Number(task.points) || 0), 0)
-  return '<p class="muted tiny">Iteration ' + escapeHtml((run.iteration || 0) + 1) +
+  // Which task the factory is on right now, at the top of the list the operator
+  // is already looking at.
+  const doingNow = tasks.filter((task) => task.status === 'doing')
+  const nowLine = doingNow.length
+    ? '<div class="run-now is-writing"><span class="run-now-dot"></span>' +
+      '<span class="run-now-text">In progress: ' +
+      escapeHtml(doingNow.map((task) => task.id + ' ' + task.title).join(' + ')) + '</span></div>'
+    : ''
+  return nowLine + renderPlanBlock(ssot) + renderBatchCosts(ssot) +
+    '<p class="muted tiny">Iteration ' + escapeHtml((run.iteration || 0) + 1) +
     ' - every task is scored out of 100. The apply stage packs the smallest tasks into one prompt so a call ' +
     'carries about 100 points: ' + escapeHtml(openPoints) + ' point(s) still open. ' +
     'Each batch is applied and validated atomically - expand a diff to review it.</p>' +
     '<table class="data"><thead><tr><th style="width:64px">ID</th><th>Task</th><th style="width:170px">Files</th>' +
     '<th style="width:96px">Points</th><th style="width:70px">Kind</th><th style="width:120px">Status</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>'
+}
+
+// The batches the apply stage will run, written at planning time so the shape
+// of the iteration is visible before the first call costs anything.
+function renderPlanBlock(ssot) {
+  const plan = ssot && ssot.plan
+  if (!plan || !Array.isArray(plan.batches) || !plan.batches.length) return ''
+  const targets = plan.targets || {}
+  const rows = plan.batches.map((batch) => '<tr>' +
+    '<td class="mono">' + escapeHtml(batch.id) + '</td>' +
+    '<td class="mono">' + escapeHtml(batch.points) + ' pts</td>' +
+    '<td>' + (batch.tasks || []).map((task) => escapeHtml(task.id + ' ' + task.title) +
+      ' <span class="muted tiny">(' + escapeHtml(task.points) + ')</span>').join('<br>') + '</td>' +
+    '</tr>').join('')
+  return '<div class="plan-block">' +
+    '<div class="plan-head"><strong>Planned batches</strong>' +
+    '<span class="muted tiny">iteration ' + escapeHtml(plan.iteration) + ' - ' +
+    formatNumber(plan.openPoints || 0) + ' points in ' + plan.batches.length + ' batch(es) - target ' +
+    escapeHtml(targets.pointsPerPrompt || 100) + ' points per call' +
+    (plan.createdAt ? ' - planned ' + escapeHtml(formatTime(plan.createdAt)) : '') + '</span></div>' +
+    '<table class="data"><thead><tr><th style="width:60px">Batch</th><th style="width:80px">Points</th>' +
+    '<th>Tasks in this call</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '</div>'
+}
+
+// What each finished batch really cost, next to what it was estimated to cost.
+function renderBatchCosts(ssot) {
+  const batches = []
+  ;(ssot.steps || []).forEach((step) => {
+    (Array.isArray(step.tasks) ? step.tasks : []).forEach((batch) => {
+      batches.push(Object.assign({ iteration: step.iteration, stage: step.stage }, batch))
+    })
+  })
+  if (!batches.length) return ''
+  const rows = batches.slice().reverse().map((batch) => {
+    const restore = batch.checkpoint
+      ? ' <button class="btn btn-quiet" type="button" data-action="restore-checkpoint" data-batch="' +
+        escapeHtml(batch.checkpoint) + '">restore</button>'
+      : ''
+    const tokens = batch.tokens
+      ? formatNumber(batch.tokens) + (batch.tokensMeasured ? ' <span class="chip chip-ok">reported</span>'
+        : ' <span class="muted tiny">est.</span>')
+      : '<span class="muted">-</span>'
+    const statusChip = batch.status === 'done' ? 'chip chip-ok'
+      : batch.status === 'rejected' ? 'chip chip-pause'
+        : batch.status === 'failed' ? 'chip chip-bad' : 'chip chip-run'
+    return '<tr>' +
+      '<td class="mono">' + escapeHtml(batch.id || '') + '</td>' +
+      '<td class="mono">' + escapeHtml(batch.iteration || '') + '</td>' +
+      '<td>' + (batch.tasks || []).map((task) => escapeHtml(task.id)).join(', ') + '</td>' +
+      '<td class="mono">' + escapeHtml(batch.points || 0) + ' pts</td>' +
+      '<td class="mono">' + tokens + '</td>' +
+      '<td><span class="' + statusChip + '">' + escapeHtml(batch.status || '') + '</span>' + restore + '</td>' +
+      '</tr>'
+  }).join('')
+  return '<div class="plan-block">' +
+    '<div class="plan-head"><strong>What each batch cost</strong>' +
+    '<span class="muted tiny">points are the estimate, tokens are what the provider reported' +
+    ' (an estimate when it reports nothing)</span></div>' +
+    '<table class="data"><thead><tr><th style="width:60px">Batch</th><th style="width:50px">Iter</th>' +
+    '<th>Tasks</th><th style="width:80px">Points</th><th style="width:130px">Tokens</th>' +
+    '<th style="width:170px">Result</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '</div>'
 }
 
 function renderTimeline(ssot, run) {
@@ -396,7 +585,9 @@ function renderTimeline(ssot, run) {
               ? ' <button class="btn btn-quiet" type="button" data-action="restore-checkpoint" data-batch="' +
                 escapeHtml(batch.checkpoint) + '">restore</button>'
               : ''
-            const tokens = batch.tokens ? ' - ' + formatNumber(batch.tokens) + ' tokens' : ''
+            const tokens = batch.tokens
+              ? ' - ' + formatNumber(batch.tokens) + ' tokens' + (batch.tokensMeasured ? ' (reported)' : ' (est.)')
+              : ''
             return escapeHtml(batch.id || 'batch') + ': ' + escapeHtml(ids) + ' = ' +
               escapeHtml(batch.points || 0) + ' pts' + tokens + (batch.status ? ' - ' + escapeHtml(batch.status) : '') +
               restore
@@ -581,6 +772,59 @@ function bindChat() {
   })
 }
 
+// The AI stream tab: the call the model is writing now, then the calls that
+// already finished so a stage can be read back without the log.
+function renderLive() {
+  const current = state.live && state.live.current
+  const text = (state.live && state.live.text) || ''
+  const notes = (state.live && state.live.notes) || []
+  const history = (state.live && state.live.history) || []
+  const opened = state.live && state.live.openCallId
+    ? history.find((call) => call.callId === state.live.openCallId)
+    : null
+
+  let head = '<p class="muted tiny">Every model call of this run. The text appears while it is written, ' +
+    'nothing is written to disk for this view, and a call is capped so a runaway answer cannot fill the page.</p>'
+  if (current) {
+    head += '<div class="live-head">' +
+      '<span class="chip chip-run">' + escapeHtml(current.stage) + '</span> ' +
+      '<span class="mono tiny">' + escapeHtml(current.model || '') + '</span> ' +
+      '<span class="muted tiny">attempt ' + escapeHtml(current.attempt || 1) + ' - ' +
+      formatNumber(current.chars) + ' chars - ' + ((Number(current.elapsedMs) || 0) / 1000).toFixed(1) + 's - ' +
+      escapeHtml(current.state) + '</span></div>'
+  } else {
+    head += '<div class="live-head"><span class="chip chip-neutral">idle</span> ' +
+      '<span class="muted tiny">No call is running now. The last answers are below.</span></div>'
+  }
+  const noteHtml = notes.length
+    ? '<ul class="live-notes">' + notes.map((note) => '<li>' + escapeHtml(note) + '</li>').join('') + '</ul>'
+    : ''
+  const streaming = current
+    ? '<pre id="liveText" class="live-text" data-call="' + escapeHtml(current.callId) + '">' + escapeHtml(text) + '</pre>'
+    : (opened
+      ? '<pre id="liveText" class="live-text" data-call="' + escapeHtml(opened.callId) + '">' +
+        escapeHtml(opened.text || '') + '</pre>'
+      : '<p class="empty">Press Start or "Run one stage" and the answer appears here as it is written.</p>')
+
+  const rows = history.length
+    ? history.map((call) => '<tr class="live-row" data-call="' + escapeHtml(call.callId) + '">' +
+      '<td class="mono">' + escapeHtml(String(call.at || '').slice(11, 19)) + '</td>' +
+      '<td>' + escapeHtml(call.stage) + '</td>' +
+      '<td><span class="chip ' + (call.state === 'done' ? 'chip-ok' : 'chip-bad') + '">' +
+      escapeHtml(call.state) + '</span></td>' +
+      '<td class="mono">' + formatNumber(call.chars) + '</td>' +
+      '<td class="mono">' + ((Number(call.elapsedMs) || 0) / 1000).toFixed(1) + 's</td>' +
+      '<td class="detail-text">' + escapeHtml(String(call.error || String(call.text || '').slice(0, 90))) + '</td>' +
+      '</tr>').join('')
+    : '<tr><td colspan="6" class="empty">No call finished yet.</td></tr>'
+
+  return head + noteHtml + streaming +
+    '<h4>Recent calls</h4>' +
+    '<table class="data"><thead><tr><th style="width:70px">Time</th><th style="width:150px">Stage</th>' +
+    '<th style="width:70px">State</th><th style="width:80px">Chars</th><th style="width:70px">Took</th>' +
+    '<th>Answer or error</th></tr></thead><tbody>' + rows + '</tbody></table>'
+}
+
 function renderEventsTab() {
   const events = (state.payload && state.payload.events || [])
   const lines = events.length ? events.slice(-250).map(eventLineHtml).join('')
@@ -600,6 +844,16 @@ function eventLineHtml(event) {
 }
 
 function appendEvent(event) {
+  // The model conversation has its own view: it never enters the run log.
+  if (event.type === 'live' || event.type === 'live-delta' || event.type === 'live-note') {
+    applyLiveEvent(event)
+    return
+  }
+  if (event.type === 'now') {
+    if (state.payload && state.payload.run) state.payload.run.now = event.now || null
+    renderNow(state.payload && state.payload.run)
+    return
+  }
   const eventKey = String(event.at) + '|' + String(event.message)
   if (eventKey === state.lastEventKey) return
   state.lastEventKey = eventKey
@@ -619,6 +873,85 @@ function appendEvent(event) {
     refreshRun()
     loadRuns()
   }
+}
+
+// Applies one live frame: a new call, a piece of text, a note, or the end of a
+// call. Only the text node is touched per delta, so a fast stream never
+// rebuilds the whole pane.
+function applyLiveEvent(event) {
+  const run = state.payload && state.payload.run
+  if (event.type === 'live-note') {
+    state.live.notes = state.live.notes.concat([String(event.message || '')]).slice(-4)
+    if (state.activeTab === 'live') renderActiveTab()
+    return
+  }
+  if (event.type === 'live') {
+    if (event.state === 'done' || event.state === 'error') {
+      const finished = {
+        callId: event.callId,
+        stage: event.stage,
+        model: event.model,
+        state: event.state,
+        chars: event.chars || 0,
+        elapsedMs: event.elapsedMs || 0,
+        at: event.at,
+        error: event.error || '',
+        text: String(event.text || state.live.text || '')
+      }
+      state.live.history = [finished].concat(state.live.history || []).slice(0, 12)
+      state.live.current = null
+      state.live.text = ''
+      state.live.notes = []
+      if (state.activeTab === 'live') {
+        state.live.openCallId = finished.callId
+        renderActiveTab()
+      }
+      renderNow(run)
+      refreshRun()
+      return
+    }
+    const existing = state.live.current
+    if (!existing || existing.callId !== event.callId) {
+      state.live.current = compactCall({
+        callId: event.callId,
+        stage: event.stage,
+        model: event.model,
+        provider: event.provider,
+        attempt: event.attempt,
+        state: event.state,
+        chars: 0,
+        startedAt: event.at,
+        elapsedMs: 0
+      })
+      state.live.text = String(event.text || '')
+      state.live.notes = []
+      if (state.activeTab === 'live') renderActiveTab()
+    }
+    renderNow(run)
+    return
+  }
+  // live-delta
+  const piece = String(event.delta || '')
+  const before = state.live.text.length
+  state.live.text += piece
+  if (state.live.current) {
+    state.live.current.chars = event.chars || state.live.text.length
+    state.live.current.state = 'streaming'
+  }
+  const pre = byId('liveText')
+  if (state.activeTab === 'live' && pre) {
+    if (pre.dataset.call !== String(event.callId)) {
+      renderActiveTab()
+    } else if (pre.textContent.length === before) {
+      pre.textContent += piece
+      pre.scrollTop = pre.scrollHeight
+    } else {
+      // A poll re-rendered the pane between two deltas: the buffer is the truth.
+      pre.textContent = state.live.text
+      pre.scrollTop = pre.scrollHeight
+    }
+  }
+  renderNow(run)
 }
 
 function connectEventStream(runId) {
@@ -655,7 +988,7 @@ function connectEventStream(runId) {
       refreshRun()
       loadRuns()
     }
-  }, 5000)
+  }, 2500)
 }
 
 // ------------------------------------------------------------------- actions
@@ -726,25 +1059,57 @@ function openRestartModal() {
   if (!state.currentRunId) return
   const payload = state.payload || {}
   const run = payload.run || {}
-  elements.restartTarget.textContent = payload.toolFolder || run.toolDirectory || ''
+  elements.restartTrail.innerHTML = pathTrailHtml(payload.toolFolderTrail || [])
+  elements.restartRunId.textContent = state.currentRunId
+  elements.restartConfirmLabel.textContent = 'Type the last 6 characters of the run id to confirm (' +
+    state.currentRunId.slice(-6) + ')'
   elements.restartConfirmText.value = ''
   elements.restartError.hidden = true
   elements.restartModal.hidden = false
   if (typeof elements.restartConfirmText.focus === 'function') elements.restartConfirmText.focus()
 }
 
+// A Windows path is one unbroken string, so it scrolls out of the modal. Each
+// segment is its own button and opens that folder in the file manager.
+function pathTrailHtml(trail) {
+  if (!trail.length) return '<span class="muted tiny">No folder is recorded for this run yet.</span>'
+  return trail.map((part, index) =>
+    (index ? '<span class="path-sep">&#8250;</span>' : '') +
+    '<button class="path-part' + (index === trail.length - 1 ? ' is-last' : '') + '" type="button"' +
+    ' data-reveal="' + index + '" title="Open ' + escapeHtml(part.absolutePath) + '">' +
+    escapeHtml(part.name) + '</button>').join('')
+}
+
+async function revealPath(index) {
+  if (!state.currentRunId) return
+  try {
+    await apiPost('/api/runs/' + encodeURIComponent(state.currentRunId) + '/reveal', { index: Number(index) })
+    if (elements.restartError) elements.restartError.hidden = true
+  } catch (error) {
+    if (elements.restartModal && !elements.restartModal.hidden) {
+      elements.restartError.textContent = 'Could not open that folder: ' + error.message
+      elements.restartError.hidden = false
+    } else {
+      showRunError(error.message)
+    }
+  }
+}
+
 function closeRestartModal() {
   elements.restartModal.hidden = true
 }
 
-// Restart deletes the generated tool folder, so it needs the typed run id as a
-// real confirmation, not a single click.
+// Restart deletes the generated tool folder, so it needs a deliberate second
+// action. Typing forty characters is not that: the last six are enough, and the
+// full id still works for anyone who prefers it.
 async function confirmRestart() {
   const runId = state.currentRunId
   if (!runId) return
-  const typed = String(elements.restartConfirmText.value || '').trim()
-  if (typed !== runId) {
-    elements.restartError.textContent = 'Type the run id exactly to confirm: ' + runId
+  const typed = String(elements.restartConfirmText.value || '').trim().toLowerCase()
+  const tail = runId.slice(-6).toLowerCase()
+  if (typed !== tail && typed !== runId.toLowerCase()) {
+    elements.restartError.textContent = 'Type the last 6 characters of the run id (' + runId.slice(-6) +
+      '), or the whole id.'
     elements.restartError.hidden = false
     return
   }
@@ -788,6 +1153,48 @@ async function restoreCheckpoint(batchId) {
     } catch (forceError) {
       showRunError(forceError.message)
     }
+  }
+}
+
+// Approve or reject the batch that is waiting. The stage is polling, so the run
+// continues on its own; the dashboard only has to write the decision.
+async function decideReview(decision) {
+  if (!state.currentRunId) return
+  const note = elements.reviewNote ? String(elements.reviewNote.value || '').trim() : ''
+  if (decision === 'reject' && !note) {
+    elements.reviewError.textContent = 'Say why you reject it, so the next attempt has something to work with.'
+    elements.reviewError.hidden = false
+    return
+  }
+  elements.btnApproveBatch.disabled = true
+  elements.btnRejectBatch.disabled = true
+  if (elements.reviewError) elements.reviewError.hidden = true
+  try {
+    await apiPost('/api/runs/' + encodeURIComponent(state.currentRunId) + '/review', { decision, note })
+    if (elements.reviewNote) elements.reviewNote.value = ''
+    state.payload.run.pendingReview = null
+    renderReview(state.payload.run)
+    await refreshRun()
+  } catch (error) {
+    if (elements.reviewError) {
+      elements.reviewError.textContent = error.message
+      elements.reviewError.hidden = false
+    }
+  } finally {
+    elements.btnApproveBatch.disabled = false
+    elements.btnRejectBatch.disabled = false
+  }
+}
+
+async function toggleReviewPolicy() {
+  if (!state.currentRunId || !state.payload || !state.payload.run) return
+  const current = state.payload.run.options && state.payload.run.options.review
+  const next = !(current && current.eachBatch)
+  try {
+    await apiPost('/api/runs/' + encodeURIComponent(state.currentRunId) + '/options', { reviewEachBatch: next })
+    await refreshRun()
+  } catch (error) {
+    showRunError(error.message)
   }
 }
 
@@ -914,6 +1321,7 @@ async function createRun(startImmediately) {
     ideaFolder: selected ? (selected.folder || selected.code) : '',
     maxIterations: Number(elements.inputIterations.value) || 3,
     maxTasksPerIteration: Number(elements.inputTasksPerIteration.value) || 4,
+    reviewEachBatch: Boolean(elements.inputReviewEachBatch && elements.inputReviewEachBatch.checked),
     industryFocus: elements.inputIndustryFocus.value || ''
   }
   try {
@@ -1042,9 +1450,21 @@ function bindEvents() {
   elements.btnPreview.addEventListener('click', () => openPreview('app/test-harness.html'))
   elements.btnOpenDocs.addEventListener('click', () => openPreview('docs/index.html'))
   elements.btnPause.addEventListener('click', pauseRun)
+  elements.btnReview.addEventListener('click', toggleReviewPolicy)
+  elements.btnApproveBatch.addEventListener('click', () => decideReview('approve'))
+  elements.btnRejectBatch.addEventListener('click', () => decideReview('reject'))
   elements.btnStop.addEventListener('click', stopRun)
   elements.btnContinue.addEventListener('click', continueRun)
   elements.btnRestart.addEventListener('click', openRestartModal)
+  elements.btnCopyRunId.addEventListener('click', () => {
+    const value = state.currentRunId || ''
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(() => {
+        elements.btnCopyRunId.textContent = 'copied'
+        window.setTimeout(() => { elements.btnCopyRunId.textContent = 'Copy' }, 1500)
+      }).catch(() => { /* the id is selectable anyway */ })
+    }
+  })
   elements.btnCancelRestart.addEventListener('click', closeRestartModal)
   elements.btnConfirmRestart.addEventListener('click', confirmRestart)
   elements.btnDelete.addEventListener('click', deleteRun)
@@ -1055,6 +1475,15 @@ function bindEvents() {
     state.activeTab = tabButton.getAttribute('data-tab')
     renderActiveTab()
   })
+
+  // The "now" strip opens the live conversation in one click.
+  if (elements.btnOpenLive) {
+    elements.btnOpenLive.addEventListener('click', () => {
+      state.activeTab = 'live'
+      state.live.openCallId = ''
+      renderActiveTab()
+    })
+  }
 
   elements.btnOpenSsot.addEventListener('click', () => {
     if (!state.currentRunId) return
@@ -1068,6 +1497,19 @@ function bindEvents() {
   })
 
   document.body.addEventListener('click', (clickEvent) => {
+    const pathPart = clickEvent.target.closest('[data-reveal]')
+    if (pathPart) {
+      revealPath(pathPart.getAttribute('data-reveal'))
+      return
+    }
+    const liveRow = clickEvent.target.closest('.live-row')
+    if (liveRow) {
+      // A running call owns the view: reading the history comes after it ends.
+      if (state.live.current) return
+      state.live.openCallId = liveRow.getAttribute('data-call') || ''
+      renderActiveTab()
+      return
+    }
     const restoreButton = clickEvent.target.closest('[data-action="restore-checkpoint"]')
     if (restoreButton) {
       restoreCheckpoint(restoreButton.getAttribute('data-batch') || '')

@@ -27,6 +27,13 @@ const STAGES = [
 const STAGE_BY_ID = new Map(STAGES.map((stage) => [stage.id, stage]))
 const STAGE_SEQUENCE = STAGES.map((stage) => stage.id)
 
+// Tokens the provider itself reported for this stage, 0 when it reported none.
+function tokenDelta(counters, before) {
+  const prompt = (Number(counters.apiPromptTokens) || 0) - (Number(before.apiPromptTokens) || 0)
+  const completion = (Number(counters.apiCompletionTokens) || 0) - (Number(before.apiCompletionTokens) || 0)
+  return Math.max(0, prompt + completion)
+}
+
 function nextStageId(currentStageId, run, config) {
   const currentIndex = STAGE_SEQUENCE.indexOf(currentStageId)
   if (currentIndex === -1) return 'select-idea'
@@ -150,7 +157,9 @@ function createPipeline(dependencies) {
     const usageBefore = {
       aiCalls: run.counters.aiCalls,
       inputChars: run.counters.inputChars,
-      outputChars: run.counters.outputChars
+      outputChars: run.counters.outputChars,
+      apiPromptTokens: Number(run.counters.apiPromptTokens) || 0,
+      apiCompletionTokens: Number(run.counters.apiCompletionTokens) || 0
     }
     let context = null
     let stepEntry = null
@@ -197,7 +206,35 @@ function createPipeline(dependencies) {
         Object.assign(stepEntry, patch)
       }
 
+      // What the operator sees in the "now" strip: the stage, and once a stage
+      // narrows down to one batch or one task, exactly which one.
+      run.now = {
+        stage: stageId,
+        title: (STAGE_BY_ID.get(stageId) || {}).title || stageId,
+        detail: '',
+        taskIds: [],
+        batchId: '',
+        startedAt: nowIso()
+      }
+      context.setNow = function (patch) {
+        if (!patch) return
+        run.now = Object.assign({}, run.now || {}, patch, { updatedAt: nowIso() })
+        try {
+          store.saveRun(run)
+        } catch (_saveError) {
+          // A progress write must never fail a stage.
+        }
+        hub.publish(run.directory, {
+          runId: run.id,
+          stage: run.now.stage || stageId,
+          type: 'now',
+          message: run.now.detail || run.now.title || '',
+          now: run.now
+        })
+      }
+
       stageResult = await STAGE_BY_ID.get(stageId).run(context)
+      run.now = null
 
       // A stage may attach structured detail to its own step entry.
       if (stageResult && stageResult.step && stepEntry) {
@@ -211,7 +248,8 @@ function createPipeline(dependencies) {
       const usage = {
         aiCalls: run.counters.aiCalls - usageBefore.aiCalls,
         inputChars: run.counters.inputChars - usageBefore.inputChars,
-        outputChars: run.counters.outputChars - usageBefore.outputChars
+        outputChars: run.counters.outputChars - usageBefore.outputChars,
+        apiTokens: tokenDelta(run.counters, usageBefore)
       }
       Object.assign(stepEntry, {
         status: 'done',
@@ -220,7 +258,9 @@ function createPipeline(dependencies) {
         ms: Date.now() - stageStartedAt,
         summary: String(stageResult.summary || '').slice(0, 400),
         usage,
-        tokens: Math.ceil((usage.inputChars + usage.outputChars) / 4)
+        tokensMeasured: usage.apiTokens > 0,
+        // A reported token count beats the characters divided by four.
+        tokens: usage.apiTokens > 0 ? usage.apiTokens : Math.ceil((usage.inputChars + usage.outputChars) / 4)
       })
 
       // The iteration totals are written by improve-product before its own step
@@ -304,10 +344,12 @@ function createPipeline(dependencies) {
         message: stageResult.summary || ''
       })
     } catch (error) {      stageError = error
+      run.now = null
       const usageError = {
         aiCalls: run.counters.aiCalls - usageBefore.aiCalls,
         inputChars: run.counters.inputChars - usageBefore.inputChars,
-        outputChars: run.counters.outputChars - usageBefore.outputChars
+        outputChars: run.counters.outputChars - usageBefore.outputChars,
+        apiTokens: tokenDelta(run.counters, usageBefore)
       }
       if (stepEntry) {
         Object.assign(stepEntry, {
@@ -317,7 +359,9 @@ function createPipeline(dependencies) {
           ms: Date.now() - stageStartedAt,
           summary: String(error && error.message || error).slice(0, 400),
           usage: usageError,
-          tokens: Math.ceil((usageError.inputChars + usageError.outputChars) / 4)
+          tokensMeasured: usageError.apiTokens > 0,
+          tokens: usageError.apiTokens > 0 ? usageError.apiTokens
+            : Math.ceil((usageError.inputChars + usageError.outputChars) / 4)
         })
         try { store.writeSsot(run.id, context.ssot) } catch (_writeError) { /* ignore */ }
       }

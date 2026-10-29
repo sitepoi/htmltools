@@ -20,6 +20,7 @@ const { renderSsotHtml } = require('./ssot/render')
 const { renderAndSave } = require('./stages/shared')
 const { createAiClient } = require('./ai/client')
 const chatService = require('./chat/service')
+const live = require('./live')
 const { nowIso } = require('./util')
 
 const UI_DIRECTORY = path.join(APP_ROOT, 'ui')
@@ -50,6 +51,48 @@ function sendText(response, statusCode, textValue, contentType) {
     'Cache-Control': 'no-store'
   })
   response.end(textValue)
+}
+
+// A long Windows path is unreadable in one line, so it is sent as a trail the
+// dashboard can render as breadcrumb links: D: > PROJECTS > UNICONHUB > ...
+function folderTrail(absolutePath) {
+  const value = String(absolutePath || '')
+  if (!value) return []
+  const resolved = path.resolve(value)
+  const segments = resolved.split(/[\\/]+/).filter(Boolean)
+  const trail = []
+  let current = ''
+  segments.forEach((segment) => {
+    if (!current && /^[A-Za-z]:$/.test(segment)) {
+      current = segment + path.sep
+    } else if (!current && segment === path.sep) {
+      current = path.sep
+    } else {
+      current = current ? path.join(current, segment) : segment
+    }
+    trail.push({ name: segment, absolutePath: current })
+  })
+  return trail
+}
+
+// Opens a folder in the operating system file manager. Only folders the server
+// itself derived from a run record are ever passed here, so the dashboard cannot
+// ask for an arbitrary path.
+function revealFolder(absolutePath) {
+  try {
+    const target = path.resolve(absolutePath)
+    if (!fs.existsSync(target)) return { ok: false, reason: 'The folder does not exist any more' }
+    if (process.platform === 'win32') {
+      spawn('explorer.exe', [target], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+    } else if (process.platform === 'darwin') {
+      spawn('open', [target], { detached: true, stdio: 'ignore' }).unref()
+    } else {
+      spawn('xdg-open', [target], { detached: true, stdio: 'ignore' }).unref()
+    }
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, reason: String((error && error.message) || error) }
+  }
 }
 
 function readBody(request) {
@@ -147,12 +190,17 @@ function buildRunPayload(run) {
     toolName: run.toolName || '',
     toolFolder: run.toolDirectory || '',
     toolFolderUri: run.toolDirectory ? 'vscode://file/' + run.toolDirectory.replace(/\\/g, '/') : '',
+    // One clickable link per path segment, each one opens that folder.
+    toolFolderTrail: folderTrail(run.toolDirectory || ''),
+    runFolderTrail: folderTrail(run.directory || ''),
     previewPath: files.some((file) => file.relativePath === harnessPath) ? harnessPath : '',
     stageSequence: STAGE_SEQUENCE,
     stageTitles: STAGE_TITLES,
     files,
     chat: chatService.readChat(run.directory, 40),
     events: readEvents(run.directory, 300),
+    // What the model is writing right now, plus the last few finished answers.
+    live: live.snapshot(run.id),
     isRunning: pipeline.isRunning(run.id)
   }
 }
@@ -246,7 +294,8 @@ async function handleApi(request, response, urlObject) {
       maxTasksPerIteration: Number(body.maxTasksPerIteration) || config.limits.maxTasksPerIteration,
       provider: body.provider || config.provider,
       dryRun: Boolean(body.dryRun),
-      industryFocus: body.industryFocus || ''
+      industryFocus: body.industryFocus || '',
+      reviewEachBatch: Boolean(body.reviewEachBatch)
     })
     const ssot = ssotModel.createSsot(run.idea)
     ssotModel.appendLog(ssot, 'system', 'Run created. Provider: ' + describeProvider(config).label)
@@ -278,6 +327,7 @@ async function handleApi(request, response, urlObject) {
     if (!action && method === 'DELETE') {
       pipeline.stopRun(runId)
       store.deleteRun(runId)
+      live.clear(runId)
       sendJson(response, 200, { ok: true })
       return
     }
@@ -341,19 +391,34 @@ async function handleApi(request, response, urlObject) {
     }
     if (action === 'restart' && method === 'POST') {
       const body = await readBody(request)
-      if (String(body.confirm || '') !== runId) {
-        sendJson(response, 400, { ok: false, error: 'Type the run id to confirm the restart.' })
+      // Typing a 40 character id is not a confirmation, it is a copy exercise.
+      // The last six characters are enough to prove the operator looked at the
+      // run they are about to delete, and the full id still works.
+      const typed = String(body.confirm || '').trim()
+      const tail = runId.slice(-6).toLowerCase()
+      const confirmed = typed === runId ||
+        (typed.length >= 6 && runId.toLowerCase().endsWith(typed.toLowerCase())) ||
+        typed.toLowerCase() === tail ||
+        String(body.confirm || '').trim().toUpperCase() === 'DELETE'
+      if (!confirmed) {
+        sendJson(response, 400, {
+          ok: false,
+          error: 'Type the last 6 characters of the run id (' + runId.slice(-6) + '), or the whole id.'
+        })
         return
       }
       pipeline.stopRun(runId)
       // A stage in flight would keep writing into the folder we are about to
       // delete, so wait until the loop is truly idle first.
       await pipeline.waitForIdle(runId)
+      live.clear(runId)
+      store.clearReview(runId)
       const result = store.resetRun(runId)
       if (!result.ok) {
         sendJson(response, 500, { ok: false, error: result.reason })
         return
       }
+      live.clear(runId)
       const current = store.loadRun(runId)
       const ssot = ssotModel.normalizeSsot(store.readSsot(runId), current.idea)
       ssotModel.appendLog(ssot, 'operator', 'Restart: deleted ' + result.removed.length +
@@ -371,6 +436,86 @@ async function handleApi(request, response, urlObject) {
     }
     if (action === 'events' && method === 'GET') {
       streamEvents(request, response, runId)
+      return
+    }
+    if (action === 'live' && method === 'GET') {
+      // Full text of the current call and of the recent ones, for a page that
+      // was opened after the stream started.
+      sendJson(response, 200, { ok: true, live: live.snapshot(runId, { textChars: 40000 }) })
+      return
+    }
+    if (action === 'reveal' && method === 'POST') {
+      const body = await readBody(request)
+      const trail = folderTrail(run.toolDirectory || run.directory)
+      const index = Number(body.index)
+      const entry = Number.isInteger(index) ? trail[index] : null
+      if (!entry) {
+        sendJson(response, 400, { ok: false, error: 'That part of the path is not known for this run.' })
+        return
+      }
+      const result = revealFolder(entry.absolutePath)
+      sendJson(response, result.ok ? 200 : 400, {
+        ok: result.ok,
+        path: entry.absolutePath,
+        error: result.ok ? null : result.reason
+      })
+      return
+    }
+    if (action === 'review' && method === 'GET') {
+      sendJson(response, 200, { ok: true, review: store.readReview(runId), pending: run.pendingReview || null })
+      return
+    }
+    if (action === 'review' && method === 'POST') {
+      const body = await readBody(request)
+      const decision = String(body.decision || '')
+      if (decision !== 'approve' && decision !== 'reject') {
+        sendJson(response, 400, { ok: false, error: 'The decision must be approve or reject.' })
+        return
+      }
+      const current = store.readReview(runId)
+      if (!current || !current.request) {
+        sendJson(response, 404, { ok: false, error: 'No batch is waiting for review.' })
+        return
+      }
+      if (current.decision) {
+        sendJson(response, 409, { ok: false, error: 'This batch was already ' + current.decision + 'd.' })
+        return
+      }
+      current.decision = decision
+      current.note = String(body.note || '').slice(0, 400)
+      current.decidedAt = nowIso()
+      store.writeReview(runId, current)
+      hub.publish(run.directory, {
+        runId,
+        stage: 'apply-tasks',
+        type: decision === 'approve' ? 'log' : 'warn',
+        message: 'Review: batch ' + current.request.batchId + ' ' + decision + 'd by the operator' +
+          (current.note ? ' (' + current.note + ')' : '')
+      })
+      sendJson(response, 200, { ok: true, review: current })
+      return
+    }
+    if (action === 'options' && method === 'POST') {
+      const body = await readBody(request)
+      const current = store.loadRun(runId)
+      current.options = current.options || {}
+      if (body.reviewEachBatch !== undefined) {
+        current.options.review = Object.assign({}, current.options.review, {
+          eachBatch: Boolean(body.reviewEachBatch)
+        })
+      }
+      if (body.maxIterations !== undefined) {
+        current.options.maxIterations = Math.max(1, Math.min(50, Number(body.maxIterations) || 1))
+      }
+      store.saveRun(current)
+      hub.publish(run.directory, {
+        runId,
+        stage: 'operator',
+        type: 'log',
+        message: 'Run options updated: review each batch ' +
+          (current.options.review && current.options.review.eachBatch ? 'on' : 'off')
+      })
+      sendJson(response, 200, { ok: true, run: store.loadRun(runId) })
       return
     }
     if (action === 'answer' && method === 'POST') {

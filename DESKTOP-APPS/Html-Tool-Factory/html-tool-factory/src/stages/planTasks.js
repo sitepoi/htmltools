@@ -11,6 +11,8 @@ const { planTasksPrompt } = require('../ai/prompts')
 const { buildCodemap } = require('../code/codemap')
 const { buildKnowledgeBlock } = require('../knowledge/contextPack')
 const ssotModel = require('../ssot/model')
+const scoring = require('../ssot/scoring')
+const { nowIso } = require('../util')
 const { askJson, normalizeIncomingTasks, renderAndSave, sanitizeOpenTaskFiles, summarizeTaskList } = require('./shared')
 
 const CONTRACT = '{ "tasks": [ { "title": "", "kind": "", "files": [], "acceptance": [], "featureId": null } ], "notes": "" }'
@@ -123,6 +125,36 @@ async function run(context) {
   }
 
   const progress = ssotModel.checklistProgress(ssot)
+  // T-06: the same batching the apply stage will use, computed now and written
+  // into the SSOT, so the operator sees the shape of the iteration up front.
+  const applySettings = config.apply || {}
+  scoring.applyPoints(ssot)
+  const previewQueue = ssotModel.todoTasks(ssot).slice(0, maxTasks)
+  const previewBatches = scoring.buildBatches(previewQueue, {
+    targetPoints: applySettings.pointsPerPrompt,
+    maxBatchPoints: applySettings.maxBatchPoints,
+    maxTasksPerBatch: applySettings.maxTasksPerBatch
+  })
+  ssot.plan = {
+    iteration,
+    createdAt: nowIso(),
+    targets: {
+      pointsPerPrompt: Number(applySettings.pointsPerPrompt) || scoring.TARGET_POINTS,
+      maxBatchPoints: Number(applySettings.maxBatchPoints) || scoring.MAX_BATCH_POINTS,
+      maxTasksPerBatch: Number(applySettings.maxTasksPerBatch) || scoring.MAX_BATCH_TASKS
+    },
+    openTasks: previewQueue.length,
+    openPoints: previewQueue.reduce((total, task) => total + (Number(task.points) || 0), 0),
+    batches: previewBatches.map((batch) => ({
+      id: batch.id,
+      points: batch.points,
+      tasks: batch.tasks.map((task) => ({ id: task.id, title: task.title, points: task.points }))
+    }))
+  }
+  ssotModel.appendLog(ssot, 'plan-tasks',
+    'Planned into ' + previewBatches.length + ' batch(es): ' +
+    previewBatches.map((batch) => batch.id + ' ' + batch.points + 'pt [' + batch.label + ']').join('; '))
+
   const summary = 'Iteration ' + iteration + ': ' + result.created.length + ' task(s) planned, depth ' +
     progress.done + '/' + progress.total + ' - ' + summarizeTaskList(result.created, 4)
   ssotModel.appendLog(ssot, 'plan-tasks', summary)

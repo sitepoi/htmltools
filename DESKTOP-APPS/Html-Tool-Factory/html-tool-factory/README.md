@@ -191,10 +191,72 @@ arbitrary hosts, non https urls, credentials. Every call is recorded in the run'
 ## Visibility and cost
 
 Every stage writes a step into `ssot.json` (`steps`): iteration, stage, status, duration,
-AI calls, characters, and the estimated tokens. The dashboard **Timeline** tab groups them
-per iteration with a progress bar, and the generated `docs/ssot.html` has the same table.
-Token totals are visible per step, per iteration and for the session, estimated as
-characters divided by four. **Run one stage** walks the loop manually.
+AI calls, characters, and the tokens. The dashboard **Timeline** tab groups them per
+iteration with a progress bar, and the generated `docs/ssot.html` has the same table.
+**Run one stage** walks the loop manually.
+
+### Real tokens, or an honest estimate
+
+A token count the provider reports is kept as it is; the character estimate is only the
+fallback. The client asks for `stream_options.include_usage` on a streamed answer, reads
+`usage` from a plain JSON answer, and maps Ollama's `prompt_eval_count` / `eval_count`.
+A provider that rejects `stream_options` is retried once without it instead of failing.
+
+- `counters.apiPromptTokens` and `counters.apiCompletionTokens` accumulate what was reported
+- every step and every batch stores `tokens` **and** `tokensMeasured`
+- the Tasks tab has a **What each batch cost** table: points next to tokens, with a
+  `reported` or `est.` chip; the run header shows the reported total when there is one
+
+### The shape of the iteration, before it costs anything
+
+The planner computes the same batches the apply stage will run (same queue slice, same
+`apply` targets) and writes them into `ssot.plan`. The Tasks tab renders them as
+**Planned batches** above the task table:
+
+```
+Planned batches        iteration 2 - 145 points in 2 batch(es) - target 100 points per call
+B1   95 pts   T-03 Rebuild the quote panel (95)
+B2   50 pts   T-04 Print layout (25) + T-05 Empty state copy (25)
+```
+
+When the batches finish, the same tab shows what each one really cost, so the point
+estimate can be compared with the measured tokens.
+
+### What is running right now
+
+While a run is active the dashboard shows one line above the tabs:
+
+```
+Apply the tasks - iteration 2 - batch B1 of 2, attempt 1 of 3: T-03 Add the quote list + T-04 Print layout   [Watch the AI]
+```
+
+It comes from `run.now` (`stage`, `batchId`, `taskIds`, `attempt`, `detail`), which the
+pipeline creates for every stage and the apply stage narrows down for every batch and
+attempt. Each change is also pushed as a `now` event, so the line updates without waiting
+for a poll. The **Tasks** tab repeats it as a banner and marks the tasks of the running
+batch as `doing`, so the list itself answers "which one is it on".
+
+### Watching the model write
+
+The **AI stream** tab shows the model answer as it arrives, not after it is finished:
+
+| What you see | Where it comes from |
+|---|---|
+| the running call, its stage, model, attempt, characters and seconds | `src/live.js` (`current`) |
+| the text, appended piece by piece | `stream: true` on the openai compatible and Ollama providers |
+| a note when an attempt failed and is being retried | `live.note` |
+| the last twelve finished calls, clickable to read the whole answer | `live.snapshot().history` |
+
+The deltas travel over the same event stream as the live log (`/api/runs/<id>/events`),
+they are kept **in memory only**, capped at 200 000 characters per call, and are never
+appended to `events.jsonl`: a token by token log on disk would grow the run folder without
+adding evidence. After a page reload the view is rebuilt from
+`GET /api/runs/<id>/live`. Set `stream.enabled` to `false` in `config.local.json` to fall
+back to one request per answer with no live text.
+
+A provider that ignores `stream: true` still works: the client checks the content type and
+treats a plain JSON answer as a single delta. While a stream is open the timeout is an
+**idle** timeout, so a call that keeps producing text is never aborted in the middle.
 
 ## How files are edited
 
@@ -203,12 +265,50 @@ The tool folder is the only writable root, and every task is an agent loop:
 - the model gets a code map plus the inline content of files under 6KB
 - bigger files are not pasted; the model calls the read only tools
   (`list_files`, `read_file`, `search_text`) at most twice, then answers
-- it answers with operations (`create`, `replace` with a unique anchor, `append`)
-  which are applied atomically and validated
+- it answers with operations (`create`, `replace` with a unique anchor, `append`,
+  and `overwrite` for a large batch) which are applied atomically and validated
 - the resulting change is stored as a unified diff (`task.diff`) with added and
   removed line counts, shown under Tasks in the dashboard
 
 There is no write tool, no shell tool and no network tool available to the model.
+
+### A whole file rewrite needs 80 points
+
+Anchor based replaces are the right tool for a small change and the wrong one for a
+file the model is rebuilding. So `overwrite` exists as its own operation, allowed only
+when the batch reaches `apply.overwriteMinPoints` (default 80):
+
+```
+Apply the tasks - batch B1 of 2, attempt 1 of 3: T-03 Rebuild the quote panel (85 points)
+```
+
+A smaller batch gets a refusal that names the threshold instead of a vague error, and the
+prompt is told which of the two rules is in force, so the model never guesses. A rewrite
+still passes the prospective validation and the boot probe like any other patch.
+
+### Nothing is written before it is computed
+
+Every batch is now three steps instead of one:
+
+1. **compute** the patch with `applyOps(..., { dryRun: true })`, which returns the new
+   content of each file without touching disk
+2. **validate** that prospective content (JavaScript through `node --check` on a
+   temporary file, HTML tag balance, CSS braces, the html tool contract, secret scan) and
+   build the unified diff
+3. **write** it, then run the DOM smoke probe
+
+With **Review each batch: on** (a per run option, also available as *Hold each batch for
+my approval* when the run is created) the factory stops between step 2 and step 3 and
+shows the diff with Approve and Reject:
+
+| Button | What happens |
+|---|---|
+| Approve and write | the batch is written exactly as it was computed, then validated and probed |
+| Reject (+ a note) | nothing is written, the tasks return to the queue, the batch is recorded as `rejected`, and the remaining batches are not attempted |
+
+The wait is bounded (`review.timeoutMs`, 15 minutes) and ends immediately on Stop or Pause.
+A rejection is a decision, not a failure: it does not consume the task's retry budget, and
+the reason travels with the task as its `lastProblems`.
 
 ## Run
 

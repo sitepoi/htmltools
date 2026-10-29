@@ -61,7 +61,7 @@ const htmlIds = new Set()
 })
 
 const dynamicIds = new Set(['tab-' + 'tasks'])
-const dynamicTabs = ['timeline', 'tasks', 'risks', 'features', 'ideas', 'tests', 'files', 'events']
+const dynamicTabs = ['timeline', 'tasks', 'risks', 'features', 'ideas', 'tests', 'files', 'events', 'chat', 'live']
 dynamicTabs.forEach((tabName) => dynamicIds.add('tab-' + tabName))
 
 const referencedIds = new Set()
@@ -155,13 +155,17 @@ function checkDashboardRenderers() {
 
   const renderChecks = [
     ['renderTasks', 'state.activeTab = "tasks"; renderTasks(__ssot, __run)', 'Create the page'],
+    ['renderPlanBlock', 'renderPlanBlock({ plan: { iteration: 1, createdAt: new Date().toISOString(), openPoints: 120, targets: { pointsPerPrompt: 100 }, batches: [{ id: "B1", points: 95, tasks: [{ id: "T-01", title: "Plan the page", points: 95 }] }] } })', 'B1'],
+    ['renderBatchCosts', 'renderBatchCosts({ steps: [{ iteration: 1, stage: "apply-tasks", tasks: [{ id: "B1", points: 95, tasks: [{ id: "T-01" }], status: "done", tokens: 1234, tokensMeasured: true }] }] })', 'reported'],
     ['renderRisks', 'renderRisks(__ssot)', 'Risk text'],
     ['renderFeatures', 'renderFeatures(__ssot)', 'Feature one'],
     ['renderIdeas', 'renderIdeas(__ssot)', 'Idea text'],
     ['renderTests', 'renderTests(__ssot)', 'node --check app.js'],
     ['renderFiles', 'state.payload = { files: [{ relativePath: "index.html", size: 2048 }] }; state.openFile = null; renderFiles()', 'index.html'],
     ['renderEventsTab', 'state.payload = { events: [{ at: "' + new Date().toISOString() + '", stage: "plan-tasks", type: "log", message: "hello" }] }; renderEventsTab()', 'hello'],
-    ['renderStageTrack', 'elements.stageTrack = { innerHTML: "" }; state.stageSequence = ["select-idea", "plan-tasks"]; state.stageTitles = { "select-idea": "Select idea", "plan-tasks": "Plan tasks" }; renderStageTrack(__run); elements.stageTrack.innerHTML', 'Plan tasks'],
+    ['renderLive', 'state.live = { current: { callId: "c1", stage: "apply-tasks", model: "m", attempt: 1, state: "streaming", chars: 12, elapsedMs: 900 }, text: "partial answer", history: [{ callId: "c0", stage: "plan-tasks", state: "done", chars: 40, elapsedMs: 1200, text: "task list" }], notes: [] }; renderLive()', 'partial answer'],
+    ['renderReview', 'elements.reviewPanel = { hidden: true }; elements.reviewMeta = { textContent: "" }; elements.reviewFiles = { textContent: "" }; elements.reviewDiff = { textContent: "" }; elements.reviewNote = { value: "" }; elements.btnReview = { textContent: "", className: "" }; renderReview({ pendingReview: { batchId: "B1", batchOf: 2, points: 90, tasks: [{ id: "T-01" }], files: ["app/A.js"], diff: "--- a\\n+++ b", diffStats: { added: 3, removed: 1 } }, options: { review: { eachBatch: true } } }); elements.reviewMeta.textContent', 'B1'],
+    ['renderNow', 'elements.runNow = { hidden: true, className: "" }; elements.runNowText = { textContent: "" }; elements.btnOpenLive = { textContent: "" }; state.stageTitles = { "apply-tasks": "Apply the tasks" }; renderNow({ stage: "apply-tasks", status: "running", iteration: 2, now: { detail: "batch B1: T-01" } }); elements.runNowText.textContent', 'batch B1'],    ['renderStageTrack', 'elements.stageTrack = { innerHTML: "" }; state.stageSequence = ["select-idea", "plan-tasks"]; state.stageTitles = { "select-idea": "Select idea", "plan-tasks": "Plan tasks" }; renderStageTrack(__run); elements.stageTrack.innerHTML', 'Plan tasks'],
     ['renderTimeline', 'state.stageSequence = ["select-idea", "plan-tasks", "run-tests"]; renderTimeline(__ssot, __run)', 'Plan the task list']
   ]
 

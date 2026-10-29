@@ -119,6 +119,9 @@ function createSsot(idea) {
     tests: [],
     iterations: [],
     ideas: [],
+    // The batches the apply stage will run, written at planning time so the
+    // shape of the iteration is visible before it costs anything.
+    plan: null,
     log: []
   }
 }
@@ -226,6 +229,32 @@ function todoTasks(ssot) {
 
 // Seeds the depth checklist once per tool. Items keep their state afterwards,
 // so a later stage can never re-open work a task already closed.
+const CHECKLIST_MARKERS = {
+  'Input validation with inline errors': [
+    { file: 'js', pattern: 'setStatus\\(|aria-invalid|reportValidity' },
+    { file: 'html', pattern: 'role="status"|-status' }
+  ],
+  'Empty state that tells the user the first step': [
+    { file: 'js', pattern: 'empty|no records yet|nothing yet|no items|no results' }
+  ],
+  'Busy state while work runs': [{ file: 'js', pattern: 'disabled\\s*=\\s*true|\\.disabled\\s*=' }],
+  'Failure state with a retry path': [{ file: 'js', pattern: 'catch\\s*\\(' }],
+  'Persistence through the tool storage SDK': [
+    { file: 'js', pattern: 'tool\\.storage|tool\\.setValue|tool\\.getValue|tool\\.save|tool\\.load' }
+  ],
+  'Export or copy of the result': [{ file: 'js', pattern: 'clipboard|Blob|download' }],
+  'Destructive actions are reversible or guarded': [{ file: 'js', pattern: '\\bagain\\b|undo|pending' }],
+  'Keyboard and screen reader basics': [
+    { file: 'html', pattern: 'role="status"' },
+    { file: 'html', pattern: '<label' }
+  ],
+  'Responsive layout and print stylesheet': [
+    { file: 'css', pattern: '@media' },
+    { file: 'css', pattern: '@media\\s+print' }
+  ],
+  'In tool self test in the harness': [{ file: 'harness', pattern: '\\[TOOL:TEST\\]' }]
+}
+
 function ensureChecklist(ssot) {
   if (!Array.isArray(ssot.checklist)) ssot.checklist = []
   if (ssot.checklist.length) return ssot.checklist
@@ -234,6 +263,7 @@ function ensureChecklist(ssot) {
     title: item.title,
     detail: item.detail,
     accept: item.accept,
+    marker: CHECKLIST_MARKERS[item.title] || [],
     status: 'todo',
     taskId: null,
     createdAt: nowIso()
@@ -358,6 +388,7 @@ module.exports = {
   IMPACTS,
   CHECKLIST_STATUSES,
   CHECKLIST_ITEMS,
+  CHECKLIST_MARKERS,
   createSsot,
   normalizeSsot,
   nextId,

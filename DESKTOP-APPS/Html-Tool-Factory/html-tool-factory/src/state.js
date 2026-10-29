@@ -84,12 +84,20 @@ class RunStore {
         maxTasksPerIteration: Number(settings.maxTasksPerIteration) || 4,
         provider: String(settings.provider || ''),
         dryRun: Boolean(settings.dryRun),
-        industryFocus: String(settings.industryFocus || '')
+        industryFocus: String(settings.industryFocus || ''),
+        // Per run review policy: hold every batch before it is written.
+        review: {
+          eachBatch: Boolean(settings.reviewEachBatch),
+          note: String(settings.reviewNote || '')
+        }
       },
       counters: {
         aiCalls: 0,
         inputChars: 0,
         outputChars: 0,
+        // Tokens the provider itself reported, when it reports any.
+        apiPromptTokens: 0,
+        apiCompletionTokens: 0,
         tasksDone: 0,
         tasksFailed: 0,
         testsPassed: 0,
@@ -225,6 +233,31 @@ class RunStore {
     return path.join(run.directory, '.checkpoints')
   }
 
+  // A batch that waits for the operator. The request is written by the apply
+  // stage, the decision is written by the dashboard, and nothing of the batch
+  // touches disk before the decision is "approve".
+  reviewPath(runId) {
+    return path.join(this.runDirectory(runId), 'review.json')
+  }
+
+  writeReview(runId, payload) {
+    writeJsonAtomic(this.reviewPath(runId), payload || {})
+    return payload
+  }
+
+  readReview(runId) {
+    return readJsonFile(this.reviewPath(runId), null)
+  }
+
+  clearReview(runId) {
+    try {
+      const filePath = this.reviewPath(runId)
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+    } catch (_error) {
+      // a stale review file is harmless: it is overwritten next time
+    }
+  }
+
   // Remembers the hash the factory itself wrote last per file, so a restore can
   // tell "a later factory batch changed it" from "somebody edited it by hand".
   checkpointIndex(run) {
@@ -344,12 +377,16 @@ class RunStore {
     run.stoppedReason = ''
     run.summary = null
     run.target = null
+    run.now = null
+    run.pendingReview = null
     run.toolName = ''
     run.toolPrefix = ''
     run.counters = {
       aiCalls: 0,
       inputChars: 0,
       outputChars: 0,
+      apiPromptTokens: 0,
+      apiCompletionTokens: 0,
       tasksDone: 0,
       tasksFailed: 0,
       testsPassed: 0,

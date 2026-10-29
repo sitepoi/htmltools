@@ -64,7 +64,17 @@ const BUILT_IN_DEFAULTS = {
   apply: {
     pointsPerPrompt: 100,
     maxBatchPoints: 130,
-    maxTasksPerBatch: 6
+    maxTasksPerBatch: 6,
+    // A batch of this many points may hand over a complete file instead of an
+    // anchor based replace. Anchor patches fail often on a file being rebuilt.
+    overwriteMinPoints: 80
+  },
+  // The operator may hold a batch after its patch is computed and before it is
+  // written, then approve or reject it in the dashboard.
+  review: {
+    eachBatch: false,
+    timeoutMs: 900000,
+    pollMs: 500
   },
   // Agentic editing: the model may inspect files with read only tools and run
   // one bounded probe before it writes a patch. No shell, no database, no
@@ -82,6 +92,12 @@ const BUILT_IN_DEFAULTS = {
       maxBytes: 200000,
       timeoutMs: 6000
     }
+  },
+  // Watch the model write. The answer is streamed to the dashboard as it
+  // arrives, so every call can be read while it is happening. Turning this off
+  // falls back to one request per answer with no live text.
+  stream: {
+    enabled: true
   },
   ideasCatalogPath: DEFAULT_CATALOG_PATH,
   catalog: {
@@ -212,7 +228,13 @@ function normalizeConfig(configValue) {
   config.apply = Object.assign({}, config.apply, {
     pointsPerPrompt: Math.max(20, Math.min(200, Number(config.apply && config.apply.pointsPerPrompt) || 100)),
     maxBatchPoints: Math.max(20, Math.min(300, Number(config.apply && config.apply.maxBatchPoints) || 130)),
-    maxTasksPerBatch: Math.max(1, Math.min(10, Number(config.apply && config.apply.maxTasksPerBatch) || 6))
+    maxTasksPerBatch: Math.max(1, Math.min(10, Number(config.apply && config.apply.maxTasksPerBatch) || 6)),
+    overwriteMinPoints: Math.max(40, Math.min(100, Number(config.apply && config.apply.overwriteMinPoints) || 80))
+  })
+  config.review = Object.assign({ enabled: true }, config.review, {
+    eachBatch: Boolean(config.review && config.review.eachBatch),
+    timeoutMs: Math.max(10000, Number(config.review && config.review.timeoutMs) || 900000),
+    pollMs: Math.max(100, Number(config.review && config.review.pollMs) || 500)
   })
   config.limits.requestTimeoutMs = Math.max(10000, Number(config.limits.requestTimeoutMs) || 180000)
   config.limits.maxRequestTimeoutMs = Math.max(config.limits.requestTimeoutMs,
@@ -303,6 +325,9 @@ function publicConfigView(config) {
     models: config.models,
     limits: config.limits,
     agentic: config.agentic,
+    stream: config.stream,
+    apply: config.apply,
+    review: config.review,
     knowledge: config.knowledge,
     target: config.target,
     catalog: config.catalog,

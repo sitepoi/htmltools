@@ -32,7 +32,10 @@ function normalizeOperation(rawOperation) {
     if (operation.content && !operation.find) operation.op = 'create'
     else if (operation.content && operation.find) operation.op = 'replace'
   }
-  if (operation.op === 'write' || operation.op === 'overwrite') operation.op = 'create'
+  if (operation.op === 'write') operation.op = 'create'
+  // "overwrite" stays its own operation: it is only allowed for a large task,
+  // so it must not be silently turned into a create that fails on an existing file.
+  if (operation.op === 'rewrite' || operation.op === 'replace-file') operation.op = 'overwrite'
   if (operation.op === 'insert') operation.op = 'append'
   return operation
 }
@@ -150,6 +153,22 @@ function applyOps(workspace, rawOperations, options) {
       continue
     }
 
+    // A whole file rewrite. Anchor based replaces fail often on a file the model
+    // is rebuilding, so a big task may hand over the complete file instead.
+    if (operation.op === 'overwrite') {
+      if (settings.allowOverwrite !== true) {
+        problems.push({
+          file: relativePath,
+          message: 'A whole file rewrite is not allowed for this task: only a task of ' +
+            (Number(settings.overwriteMinPoints) || 80) + ' points or more may replace a file completely. ' +
+            'Use "replace" with an anchor that exists exactly once, or "append".'
+        })
+        continue
+      }
+      staged.set(relativePath, operation.content)
+      continue
+    }
+
     if (operation.op === 'delete') {
       if (settings.allowDelete !== true) {
         problems.push({
@@ -166,10 +185,24 @@ function applyOps(workspace, rawOperations, options) {
       continue
     }
 
-    problems.push({ file: relativePath, message: 'Unknown operation "' + operation.op + '". Use create, replace, append or delete.' })
+    problems.push({ file: relativePath, message: 'Unknown operation "' + operation.op + '". Use create, replace, append, overwrite or delete.' })
   }
 
   if (problems.length) return { ok: false, problems, changed: [] }
+
+  const changed = []
+  // A dry run answers the same question without writing anything, so a batch can
+  // be validated and reviewed before it lands.
+  if (settings.dryRun === true) {
+    for (const [relativePath, nextText] of staged.entries()) {
+      changed.push({
+        file: relativePath,
+        before: originals.get(relativePath),
+        after: nextText
+      })
+    }
+    return { ok: true, problems: [], changed, dryRun: true, backupDirectory: null }
+  }
 
   // Backups first, then write everything.
   const backupDirectory = settings.backupDirectory
@@ -184,7 +217,7 @@ function applyOps(workspace, rawOperations, options) {
     }
   }
 
-  const changed = []
+  const changedWrites = changed
   try {
     for (const [relativePath, nextText] of staged.entries()) {
       const absolutePath = workspace.resolveInside(relativePath)
@@ -194,7 +227,7 @@ function applyOps(workspace, rawOperations, options) {
         ensureDir(path.dirname(absolutePath))
         fs.writeFileSync(absolutePath, nextText, 'utf8')
       }
-      changed.push({
+      changedWrites.push({
         file: relativePath,
         before: originals.get(relativePath),
         after: nextText
