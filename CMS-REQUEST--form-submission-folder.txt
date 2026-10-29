@@ -1,0 +1,130 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CMS FEATURE REQUEST - FOLDER TARGET FOR PUBLIC FORM SUBMISSIONS
+──────────────────────────────────────────────────────────────────────────────
+Target: sitepoicms (public form intake + form-type definition). Scope: a
+generic capability. No website-specific code in the CMS, no new object type
+required, and no change to any published page.
+
+WHY THIS EXISTS (the problem)
+─────────────────────────────
+Every public website form posts to one destination application:
+
+  POST /api/public/forms/submit
+  { cmsObjectType: "form-submissions-uniconbaseapps", formTypeId: "...", values: {...} }
+
+That single cmsObjectType is the ONLY destination the page can name. The page
+cannot pick a folder: the platform rules state that formTypeId is a human
+label, and that "the page can never set destination table or hooks".
+
+But the real data is not one flat pile. One academy alone files registrations
+per exam instance and per metro area, for example:
+
+  form-submissions-uniconbaseapps
+    / 2026-11-07-vancouver-cemc-trial-exam-registration
+    / 2026-11-21-calgary-cemc-trial-exam-registration
+    / 2027-02-13-toronto-cemc-trial-exam-registration
+
+Without folder routing, every submission of the application lands in one list,
+and the person registering cannot influence where their record is filed.
+
+TODAY'S WORKAROUND (and why it is not enough)
+─────────────────────────────────────────────
+The page sends formTypeId equal to the folder name:
+
+  formTypeId: "2026-11-07-vancouver-cemc-trial-exam-registration"
+  page:       "/2026-11-07-vancouver-cemc-trial-exam-registration"
+
+So the intent is already in the payload. What is missing is a CMS rule that
+turns that intent into an actual folder placement.
+
+WHAT TO BUILD (pick ONE, in this order of preference)
+─────────────────────────────────────────────────────
+OPTION 1 - DECLARATIVE (preferred, zero page work)
+  The form-type definition object owns the folder, exactly as it already owns
+  the destination table and the server hooks. Something like:
+
+    formTypes: {
+      "2026-11-07-vancouver-cemc-trial-exam-registration": {
+        cmsObjectType: "form-submissions-uniconbaseapps",
+        folder: "2026-11-07-vancouver-cemc-trial-exam-registration",  // name or id
+        autoCreateFolder: true
+      }
+    }
+
+  A submission whose formTypeId matches an entry is created inside that folder.
+  An unknown formTypeId keeps today's behaviour (application default folder),
+  so nothing breaks.
+
+OPTION 2 - PAYLOAD FIELD (flexible, no per-form configuration)
+  Accept ONE optional new root field on the public endpoint:
+
+    { cmsObjectType, folder: "2026-11-07-vancouver-cemc-trial-exam-registration",
+      formTypeId, page, submittedAt, gw_hp, values }
+
+  Semantics to implement:
+    - folder is a NAME resolved inside cmsObjectType (case-insensitive,
+      trimmed, slug-safe); an id may be accepted later but is not required now.
+    - folder must belong to cmsObjectType. A folder from another application
+      must never be accepted.
+    - unknown folder  -> 400 {"ok":false,"error":"UNKNOWN_FOLDER"}, nothing
+      stored. Do not silently fall back to the default folder.
+    - folder absent   -> current behaviour, byte for byte.
+    - optional setting formIntake.autoCreateFolder (default off): when on, a
+      missing folder is created under the application root with that name.
+
+OPTION 3 - AUTO FOLDER PER FORM TYPE (least configuration, least control)
+  Setting formIntake.folderPerFormType (default off). When it is on, every
+  submission whose formTypeId has no folder yet creates one named after the
+  formTypeId inside the destination application, and lands there.
+
+RECOMMENDED
+───────────
+Option 1 plus the `folder` field of Option 2, both gated by configuration. The
+first gives admins control without touching pages, the second lets a site opt
+into per-instance folders without a form-type object per instance.
+
+WHAT MUST NOT CHANGE
+────────────────────
+  - Origin allowlist, rate limit, 256 KB body cap, 4000 characters per field,
+    honeypot handling (non-empty gw_hp = 200 and nothing stored).
+  - The response shapes: 200 {"ok":true,"id"}, 400, 403 ORIGIN_NOT_ALLOWED,
+    429 RATE_LIMIT_EXCEEDED, 500 STORAGE_FAILED.
+  - No read endpoint is added. The visitor still gets no access to submissions.
+  - Existing pages keep working untouched; a form without the new field or the
+    new configuration stores exactly where it stores today.
+
+ERROR NAMES TO ADD
+──────────────────
+  UNKNOWN_FOLDER        the named folder does not exist in that application
+  FOLDER_NOT_ALLOWED    the folder belongs to another application
+  FOLDER_CREATE_FAILED  auto-create was on and the folder could not be created
+
+ACCEPTANCE TESTS (curl, then check the CMS list)
+────────────────────────────────────────────────
+  1. No `folder`, no form-type entry
+     -> stored in the application default folder (unchanged).
+  2. `folder` = existing folder of that application
+     -> row appears inside that folder; response 200 with the object id.
+  3. `folder` = name that does not exist
+     -> 400 UNKNOWN_FOLDER, nothing stored, nothing created.
+  4. `folder` = folder of a different application
+     -> 400 FOLDER_NOT_ALLOWED, nothing stored.
+  5. Option 1 configured for a formTypeId
+     -> that formTypeId lands in its folder even when the payload has no folder.
+  6. Honeypot filled with any of the above
+     -> 200, nothing stored, no folder created.
+  7. Origin of a non-allowlisted site
+     -> 403 ORIGIN_NOT_ALLOWED before any folder logic runs.
+
+WHAT THE WEBSITE SENDS TODAY (for reference, no change requested)
+──────────────────────────────────────────────────────────────────
+  cmsObjectType: "form-submissions-uniconbaseapps"
+  formTypeId:    "2026-11-07-vancouver-cemc-trial-exam-registration"
+  page:          "/2026-11-07-vancouver-cemc-trial-exam-registration"
+  submittedAt:   ISO timestamp
+  gw_hp:         "" (honeypot, must stay empty)
+  values:        parent_name, student_name, student_grade, email, phone,
+                 consent, exam, exam_date, city, area, venue_city
+
+formTypeId, the page path and the wanted folder are deliberately the SAME
+string, so either routing option maps without any further page change.

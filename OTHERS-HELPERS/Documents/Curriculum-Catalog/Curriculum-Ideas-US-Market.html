@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curriculum Ideas for the US Market - Ranked Shortlist</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --ok: #1d7a36;
+    --warn: #a86400;
+    --stop: #a11a1a;
+    --ok-soft: #eaf6ed;
+    --warn-soft: #fdf4e3;
+    --stop-soft: #fbeceb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 50px 56px 58px;
+  }
+
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 18px;
+    margin-bottom: 22px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title { font-size: 27px; font-weight: 700; }
+  .doc-subtitle { font-size: 15.5px; color: var(--accent); font-weight: 600; margin-top: 7px; }
+  .doc-meta { margin-top: 11px; font-size: 12.5px; color: var(--muted); }
+  .doc-meta span { margin: 0 8px; }
+
+  section { margin-bottom: 26px; }
+  h2 {
+    font-size: 14.5px;
+    text-transform: uppercase;
+    letter-spacing: 1.3px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 11px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3 { font-size: 13.5px; margin: 15px 0 6px; }
+  h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: 12px 0 5px; }
+  p { font-size: 13.5px; margin-bottom: 9px; }
+  ul, ol { margin: 0 0 9px 21px; }
+  li { font-size: 13.5px; margin-bottom: 5px; }
+  a { color: var(--accent); }
+  code {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 12px;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+
+  .lead { font-size: 14px; color: #2b3a4d; }
+
+  .answer {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 17px;
+    background: #f8fbfd;
+    margin-bottom: 14px;
+  }
+  .answer h3 { margin: 0 0 6px; color: var(--accent); font-size: 15px; }
+  .answer p { font-size: 13.5px; margin-bottom: 7px; }
+  .answer p:last-child { margin-bottom: 0; }
+
+  .callout-warn {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    padding: 11px 15px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 11px;
+  }
+  .callout-warn p:last-child { margin-bottom: 0; }
+
+  .callout-stop {
+    background: var(--stop-soft);
+    border-left: 4px solid var(--stop);
+    padding: 11px 15px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 11px;
+  }
+  .callout-stop p:last-child { margin-bottom: 0; }
+
+  .callout-ok {
+    background: var(--ok-soft);
+    border-left: 4px solid var(--ok);
+    padding: 11px 15px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 11px;
+  }
+  .callout-ok p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 9px 0 14px; font-size: 12.5px; }
+  th, td { padding: 7px 9px; border: 1px solid var(--line); vertical-align: top; text-align: left; }
+  th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  td.num, th.num { text-align: center; white-space: nowrap; }
+  table.compact td, table.compact th { padding: 5px 7px; font-size: 11.8px; }
+  tr.total td { background: #f8fafc; font-weight: 600; }
+  tr.win td { background: #f2f9f4; }
+  tr.out td { background: #fdf5f4; }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .b-low { background: var(--ok-soft); color: var(--ok); border: 1px solid #bfe0c8; }
+  .b-med { background: var(--warn-soft); color: var(--warn); border: 1px solid #ecd6a6; }
+  .b-high { background: var(--stop-soft); color: var(--stop); border: 1px solid #efc2bf; }
+  .b-neutral { background: #eef2f6; color: #475569; border: 1px solid #d8dee6; }
+
+  .score { font-weight: 700; }
+  .s-a { color: var(--ok); }
+  .s-b { color: #2c6e8f; }
+  .s-c { color: var(--warn); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 13px; }
+  .card { border: 1px solid var(--line); border-radius: 4px; padding: 11px 13px; background: #fbfcfd; }
+  .card h4 { margin-top: 0; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+
+  .step {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f4f7fa;
+    border-bottom: 1px solid var(--line);
+    padding: 7px 12px;
+  }
+  .step-id {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    background: #e3edf5;
+    border-radius: 3px;
+    padding: 1px 6px;
+  }
+  .step-name { font-size: 13px; font-weight: 700; }
+  .step-time { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+  .step-body { padding: 9px 12px; font-size: 12.8px; }
+  .step-body p:last-child { margin-bottom: 0; }
+
+  .sheet {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 13px 15px;
+    background: #fbfcfd;
+  }
+  .sheet-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px dashed #e2e8f0;
+  }
+  .sheet-row:last-child { border-bottom: none; }
+  .sheet-row input { margin-top: 4px; }
+
+  .ph {
+    color: var(--muted);
+    font-style: italic;
+    background: #f8fafc;
+    border-bottom: 1px dashed #b6c2cf;
+    padding: 0 3px;
+  }
+
+  .note-small { font-size: 11.8px; color: var(--muted); }
+
+  .approval-note {
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px dashed var(--line);
+    padding-top: 13px;
+  }
+
+  @media (max-width: 860px) {
+    .page { padding: 26px 18px 32px; margin: 12px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .doc-title { font-size: 22px; }
+    table { font-size: 11.8px; }
+    th, td { padding: 5px 6px; }
+  }
+
+  @page { margin: 14mm 12mm; }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; border: none; box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, h4, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .answer, .card, .step, .callout-warn, .callout-stop, .callout-ok, .sheet {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">UniconHub</div>
+    <div class="doc-title">Curriculum Ideas for the US Market</div>
+    <div class="doc-subtitle">Ranked shortlist, source plan, and the production pipeline</div>
+    <div class="doc-meta">
+      Document: <span class="ph">CUR-2026-01</span> |
+      Prepared: 2026-10-28 |
+      Version: <span class="ph">1.0</span>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section>
+    <h2>1. How to read this</h2>
+    <p class="lead">
+      Fifty-seven curriculum ideas, each scored on six things that decide whether it can actually be
+      built and sold: demand, regulatory ease, willingness to pay, source availability and licence,
+      competition, and production effort.
+    </p>
+
+    <div class="answer">
+      <h3>Short answer</h3>
+      <p>
+        Build <strong>exam-prep and licence-knowledge products from official public handbooks</strong>.
+        They are the only category where the PDF exists before you write it, the coverage matrix is
+        objective, and the buyer already knows they need to pass something.
+      </p>
+      <p>
+        First three: <strong>US citizenship civics</strong>, <strong>CDL permit knowledge</strong>,
+        and <strong>notary plus loan signing agent</strong>. Different buyers, all public sources, all
+        outside the approval regimes that make real pre-licensing courses illegal to sell without a
+        state contract.
+      </p>
+      <p>
+        Do not start with teaching, coaching or "how to become" courses. Start with "pass this
+        test", because the pass mark is the product.
+      </p>
+    </div>
+
+    <div class="callout-warn">
+      <p><strong>No statistics are invented here.</strong> The scores are my judgement from demand
+      signals you can check yourself: job postings, exam registrations, licensing board pages,
+      Reddit and Facebook study groups, and the number and quality of existing competitors. Validate
+      any number before it goes into a sales page. The scores are a ranking tool, not market research.</p>
+    </div>
+
+    <h3>1.1 The three filters every idea must pass</h3>
+    <table class="compact">
+      <tr>
+        <th style="width:6%">#</th>
+        <th style="width:26%">Filter</th>
+        <th>Why it decides everything</th>
+      </tr>
+      <tr><td class="num">1</td><td><strong>Can it be sold without an approval?</strong></td><td>If the course grants a licence, a credential or required hours, it needs state or board approval. Exam prep does not.</td></tr>
+      <tr><td class="num">2</td><td><strong>Does an official source exist?</strong></td><td>The source becomes the coverage matrix and the acceptance test. Without it, quality is opinion and the AI writes fiction.</td></tr>
+      <tr><td class="num">3</td><td><strong>May you legally use that source?</strong></td><td>US federal works are public domain. Industry-body objectives are copyrighted but may be taught to. Reproducing them is another matter.</td></tr>
+    </table>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h2>2. The one rule that protects the whole plan</h2>
+    <p>
+      Your pipeline is: subject listing, a PDF per subject, upload, then AI generation inside
+      Curriculum Builder. The tool reads the PDFs attached to a lesson and generates study content,
+      slides, flashcards and quiz from them. That means <strong>the PDF is the truth</strong>. If the
+      PDF is AI-written from nothing, the course is AI-written from nothing, twice, with no check
+      anywhere.
+    </p>
+    <div class="callout-stop">
+      <p><strong>AI may not author the source PDF.</strong> AI may format, summarise, re-level and
+      restructure an official source. Every fact must be traceable to an official page. If a fact has
+      no source page, it does not enter the PDF, and therefore cannot enter the course.</p>
+    </div>
+    <p>
+      Practical consequence: the curriculum producer's job is mostly <strong>building the source
+      pack</strong>, not writing lessons. Get the source pack right and the AI generation becomes a
+      formatting exercise with a checkable answer key.
+    </p>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2>3. The ranked list</h2>
+    <p class="note-small">
+      Score out of 100: demand 25, regulatory ease 20, willingness to pay 20, source and licence 15,
+      competition 10 (5 means low competition), production effort 10 (5 means fast to build).
+      <span class="badge b-low">80+</span> build first,
+      <span class="badge b-med">70 to 79</span> second wave,
+      <span class="badge b-neutral">below 70</span> only if you have a reason.
+    </p>
+
+    <h3>3.1 Exam and licence-knowledge prep (highest fit for the pipeline)</h3>
+    <table class="compact">
+      <tr>
+        <th style="width:30%">Curriculum</th>
+        <th style="width:20%">Buyer</th>
+        <th class="num" style="width:8%">Score</th>
+        <th style="width:22%">Official source for the PDF</th>
+        <th>Regulation note</th>
+      </tr>
+      <tr class="win">
+        <td><strong>US citizenship test prep (N-400 civics, reading, writing)</strong></td>
+        <td>Immigrants, resettlement agencies, ESL schools</td>
+        <td class="num score s-a">89</td>
+        <td>USCIS official study materials, 100 civics questions</td>
+        <td>None. Federal material is public domain. Highest safety</td>
+      </tr>
+      <tr class="win">
+        <td><strong>CDL permit knowledge test</strong></td>
+        <td>New drivers, trucking schools, carriers</td>
+        <td class="num score s-a">87</td>
+        <td>State CDL manuals, one per state plus federal rules</td>
+        <td>Permit knowledge only. Behind-the-wheel training needs FMCSA registration</td>
+      </tr>
+      <tr class="win">
+        <td><strong>ASVAB prep</strong></td>
+        <td>Military applicants, high schools</td>
+        <td class="num score s-a">83</td>
+        <td>Official ASVAB test description and public practice items</td>
+        <td>None for prep. Do not claim official affiliation</td>
+      </tr>
+      <tr class="win">
+        <td><strong>Notary public and loan signing agent</strong></td>
+        <td>Side-income seekers, mobile notaries</td>
+        <td class="num score s-a">83</td>
+        <td>State notary handbooks and exam outlines</td>
+        <td>Commission is granted by the state; training is not regulated in most states</td>
+      </tr>
+      <tr class="win">
+        <td><strong>CompTIA A+ prep</strong></td>
+        <td>Career changers, IT helpdesk</td>
+        <td class="num score s-a">83</td>
+        <td>Published exam objectives, public domain portions of vendor docs</td>
+        <td>Objectives are public; the name and logo are trademarks. Prep only</td>
+      </tr>
+      <tr class="win">
+        <td><strong>CompTIA Security+ prep</strong></td>
+        <td>IT, military transition, compliance staff</td>
+        <td class="num score s-a">82</td>
+        <td>Published exam objectives</td>
+        <td>Same as A+</td>
+      </tr>
+      <tr class="win">
+        <td><strong>SIE exam prep (securities essentials)</strong></td>
+        <td>Finance career entrants</td>
+        <td class="num score s-a">82</td>
+        <td>FINRA content outline</td>
+        <td>SIE can be taken without firm sponsorship. Do not imply FINRA approval</td>
+      </tr>
+      <tr class="win">
+        <td><strong>TEAS and HESI nursing entrance prep</strong></td>
+        <td>Nursing school applicants</td>
+        <td class="num score s-a">82</td>
+        <td>Published test blueprints</td>
+        <td>None for prep. High willingness to pay</td>
+      </tr>
+      <tr>
+        <td>Series 7 and Series 65 prep</td>
+        <td>Finance employees</td>
+        <td class="num score s-b">78</td>
+        <td>FINRA content outlines</td>
+        <td>Series 7 requires firm sponsorship to sit; say so plainly</td>
+      </tr>
+      <tr>
+        <td>Cosmetology and barber state board theory</td>
+        <td>Beauty school students</td>
+        <td class="num score s-b">77</td>
+        <td>State board candidate handbooks</td>
+        <td>Practical exam is in person; sell theory only</td>
+      </tr>
+      <tr>
+        <td>Electrician journeyman exam prep</td>
+        <td>Apprentices, trades</td>
+        <td class="num score s-b">77</td>
+        <td>State exam outlines, NFPA code references</td>
+        <td>NEC text is copyrighted. Teach to it, do not reproduce it</td>
+      </tr>
+      <tr>
+        <td>Medical coding (CPC) exam prep</td>
+        <td>Career changers, coders</td>
+        <td class="num score s-b">76</td>
+        <td>Published exam outline; code sets are public</td>
+        <td>Certification body owns the exam. Prep only. High value, high depth</td>
+      </tr>
+      <tr>
+        <td>NCLEX-RN and PN prep</td>
+        <td>Nursing graduates</td>
+        <td class="num score s-b">76</td>
+        <td>Published test plan</td>
+        <td>None for prep. Heavily crowded, hard to differentiate</td>
+      </tr>
+      <tr>
+        <td>Life and health insurance exam prep</td>
+        <td>Career changers</td>
+        <td class="num score s-b">75</td>
+        <td>State exam content outlines</td>
+        <td>Pre-licensing hours are state-regulated. Sell exam prep, not credit</td>
+      </tr>
+      <tr>
+        <td>PMP and CAPM exam prep</td>
+        <td>Project managers</td>
+        <td class="num score s-b">75</td>
+        <td>Published exam content outline</td>
+        <td>Guide text is copyrighted. PDU claims need provider status</td>
+      </tr>
+      <tr>
+        <td>Real estate salesperson exam prep</td>
+        <td>Career changers</td>
+        <td class="num score s-b">73</td>
+        <td>State exam outlines and candidate handbooks</td>
+        <td>State pre-licensing course hours are approved-provider work. Do not imply credit</td>
+      </tr>
+      <tr>
+        <td>PTCB pharmacy technician prep</td>
+        <td>Pharmacy assistants</td>
+        <td class="num score s-b">72</td>
+        <td>Published exam blueprint</td>
+        <td>State registration rules vary</td>
+      </tr>
+      <tr>
+        <td>HVAC EPA 608 prep</td>
+        <td>HVAC students</td>
+        <td class="num score s-b">71</td>
+        <td>EPA public study guide</td>
+        <td>The certificate requires an EPA-approved proctor. Prep only</td>
+      </tr>
+      <tr>
+        <td>Plumbing journeyman prep</td>
+        <td>Trades</td>
+        <td class="num score s-b">71</td>
+        <td>State exam outlines, public code summaries</td>
+        <td>Licensing is state-controlled. Prep only</td>
+      </tr>
+      <tr>
+        <td>Welding certification prep (AWS)</td>
+        <td>Trades students</td>
+        <td class="num score s-b">71</td>
+        <td>Public standards descriptions</td>
+        <td>Standard text is copyrighted; practical test is in person</td>
+      </tr>
+      <tr>
+        <td>Dental assisting (DANB) prep</td>
+        <td>Dental assistants</td>
+        <td class="num score s-b">69</td>
+        <td>Published exam outline</td>
+        <td>State rules vary; radiology has separate requirements</td>
+      </tr>
+      <tr>
+        <td>Security guard licence prep</td>
+        <td>Entry-level security</td>
+        <td class="num score s-b">69</td>
+        <td>State licensing pages</td>
+        <td>Many states require approved training. Check before selling</td>
+      </tr>
+      <tr>
+        <td>Home inspection exam prep</td>
+        <td>Career changers</td>
+        <td class="num score s-b">68</td>
+        <td>State standards of practice</td>
+        <td>Licensing is state-controlled and often requires supervised inspections</td>
+      </tr>
+      <tr>
+        <td>Veterinary assistant basics</td>
+        <td>Clinic staff</td>
+        <td class="num score s-b">66</td>
+        <td>Public veterinary technician guidance</td>
+        <td>None for a knowledge course; no credential</td>
+      </tr>
+      <tr>
+        <td>Phlebotomy and EKG knowledge prep</td>
+        <td>Medical assistants</td>
+        <td class="num score s-b">65</td>
+        <td>Public health authority guides</td>
+        <td>Skills must be taught in person; knowledge only online</td>
+      </tr>
+      <tr>
+        <td>Food safety manager prep</td>
+        <td>Restaurant staff</td>
+        <td class="num score s-b">63</td>
+        <td>FDA Food Code (public)</td>
+        <td>The certificate needs an accredited programme. Prep only</td>
+      </tr>
+      <tr class="out">
+        <td>Pesticide applicator exam prep</td>
+        <td>Agriculture</td>
+        <td class="num score s-c">61</td>
+        <td>State manuals</td>
+        <td>Small market, state by state</td>
+      </tr>
+      <tr class="out">
+        <td>EMT and paramedic knowledge prep</td>
+        <td>EMS students</td>
+        <td class="num score s-c">60</td>
+        <td>National EMS education standards</td>
+        <td>State-approved programmes required for certification</td>
+      </tr>
+    </table>
+
+    <h3>3.2 Job skills and professional development</h3>
+    <table class="compact">
+      <tr>
+        <th style="width:32%">Curriculum</th>
+        <th style="width:20%">Buyer</th>
+        <th class="num" style="width:8%">Score</th>
+        <th>Why</th>
+      </tr>
+      <tr><td><strong>AI literacy and safe AI use at work</strong></td><td>Employers, HR</td><td class="num score s-a">87</td><td>Urgent demand, no regulation, B2B seats, annual refresh</td></tr>
+      <tr><td><strong>Cybersecurity awareness for staff</strong></td><td>Employers</td><td class="num score s-a">81</td><td>Recurring compliance need, public NIST material</td></tr>
+      <tr><td>Freight dispatch and trucking business</td><td>Owner-operators</td><td class="num score s-a">80</td><td>High ticket, practical, public FMCSA rules</td></tr>
+      <tr><td>Excel from zero to pivot tables</td><td>Office workers</td><td class="num score s-b">79</td><td>Evergreen, low price, crowded</td></tr>
+      <tr><td>SQL for analysts</td><td>Career changers</td><td class="num score s-b">78</td><td>Strong demand, easy to test with exercises</td></tr>
+      <tr><td>Medical terminology</td><td>Medical office</td><td class="num score s-b">77</td><td>Cheap to produce, sells as a bundle add-on</td></tr>
+      <tr><td>Bookkeeping with QuickBooks</td><td>Small business</td><td class="num score s-b">77</td><td>Clear buyer, refreshes needed</td></tr>
+      <tr><td>Business writing and email</td><td>Employers</td><td class="num score s-b">76</td><td>Fast to build, low price, good B2B bundle item</td></tr>
+      <tr><td>Spanish for healthcare workers</td><td>Clinics</td><td class="num score s-b">76</td><td>High value in US clinics, needs audio and review</td></tr>
+      <tr><td>Digital marketing fundamentals</td><td>Small business</td><td class="num score s-b">74</td><td>Crowded, platforms change, but broad appeal</td></tr>
+      <tr><td>TESOL certificate</td><td>Aspiring teachers</td><td class="num score s-b">70</td><td>Unregulated, broad, must be clear it is not a state teaching licence</td></tr>
+      <tr><td>Customer service and call centre</td><td>Employers</td><td class="num score s-b">70</td><td>B2B seats, low price, easy to localise</td></tr>
+    </table>
+
+    <h3>3.3 Academic, homeschool and test prep</h3>
+    <table class="compact">
+      <tr>
+        <th style="width:32%">Curriculum</th>
+        <th style="width:20%">Buyer</th>
+        <th class="num" style="width:8%">Score</th>
+        <th>Why</th>
+      </tr>
+      <tr><td><strong>SAT math</strong></td><td>High school students, parents</td><td class="num score s-b">79</td><td>Huge demand, official test specifications, crowded</td></tr>
+      <tr><td>GED and HiSET prep</td><td>Adult learners</td><td class="num score s-b">78</td><td>Public test specifications, strong social value</td></tr>
+      <tr><td>ACT prep</td><td>High school students</td><td class="num score s-b">78</td><td>Same as SAT, slightly less crowded</td></tr>
+      <tr><td>College application essay writing</td><td>Families</td><td class="num score s-b">76</td><td>High willingness to pay, seasonal peaks</td></tr>
+      <tr><td>Homeschool Algebra 1, full year</td><td>Homeschool parents</td><td class="num score s-b">75</td><td>Recurring buyers, needs a full year of depth</td></tr>
+      <tr><td>Homeschool middle school science</td><td>Homeschool parents</td><td class="num score s-b">72</td><td>Labs are the hard part; theory is easy</td></tr>
+      <tr><td>Reading intervention for older learners</td><td>Parents, schools</td><td class="num score s-b">72</td><td>Real need, hard to do well without specialist review</td></tr>
+      <tr><td>Financial literacy for teens</td><td>Parents, schools</td><td class="num score s-b">71</td><td>No standard, easy to build, low price</td></tr>
+      <tr><td>Study skills for teens</td><td>Parents</td><td class="num score s-b">69</td><td>Low price, strong bundle item, weak as a standalone</td></tr>
+      <tr class="out"><td>AP course support</td><td>High school</td><td class="num score s-c">66</td><td>College Board trademark rules; keep to "support", never "official"</td></tr>
+    </table>
+
+    <h3>3.4 Trades and life skills</h3>
+    <table class="compact">
+      <tr>
+        <th style="width:32%">Curriculum</th>
+        <th style="width:20%">Buyer</th>
+        <th class="num" style="width:8%">Score</th>
+        <th>Why</th>
+      </tr>
+      <tr><td>Personal training exam prep (NASM, ACE)</td><td>Fitness career entrants</td><td class="num score s-b">72</td><td>Clear blueprint, prep only, competitive</td></tr>
+      <tr><td>Home electrical basics for homeowners</td><td>Homeowners</td><td class="num score s-b">69</td><td>Must be explicit: not a licence, not permitted work</td></tr>
+      <tr><td>Automotive maintenance basics</td><td>Young drivers</td><td class="num score s-b">68</td><td>Good video fit, low price</td></tr>
+      <tr><td>Woodworking fundamentals</td><td>Hobbyists</td><td class="num score s-c">64</td><td>Low price, needs visuals</td></tr>
+      <tr><td>Cooking fundamentals</td><td>Beginners</td><td class="num score s-c">63</td><td>Video-first, not a text course</td></tr>
+      <tr class="out"><td>Nutrition coaching</td><td>Wellness</td><td class="num score s-c">61</td><td>Medical claim risk. Avoid unless a dietitian reviews it</td></tr>
+      <tr class="out"><td>Caregiver and home health aide</td><td>Care agencies</td><td class="num score s-c">60</td><td>State training rules and supervised hours</td></tr>
+    </table>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2>4. The top ten in detail</h2>
+    <p>
+      These are the ten with the best combination of source quality, demand and freedom to sell.
+      Module counts are estimates for a first sellable version.
+    </p>
+    <table class="compact">
+      <tr>
+        <th style="width:16%">Curriculum</th>
+        <th style="width:16%">What the learner can do at the end</th>
+        <th style="width:16%">Source pack for the PDF</th>
+        <th style="width:14%">Subject listing</th>
+        <th style="width:10%">Licence</th>
+        <th style="width:9%">Effort</th>
+        <th>Price band</th>
+      </tr>
+      <tr class="win">
+        <td><strong>US citizenship test prep</strong></td>
+        <td>Answer the civics questions, read and write the test sentences, handle the interview</td>
+        <td>USCIS civics questions and study booklet, official reading and writing vocabulary</td>
+        <td>6 sections, 24 lessons: civics groups, reading, writing, interview practice, mock test, final review</td>
+        <td><span class="badge b-low">Public domain</span></td>
+        <td>Low</td>
+        <td>$29 to $59 consumer, or per-seat to agencies</td>
+      </tr>
+      <tr class="win">
+        <td><strong>CDL permit knowledge</strong></td>
+        <td>Pass the general knowledge, air brake and combination permit tests</td>
+        <td>State CDL manual plus federal driver regulations</td>
+        <td>8 sections, 40 lessons, plus a state addendum pack per state</td>
+        <td><span class="badge b-med">Check per state</span></td>
+        <td>Medium</td>
+        <td>$79 to $149 consumer, $500 to $2,000 per school licence</td>
+      </tr>
+      <tr class="win">
+        <td><strong>Notary and loan signing agent</strong></td>
+        <td>Understand the notary role, complete a signing appointment, prepare for the state exam</td>
+        <td>State notary handbook, state exam outline, public signing practice guides</td>
+        <td>5 sections, 20 lessons, a document set, a mock appointment</td>
+        <td><span class="badge b-low">Public</span></td>
+        <td>Low</td>
+        <td>$149 to $399, strong upsell to a signing business kit</td>
+      </tr>
+      <tr class="win">
+        <td><strong>ASVAB prep</strong></td>
+        <td>Score above the entry threshold in the four core subtests</td>
+        <td>Official ASVAB test description and public sample questions</td>
+        <td>6 sections, 30 lessons: arithmetic, word knowledge, paragraph comprehension, math knowledge, science, test strategy</td>
+        <td><span class="badge b-med">Public, trademark care</span></td>
+        <td>Medium</td>
+        <td>$39 to $79, school and recruiter bundles</td>
+      </tr>
+      <tr class="win">
+        <td><strong>CompTIA A+ prep</strong></td>
+        <td>Cover both core exam domains and pass practice tests</td>
+        <td>Published exam objectives plus public vendor documentation</td>
+        <td>8 sections, 48 lessons, 2 practice exams</td>
+        <td><span class="badge b-med">Objectives public</span></td>
+        <td>High</td>
+        <td>$99 to $199, employer seat licences</td>
+      </tr>
+      <tr class="win">
+        <td><strong>TEAS and HESI prep</strong></td>
+        <td>Score competitively on reading, maths, science and English</td>
+        <td>Published test blueprints and public study guides</td>
+        <td>5 sections, 35 lessons, 3 timed practice tests</td>
+        <td><span class="badge b-med">Blueprint public</span></td>
+        <td>Medium</td>
+        <td>$79 to $179, high willingness to pay before admission deadlines</td>
+      </tr>
+      <tr class="win">
+        <td><strong>SIE exam prep</strong></td>
+        <td>Pass the Securities Industry Essentials exam</td>
+        <td>FINRA content outline and public investor education material</td>
+        <td>4 sections, 22 lessons, 1 full practice exam</td>
+        <td><span class="badge b-med">Outline public</span></td>
+        <td>Low</td>
+        <td>$99 to $199, low competition</td>
+      </tr>
+      <tr>
+        <td><strong>AI literacy for work</strong></td>
+        <td>Use AI safely, verify output, write a usable prompt, know what not to paste</td>
+        <td>Your own framework plus public vendor documentation and NIST AI guidance</td>
+        <td>5 sections, 20 lessons, policy templates, scenario exercises</td>
+        <td><span class="badge b-low">Your own</span></td>
+        <td>Low</td>
+        <td>$49 to $149 per seat, annual refresh</td>
+      </tr>
+      <tr>
+        <td><strong>Cosmetology and barber theory</strong></td>
+        <td>Pass the state theory exam and be ready for the practical</td>
+        <td>State board candidate handbook and public safety and sanitation guides</td>
+        <td>7 sections, 35 lessons, 500-question bank</td>
+        <td><span class="badge b-med">Check per state</span></td>
+        <td>Medium</td>
+        <td>$59 to $129, beauty school bundles</td>
+      </tr>
+      <tr>
+        <td><strong>Freight dispatch and trucking business</strong></td>
+        <td>Set up authority, price a load, dispatch legally, keep records</td>
+        <td>FMCSA public rules, forms and guidance</td>
+        <td>6 sections, 24 lessons, templates and calculators</td>
+        <td><span class="badge b-low">Public</span></td>
+        <td>Medium</td>
+        <td>$199 to $499, strong perceived value</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h2>5. What to build first, and why those three</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h4>Course 1: US citizenship</h4>
+        <p><strong>Why first:</strong> the source is federal, public domain, finite and stable. The
+        whole curriculum fits in about 24 lessons. The pass mark is public. Buyers are motivated and
+        easy to reach through community organisations.</p>
+        <p><strong>Differentiator:</strong> a second language version, interview practice scripts, and
+        a mock test that mirrors the real one.</p>
+      </div>
+      <div class="card">
+        <h4>Course 2: CDL permit</h4>
+        <p><strong>Why second:</strong> a public manual per state, a clear permit exam, and a B2B
+        buyer who buys in seats. The state addendum model gives you 50 upsells from one base
+        course.</p>
+        <p><strong>Differentiator:</strong> a state-specific question bank generated from that
+        state's manual, not a generic national one.</p>
+      </div>
+      <div class="card">
+        <h4>Course 3: Notary and signing agent</h4>
+        <p><strong>Why third:</strong> low competition, high ticket, small official source, and a
+        natural upsell into a signing business kit.</p>
+        <p><strong>Differentiator:</strong> a full mock appointment with documents, plus a pricing and
+        marketing module.</p>
+      </div>
+      <div class="card">
+        <h4>Why not CompTIA first</h4>
+        <p>It is bigger money but far more content, faster-changing objectives, and crowded
+        competition. It is the right course 6 to 10, not course 1.</p>
+      </div>
+    </div>
+
+    <h3>5.1 Ten-week sequence that matches the role plan</h3>
+    <table class="compact">
+      <tr><th style="width:12%">Weeks</th><th style="width:30%">Course</th><th>Deliverable</th></tr>
+      <tr><td>0 to 1</td><td>Platform and source templates</td><td>Lesson-size PDF rule, source page map, coverage matrix template, Curriculum Builder SSOT filled</td></tr>
+      <tr><td>1 to 3</td><td>US citizenship</td><td>Full source pack, 24 lessons generated, coverage 100 percent, mock test, learner walk-through</td></tr>
+      <tr><td>4 to 6</td><td>CDL permit, base course</td><td>Federal plus one state manual, 40 lessons, question bank, one state addendum</td></tr>
+      <tr><td>7 to 8</td><td>Notary and signing agent</td><td>Source pack, 20 lessons, mock appointment, exam practice</td></tr>
+      <tr><td>9</td><td>Productisation</td><td>Syllabus PDF, sample lesson, 10-question sample test, landing copy, pricing page</td></tr>
+      <tr><td>10</td><td>Handover and expert review</td><td>Review packs, open questions, correction list, second-state addendum plan</td></tr>
+    </table>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h2>6. The production pipeline, step by step</h2>
+    <p>
+      This is the workflow you described, corrected in two places that matter: the PDF must be an
+      official extract, and it must be attached per lesson, not per course.
+    </p>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-id">1</span>
+        <span class="step-name">Subject listing</span>
+        <span class="step-time">1 to 2 days</span>
+      </div>
+      <div class="step-body">
+        <p>One row per lesson with: code, title as an outcome, the source pages that support it, and
+        one acceptance line. This table is the course skeleton and the coverage matrix at the same
+        time. Nothing is uploaded before this exists, because this is what makes the output checkable.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-id">2</span>
+        <span class="step-name">Source pack, one PDF per lesson</span>
+        <span class="step-time">3 to 5 days per course</span>
+      </div>
+      <div class="step-body">
+        <p>Cut the official handbook into lesson-sized PDFs, typically 8 to 20 pages each, named
+        <code>03-02-traffic-signals.pdf</code>. Add a first page with: source document, version or
+        date, page range, and the lesson objective. AI may format and re-level this, but every fact
+        stays traceable to a page.</p>
+        <p><strong>Why per lesson:</strong> the tool reads every PDF attached to a lesson and combines
+        the text before generating. Attaching one 200-page manual to all lessons produces repetitive,
+        unfocused content and wastes the context budget. A lesson-sized extract is the single biggest
+        quality lever in the whole pipeline.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-id">3</span>
+        <span class="step-name">Upload and attach</span>
+        <span class="step-time">1 day</span>
+      </div>
+      <div class="step-body">
+        <p>Create the curriculum, sections and lessons in the tool, then attach the matching PDF to
+        each lesson. Work in the local harness and hand the owner the pack; the owner imports to the
+        live CMS. This keeps the no-database rule intact.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-id">4</span>
+        <span class="step-name">Generate</span>
+        <span class="step-time">1 day for 20 to 40 lessons</span>
+      </div>
+      <div class="step-body">
+        <p>Run Generate All per section. The tool produces study content, slides, flashcards and quiz
+        per lesson, and skips fields that are already filled, so a re-run is safe. Generation is the
+        cheapest step; the value is in steps 1, 2 and 5.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-id">5</span>
+        <span class="step-name">Quality pass</span>
+        <span class="step-time">2 to 3 days per course</span>
+      </div>
+      <div class="step-body">
+        <p>Four checks only: coverage against the matrix, every quiz answer against the source page,
+        no duplicate or contradictory statements between lessons, and a full learner walk-through. A
+        sample of five lessons is read line by line by a human.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-id">6</span>
+        <span class="step-name">Productise</span>
+        <span class="step-time">1 to 2 days</span>
+      </div>
+      <div class="step-body">
+        <p>Syllabus PDF, one free sample lesson, a ten-question sample test, a short outcome
+        statement, a refund policy and an accessibility statement. Without these, a US buyer has no
+        reason to trust a new seller.</p>
+      </div>
+    </div>
+
+    <div class="callout-warn">
+      <p><strong>Tooling caveat.</strong> The Curriculum Builder SSOT in the repository still carries
+      template placeholder text, so it cannot guide anyone yet. Confirm the PDF attachment and
+      generation flow in the harness in week 1 before planning 40 lessons around it.</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h2>7. Selling in the US: packaging and price bands</h2>
+    <table class="compact">
+      <tr>
+        <th style="width:22%">Model</th>
+        <th style="width:26%">How it works</th>
+        <th style="width:18%">Best for</th>
+        <th>Watch out</th>
+      </tr>
+      <tr><td>Single self-paced course</td><td>One-time price, lifetime access</td><td>Citizenship, notary, ASVAB</td><td>Refund expectations; keep the sample honest</td></tr>
+      <tr><td>Course plus question bank</td><td>Higher price, practice tests as the differentiator</td><td>CDL, CompTIA, TEAS</td><td>The bank must be large enough to feel real</td></tr>
+      <tr><td>State addendum</td><td>Base course plus a cheap state module</td><td>CDL, cosmetology, insurance</td><td>Each addendum needs its own coverage check</td></tr>
+      <tr><td>B2B seat licence</td><td>School or employer buys seats</td><td>CDL schools, employers, agencies</td><td>Invoicing, purchase orders, per-seat tracking</td></tr>
+      <tr><td>Cohort or tutor-supported</td><td>Course plus live sessions</td><td>Citizenship, TEAS</td><td>Your time becomes the product; hard to scale</td></tr>
+      <tr><td>Bundle</td><td>Two courses at a discount</td><td>Medical terminology plus coding</td><td>Do not dilute a premium course with a weak one</td></tr>
+    </table>
+
+    <h3>7.1 What US buyers expect before paying</h3>
+    <ul>
+      <li>A clear outcome statement and a visible sample lesson.</li>
+      <li>A refund policy in plain language, and a working contact route.</li>
+      <li>Accessibility: readable contrast, keyboard use, captions or transcripts if there is audio.</li>
+      <li>No false claims. Never use official, approved, accredited or certified unless you hold it.</li>
+      <li>No trademarks of exam bodies in the product name or logo.</li>
+      <li>State sales tax handling for digital goods, which varies by state. Get advice before scaling.</li>
+    </ul>
+  </section>
+
+  <!-- 8 -->
+  <section>
+    <h2>8. What not to build</h2>
+    <p>These look attractive and are the fastest way to a legal problem. All of them require an approval, an accreditation or a supervised component you do not have.</p>
+    <table class="compact">
+      <tr><th style="width:34%">Category</th><th>Why to avoid it</th></tr>
+      <tr><td>State pre-licensing courses that earn credit hours</td><td>Real estate, insurance and mortgage pre-licensing need an approved provider in almost every state.</td></tr>
+      <tr><td>OSHA 10 or 30 cards</td><td>Delivery is restricted to OSHA-authorized trainers.</td></tr>
+      <tr><td>CPR, first aid and BLS certification</td><td>Certification requires an authorized instructor and in-person skills testing.</td></tr>
+      <tr><td>Food handler certificates</td><td>Most states accept only accredited programmes for the certificate itself.</td></tr>
+      <tr><td>CDL behind-the-wheel or ELDT</td><td>Entry-level driver training must come from an FMCSA-registered provider.</td></tr>
+      <tr><td>Driver education for minors</td><td>State approval is required in most states.</td></tr>
+      <tr><td>CNA, EMT, phlebotomy, dental radiology certification</td><td>State-approved programmes and supervised clinical hours.</td></tr>
+      <tr><td>Any "become a certified X" promise</td><td>You would be selling a credential you cannot issue.</td></tr>
+      <tr><td>Medical, legal or tax advice</td><td>Regulated professions; content becomes advice the moment it is specific.</td></tr>
+      <tr><td>Nutrition or therapy claims</td><td>Health claim risk; needs a licensed reviewer and careful wording.</td></tr>
+    </table>
+    <div class="callout-ok">
+      <p><strong>The safe formula:</strong> teach to a public exam or a public standard, sell the
+      preparation, never the credential, and never imply affiliation.</p>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section>
+    <h2>9. Risks and controls</h2>
+    <table class="compact">
+      <tr><th style="width:26%">Risk</th><th style="width:10%">Impact</th><th style="width:12%">Likelihood</th><th>Control</th></tr>
+      <tr>
+        <td>AI-written source PDF teaches something false</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Official sources only, page reference per lesson, sample read line by line, expert sign-off.</td>
+      </tr>
+      <tr>
+        <td>Whole-book PDF attached to every lesson</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td>Mandatory lesson-sized extracts, 8 to 20 pages, named by lesson code.</td>
+      </tr>
+      <tr>
+        <td>Selling a course that needs a state approval</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Exam-prep positioning only, approval checklist per course before listing, legal review.</td>
+      </tr>
+      <tr>
+        <td>Reproducing copyrighted material</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Teach to objectives, never paste proprietary text; no logos; a licence column per source.</td>
+      </tr>
+      <tr>
+        <td>Coverage claimed but topics skipped</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Coverage matrix with source page per row, random sample audit every week.</td>
+      </tr>
+      <tr>
+        <td>Trademark trouble in the product name</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Generic names, "prep" wording, no exam-body logos, no official claims.</td>
+      </tr>
+      <tr>
+        <td>Content ages and quietly becomes wrong</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td>Store the source version date in the pack; a yearly review task per course.</td>
+      </tr>
+      <tr>
+        <td>Buyer refunds because the sample overpromised</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>The free sample must be a real lesson from the course, not the best one edited separately.</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 10 -->
+  <section>
+    <h2>10. Decision sheet</h2>
+    <div class="sheet">
+      <div class="sheet-row"><input type="checkbox" id="c1"><label for="c1"><strong>Start with the three recommended:</strong> citizenship, CDL permit, notary and signing agent.</label></div>
+      <div class="sheet-row"><input type="checkbox" id="c2"><label for="c2"><strong>Start with a different set</strong> from section 3. Note which and why: <span class="ph">[courses]</span>.</label></div>
+      <div class="sheet-row"><input type="checkbox" id="c3"><label for="c3"><strong>Confirm the lesson-sized PDF rule</strong> before any generation, and add it to the SSOT.</label></div>
+      <div class="sheet-row"><input type="checkbox" id="c4"><label for="c4"><strong>Name the expert reviewer</strong> per course. Without one, citizenship and CDL still ship; regulated topics do not.</label></div>
+      <div class="sheet-row"><input type="checkbox" id="c5"><label for="c5"><strong>Decide the first sales channel:</strong> own site, marketplace, or B2B direct. This changes the sample and the refund policy.</label></div>
+    </div>
+
+    <h3>10.1 Inputs still needed</h3>
+    <table class="compact">
+      <tr><th style="width:6%">#</th><th style="width:34%">Input</th><th>Why it blocks</th></tr>
+      <tr><td class="num">1</td><td>Second language, if any</td><td>Citizenship prep is much stronger in Spanish, and possibly in the languages your community already serves.</td></tr>
+      <tr><td class="num">2</td><td>State list for CDL and cosmetology</td><td>One base course, then one addendum per state you choose to sell.</td></tr>
+      <tr><td class="num">3</td><td>Expert reviewer and review time</td><td>Two to four hours per course is enough if the coverage matrix is good.</td></tr>
+      <tr><td class="num">4</td><td>Confirm Curriculum Builder PDF and generation flow</td><td>The whole plan depends on per-lesson attachments working in the harness.</td></tr>
+      <tr><td class="num">5</td><td>Price test and refund policy</td><td>Needed before the first listing, not after.</td></tr>
+    </table>
+
+    <div class="approval-note">
+      <p>
+        Scores are judgement, not measured market data. Verify demand and licensing rules for the
+        state you plan to sell into before publishing. Nothing was committed or pushed.
+      </p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

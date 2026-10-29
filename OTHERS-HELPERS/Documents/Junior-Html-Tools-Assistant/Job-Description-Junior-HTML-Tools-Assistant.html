@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Junior AI Tool Producer - Job Card, Job Description and Position Manager</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --ok: #1d7a36;
+    --warn: #a86400;
+    --stop: #a11a1a;
+    --ok-soft: #eaf6ed;
+    --warn-soft: #fdf4e3;
+    --stop-soft: #fbeceb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 52px 60px 60px;
+  }
+
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title { font-size: 28px; font-weight: 700; letter-spacing: 0.2px; }
+  .doc-subtitle { font-size: 16px; color: var(--accent); font-weight: 600; margin-top: 8px; }
+  .doc-eng { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  .doc-meta { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+  .doc-meta span { margin: 0 8px; }
+  .doc-note { text-align: center; font-size: 12.5px; color: var(--muted); margin: -8px 0 20px; }
+
+  /* ---------- Job card ---------- */
+  .jobcard {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 26px;
+  }
+  .jobcard-head {
+    background: var(--accent);
+    color: #fff;
+    padding: 12px 20px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .jobcard-body { padding: 18px 20px 16px; }
+  .jobcard-sentence {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  .jobcard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 26px;
+    margin-bottom: 14px;
+  }
+  .jobcard-block h4 {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 5px;
+  }
+  .jobcard-block ul { margin: 0 0 0 16px; }
+  .jobcard-block li { font-size: 12.5px; margin-bottom: 3px; }
+  .jobcard-foot {
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+    font-size: 12.5px;
+    color: #2b3a4d;
+  }
+  .jobcard-foot strong { color: var(--accent); }
+
+  /* ---------- Sections ---------- */
+  section { margin-bottom: 28px; }
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.3px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 12px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3 { font-size: 13.5px; margin: 16px 0 6px; }
+  h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: 12px 0 5px; }
+  p { font-size: 13.5px; margin-bottom: 9px; }
+  ul, ol { margin: 0 0 9px 22px; }
+  li { font-size: 13.5px; margin-bottom: 5px; }
+  a { color: var(--accent); }
+  code {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 12px;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+
+  .lead { font-size: 14px; color: #2b3a4d; }
+
+  .highlight-box {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 11px 15px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 11px;
+  }
+  .highlight-box p:last-child { margin-bottom: 0; }
+
+  .callout-warn {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    padding: 11px 15px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 11px;
+  }
+  .callout-warn p:last-child { margin-bottom: 0; }
+
+  .callout-stop {
+    background: var(--stop-soft);
+    border-left: 4px solid var(--stop);
+    padding: 11px 15px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 11px;
+  }
+  .callout-stop p:last-child { margin-bottom: 0; }
+
+  .callout-ok {
+    background: var(--ok-soft);
+    border-left: 4px solid var(--ok);
+    padding: 11px 15px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 11px;
+  }
+  .callout-ok p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 9px 0 15px; font-size: 12.5px; }
+  th, td { padding: 7px 9px; border: 1px solid var(--line); vertical-align: top; text-align: left; }
+  th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+  }
+  td.num { text-align: center; white-space: nowrap; }
+  tr.total td { background: #f8fafc; font-weight: 600; }
+  table.compact td, table.compact th { padding: 6px 8px; font-size: 12px; }
+
+  table.meta-table td:first-child {
+    width: 200px;
+    background: #f5f8fb;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .ph {
+    color: var(--muted);
+    font-style: italic;
+    background: #f8fafc;
+    border-bottom: 1px dashed #b6c2cf;
+    padding: 0 3px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .b-low { background: var(--ok-soft); color: var(--ok); border: 1px solid #bfe0c8; }
+  .b-med { background: var(--warn-soft); color: var(--warn); border: 1px solid #ecd6a6; }
+  .b-high { background: var(--stop-soft); color: var(--stop); border: 1px solid #efc2bf; }
+  .b-neutral { background: #eef2f6; color: #475569; border: 1px solid #d8dee6; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 13px; }
+  .card { border: 1px solid var(--line); border-radius: 4px; padding: 11px 13px; background: #fbfcfd; }
+  .card h4 { margin-top: 0; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+
+  .duty {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .duty-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f4f7fa;
+    border-bottom: 1px solid var(--line);
+    padding: 8px 13px;
+  }
+  .duty-id {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent);
+    background: #e3edf5;
+    border-radius: 3px;
+    padding: 1px 6px;
+  }
+  .duty-name { font-size: 13.5px; font-weight: 700; }
+  .duty-share { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+  .duty-body { padding: 10px 13px; }
+  .duty-body table { margin: 0; }
+  .duty-body td:first-child { width: 130px; background: #f8fafc; font-weight: 600; color: #334155; }
+
+  .tracker-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .tracker-bar {
+    flex: 1;
+    min-width: 180px;
+    height: 10px;
+    background: #e6ecf2;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .tracker-bar div { height: 100%; width: 0; background: var(--accent); transition: width 0.15s ease; }
+  .tracker-label { font-size: 12px; color: var(--muted); }
+  .tracker-reset {
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  .week-group { margin-bottom: 11px; }
+  .week-head {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+    margin-bottom: 5px;
+  }
+  .task-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; padding: 2px 0; }
+  .task-row input { margin-top: 3px; }
+  .task-row.is-done span { text-decoration: line-through; color: var(--muted); }
+
+  .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 26px; }
+  .sig-line {
+    border-top: 1px solid var(--ink);
+    margin-top: 50px;
+    padding-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .sig-role { font-weight: 600; color: var(--ink); display: block; }
+
+  .approval-note {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px dashed var(--line);
+    padding-top: 13px;
+  }
+
+  .ad-copy {
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    background: #fbfcfd;
+    padding: 15px 17px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+  }
+  .ad-copy p:last-child { margin-bottom: 0; }
+
+  .example {
+    border: 1px dashed #b6c2cf;
+    background: #fbfcfd;
+    border-radius: 4px;
+    padding: 10px 13px;
+    font-size: 12.5px;
+    margin-bottom: 10px;
+  }
+  .example strong { color: var(--accent); }
+  .example code { font-size: 11.5px; }
+
+  @media (max-width: 820px) {
+    .page { padding: 26px 20px 32px; margin: 12px; }
+    .jobcard-grid { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .sig-grid { grid-template-columns: 1fr; gap: 20px; }
+    .doc-title { font-size: 22px; }
+    table { font-size: 12px; }
+    th, td { padding: 6px 7px; }
+    .duty-body td:first-child { width: 105px; }
+  }
+
+  @page { margin: 16mm 14mm; }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; border: none; box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    .tracker-reset { display: none; }
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, h4, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .jobcard, .duty, .card, .highlight-box, .callout-warn, .callout-stop, .callout-ok, .ad-copy, .example {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .doc-header { border-bottom-color: #000; break-after: avoid; page-break-after: avoid; }
+    h2 { color: #000; }
+    .jobcard-head { background: #1a2433; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">UniconHub</div>
+    <div class="doc-title">Junior AI Tool Producer</div>
+    <div class="doc-subtitle">Job card, job description and position manager</div>
+    <div class="doc-eng">Revision 3. Curriculum production, plus one delivery loop for every artifact</div>
+    <div class="doc-meta">
+      Document: <span class="ph">JD-2026-06</span> |
+      Prepared: 2026-10-28 |
+      Version: <span class="ph">3.0</span>
+    </div>
+  </header>
+
+  <p class="doc-note">
+    To decide between the role models first, open the short decision summary:
+    <a href="Decision-Summary-Junior-Position.html">Decision-Summary-Junior-Position.html</a>.
+  </p>
+
+  <!-- ================= JOB CARD ================= -->
+  <div class="jobcard" id="jobcard">
+    <div class="jobcard-head">The job in one page</div>
+    <div class="jobcard-body">
+      <p class="jobcard-sentence">
+        One person who turns approved ideas into finished artifacts with AI: complete curriculum
+        packs built in our own Curriculum Builder, and small working HTML tools. She is also the
+        first independent, hostile user of everything we ship.
+      </p>
+
+      <div class="jobcard-grid">
+        <div class="jobcard-block">
+          <h4>What she does all day</h4>
+          <ul>
+            <li><strong>Produce curricula, about 45 percent.</strong> Research the official source, structure the course, write every lesson, build the coverage matrix, walk the course as a learner, fill the gaps.</li>
+            <li><strong>Build tools, about 25 percent.</strong> Write the spec, generate the tool with AI inside our template, test it until it passes the spec.</li>
+            <li><strong>Break, about 20 percent.</strong> Use tools and courses like a confused first-time user, and log real defects with reproduction steps.</li>
+            <li><strong>Check byproducts, about 10 percent.</strong> Demo data, screenshots, help text, catalog rows. Generated by AI, verified by her in minutes.</li>
+          </ul>
+        </div>
+        <div class="jobcard-block">
+          <h4>What she never does</h4>
+          <ul>
+            <li>Existing tool logic or tool rules</li>
+            <li>Architecture, pricing, product claims</li>
+            <li>Git, database, environment files</li>
+            <li>CMS upload or publishing</li>
+          </ul>
+        </div>
+        <div class="jobcard-block">
+          <h4>What stays with you</h4>
+          <ul>
+            <li>Idea approval and spec approval</li>
+            <li>Line-by-line review of her code</li>
+            <li>Final manual acceptance</li>
+            <li>Upload, publish, release</li>
+          </ul>
+        </div>
+        <div class="jobcard-block">
+          <h4>What you get in 10 weeks</h4>
+          <ul>
+            <li>2 complete curriculum packs and 1 approved outline</li>
+            <li>3 to 5 small tools accepted after your review</li>
+            <li>1 defect report per week, from week 4</li>
+            <li>Every touched tool left with current screenshots, demo data and help text</li>
+            <li>Supervision: 6 to 8 h/week, then 3 h/week, then 2 h/week</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="jobcard-foot">
+        <strong>The test that keeps this honest:</strong> if an AI can finish a task in one command,
+        it is a byproduct, not an assignment. The junior is paid for judgement, iteration and
+        accountability, not for pressing a button that already works.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       1
+  ============================================================ -->
+  <section id="s1">
+    <h2>1. What changed from the first draft</h2>
+    <p class="lead">
+      Revision 1 built the role around work that AI already does. You were right to reject it.
+      This revision keeps those tasks only as byproducts of a real deliverable.
+    </p>
+    <table class="compact">
+      <tr>
+        <th style="width:34%">Revision 1 said</th>
+        <th style="width:10%">Reality</th>
+        <th>Revision 2 does instead</th>
+      </tr>
+      <tr>
+        <td>Run screenshot capture for 12 tools per week</td>
+        <td>One script</td>
+        <td>She decides whether the screenshots prove the feature, and fixes the state that produces them. Minutes per tool, attached to a tool she built or tested.</td>
+      </tr>
+      <tr>
+        <td>Write demo data sets</td>
+        <td>One AI prompt</td>
+        <td>She checks whether the data would be recognised as real by the person who uses that tool, and corrects what AI got generically wrong.</td>
+      </tr>
+      <tr>
+        <td>Update 60 catalog rows</td>
+        <td>Trivial</td>
+        <td>A one-minute byproduct when a tool is accepted. Never a standalone assignment.</td>
+      </tr>
+      <tr>
+        <td>Fill document templates</td>
+        <td>AI plus script</td>
+        <td>A byproduct of the tool she just built. She checks that no sentence claims something the tool does not do.</td>
+      </tr>
+      <tr>
+        <td>Write evidence reports</td>
+        <td>Bureaucracy</td>
+        <td>Cut down to one screen of proof per delivered tool: what passed, what failed, what an owner should check.</td>
+      </tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>The trade-off you are accepting with revision 2.</strong> Output and value go up,
+      but so does risk: a tool built by a school-leaver with AI can look correct and be broken in a
+      way nobody sees until a user hits it. That is why this revision adds three things the first
+      draft did not need: a restricted class of tools she may build, a mandatory acceptance
+      protocol, and your line-by-line code review before anything is uploaded.</p>
+    </div>
+
+    <div class="callout-ok">
+      <p><strong>Revision 3 adds two things.</strong> First, curriculum production: complete course
+      packs built in Curriculum Builder, starting with a driving licence theory course. It is the
+      lowest-risk real output in the library, and it teaches the tools by using them. Second, one
+      written delivery loop that both curricula and tools follow, so the work stops depending on
+      your memory of how the last one was done.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       2
+  ============================================================ -->
+  <section id="s2">
+    <h2>2. The three things you asked about, in plain words</h2>
+
+    <h3>Catalog row</h3>
+    <p>
+      One line in the master list of tool ideas. It answers: what is the idea, does it exist yet,
+      how important is it, where does it live, is it published, what is the note for later. It is the
+      inventory line of one tool.
+    </p>
+    <div class="example">
+      <strong>Example of one catalog row</strong><br>
+      Idea: Personal Tax Preparation. Status: built. Priority: high. Folder: <code>PERSONAL/GENERAL/personal-finance/PersonalTaxPreparation</code>.
+      Published: 6 of 8 subjects. Note: needs screenshots after the new dashboard. Code version: 1.4.2.
+    </div>
+
+    <h3>Copy in templates</h3>
+    <p>
+      The sentences that sit inside fixed document blocks. The structure is decided in advance; only
+      the words change, and no new fact may be added. Typical slots: three sentences under "What this
+      tool does", three benefit cards, five FAQ answers, one release note row, one social post.
+    </p>
+    <div class="example">
+      <strong>Example slot and fill</strong><br>
+      Slot: "What this tool does" - three sentences, no adjectives.<br>
+      Fill: "Collects invoices and expense receipts in one list. Calculates totals per currency. Exports a monthly report as PDF."
+    </div>
+
+    <h3>Evidence report</h3>
+    <p>
+      The proof that a task was actually done, in a form someone else can check in under a minute.
+      "It works" is not evidence. A command, a path, a count and one opened image is evidence.
+    </p>
+    <div class="example">
+      <strong>Example evidence block for one tool</strong><br>
+      Command: screenshot capture for <code>InvoiceAndExpenseCollector</code>.<br>
+      Result: 9 files written to <code>docs/screenshots/</code>, manifest updated.<br>
+      Proof: <code>01-dashboard-desktop.png</code> opened and shows the new totals row.<br>
+      Warning: none.
+    </div>
+
+    <div class="highlight-box">
+      <p><strong>In revision 2 all three are small.</strong> Catalog row: 1 minute. Copy slots: 10 to
+      20 minutes. Evidence block: 3 minutes. They arrive attached to a tool she built or tested, plus
+      one consolidated weekly list. They are never the week's work.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       3
+  ============================================================ -->
+  <section id="s3">
+    <h2>3. The design rule: AI types, she judges</h2>
+
+    <h3>3.1 What AI removes from the job</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>AI does these, fast and cheap</h4>
+        <ul>
+          <li>Typing code and markup</li>
+          <li>First drafts of any text</li>
+          <li>Boilerplate structure</li>
+          <li>Plausible demo data</li>
+          <li>Running a documented script</li>
+          <li>Generating document shells</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>AI cannot do these, and that is the job</h4>
+        <ul>
+          <li>Decide whether a screenshot proves the feature</li>
+          <li>Know whether demo data feels real to the actual user</li>
+          <li>Discover how a confused person breaks the tool</li>
+          <li>Be accountable for a delivered artifact</li>
+          <li>Check an AI claim against the running page</li>
+          <li>Choose what is worth building</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>3.2 The 15-minute rule</h3>
+    <div class="callout-ok">
+      <p>No task is assigned if its total human time is under 15 minutes, unless it is a byproduct
+      step inside a larger deliverable. Anything shorter is done by the AI or by you.</p>
+    </div>
+
+    <h3>3.3 The new definition of junior work</h3>
+    <p>
+      AI produces, she inspects, corrects and signs. That is the whole design. It means her value is
+      not speed of typing; it is suspicion, persistence and the willingness to say "this looks right
+      but it is wrong, and here is how".
+    </p>
+    <table class="compact">
+      <tr>
+        <th style="width:26%">Old junior job</th>
+        <th style="width:26%">AI-era junior job</th>
+        <th>What it requires</th>
+      </tr>
+      <tr><td>Produce the artifact</td><td>Own the acceptance of the artifact</td><td>A written definition of done, before the work starts</td></tr>
+      <tr><td>Follow steps</td><td>Follow steps, then attack the result</td><td>A fixed attack list of 12 actions</td></tr>
+      <tr><td>Report progress</td><td>Report what passed, what failed and what you should check</td><td>One screen of proof, no storytelling</td></tr>
+      <tr><td>Learn the tool</td><td>Learn the rules, and learn where AI is confidently wrong</td><td>A prompt log and a five-bullet explanation of every tool she delivers</td></tr>
+    </table>
+
+    <h3>3.4 Honest limits of a school-leaver with AI</h3>
+    <table class="compact">
+      <tr>
+        <th style="width:30%">Limit</th>
+        <th>Consequence for the plan</th>
+      </tr>
+      <tr><td>Cannot judge code quality</td><td>Every file she produces is reviewed by you, line by line, for at least the first three tools.</td></tr>
+      <tr><td>Trusts a plausible AI answer</td><td>She must demonstrate each claim against the running tool before it counts.</td></tr>
+      <tr><td>Weak domain knowledge</td><td>Her research is input, never the final word. You approve the spec before code is generated.</td></tr>
+      <tr><td>Cannot design a system</td><td>She builds single-purpose tools only. Anything with objects, integrations or multiple users stays with you.</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================================
+       4
+  ============================================================ -->
+  <section id="s4">
+    <h2>4. Job models, compared</h2>
+    <p>
+      You asked me to consider two ideas without committing to them: tool building and curriculum
+      building. Both are below as models, so you can choose on evidence rather than on my
+      preference.
+    </p>
+    <table class="compact">
+      <tr>
+        <th style="width:18%">Model</th>
+        <th style="width:25%">What she does</th>
+        <th style="width:13%">Your time</th>
+        <th style="width:16%">Output in 10 weeks</th>
+        <th style="width:12%">Risk</th>
+        <th>Verdict</th>
+      </tr>
+      <tr>
+        <td><strong>1. Operations clerk</strong><br>(revision 1)</td>
+        <td>Runs scripts, updates rows, refreshes screenshots, writes evidence packs</td>
+        <td>1 to 2 h/week</td>
+        <td>High volume of low-value upkeep</td>
+        <td><span class="badge b-low">Low</span></td>
+        <td><span class="badge b-high">Reject</span> AI does it cheaper</td>
+      </tr>
+      <tr>
+        <td><strong>2. AI tool producer</strong><br>(recommended)</td>
+        <td>Researches, specs, builds small tools with AI, tests them, breaks everything else, keeps byproducts current</td>
+        <td>6 to 8 h/week, falling to 2</td>
+        <td>6 to 8 tools plus weekly defect reports</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-low">Choose</span> highest value, contained</td>
+      </tr>
+      <tr>
+        <td><strong>3. Spec and test only</strong><br>(safe fallback)</td>
+        <td>Writes specs and acceptance tests, tests your tools, attacks them, reports defects. Never writes production code</td>
+        <td>3 to 4 h/week</td>
+        <td>8 to 10 specs, 8 to 10 acceptance passes</td>
+        <td><span class="badge b-low">Low</span></td>
+        <td><span class="badge b-med">Fallback</span> use for weeks 1 to 3</td>
+      </tr>
+      <tr>
+        <td><strong>4. Research analyst</strong></td>
+        <td>Domain research and tool ideas only</td>
+        <td>2 h/week</td>
+        <td>10 to 15 idea briefs</td>
+        <td><span class="badge b-low">Low</span></td>
+        <td><span class="badge b-neutral">Optional</span> hard to verify value</td>
+      </tr>
+      <tr>
+        <td><strong>5. Curriculum producer</strong><br>(revision 3)</td>
+        <td>Researches an official syllabus, structures a course in Curriculum Builder, writes every lesson, builds the coverage matrix, walks it as a learner, fixes gaps</td>
+        <td>3 h/week</td>
+        <td>2 complete course packs plus 1 outline</td>
+        <td><span class="badge b-low">Low code</span> / <span class="badge b-med">Medium fact</span></td>
+        <td><span class="badge b-low">Start here</span> real asset, no code risk</td>
+      </tr>
+    </table>
+
+    <h3>4.1 Recommended combination</h3>
+    <div class="highlight-box">
+      <p><strong>Model 5 from week 1, model 3 in parallel, model 2 from week 4.</strong> Curriculum
+      production is the safest high-value work in the whole list: no code, an external standard to
+      check against, and a finished asset at the end. While she produces course 1 in weeks 1 to 3,
+      she also runs model 3 acceptance passes on two existing tools, which teaches her the rules of
+      the library. If she passes those twice, she adds tool building from week 4. If she does not,
+      she stays on curricula and testing and still delivers a real asset.</p>
+    </div>
+    <p>
+      This is the answer to your question about giving her curriculum work: yes, and earlier than
+      tool building, because a wrong lesson is edited while a wrong tool ships. The reverse order
+      costs you more supervision for the same first month.
+    </p>
+
+    <h3>4.2 Why not simply hire a developer</h3>
+    <p>
+      A developer costs several times more and would not do the repetitive testing and byproduct work
+      at all. The point of this role is not cheap code. It is a second pair of hands with judgement,
+      time and accountability, amplified by AI.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       5
+  ============================================================ -->
+  <section id="s5">
+    <h2>5. The five duties in detail</h2>
+    <p>
+      These five duties are the tool track and the quality loop, about 55 percent of the role. The
+      other 45 percent is curriculum production, described with its own loop in section 6.
+    </p>
+
+    <div class="duty">
+      <div class="duty-head">
+        <span class="duty-id">D1</span>
+        <span class="duty-name">Build a green-class tool with AI</span>
+        <span class="duty-share">about 25 percent of hours</span>
+      </div>
+      <div class="duty-body">
+        <table class="compact">
+          <tr><td>Input</td><td>One approved idea, the tool template, the rules file, and the spec she wrote in D2.</td></tr>
+          <tr><td>Steps</td><td>Generate with AI in small pieces, not one giant prompt. Assemble the three files plus the harness. Run the checks. Iterate until the acceptance list passes.</td></tr>
+          <tr><td>Output</td><td>A tool folder that loads in the harness, follows the file contract and passes every acceptance item.</td></tr>
+          <tr><td>Evidence</td><td>Check results, one screenshot per main state, the acceptance list with each item marked pass or fail, and a five-bullet explanation of how the code works.</td></tr>
+          <tr><td>Time</td><td>12 to 18 hours per tool at the start, 8 to 12 once fluent.</td></tr>
+          <tr><td>Failure mode</td><td>The tool looks right and breaks on empty input, long text or a reload. Or the AI quietly adds a feature nobody asked for.</td></tr>
+          <tr><td>Guardrail</td><td>Green class only, acceptance protocol mandatory, no upload by her.</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="duty">
+      <div class="duty-head">
+        <span class="duty-id">D2</span>
+        <span class="duty-name">Write the one-page spec before any code exists</span>
+        <span class="duty-share">about 5 percent</span>
+      </div>
+      <div class="duty-body">
+        <table class="compact">
+          <tr><td>Input</td><td>An idea from the backlog plus 30 to 60 minutes of research on how people in that domain actually work.</td></tr>
+          <tr><td>Steps</td><td>Write purpose, user, the 5 to 10 inputs or steps, the output, the empty state, 5 acceptance tests and 3 edge cases. State what the tool must not do.</td></tr>
+          <tr><td>Output</td><td>One page, maximum 400 words. Approved by you before generation starts.</td></tr>
+          <tr><td>Evidence</td><td>Your written approval on the spec, with the date.</td></tr>
+          <tr><td>Time</td><td>45 to 90 minutes.</td></tr>
+          <tr><td>Failure mode</td><td>A spec so vague that any output satisfies it. Then nobody can accept or reject the result.</td></tr>
+          <tr><td>Guardrail</td><td>A spec without 5 testable acceptance lines is rejected before code.</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="duty">
+      <div class="duty-head">
+        <span class="duty-id">D3</span>
+        <span class="duty-name">Break things as a confused first-time user</span>
+        <span class="duty-share">about 15 percent</span>
+      </div>
+      <div class="duty-body">
+        <p style="margin-top:0">This is the duty AI genuinely cannot perform, because AI does not get confused.</p>
+        <table class="compact">
+          <tr><td>Input</td><td>Any tool or document, plus the fixed attack list below.</td></tr>
+          <tr><td>Output</td><td>A defect list with reproduction steps, expected result, actual result and a screenshot.</td></tr>
+          <tr><td>Time</td><td>20 to 30 minutes per tool.</td></tr>
+          <tr><td>Evidence</td><td>Steps anyone can repeat in under a minute.</td></tr>
+          <tr><td>Failure mode</td><td>Lists opinions, duplicates, or cosmetic preferences as defects.</td></tr>
+          <tr><td>Guardrail</td><td>A finding needs a rule or a broken behaviour, not a taste.</td></tr>
+        </table>
+        <h4>The attack list, always the same 12 actions</h4>
+        <table class="compact">
+          <tr><td class="num" style="width:6%">1</td><td>Submit with everything empty</td><td class="num" style="width:6%">7</td><td>Navigate away and come back</td></tr>
+          <tr><td class="num">2</td><td>Type 5,000 characters into one field</td><td class="num">8</td><td>Open at 390 pixel width</td></tr>
+          <tr><td class="num">3</td><td>Paste quotes, line breaks, Turkish characters, emoji</td><td class="num">9</td><td>Use keyboard only, tab through everything</td></tr>
+          <tr><td class="num">4</td><td>Use decimals, negatives and zero where a number is expected</td><td class="num">10</td><td>Delete all rows, then add again</td></tr>
+          <tr><td class="num">5</td><td>Double-click every action button</td><td class="num">11</td><td>Use browser back and forward</td></tr>
+          <tr><td class="num">6</td><td>Reload in the middle of a task</td><td class="num">12</td><td>Repeat the same action 50 times</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="duty">
+      <div class="duty-head">
+        <span class="duty-id">D4</span>
+        <span class="duty-name">Check the byproducts attached to a tool</span>
+        <span class="duty-share">about 5 percent</span>
+      </div>
+      <div class="duty-body">
+        <table class="compact">
+          <tr><td>Demo data</td><td>One AI prompt, then she checks: is this realistic to the person who uses that tool, does it show the best feature, does it include an empty case. 10 minutes.</td></tr>
+          <tr><td>Screenshots</td><td>Run the capture, then check: does each image show the feature it is named after, is anything blank or cut off. 5 minutes.</td></tr>
+          <tr><td>Help text</td><td>Fill the fixed slots from the facts sheet. No new claims. 10 to 20 minutes.</td></tr>
+          <tr><td>Catalog row</td><td>One line: status, priority, folder, publish flags, version, note. 1 minute.</td></tr>
+          <tr><td>Evidence block</td><td>Command, path, counts, one proof. 3 minutes.</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="duty">
+      <div class="duty-head">
+        <span class="duty-id">D5</span>
+        <span class="duty-name">Report in one screen</span>
+        <span class="duty-share">about 5 percent</span>
+      </div>
+      <div class="duty-body">
+        <table class="compact">
+          <tr><td>Daily</td><td>Three lines, written: done, blocked, next. No chat messages required.</td></tr>
+          <tr><td>Weekly</td><td>One screen: tools delivered, acceptance results, defects found, what you should check, what needs a decision.</td></tr>
+          <tr><td>Never</td><td>Narrated progress, screenshots without a question, or a claim without a proof.</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       6
+  ============================================================ -->
+  <section id="s6">
+    <h2>6. The curriculum track and the delivery loop</h2>
+    <p class="lead">
+      Yes to curriculum building, and it should be the first real work she does. A course is a
+      finished asset with no code risk, an external standard to check it against, and one clear test:
+      can a learner follow it. It also teaches the tool library by using it, which no amount of
+      reading the rules achieves.
+    </p>
+
+    <h3>6.1 Why this is the best fit in the library</h3>
+    <table class="compact">
+      <tr><th style="width:26%">Property</th><th>Consequence</th></tr>
+      <tr><td>No code</td><td>A weak lesson is edited, not debugged. Nothing in the platform can break.</td></tr>
+      <tr><td>External standard</td><td>Good is not a matter of taste. The official syllabus either is covered or is not.</td></tr>
+      <tr><td>Real output</td><td>A course someone can teach from, that the tool can store and hand over.</td></tr>
+      <tr><td>Teaches the tools</td><td>She learns Curriculum Builder by producing with it, not by reading about it.</td></tr>
+      <tr><td>AI is strong but insufficient</td><td>AI drafts lesson text well, knows the official requirements poorly, and cannot tell whether a beginner can follow it. That gap is her job.</td></tr>
+    </table>
+
+    <h3>6.2 What a curriculum pack contains</h3>
+    <table class="compact">
+      <tr><th style="width:24%">Part</th><th>What it must contain</th></tr>
+      <tr><td>Course brief</td><td>One page: who it is for, entry level, duration, what the learner can do at the end, and what the course is not.</td></tr>
+      <tr><td>Source list</td><td>Every official document used, with its version or date. No source, no claim.</td></tr>
+      <tr><td>Structure</td><td>Sections, then lessons. A lesson title says what the learner will be able to do, not only the topic name.</td></tr>
+      <tr><td>Lesson content</td><td>Per lesson: objective, three to six key points, explanation, example, practice or quiz, and the common mistake.</td></tr>
+      <tr><td>Coverage matrix</td><td>One row per official topic: which lesson covers it, fully or partly. A missing topic is either filled or excluded in writing with a reason.</td></tr>
+      <tr><td>Learner walk-through</td><td>A written record of following the course from the start, with time per lesson and every point of confusion.</td></tr>
+      <tr><td>Review pack</td><td>What an expert must check, plus the open questions. This is what makes expert review take hours instead of weeks.</td></tr>
+      <tr><td>Handover file</td><td>The curriculum object and its lesson documents in a form you can load into the live tool. She produces it in the local harness; you import it.</td></tr>
+    </table>
+
+    <div class="example">
+      <strong>Worked example: driving licence theory</strong><br>
+      Course brief: adult learner preparing for the theory exam, 42 lessons, about 12 hours of study.<br>
+      Sections: 1 Road rules, 2 Signs and signals, 3 Vehicle and safety, 4 Emergencies and first aid,
+      5 Sharing the road, 6 Exam preparation.<br>
+      Coverage matrix: one row per chapter of the official handbook for the chosen jurisdiction.<br>
+      Every lesson: objective, key points, one worked example, a five-question quiz, the common
+      mistake.<br>
+      Label on every page: draft for expert review, not official advice.
+    </div>
+    <p>
+      The jurisdiction is your decision, not hers. The pack cites the official handbook for that
+      jurisdiction and never paraphrases a rule from memory.
+    </p>
+
+    <h3>6.3 The loop, written once and used for every artifact</h3>
+    <p>
+      This is the procedure you described, made explicit. It applies to a course, a tool, a document
+      or a dataset. The artifact changes; the stages do not.
+    </p>
+    <table class="compact">
+      <tr>
+        <th style="width:6%">#</th>
+        <th style="width:16%">Stage</th>
+        <th style="width:36%">Artifact produced</th>
+        <th>Gate to move on</th>
+      </tr>
+      <tr><td class="num">0</td><td><strong>Frame</strong></td><td>One paragraph: what the artifact is, who it is for, and the exit criteria in numbers</td><td>You approve the scope and the stop condition</td></tr>
+      <tr><td class="num">1</td><td><strong>Research</strong></td><td>Source list plus a two-page note: what the official material requires, what similar products do</td><td>Sources are official, dated and sufficient</td></tr>
+      <tr><td class="num">2</td><td><strong>SSOT</strong></td><td>One document deciding purpose, structure, fields, inclusions and exclusions</td><td>You approve the SSOT before anything is produced</td></tr>
+      <tr><td class="num">3</td><td><strong>Task list</strong></td><td>Atomic tasks of four hours or less, each with one acceptance line, grouped into releases</td><td>Every task is testable and fits the week</td></tr>
+      <tr><td class="num">4</td><td><strong>Apply</strong></td><td>The work itself, one task at a time</td><td>Each task is checked as it closes, not at the end</td></tr>
+      <tr><td class="num">5</td><td><strong>Test</strong></td><td>The acceptance list with pass or fail and evidence, plus the learner walk-through for content</td><td>A written result, never an opinion</td></tr>
+      <tr><td class="num">6</td><td><strong>Gap list</strong></td><td>Failures, missing items and confusion points, converted into new tasks</td><td>New tasks replace finished ones; nothing is added silently</td></tr>
+      <tr><td class="num">7</td><td><strong>Repeat</strong></td><td>Back to stage 4 until the exit criteria are met</td><td>Maximum three improvement rounds per week</td></tr>
+      <tr><td class="num">8</td><td><strong>Freeze</strong></td><td>Your acceptance, the byproducts, a version and a handover note</td><td>You sign; the artifact is now referenced, not edited</td></tr>
+    </table>
+
+    <h4>Seven rules that keep the loop honest</h4>
+    <ol>
+      <li>No stage skipped. No content and no code before the SSOT exists.</li>
+      <li>Every round ends with a written test result. Looks good is not a result.</li>
+      <li>The stop condition is fixed at stage 0. Without it the loop never ends.</li>
+      <li>A task without an acceptance line is not a task.</li>
+      <li>Ideas discovered mid-loop go on the idea list, never into the current artifact.</li>
+      <li>Three improvement rounds per artifact per week, then either freeze it or park it.</li>
+      <li>You approve at stage 0, stage 2 and stage 8 only. Everything else is self-service.</li>
+    </ol>
+
+    <h3>6.4 Two variants of the same loop</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>Content loop</h4>
+        <p>Official source list, coverage matrix, outline, lessons, learner walk-through, gap list, fill, walk again.</p>
+        <p><strong>Definition of done:</strong> coverage is 100 percent, every lesson has the six parts, and a learner finishes the course without help.</p>
+      </div>
+      <div class="card">
+        <h4>Code loop</h4>
+        <p>Spec, task list, build in small generations, five acceptance gates, 12-action attack list, defect list, fix, attack again.</p>
+        <p><strong>Definition of done:</strong> all gates pass, no fatal or major defect open, and the tool does one job clearly.</p>
+      </div>
+    </div>
+
+    <h3>6.5 What easy to use and very capable means in numbers</h3>
+    <p>Do not accept the phrase without these seven checks. They are the exit criteria of every artifact.</p>
+    <table class="compact">
+      <tr><th style="width:24%">Criterion</th><th>Measured how</th></tr>
+      <tr><td>Coverage</td><td>100 percent of official topics mapped to a lesson, or to a written exclusion with a reason</td></tr>
+      <tr><td>Completeness</td><td>Every lesson has the six required parts, no exceptions</td></tr>
+      <tr><td>First-use clarity</td><td>A first-time learner finishes the first lesson and can state what they will be able to do</td></tr>
+      <tr><td>Navigation</td><td>Any topic is reachable in three clicks or fewer inside the tool</td></tr>
+      <tr><td>Consistency</td><td>Same field names, same lesson length band, same number of quiz questions</td></tr>
+      <tr><td>Reviewability</td><td>An expert reviews the whole course in under three hours, using the coverage matrix and review pack</td></tr>
+      <tr><td>Independence</td><td>Another person can extend the course from the pack alone, without asking her anything</td></tr>
+    </table>
+
+    <h3>6.6 Curriculum acceptance checklist, twelve items</h3>
+    <table class="compact">
+      <tr><td class="num" style="width:6%">1</td><td>Course brief approved by you</td><td class="num" style="width:6%">7</td><td>Every quiz answer is correct and sourced</td></tr>
+      <tr><td class="num">2</td><td>Source list complete, dated and official</td><td class="num">8</td><td>No invented rule, date, price or legal claim</td></tr>
+      <tr><td class="num">3</td><td>Every section has a purpose, not just a name</td><td class="num">9</td><td>Learner walk-through recorded and confusion fixed</td></tr>
+      <tr><td class="num">4</td><td>Every lesson title is an outcome</td><td class="num">10</td><td>Every lesson fits the length band</td></tr>
+      <tr><td class="num">5</td><td>Every lesson has the six required parts</td><td class="num">11</td><td>Review pack lists what an expert must check</td></tr>
+      <tr><td class="num">6</td><td>Coverage matrix is 100 percent</td><td class="num">12</td><td>Handover file loads in the tool without error</td></tr>
+    </table>
+
+    <h3>6.7 The real dangers, and their controls</h3>
+    <table class="compact">
+      <tr><th style="width:24%">Danger</th><th style="width:30%">Why it matters</th><th>Control</th></tr>
+      <tr><td>A wrong rule in a driving course</td><td>It teaches something dangerous and creates liability</td><td>Official sources only, one citation per claim, expert review, draft label, your sign-off, she never publishes</td></tr>
+      <tr><td>Padding</td><td>Forty lessons that say the same thing feel complete and teach nothing</td><td>Coverage matrix, length band, one idea per lesson, sample audit by you</td></tr>
+      <tr><td>Hollow titles</td><td>Titles without content look like a finished course</td><td>The six required parts, checked on a random sample every week</td></tr>
+      <tr><td>Scope drift</td><td>The course grows until it never ships</td><td>Scope fixed in the brief; new topics go to the idea list</td></tr>
+      <tr><td>Unsourced content</td><td>AI writes plausible regulations from memory</td><td>No source, no claim. A lesson without a source line is rejected</td></tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>Task zero before the first course.</strong> The Curriculum Builder SSOT in this
+      repository still carries template placeholder text, so it cannot guide anyone yet. Filling it
+      is the first task of week 1, and it is also the first exercise in the loop: research, SSOT,
+      task list, apply, test.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       7
+  ============================================================ -->
+  <section id="s7">
+    <h2>7. What she must never do, and what stays with you</h2>
+
+    <div class="callout-stop">
+      <p><strong>Absolute, no exceptions.</strong> No git command of any kind. No database access. No
+      opening environment or secret files. No CMS upload or publishing. No editing an existing tool
+      file, tool rule, prompt or generated region. No pricing, partner or customer wording. A breach
+      stops the engagement the same day.</p>
+    </div>
+
+    <table class="compact">
+      <tr>
+        <th style="width:34%">Area</th>
+        <th style="width:33%">Assistant</th>
+        <th>Owner</th>
+      </tr>
+      <tr><td>Tool ideas</td><td>May propose and research</td><td>Approves what gets built</td></tr>
+      <tr><td>Tool spec</td><td>Writes it</td><td>Approves before code</td></tr>
+      <tr><td>New green-class tools</td><td>Builds with AI, tests, documents</td><td>Reviews code, accepts, uploads</td></tr>
+      <tr><td>Existing tools</td><td>Tests and reports only</td><td>Any change</td></tr>
+      <tr><td>Red-class tools (objects, AI, uploads, multi-user, integrations)</td><td>Not involved</td><td>Builds and owns</td></tr>
+      <tr><td>Documentation text</td><td>Fills fixed slots from a facts sheet</td><td>Final wording and claims</td></tr>
+      <tr><td>Catalog</td><td>Named rows only, after acceptance</td><td>Structure and rules</td></tr>
+      <tr><td>Release</td><td>Prepares the bundle if asked</td><td>Ships</td></tr>
+    </table>
+
+    <h3>6.1 Green class, the only tools she may build</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>Allowed</h4>
+        <ul>
+          <li>Single purpose, one screen, no login</li>
+          <li>State saved only through the tool's own saved value</li>
+          <li>Local calculations, formatting, conversion, checklists, generators, planners</li>
+          <li>Print or single-document output</li>
+          <li>Three files plus the test harness</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Not allowed, stays with you</h4>
+        <ul>
+          <li>Creating or querying CMS objects</li>
+          <li>Any AI call or streaming</li>
+          <li>File upload or file content reading</li>
+          <li>Email, payment, external service or network call</li>
+          <li>Anything that changes an existing tool</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       8
+  ============================================================ -->
+  <section id="s8">
+    <h2>8. The 10-week plan</h2>
+
+    <h3>8.1 Week by week</h3>
+    <table class="compact">
+      <tr>
+        <th style="width:5%">Wk</th>
+        <th style="width:30%">Curriculum track</th>
+        <th style="width:24%">Tool track</th>
+        <th style="width:10%">Your time</th>
+        <th>Gate to pass before the next week</th>
+      </tr>
+      <tr>
+        <td class="num">0</td>
+        <td>Curriculum Builder tour, source list and coverage matrix templates, fill the tool SSOT</td>
+        <td>Workspace, template, rules read, tracking sheet, harness running</td>
+        <td class="num">3 h</td>
+        <td>SSOT drafted, source list approved, harness opens</td>
+      </tr>
+      <tr>
+        <td class="num">1</td>
+        <td>Course 1: brief, source list, outline, coverage matrix skeleton</td>
+        <td>Two practice acceptance passes on existing tools</td>
+        <td class="num">6 h</td>
+        <td>Brief and outline approved; coverage matrix lists every official topic</td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td>Course 1: sections 1 to 3 with full lesson content</td>
+        <td>Model 3: one spec plus one acceptance pass</td>
+        <td class="num">5 h</td>
+        <td>Sample audit: six lesson parts present in every checked lesson</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td>Course 1 complete, coverage matrix 100 percent, learner walk-through</td>
+        <td>Model 3: second spec and acceptance pass</td>
+        <td class="num">4 h</td>
+        <td>Walk-through passes; two tool protocols passed without your fixes</td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td>Course 1 gap list, fixes, review pack for the expert</td>
+        <td>First green-class tool from her own spec</td>
+        <td class="num">4 h</td>
+        <td>Course 1 signed by you as draft for review; tool code review clean</td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td>Course 2: brief, source list, outline</td>
+        <td>One tool plus its full byproduct set</td>
+        <td class="num">3 h</td>
+        <td>Course 2 outline approved</td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td>Course 2: sections 1 to 3, coverage matrix</td>
+        <td>One tool</td>
+        <td class="num">4 h</td>
+        <td>Mid-point decision: continue, narrow or end</td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <td>Course 2 complete and walk-through recorded</td>
+        <td>One tool plus a defect report on older tools</td>
+        <td class="num">3 h</td>
+        <td>Coverage 100 percent; defects confirmed 4 of 5</td>
+      </tr>
+      <tr>
+        <td class="num">8</td>
+        <td>Course 2 gap fill, review pack, expert questions</td>
+        <td>Byproducts refreshed for four existing tools</td>
+        <td class="num">2.5 h</td>
+        <td>Course 2 signed as draft for review</td>
+      </tr>
+      <tr>
+        <td class="num">9</td>
+        <td>Course 3 outline plus first section, or a second pass on course 1 from expert feedback</td>
+        <td>Regression pass on her own tools</td>
+        <td class="num">2.5 h</td>
+        <td>Loop exit criteria met for two courses</td>
+      </tr>
+      <tr>
+        <td class="num">10</td>
+        <td>Handover: two complete packs, one outline, source lists, coverage matrices, review packs</td>
+        <td>Final tool, specs, prompt log, acceptance records, open defects</td>
+        <td class="num">3 h</td>
+        <td>You can extend a course from the pack alone</td>
+      </tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>If the content is deeper than expected</strong> (longer lessons, more official
+      chapters), drop to one complete course plus two outlines and keep the tool quota. Never let a
+      course brief grow mid-course to protect a deadline; move the new topics to the idea list.</p>
+    </div>
+
+    <h3>8.2 Tracker</h3>
+    <p>
+      Ticks are stored in this browser only, so the document stays usable as a printable record.
+      Print it at the week 6 and week 10 reviews.
+    </p>
+
+    <div class="tracker-head">
+      <div class="tracker-bar"><div id="trackerFill"></div></div>
+      <span class="tracker-label" id="trackerLabel">0 of 0 done</span>
+      <button type="button" class="tracker-reset" id="trackerReset">Clear ticks</button>
+    </div>
+
+    <div class="week-group">
+      <div class="week-head">Before start and week 1</div>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w0-1"><span>Workspace, template and harness ready; five prohibitions repeated back in writing</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w0-2"><span>Curriculum Builder SSOT filled; lesson-content and coverage matrix templates defined</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c1-1"><span>Course 1 brief, source list and outline approved</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w1-1"><span>First tool spec written with 5 testable acceptance lines and approved</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w1-2"><span>Two practice acceptance passes completed on existing tools</span></label>
+    </div>
+
+    <div class="week-group">
+      <div class="week-head">Weeks 2 to 3, content plus model 3</div>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c2-1"><span>Course 1 sections 1 to 3 written with all six lesson parts</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c3-1"><span>Course 1 coverage matrix reaches 100 percent, exclusions written</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c3-2"><span>Course 1 learner walk-through recorded and confusion fixed</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w2-1"><span>Two existing tools fully accepted against the protocol</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w2-2"><span>At least three real defects found with reproduction steps</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w3-2"><span>Two acceptance protocols passed end to end</span></label>
+    </div>
+
+    <div class="week-group">
+      <div class="week-head">Weeks 4 to 6, content plus tool building</div>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c4-1"><span>Course 1 signed as draft for review, with review pack</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c5-1"><span>Course 2 outline approved</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w4-1"><span>First real green-class tool accepted after code review</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w5-1"><span>Complete byproduct set for that tool: data, screenshots, help text, catalog row</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c6-1"><span>Course 2 sections 1 to 3 complete</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w6-1"><span>Self-assessment and continue, narrow or end decision recorded</span></label>
+    </div>
+
+    <div class="week-group">
+      <div class="week-head">Weeks 7 to 10</div>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c7-1"><span>Course 2 complete, coverage 100 percent, walk-through recorded</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c8-1"><span>Course 2 signed as draft for review</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w7-1"><span>Defect report on older tools with a 4 of 5 acceptance rate</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w8-1"><span>Byproducts refreshed for four existing tools with no rework</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c9-1"><span>Course 3 outline approved, or course 1 revised from expert feedback</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w9-1"><span>Regression pass on her own tools with no broken behaviour</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="c10-1"><span>Two complete packs and one outline handed over and loadable</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w10-1"><span>Handover pack complete: specs, prompt log, acceptance records, open defects</span></label>
+      <label class="task-row"><input type="checkbox" class="task-box" data-task="w10-2"><span>Final review and written recommendation recorded</span></label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       8
+  ============================================================ -->
+  <section id="s9">
+    <h2>9. Final job description</h2>
+
+    <h3>9.1 Position details</h3>
+    <table class="meta-table">
+      <tr><td>Job title</td><td>Junior AI Tool Producer</td></tr>
+      <tr><td>Alternative titles</td><td>AI-Assisted Tool Builder; Junior Tool Producer</td></tr>
+      <tr><td>Reporting to</td><td><span class="ph">[owner name and role]</span></td></tr>
+      <tr><td>Engagement</td><td><span class="ph">[fixed-term contract / part-time / internship]</span></td></tr>
+      <tr><td>Duration</td><td>10 weeks, <span class="ph">[start date]</span> to <span class="ph">[end date]</span></td></tr>
+      <tr><td>Hours</td><td><span class="ph">[30 hours per week]</span>, <span class="ph">[core hours]</span></td></tr>
+      <tr><td>Location</td><td><span class="ph">[remote / hybrid, city]</span>. Own computer, stable internet.</td></tr>
+      <tr><td>Pay</td><td><span class="ph">[hourly rate or weekly stipend, currency]</span></td></tr>
+      <tr><td>Languages</td><td>English at a level that can follow written rules and write a clear report. <span class="ph">[Turkish is an asset]</span></td></tr>
+      <tr><td>Experience</td><td>None in software. Secondary school completion is enough. Curiosity and honesty are the requirements.</td></tr>
+      <tr><td>Reviews</td><td>Week 3 gate, week 6 mid-point, week 10 final</td></tr>
+    </table>
+
+    <h3>9.2 Purpose</h3>
+    <p>
+      Turn approved ideas into finished artifacts using AI as the production engine: complete
+      curriculum packs built in Curriculum Builder, and small working HTML tools. Act as the first
+      independent user of everything we release. The role exists because AI can produce text and code
+      but cannot decide whether a lesson teaches, whether a course covers the official syllabus, or
+      whether a tool is good, useful or broken for a real person.
+    </p>
+
+    <h3>9.3 Responsibilities</h3>
+    <table class="compact">
+      <tr>
+        <th style="width:7%">ID</th>
+        <th style="width:28%">Responsibility</th>
+        <th>What it means</th>
+      </tr>
+      <tr><td class="num">R1</td><td><strong>Spec before code</strong></td><td>Write a one-page spec for each approved idea: purpose, user, inputs, output, empty state, five acceptance tests, three edge cases, explicit exclusions. Obtain written approval.</td></tr>
+      <tr><td class="num">R2</td><td><strong>Build with AI, green class only</strong></td><td>Produce the tool files and test harness inside the agreed template. Keep the AI on a leash: small generations, no unrequested features, no forbidden API.</td></tr>
+      <tr><td class="num">R3</td><td><strong>Accept her own work</strong></td><td>Run the automated checks and the acceptance list. Fix failures before submitting. Report any remaining failure, never hide it.</td></tr>
+      <tr><td class="num">R4</td><td><strong>Break existing work</strong></td><td>Run the 12-action attack list on tools and documents, and log real defects with steps, expected result, actual result and a screenshot.</td></tr>
+      <tr><td class="num">R5</td><td><strong>Keep the byproducts current</strong></td><td>Demo data, screenshots, help text and catalog rows for every tool she built or tested. Generated by AI and verified by her before handover.</td></tr>
+      <tr><td class="num">R6</td><td><strong>Produce curriculum packs</strong></td><td>Follow the loop in section 6: official sources, course brief, structure, every lesson with the six required parts, coverage matrix, learner walk-through, gap list, review pack. Deliver in the harness; the owner imports.</td></tr>
+    </table>
+
+    <h3>9.4 Weekly deliverables</h3>
+    <table class="compact">
+      <tr><th style="width:24%">Deliverable</th><th style="width:14%">Due</th><th>Definition of done</th></tr>
+      <tr><td>Monday plan</td><td>Mon 09:30</td><td>One page: idea, spec status, tools to test, expected submission date.</td></tr>
+      <tr><td>Daily lines</td><td>End of shift</td><td>Three written lines: done, blocked, next.</td></tr>
+      <tr><td>Spec</td><td>Before building</td><td>Under 400 words, five testable acceptance lines, approved in writing.</td></tr>
+      <tr><td>Tool submission</td><td>Friday 12:00</td><td>Files, harness, check results, screenshots, acceptance list marked pass or fail, five-bullet code explanation.</td></tr>
+      <tr><td>Defect report</td><td>Friday 15:00</td><td>Reproducible steps, severity, screenshot, no duplicates, no taste-based items.</td></tr>
+      <tr><td>Curriculum pack</td><td>Friday 15:00</td><td>Brief, source list, structure, all lessons, coverage matrix, walk-through, review pack, handover file.</td></tr>
+      <tr><td>Weekly summary</td><td>Friday 16:00</td><td>One screen: delivered, passed, failed, needs your check, needs a decision.</td></tr>
+    </table>
+
+    <h3>9.5 Acceptance protocol, every tool</h3>
+    <table class="compact">
+      <tr><th style="width:6%">#</th><th style="width:26%">Gate</th><th>Must be true</th></tr>
+      <tr><td class="num">1</td><td>Structure</td><td>Three files plus harness, correct entry point, build stamp present, no forbidden API used.</td></tr>
+      <tr><td class="num">2</td><td>Automated checks</td><td>Script syntax passes, id cross-check passes, harness loads with no console error.</td></tr>
+      <tr><td class="num">3</td><td>Functional</td><td>Every acceptance line from the spec passes on empty, typical and extreme data.</td></tr>
+      <tr><td class="num">4</td><td>Adversarial</td><td>All 12 attack actions survive, or the failure is documented and accepted.</td></tr>
+      <tr><td class="num">5</td><td>Owner</td><td>Your ten-minute manual pass plus your code review. Only then does it exist as a delivered tool.</td></tr>
+    </table>
+
+    <h4>Content acceptance, every course</h4>
+    <table class="compact">
+      <tr><th style="width:6%">#</th><th style="width:26%">Gate</th><th>Must be true</th></tr>
+      <tr><td class="num">1</td><td>Sources</td><td>Official, dated, and every factual claim traces to one of them.</td></tr>
+      <tr><td class="num">2</td><td>Coverage</td><td>100 percent of official topics mapped, or excluded in writing with a reason.</td></tr>
+      <tr><td class="num">3</td><td>Completeness</td><td>Every lesson has objective, key points, explanation, example, practice and common mistake.</td></tr>
+      <tr><td class="num">4</td><td>Walk-through</td><td>A recorded learner pass with confusion points fixed, plus the twelve-item checklist in section 6.6.</td></tr>
+      <tr><td class="num">5</td><td>Owner and expert</td><td>Your sign-off plus expert review questions answered. Released as draft for review, never published by her.</td></tr>
+    </table>
+
+    <h3>9.6 Skills</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>Required</h4>
+        <ul>
+          <li>Uses AI tools comfortably and reads its output critically</li>
+          <li>Can explain, in plain words, what a piece of code is supposed to do</li>
+          <li>Writes short, clear English</li>
+          <li>Follows written rules exactly, including naming and file placement</li>
+          <li>Curious about how ordinary people use software badly</li>
+          <li>Researches from sources and cites them, instead of trusting memory</li>
+          <li>Can write a structured explanation a beginner can follow</li>
+          <li>Willing to be wrong in writing</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Asset, not required</h4>
+        <ul>
+          <li>Basic HTML and CSS reading</li>
+          <li>Has built something small before, any language</li>
+          <li>Turkish or another language</li>
+          <li>Has taught, tutored or explained something to someone, even informally</li>
+          <li>Can read a syllabus, handbook or official guide and pull out its topics</li>
+          <li>Can use a terminal with a given command</li>
+          <li>Can edit screenshots and images</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>9.7 AI use rules</h3>
+    <table class="compact">
+      <tr><th style="width:6%">#</th><th>Rule</th></tr>
+      <tr><td class="num">1</td><td>AI is expected and encouraged. Using it is not a shortcut; hiding it is a fault.</td></tr>
+      <tr><td class="num">2</td><td>Keep a prompt log per deliverable: what was asked, what came back, what was changed and why.</td></tr>
+      <tr><td class="num">3</td><td>Every AI claim about behaviour must be demonstrated on the running tool before it is reported.</td></tr>
+      <tr><td class="num">4</td><td>No secrets, keys, tokens, customer data or internal files may be pasted into any AI tool.</td></tr>
+      <tr><td class="num">5</td><td>AI may not invent documentation facts. Text is written from the facts sheet or the screenshots only.</td></tr>
+      <tr><td class="num">6</td><td>No copied code from the internet or from AI output without checking the licence and rewriting it to our template.</td></tr>
+      <tr><td class="num">7</td><td>Generated code must be read and explained, not pasted blind. Five bullets per tool.</td></tr>
+      <tr><td class="num">8</td><td>For content, AI may draft, but every factual statement must be checked against an official source in the list. No source, no sentence.</td></tr>
+      <tr><td class="num">9</td><td>Never let AI invent a regulation, a date, a price, an exam rule or a legal requirement, even as an example.</td></tr>
+    </table>
+
+    <h3>9.8 Performance measures</h3>
+    <table class="compact">
+      <tr><th style="width:30%">Measure</th><th style="width:18%">Target</th><th>How it is measured</th></tr>
+      <tr><td>Boundary compliance</td><td>100 percent</td><td>Zero git, database, publishing or out-of-scope edits. Hard gate.</td></tr>
+      <tr><td>Curriculum packs</td><td>1 complete by week 4, 2 by week 10</td><td>Passed all five content gates, signed as draft for review.</td></tr>
+      <tr><td>Topic coverage</td><td>100 percent</td><td>Coverage matrix against the official source list.</td></tr>
+      <tr><td>Tools accepted</td><td>2 by week 6, 3 to 5 by week 10</td><td>Passed all five tool acceptance gates.</td></tr>
+      <tr><td>Spec quality</td><td>9 of 10 approved first time</td><td>Approved specs against submitted specs.</td></tr>
+      <tr><td>Defect quality</td><td>4 of 5 confirmed real</td><td>Owner-confirmed findings against reported findings.</td></tr>
+      <tr><td>Rework</td><td>Under 20 percent by week 8</td><td>Tools returned for behaviour fixes.</td></tr>
+      <tr><td>Byproduct completeness</td><td>100 percent</td><td>Every delivered tool has data, screenshots, help text and a catalog row.</td></tr>
+    </table>
+
+    <h3>9.9 Out of scope</h3>
+    <ul>
+      <li>Any change to an existing tool, rule, prompt or generated region.</li>
+      <li>Any tool that creates objects, calls AI, uploads files, sends email or reaches the network.</li>
+      <li>Architecture, tool selection and product strategy.</li>
+      <li>Pricing, customers, partners, legal or marketing claims.</li>
+      <li>Any regulation, safety rule or legal statement that is not quoted from the approved official source.</li>
+      <li>Importing curricula into the live CMS, publishing a course, or approving expert content.</li>
+      <li>Publishing, deployment, release approval, database work.</li>
+      <li>External communication with users or clients.</li>
+    </ul>
+
+    <h3>9.10 Growth after week 10</h3>
+    <table class="compact">
+      <tr><th style="width:20%">If performance is</th><th>Next step</th></tr>
+      <tr><td>Strong and reliable</td><td>Continue as a producer with a monthly quota for courses and tools, ownership of the byproduct pipeline, and later the curriculum backlog.</td></tr>
+      <tr><td>Strong on testing, weak on building</td><td>Move permanently to the spec and acceptance role. That is still valuable.</td></tr>
+      <tr><td>Average</td><td>Renew the fixed scope only. No ownership expansion.</td></tr>
+      <tr><td>Weak or boundary-breaking</td><td>End at the week 6 review with a written reason.</td></tr>
+    </table>
+
+    <h3>9.11 Ready-to-post advertisement</h3>
+    <div class="ad-copy">
+      <p><strong>Junior AI Content and Tool Producer, 10 weeks (remote)</strong></p>
+      <p>
+        We build practical web tools and the courses that go with them. We are looking for one
+        careful person who will turn approved ideas into finished artifacts using AI: a complete
+        course built in our Curriculum Builder, or a small working tool. In both cases you research
+        the source, write the plan, produce with AI inside our template, test the result like a real,
+        impatient user, and report honestly what works and what does not.
+      </p>
+      <p>
+        No coding experience is required, but you must be able to read what AI produces, explain what
+        it does in plain words, and notice when something is subtly wrong. Full training on our rules
+        and structure is provided.
+      </p>
+      <p>
+        <span class="ph">[30 hours per week]</span> for 10 weeks from <span class="ph">[start date]</span>,
+        remote, with a short written check-in each day and one review each week. Pay is
+        <span class="ph">[rate]</span>. <span class="ph">[Turkish]</span> is an asset.
+      </p>
+      <p>
+        Apply to <span class="ph">[address]</span> with <span class="ph">[what to send]</span>. Shortlisted
+        candidates do a paid 90-minute practical task: build a very small tool with AI and explain
+        what they tested.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       9
+  ============================================================ -->
+  <section id="s10">
+    <h2>10. Position manager kit</h2>
+
+    <h3>10.1 Weekly rhythm</h3>
+    <table class="compact">
+      <tr><th style="width:14%">When</th><th style="width:12%">Length</th><th>What happens</th></tr>
+      <tr><td>Monday 09:30</td><td>20 min</td><td>Hand over the week: one idea, one spec to approve, two tools to test. Everything else is byproduct.</td></tr>
+      <tr><td>Daily, end of shift</td><td>5 min written</td><td>Done, blocked, next. Written, not spoken.</td></tr>
+      <tr><td>Wednesday 14:00</td><td>10 min</td><td>Check direction only: is the spec realistic, is the AI going in circles.</td></tr>
+      <tr><td>Friday 12:00</td><td>30 min</td><td>You run the acceptance gates on the submission, then the ten-minute manual pass.</td></tr>
+      <tr><td>Friday 16:00</td><td>45 min</td><td>Review and decision, one improvement for next week, one thing she must stop doing.</td></tr>
+    </table>
+
+    <h3>10.2 Task card, six fields</h3>
+    <table class="compact">
+      <tr><td style="width:22%"><strong>1. Idea</strong></td><td>One sentence, plus the intended user.</td></tr>
+      <tr><td><strong>2. Class</strong></td><td>Green class, and the exact exclusion list for this tool.</td></tr>
+      <tr><td><strong>3. Deliverable</strong></td><td>Spec plus tool plus byproducts, or spec only, or test pass only.</td></tr>
+      <tr><td><strong>4. Deadline</strong></td><td>Date and time inside the week.</td></tr>
+      <tr><td><strong>5. Acceptance</strong></td><td>Which of the five gates apply and who runs each one.</td></tr>
+      <tr><td><strong>6. Out of bounds</strong></td><td>What may not be touched for this card, stated explicitly.</td></tr>
+    </table>
+
+    <h3>10.3 Your ten-minute manual pass</h3>
+    <ol>
+      <li>Open the harness. Does it load clean with no console error?</li>
+      <li>Use it as the intended user for two minutes. Is the main job obvious without reading anything?</li>
+      <li>Empty state: what do you see before entering anything?</li>
+      <li>Extreme input: one very long text, one zero, one negative.</li>
+      <li>Reload. Is the state where you left it?</li>
+      <li>Narrow the window to phone width. Anything unusable?</li>
+      <li>Read the code for: forbidden API, secrets, external calls, unrequested features.</li>
+      <li>Read the five-bullet explanation. Would a non-coder understand the behaviour?</li>
+    </ol>
+
+    <h3>10.4 Escalation</h3>
+    <table class="compact">
+      <tr><th style="width:30%">Situation</th><th style="width:26%">Assistant</th><th>Example</th></tr>
+      <tr><td>AI output contradicts the spec</td><td>Follow the spec, note the conflict</td><td>AI added a settings panel nobody asked for. Remove it, mention it in the log.</td></tr>
+      <tr><td>Spec turns out to be wrong mid-build</td><td>Stop and ask, do not improvise</td><td>The tool needs a field the spec missed. Ask; do not add it silently.</td></tr>
+      <tr><td>Automated check fails twice</td><td>Stop, report, switch card</td><td>Id cross-check keeps failing. Report the ids; do not rename things at random.</td></tr>
+      <tr><td>She thinks an existing tool is broken</td><td>Report only, never fix</td><td>Broken link inside a generated region. Note the location.</td></tr>
+      <tr><td>Unsure whether a task is in scope</td><td>Ask before starting</td><td>Not sure whether a tool counts as green class. Ask first.</td></tr>
+    </table>
+
+    <h3>10.5 Defect format</h3>
+    <table class="compact">
+      <tr><td style="width:20%"><strong>1. ID</strong></td><td>F-week-number</td></tr>
+      <tr><td><strong>2. Artifact</strong></td><td>Exact tool or document</td></tr>
+      <tr><td><strong>3. Attack action</strong></td><td>Which of the 12</td></tr>
+      <tr><td><strong>4. Steps</strong></td><td>Numbered, repeatable in under a minute</td></tr>
+      <tr><td><strong>5. Expected and actual</strong></td><td>Two sentences</td></tr>
+      <tr><td><strong>6. Proof</strong></td><td>Screenshot or copied message</td></tr>
+      <tr><td><strong>7. Severity</strong></td><td><span class="badge b-high">Fatal</span> blocks the job; <span class="badge b-med">Major</span> wrong result; <span class="badge b-low">Minor</span> cosmetic</td></tr>
+    </table>
+
+    <h3>10.6 Warning signs</h3>
+    <table class="compact">
+      <tr><th style="width:34%">Signal</th><th>Response</th></tr>
+      <tr><td>Tools pass but feel hollow</td><td>Check the spec. A vague spec produces a tool that cannot fail.</td></tr>
+      <tr><td>Defects are all cosmetic</td><td>Make her demo the tool to you live as a confused user. Expand the attack list.</td></tr>
+      <tr><td>She cannot explain her own code</td><td>Return the tool. The five-bullet explanation is part of the deliverable.</td></tr>
+      <tr><td>AI invented a feature</td><td>Not her fault, but it must be caught. Review the prompt log for the request that invited it.</td></tr>
+      <tr><td>Frequent out-of-scope edits</td><td>Narrow to one folder per card for two weeks.</td></tr>
+      <tr><td>Any boundary breach</td><td>Stop that day. Document it. Decide whether the engagement continues.</td></tr>
+    </table>
+
+    <h3>10.7 Seven questions at the end of every loop round</h3>
+    <ol>
+      <li>Which stage are we in, and what is the artifact of that stage?</li>
+      <li>What failed in the last test, in one sentence each?</li>
+      <li>Which task on the list has no acceptance line?</li>
+      <li>What did we add that is not in the SSOT?</li>
+      <li>Is the stop condition still the same as at stage 0?</li>
+      <li>What would make a first-time user give up?</li>
+      <li>What are we avoiding because it is boring?</li>
+    </ol>
+
+    <h3>10.8 Content warning signs</h3>
+    <table class="compact">
+      <tr><th style="width:36%">Signal</th><th>Response</th></tr>
+      <tr><td>Every lesson is exactly the same length and shape</td><td>AI templating. Read three lessons aloud; if they could be swapped, they teach nothing.</td></tr>
+      <tr><td>No source line on a lesson</td><td>Reject the pack until every factual claim has one.</td></tr>
+      <tr><td>Coverage says 100 percent but lessons are thin</td><td>Sample audit: pick five rows of the matrix and open the lessons behind them.</td></tr>
+      <tr><td>Walk-through finished with no confusion</td><td>Not a walk-through. Ask for the confusion list; if it is empty, she did not try.</td></tr>
+      <tr><td>The course keeps gaining topics</td><td>Scope drift. New topics go to the idea list; the brief is frozen.</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================================
+       10
+  ============================================================ -->
+  <section id="s11">
+    <h2>11. Hiring and the paid practical test</h2>
+
+    <h3>11.1 Who to look for</h3>
+    <ul>
+      <li><strong>Suspicious by nature.</strong> Looks at a result and asks "what if I do this instead".</li>
+      <li><strong>Honest about not knowing.</strong> Cheap to train, expensive to fool.</li>
+      <li><strong>Follows the rule even when the rule feels silly.</strong> This is the whole safety model.</li>
+      <li><strong>Comfortable with AI and unimpressed by it.</strong> Uses it as a tool, checks it as a suspect.</li>
+      <li><strong>Writes short and clear.</strong> The job is mostly written.</li>
+    </ul>
+
+    <h3>11.2 Process</h3>
+    <table class="compact">
+      <tr><th style="width:8%">Step</th><th style="width:30%">What</th><th style="width:10%">Time</th><th>Output</th></tr>
+      <tr><td class="num">1</td><td>Written application with three specific answers</td><td>20 min</td><td>Shortlist of 5 to 8</td></tr>
+      <tr><td class="num">2</td><td>Paid practical test, alone, with AI allowed</td><td>90 min</td><td>Shortlist of 2 to 3</td></tr>
+      <tr><td class="num">3</td><td>Structured interview, 30 minutes</td><td>30 min</td><td>One offer, or none</td></tr>
+      <tr><td class="num">4</td><td>Week 1 and week 3 gates</td><td>2 weeks</td><td>Confirmation or exit</td></tr>
+    </table>
+
+    <h3>11.3 The paid practical test</h3>
+    <p>
+      Give her a stripped template, a one-page rule summary and one sentence of requirements. She has
+      90 minutes, AI is allowed and expected.
+    </p>
+    <div class="example">
+      <strong>Test brief, example</strong><br>
+      "Build a small tool that splits a restaurant bill: number of people, total, tip percentage.
+      Show the amount per person. It must handle zero people, a zero total and a very large number.
+      Deliver the three files, the harness screenshot, and a note of what you tested."
+    </div>
+    <table class="compact">
+      <tr><th style="width:36%">Criterion</th><th style="width:10%">Points</th><th>Full marks</th></tr>
+      <tr><td>It actually works</td><td class="num">5</td><td>All three files load, the calculation is correct, the harness renders</td></tr>
+      <tr><td>Followed the structure</td><td class="num">5</td><td>File names, entry point, build stamp, no extra file</td></tr>
+      <tr><td>Tested like a user</td><td class="num">5</td><td>Reports real tests including zero and extreme values, with results</td></tr>
+      <tr><td>Explains the code</td><td class="num">3</td><td>Five plain sentences that match what the code does</td></tr>
+      <tr><td>Honest about gaps</td><td class="num">2</td><td>States what was skipped or uncertain, without being asked</td></tr>
+    </table>
+    <p>Hire at 15 or above. Below 11, reject. Between 11 and 14, continue only if the interview is strong.</p>
+
+    <h4>Alternative test, if you hire for the curriculum track first</h4>
+    <p>
+      Give a three-page extract from a public official handbook, a lesson template and 90 minutes.
+      Ask for a ten-lesson mini course, a coverage table, one fully written lesson, and a list of
+      what she checked. AI is allowed and expected.
+    </p>
+    <table class="compact">
+      <tr><th style="width:40%">Criterion</th><th style="width:10%">Points</th><th>Full marks</th></tr>
+      <tr><td>Structure follows the template</td><td class="num">5</td><td>Sections, lesson titles as outcomes, nothing invented</td></tr>
+      <tr><td>Coverage table is honest</td><td class="num">5</td><td>Every topic from the extract appears, gaps admitted</td></tr>
+      <tr><td>Lesson content is usable</td><td class="num">5</td><td>Objective, key points, example, practice, common mistake</td></tr>
+      <tr><td>Sources cited</td><td class="num">3</td><td>Each fact traceable to the extract, with the page named</td></tr>
+      <tr><td>Honest about gaps</td><td class="num">2</td><td>States what she could not finish, without being asked</td></tr>
+    </table>
+
+    <h3>11.4 Interview questions</h3>
+    <ol>
+      <li>Show me something AI made for you that looked right and was wrong. How did you notice?</li>
+      <li>How do you decide when AI output is good enough to hand over?</li>
+      <li>Tell me about a time you broke something and said so.</li>
+      <li>What would you do if your tool worked for you but not for someone else?</li>
+      <li>How would you test a calculator you just built?</li>
+      <li>This job bans git, database access and publishing absolutely. Is that acceptable?</li>
+      <li>How would you tell me a spec is wrong, before or after building it?</li>
+      <li>Which part of the practical test was hardest, and what did you try?</li>
+      <li>What would you want to learn in ten weeks?</li>
+      <li>Do you prefer building or checking? Why?</li>
+    </ol>
+
+    <h3>11.5 Red flags</h3>
+    <ul>
+      <li>Delivers something that works in the demo but was never tested outside it.</li>
+      <li>Cannot explain AI output, only paste it.</li>
+      <li>Reports "it works" without a single test.</li>
+      <li>Ignores the file naming or adds extra files.</li>
+      <li>Hides a known failure until asked.</li>
+      <li>Wants creative freedom in the first month.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================
+       11
+  ============================================================ -->
+  <section id="s12">
+    <h2>12. Risks and controls</h2>
+    <table class="compact">
+      <tr><th style="width:28%">Risk</th><th style="width:11%">Impact</th><th style="width:12%">Likelihood</th><th>Control</th></tr>
+      <tr>
+        <td>A tool she built looks correct and is subtly broken for a user</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Green class only, five-gate acceptance, your code review, your ten-minute manual pass, no self-publishing.</td>
+      </tr>
+      <tr>
+        <td>She trusts AI instead of verifying</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td>Every claim must be shown on the running tool. Prompt log. Return the deliverable when it cannot be demonstrated.</td>
+      </tr>
+      <tr>
+        <td>Her tools are hollow or generic</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Spec approval before code, and a spec must state what the tool must not do.</td>
+      </tr>
+      <tr>
+        <td>Copied or licensed code from AI output</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Rewrite to the template, no third-party bundle without your approval, licence check on anything imported.</td>
+      </tr>
+      <tr>
+        <td>Boundary breach: git, database, publishing, existing tools</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Absolute ban, repeated in writing in week 1, immediate stop on breach, restricted workspace copy.</td>
+      </tr>
+      <tr>
+        <td>Supervision creeps above budget</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td>One idea per week, one spec at a time, questions batched, no red-class work.</td>
+      </tr>
+      <tr>
+        <td>Output volume hides weak quality</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Measure accepted tools, not submitted tools. Count rework and defect hit rate.</td>
+      </tr>
+      <tr>
+        <td>She leaves mid-engagement</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Specs and prompt logs are written artifacts, so a replacement can continue. Handover pack from week 8.</td>
+      </tr>
+      <tr>
+        <td>A wrong rule in a course reaches a learner</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Official sources only, one citation per claim, expert review, draft label, your sign-off, she never publishes.</td>
+      </tr>
+      <tr>
+        <td>Coverage is claimed but topics are skipped</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Random sample audit of the matrix every week, exclusions must be written and justified, source line per lesson.</td>
+      </tr>
+      <tr>
+        <td>Padding: many hollow lessons that teach nothing</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td>One idea per lesson, length band, six required parts, read three lessons aloud at the weekly review.</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- ============================================================
+       12
+  ============================================================ -->
+  <section id="s13">
+    <h2>13. Open decisions and approval</h2>
+
+    <table class="compact">
+      <tr><th style="width:5%">#</th><th style="width:32%">Decision</th><th style="width:28%">Options</th><th>Why it matters</th></tr>
+      <tr><td class="num">1</td><td>Which model to start with</td><td>2 with model 3 ramp, or model 3 for all 10 weeks</td><td>Sets the risk level and the output expectation</td></tr>
+      <tr><td class="num">2</td><td>Which tool ideas are green class</td><td>List of 8 to 12 approved ideas</td><td>She needs a queue, and only safe ideas may enter it</td></tr>
+      <tr><td class="num">3</td><td>Who reviews her code</td><td>You, or you plus a developer</td><td>The main quality control for built tools</td></tr>
+      <tr><td class="num">4</td><td>AI tools allowed</td><td>Which assistant, free or paid, company account</td><td>Affects speed, privacy and cost</td></tr>
+      <tr><td class="num">5</td><td>Package installs</td><td>Not allowed, or allowed with approval</td><td>Most supply-chain risk sits here</td></tr>
+      <tr><td class="num">6</td><td>Hours, pay, start date</td><td>20, 30 or 37.5 hours; rate; dates</td><td>Needed for the advertisement</td></tr>
+      <tr><td class="num">7</td><td>Workspace access</td><td>Full local copy, or a restricted copy with the template and one tool folder</td><td>Restricted copy removes most technical risk</td></tr>
+      <tr><td class="num">8</td><td>Language</td><td>Turkish required, asset, or not needed</td><td>Changes the candidate pool</td></tr>
+      <tr><td class="num">9</td><td>First course subject and jurisdiction</td><td>Driving licence theory, and which province or country handbook</td><td>Sets the source list and the expert reviewer</td></tr>
+      <tr><td class="num">10</td><td>Who reviews curriculum facts</td><td>A qualified instructor, a lawyer, or yourself</td><td>The only protection against a wrong rule</td></tr>
+      <tr><td class="num">11</td><td>Required lesson parts</td><td>The six parts in section 6.2, or a shorter set</td><td>Defines completeness and the audit sample</td></tr>
+      <tr><td class="num">12</td><td>Are courses internal or sold</td><td>Internal training, resale, or both</td><td>Changes the review standard and the legal exposure</td></tr>
+    </table>
+
+    <div class="sig-grid">
+      <div>
+        <div class="sig-line">
+          <span class="sig-role">Prepared by</span>
+          <span class="ph">[name]</span> - <span class="ph">[date]</span>
+        </div>
+      </div>
+      <div>
+        <div class="sig-line">
+          <span class="sig-role">Approved by</span>
+          <span class="ph">[name]</span> - <span class="ph">[date]</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Revision history</h3>
+    <table class="compact">
+      <tr><th style="width:10%">Version</th><th style="width:14%">Date</th><th>Change</th></tr>
+      <tr><td>1.0</td><td>2026-10-28</td><td>First draft: clerical operations role built on screenshot, demo data, catalog and copy upkeep.</td></tr>
+      <tr><td>2.0</td><td>2026-10-28</td><td>Rebuilt around AI-assisted tool production. Clerical work demoted to byproducts. Added the 15-minute rule, green class, the five-gate acceptance protocol, the 12-action attack list, job models, and the build-based practical test.</td></tr>
+      <tr><td>3.0</td><td>2026-10-28</td><td>Added the curriculum track as the first assignment, the eight-stage delivery loop with numeric exit criteria, the twelve-item curriculum checklist, content acceptance gates, a curriculum practical test, and a revised two-track 10-week plan.</td></tr>
+    </table>
+
+    <div class="approval-note">
+      <p>
+        Section 9 becomes contractual only when signed and when the placeholders are filled. Review
+        the plan at the week 6 checkpoint and record decisions in the revision history.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  var KEY = 'uniconhub_junior_jd_v3';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.task-box'));
+  var saved = {};
+
+  try {
+    var raw = window.localStorage.getItem(KEY);
+    if (raw) { saved = JSON.parse(raw) || {}; }
+  } catch (e) {
+    saved = {};
+  }
+
+  function refresh() {
+    var done = 0;
+    for (var i = 0; i < boxes.length; i++) {
+      var box = boxes[i];
+      var row = box.parentNode;
+      if (box.checked) { done++; }
+      if (row && row.classList) { row.classList.toggle('is-done', box.checked); }
+    }
+    var pct = boxes.length ? Math.round((done * 100) / boxes.length) : 0;
+    var fill = document.getElementById('trackerFill');
+    var label = document.getElementById('trackerLabel');
+    if (fill) { fill.style.width = pct + '%'; }
+    if (label) { label.textContent = done + ' of ' + boxes.length + ' done (' + pct + '%)'; }
+  }
+
+  function persist() {
+    try { window.localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+  }
+
+  boxes.forEach(function (box) {
+    var id = box.getAttribute('data-task');
+    if (id && typeof saved[id] === 'boolean') { box.checked = saved[id]; }
+    box.addEventListener('change', function () {
+      if (id) { saved[id] = box.checked; }
+      persist();
+      refresh();
+    });
+  });
+
+  var reset = document.getElementById('trackerReset');
+  if (reset) {
+    reset.addEventListener('click', function () {
+      saved = {};
+      persist();
+      for (var i = 0; i < boxes.length; i++) { boxes[i].checked = false; }
+      refresh();
+    });
+  }
+
+  refresh();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Description - Junior AI Builder (Curriculum and Tools)</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 850px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 50px 58px 56px;
+  }
+
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 18px;
+    margin-bottom: 24px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title { font-size: 28px; font-weight: 700; }
+  .doc-subtitle { font-size: 15.5px; color: var(--accent); font-weight: 600; margin-top: 7px; }
+  .doc-meta { margin-top: 11px; font-size: 12.5px; color: var(--muted); }
+  .doc-meta span { margin: 0 8px; }
+
+  section { margin-bottom: 24px; }
+  h2 {
+    font-size: 14.5px;
+    text-transform: uppercase;
+    letter-spacing: 1.3px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 10px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3 { font-size: 13.5px; margin: 14px 0 5px; }
+  p { font-size: 13.5px; margin-bottom: 9px; }
+  ul, ol { margin: 0 0 9px 21px; }
+  li { font-size: 13.5px; margin-bottom: 5px; }
+  a { color: var(--accent); }
+
+  .intro {
+    font-size: 14.5px;
+    line-height: 1.62;
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    padding: 13px 16px;
+    margin-bottom: 12px;
+  }
+  .intro p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 9px 0 14px; font-size: 13px; }
+  th, td { padding: 8px 10px; border: 1px solid var(--line); vertical-align: top; text-align: left; }
+  th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+  }
+  table.terms td:first-child {
+    width: 190px;
+    background: #f5f8fb;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+  .box {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px 14px;
+    background: #fbfcfd;
+  }
+  .box h3 { margin-top: 0; }
+  .box ul:last-child, .box p:last-child { margin-bottom: 0; }
+
+  .rules {
+    border: 1px solid #efc2bf;
+    background: #fdf6f5;
+    border-radius: 4px;
+    padding: 12px 15px;
+    font-size: 13px;
+  }
+  .rules ul:last-child { margin-bottom: 0; }
+
+  .note {
+    border: 1px dashed #b6c2cf;
+    background: #fbfcfd;
+    border-radius: 4px;
+    padding: 11px 14px;
+    font-size: 12.5px;
+    margin-top: 10px;
+  }
+
+  .ph {
+    color: var(--muted);
+    font-style: italic;
+    background: #f8fafc;
+    border-bottom: 1px dashed #b6c2cf;
+    padding: 0 3px;
+  }
+
+  .ad {
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    background: #fbfcfd;
+    border-radius: 0 4px 4px 0;
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+  .ad p:last-child { margin-bottom: 0; }
+
+  .sig-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 26px;
+  }
+  .sig-line {
+    border-top: 1px solid var(--ink);
+    margin-top: 48px;
+    padding-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .sig-role { font-weight: 600; color: var(--ink); display: block; }
+
+  .footer-note {
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+  }
+
+  @media (max-width: 760px) {
+    .page { padding: 26px 20px 32px; margin: 12px; }
+    .two-col { grid-template-columns: 1fr; }
+    .doc-title { font-size: 22px; }
+    .sig-grid { grid-template-columns: 1fr; gap: 18px; }
+    table { font-size: 12.5px; }
+  }
+
+  @page { margin: 16mm 14mm; }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; border: none; box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .intro, .box, .rules, .ad, .note { break-inside: avoid; page-break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">UniconHub</div>
+    <div class="doc-title">Junior AI Builder</div>
+    <div class="doc-subtitle">Curriculum and Tools - 10-week role with full training</div>
+    <div class="doc-meta">
+      Document: <span class="ph">JD-2026-07</span> |
+      Version: <span class="ph">1.0</span> |
+      Date: 2026-10-28
+    </div>
+  </header>
+
+  <section>
+    <div class="intro">
+      <p>
+        We are looking for one junior person to build two things with AI: short courses and small
+        web tools. You do not need to be a programmer or a teacher. We will train you from the first
+        day, and you will work on real material that we review together.
+      </p>
+      <p>
+        This is a paid, remote, 10-week role. Your work will be used by real people, so care and
+        honesty matter more than speed.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>1. What you will do</h2>
+
+    <div class="two-col">
+      <div class="box">
+        <h3>Build courses</h3>
+        <ul>
+          <li>Research an official guide or handbook for a subject.</li>
+          <li>Turn it into a clear outline: sections and lessons.</li>
+          <li>Prepare a short PDF for each lesson, taken from the official source.</li>
+          <li>Use our Curriculum Builder to generate lesson text, slides, flashcards and quizzes.</li>
+          <li>Read the result like a student and fix what is confusing.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>Build small tools</h3>
+        <ul>
+          <li>Write a one-page plan for a simple tool before building it.</li>
+          <li>Build it with AI inside our template, in small steps.</li>
+          <li>Test it yourself: empty fields, long text, wrong numbers, reload, phone screen.</li>
+          <li>Fix what fails and test again.</li>
+          <li>Hand it over with a short note of what you tested.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Check and improve</h3>
+      <ul>
+        <li>Use our existing tools and courses like a first-time user, and write down what is broken.</li>
+        <li>Give steps that anyone can repeat to see the same problem.</li>
+        <li>Keep clear notes, so another person can continue your work.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. What we will teach you</h2>
+    <p>All training is paid and happens during working hours. No prior experience is needed.</p>
+    <table>
+      <tr>
+        <th style="width:20%">When</th>
+        <th>What you learn</th>
+      </tr>
+      <tr>
+        <td><strong>Week 1</strong></td>
+        <td>How our files and folders are organised, our work rules, the tool template, Curriculum Builder, and how to prepare a source PDF from an official guide.</td>
+      </tr>
+      <tr>
+        <td><strong>Week 2</strong></td>
+        <td>How to write a one-page tool plan, how to build with AI in small steps, and how to run a test checklist.</td>
+      </tr>
+      <tr>
+        <td><strong>Week 3 onwards</strong></td>
+        <td>One new skill each week with written feedback: research from sources, writing for beginners, writing quiz questions, accessibility, and checking your own work.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. What we expect from you</h2>
+    <div class="two-col">
+      <div class="box">
+        <h3>Required</h3>
+        <ul>
+          <li>You can read and write English clearly.</li>
+          <li>You follow written steps exactly, including file names.</li>
+          <li>You are comfortable using AI tools and willing to check their answers.</li>
+          <li>You say clearly when something fails or when you are unsure.</li>
+          <li>You ask for help within 30 minutes of being stuck.</li>
+          <li>You can work <span class="ph">[30 hours per week]</span> for 10 weeks.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>Nice to have, not required</h3>
+        <ul>
+          <li>Turkish, Spanish or another language.</li>
+          <li>You can read simple HTML and CSS.</li>
+          <li>You have tutored, taught or explained something to someone.</li>
+          <li>You have used ChatGPT, Claude or similar every day.</li>
+        </ul>
+      </div>
+    </div>
+    <p>
+      <strong>Not required:</strong> a university degree, programming experience, a teaching
+      certificate, or a portfolio.
+    </p>
+  </section>
+
+  <section>
+    <h2>4. How we work</h2>
+    <ul>
+      <li><strong>Short daily update.</strong> Three written lines: what you did, what is blocking you, what is next.</li>
+      <li><strong>Monday plan, Friday review.</strong> We agree the week on Monday and review it together on Friday.</li>
+      <li><strong>Proof with every delivery.</strong> A file path, a screenshot or a test result. "It works" is not enough.</li>
+      <li><strong>Written feedback.</strong> You always get a clear reason when something is accepted or returned.</li>
+      <li><strong>You never publish.</strong> We review and publish after you hand over.</li>
+    </ul>
+
+    <div class="rules">
+      <h3>Five rules that never change</h3>
+      <ul>
+        <li>Never use git, the database, or publishing tools. Those stay with us.</li>
+        <li>Work only on the files and tasks you are given.</li>
+        <li>Never invent a fact, a price, a law, a rule or a source page.</li>
+        <li>Never copy text or code without checking where it came from.</li>
+        <li>When in doubt, ask first and wait.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. What success looks like after 10 weeks</h2>
+    <ul>
+      <li>You can build a small tool from a one-page plan without help.</li>
+      <li>You can turn an official guide into a course where every lesson is covered and checked.</li>
+      <li>Most of your work passes review the first time.</li>
+      <li>Another person can pick up your notes and continue.</li>
+      <li>You can explain what you built, and what you tested, in plain words.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. Terms</h2>
+    <table class="terms">
+      <tr><td>Job title</td><td>Junior AI Builder (Curriculum and Tools)</td></tr>
+      <tr><td>Reporting to</td><td><span class="ph">[name and role]</span></td></tr>
+      <tr><td>Duration</td><td>10 weeks, <span class="ph">[start date]</span> to <span class="ph">[end date]</span></td></tr>
+      <tr><td>Hours</td><td><span class="ph">[30 hours per week]</span>, <span class="ph">[core hours]</span></td></tr>
+      <tr><td>Location</td><td><span class="ph">[remote / hybrid, city]</span>. Own computer and stable internet required.</td></tr>
+      <tr><td>Pay</td><td><span class="ph">[hourly rate or weekly amount, currency]</span></td></tr>
+      <tr><td>Training</td><td>Provided, paid, from week 1</td></tr>
+      <tr><td>Reviews</td><td>Week 3 check-in, week 6 review, week 10 final review</td></tr>
+      <tr><td>Equipment</td><td><span class="ph">[own laptop / provided laptop]</span></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>7. How to apply</h2>
+    <ol>
+      <li>Send a short application to <span class="ph">[address]</span> with <span class="ph">[what to send]</span>.</li>
+      <li>Shortlisted candidates do a paid 90-minute task with AI allowed: build a very small tool, or turn a three-page guide into a ten-lesson outline.</li>
+      <li>Then a 30-minute conversation about how you work and what you want to learn.</li>
+    </ol>
+    <div class="note">
+      <strong>We look for care, not experience.</strong> A careful person with no background beats an
+      experienced person who guesses, in this job.
+    </div>
+  </section>
+
+  <section>
+    <h2>8. Short version for posting</h2>
+    <div class="ad">
+      <p><strong>Junior AI Builder (Curriculum and Tools), 10 weeks, remote, training provided</strong></p>
+      <p>
+        We are looking for one careful person to build short courses and small web tools with AI.
+        You will research official guides, prepare lesson material, build simple tools from a plan,
+        and test your own work before handing it over.
+      </p>
+      <p>
+        No programming or teaching experience needed. You must write clear English, follow written
+        steps exactly, and say honestly when something does not work. Full training from week 1.
+        <span class="ph">[30 hours per week]</span>, <span class="ph">[pay]</span>, from
+        <span class="ph">[start date]</span>.
+      </p>
+      <p>Apply to <span class="ph">[address]</span> with <span class="ph">[what to send]</span>.</p>
+    </div>
+  </section>
+
+  <div class="sig-grid">
+    <div>
+      <div class="sig-line">
+        <span class="sig-role">Prepared by</span>
+        <span class="ph">[name]</span> - <span class="ph">[date]</span>
+      </div>
+    </div>
+    <div>
+      <div class="sig-line">
+        <span class="sig-role">Approved by</span>
+        <span class="ph">[name]</span> - <span class="ph">[date]</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <p>
+      This document is the simple version of the role. The detailed management version, with the
+      delivery loop and acceptance checklists, is
+      <a href="Job-Description-Junior-HTML-Tools-Assistant.html">Job-Description-Junior-HTML-Tools-Assistant.html</a>.
+      Fill every italic placeholder before sending this to a candidate.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

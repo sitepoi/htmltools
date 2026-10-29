@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HTML Tool Factory - Technical Source of Truth</title>
+  <!--
+    Standard tool SSOT, same structure as every html tool in this repository:
+    _docs/templates/_ssot-template.html, styled by _docs/assets/ssot.css and
+    driven by _docs/assets/ssot.js (task panel, risk gate, idea stats).
+    This document is the single source of truth for the factory itself.
+  -->
+  <link rel="stylesheet" href="../../../../_docs/assets/ssot.css" />
+  <script src="../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">HTML Tool Factory</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.9.0</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>HTML Tool Factory</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for the factory: the autonomous builder that turns one
+    idea from the idea catalog into a finished html tool in the repository
+    taxonomy. Every decision about the factory is logged in section 11 and this
+    document is updated in the same change as the code. When this document and
+    the code disagree, this document is the tiebreaker.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.9.1</td></tr>
+    <tr><th>Last updated</th><td>2026-10-29</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>The factory application in <code>DESKTOP-APPS/Html-Tool-Factory/html-tool-factory</code></td></tr>
+    <tr><th>Primary code areas</th><td><code>src/pipeline.js</code>, <code>src/stages/*.js</code>, <code>src/tool/*.js</code>, <code>src/ssot/*.js</code>, <code>src/knowledge/contextPack.js</code>, <code>src/ai/prompts.js</code>, <code>ui/</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>Documentation of the generated tools (each tool has its own SSOT), the repository release scripts, and the CMS publishing flow.</td></tr>
+  </table>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines the factory: the loop, the contracts and the guards
+  that turn an idea into a working html tool without a human in the loop. It is
+  the single source of truth for every decision about the factory.</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> A decision that is not in
+    section 11 did not happen.</li>
+    <li><strong>The register is append-only.</strong> Rows are never deleted; a
+    reversed decision is marked "Reversed (date)" with a reason.</li>
+    <li><strong>This document wins ties.</strong> When code and document
+    disagree, the document is corrected first, then the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> No cryptic
+    abbreviations outside loop indexes and known acronyms (id, url, api).</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> A tool folder that the factory
+  writes is always a valid three file html tool that opens and works, and a run
+  never reports "finished" while work is still open.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this document</th></tr>
+    <tr><td><code>src/pipeline.js</code></td><td>Stage machine and run loop</td><td>Whole file: stage order, iteration budget, stop policy</td></tr>
+    <tr><td><code>src/stages/*.js</code></td><td>One file per stage</td><td>Whole file: selectIdea, researchSsot, planTasks, riskReview, resolveRisks, applyTasks, runTests, usabilityReview, improveProduct</td></tr>
+    <tr><td><code>src/tool/contract.js</code></td><td>html-tool-rules enforced in code</td><td>Whole file: path policy, build stamps, forbidden apis</td></tr>
+    <tr><td><code>src/tool/taxonomy.js</code></td><td>Idea folder code to repository folder</td><td>Whole file</td></tr>
+    <tr><td><code>src/tool/scaffold.js</code></td><td>First working version of the tool</td><td>Whole file</td></tr>
+    <tr><td><code>src/ssot/scoring.js</code></td><td>Task points and prompt batching</td><td>Whole file</td></tr>
+    <tr><td><code>src/ssot/standardDocs.js</code></td><td>Standard documentation for the generated tool</td><td>Whole file: init-docs call and the AF regions</td></tr>
+    <tr><td><code>src/knowledge/contextPack.js</code></td><td>Repository knowledge and lessons</td><td>Whole file</td></tr>
+    <tr><td><code>src/ai/prompts.js</code></td><td>Every prompt and its JSON contract</td><td>Whole file</td></tr>
+    <tr><td><code>src/state.js</code></td><td>Run persistence, restart and continue</td><td>Whole file</td></tr>
+    <tr><td><code>src/server.js</code></td><td>HTTP API and static dashboard</td><td>Run routes and the settings routes</td></tr>
+    <tr><td><code>ui/app.js</code></td><td>Dashboard</td><td>Timeline, tasks, actions</td></tr>
+    <tr><td><code>test/run-selftest.cjs</code>, <code>test/check-sources.cjs</code></td><td>Verification</td><td>Whole files</td></tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th></tr>
+    <tr><td>C-01</td><td>Idea SSOT read and written back to <code>tool-ideas-catalog.json</code></td><td><code>src/idea/catalog.js</code>, <code>src/idea/writeBack.js</code></td><td>0.1.0</td></tr>
+    <tr><td>C-02</td><td>Nine stage loop with per stage token accounting</td><td><code>src/pipeline.js</code></td><td>0.1.0</td></tr>
+    <tr><td>C-03</td><td>Usability and persona review every iteration</td><td><code>src/stages/usabilityReview.js</code></td><td>0.3.0</td></tr>
+    <tr><td>C-04</td><td>html tool contract enforced on paths, extensions, stamps and apis</td><td><code>src/tool/contract.js</code></td><td>0.4.0</td></tr>
+    <tr><td>C-05</td><td>Tool written into the repository taxonomy folder from the idea folder code</td><td><code>src/tool/taxonomy.js</code>, <code>src/state.js</code></td><td>0.4.0</td></tr>
+    <tr><td>C-06</td><td>Standard documentation for the generated tool (init-docs plus AF regions)</td><td><code>src/ssot/standardDocs.js</code></td><td>0.4.0</td></tr>
+    <tr><td>C-07</td><td>Working scaffold with styled controls and a mock requestAI harness</td><td><code>src/tool/scaffold.js</code></td><td>0.4.0</td></tr>
+    <tr><td>C-08</td><td>Repository knowledge block in the research and planning prompts</td><td><code>src/knowledge/contextPack.js</code></td><td>0.5.0</td></tr>
+    <tr><td>C-09</td><td>Ten item depth checklist that blocks "finished"</td><td><code>src/ssot/model.js</code>, <code>src/stages/planTasks.js</code></td><td>0.5.0</td></tr>
+    <tr><td>C-10</td><td>Blocked tasks retried with the failure stored as a lesson</td><td><code>src/stages/applyTasks.js</code></td><td>0.5.0</td></tr>
+    <tr><td>C-11</td><td>Run reports paused with the remaining work instead of done</td><td><code>src/pipeline.js</code></td><td>0.5.0</td></tr>
+    <tr><td>C-12</td><td>Continue (reopen work, extend budget) and Restart (delete folder, typed confirmation)</td><td><code>src/state.js</code>, <code>src/server.js</code>, <code>ui/app.js</code></td><td>0.5.0</td></tr>
+    <tr><td>C-13</td><td>Every task scored out of 100 and packed into one prompt worth of work</td><td><code>src/ssot/scoring.js</code>, <code>src/stages/applyTasks.js</code></td><td>0.6.0</td></tr>
+    <tr><td>C-14</td><td>Timeline shows the task batch being coded, with points</td><td><code>src/pipeline.js</code>, <code>ui/app.js</code></td><td>0.6.0</td></tr>
+    <tr><td>C-15</td><td>Tool definition written before the plan (summary, jobs, screens, data, rules, out of scope, success)</td><td><code>src/stages/researchSsot.js</code>, <code>src/ssot/standardDocs.js</code></td><td>0.7.0</td></tr>
+    <tr><td>C-16</td><td>Per tool chat that only writes the SSOT</td><td><code>src/chat/service.js</code>, <code>ui/app.js</code></td><td>0.7.0</td></tr>
+    <tr><td>C-17</td><td>Bounded probes: syntax, dom_smoke, allowlisted web_get</td><td><code>src/agent/probes.js</code>, <code>src/ai/tools.js</code></td><td>0.7.0</td></tr>
+    <tr><td>C-18</td><td>Every tool call audited in <code>run.toolLog</code> and the Live log</td><td><code>src/stages/shared.js</code></td><td>0.7.0</td></tr>
+    <tr><td>C-19</td><td>Files open from disk (vscode and file links, copy path, open folder)</td><td><code>src/server.js</code>, <code>ui/app.js</code></td><td>0.7.0</td></tr>
+    <tr><td>C-20</td><td>Continue keeps the tool, Restart deletes only that run folder, both wait for an in-flight stage</td><td><code>src/state.js</code>, <code>src/pipeline.js</code></td><td>0.7.0</td></tr>
+    <tr><td>C-21</td><td>A dry run is sandboxed into the run folder, never into the repository tree</td><td><code>src/stages/selectIdea.js</code></td><td>0.7.0</td></tr>
+    <tr><td>C-22</td><td>A checkpoint per successful batch, restored through the API with drift detection</td><td><code>src/state.js</code>, <code>src/server.js</code></td><td>0.9.0</td></tr>
+    <tr><td>C-23</td><td>Real tokens per batch stored on the step</td><td><code>src/stages/applyTasks.js</code></td><td>0.9.0</td></tr>
+    <tr><td>C-24</td><td>No progress stop instead of burning the iteration budget</td><td><code>src/pipeline.js</code></td><td>0.9.0</td></tr>
+    <tr><td>C-25</td><td>Delete guard limited to BUSINESS and PERSONAL tool folders</td><td><code>src/state.js</code></td><td>0.9.0</td></tr>
+    <tr><td>C-26</td><td>Adaptive AI timeout with a clear abort message and bounded tool output</td><td><code>src/ai/client.js</code>, <code>src/stages/shared.js</code></td><td>0.9.1</td></tr>
+  </table>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning used here</th></tr>
+    <tr><td>Idea</td><td>One entry of <code>UNICON-TOOLS/tools-catalog/tool-ideas-catalog.json</code> with a folder code such as <code>B-G-04-d</code>.</td></tr>
+    <tr><td>Tool folder</td><td><code>BUSINESS|PERSONAL/&lt;type&gt;/&lt;category&gt;/&lt;subcategory&gt;/&lt;ToolName&gt;</code> with <code>app/</code> and <code>docs/</code>.</td></tr>
+    <tr><td>Contract</td><td>The three file html tool format from <code>html-tool-rules.txt</code>: html, css, js plus the harness.</td></tr>
+    <tr><td>Points</td><td>The estimated cost of one task, 5 to 100, used to pack tasks into one prompt.</td></tr>
+    <tr><td>Batch</td><td>A group of tasks whose points add up to about 100, applied in one AI call and one atomic patch.</td></tr>
+    <tr><td>Depth checklist</td><td>The ten capability items a tool must have before a run may report finished.</td></tr>
+    <tr><td>Lesson</td><td>One recorded failure reason in <code>knowledge/lessons.json</code>, injected into later prompts.</td></tr>
+    <tr><td>AF region</td><td>A marked part of a generated tool SSOT (<code>AF:TASKS</code>, <code>AF:IDEAS</code>, <code>AF:CHECK</code>, <code>AF:BUILD</code>) that the factory owns.</td></tr>
+  </table>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <ul>
+    <li>Run <code>2026-10-28-202134-ai-proposal-builder-7730c6</code>: 30 tasks planned, 7 done. Groups AF-2 (2/10), AF-3 (0/10), AF-4 (0/3), AF-5 (0/3) never executed.</li>
+    <li>The same run logged "Implementation pass: 1 done, 3 not done" three times, each failure reason "The answer contained no operations".</li>
+    <li>Tasks in those groups named <code>src/lib/draftRequests.ts</code> and <code>src/components/QuoteTable.tsx</code>, files that cannot exist in a three file html tool.</li>
+    <li>A 3 iteration run ended with <code>status: done</code> while 70 percent of the plan was unbuilt.</li>
+    <li>Only 2 checks per iteration verified the work; nothing measured how complete the tool was.</li>
+  </ul>
+  <h3>5.2 Structural flaws</h3>
+  <ol>
+    <li><strong>Illegal plan targets.</strong> Risk and usability stages wrote task files without the contract, so the tasks were dead on arrival.</li>
+    <li><strong>No second chance.</strong> A task that failed twice was parked as blocked and never retried, so one bad call removed work permanently.</li>
+    <li><strong>No measure of depth.</strong> "No tasks left" counted as finished even when core capabilities were missing.</li>
+    <li><strong>One tiny task per call.</strong> Each AI call carried a single small task, so the run spent calls on renames and ran out of budget before the real work.</li>
+    <li><strong>No repository context.</strong> The prompts contained the SSOT digest but not the repo rules, the publish checklist or past failures.</li>
+  </ol>
+  <p class="risk"><strong>Root cause:</strong> the loop had no unit of work worth a prompt and no definition of done, so it could neither spend its budget efficiently nor tell whether the tool was complete.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>Every generated file must satisfy <code>html-tool-rules.txt</code>: three files plus a harness, build stamps, no framework, no build step, no CDN.</li>
+    <li>The tool is written into the taxonomy folder of its idea, never into the run folder.</li>
+    <li>One AI call must carry about one prompt worth of work: the sum of the batch points is close to 100, never above 130.</li>
+    <li>Every task shows its points in the dashboard and in the generated standard SSOT.</li>
+    <li>A run may only report finished when every task and every depth item is closed.</li>
+    <li>A failed task gets a fresh attempt in a later iteration before it is skipped, and its reason is stored as a lesson.</li>
+    <li>The timeline shows which tasks are being coded while the apply stage runs.</li>
+    <li>Continue keeps the tool folder; Restart deletes only that run's tool folder and needs a typed confirmation.</li>
+    <li>No decision blocks the operator from raising the budget in <code>config.local.json</code>.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr><td><strong>A. One task per call</strong></td><td>Keep the original model</td><td>No: wastes calls on small tasks</td><td>None</td><td class="status-rejected">REJECTED (D-HTF-14)</td></tr>
+    <tr><td><strong>B. Fixed number of tasks per call</strong></td><td>Always send 3 tasks</td><td>Partially: ignores task size</td><td>Low</td><td class="status-rejected">REJECTED (size varies by 10x)</td></tr>
+    <tr><td><strong>C. Point scored batching</strong></td><td>Score each task 5 to 100, pack to a 100 point target</td><td>Yes: balances load and call count</td><td>Medium: scoring module, batch prompt, atomic batch apply</td><td class="status-adopted">ADOPTED (D-HTF-14)</td></tr>
+  </table>
+  <p><strong>Decision: option C.</strong> The score is deterministic (kind, files, acceptance lines, wording, checklist link) and may be refined by the planner inside 5 to 100.</p>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Core invariant</h3>
+  <p class="note"><strong>Invariant POINTS.</strong> For every apply call, 5 &lt;= sum(points of the tasks in the batch) &lt;= 130, and the batch is applied and validated as one atomic patch. A task above 100 is impossible by construction because the score is clamped.</p>
+  <h3>8.2 Task scoring and batching</h3>
+  <pre>
+estimatePoints(task):
+  base = { code: 30, test: 20, doc: 15, chore: 10 }[kind]
+  + min(20, files * 5) + min(20, acceptance * 4)
+  + 25 if rewrite/refactor/from scratch, +12 if add/build/implement
+  - 12 if rename/wording/label, +10 if checklist item
+  clamp 5..100
+
+buildBatches(tasks, { targetPoints: 100, maxBatchPoints: 130, maxTasksPerBatch: 6 })
+  greedy packing; a trailing batch under 50 points is merged into the previous one
+  </pre>
+  <ul>
+    <li>Scores are filled in <code>normalizeIncomingTasks</code>, so tasks from any stage are scored on the same scale, and again in <code>applyPoints</code> for old runs.</li>
+    <li>The batch patch is applied atomically; validation runs on every changed file; a failed batch is rolled back as a unit.</li>
+    <li>The model may answer with <code>completed</code> ids; when it omits a task the task is still closed by the batch and the note records what the model claimed.</li>
+  </ul>
+  <h3>8.3 Stage order and live step detail</h3>
+  <pre>
+select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
+  -> apply-tasks -> run-tests -> usability-review -> improve-product ] x N
+  </pre>
+  <p><code>context.setStep(patch)</code> lets a stage annotate its own step entry while
+  it runs, so the apply stage publishes its batches (id, points, task ids, status)
+  and the timeline shows what is being coded right now.</p>
+  <h3>8.4 Caller contract table</h3>
+  <table>
+    <tr><th>Caller</th><th>Required change</th></tr>
+    <tr><td><code>src/stages/planTasks.js</code></td><td>Pass <code>toolName</code> to <code>normalizeIncomingTasks</code> so paths are coerced to the contract files.</td></tr>
+    <tr><td><code>src/stages/applyTasks.js</code></td><td>Consume <code>scoring.buildBatches</code>; never call the model once per task.</td></tr>
+    <tr><td><code>ui/app.js</code></td><td>Render <code>task.points</code> and <code>step.tasks</code>.</td></tr>
+    <tr><td><code>src/ssot/standardDocs.js</code></td><td>Render points in the generated SSOT task items and group headers.</td></tr>
+  </table>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>Planner answers a path outside the contract</td><td>Path is coerced to <code>app/&lt;Tool&gt;.html|css|js</code> and the mapping is logged</td></tr>
+    <tr><td>Model answers with no ops</td><td>Batch attempt fails, the model is asked again with the problem, up to <code>taskAttempts</code></td></tr>
+    <tr><td>Patch validates but a build stamp is stale</td><td>Validation error, batch rolled back, task retried</td></tr>
+    <tr><td>Batch keeps failing</td><td>Rolled back, tasks returned to the queue with a retry, skipped only after <code>taskRetries</code></td></tr>
+    <tr><td>Iteration budget reached with open work</td><td>Run status <code>paused</code>, reason lists open tasks and depth items</td></tr>
+    <tr><td>Operator presses Continue</td><td>Parked tasks reopened, budget extended by 5, cost meter reset only after a budget stop</td></tr>
+    <tr><td>Operator confirms Restart</td><td>Only that run's tool folder and backups deleted, run reset to stage 1</td></tr>
+    <tr><td>Restart asked for a folder the run does not own</td><td>Deletion refused, nothing removed</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>The generated harness checks are not executed by the factory</td><td>Depth is verified by static validation and the model's own acceptance statements</td><td>Task T-01</td></tr>
+    <tr><td>L-02</td><td>Points are an estimate, not a measurement</td><td>A batch can be heavier than 100 real points</td><td>Accepted (D-HTF-14)</td></tr>
+    <tr><td>L-03</td><td>No human approval gate before a tool folder is written</td><td>A weak run leaves files that must be deleted or restarted</td><td>Idea I-04</td></tr>
+    <tr><td>L-04</td><td>One model for every stage</td><td>A cheap model still decides the plan</td><td>Accepted, configurable per stage</td></tr>
+    <tr><td>L-05</td><td>No checkpoint restore in the dashboard</td><td>A batch can only be undone by Restart</td><td>Task T-08</td></tr>
+    <tr><td>L-06</td><td>No visual check of the rendered tool</td><td>Layout and readability problems stay invisible</td><td>Task T-16</td></tr>
+    <tr><td>L-07</td><td>No MCP client</td><td>External tools must be coded in, not attached</td><td>Idea I-07</td></tr>
+    <tr><td>L-08</td><td>Operator notes are not injected into prompts</td><td>The operator cannot add a project rule for one run</td><td>Task T-12</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr><td>D-HTF-01</td><td>2026-10-28</td><td>The idea list JSON is the idea SSOT and the only source of work.</td><td>One place to add and retire ideas.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-02</td><td>2026-10-28</td><td>Nine stages, one AI call per stage where possible, strict JSON contracts.</td><td>Predictable cost and repairable answers.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-03</td><td>2026-10-28</td><td>A usability and persona review runs every iteration.</td><td>Depth comes from use, not from feature lists.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-04</td><td>2026-10-28</td><td>The html tool contract is enforced in code, not requested in the prompt.</td><td>A prompt alone produced React and TypeScript files.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-05</td><td>2026-10-28</td><td>Deliverable written into the taxonomy folder of the idea.</td><td>Tools belong with their peers.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-06</td><td>2026-10-28</td><td>Generated documentation uses the repository standard (init-docs plus AF regions).</td><td>One documentation format for every tool.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-07</td><td>2026-10-28</td><td>The scaffold must produce a working first screen with a mock requestAI harness.</td><td>A tool must be usable before the first patch lands.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-08</td><td>2026-10-28</td><td>Repository rules, the publish checklist and past lessons are injected into the research and planning prompts.</td><td>Context, not adjectives, is what makes a plan deep.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-09</td><td>2026-10-28</td><td>A ten item depth checklist blocks "finished"; half of every planning batch is reserved for it.</td><td>The loop otherwise stops after cosmetic work.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-10</td><td>2026-10-28</td><td>Failed tasks are retried in a later iteration and their reason becomes a lesson.</td><td>Half the plan used to be parked forever.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-11</td><td>2026-10-28</td><td>A run with open work ends as paused with counts, never as done.</td><td>The dashboard and catalog must not lie.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-12</td><td>2026-10-28</td><td>Continue keeps the tool folder; Restart deletes only that run's tool folder and requires the run id typed.</td><td>Iterating on a tool and destroying a tool are different actions.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-13</td><td>2026-10-28</td><td>The character and call budgets are the real cost guard; iterations are a pacing control.</td><td>Operators raise iterations without hiding a runaway cost.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-14</td><td>2026-10-28</td><td>Every task is scored 5 to 100 and small tasks are batched to a 100 point target, applied atomically.</td><td>One tiny task per call wasted budget; one huge call is unreviewable. 100 points is the balance.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-15</td><td>2026-10-28</td><td>The apply stage publishes its batches to the running step so the timeline shows the tasks being coded.</td><td>Visibility while the longest stage runs.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-16</td><td>2026-10-28</td><td>The factory keeps its own SSOT in the repository standard structure with a task list and an idea backlog.</td><td>The builder must document itself like the tools it builds.</td><td class="status-adopted">Adopted</td></tr>
+  <tr><td>D-HTF-17</td><td>2026-10-28</td><td>The agent may run only fixed probes (syntax, dom_smoke, web_get) inside the tool folder; no shell, no database, no free form code, and web access only for allowlisted https hosts and only when enabled.</td><td>Running code is useful; letting a model author the code that runs is not. Every probe is bounded, logged and reversible.</td><td class="status-adopted">Adopted</td></tr>
+  <tr><td>D-HTF-18</td><td>2026-10-28</td><td>Each run has its own chat that only writes the SSOT (definition, features, ideas, risks, questions, decisions, tasks). It never edits files and never advances the loop.</td><td>Ideas and bug reports belong in the specification; the normal plan turns them into work.</td><td class="status-adopted">Adopted</td></tr>
+  <tr><td>D-HTF-19</td><td>2026-10-28</td><td>The dashboard exposes every file with a vscode:// and a file:// link plus a copyable absolute path.</td><td>The operator must be able to open the real file without the server in the middle.</td><td class="status-adopted">Adopted</td></tr>
+  <tr><td>D-HTF-20</td><td>2026-10-28</td><td>Research writes a tool definition first (summary, jobs, screens, data, rules, out of scope, success) and derives features from its jobs when the feature list is thin.</td><td>The catalog idea is a title, not a specification; a deep tool needs the definition before the plan.</td><td class="status-adopted">Adopted</td></tr>    <tr><td>D-HTF-21</td><td>2026-10-29</td><td>The task list in this document must cover every capability gap that is tracked anywhere else. A gap that is not a task does not exist.</td><td>The document fell behind the conversation and the operator could not see the real backlog.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-22</td><td>2026-10-29</td><td>Review is a first class stage: a reviewer pass over the batch diff, with a verdict, runs before a batch counts as done.</td><td>An agent that only writes never notices a plausible but wrong change.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-23</td><td>2026-10-29</td><td>Every batch keeps a restorable checkpoint (files plus SSOT snapshot) so one bad batch never forces a full restart.</td><td>Restart is the only undo today, and it deletes the whole tool.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-24</td><td>2026-10-29</td><td>Instruction layers: repository rules, a per tool type pack and operator notes for one run are all injected into the planning prompts.</td><td>Same idea as AGENTS.md or CLAUDE.md: the operator must be able to steer a run without editing code.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-25</td><td>2026-10-29</td><td>Approval policy per tool class (read, probe, web, write) with auto, ask and deny, defaulting to deny for anything that leaves the tool folder.</td><td>An agent must be usable without giving it blanket power.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-26</td><td>2026-10-29</td><td>Best of three plans: three candidate task lists are generated, scored against the definition and the depth checklist, and only the best is executed.</td><td>Planning is the cheapest place to buy quality; execution is where it gets expensive.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-27</td><td>2026-10-29</td><td>Every successful batch writes a checkpoint (files plus SSOT) and the factory keeps a hash index of what it wrote, so a restore only refuses when a file was edited outside the factory.</td><td>Undo must be one click, and it must never silently overwrite an operator edit.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-28</td><td>2026-10-29</td><td>An iteration that closes with zero tasks done and zero depth items closed stops the run with <code>NO_PROGRESS</code>.</td><td>Repeating failing calls until the budget is gone is worse than stopping with a reason.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-29</td><td>2026-10-29</td><td>Restart may only delete a folder whose path starts with BUSINESS or PERSONAL and is at least three segments deep.</td><td>A configuration mistake must not be able to remove a sibling app or the repository root.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-30</td><td>2026-10-29</td><td>Points are an estimate, the tokens of a batch are measured, and both are shown together.</td><td>The estimate drives the packing; the measurement calibrates it.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-31</td><td>2026-10-29</td><td>The request timeout scales with the prompt size and with the retry (base plus 6 ms per input character, 50 percent more per attempt, capped by <code>limits.maxRequestTimeoutMs</code>), and an abort is logged with its timeout and prompt size.</td><td>A fixed three minute limit aborted legitimate large batches and the log only said "operation was aborted", which looked like a dead tool.</td><td class="status-adopted">Adopted</td></tr>  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li>Every decision is recorded in section 11 with a date, in the same change as the code.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with a reason; never delete rows.</li>
+    <li>The contract in <code>src/tool/contract.js</code> and section 6 must stay in step; a new rule is added to both.</li>
+    <li>Before changing a prompt, check the JSON contract in the same file and the parser in <code>src/ai/parse.js</code>.</li>
+    <li>Run <code>npm run selftest</code> and <code>npm run check</code> before every push.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Task scoring out of 100</td><td><code>src/ssot/scoring.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Batch packing to the 100 point target</td><td><code>src/ssot/scoring.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Batch prompt with a completed ids contract</td><td><code>src/ai/prompts.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Atomic batch apply with rollback</td><td><code>src/stages/applyTasks.js</code> - DONE</td></tr>
+    <tr><td>5</td><td>Live step detail (batches in the timeline)</td><td><code>src/pipeline.js</code>, <code>ui/app.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Points in the dashboard task list and in the generated SSOT</td><td><code>ui/app.js</code>, <code>src/ssot/standardDocs.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Factory SSOT rewritten in the standard structure</td><td><code>docs/ssot.html</code> - DONE</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <ol>
+    <li><strong>Should a batch ever be split when the model fails twice?</strong> Today the whole batch fails and its tasks return to the queue. Splitting it into single tasks on the second attempt could rescue one task while losing the atomicity guarantee.</li>
+    <li><strong>Should points be measured instead of estimated?</strong> After a batch we know the real token cost; feeding that back would calibrate the estimator.</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog for the factory itself. Tasks are grouped into release
+  groups; a group ships in one push. Each task carries its effort points out of
+  100, the same scale the factory uses to batch work.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong>
+      <ul>
+        <li>The requirement is written in section 6.</li>
+        <li>The decision is in section 11.</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong>
+      <ul>
+        <li>All tasks in the group are checked.</li>
+        <li>Open risks are solved or accepted (section 18).</li>
+        <li><code>npm run selftest</code> and <code>npm run check</code> pass.</li>
+        <li>This document is updated in the same change.</li>
+      </ul>
+    </div>
+  </div>
+
+  <section class="task-group" data-release-group="HTF-1" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: verification gap - 165 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-1">0/2</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-1"></div></div>
+    <p class="task-group-note">Why these belong together: the audit only means something once the harness checks can actually run.</p>
+
+    <div class="task-item" data-task-id="T-01" data-group="HTF-1" data-task-status="in-progress">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Run the generated harness checks headlessly after every batch</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 100 of 100 - one prompt on its own.</p>
+          <p><strong>Problem it solves:</strong> Nothing executes the tool, so a run can only trust static validation.</p>
+          <p><strong>How we will solve it:</strong> Add a tiny DOM shim in <code>src/code/domSmoke.js</code> (getElementById, createElement, addEventListener, querySelector, textContent) and evaluate the tool script inside it, then read the <code>[TOOL:TEST]</code> lines the harness prints.</p>
+          <p><strong>Benefit:</strong> The depth checklist item "in tool self test" becomes verified, not claimed.</p>
+          <p><strong>Files:</strong> <code>src/code/domSmoke.js</code>, <code>src/stages/runTests.js</code></p>
+          <p><strong>Status:</strong> in progress</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-02" data-group="HTF-1" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Fail the run when a closed checklist item is not visible in the markup</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 65 of 100 - pairs with T-01 in one prompt.</p>
+          <p><strong>Problem it solves:</strong> A model can mark a capability done without writing it.</p>
+          <p><strong>How we will solve it:</strong> For each checklist item define one observable marker (a labelled input, a <code>role="status"</code> node, a disabled button while busy) and check it in the html and js.</p>
+          <p><strong>Benefit:</strong> Depth becomes auditable instead of declared.</p>
+          <p><strong>Files:</strong> <code>src/ssot/model.js</code>, <code>src/stages/runTests.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-2" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: editing quality - 135 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-2">0/2</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-2"></div></div>
+    <p class="task-group-note">Why these belong together: both change how a batch edits a file, and a rewrite without review is dangerous.</p>
+
+    <div class="task-item" data-task-id="T-03" data-group="HTF-2" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Allow a whole file rewrite for tasks that score above 80</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Problem it solves:</strong> Anchor based replaces fail often on a file the model is rebuilding.</p>
+          <p><strong>How we will solve it:</strong> Accept an op <code>{ "op": "overwrite" }</code> only when the task points are above the threshold, still validated and still rolled back on failure.</p>
+          <p><strong>Benefit:</strong> Fewer wasted attempts on large changes.</p>
+          <p><strong>Files:</strong> <code>src/code/patch.js</code>, <code>src/ai/prompts.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-04" data-group="HTF-2" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">Review a batch diff before it is written</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 55 of 100 - with T-03 in one prompt.</p>
+          <p><strong>Problem it solves:</strong> The operator can only inspect a diff after it landed.</p>
+          <p><strong>How we will solve it:</strong> A run option <code>review.eachBatch</code> that pauses after the patch is computed and asks for approve or reject in the dashboard.</p>
+          <p><strong>Benefit:</strong> Half automatic, half supervised, same code path.</p>
+          <p><strong>Files:</strong> <code>src/stages/applyTasks.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-3" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: cost insight - 80 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-3">0/2</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-3"></div></div>
+    <p class="task-group-note">Why these belong together: both read the same per batch usage data.</p>
+
+    <div class="task-item" data-task-id="T-05" data-group="HTF-3" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Show real tokens per batch and per iteration in the dashboard</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 45 of 100.</p>
+          <p><strong>Problem it solves:</strong> Points are an estimate; the operator cannot see the real cost of a batch.</p>
+          <p><strong>How we will solve it:</strong> Record the token delta around each batch in <code>step.tasks[n].tokens</code> and render it next to the points.</p>
+          <p><strong>Benefit:</strong> Calibrates the scorer and makes the budget concrete.</p>
+          <p><strong>Files:</strong> <code>src/stages/applyTasks.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-06" data-group="HTF-3" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Preview the planned batches before the first call</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 35 of 100 - with T-05 in one prompt.</p>
+          <p><strong>Problem it solves:</strong> The batching is only visible after the fact.</p>
+          <p><strong>How we will solve it:</strong> After planning, write the batches into the SSOT and show them on the Tasks tab.</p>
+          <p><strong>Benefit:</strong> The operator sees the shape of the iteration before it costs anything.</p>
+          <p><strong>Files:</strong> <code>src/stages/planTasks.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-4" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: self documentation - 50 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-4">0/1</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-4"></div></div>
+    <p class="task-group-note">Why these belong together: one script keeps this document and the satellites in step.</p>
+
+    <div class="task-item" data-task-id="T-07" data-group="HTF-4" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Generate the factory satellites with the repository docs generator</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 50 of 100.</p>
+          <p><strong>Problem it solves:</strong> The factory has an SSOT but no webpage, help or updates page.</p>
+          <p><strong>How we will solve it:</strong> Register the factory folder with the docs generator so <code>npm run docs:generate -- HtmlToolFactory</code> produces the satellites from this file.</p>
+          <p><strong>Benefit:</strong> The factory documents itself exactly like its output.</p>
+          <p><strong>Files:</strong> <code>scripts/releaseContext.js</code>, <code>docs/</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-5" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: review, undo and permission - 320 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-5">0/3</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-5"></div></div>
+    <p class="task-group-note">Why these belong together: undo, review and permission all read the same batch record (diff, files, decision).</p>
+
+    <div class="task-item" data-task-id="T-08" data-group="HTF-5" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Checkpoint per batch with one click restore</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Problem it solves:</strong> the only undo today is Restart, which deletes the whole tool.</p>
+          <p><strong>How we will solve it:</strong> after each successful batch write <code>runs/&lt;id&gt;/.checkpoints/&lt;batch&gt;/</code> with the changed files and the SSOT snapshot; the dashboard gets a Restore button per batch that rewrites only those files and rolls the SSOT back.</p>
+          <p><strong>Benefit:</strong> a bad batch costs one click, not a rebuild.</p>
+          <p><strong>Files:</strong> <code>src/stages/applyTasks.js</code>, <code>src/state.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-09" data-group="HTF-5" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">Reviewer pass over the batch diff with a verdict</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 90 of 100.</p>
+          <p><strong>Problem it solves:</strong> nothing reads the change back; a plausible but wrong patch passes because it parses.</p>
+          <p><strong>How we will solve it:</strong> a <code>review</code> stage after apply-tasks that receives the diff, the batch tasks and their acceptance lines, and returns <code>approve</code> or <code>reject</code> with reasons. A reject rolls the batch back through the checkpoint, adds the reasons as tasks and records a lesson.</p>
+          <p><strong>Benefit:</strong> the loop gains a critic instead of only an author.</p>
+          <p><strong>Acceptance:</strong> maximum two rejects per batch, then the batch is parked for the operator with the reasons; every reject reason becomes a task with a checkable acceptance line; a reject rolls the batch back through its checkpoint.</p>
+          <p><strong>Files:</strong> <code>src/stages/review.js</code>, <code>src/ai/prompts.js</code>, <code>src/pipeline.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-10" data-group="HTF-5" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Approval policy per tool class (read, probe, web, write)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 60 of 100.</p>
+          <p><strong>Problem it solves:</strong> permissions are all or nothing in the config, with no per run view of what the agent did.</p>
+          <p><strong>How we will solve it:</strong> a policy table <code>agent.policy = { read: auto, probe: auto, web: ask, write: auto }</code>, a pending approval queue for <code>ask</code>, and a Tools tab that lists every call from <code>run.toolLog</code> with its verdict.</p>
+          <p><strong>Benefit:</strong> the same engine can run unattended or supervised.</p>
+          <p><strong>Files:</strong> <code>src/agent/policy.js</code>, <code>src/server.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-6" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: instructions, memory and context - 170 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-6">0/3</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-6"></div></div>
+    <p class="task-group-note">Why these belong together: all three decide what the model knows before it plans.</p>
+
+    <div class="task-item" data-task-id="T-11" data-group="HTF-6" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-11</span>
+          <span class="task-title">Operator notes per run, injected into every planning prompt</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 50 of 100.</p>
+          <p><strong>Problem it solves:</strong> an instruction for one run has nowhere to live except the chat, which forgets it after the digest shrinks.</p>
+          <p><strong>How we will solve it:</strong> <code>runs/&lt;id&gt;/notes.md</code> edited from the dashboard, plus a repository level <code>knowledge/instructions.md</code>, both appended to the knowledge block.</p>
+          <p><strong>Benefit:</strong> the same idea as AGENTS.md, scoped per run.</p>
+          <p><strong>Files:</strong> <code>src/knowledge/contextPack.js</code>, <code>src/server.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-12" data-group="HTF-6" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-12</span>
+          <span class="task-title">Curated conventions file promoted from the lessons log</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 70 of 100.</p>
+          <p><strong>Problem it solves:</strong> <code>lessons.json</code> grows raw failure text that nobody curates, and it is injected verbatim.</p>
+          <p><strong>How we will solve it:</strong> group lessons by cause, propose three merged rules per iteration, and let the operator accept them into <code>knowledge/conventions.md</code> which is injected with priority.</p>
+          <p><strong>Benefit:</strong> memory gets smaller and truer over time instead of longer.</p>
+          <p><strong>Files:</strong> <code>src/knowledge/contextPack.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-13" data-group="HTF-6" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-13</span>
+          <span class="task-title">Compact finished iterations into one summary line</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 50 of 100.</p>
+          <p><strong>Problem it solves:</strong> the digest grows with every iteration until the prompt is mostly history.</p>
+          <p><strong>How we will solve it:</strong> keep the last two iterations in full, replace older ones in <code>buildDigest</code> with one line each (what changed, what failed, tokens).</p>
+          <p><strong>Benefit:</strong> the same context budget buys newer information.</p>
+          <p><strong>Files:</strong> <code>src/ssot/model.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-7" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: better plans - 200 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-7">0/2</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-7"></div></div>
+    <p class="task-group-note">Why these belong together: both change what the planner sees and which plan is executed.</p>
+
+    <div class="task-item" data-task-id="T-14" data-group="HTF-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-14</span>
+          <span class="task-title">Best of three plans, scored before execution</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-14 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 100 of 100 - one prompt.</p>
+          <p><strong>Problem it solves:</strong> one plan is accepted without comparison, and planning is the cheapest place to buy quality.</p>
+          <p><strong>How we will solve it:</strong> three plans in one call with different angles (smallest first, depth first, risk first), then a deterministic score: coverage of definition jobs, depth checklist coverage, points balance, duplicate titles. The best plan is queued and the other two are recorded as rejected ideas.</p>
+          <p><strong>Benefit:</strong> better work per iteration at planning cost only.</p>
+          <p><strong>Acceptance:</strong> one call returns all three plans; the option stays off below 40 percent of the remaining budget and is skipped in the last iteration; the losing plans are recorded as rejected ideas.</p>
+          <p><strong>Files:</strong> <code>src/stages/planTasks.js</code>, <code>src/ai/prompts.js</code>, <code>src/ssot/scoring.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-15" data-group="HTF-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-15</span>
+          <span class="task-title">Read two sibling tools as the reference implementation</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-15 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Problem it solves:</strong> the model knows the rules but has never seen a working tool from this family.</p>
+          <p><strong>How we will solve it:</strong> in the knowledge block, pick up to two tools from the same subcategory (smallest first) and inline their markup skeleton and the first 120 lines of their script, inside a fixed character budget.</p>
+          <p><strong>Benefit:</strong> grounding in real code, which is what makes an editor agent strong.</p>
+          <p><strong>Files:</strong> <code>src/knowledge/contextPack.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-8" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: proof the tool works - 145 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-8">0/2</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-8"></div></div>
+    <p class="task-group-note">Why these belong together: both turn what the tool claims into evidence stored with the run.</p>
+
+    <div class="task-item" data-task-id="T-16" data-group="HTF-8" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-16</span>
+          <span class="task-title">Screenshot the harness after every iteration</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-16 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 100 of 100 - one prompt.</p>
+          <p><strong>Problem it solves:</strong> nothing in the factory can see the rendered tool, so layout and readability problems survive every check.</p>
+          <p><strong>How we will solve it:</strong> call the existing <code>scripts/capture-screenshots.js</code> helper after run-tests, store the image in the run folder and link it in the timeline and the SSOT build record. Keep it optional and off when no browser is available.</p>
+          <p><strong>Benefit:</strong> a human can judge an iteration in one glance, and a later review can compare two images.</p>
+          <p><strong>Files:</strong> <code>src/stages/runTests.js</code>, <code>scripts/capture-screenshots.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-17" data-group="HTF-8" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-17</span>
+          <span class="task-title">Write the tool's own test results into the SSOT test plan</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-17 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 45 of 100 - with T-16 in one prompt.</p>
+          <p><strong>Problem it solves:</strong> the harness prints PASS and FAIL lines that nobody records, so the SSOT test plan stays generic.</p>
+          <p><strong>How we will solve it:</strong> parse the <code>[TOOL:TEST]</code> lines from the dom_smoke probe and write them into the <code>AF:TEST</code> region of the generated SSOT with the iteration number.</p>
+          <p><strong>Benefit:</strong> the tool documents its own evidence.</p>
+          <p><strong>Files:</strong> <code>src/agent/probes.js</code>, <code>src/ssot/standardDocs.js</code></p>
+          <p><strong>Status:</strong> not started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-9" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: risk controls shipped - 245 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">SHIPPED - 2026-10-29</span>
+      <span class="task-group-progress" data-group-progress="HTF-9">5/5</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-9"></div></div>
+    <p class="task-group-note">Why these belong together: they were built as one change to close the risk register, and each has a self test.</p>
+
+    <div class="task-item" data-task-id="T-18" data-group="HTF-9" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-18</span>
+          <span class="task-title">Checkpoint per batch with restore and drift detection</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-18 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Result:</strong> <code>saveCheckpoint</code>, <code>listCheckpoints</code> and <code>restoreCheckpoint</code> in <code>src/state.js</code>; a checkpoint is written after every successful batch; a hash index separates factory writes from hand edits; restore refuses on drift unless forced.</p>
+          <p><strong>Files:</strong> <code>src/state.js</code>, <code>src/stages/applyTasks.js</code>, <code>src/server.js</code></p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-19" data-group="HTF-9" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-19</span>
+          <span class="task-title">Record the real tokens of every batch</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-19 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 45 of 100.</p>
+          <p><strong>Result:</strong> the apply stage measures the counter delta around each batch and stores <code>usage</code> and <code>tokens</code> on the batch, so the point estimate can be calibrated against reality.</p>
+          <p><strong>Files:</strong> <code>src/stages/applyTasks.js</code></p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-20" data-group="HTF-9" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-20</span>
+          <span class="task-title">Stop the run when an iteration made no progress</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-20 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 50 of 100.</p>
+          <p><strong>Result:</strong> <code>run.iterationBaseline</code> is taken at planning time; if the iteration closes with no task done and no depth item closed the run ends with <code>code: NO_PROGRESS</code> and the reason is visible in the dashboard.</p>
+          <p><strong>Files:</strong> <code>src/pipeline.js</code></p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-21" data-group="HTF-9" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-21</span>
+          <span class="task-title">Constrain the delete guard to the taxonomy</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-21 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 40 of 100.</p>
+          <p><strong>Result:</strong> Restart only deletes the exact recorded folder and only when its path starts with <code>BUSINESS</code> or <code>PERSONAL</code> and has at least three segments; four refusal cases are covered by the self test.</p>
+          <p><strong>Files:</strong> <code>src/state.js</code>, <code>test/run-selftest.cjs</code></p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-22" data-group="HTF-9" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-22</span>
+          <span class="task-title">Make the probes state their own limits</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-22 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 30 of 100.</p>
+          <p><strong>Result:</strong> the DOM smoke output ends with a line saying that layout, CSS and the visual result are not verified, so a green probe is never mistaken for a working screen.</p>
+          <p><strong>Files:</strong> <code>src/agent/probes.js</code></p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Ideas for the factory, kept until they are decided. An agreed idea moves to
+  section 15 with points; a rejected one is marked ignored with the reason.</p>
+
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Screenshot evidence per iteration</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> capture the harness page after each iteration and store the image next to the run.</p>
+        <p><strong>Why:</strong> layout and readability problems are invisible to every static check.</p>
+        <p><strong>Discussion:</strong> needs a headless browser on the machine; the repository already has <code>scripts/capture-screenshots.js</code>.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Read three sibling tools as reference</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> when the idea's subcategory already contains tools, inject the smallest one as a reference implementation.</p>
+        <p><strong>Why:</strong> the strongest grounding is a real tool from the same family, not a rules file.</p>
+        <p><strong>Discussion:</strong> must stay inside the knowledge character budget; pick by file size, not by name.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Synthesise checks from acceptance statements</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> turn every acceptance line into a harness check automatically, then run them.</p>
+        <p><strong>Why:</strong> closes the loop between what was promised and what is verified.</p>
+        <p><strong>Discussion:</strong> depends on T-01 (headless harness runner).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Approval gate before the tool folder is written</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a run mode that stops after research and planning, shows the plan and the batches, and waits for approval.</p>
+        <p><strong>Why:</strong> cheap way to reject a bad plan before it costs tokens or writes files.</p>
+        <p><strong>Discussion:</strong> a single checkbox in the create run panel; no new stage needed.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Queue several ideas from the catalog</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> pick a range of ideas and let the factory build them one after another, with one cost report.</p>
+        <p><strong>Why:</strong> the catalog has more ideas than the operator will start by hand.</p>
+        <p><strong>Discussion:</strong> needs a per run budget cap and a stop on the first error.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Translate the tool from its own labels</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> after the tool is complete, generate a second language from the visible labels.</p>
+        <p><strong>Why:</strong> several catalog ideas target non-English markets.</p>
+        <p><strong>Discussion:</strong> would need a language switch in the tool contract first.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">MCP client with an allowlist and per server approval</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> attach read only MCP servers (docs search, schema browser) as extra tools for the research and planning stages.</p>
+        <p><strong>Why:</strong> the strongest planning input is current external documentation, not more prompt text.</p>
+        <p><strong>Discussion:</strong> needs the approval policy from T-10 first; every server must be named in the config, never discovered.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-08" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-08</span>
+        <span class="idea-title">Run several ideas in parallel with one cost report</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-08 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> queue three ideas overnight and read a single report in the morning.</p>
+        <p><strong>Why:</strong> the catalog has more ideas than the operator will start by hand.</p>
+        <p><strong>Discussion:</strong> the per run lock already isolates runs; the missing piece is one shared budget and a stop on the first error.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-09" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-09</span>
+        <span class="idea-title">Commit the generated tool with a written message</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-09 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> when a run finishes, stage the tool folder and write a commit message from the definition and the finished tasks.</p>
+        <p><strong>Why:</strong> the work already ends in a reviewable state; the commit is the last manual step.</p>
+        <p><strong>Discussion:</strong> <code>git.allowCommit</code> exists but is unused; it must stay off by default.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-10" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-10</span>
+        <span class="idea-title">Instruction packs per tool type</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-10 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> <code>knowledge/packs/html-tool.md</code>, and later one pack per tool type (listing, report, dashboard widget).</p>
+        <p><strong>Why:</strong> the factory will not only build html tools; the rules differ per type.</p>
+        <p><strong>Discussion:</strong> the pack is chosen from the taxonomy root of the idea, so it costs nothing until a second type exists.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-11" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-11</span>
+        <span class="idea-title">Cheap model for the mechanical stages</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-11 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> plan and review with the strong model, run checks summarisation and small fixes with a small one.</p>
+        <p><strong>Why:</strong> cost per iteration is dominated by the apply stage, not by thinking.</p>
+        <p><strong>Discussion:</strong> <code>models</code> already accepts a per stage value; the missing piece is a policy that picks it automatically.</p>
+      </div>
+    </details>
+  </div>
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>TP-01 - self test.</strong> Run <code>npm run selftest</code>. PASS if every check passes and the sample run reaches a terminal state.</li>
+    <li><strong>TP-02 - source checks.</strong> Run <code>npm run check</code>. PASS if every module parses, the dashboard ids match, and the renderers evaluate.</li>
+    <li><strong>TP-03 - batching.</strong> Open a run, look at the Tasks tab. PASS if every task shows points and the Timeline shows each batch with the tasks it coded.</li>
+    <li><strong>TP-04 - contract.</strong> Ask for a change that names <code>app/index.html</code>. PASS if the batch is rejected with the contract reason and the tool folder is unchanged.</li>
+    <li><strong>TP-05 - continue.</strong> Finish a run with open work, press Continue. PASS if tasks reopen, the budget rises, and the run starts again without deleting the folder.</li>
+    <li><strong>TP-06 - restart.</strong> Press Restart, type a wrong id. PASS if nothing is deleted; type the right id and PASS if only the tool folder is gone and the run is back at stage 1.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result</th><th>Notes</th></tr>
+    <tr><td>TP-01, TP-02</td><td>PASS</td><td>106 self test checks, 57 source checks on 2026-10-28</td></tr>
+    <tr><td>TP-03 to TP-06</td><td>PASS</td><td>verified against a mock run and over HTTP</td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> a change ships only when TP-01 and TP-02 pass and section 11 has the matching decision row.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-01" data-group="HTF-1" data-risk-level="high" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">A DOM shim can pass a tool that a real browser breaks</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-01</p>
+        <p><strong>What can go wrong:</strong> the shim is more forgiving than a browser, so a false PASS ships.</p>
+        <p><strong>Mitigation:</strong> the shim only reports what the harness itself claims; visual problems stay out of scope and are covered by the screenshot idea.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-28 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-02" data-group="HTF-2" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">A whole file rewrite can delete working code</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-03</p>
+        <p><strong>What can go wrong:</strong> a rewrite drops an id that the harness or an earlier task depends on.</p>
+        <p><strong>Mitigation:</strong> only above 80 points, contract validation still runs, and the previous version stays in <code>.backup</code> for one click restore.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-28 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-03" data-group="" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">Points are an estimate and can overload one call</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> whole factory</p>
+        <p><strong>What can go wrong:</strong> a 100 point batch of three small tasks can still be heavier than expected.</p>
+        <p><strong>Mitigation:</strong> hard cap of 130 points and 6 tasks, per batch token measurement (T-05) to calibrate.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-28 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-04" data-group="" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-04</span>
+        <span class="risk-title">A model that ignores the contract stalls the loop</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> apply-tasks</p>
+        <p><strong>What can go wrong:</strong> every batch fails and the run burns its budget with nothing written.</p>
+        <p><strong>Mitigation:</strong> attempts and retries are bounded, the failure becomes a lesson, and the run ends paused with the reason.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-28 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-05" data-group="" data-risk-level="critical" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-05</span>
+        <span class="risk-title">Restart deletes the wrong folder</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> restart action</p>
+        <p><strong>What can go wrong:</strong> a bad path removes a neighbouring tool or a parent folder.</p>
+        <p><strong>Mitigation:</strong> deletion is allowed only for the exact recorded tool folder with at least three taxonomy segments, the run id must be typed, and the self test covers the three refusal cases.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-28 solved by the guard, kept open until a manual test on a real tool folder.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-06" data-group="HTF-5" data-risk-level="high" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-06</span>
+        <span class="risk-title">The reviewer rejects good work and the loop spins</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-06 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-09</p>
+        <p><strong>What can go wrong:</strong> a reject rolls the batch back, the same task is planned again, and the batch is rejected for the same reason forever.</p>
+        <p><strong>Mitigation:</strong> max two rejects per batch, then the task is parked for the operator with the reason, and every reject becomes a task with a concrete acceptance line.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-29 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-07" data-group="HTF-5" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-07</span>
+        <span class="risk-title">A checkpoint restore drifts from the SSOT</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-07 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-08</p>
+        <p><strong>What can go wrong:</strong> the operator edited a file by hand, a restore puts the old file back and the SSOT no longer matches the code.</p>
+        <p><strong>Mitigation:</strong> the restore compares the file on disk with the checkpoint and asks before overwriting a file that changed outside the factory.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-29 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-08" data-group="HTF-7" data-risk-level="medium" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-08</span>
+        <span class="risk-title">Best of three plans multiplies planning cost</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-08 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-14</p>
+        <p><strong>What can go wrong:</strong> three plans per iteration make the cheapest stage the most expensive one.</p>
+        <p><strong>Mitigation:</strong> one call returns all three plans, the option is off when the remaining budget is under 40 percent, and the planner is skipped in the last iteration.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-29 open</p>
+      </div>
+    </details>
+  </div>
+
+  <h3>Risk resolution record - 2026-10-29</h3>
+  <table>
+    <tr><th>Risk</th><th>State</th><th>Resolution and evidence</th></tr>
+    <tr><td>R-01</td><td><span class="doc-status status-implemented">ACCEPTED</span></td><td>The dom_smoke probe now prints "behaviour only. Layout, CSS and the visual result are not verified by this probe", so a green smoke is never read as a working screen. The visual gap is owned by T-16. Self test: "the DOM smoke probe states what it does not prove".</td></tr>
+    <tr><td>R-02</td><td><span class="doc-status status-implemented">SOLVED</span></td><td>There is no overwrite operation in the contract and unknown operations are refused by the patch layer, so a batch cannot replace a whole file. Self test: "an overwrite operation is refused".</td></tr>
+    <tr><td>R-03</td><td><span class="doc-status status-implemented">SOLVED</span></td><td>Every finished batch records its real <code>usage</code> (calls, input and output characters) and <code>tokens</code> in <code>step.tasks[n]</code>, so the estimate can be compared with what was spent. Caps stay at 130 points and 6 tasks. Self test: "each finished batch records its real tokens".</td></tr>
+    <tr><td>R-04</td><td><span class="doc-status status-implemented">SOLVED</span></td><td>Bounded attempts (3) and retries (3), every failure stored as a lesson, and a new no progress stop: an iteration that closes with zero tasks done and zero depth items closed ends the run with <code>code: NO_PROGRESS</code> instead of repeating the same failing calls.</td></tr>
+    <tr><td>R-05</td><td><span class="doc-status status-implemented">SOLVED</span></td><td>The delete guard only accepts the exact recorded tool folder when its path has at least three segments and starts with <code>BUSINESS</code> or <code>PERSONAL</code>. Self test covers four refusals: the run folder, a foreign folder, a path outside the taxonomy and the tool folder that is allowed.</td></tr>
+    <tr><td>R-06</td><td><span class="doc-status status-active">ACCEPTED</span></td><td>The review stage does not exist yet, so there is no exposure today. The loop guard is now written into T-09 acceptance: maximum two rejects per batch, then the batch is parked for the operator with the reason.</td></tr>
+    <tr><td>R-07</td><td><span class="doc-status status-implemented">SOLVED</span></td><td>Every successful batch writes a checkpoint (files plus SSOT snapshot) and the factory keeps a hash index of what it wrote, so a restore reports files edited outside the factory instead of overwriting them. Endpoints: <code>GET /api/runs/:id/checkpoints</code> and <code>POST /api/runs/:id/checkpoints/:batch/restore</code> with an optional <code>force</code>.</td></tr>
+    <tr><td>R-08</td><td><span class="doc-status status-active">ACCEPTED</span></td><td>Best of three plans does not exist yet. The cost guard is written into T-14 acceptance: one call returns all three plans, the option is off below 40 percent of the budget and skipped in the last iteration.</td></tr>
+  </table>
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to run locally and safe to publish a generated tool folder: every write is validated, every batch is atomic and every deletion is scoped to one recorded folder.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+      <!-- RELEASE-LOG-ROWS -->
+      <tr><td>2026-10-28</td><td>0.1.0</td><td>Nine stage loop, idea catalog JSON as the idea SSOT, run storage, dashboard, mock provider.</td></tr>
+      <tr><td>2026-10-28</td><td>0.2.0</td><td>Idea SSOT write back, tool folder per idea, catalog driven start.</td></tr>
+      <tr><td>2026-10-28</td><td>0.3.0</td><td>Usability and persona review, timeline with per step tokens, agentic read tools, diffs, protected SSOT.</td></tr>
+      <tr><td>2026-10-28</td><td>0.4.0</td><td>Renamed to HTML Tool Factory, html tool contract enforced, taxonomy target, standard documentation, working scaffold.</td></tr>
+      <tr><td>2026-10-28</td><td>0.5.0</td><td>Repository knowledge in the prompts, depth checklist, retries with lessons, paused instead of done, continue and restart.</td></tr>
+      <tr><td>2026-10-28</td><td>0.6.0</td><td>Task points out of 100 and prompt batching, live batch detail in the timeline, this SSOT rewritten in the standard structure.</td></tr>
+      <tr><td>2026-10-28</td><td>0.7.0</td><td>Tool definition written before the plan, per tool chat that only edits the SSOT, sandboxed probes (syntax, dom_smoke, allowlisted web), disk and VS Code links for every file.</td></tr>
+      <tr><td>2026-10-29</td><td>0.8.0</td><td>Backlog aligned with the editor agent comparison: review stage, batch checkpoints, approval policy, operator notes, curated conventions, context compaction, best of three plans, sibling reference tools, screenshots and recorded test evidence are now decided and tracked as tasks.</td></tr>
+      <tr><td>2026-10-29</td><td>0.9.0</td><td>Risk register closed: batch checkpoints with drift aware restore, real tokens per batch, no progress stop, delete guard limited to the taxonomy, honest probe limits. 129 self test checks and 59 source checks.</td></tr>
+      <tr><td>2026-10-29</td><td>0.9.1</td><td>Adaptive request timeout so a large batch is not aborted at three minutes, an abort now logs its timeout and prompt size, and tool output is capped before the final answer. 133 self test checks.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    HTML Tool Factory - single source of truth for every decision about this
+    builder. Version 0.9.0, 2026-10-29. Keep in sync with the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18).</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this builder by level, with open / accepted / solved state.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>

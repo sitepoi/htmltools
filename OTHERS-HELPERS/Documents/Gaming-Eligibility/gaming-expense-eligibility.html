@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Community Gaming Grant 2025-26 - Program Dossier</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --line: #e2e8f0;
+    --line-strong: #cbd5e1;
+    --paper: #ffffff;
+    --accent: #0f5c8a;
+    --accent-soft: #eef5fa;
+    --good: #1d7a36;
+    --good-bg: #e9f6ed;
+    --warn: #8a5a00;
+    --warn-bg: #fdf3e1;
+    --dep: #45566b;
+    --dep-bg: #edf1f7;
+    --stop: #b42318;
+    --stop-bg: #fdecea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 34px 20px 60px;
+    background: #eef1f5;
+    color: var(--ink);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14.5px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    width: 100%;
+    max-width: 1240px;
+    margin: 0 auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 36px 40px 30px;
+    box-shadow: 0 18px 44px rgba(15, 35, 60, .08);
+  }
+
+  /* ---------- head ---------- */
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--accent);
+  }
+  .eyebrow {
+    margin: 0 0 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 { margin: 0; font-size: 29px; line-height: 1.18; letter-spacing: -.01em; }
+  .sub { margin: 8px 0 0; font-size: 14px; color: var(--muted); max-width: 760px; }
+  .head-meta { text-align: right; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+  .head-meta strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- tiles ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0 0; }
+  .tile { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fbfcfe; }
+  .tile span { display: block; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .tile b { display: block; margin-top: 4px; font-size: 20px; letter-spacing: -.01em; }
+  .tile em { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .tile.hot b { color: var(--stop); }
+
+  /* ---------- sections ---------- */
+  section.block { margin-top: 30px; }
+  .block-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  .block-no {
+    font-size: 11px; font-weight: 800; letter-spacing: .1em;
+    color: #ffffff; background: var(--accent);
+    border-radius: 5px; padding: 2px 7px;
+  }
+  h2 { margin: 0; font-size: 20px; letter-spacing: -.01em; }
+  .block-sub { margin: 4px 0 14px; font-size: 13px; color: var(--muted); max-width: 900px; }
+
+  h3 { font-size: 15px; margin: 20px 0 6px; }
+
+  /* ---------- chips ---------- */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px;
+    font-size: 12px; color: var(--muted); background: #fbfcfe;
+  }
+  .chip b { color: var(--ink); font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+  .dot.good { background: var(--good); }
+  .dot.warn { background: #d99a2b; }
+  .dot.dep { background: #7b8794; }
+  .dot.stop { background: var(--stop); }
+  .dot.info { background: var(--accent); }
+
+  /* ---------- ranked list ---------- */
+  .rank { list-style: none; margin: 10px 0 0; padding: 0; counter-reset: rank; }
+  .rank li {
+    counter-increment: rank;
+    position: relative;
+    padding: 9px 0 9px 36px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .rank li::before {
+    content: counter(rank);
+    position: absolute; left: 0; top: 9px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rank li strong { color: var(--ink); font-weight: 600; }
+  .rank li.no strong { color: var(--stop); }
+  .rank .tag {
+    display: inline-block; margin-left: 8px; padding: 1px 7px;
+    border-radius: 4px; font-size: 9.5px; font-weight: 800;
+    letter-spacing: .08em; text-transform: uppercase;
+    background: var(--good-bg); color: var(--good);
+  }
+  .rank .tag.cond { background: var(--warn-bg); color: var(--warn); }
+  .rank .tag.stop { background: var(--stop-bg); color: var(--stop); }
+
+  .why { margin: 10px 0 0; padding-left: 20px; }
+  .why li { font-size: 13.5px; color: var(--muted); margin-bottom: 6px; }
+  .why li strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- table ---------- */
+  table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px; font-size: 13px; }
+  thead th {
+    text-align: left; font-size: 10.5px; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    padding: 0 12px 9px; border-bottom: 1px solid var(--line-strong);
+  }
+  thead th:first-child { padding-left: 14px; }
+  tbody td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody td:first-child { padding-left: 14px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:nth-child(even) { background: #fafbfd; }
+
+  .col-expense { width: 21%; }
+  .col-status { width: 12%; }
+  .col-view { width: 26%; }
+  .col-review { width: 41%; }
+
+  .expense { display: flex; align-items: baseline; gap: 8px; font-weight: 600; color: var(--ink); }
+  .no { font-size: 11px; font-weight: 700; color: #94a3b8; font-variant-numeric: tabular-nums; min-width: 16px; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px 3px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .pill .dot { width: 6px; height: 6px; flex: 0 0 6px; }
+  .pill.good { background: var(--good-bg); color: var(--good); border-color: #c9e6d2; }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); border-color: #f0d9ab; }
+  .pill.dep { background: var(--dep-bg); color: var(--dep); border-color: #d5dde8; }
+
+  .view { color: var(--muted); }
+  .view strong { color: var(--ink); font-weight: 600; }
+  .rev {
+    display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .09em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 5px;
+    margin-bottom: 5px; border: 1px solid transparent;
+  }
+  .rev.agree { background: var(--good-bg); color: var(--good); border-color: #c9e6d2; }
+  .rev.adjust { background: var(--warn-bg); color: var(--warn); border-color: #f0d9ab; }
+  .rev-note { color: var(--muted); line-height: 1.45; }
+  .rev-note strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- decisions ---------- */
+  .decision {
+    display: grid; grid-template-columns: 34px 1fr;
+    gap: 12px; padding: 14px 16px;
+    border: 1px solid var(--line); border-left: 4px solid var(--line-strong);
+    border-radius: 10px; margin-bottom: 10px; background: #ffffff;
+  }
+  .decision.stop { border-left-color: var(--stop); background: #fffafa; }
+  .decision.warn { border-left-color: #d99a2b; background: #fffcf6; }
+  .decision.info { border-left-color: var(--accent); background: #fbfdff; }
+  .decision .dn {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 13px; font-weight: 700; color: var(--muted); padding-top: 1px;
+  }
+  .decision h3 { margin: 0 0 4px; font-size: 14.5px; }
+  .decision p { margin: 0; font-size: 13px; color: var(--muted); }
+  .decision p + p { margin-top: 6px; }
+  .decision strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- budget ---------- */
+  table.money td, table.money th { font-variant-numeric: tabular-nums; }
+  table.money td.num, table.money th.num { text-align: right; white-space: nowrap; }
+  table.money tfoot td {
+    border-top: 2px solid var(--accent); border-bottom: 0;
+    font-weight: 700; color: var(--ink); padding-top: 10px;
+  }
+  table.money tfoot tr:first-child td { border-top: 2px solid var(--accent); }
+  .muted-cell { color: var(--muted); }
+
+  /* ---------- quote / draft ---------- */
+  .draft {
+    margin: 12px 0 0; padding: 16px 18px;
+    background: var(--accent-soft); border: 1px solid #cfe2ef;
+    border-radius: 12px; font-size: 13.5px; line-height: 1.6;
+    color: #24384c; white-space: pre-wrap;
+  }
+  .draft strong { color: var(--ink); }
+  .char-count { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+
+  /* ---------- narrative ---------- */
+  .qa { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; }
+  .qa:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  .q {
+    margin: 0 0 6px; font-size: 12.5px; font-weight: 700;
+    letter-spacing: .04em; color: var(--accent); text-transform: uppercase;
+  }
+  .qa p { margin: 0 0 8px; font-size: 13.5px; }
+  .qa ul { margin: 0 0 8px; padding-left: 20px; }
+  .qa li { font-size: 13.5px; margin-bottom: 4px; }
+  .qa p:last-child, .qa ul:last-child { margin-bottom: 0; }
+
+  /* ---------- checklist ---------- */
+  .checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 26px; margin-top: 10px; }
+  .check {
+    position: relative; padding-left: 24px; font-size: 13px; color: var(--muted);
+  }
+  .check::before {
+    content: ""; position: absolute; left: 0; top: 4px;
+    width: 12px; height: 12px; border: 1.5px solid var(--accent); border-radius: 3px;
+  }
+  .check strong { color: var(--ink); font-weight: 600; }
+
+  .note-strip {
+    margin-top: 16px; padding: 10px 14px;
+    border: 1px dashed var(--line-strong); border-radius: 10px;
+    font-size: 12.5px; color: var(--muted); background: #f8fafc;
+  }
+  .note-strip b { color: var(--ink); }
+
+  .foot {
+    margin-top: 26px; padding-top: 12px; border-top: 1px solid var(--line);
+    font-size: 11px; color: #94a3b8; line-height: 1.55;
+  }
+
+  @media (max-width: 1000px) {
+    .sheet { padding: 24px 18px; }
+    .head-meta { text-align: left; }
+    .tiles { grid-template-columns: 1fr 1fr; }
+    .checklist { grid-template-columns: 1fr; }
+    .col-expense, .col-status, .col-view, .col-review { width: auto; }
+  }
+
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    body { background: #ffffff; padding: 0; font-size: 8.5pt; }
+    .sheet { max-width: none; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+    table { font-size: 7.8pt; }
+    section.block { break-inside: avoid-page; }
+    .decision { break-inside: avoid; }
+    tbody tr:nth-child(even) { background: #fafbfd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .pill, .rev, .dot, .tile, .draft, .decision { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tbody td { padding: 5px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <header class="head">
+    <div>
+      <p class="eyebrow">Community Gaming Grant - 2025-26</p>
+      <h1>Ubuntu: I Am Because We Are<br />Program dossier and eligibility review</h1>
+      <p class="sub">Human and Social Services stream. Eligibility findings, budget reconciliation, a compliant use-of-funds statement, and the program narrative prepared for the application.</p>
+    </div>
+    <div class="head-meta">
+      <strong>Awarded: $40,000</strong><br />
+      Program budget: $121,000<br />
+      Prepared 28 October 2026
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><span>Grant stream</span><b>CGG - HSS</b><em>2025-2026</em></div>
+    <div class="tile"><span>Expense lines reviewed</span><b>20</b><em>8 removed as risky</em></div>
+    <div class="tile"><span>Award to place</span><b>$40,000</b><em>Every dollar can sit in a safe line</em></div>
+    <div class="tile"><span>Participants</span><b>125 youth</b><em>35 mentors, 350 community</em></div>
+  </div>
+
+  <!-- ─────────────── 01 ELIGIBILITY ─────────────── -->
+  <section class="block">
+    <div class="block-head"><span class="block-no">01</span><h2>Eligibility review, line by line</h2></div>
+    <p class="block-sub">Updated after your answers: mixed employees, contractors and volunteers; camps that include meals; and the question about multi-year equipment.</p>
+
+    <div class="chips">
+      <span class="chip"><span class="dot good"></span>Eligible <b>19</b></span>
+      <span class="chip"><span class="dot dep"></span>Depends <b>1</b></span>
+      <span class="chip"><span class="dot info"></span>Review: agree <b>19</b></span>
+      <span class="chip"><span class="dot warn"></span>Review: adjust <b>1</b></span>
+      <span class="chip"><span class="dot stop"></span>Removed <b>8</b></span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="col-expense">Expense</th>
+          <th class="col-status">Original call</th>
+          <th class="col-view">Assessment</th>
+          <th class="col-review">Review</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="expense"><span class="no">01</span>Ubuntu Manager / Program Coordinator wages</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view"><strong>Very strong</strong> if directly attributable to Ubuntu.</td>
+          <td><span class="rev agree">Agree, prorate</span>
+            <div class="rev-note">Employees and contractors can both be claimed, but only the share of time spent on this program. Keep timesheets and a payroll or contract allocation.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">02</span>Mentor Training Leads</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Trainer wages are program delivery. Hold the payroll or contract record and the session schedule.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">03</span>Camp Facility Rental</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Rental for program delivery is a direct cost. The agreement and dates should match the camp sessions.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">04</span>Transportation within BC</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong when essential to Ubuntu delivery.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Keep the reason for each trip and confirm every leg stays in BC; out-of-province travel is not eligible.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">05</span>Materials &amp; Supplies</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree, consumables only</span>
+            <div class="rev-note"><strong>Answer to your question: no, you cannot buy multi-year equipment with this grant.</strong> Capital purchases are not eligible. Consumables used up in the program are.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">06</span>Community Engagement Facility Rental</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Straightforward if the space is rented for the engagement sessions themselves.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">07</span>Event Organizers Wages</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">If actual paid wages and directly related to Ubuntu.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Payroll or a contractor invoice, not volunteer thank-you money. Keep the event dates and the hours each person worked.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">08</span>Community Engagement Materials</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Consumables used in the sessions. Invoices should name the program.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">09</span>Community Engagement Transportation</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Keep it distinct from the general transport line so the two are not counted twice.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">10</span>Mentorship Circle Room Rental</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Direct program cost with a clear paper trail.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">11</span>Volunteer Mentors</span></td>
+          <td><span class="pill dep"><span class="dot"></span>Depends</span></td>
+          <td class="view">Actual wages or training costs can be eligible; volunteer time itself is not a cash expense.</td>
+          <td><span class="rev agree">Agree, name the cash</span>
+            <div class="rev-note">You confirmed volunteers are part of delivery, so this line must be training, screening or materials - not hours. Volunteer time stays in-kind and is disclosed, not claimed.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">12</span>Mentorship Materials</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Keep it consumable; anything reusable and durable belongs outside the grant.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">13</span>Math Camp / Mock Exam Rentals</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Venue rental for the sessions. If the mock exam charges fees, show that the gaming share is not also recovered from participants.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">14</span>Administrators &amp; Instructors</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong if paid.</td>
+          <td><span class="rev adjust">Split the line</span>
+            <div class="rev-note">Instructor wages are clearly program delivery. Administrator time needs the same proration as line 01 - and only paid administrators, never volunteer coordinators.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">15</span>Guide Wages</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong if actual wages.</td>
+          <td><span class="rev agree">Agree, identify the role</span>
+            <div class="rev-note">Say in one line what a guide does and for which activity - campus tours, camps or pathway sessions - so a reviewer can match it to the narrative.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">16</span>Academic Materials</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Consumables only; textbooks and reusable kits may be treated as capital.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">17</span>Academic Transportation</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong if within BC and essential.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Same test as line 04: purpose recorded, all travel inside BC, no commuting.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">18</span>Mentor Recruitment / Training Facility</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Training that supports program delivery is eligible; keep the session dates and attendee list.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">19</span>Instructors</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong if paid.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Paid instruction with hours and a program link is the cleanest kind of gaming expense - and most of your activity is instruction.</div></td>
+        </tr>
+        <tr>
+          <td><span class="expense"><span class="no">20</span>Facilitator / Trainer Honoraria</span></td>
+          <td><span class="pill good"><span class="dot"></span>Eligible</span></td>
+          <td class="view">Strong when genuinely program-related.</td>
+          <td><span class="rev agree">Agree</span>
+            <div class="rev-note">Defensible with an invoice or signed acknowledgement per person and the session details.</div></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note-strip">
+      <b>Eight lines are not in this table.</b> Summer Program Facilitators (Canada Summer Jobs) and Career Fair Facility / Rental (City of Burnaby) are already government funded. Camp Meals, Snacks / Light Refreshments, Mentorship Circle Snacks and Mentor Training Snacks are food, which is hospitality. Camp Leaders Wages stay out while they are in-kind, and Gifts / Honoraria was split so that only service honoraria remain (line 20).
+    </div>
+  </section>
+
+  <!-- ─────────────── 02 DECISIONS ─────────────── -->
+  <section class="block">
+    <div class="block-head"><span class="block-no">02</span><h2>Six decisions before the budget is final</h2></div>
+    <p class="block-sub">The award is settled at $40,000, so these are now budget decisions rather than application decisions. Ordered by how much each one can cost you.</p>
+
+    <div class="decision stop">
+      <div class="dn">01</div>
+      <div>
+        <h3>Instructor wages are probably counted twice</h3>
+        <p>Your Use of Funds paragraph puts <strong>academic instructors</strong> inside Staffing ($45,000), while line 5, <strong>Academic Coaching &amp; Tutoring</strong> ($12,000), describes the same instruction. A reviewer will read that as the same wages paid twice.</p>
+        <p>Pick one home. Either instructors sit in Staffing and line 5 becomes materials, assessment and external tutoring contracts, or instructors sit in line 5 and Staffing means the coordinator and event organizers only.</p>
+      </div>
+    </div>
+
+    <div class="decision stop">
+      <div class="dn">02</div>
+      <div>
+        <h3>Food stays out of every line</h3>
+        <p>Food and drink is treated as hospitality and is not an eligible gaming expense, even inside a camp. Camps still happen - the venue, the paid leaders, the supplies and the transport are all claimable, the meals are not.</p>
+        <p>Keep meals in the program budget and fund them from fees, donations or another source. Do not let them reappear in the Use of Funds wording.</p>
+      </div>
+    </div>
+
+    <div class="decision stop">
+      <div class="dn">03</div>
+      <div>
+        <h3>Gifts stay out - honoraria are not gifts</h3>
+        <p>Gifts cannot be purchased with gaming funds in any amount, so they are not in this plan. An honorarium paid to a named person for delivering a session is a service payment, not a gift, and remains eligible as line 20 - but it is not part of the $40,000 split above.</p>
+      </div>
+    </div>
+
+    <div class="decision warn">
+      <div class="dn">04</div>
+      <div>
+        <h3>Multi-year equipment: no</h3>
+        <p>You asked whether you may purchase equipment. <strong>No - capital purchases are not eligible.</strong> Anything with a useful life beyond the grant year (laptops, tablets, furniture, sports equipment, printers) has to be bought with other money.</p>
+        <p>Consumables are fine: paper, printing, craft supplies, workbooks, single-use program kits.</p>
+      </div>
+    </div>
+
+    <div class="decision warn">
+      <div class="dn">05</div>
+      <div>
+        <h3>"Youth Sports and Physical Wellness" is not in the narrative</h3>
+        <p>Budget line 7 ($2,000) has no matching activity in the program description. A reviewer reading the two documents side by side will spot it.</p>
+        <p>Either add the activity to the narrative - what, who, when, where - or remove the line and move the $2,000 to instruction or camps.</p>
+      </div>
+    </div>
+
+    <div class="decision info">
+      <div class="dn">06</div>
+      <div>
+        <h3>Mixed staffing needs three separate treatments</h3>
+        <p>You confirmed employees, contractors and volunteers all deliver the program. They cannot share one line:</p>
+        <p><strong>Employees</strong> - payroll, prorated to program time. <strong>Contractors</strong> - contract plus invoice, same proration. <strong>Volunteers</strong> - in-kind hours disclosed at $0 cash, or an honorarium only if they are paid for a specific service.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── 03 WHERE THE MONEY GOES ─────────────── -->
+  <section class="block">
+    <div class="block-head"><span class="block-no">03</span><h2>Where the $40,000 goes</h2></div>
+    <p class="block-sub">Your four priorities first, then the two lines that carry them. Every item below is a paid cost or a rental - no food, no gifts, no equipment, no honoraria.</p>
+
+    <h3>Priority order</h3>
+    <table class="money">
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>Priority</th>
+          <th>What it covers</th>
+          <th class="num">Amount</th>
+          <th>Why it is safe</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">1</td><td><strong>Camp facility rental</strong></td><td>Venue hire for leadership and math camps.</td><td class="num">10,000</td><td class="muted-cell">Rental agreement in the program's name, dates matching the camp sessions.</td></tr>
+        <tr><td class="num">2</td><td><strong>Transportation within BC</strong></td><td>Student travel to camps, fairs, campus tours and pathway trips.</td><td class="num">8,000</td><td class="muted-cell">Bus invoices or mileage logs, every leg inside BC.</td></tr>
+        <tr><td class="num">3</td><td><strong>Mentor recruitment and training</strong></td><td>Training facility, trainer fees, safeguarding and training materials.</td><td class="num">2,000</td><td class="muted-cell">The whole line, and the cleanest dollar in the budget.</td></tr>
+        <tr><td class="num">4</td><td><strong>Program Coordinator wages</strong></td><td>Program share of salary, prorated.</td><td class="num">12,000</td><td class="muted-cell">Payroll record plus timesheets showing program time.</td></tr>
+        <tr><td class="num">5</td><td><strong>Mentorship circle room rental</strong></td><td>Weekly Saturday space.</td><td class="num">4,000</td><td class="muted-cell">Rental invoices for the session dates.</td></tr>
+        <tr><td class="num">6</td><td><strong>Program materials and supplies</strong></td><td>Consumables for tutoring, camps and mentor training.</td><td class="num">4,000</td><td class="muted-cell">Invoices for consumables only - nothing durable.</td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td class="num"></td><td>Total</td><td></td><td class="num">40,000</td><td class="muted-cell">Six lines, each paid or rented</td></tr>
+      </tfoot>
+    </table>
+    <div class="note-strip"><b>One line is still missing.</b> Transportation is not its own line in your seven-line budget, so add it - or say which line carries it. The coordinator share also needs a timesheet basis, not an estimate.</div>
+
+    <h3>Why these four come first</h3>
+    <ul class="why">
+      <li><strong>Rentals and transport have nothing to interpret.</strong> Either the invoice exists or it does not.</li>
+      <li><strong>Mentor training is explicitly a program cost</strong>, and it strengthens the file because it shows mentors are prepared before they meet a student.</li>
+      <li><strong>Coordinator wages are the largest safe block</strong> once the program share is documented, and they are what delivers the schedule you describe.</li>
+    </ul>
+
+    <h3>Use of Funds wording for the file</h3>
+    <div class="draft">BC Community Gaming Grant funds will cover direct delivery costs of the Ubuntu program for 2025-26: camp facility rentals; student transportation within BC for camps, fairs and campus tours; mentor recruitment and training, including the training facility, trainer fees and training materials; the program share of the Program Coordinator's wages; room rentals for weekly mentorship circles; and program materials and supplies for tutoring and camps.
+
+Funds will not be used for food or refreshments, gifts, honoraria, capital equipment, or any cost already covered by another government funder. A line-by-line budget and the allocation basis for shared costs are attached.</div>
+    <div class="char-count">Under 800 characters - fits the 1,000-character limit.</div>
+  </section>
+
+  <!-- ─────────────── 04 NARRATIVE ─────────────── -->
+  <section class="block">
+    <div class="block-head"><span class="block-no">04</span><h2>Program narrative</h2></div>
+    <p class="block-sub">Your answers, kept as written, arranged in the order the application asks for them.</p>
+
+    <div class="qa">
+      <p class="q">What activities and services were delivered?</p>
+      <p>Over the previous 12 months, the Ubuntu: I Am Because We Are - Youth Academic Mentorship and Leadership Program delivered year-round academic enrichment, mentorship, and leadership programming to youth across Metro Vancouver. The program is open to all youth, with prioritized outreach to youth from immigrant, newcomer, and refugee families who face barriers to academic success, post-secondary access, and community integration.</p>
+      <ul>
+        <li><strong>Weekly mentorship circles</strong> every Saturday, connecting youth with trained mentors for leadership development, academic support, homework guidance, goal-setting and social-emotional mentorship through group workshops, collaborative learning and individual check-ins.</li>
+        <li><strong>Weekly academic instruction</strong> through grade-based math tutoring led by trained instructors: numeracy development, curriculum reinforcement, test preparation and individualized learning plans supported by assessments and progress tracking.</li>
+        <li><strong>Reading and literacy programming</strong> year-round through the Future Generation Reading Club for university-bound youth and the Young Seekers Reading Circle for high-school students: reading challenges, essay workshops, discussion groups, feedback sessions and academic recognition.</li>
+        <li><strong>University and career pathway programming</strong>: admissions and scholarship seminars, essay-writing clinics, annual Career and University Faculty Fairs, and guided campus discovery tours.</li>
+        <li><strong>Quarterly math enrichment camps</strong>: intensive instruction, collaborative problem-solving labs and exam simulations, including CEMC contest preparation and mock exams.</li>
+        <li><strong>Seasonal leadership camps</strong>: communication, teamwork, resilience, civic leadership, digital literacy and facilitation skills.</li>
+        <li><strong>Mentor recruitment and training</strong> year-round: safeguarding protocols, cultural-responsiveness training, facilitation workshops and leadership development.</li>
+        <li><strong>Community engagement</strong>: youth participation in Canada Day community programming and Winter Light Festival initiatives, promoting intercultural exchange, volunteerism and public educational showcases.</li>
+        <li><strong>Monitoring and evaluation</strong> embedded across all activities: attendance tracking, literacy and numeracy assessments, participant learning plans, mentor evaluations, feedback surveys and outcome reporting.</li>
+      </ul>
+    </div>
+
+    <div class="qa">
+      <p class="q">Who benefited, and how many participated?</p>
+      <p>Approximately <strong>125 youth participants</strong> through weekly mentorship, tutoring, literacy programming, academic camps, pathway seminars and leadership activities. Programming was supported by approximately <strong>35 trained mentors and volunteers</strong>, with an estimated <strong>350 additional community participants</strong> engaged through public showcases, campus tours, fairs and community events involving families, educators and community partners.</p>
+      <p>The majority of youth served were from immigrant, newcomer and refugee communities, while all activities remained fully open and accessible to youth from the broader public.</p>
+    </div>
+
+    <div class="qa">
+      <p class="q">When and how often did activities take place?</p>
+      <ul>
+        <li><strong>Weekly:</strong> mentorship circles, math tutoring, reading clubs, CEMC practice groups.</li>
+        <li><strong>Monthly:</strong> academic skills workshops and admissions or scholarship seminars.</li>
+        <li><strong>Quarterly:</strong> math enrichment camps and exam simulations.</li>
+        <li><strong>Seasonally:</strong> leadership development camps and campus tours.</li>
+        <li><strong>Annually:</strong> Career and University Faculty Fairs, Canada Day activities, Winter Light Festival programming.</li>
+      </ul>
+    </div>
+
+    <div class="qa">
+      <p class="q">Where were activities delivered?</p>
+      <p>Community centres, public libraries, rented classrooms and tutoring facilities, university and college campuses for tours and fairs, regional camp venues, and municipal event spaces.</p>
+    </div>
+
+    <div class="qa">
+      <p class="q">How and by whom was the program delivered?</p>
+      <p>Program coordinators overseeing scheduling, safeguarding, intake, reporting and evaluation; paid instructional staff delivering tutoring, literacy instruction, camps and workshops; volunteer mentors facilitating weekly mentorship and leadership coaching; guest educators supporting pathway sessions; and community and educational partners providing collaborative venues and support. All mentors and staff completed safeguarding, child-protection and facilitation training prior to service delivery.</p>
+    </div>
+
+    <div class="qa">
+      <p class="q">How is the program ongoing, and for how many years?</p>
+      <p>The program has been delivered for <strong>one year</strong> and is ongoing rather than a one-time project. Weekly mentorship circles, math tutoring and reading clubs continue on the same schedule, and the camps, fairs and campus tours repeat on their annual calendar. The 2025-26 budget is built on that same delivery model, with the same coordinator, instructors and volunteer mentors.</p>
+    </div>
+
+    <div class="qa">
+      <p class="q">Why is the program needed in the community?</p>
+      <p>Youth across Metro Vancouver, particularly those from immigrant, newcomer and refugee families, face persistent barriers to academic achievement, post-secondary navigation and community integration: language transitions, limited familiarity with the Canadian school system, reduced access to tutoring or mentorship, and social isolation. Public school resources and settlement services often lack sufficient capacity for individualized academic support and sustained mentorship.</p>
+      <p>The Ubuntu program addresses these gaps with consistent academic tutoring, literacy development, mentorship relationships, leadership training and pathway navigation that complement formal education and improve long-term educational engagement, confidence and community belonging.</p>
+    </div>
+
+    <div class="qa">
+      <p class="q">How has the program demonstrated accessibility and inclusivity?</p>
+      <p>All activities are open to youth from the entire community, with prioritized outreach to immigrant, newcomer and refugee families. Programming is offered at no cost to participants, or with full fee waivers when required. Activities are delivered across transit-accessible community venues, including community centres and libraries. Multilingual communication support is provided for families, and accommodations are made for varying literacy levels, learning styles and physical accessibility needs. Activity designs incorporate culturally responsive facilitation and inclusive learning methodologies.</p>
+    </div>
+
+    <div class="qa">
+      <p class="q">How is community support demonstrated?</p>
+      <p>Through volunteer participation, partnerships and institutional collaboration. Trained volunteer mentors from universities and community organizations support weekly programming and special events. The program maintains active partnerships with libraries, community centres, schools and post-secondary institutions that provide venue access, outreach referrals, campus tour coordination and workshop facilitation. Families regularly attend community showcases, university fairs and campus tours. Collaborative engagements with educators and local agencies further validate demand and relevance.</p>
+    </div>
+
+    <div class="qa">
+      <p class="q">How was the program made available and communicated?</p>
+      <p>Year-round promotion through partnerships with schools, libraries, settlement organizations, community centres, multicultural networks, social media, community newsletters and targeted digital outreach. Printed flyers and registration information are distributed at partner locations. Information sessions for parents and youth are held during community events and workshops, and referrals are received directly from educators, community workers and settlement agencies.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────── 05 EVIDENCE ─────────────── -->
+  <section class="block">
+    <div class="block-head"><span class="block-no">05</span><h2>Evidence to have ready</h2></div>
+    <p class="block-sub">Nothing here is asked for at submission, but every one of these is asked for if the application is reviewed or audited.</p>
+    <div class="checklist">
+      <div class="check"><strong>Program actuals</strong> for the previous fiscal year, with clear titles and date ranges.</div>
+      <div class="check"><strong>Payroll registers</strong> showing the program share for each employee.</div>
+      <div class="check"><strong>Contractor agreements and invoices</strong> for facilitators, guides and instructors.</div>
+      <div class="check"><strong>Rental agreements</strong> with dates matching camps, circles and events.</div>
+      <div class="check"><strong>Attendance records</strong> supporting the 125 youth and 350 community figures.</div>
+      <div class="check"><strong>Transport logs</strong> showing purpose and that every leg stayed in BC.</div>
+      <div class="check"><strong>In-kind schedule</strong> valuing volunteer hours, shown as both revenue and expense.</div>
+      <div class="check"><strong>Honoraria schedule</strong> with name, role, session date and amount.</div>
+      <div class="check"><strong>Board approval</strong> of the application and the budget.</div>
+      <div class="check"><strong>Insurance and safeguarding policy</strong> for programs serving minors.</div>
+    </div>
+  </section>
+
+  <!-- ─────────────── 06 OPEN ─────────────── -->
+  <section class="block">
+    <div class="block-head"><span class="block-no">06</span><h2>Still open</h2></div>
+    <div class="checklist">
+      <div class="check">Which line do instructor wages live in - Staffing or Academic Coaching?</div>
+      <div class="check">Which budget line pays for student transportation?</div>
+      <div class="check">Do you have a rental invoice for each camp venue?</div>
+      <div class="check">Do you buy any equipment that lasts more than one year, and how much?</div>
+      <div class="check">Do you have program actuals for that first year, with clear dates?</div>
+      <div class="check">Is this application a renewal or a new application for a second year?</div>
+    </div>
+  </section>
+
+  <div class="foot">
+    Prepared as a working document for the 2025-26 Community Gaming Grant (Human and Social Services). Eligibility findings are a second opinion for planning only - the Gaming Policy and Enforcement Branch makes the ruling, and the current program guidelines and Section 6 of those guidelines override anything written here. Every expense still needs its supporting documents.
+  </div>
+
+</div>
+
+</body>
+</html>

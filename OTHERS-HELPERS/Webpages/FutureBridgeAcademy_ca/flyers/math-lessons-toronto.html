@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Future Bridge Academy - Online math lessons for Toronto</title>
+<style>
+	/* =========================================================================
+	   FUTURE BRIDGE ACADEMY - ONLINE MATH LESSONS, TORONTO
+	   A compact 4:5 card (not A4): one screenful on a phone, one image to share.
+	   Every size inside the card is in cqw, so the layout is identical at any
+	   width: 366 px on a phone, 440 px on screen, 880 px for a 2x screenshot.
+
+	   HOW TO EXPORT
+	     Image : click Hide bar, then screenshot the card (440 x 550 CSS px,
+	             or take it at 2x for 880 x 1100).
+	     PDF   : click Print / Save as PDF - the page is set to the card size,
+	             so the PDF is exactly this card, not an A4 sheet with margins.
+	   ========================================================================= */
+	:root {
+		--brand-1: #FF6B35;
+		--brand-2: #004E89;
+		--brand-2-deep: #00365F;
+		--brand-3: #FFD23F;
+		--brand-4: #06D6A0;
+		--ink: #102A43;
+		--muted: #486581;
+		--line: #E2E8F0;
+		--soft: #F5F8FC;
+	}
+
+	* {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+
+	body {
+		font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+		color: var(--ink);
+		background: #DCE4EE;
+		line-height: 1.35;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	/* ---------------- export bar (never printed, never screenshotted) ---------------- */
+	.bar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		padding: 9px 14px;
+		background: #1F2937;
+		color: #E5E7EB;
+		font-size: 12px;
+	}
+
+	.bar b { font-size: 12.5px; color: #fff; }
+	.bar .grow { flex: 1 1 auto; }
+
+	.bar button {
+		padding: 6px 13px;
+		border: 0;
+		border-radius: 8px;
+		background: var(--brand-3);
+		color: #1F2937;
+		font: inherit;
+		font-weight: 800;
+		cursor: pointer;
+	}
+
+	.bar button.ghost {
+		background: transparent;
+		border: 1px solid #4B5563;
+		color: #E5E7EB;
+		font-weight: 600;
+	}
+
+	/* ---------------- the card ---------------- */
+	.stage {
+		display: flex;
+		justify-content: center;
+		padding: 16px 12px 28px;
+	}
+
+	.card {
+		position: relative;
+		width: 100%;
+		max-width: 440px;
+		aspect-ratio: 4 / 5;
+		container-type: size;
+		display: flex;
+		flex-direction: column;
+		background: #fff;
+		border-radius: 18px;
+		overflow: hidden;
+		box-shadow: 0 18px 44px rgba(16, 42, 67, 0.22);
+	}
+
+	/* ---------------- header: photo band, deliberately short ---------------- */
+	.head {
+		position: relative;
+		flex: 0 0 auto;
+		height: 26cqh;
+		padding: 4cqw 5cqw 3.4cqw;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		color: #fff;
+		background-color: var(--brand-2-deep);
+		background-image:
+			linear-gradient(118deg, rgba(0, 54, 95, 0.95) 0%, rgba(0, 54, 95, 0.82) 52%, rgba(0, 41, 74, 0.7) 100%),
+			url("https://images.pexels.com/photos/5306456/pexels-photo-5306456.jpeg?auto=compress&cs=tinysrgb&w=1200");
+		background-size: cover, cover;
+		background-position: center, 50% 42%;
+	}
+
+	.head-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 3cqw;
+	}
+
+	.logo {
+		display: block;
+		height: 8cqw;
+		width: auto;
+		filter: brightness(0) invert(1);
+	}
+
+	.head-tag {
+		font-size: 2.3cqw;
+		font-weight: 800;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.88);
+		white-space: nowrap;
+	}
+
+	h1 {
+		font-size: 7.2cqw;
+		line-height: 1.02;
+		letter-spacing: -0.02em;
+		font-weight: 800;
+	}
+
+	h1 .hl { color: var(--brand-3); }
+
+	/* ---------------- schedule ---------------- */
+	.body {
+		flex: 1 1 auto;
+		min-height: 0;
+		padding: 2.6cqw 5cqw 1.6cqw;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.label {
+		display: flex;
+		align-items: center;
+		gap: 2cqw;
+		font-size: 2.2cqw;
+		font-weight: 800;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+		color: var(--brand-1);
+	}
+
+	.label::after {
+		content: "";
+		flex: 1 1 auto;
+		height: 1px;
+		background: var(--line);
+	}
+
+	.rows {
+		flex: 1 1 auto;
+		min-height: 0;
+		margin-top: 1.8cqw;
+		display: grid;
+		gap: 1.4cqw;
+		align-content: start;
+	}
+
+	.row {
+		--teacher-colour: var(--brand-1);
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.5cqw 2.4cqw;
+		padding: 1.6cqw 3cqw;
+		border: 1px solid var(--line);
+		border-left: 0.9cqw solid var(--teacher-colour);
+		border-radius: 2.8cqw;
+		background: var(--soft);
+		break-inside: avoid;
+	}
+
+	.grade {
+		font-size: 4.7cqw;
+		font-weight: 800;
+		letter-spacing: -0.01em;
+		line-height: 1.1;
+		color: var(--brand-2-deep);
+	}
+
+	.teacher {
+		justify-self: end;
+		padding: 0.7cqw 2.2cqw;
+		border-radius: 999px;
+		background: #FFF1EA;
+		color: var(--teacher-colour);
+		font-size: 2.5cqw;
+		font-weight: 800;
+		white-space: nowrap;
+	}
+
+	.when {
+		grid-column: 1 / -1;
+		font-size: 2.6cqw;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	.when b {
+		margin-left: 1.6cqw;
+		font-size: 5.1cqw;
+		letter-spacing: -0.01em;
+		color: var(--brand-2-deep);
+	}
+
+	.when .sep { color: var(--brand-1); }
+
+	.row-said { --teacher-colour: var(--brand-1); }
+	.row-sevinc { --teacher-colour: var(--brand-2); }
+	.row-sevinc .teacher { background: #EAF2F9; }
+
+	/* ---------------- footer ---------------- */
+	.foot {
+		flex: 0 0 auto;
+		padding: 2.6cqw 5cqw 3cqw;
+		background: var(--brand-2-deep);
+		color: #fff;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 1cqw 3cqw;
+	}
+
+	.foot-site {
+		font-size: 2.5cqw;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		color: #fff;
+		text-decoration: none;
+		overflow-wrap: anywhere;
+	}
+
+	.foot-mail {
+		grid-column: 1;
+		font-size: 2.2cqw;
+		color: rgba(255, 255, 255, 0.82);
+		text-decoration: none;
+		overflow-wrap: anywhere;
+	}
+
+	.foot-cta {
+		grid-column: 2;
+		grid-row: 1 / span 2;
+		padding: 1.9cqw 3.2cqw;
+		border-radius: 2.4cqw;
+		background: var(--brand-3);
+		color: #1F2937;
+		font-size: 2.3cqw;
+		font-weight: 800;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	/* ---------------- print: the card IS the page ---------------- */
+	@page { size: 116.4mm 145.5mm; margin: 0; }
+
+	@media print {
+		html,
+		body { background: #fff !important; }
+
+		*,
+		*::before,
+		*::after {
+			box-shadow: none !important;
+			text-shadow: none !important;
+		}
+
+		.bar { display: none !important; }
+
+		.stage {
+			display: block;
+			padding: 0;
+		}
+
+		.card {
+			width: 116.4mm;
+			height: 145.5mm;
+			max-width: none;
+			aspect-ratio: auto;
+			border-radius: 0;
+		}
+
+		a { text-decoration: none; color: inherit; }
+	}
+
+	/* ---------------- very small phones ---------------- */
+	@media (max-width: 360px) {
+		.stage { padding: 10px 8px 20px; }
+		.card { border-radius: 14px; }
+	}
+</style>
+</head>
+<body>
+
+<div class="bar" id="exportBar">
+	<b>Math lessons card</b>
+	<span>4:5 card, one screen. Hide this bar for a screenshot, or print to PDF at the card size.</span>
+	<span class="grow"></span>
+	<button type="button" onclick="window.print()">Print / Save as PDF</button>
+	<button type="button" class="ghost" onclick="document.getElementById('exportBar').style.display='none'">Hide bar</button>
+</div>
+
+<div class="stage">
+	<article class="card">
+
+		<header class="head">
+			<div class="head-top">
+				<img class="logo"
+					src="Future-Bridge-Academy%20-Full-Logo-transparent.png"
+					alt="Future Bridge Academy">
+				<span class="head-tag">Online &middot; Toronto</span>
+			</div>
+			<h1>Math lessons<br><span class="hl">Grades 7 to 10.</span></h1>
+		</header>
+
+		<div class="body">
+			<p class="label">Weekly schedule &middot; Ontario time</p>
+
+			<div class="rows">
+
+				<div class="row row-said">
+					<span class="grade">Grade 10</span>
+					<span class="teacher">Said hoca</span>
+					<p class="when">Thursday <b>5:00 <span class="sep">&ndash;</span> 6:00 PM</b></p>
+				</div>
+
+				<div class="row row-sevinc">
+					<span class="grade">Grade 9</span>
+					<span class="teacher">Sevinc hoca</span>
+					<p class="when">Thursday <b>6:30 <span class="sep">&ndash;</span> 7:30 PM</b></p>
+				</div>
+
+				<div class="row row-sevinc">
+					<span class="grade">Grade 8</span>
+					<span class="teacher">Sevinc hoca</span>
+					<p class="when">Friday <b>6:00 <span class="sep">&ndash;</span> 7:00 PM</b></p>
+				</div>
+
+				<div class="row row-sevinc">
+					<span class="grade">Grade 7</span>
+					<span class="teacher">Sevinc hoca</span>
+					<p class="when">Friday <b>7:00 <span class="sep">&ndash;</span> 8:00 PM</b></p>
+				</div>
+
+			</div>
+		</div>
+
+		<footer class="foot">
+			<a class="foot-site" href="https://futurebridgeacademy.ca">futurebridgeacademy.ca</a>
+			<a class="foot-mail" href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a>
+			<a class="foot-cta" href="mailto:info@futurebridgeacademy.ca">Ask about a place</a>
+		</footer>
+
+	</article>
+</div>
+
+</body>
+</html>

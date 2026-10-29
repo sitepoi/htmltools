@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Application Factory</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">
+        <strong>HTML Tool Factory</strong>
+        <span class="brand-sub">Idea to tested application, on its own loop</span>
+      </span>
+    </div>
+    <div class="topbar-right">
+      <span id="providerChip" class="chip chip-neutral">Provider: loading</span>
+      <button id="btnSettings" class="btn btn-ghost" type="button">Settings</button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar">
+      <button id="btnNewRun" class="btn btn-primary btn-block" type="button">+ New build</button>
+      <div class="sidebar-head">
+        <span>Runs</span>
+        <span id="runsCount" class="muted">0</span>
+      </div>
+      <div id="runsList" class="runs-list">
+        <p class="empty">No runs yet.</p>
+      </div>
+      <div class="sidebar-foot">
+        <div id="catalogLine" class="muted tiny">Catalog: loading</div>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <section id="newRunPanel" class="panel panel-new" hidden>
+        <h2>Start a new build</h2>
+        <p class="muted">Pick an idea from the html tool idea list, or type your own. The loop then runs on its own
+          and produces the full tool folder: app/ (html, css, js, test harness) and docs/.</p>
+
+        <label class="field">
+          <span>Search the idea catalog (tool-ideas-catalog.json)</span>
+          <input id="ideaSearch" type="search" placeholder="Type to filter ideas (for example: invoice, roster, checklist)">
+        </label>
+        <div id="ideasList" class="ideas-list">
+          <p class="empty">Loading ideas...</p>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Or type an idea name</span>
+            <input id="inputIdeaName" type="text" placeholder="Custom idea name">
+          </label>
+          <label class="field">
+            <span>Industry focus (optional)</span>
+            <input id="inputIndustryFocus" type="text" placeholder="For example: dental clinics in Canada">
+          </label>
+          <label class="field">
+            <span>Iterations</span>
+            <input id="inputIterations" type="number" min="1" max="20" value="3">
+          </label>
+          <label class="field">
+            <span>Tasks per iteration</span>
+            <input id="inputTasksPerIteration" type="number" min="1" max="12" value="4">
+          </label>
+        </div>
+
+        <div class="panel-actions">
+          <button id="btnCreateRun" class="btn btn-primary" type="button">Create and start</button>
+          <button id="btnCreateRunIdle" class="btn btn-ghost" type="button">Create without starting</button>
+          <button id="btnCancelNew" class="btn btn-quiet" type="button">Cancel</button>
+        </div>
+        <p id="newRunError" class="error-line" hidden></p>
+      </section>
+
+      <section id="runPanel" class="panel panel-run" hidden>
+        <div class="run-head">
+          <div class="run-head-main">
+            <h2 id="runTitle">Run</h2>
+            <div class="run-meta">
+              <span id="runStatus" class="chip chip-neutral">idle</span>
+              <span id="runStage" class="muted">stage</span>
+              <span id="runIteration" class="muted">iteration 0</span>
+              <span id="runIdea" class="muted"></span>
+            </div>
+            <div id="runToolFolder" class="run-folder muted tiny"></div>
+          </div>
+          <div class="run-actions">
+            <button id="btnStart" class="btn btn-primary" type="button">Start</button>
+            <button id="btnContinue" class="btn btn-ghost" type="button">Continue</button>
+            <button id="btnStep" class="btn btn-ghost" type="button">Run one stage</button>
+            <button id="btnPreview" class="btn btn-ghost" type="button">Preview app</button>
+            <button id="btnOpenDocs" class="btn btn-ghost" type="button">Open docs</button>
+            <button id="btnPause" class="btn btn-quiet" type="button">Pause</button>
+            <button id="btnStop" class="btn btn-danger" type="button">Stop</button>
+            <button id="btnRestart" class="btn btn-danger" type="button">Restart tool</button>
+            <button id="btnDelete" class="btn btn-quiet" type="button">Delete</button>
+          </div>
+        </div>
+
+        <div id="stageTrack" class="stage-track"></div>
+
+        <div class="run-stats">
+          <div class="stat">
+            <span class="stat-label">AI calls</span>
+            <span id="statAiCalls" class="stat-value">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Est. tokens</span>
+            <span id="statTokens" class="stat-value">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Tasks done</span>
+            <span id="statTasks" class="stat-value">0 / 0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Checks</span>
+            <span id="statChecks" class="stat-value">n/a</span>
+          </div>
+          <div class="stat stat-wide">
+            <span class="stat-label">Last result</span>
+            <span id="statSummary" class="stat-value stat-summary">-</span>
+          </div>
+        </div>
+
+        <p id="runError" class="error-line" hidden></p>
+
+        <nav class="tabs" id="runTabs">
+          <button class="tab is-active" data-tab="timeline" type="button">Timeline</button>
+          <button class="tab" data-tab="tasks" type="button">Tasks</button>
+          <button class="tab" data-tab="risks" type="button">Risks and questions</button>
+          <button class="tab" data-tab="features" type="button">Features</button>
+          <button class="tab" data-tab="ideas" type="button">Ideas</button>
+          <button class="tab" data-tab="chat" type="button">Chat</button>
+          <button class="tab" data-tab="tests" type="button">Checks</button>
+          <button class="tab" data-tab="files" type="button">Files</button>
+          <button class="tab" data-tab="events" type="button">Live log</button>
+          <button id="btnOpenSsot" class="tab tab-link" type="button">Open SSOT page</button>
+        </nav>
+
+        <div class="tab-body">
+          <div id="tab-timeline" class="tab-pane is-active"></div>
+          <div id="tab-tasks" class="tab-pane"></div>
+          <div id="tab-risks" class="tab-pane"></div>
+          <div id="tab-features" class="tab-pane"></div>
+          <div id="tab-ideas" class="tab-pane"></div>
+          <div id="tab-chat" class="tab-pane"></div>
+          <div id="tab-tests" class="tab-pane"></div>
+          <div id="tab-files" class="tab-pane"></div>
+          <div id="tab-events" class="tab-pane">
+            <div id="eventStream" class="event-stream"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="emptyPanel" class="panel panel-empty">
+        <h2>No run selected</h2>
+        <p class="muted">Create a build on the left. The factory picks the idea, writes the specification,
+          answers its own risks, writes the code, tests it, then proposes the next improvements and repeats.</p>
+        <ol class="loop-list">
+          <li><strong>Select the idea</strong> from the html tool idea catalog</li>
+          <li><strong>Research and write the SSOT</strong> by reviewing the industry</li>
+          <li><strong>Plan the task list</strong> in the SSOT</li>
+          <li><strong>Review the SSOT</strong> and define risks and open questions</li>
+          <li><strong>Solve them</strong> with common sense and security defaults</li>
+          <li><strong>Apply the tasks</strong> in code, patch by patch, validated</li>
+          <li><strong>Test</strong> the application with deterministic checks</li>
+          <li><strong>Create new ideas</strong>, then return to step 3</li>
+        </ol>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div id="restartModal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Restart this tool</h3>
+      <button id="btnCancelRestart" class="btn btn-quiet" type="button">Cancel</button>
+    </div>
+    <div class="modal-body">
+      <p><strong>This deletes the generated tool folder</strong> and every backup of it, then starts the
+        same idea again from the first stage.</p>
+      <p id="restartTarget" class="mono tiny muted"></p>
+      <label class="field">
+        <span>Type the run id to confirm</span>
+        <input id="restartConfirmText" type="text" autocomplete="off" spellcheck="false" />
+      </label>
+      <p id="restartError" class="error-line" hidden></p>
+      <div class="run-actions">
+        <button id="btnConfirmRestart" class="btn btn-danger" type="button">
+          Delete the tool folder and start over
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Settings</h3>
+      <button id="btnCloseSettings" class="btn btn-quiet" type="button">Close</button>
+    </div>
+    <div class="modal-body">
+      <label class="field">
+        <span>AI provider</span>
+        <select id="setProvider">
+          <option value="mock">Dry run (mock AI, no network, no tokens)</option>
+          <option value="unicon-gateway">Unicon Gateway</option>
+          <option value="openai-compatible">OpenAI compatible endpoint</option>
+          <option value="ollama">Local Ollama</option>
+        </select>
+      </label>
+
+      <div class="settings-group" data-provider="unicon-gateway">
+        <label class="field"><span>Gateway base URL</span><input id="setGatewayUrl" type="text" placeholder="https://gateway.example.com"></label>
+        <label class="field"><span>Gateway API key (leave blank to keep the saved one)</span><input id="setGatewayKey" type="password" autocomplete="off"></label>
+        <label class="field"><span>Tenant hostname (optional)</span><input id="setGatewayHost" type="text" placeholder="tenant.example.com"></label>
+        <label class="field"><span>Gateway provider name</span><input id="setGatewayProvider" type="text" placeholder="deepseek"></label>
+        <label class="field"><span>Model</span><input id="setGatewayModel" type="text" placeholder="deepseek-v4-pro"></label>
+      </div>
+
+      <div class="settings-group" data-provider="openai-compatible">
+        <div class="preset-row">
+          <span class="muted tiny">Quick presets</span>
+          <button class="btn btn-ghost btn-preset" type="button" data-preset="deepseek">DeepSeek</button>
+          <button class="btn btn-ghost btn-preset" type="button" data-preset="openai">OpenAI</button>
+        </div>
+        <label class="field"><span>Base URL</span><input id="setOpenAiUrl" type="text" placeholder="https://api.deepseek.com/v1"></label>
+        <label class="field"><span>API key (leave blank to keep the saved one)</span><input id="setOpenAiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+        <label class="field"><span>Model</span><input id="setOpenAiModel" type="text" placeholder="deepseek-chat"></label>
+      </div>
+
+      <div class="settings-group" data-provider="ollama">
+        <label class="field"><span>Ollama host</span><input id="setOllamaHost" type="text" placeholder="http://localhost:11434"></label>
+        <label class="field"><span>Model</span><input id="setOllamaModel" type="text" placeholder="deepseek-r1:14b"></label>
+      </div>
+
+      <h4>Limits</h4>
+      <div class="field-grid">
+        <label class="field"><span>Max AI calls per run</span><input id="setMaxCalls" type="number" min="5" max="500" value="80"></label>
+        <label class="field"><span>Max characters per run</span><input id="setMaxChars" type="number" min="10000" max="50000000" value="2400000"></label>
+      </div>
+      <p class="muted tiny">API keys are written to the settings file below (gitignored). Nothing is sent anywhere except the provider you choose.</p>
+      <p id="settingsPath" class="muted tiny mono"></p>
+      <p id="settingsStatus" class="ok-line" hidden></p>
+    </div>
+    <div class="modal-foot">
+      <button id="btnSaveSettings" class="btn btn-primary" type="button">Save settings</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+PROMPT - BUILD THE "FORM SUBMISSION VIEWER" HTML TOOL
+======================================================
+
+0. ROLE AND OUTCOME
+-------------------
+Build one object-level HTML tool for the UniconHub CMS html-tool system. It is
+attached to a FORM SUBMISSION record and shows that ONE submission - every
+answer plus the record metadata - in a professional, readable dossier.
+
+It is a viewer, not an index. Browsing, sorting, searching and deleting
+submissions stay in the CMS folder and object list. The tool never lists other
+submissions and never asks the user which one to open: the record it is
+embedded on IS the subject.
+
+Tool name: FormSubmissionViewer
+Tool type: TYPE 1 object-level interface
+Placement: BUSINESS / GENERAL / forms-data-collection / forms-surveys /
+           FormSubmissionViewer
+
+Deliverables:
+  app/FormSubmissionViewer.html
+  app/FormSubmissionViewer.css
+  app/FormSubmissionViewer.js
+  app/test-harness.html
+Do NOT commit or push to git. Do NOT change any other tool.
+
+1. READ THESE FILES FIRST (BINDING)
+-----------------------------------
+  html-tool-rules.txt                        (TYPE 1 is this tool type - SDK,
+                                              entry point, params, sandbox)
+  PUBLICWEBSITE-GUIDE--form-submission.txt   (the write side that created the data)
+  publish-rules.txt                          (documents and release gate, later)
+
+Where they disagree with this prompt, the rules file wins, except for the
+parameter names and the visual specification below, which are decided here.
+
+2. WHAT THIS TOOL IS, AND WHAT IT IS NOT
+----------------------------------------
+IS:
+  - a single-record dossier: the answers, who sent them, when, from which page,
+    into which application;
+  - readable by a non-technical person in five seconds, complete for an auditor
+    when they scroll;
+  - printable as one clean A4 page and copyable as plain text.
+
+IS NOT:
+  - a list, table, grid, board or dashboard of submissions;
+  - a search, filter, sort, paging or bulk action surface;
+  - an editor. The submission is evidence of what a visitor sent. The tool must
+    never offer to change a submitted value, and must never write to the record.
+  - a delete surface. Deleting happens in the CMS object list.
+
+3. WHERE THE DATA COMES FROM (OBJECT-LEVEL CONTRACT)
+----------------------------------------------------
+The tool renders the record it is mounted on. Read it like this:
+
+  tool.onReady(function (value, fields) {
+    renderSubmission(fields);
+    tool.onFieldsChange(function (nextFields) { renderSubmission(nextFields); });
+  });
+
+  - `fields` is the whole record: the object shell (id, name, slug, contentId,
+    cmsObjectType, typeId, parentId, created, updated, meta.*) PLUS every
+    sibling field value keyed by field id.
+  - tool.getFields() returns the same snapshot at any later moment.
+  - `value` is this tool's own saved value: keep it tiny UI state only.
+  - No tool.requestObjects, no fetch, no polling, no listeners on other
+    records. This tool reads one record and nothing else.
+
+4. DO NOT ASSUME THE STORED KEY NAMES
+-------------------------------------
+The CMS decides how a submission is stored. Handle both shapes without asking:
+
+  readSubmission(fields):
+    - values = fields.values when it is a plain object, otherwise the record's
+      own field values (every key that is not a known shell key).
+    - shell keys to skip when collecting values:
+      id, _id, contentId, name, slug, cmsObjectType, typeId, parentId, tenantId,
+      permissions, created, updated, createdAt, updatedAt, meta, productData
+    - when productData.data_categoriesBased exists and the values bag is empty,
+      read from there instead.
+    - metadata:
+        formTypeId  <- values.formTypeId, else fields.formTypeId,
+                       else fields.meta.formTypeId, else ''
+        page        <- values.page, else fields.page, else ''
+        submittedAt <- values.submittedAt, else fields.created, else fields.updated
+        sourceType  <- fields.cmsObjectType
+        recordId    <- fields.id
+    - Keep every scalar answer. An unknown key still gets a readable row. Never
+      drop data, never rename silently.
+    - Arrays and objects are shown in the raw block and, if short, as a small
+      key: value list.
+
+5. FIELD UNDERSTANDING (this is what makes it readable)
+-------------------------------------------------------
+Every answer is rendered with a label, a value and a type:
+
+  5.1 Labels
+      - fieldMap param wins: { "key": { "label": "Phone", "type": "phone",
+        "group": "contact", "width": 150 } }
+      - Otherwise derive the label: snake_case / camelCase to Title Case, keep
+        known acronyms upper case (id, url, cemc, ib, sms). Example:
+        parent_name -> "Parent name", venue_city -> "Venue city".
+      - Never show a raw key as the visible label.
+
+  5.2 Types and formatting
+      email    lowercase, mailto: link, and a "Reply by email" button.
+      phone    10 digits -> (604) 555-0123, tel: link with +1 prefix, and a
+               "Call" button. Other lengths keep the stored text.
+      date     ISO date and ISO date-time values formatted with
+               Intl.DateTimeFormat in the timeZone param:
+                 date only     -> "Saturday 7 November 2026"
+                 date and time -> "Saturday 7 November 2026, 12:56"
+               The raw ISO string stays visible in the metadata block.
+      yes/no   a badge: "Yes" in the accent colour, "No" muted. Keys ending in
+               _consent, opt_in, subscribe, consent get the label suffix
+               "opt-in" so "yes" is never mistaken for something else.
+      long     more than 120 characters or containing a newline: full width,
+               line breaks preserved.
+      number   right aligned, thousands separators only for integers > 999.
+      url      clickable through tool.openUrl.
+      empty    "Not provided" in muted italic. Never "undefined", never "null",
+               never a blank cell with no explanation.
+
+  5.3 Groups, in this order, and only the ones that have values
+      1. Person        keys containing parent, student, name, guardian, child,
+                       first_name, last_name, grade, age, school
+      2. Contact       email, phone, mobile, contact
+      3. Event or exam exam, exam_date, date, city, area, venue, location,
+                       session, time, address
+      4. Consents      consent, opt_in, subscribe, permission, agree
+      5. Answers       everything else, first-seen order
+      6. Metadata      separate block, never mixed with answers
+      A fieldMap group value overrides the automatic grouping.
+
+6. SCREEN SPEC (one record)
+---------------------------
+  A. Letterhead band
+     - Small kicker: "Form submission".
+     - Title: the form label. Resolve it from formTypeLabels[formTypeId], then
+       formTypeId itself, then "Submission".
+     - Second line: the human date and time of submission, then the page path.
+     - Right side actions: Reply by email (if an email exists), Copy summary,
+       Copy JSON, Print / PDF. On mobile these collapse into one row of icons
+       with text labels kept visible to screen readers.
+
+  B. Identity card (the five second answer)
+     - The person's name, large, with the grade or role as a chip when present.
+     - One line of contact: email and phone as links.
+     - Everything found in the Person group appears here as label and value
+       pairs, not repeated below.
+
+  C. Detail sections
+     - One card per group from 5.3, headings "Contact", "Event", "Consents",
+       "Answers".
+     - Two columns above 900px, one column below.
+     - Label above value, 0.8rem uppercase label, 1rem value, 1.5 line height.
+     - Consents get a sentence, not just a badge: "Email opt-in: yes" or
+       "Email opt-in: not given".
+
+  D. Record metadata card (collapsed by default on mobile, open on desktop)
+     - Record id (monospace, truncated, copy button)
+     - Form type id, source application (cmsObjectType), contentId, typeId
+     - Submitted at (raw ISO), Created, Updated (ISO, in monospace)
+     - Page path
+     - A subtle chip "Updated after submission" when updated is more than one
+       minute later than created - facts only, no speculation.
+
+  E. Raw data (collapsible details element)
+     - Tab 1 "Answers": the values object, pretty printed, 2 spaces.
+     - Tab 2 "Full record": everything received, pretty printed.
+     - Copy buttons for both. This is the audit trail, so it must be exact.
+
+  F. Footer line: "This record was submitted by a visitor through a public
+     form. Values shown here are exactly as received."
+
+  G. Browser tab title: the form label plus the person's name, so several open
+     submissions are distinguishable.
+
+7. BEHAVIOUR
+------------
+  - One render function, called from onReady and from onFieldsChange. It clears
+    the container and rebuilds from the record; no incremental patching, no
+    duplicate sections after a field change.
+  - No animation beyond a 150 ms fade on the first render, disabled under
+    prefers-reduced-motion.
+  - Long values never break the layout: word-break for ids and emails, pre-wrap
+    for multi-line answers.
+  - Copy actions use navigator.clipboard with a textarea fallback for the
+    sandboxed iframe, and confirm with tool.notify.
+  - The stored value stays tiny:
+    { version: 1, ui: { showRaw: false, maskContacts: false } }
+    Nothing from the submission is ever written to it.
+
+8. COPY SUMMARY (plain text, one block)
+---------------------------------------
+"Copy summary" produces exactly this shape, skipping missing lines:
+
+  CEMC Trial Exam
+  Submitted: Saturday 7 November 2026, 12:56
+  Student: Ada Yilmaz (Grade 8)
+  Parent: Deniz Yilmaz
+  Email: ada@example.com
+  Phone: (604) 555-0123
+  Email opt-in: yes
+  Exam: CEMC Trial Exam
+  Exam date: Saturday 7 November 2026
+  City: Vancouver / Greater Vancouver
+  Page: /2026-11-07-vancouver-cemc-trial-exam-registration
+  Record: <record id>
+
+Rules: labels from the field map, dates human, contacts in the masked form when
+masking is on, no markdown, no trailing spaces, one blank line before "Record".
+
+9. PRINT / PDF
+--------------
+  - A4 portrait, @page margins 16mm, single submission, no buttons, no raw
+    JSON unless the raw block is open when Print is pressed.
+  - Letterhead: brandName (param) in the accent colour, form label, and
+    "Submitted <human date>" on the right.
+  - Detail sections as a definition grid; metadata as a small table at the end.
+  - Footer: "Generated <date time> by <user name>" and page X of Y via CSS
+    counters.
+  - Build a standalone HTML string with inline CSS, then
+    tool.requestExportPdf({ html: standaloneHtml, filename: 'submission-<id>.pdf' })
+    followed by tool.openUrl(resultUrl). If that API is absent, print the
+    document itself with window.print() and a print stylesheet.
+  - Do NOT load a logo image: the sandbox blocks external hosts. Use the brand
+    name text and the accent colour only.
+
+10. PARAMS (all optional, declare each with tool.declareParams)
+--------------------------------------------------------------
+  fieldMap            JSON, default {} :
+                      { "phone": { "label": "Phone", "type": "phone",
+                                   "group": "contact" } }
+  fieldGroups         JSON, default {} : group key -> display title, so an
+                      admin can rename "Event or exam" to "Exam".
+  formTypeLabels      JSON, default {} : formTypeId -> display label, for the
+                      ids used by this tenant's forms.
+  brandName           text, default "Form submission"
+  accentColor         text, default "#004E89"
+  timeZone            text, default "" (browser time zone)
+  websiteBaseUrl      text, default "". When set, the page path becomes a link
+                      to websiteBaseUrl + page.
+  maskContactDetails  toggle, default "no". "yes" starts with contacts hidden.
+  showRawJson         toggle, default "yes".
+  showDiagnostics     toggle, default "no". Shows a "Fields" link that lists the
+                      keys found in the record with example values and a ready
+                      to copy fieldMap JSON - how an admin learns the real keys.
+
+Every param must be parsed defensively: broken JSON shows one warning line in
+the UI and the tool keeps working with defaults.
+
+11. STATES
+----------
+  - No record: "This tool shows one form submission. Open a submission from the
+    form application folder to see its details." Centred, no controls.
+  - Record with no answers: the identity card says "No answers were stored for
+    this submission", and the metadata and raw blocks still render.
+  - Unknown keys only: they appear under "Answers" with derived labels; nothing
+    is hidden.
+  - Malformed value (object where text was expected): render it in the raw block
+    and as a compact list, with a quiet note.
+  - Render error: one friendly sentence plus "Copy technical details" holding the
+    stack. Never leave an empty panel.
+
+12. PERMISSIONS AND PRIVACY
+---------------------------
+  - Viewing, printing and copying work for every role that can open the record.
+  - The tool has no write action at all. tool.isReadOnly() changes nothing except
+    hiding nothing - there is nothing to hide.
+  - Masking: when maskContactDetails is "yes" or the user toggles "Hide contact
+    details", show a***@example.com and (604) •••-••19 in the screen view AND in
+    the copy summary. The raw JSON block always shows the true values, because it
+    is the audit trail; put one muted note saying so next to the toggle.
+  - Never console.log personal data. Log only record ids and error counts.
+  - Render every value with textContent. innerHTML only for static markup.
+
+13. STYLE AND CODE RULES
+------------------------
+  - Entry point: one tool.onReady(...). No DOMContentLoaded, no window.onload,
+    no raw postMessage.
+  - Plain JavaScript in the established style: var and function, no frameworks,
+    no optional chaining, no top-level await.
+  - Descriptive names: submissionValues, fieldLabelMap, personFields,
+    renderedGroups. No cryptic abbreviations.
+  - CSS scoped under a root class `.fsv` with the `fsv-` prefix on every class
+    and id. No global element selectors, no external fonts or images.
+  - Hyphen instead of em dash in every string. No emoji.
+  - Contrast at least 4.5:1 for body text, focus ring visible on every control,
+    tap targets at least 44px, headings in document order (h1 then h2).
+
+14. TEST HARNESS AND ACCEPTANCE
+-------------------------------
+app/test-harness.html mocks window.tool before the tool loads:
+  - onReady(value, fields) with a record selector offering:
+      full trial exam record, trial exam with missing phone and no consent,
+      career fair entry, contact message with a long text answer, volunteer
+      application, record with three unknown keys, and an empty record;
+  - getFields, onFieldsChange (the selector fires it), getValue, setValue,
+    isReadOnly, getUser (viewer and editor), notify, openUrl,
+    requestExportPdf (fake url, logs the html length).
+  - a toggle for maskContactDetails and a button that fires onFieldsChange with
+    the same record to prove the re-render does not duplicate sections.
+
+Acceptance checks that must all pass:
+  1. node --check on the JS passes; the harness loads with no console errors.
+  2. Full trial exam record renders: title "CEMC Trial Exam", submitted
+     "Saturday 7 November 2026, 12:56", student "Ada Yilmaz" with a "Grade 8"
+     chip, parent name, email as a mailto link, phone displayed as
+     (604) 555-0123 with a tel link.
+  3. Consent "yes" reads "Email opt-in: yes"; the record without the key reads
+     "Email opt-in: not given" in muted text. No "undefined" anywhere.
+  4. Unknown keys land under "Answers" with derived labels ("Future Note"), not
+     hidden and not in the Person group.
+  5. Metadata card shows record id, formTypeId, source application, page path,
+     submitted/created/updated ISO values, and the "Updated after submission"
+     chip only when the timestamps justify it.
+  6. Raw block shows exact JSON for Answers and for the full record; Copy puts
+     valid JSON on the clipboard.
+  7. Copy summary produces the layout in section 8, one blank line before
+     "Record", no trailing spaces.
+  8. Print / PDF builds an A4 portrait document with the letterhead, no buttons
+     and a generated timestamp.
+  9. Firing onFieldsChange twice leaves exactly one identity card, one section
+     per group and one metadata card.
+ 10. The empty record and the missing-record states show the specified text.
+ 11. Masking hides email and phone in the screen view and in the copy summary,
+     while the raw block still shows the true values.
+ 12. Viewer role sees no write control of any kind.
+ 13. At 390px everything is one column with no horizontal scroll; at 1280px the
+     detail sections are two columns.
+ 14. No network requests to external hosts; no value rendered with innerHTML.
+
+15. OUT OF SCOPE
+----------------
+  - Listing, searching, filtering, sorting, paging or selecting submissions.
+  - CSV export of many records, KPI tiles, charts, dashboards.
+  - Editing any submitted value, deleting the record, sending emails from the
+    tool (mailto and tel links only).
+  - Reading other CMS objects, or any change to the website pages.
+
+16. DELIVERY CHECKLIST
+----------------------
+  [ ] The four files above exist and nothing else was touched.
+  [ ] Every param is declared with tool.declareParams and documented in the
+      tool's own "How to configure" block.
+  [ ] No external hosts, no libraries, no secrets, no PII in logs.
+  [ ] No write path exists in the code (no requestObjects, no create, update or
+      delete anywhere).
+  [ ] Acceptance checks 1 to 14 verified, with the observed results listed in
+      your reply.
+  [ ] Docs and SSOT are not written in this step; the ship pipeline generates
+      them later (publish-rules.txt).
