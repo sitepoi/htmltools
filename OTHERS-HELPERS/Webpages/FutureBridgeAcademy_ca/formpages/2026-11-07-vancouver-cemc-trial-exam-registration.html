@@ -8,8 +8,10 @@
        <YYYY-MM-DD>-<city>-<exam-slug>-registration.html
        -> 2026-11-07-vancouver-cemc-trial-exam-registration.html
      The CITY is the area the registration belongs to, not necessarily the venue
-     town: this page covers the Greater Vancouver area and the exam is held in
-     New Westminster. Calgary, Edmonton and Toronto are separate pages.
+     town: this page covers the Greater Vancouver area. The exam is held in
+     New Westminster.
+     Vancouver, Calgary, Edmonton, Toronto, Ottawa and Victoria are separate
+     pages with the same date, the same fields and their own venue.
 
      - Submits over the CMS public API (PUBLICWEBSITE-GUIDE--form-submission.txt):
        destination cmsObjectType form-submissions-uniconbaseapps,
@@ -60,6 +62,18 @@
      - The venue address links straight to Google Maps directions.
 
      ---------------------------------------------------------------------------
+     CITY THEMES (one palette per city - the token block at the end of the style)
+     ---------------------------------------------------------------------------
+     Vancouver  accent #FF6B35  hero #00325A - #004E89 - #0A62A8   (brand)
+     Calgary    accent #C8102E  hero #1F0A10 - #5A1020 - #9E1730
+     Edmonton   accent #0F7B63  hero #04241C - #0A4235 - #106B58
+     Toronto    accent #1D4ED8  hero #0A1428 - #122A57 - #1E4FA3
+     Ottawa     accent #6D28D9  hero #12081F - #26124A - #43278C
+     Victoria   accent #0E7490  hero #04202A - #0A3B4A - #0F6C86
+     The tokens are scoped to .fba-trial, so the site chrome keeps the brand
+     orange. Change the token block, not the shared rules above it.
+     ---------------------------------------------------------------------------
+     ---------------------------------------------------------------------------
      TO MAKE THE NEXT INSTANCE (another date, another city)
      ---------------------------------------------------------------------------
      The style, the fields and the script are shared. Change only these:
@@ -85,17 +99,20 @@
        7. formDefaultCmsObjectType    -> form-submissions-uniconbaseapps unless the
                                          CMS gives that city or exam its own
                                          application object
+       8. the root div class        -> add fba-trial-city-<city> and set its token
+                                        block at the end of the <style>; the
+                                        palette table is under CITY THEMES
      Keep the root class .fba-trial and the fba-trial-* prefix so every instance
      looks identical.
      ============================================================================= -->
-<div class="fba-page fba-trial">
+<div class="fba-page fba-trial fba-trial-city-vancouver">
 
 	<!-- ============================== HERO ============================== -->
 	<section class="fba-trial-hero">
 		<div class="fba-wrap">
 			<div class="fba-trial-hero-inner">
 				<p class="fba-trial-chip">CEMC - Trial Exam</p>
-				<h1 class="fba-trial-title">CEMC Trial Exam</h1>
+				<h1 class="fba-trial-title">CEMC Trial Exam - Vancouver</h1>
 				<p class="fba-trial-lede">Open to students across the Greater Vancouver area. One sitting, in
 					person, in New Westminster.</p>
 
@@ -315,9 +332,9 @@
 			overflow: hidden;
 			border-radius: 0 0 34px 34px;
 			background:
-				radial-gradient(1200px 340px at 12% -10%, rgba(255, 210, 63, 0.18), transparent 62%),
-				radial-gradient(900px 320px at 88% 0%, rgba(255, 107, 53, 0.22), transparent 60%),
-				linear-gradient(135deg, #00325A 0%, #004E89 58%, #0A62A8 100%);
+				radial-gradient(1200px 340px at 12% -10%, var(--trial-glow-a, rgba(255, 210, 63, 0.18)), transparent 62%),
+				radial-gradient(900px 320px at 88% 0%, var(--trial-glow-b, rgba(255, 107, 53, 0.22)), transparent 60%),
+				linear-gradient(135deg, var(--trial-hero-from, #00325A) 0%, var(--trial-hero-mid, #004E89) 58%, var(--trial-hero-to, #0A62A8) 100%);
 			color: #fff;
 		}
 
@@ -431,7 +448,7 @@
 		.fba-trial .fba-trial-btn-primary {
 			background: var(--fba-primary);
 			color: #fff;
-			box-shadow: 0 14px 28px rgba(255, 107, 53, 0.34);
+			box-shadow: 0 14px 28px rgba(var(--trial-accent-rgb, 255, 107, 53), 0.34);
 		}
 
 		.fba-trial .fba-trial-btn-primary:hover,
@@ -439,7 +456,7 @@
 			background: var(--fba-primary-dark);
 			color: #fff;
 			transform: translateY(-1px);
-			box-shadow: 0 18px 34px rgba(255, 107, 53, 0.4);
+			box-shadow: 0 18px 34px rgba(var(--trial-accent-rgb, 255, 107, 53), 0.4);
 		}
 
 		.fba-trial .fba-trial-btn-ghost {
@@ -508,7 +525,7 @@
 		}
 
 		.fba-trial .fba-trial-info-icon-date {
-			background: rgba(255, 107, 53, 0.12);
+			background: rgba(var(--trial-accent-rgb, 255, 107, 53), 0.12);
 		}
 
 		.fba-trial .fba-trial-info-icon-date svg {
@@ -516,7 +533,7 @@
 		}
 
 		.fba-trial .fba-trial-info-icon-place {
-			background: rgba(0, 78, 137, 0.1);
+			background: rgba(var(--trial-secondary-rgb, 0, 78, 137), 0.1);
 		}
 
 		.fba-trial .fba-trial-info-icon-place svg {
@@ -556,7 +573,7 @@
 			font-weight: 700;
 			color: var(--fba-secondary);
 			text-decoration: none;
-			border-bottom: 2px solid rgba(0, 78, 137, 0.22);
+			border-bottom: 2px solid rgba(var(--trial-secondary-rgb, 0, 78, 137), 0.22);
 			padding-bottom: 2px;
 			align-self: flex-start;
 		}
@@ -684,8 +701,8 @@
 		.fba-trial .fba-trial-field input:focus,
 		.fba-trial .fba-trial-field select:focus {
 			outline: none;
-			border-color: rgba(0, 78, 137, 0.5);
-			box-shadow: 0 0 0 4px rgba(0, 78, 137, 0.12);
+			border-color: rgba(var(--trial-secondary-rgb, 0, 78, 137), 0.5);
+			box-shadow: 0 0 0 4px rgba(var(--trial-secondary-rgb, 0, 78, 137), 0.12);
 		}
 
 		.fba-trial .fba-trial-field input.is-invalid,
@@ -770,7 +787,7 @@
 			font-size: 1rem;
 			font-weight: 700;
 			cursor: pointer;
-			box-shadow: 0 12px 24px rgba(255, 107, 53, 0.28);
+			box-shadow: 0 12px 24px rgba(var(--trial-accent-rgb, 255, 107, 53), 0.28);
 			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 		}
 
@@ -778,7 +795,7 @@
 		.fba-trial .fba-trial-submit:focus-visible {
 			background: var(--fba-primary-dark);
 			transform: translateY(-1px);
-			box-shadow: 0 16px 30px rgba(255, 107, 53, 0.32);
+			box-shadow: 0 16px 30px rgba(var(--trial-accent-rgb, 255, 107, 53), 0.32);
 		}
 
 		.fba-trial .fba-trial-submit:disabled {
@@ -978,6 +995,20 @@
 				font-size: 0.82rem;
 			}
 		}
+
+		/* ---------- city theme: Vancouver (brand palette) ---------- */
+		.fba-trial.fba-trial-city-vancouver {
+			--fba-primary: #FF6B35;
+			--fba-secondary: #004E89;
+			--trial-accent-rgb: 255, 107, 53;
+			--trial-secondary-rgb: 0, 78, 137;
+			--trial-hero-from: #00325A;
+			--trial-hero-mid: #004E89;
+			--trial-hero-to: #0A62A8;
+			--trial-glow-a: rgba(255, 210, 63, 0.18);
+			--trial-glow-b: rgba(255, 107, 53, 0.22);
+		}
+
 	</style>
 
 	<script>
@@ -1248,6 +1279,10 @@
 			if (statusCode === 429) {
 				return 'Too many attempts from this connection. Please wait a minute and try again.';
 			}
+			/* 502/503/504 come from the gateway, not from the form: the write may have landed */
+			if (statusCode === 502 || statusCode === 503 || statusCode === 504) {
+				return 'The registration service did not answer in time. Please do not send the form again just yet - email info@futurebridgeacademy.ca and we will check whether your place was saved.';
+			}
 			return 'We could not send this just now. Please try again. If it still fails, email info@futurebridgeacademy.ca.';
 		}
 
@@ -1311,6 +1346,9 @@
 					!(result.body && result.body.ok === false);
 
 				if (!accepted) {
+					/* the administrator needs the reason the CMS gave; the visitor gets the friendly text */
+					window.console.error('[FORM] The CMS rejected this submission: HTTP ' + result.status +
+						'. Response: ' + JSON.stringify(result.body) + '. Endpoint: ' + endpoint);
 					setFormStatus(form, formErrorMessage(result.status), 'error');
 					return;
 				}
@@ -1329,7 +1367,9 @@
 					clearFieldError(field);
 				});
 				setFormStatus(form, 'Thank you. Your place for the CEMC trial exam is registered.', 'ok');
-			}).catch(function () {
+			}).catch(function (networkError) {
+				window.console.error('[FORM] The submission did not reach the CMS: ' +
+					(networkError && networkError.message ? networkError.message : 'network error'));
 				setFormStatus(form, formErrorMessage(0), 'error');
 			}).then(function () {
 				form.classList.remove('gw-busy');
@@ -1378,9 +1418,16 @@
 			if (usesApi) {
 				forms.forEach(function (form) {
 					form.addEventListener('submit', function (event) {
-						event.preventDefault();
 						var endpoint = endpointForForm(form);
-						if (!endpoint || form.classList.contains('gw-busy')) { return; }
+						/* no endpoint: leave the event alone for another binder */
+						if (!endpoint) { return; }
+						/* THIS PAGE OWNS THE SUBMIT. Capture phase plus stopImmediatePropagation
+						   keeps a second binder (the CMS shell binds form[data-gw-form] and wrote
+						   "Something went wrong" into the same status element) from posting a second
+						   copy and flashing its own error before this page answers. */
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						if (form.classList.contains('gw-busy')) { return; }
 
 						/* controlled validation: nothing leaves the page until every field is good */
 						var firstInvalidField = null;
@@ -1398,7 +1445,7 @@
 						}
 
 						sendFormToApi(form, endpoint);
-					});
+					}, true);
 				});
 			} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
 				platform.forms.bind(root);

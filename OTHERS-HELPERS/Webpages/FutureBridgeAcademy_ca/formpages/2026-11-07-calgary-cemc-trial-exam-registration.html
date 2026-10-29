@@ -1,0 +1,1459 @@
+<!-- =============================================================================
+     CEMC Trial Exam registration - CMS fragment for a public website page
+     Route /2026-11-07-calgary-cemc-trial-exam-registration
+     - No doctype, html, head, body or chrome tags: the CMS owns the page shell.
+     - One parent div (.fba-page .fba-trial), one h1, one form, no .html links.
+
+     FILE NAME FORMAT (one file per date and city):
+       <YYYY-MM-DD>-<city>-<exam-slug>-registration.html
+       -> 2026-11-07-calgary-cemc-trial-exam-registration.html
+     The CITY is the area the registration belongs to, not necessarily the venue
+     town: this page covers the Greater Calgary area. The venue for this city
+     has NOT been confirmed yet - the page shows "Venue to be confirmed" and
+     has no directions link until the address is supplied.
+     Vancouver, Calgary, Edmonton, Toronto, Ottawa and Victoria are separate
+     pages with the same date, the same fields and their own venue.
+
+     - Submits over the CMS public API (PUBLICWEBSITE-GUIDE--form-submission.txt):
+       destination cmsObjectType form-submissions-uniconbaseapps,
+       label formTypeId 2026-11-07-calgary-cemc-trial-exam-registration.
+     - form-submissions-uniconbaseapps is the GENERAL form application: every form
+       uses it unless that page names a specific application of its own. A page
+       with its own cmsObjectType keeps it (contact-us-forms-uniconbaseapps,
+       apply-position-forms-uniconbaseapps, event-entry-registraton-uniconbaseapps).
+     - FOLDER ROUTING (webpage-widget-flow-ssot.html section 8.10, D-PFI-26/27,
+       applied 29 Oct 2026): the form channel accepts the same folder keys as the
+       keyed write path, resolved BEFORE the permission checks by the shared
+       router and stamped as the object's typeId:
+         typeId             a folder id that already exists (wins)
+         folder: { name }   find-or-create a TOP-LEVEL folder (server slugifies)
+         folder: { tree }   find-or-create a path, max depth 5 / 10 nodes
+       This page sends BOTH keys, so the CMS can match an existing folder or
+       create it: data-gw-form-folder-id (empty until the folder exists, then the
+       real id) becomes payload.typeId, and data-gw-form-folder
+       ("2026-11-07-calgary-cemc-trial-exam-registration") becomes
+       payload.folder = { name }. The CMS uses the id when it exists and falls
+       back to the name, which is find-or-created and reused afterwards. The
+       declaration is consumed by the CMS and is NOT stored on the object.
+       Without a folder a submission is stored but INVISIBLE in the app's object
+       list, which lists strictly per folder; a malformed declaration answers
+       400 INVALID_FOLDER_TARGET / FOLDER_TREE_INVALID; a folder that cannot be
+       created still stores the record, unfiled, and answers 200 without
+       folderId. Set data-gw-form-folder-id instead when the folder already
+       exists and you know its id.
+     - OBJECT NAME (same section, D-PFI-30): the form also names the record. This
+       page sets data-gw-form-name-template="{{student_name}}", so the CMS renders
+       the name from the submitted values and the object list shows "Ada Yilmaz"
+       inside the folder above instead of a timestamp. data-gw-form-object-name
+       (a fixed literal) wins over the template if it is ever set; the object id
+       and slug are never changed by either key. Neither key is sent when both
+       attributes are empty, and the CMS then falls back to the application's
+       formIntake.nameTemplate or its own default name.
+     - Fields: parent_name, student_name, student_grade, email, phone (optional),
+       consent (optional email opt-in). Five hidden fields record WHICH exam the
+       registration belongs to (exam, exam_date, city, area, venue_city) so a city
+       export reads on its own; the formTypeId stays the authoritative label.
+     - PHONE: auto-formatted to (403) 555-0123 while typing, paste tolerant
+       (+1 and separators are stripped), stored as the formatted string.
+     - EMAIL: controlled - spaces are removed, the domain is lower-cased, and the
+       address must match name@domain.tld before the form can be sent.
+     - FACTS ON THE PAGE: only the exam name, the date and the venue address that
+       were supplied. No start time, no fee and no "we will email you" promise is
+       stated, because none of them has been confirmed for publishing.
+     - VENUE NOT CONFIRMED (see the TBC note at the top of this file). This page
+       shows "Venue to be confirmed", carries no Google Maps link and stores
+       venue_city=TBC until the address is supplied.
+
+     ---------------------------------------------------------------------------
+     CITY THEMES (one palette per city - the token block at the end of the style)
+     ---------------------------------------------------------------------------
+     Vancouver  accent #FF6B35  hero #00325A - #004E89 - #0A62A8   (brand)
+     Calgary    accent #C8102E  hero #1F0A10 - #5A1020 - #9E1730
+     Edmonton   accent #0F7B63  hero #04241C - #0A4235 - #106B58
+     Toronto    accent #1D4ED8  hero #0A1428 - #122A57 - #1E4FA3
+     Ottawa     accent #6D28D9  hero #12081F - #26124A - #43278C
+     Victoria   accent #0E7490  hero #04202A - #0A3B4A - #0F6C86
+     The tokens are scoped to .fba-trial, so the site chrome keeps the brand
+     orange. Change the token block, not the shared rules above it.
+     ---------------------------------------------------------------------------
+     ---------------------------------------------------------------------------
+     TO MAKE THE NEXT INSTANCE (another date, another city)
+     ---------------------------------------------------------------------------
+     The style, the fields and the script are shared. Change only these:
+       1. File name + route comment: <YYYY-MM-DD>-<city>-<exam-slug>-registration.html
+       2. h1, hero lede, the three hero chips and the two detail cards
+       3. data-gw-form-type           -> <YYYY-MM-DD>-<city>-<exam-slug>-registration
+                                         (the SAME string as the file name without
+                                         .html and as the CMS folder name, so one
+                                         string identifies the page, the label and
+                                         the target folder)
+       4. the five hidden inputs      -> exam, exam_date, city, area, venue_city
+       5. data-gw-form-folder         -> the SAME string again: it is the folder
+                                         name the CMS creates or matches for this
+                                         instance under the destination app
+          data-gw-form-folder-id      -> paste the real folder id once the folder
+                                         exists; empty is ignored. Both travel in
+                                         the payload, the id wins when it resolves
+       5b. data-gw-form-name-template -> the CMS object name, rendered from the
+                                         answers: {{student_name}}. Use
+                                         data-gw-form-object-name for a fixed text
+                                         (it wins over the template).
+       6. the Google Maps directions link (destination = the new address)
+       7. formDefaultCmsObjectType    -> form-submissions-uniconbaseapps unless the
+                                         CMS gives that city or exam its own
+                                         application object
+       8. the root div class        -> add fba-trial-city-<city> and set its token
+                                        block at the end of the <style>; the
+                                        palette table is under CITY THEMES
+     Keep the root class .fba-trial and the fba-trial-* prefix so every instance
+     looks identical.
+     ============================================================================= -->
+<div class="fba-page fba-trial fba-trial-city-calgary">
+
+	<!-- ============================== HERO ============================== -->
+	<section class="fba-trial-hero">
+		<div class="fba-wrap">
+			<div class="fba-trial-hero-inner">
+				<p class="fba-trial-chip">CEMC - Trial Exam</p>
+				<h1 class="fba-trial-title">CEMC Trial Exam - Calgary</h1>
+				<p class="fba-trial-lede">Open to students across the Greater Calgary area. One sitting, in
+					person. The venue is not confirmed yet.</p>
+
+				<ul class="fba-trial-hero-meta">
+					<li>
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<rect x="3" y="5" width="18" height="16" rx="3"></rect>
+							<path d="M8 3v4M16 3v4M3 11h18"></path>
+						</svg>
+						Saturday 7 November 2026
+					</li>
+					<li>
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"></path>
+							<circle cx="12" cy="10" r="2.6"></circle>
+						</svg>
+						Greater Calgary
+					</li>
+					<li>
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<path d="M20 6 9 17l-5-5"></path>
+						</svg>
+						In person
+					</li>
+				</ul>
+
+				<div class="fba-trial-hero-actions">
+					<a class="fba-trial-btn fba-trial-btn-primary" href="#fba-trial-form">Register for this exam</a>
+
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== WHEN AND WHERE ============================== -->
+	<section class="fba-trial-info">
+		<div class="fba-wrap">
+			<div class="fba-trial-info-grid">
+
+				<article class="fba-trial-info-card">
+					<span class="fba-trial-info-icon fba-trial-info-icon-date">
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<rect x="3" y="5" width="18" height="16" rx="3"></rect>
+							<path d="M8 3v4M16 3v4M3 11h18M8 15h3"></path>
+						</svg>
+					</span>
+					<h2>When</h2>
+					<p class="fba-trial-info-main">Saturday 7 November 2026</p>
+					<p class="fba-trial-info-sub">One sitting on this date.</p>
+				</article>
+
+				<article class="fba-trial-info-card">
+					<span class="fba-trial-info-icon fba-trial-info-icon-place">
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"></path>
+							<circle cx="12" cy="10" r="2.6"></circle>
+						</svg>
+					</span>
+					<h2>Where</h2>
+					<p class="fba-trial-info-main">Venue to be confirmed</p>
+					<p class="fba-trial-info-sub">The address for this city will be published on this page.</p>
+
+				</article>
+
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FORM ============================== -->
+	<section class="fba-trial-form-sec" id="fba-trial-form">
+		<div class="fba-wrap">
+			<div class="fba-trial-layout">
+
+				<!-- Folder target (section 8.10, D-PFI-27). Both are sent; the CMS uses
+				     the id when it exists and otherwise creates or matches the name:
+				       data-gw-form-folder-id  -> payload.typeId  (paste the folder id here)
+				       data-gw-form-folder     -> payload.folder = { name }
+				     Leave the id empty until the folder exists; empty is ignored.
+				     Object name (D-PFI-30): the template is rendered by the CMS from the
+				     answers, so the record is titled with the student name. -->
+				<form class="fba-trial-form" data-gw-form
+					data-gw-form-type="2026-11-07-calgary-cemc-trial-exam-registration"
+					data-gw-form-folder-id=""
+					data-gw-form-folder="2026-11-07-calgary-cemc-trial-exam-registration"
+					data-gw-form-name-template="{{student_name}}" novalidate>
+					<div class="fba-trial-form-head">
+						<h2>Register for this exam</h2>
+						<p>One form per student. It takes under a minute.</p>
+					</div>
+
+					<div class="fba-trial-fields">
+						<label class="fba-trial-field">
+							<span class="fba-trial-label">Parent or guardian name <em>required</em></span>
+							<input type="text" name="parent_name" autocomplete="name" autocapitalize="words"
+								enterkeyhint="next" maxlength="120" required>
+							<span class="fba-trial-error" data-trial-error role="alert"></span>
+						</label>
+						<label class="fba-trial-field">
+							<span class="fba-trial-label">Student name <em>required</em></span>
+							<input type="text" name="student_name" autocomplete="off" autocapitalize="words"
+								enterkeyhint="next" maxlength="120" required>
+							<span class="fba-trial-error" data-trial-error role="alert"></span>
+						</label>
+						<label class="fba-trial-field fba-trial-field-wide">
+							<span class="fba-trial-label">Grade <em>required</em></span>
+							<select name="student_grade" required aria-describedby="fba-trial-grade-hint">
+								<option value="">Choose a grade</option>
+								<option value="Grade 5">Grade 5</option>
+								<option value="Grade 6">Grade 6</option>
+								<option value="Grade 7">Grade 7</option>
+								<option value="Grade 8">Grade 8</option>
+								<option value="Grade 9">Grade 9</option>
+								<option value="Grade 10">Grade 10</option>
+								<option value="Grade 11">Grade 11</option>
+								<option value="Grade 12">Grade 12</option>
+								<option value="Not sure">Not sure</option>
+							</select>
+							<span class="fba-trial-hint" id="fba-trial-grade-hint">The grade the student is in at
+								school now.</span>
+							<span class="fba-trial-error" data-trial-error role="alert"></span>
+						</label>
+						<label class="fba-trial-field fba-trial-field-wide">
+							<span class="fba-trial-label">Email <em>required</em></span>
+							<input type="email" name="email" inputmode="email" autocomplete="email"
+								autocapitalize="none" spellcheck="false" enterkeyhint="next" maxlength="160"
+								placeholder="name@example.com" aria-describedby="fba-trial-email-hint" required>
+							<span class="fba-trial-hint" id="fba-trial-email-hint">The address we write to about this
+								exam.</span>
+							<span class="fba-trial-error" data-trial-error role="alert"></span>
+						</label>
+						<label class="fba-trial-field fba-trial-field-wide">
+							<span class="fba-trial-label">Phone <em>optional</em></span>
+							<input type="tel" name="phone" inputmode="tel" autocomplete="tel" enterkeyhint="send"
+								maxlength="14" placeholder="(403) 555-0123" data-trial-phone
+								aria-describedby="fba-trial-phone-hint">
+							<span class="fba-trial-hint" id="fba-trial-phone-hint">Only used if we need to reach you on
+								the day.</span>
+							<span class="fba-trial-error" data-trial-error role="alert"></span>
+						</label>
+					</div>
+
+					<div class="fba-trial-consent">
+						<label class="fba-trial-consent-field">
+							<input type="checkbox" name="consent" value="yes">
+							<span>Email me about future trial exams, mock exams and free lessons.
+								<em class="fba-trial-optional">(optional)</em></span>
+						</label>
+					</div>
+
+					<!-- which exam this registration belongs to (readable in the CMS export) -->
+					<input type="hidden" name="exam" value="CEMC Trial Exam">
+					<input type="hidden" name="exam_date" value="2026-11-07">
+					<input type="hidden" name="city" value="Calgary">
+					<input type="hidden" name="area" value="Greater Calgary">
+					<input type="hidden" name="venue_city" value="TBC">
+
+					<!-- honeypot: hidden from view and from screen readers, never a real field -->
+					<input class="fba-trial-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+						aria-hidden="true">
+
+					<div class="fba-trial-actions">
+						<div class="fba-trial-status" data-gw-form-status role="status"></div>
+						<button class="fba-trial-submit" type="submit">Register for the exam</button>
+					</div>
+
+					<p class="fba-trial-note">We use these details to run this exam. We only email you about other
+						exams and lessons if you tick the box. We do not pass them to anyone else, and you can ask us
+						to delete them at any time.</p>
+				</form>
+
+				<aside class="fba-trial-aside">
+					<h2 class="fba-trial-aside-title">What happens next</h2>
+					<ol class="fba-trial-steps">
+						<li>
+							<span class="fba-trial-step-num">1</span>
+							<span class="fba-trial-step-body">
+								<strong>Fill the form</strong>
+								One form per student.
+							</span>
+						</li>
+						<li>
+							<span class="fba-trial-step-num">2</span>
+							<span class="fba-trial-step-body">
+								<strong>Your place is saved</strong>
+								The confirmation appears on this page.
+							</span>
+						</li>
+						<li>
+							<span class="fba-trial-step-num">3</span>
+							<span class="fba-trial-step-body">
+								<strong>Come on the day</strong>
+								At the venue shown above.
+							</span>
+						</li>
+					</ol>
+					<p class="fba-trial-aside-help">Question about the exam? Write to
+						<a href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a>.</p>
+				</aside>
+
+			</div>
+		</div>
+	</section>
+
+	<style>
+		/* ---------- trial exam registration (page scoped) ---------- */
+		.fba-trial .fba-trial-hero {
+			position: relative;
+			overflow: hidden;
+			border-radius: 0 0 34px 34px;
+			background:
+				radial-gradient(1200px 340px at 12% -10%, var(--trial-glow-a, rgba(255, 210, 63, 0.18)), transparent 62%),
+				radial-gradient(900px 320px at 88% 0%, var(--trial-glow-b, rgba(255, 107, 53, 0.22)), transparent 60%),
+				linear-gradient(135deg, var(--trial-hero-from, #00325A) 0%, var(--trial-hero-mid, #004E89) 58%, var(--trial-hero-to, #0A62A8) 100%);
+			color: #fff;
+		}
+
+		.fba-trial .fba-trial-hero::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+			background-size: 22px 22px;
+			opacity: 0.35;
+			pointer-events: none;
+		}
+
+		.fba-trial .fba-trial-hero-inner {
+			position: relative;
+			z-index: 1;
+			padding: 56px 0 74px;
+			text-align: center;
+		}
+
+		.fba-trial .fba-trial-chip {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin: 0 0 14px;
+			padding: 7px 15px;
+			border: 1px solid rgba(255, 255, 255, 0.28);
+			border-radius: 999px;
+			background: rgba(255, 255, 255, 0.1);
+			font-size: 0.75rem;
+			font-weight: 700;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: #fff;
+		}
+
+		.fba-trial .fba-trial-title {
+			margin: 0 0 12px;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: clamp(2.1rem, 4.2vw, 3.05rem);
+			line-height: 1.05;
+			letter-spacing: -0.025em;
+			text-wrap: balance;
+			color: #fff;
+		}
+
+		.fba-trial .fba-trial-lede {
+			max-width: 58ch;
+			margin: 0 auto;
+			font-size: 1.03rem;
+			line-height: 1.6;
+			text-wrap: balance;
+			color: rgba(255, 255, 255, 0.86);
+		}
+
+		.fba-trial .fba-trial-hero-meta {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 10px;
+			margin: 22px 0 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		.fba-trial .fba-trial-hero-meta li {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 8px 14px;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			border-radius: 999px;
+			background: rgba(255, 255, 255, 0.08);
+			font-size: 0.85rem;
+			font-weight: 600;
+			color: rgba(255, 255, 255, 0.94);
+		}
+
+		.fba-trial .fba-trial-hero-meta svg {
+			width: 15px;
+			height: 15px;
+			fill: none;
+			stroke: rgba(255, 255, 255, 0.85);
+			stroke-width: 1.9;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.fba-trial .fba-trial-hero-actions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 12px;
+			margin-top: 26px;
+		}
+
+		.fba-trial .fba-trial-btn {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 52px;
+			padding: 14px 26px;
+			border: 1px solid transparent;
+			border-radius: 14px;
+			font-size: 0.97rem;
+			font-weight: 700;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+		}
+
+		.fba-trial .fba-trial-btn-primary {
+			background: var(--fba-primary);
+			color: #fff;
+			box-shadow: 0 14px 28px rgba(var(--trial-accent-rgb, 255, 107, 53), 0.34);
+		}
+
+		.fba-trial .fba-trial-btn-primary:hover,
+		.fba-trial .fba-trial-btn-primary:focus-visible {
+			background: var(--fba-primary-dark);
+			color: #fff;
+			transform: translateY(-1px);
+			box-shadow: 0 18px 34px rgba(var(--trial-accent-rgb, 255, 107, 53), 0.4);
+		}
+
+		.fba-trial .fba-trial-btn-ghost {
+			border-color: rgba(255, 255, 255, 0.38);
+			background: rgba(255, 255, 255, 0.06);
+			color: #fff;
+		}
+
+		.fba-trial .fba-trial-btn-ghost:hover,
+		.fba-trial .fba-trial-btn-ghost:focus-visible {
+			border-color: rgba(255, 255, 255, 0.7);
+			background: rgba(255, 255, 255, 0.14);
+			color: #fff;
+			transform: translateY(-1px);
+		}
+
+		/* ---------- when and where cards ---------- */
+		.fba-trial .fba-trial-info {
+			padding: 0 0 6px;
+		}
+
+		.fba-trial .fba-trial-info-grid {
+			position: relative;
+			z-index: 2;
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 18px;
+			max-width: 900px;
+			margin: -40px auto 0;
+		}
+
+		.fba-trial .fba-trial-info-card {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			padding: 24px 24px 22px;
+			border: 1px solid var(--fba-line);
+			border-radius: 20px;
+			background: #fff;
+			box-shadow: var(--fba-shadow);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.fba-trial .fba-trial-info-card:hover {
+			transform: translateY(-2px);
+			box-shadow: var(--fba-shadow-lg);
+		}
+
+		.fba-trial .fba-trial-info-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			margin-bottom: 10px;
+			border-radius: 13px;
+		}
+
+		.fba-trial .fba-trial-info-icon svg {
+			width: 21px;
+			height: 21px;
+			fill: none;
+			stroke-width: 1.8;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.fba-trial .fba-trial-info-icon-date {
+			background: rgba(var(--trial-accent-rgb, 255, 107, 53), 0.12);
+		}
+
+		.fba-trial .fba-trial-info-icon-date svg {
+			stroke: var(--fba-primary-dark);
+		}
+
+		.fba-trial .fba-trial-info-icon-place {
+			background: rgba(var(--trial-secondary-rgb, 0, 78, 137), 0.1);
+		}
+
+		.fba-trial .fba-trial-info-icon-place svg {
+			stroke: var(--fba-secondary);
+		}
+
+		.fba-trial .fba-trial-info-card h2 {
+			margin: 0;
+			font-size: 0.76rem;
+			font-weight: 700;
+			letter-spacing: 0.11em;
+			text-transform: uppercase;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-info-main {
+			margin: 4px 0 0;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.12rem;
+			line-height: 1.3;
+			color: var(--fba-secondary);
+		}
+
+		.fba-trial .fba-trial-info-sub {
+			margin: 2px 0 0;
+			font-size: 0.92rem;
+			line-height: 1.5;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-info-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			margin-top: 14px;
+			font-size: 0.9rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+			text-decoration: none;
+			border-bottom: 2px solid rgba(var(--trial-secondary-rgb, 0, 78, 137), 0.22);
+			padding-bottom: 2px;
+			align-self: flex-start;
+		}
+
+		.fba-trial .fba-trial-info-link svg {
+			width: 15px;
+			height: 15px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 2;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.fba-trial .fba-trial-info-link:hover,
+		.fba-trial .fba-trial-info-link:focus-visible {
+			color: var(--fba-primary-dark);
+			border-bottom-color: currentColor;
+		}
+
+		/* ---------- form and aside ---------- */
+		.fba-trial .fba-trial-form-sec {
+			/* the hero button jumps to this section: keep it clear of the sticky header */
+			scroll-margin-top: 110px;
+			padding: 34px 0 56px;
+		}
+
+		.fba-trial .fba-trial-layout {
+			display: grid;
+			grid-template-columns: minmax(0, 1.34fr) minmax(258px, 0.66fr);
+			gap: 20px;
+			align-items: start;
+			max-width: 980px;
+			margin: 0 auto;
+		}
+
+		.fba-trial .fba-trial-form {
+			padding: 30px;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			background: #fff;
+			box-shadow: var(--fba-shadow);
+		}
+
+		.fba-trial .fba-trial-form-head h2 {
+			margin: 0 0 4px;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.35rem;
+			color: var(--fba-secondary);
+		}
+
+		.fba-trial .fba-trial-form-head p {
+			margin: 0 0 22px;
+			font-size: 0.93rem;
+			line-height: 1.55;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-fields {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 16px;
+		}
+
+		.fba-trial .fba-trial-field {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+			min-width: 0;
+		}
+
+		.fba-trial .fba-trial-field-wide {
+			grid-column: 1 / -1;
+		}
+
+		.fba-trial .fba-trial-label {
+			font-size: 0.9rem;
+			font-weight: 700;
+			color: var(--fba-text);
+		}
+
+		.fba-trial .fba-trial-label em {
+			font-style: normal;
+			font-weight: 500;
+			font-size: 0.8rem;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-hint {
+			font-size: 0.82rem;
+			line-height: 1.45;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-field input,
+		.fba-trial .fba-trial-field select {
+			width: 100%;
+			min-height: 54px;
+			padding: 15px 16px;
+			border: 1px solid var(--fba-line);
+			border-radius: 14px;
+			background: #fff;
+			font: inherit;
+			/* 16px or more: below that, phones zoom in when a field is focused */
+			font-size: 1rem;
+			color: var(--fba-text);
+			-webkit-appearance: none;
+			appearance: none;
+			transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+		}
+
+		.fba-trial .fba-trial-field select {
+			background-image: linear-gradient(45deg, transparent 50%, var(--fba-muted) 50%),
+				linear-gradient(135deg, var(--fba-muted) 50%, transparent 50%);
+			background-position: calc(100% - 22px) 24px, calc(100% - 16px) 24px;
+			background-size: 6px 6px, 6px 6px;
+			background-repeat: no-repeat;
+			padding-right: 44px;
+		}
+
+		.fba-trial .fba-trial-field input::placeholder {
+			color: #9aa3b2;
+		}
+
+		.fba-trial .fba-trial-field input:focus,
+		.fba-trial .fba-trial-field select:focus {
+			outline: none;
+			border-color: rgba(var(--trial-secondary-rgb, 0, 78, 137), 0.5);
+			box-shadow: 0 0 0 4px rgba(var(--trial-secondary-rgb, 0, 78, 137), 0.12);
+		}
+
+		.fba-trial .fba-trial-field input.is-invalid,
+		.fba-trial .fba-trial-field select.is-invalid {
+			border-color: #d92d20;
+			background: #fffbfa;
+		}
+
+		.fba-trial .fba-trial-field input.is-invalid:focus,
+		.fba-trial .fba-trial-field select.is-invalid:focus {
+			box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.12);
+		}
+
+		.fba-trial .fba-trial-error {
+			font-size: 0.82rem;
+			font-weight: 600;
+			line-height: 1.45;
+			color: #b42318;
+		}
+
+		.fba-trial .fba-trial-error:empty {
+			display: none;
+		}
+
+		.fba-trial .fba-trial-consent {
+			display: grid;
+			margin-top: 18px;
+			padding: 4px 16px;
+			border: 1px solid var(--fba-line);
+			border-radius: 14px;
+			background: var(--fba-light);
+		}
+
+		.fba-trial .fba-trial-consent-field {
+			display: flex;
+			align-items: flex-start;
+			gap: 12px;
+			padding: 12px 0;
+			font-size: 0.95rem;
+			line-height: 1.5;
+			color: var(--fba-text);
+			cursor: pointer;
+		}
+
+		.fba-trial .fba-trial-consent-field input {
+			flex: 0 0 auto;
+			width: 22px;
+			height: 22px;
+			margin: 0;
+			accent-color: var(--fba-primary);
+		}
+
+		.fba-trial .fba-trial-optional {
+			font-style: normal;
+			font-weight: 500;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+
+		.fba-trial .fba-trial-actions {
+			display: grid;
+			gap: 14px;
+			margin-top: 22px;
+		}
+
+		.fba-trial .fba-trial-submit {
+			width: 100%;
+			min-height: 56px;
+			padding: 16px 24px;
+			border: 0;
+			border-radius: 14px;
+			background: var(--fba-primary);
+			color: #fff;
+			font: inherit;
+			font-size: 1rem;
+			font-weight: 700;
+			cursor: pointer;
+			box-shadow: 0 12px 24px rgba(var(--trial-accent-rgb, 255, 107, 53), 0.28);
+			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+		}
+
+		.fba-trial .fba-trial-submit:hover,
+		.fba-trial .fba-trial-submit:focus-visible {
+			background: var(--fba-primary-dark);
+			transform: translateY(-1px);
+			box-shadow: 0 16px 30px rgba(var(--trial-accent-rgb, 255, 107, 53), 0.32);
+		}
+
+		.fba-trial .fba-trial-submit:disabled {
+			cursor: default;
+			opacity: 0.72;
+			transform: none;
+		}
+
+		.fba-trial .fba-trial-status {
+			font-size: 0.95rem;
+			line-height: 1.5;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-status:empty {
+			display: none;
+		}
+
+		.fba-trial .fba-trial-status.is-ok {
+			padding: 12px 16px;
+			border: 1px solid #b7ebd8;
+			border-radius: 12px;
+			background: #eefbf5;
+			font-weight: 600;
+			color: #067a5b;
+		}
+
+		.fba-trial .fba-trial-status.is-error {
+			padding: 12px 16px;
+			border: 1px solid #f5c2bb;
+			border-radius: 12px;
+			background: #fef3f1;
+			font-weight: 600;
+			color: #b42318;
+		}
+
+		.fba-trial .fba-trial-note {
+			margin-top: 16px;
+			padding-top: 14px;
+			border-top: 1px solid var(--fba-line);
+			font-size: 0.86rem;
+			line-height: 1.55;
+			color: var(--fba-muted);
+		}
+
+		/* ---------- what happens next ---------- */
+		.fba-trial .fba-trial-aside {
+			padding: 24px 22px;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			background: var(--fba-light);
+		}
+
+		.fba-trial .fba-trial-aside-title {
+			margin: 0 0 16px;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.05rem;
+			line-height: 1.3;
+			color: var(--fba-secondary);
+		}
+
+		.fba-trial .fba-trial-steps {
+			display: grid;
+			gap: 14px;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		.fba-trial .fba-trial-steps li {
+			display: flex;
+			align-items: flex-start;
+			gap: 12px;
+		}
+
+		.fba-trial .fba-trial-step-num {
+			display: inline-flex;
+			flex: 0 0 auto;
+			align-items: center;
+			justify-content: center;
+			width: 26px;
+			height: 26px;
+			border-radius: 50%;
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			font-size: 0.8rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+		}
+
+		.fba-trial .fba-trial-step-body {
+			display: block;
+			font-size: 0.88rem;
+			line-height: 1.5;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-step-body strong {
+			display: block;
+			font-size: 0.92rem;
+			color: var(--fba-text);
+		}
+
+		.fba-trial .fba-trial-aside-help {
+			margin: 18px 0 0;
+			padding-top: 14px;
+			border-top: 1px solid var(--fba-line);
+			font-size: 0.86rem;
+			line-height: 1.55;
+			color: var(--fba-muted);
+		}
+
+		.fba-trial .fba-trial-aside-help a {
+			font-weight: 700;
+			color: var(--fba-primary-dark);
+			text-decoration: none;
+			border-bottom: 1px solid currentColor;
+		}
+
+		@media (max-width: 900px) {
+			.fba-trial .fba-trial-layout {
+				grid-template-columns: minmax(0, 1fr);
+			}
+
+			.fba-trial .fba-trial-aside {
+				order: 2;
+			}
+		}
+
+		@media (max-width: 720px) {
+			.fba-trial .fba-trial-info-grid {
+				grid-template-columns: minmax(0, 1fr);
+				margin-top: -32px;
+			}
+
+			.fba-trial .fba-trial-fields {
+				grid-template-columns: minmax(0, 1fr);
+			}
+		}
+
+		@media (max-width: 640px) {
+			.fba-trial .fba-trial-hero {
+				border-radius: 0 0 24px 24px;
+			}
+
+			.fba-trial .fba-trial-hero-inner {
+				padding: 38px 0 56px;
+			}
+
+			.fba-trial .fba-trial-lede {
+				font-size: 0.97rem;
+			}
+
+			.fba-trial .fba-trial-hero-meta {
+				gap: 8px;
+				margin-top: 18px;
+			}
+
+			.fba-trial .fba-trial-hero-meta li {
+				font-size: 0.8rem;
+				padding: 7px 12px;
+			}
+
+			.fba-trial .fba-trial-hero-actions {
+				display: grid;
+				margin-top: 22px;
+			}
+
+			.fba-trial .fba-trial-btn {
+				width: 100%;
+			}
+
+			.fba-trial .fba-trial-info-card {
+				padding: 20px 18px;
+				border-radius: 18px;
+			}
+
+			.fba-trial .fba-trial-info-main {
+				font-size: 1.03rem;
+			}
+
+			.fba-trial .fba-trial-form-sec {
+				padding: 24px 0 38px;
+			}
+
+			.fba-trial .fba-trial-form {
+				padding: 20px 16px 22px;
+				border-radius: 18px;
+			}
+
+			.fba-trial .fba-trial-aside {
+				padding: 20px 18px;
+				border-radius: 18px;
+			}
+
+			.fba-trial .fba-trial-note {
+				font-size: 0.82rem;
+			}
+		}
+
+		/* ---------- city theme: Calgary ---------- */
+		.fba-trial.fba-trial-city-calgary {
+			--fba-primary: #C8102E;
+			--fba-primary-dark: #A00D24;
+			--fba-secondary: #8A1226;
+			--trial-accent-rgb: 200, 16, 46;
+			--trial-secondary-rgb: 138, 18, 38;
+			--trial-hero-from: #1F0A10;
+			--trial-hero-mid: #5A1020;
+			--trial-hero-to: #9E1730;
+			--trial-glow-a: rgba(255, 196, 120, 0.16);
+			--trial-glow-b: rgba(200, 16, 46, 0.3);
+		}
+
+	</style>
+
+	<script>
+	(function () {
+		'use strict';
+
+		var root = document.querySelector('.fba-trial');
+		if (!root || root.getAttribute('data-fba-trial-ready') === '1') { return; }
+		root.setAttribute('data-fba-trial-ready', '1');
+		root.classList.add('fba-js');
+
+		/* ---------------------- field validation ---------------------- */
+		/* The form is controlled: the browser's own bubbles are switched off
+		   (novalidate) and every field is checked here instead, so the message
+		   appears under the field it belongs to and the send never starts with
+		   a bad value. */
+		var emailPattern = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+
+		function fieldOf(input) {
+			return input.closest('.fba-trial-field');
+		}
+
+		function errorElementOf(input) {
+			var field = fieldOf(input);
+			return field ? field.querySelector('[data-trial-error]') : null;
+		}
+
+		function setFieldError(input, message) {
+			var errorElement = errorElementOf(input);
+			if (errorElement) { errorElement.textContent = message || ''; }
+			input.classList.toggle('is-invalid', Boolean(message));
+			if (message) {
+				input.setAttribute('aria-invalid', 'true');
+			} else {
+				input.removeAttribute('aria-invalid');
+			}
+		}
+
+		function clearFieldError(input) {
+			setFieldError(input, '');
+		}
+
+		function normalizeEmailAddress(rawValue) {
+			var value = String(rawValue || '').replace(/\s+/g, '').trim();
+			var atIndex = value.lastIndexOf('@');
+			/* the domain is case-insensitive, so store it in lower case */
+			if (atIndex === -1) { return value; }
+			return value.slice(0, atIndex) + '@' + value.slice(atIndex + 1).toLowerCase();
+		}
+
+		function emailProblem(rawValue) {
+			var value = normalizeEmailAddress(rawValue);
+			if (!value) { return 'Please enter your email address.'; }
+			if (value.length > 160) { return 'That email address is too long.'; }
+			if (value.indexOf('..') !== -1) { return 'Please check the email address. It should look like name@example.com.'; }
+			if (!emailPattern.test(value)) { return 'Please check the email address. It should look like name@example.com.'; }
+			return '';
+		}
+
+		function phoneDigits(rawValue) {
+			return String(rawValue || '').replace(/\D/g, '');
+		}
+
+		function formatPhoneDigits(rawValue) {
+			var digits = phoneDigits(rawValue);
+			/* a pasted +1 403 555 0123 becomes a 10 digit number */
+			if (digits.length === 11 && digits.charAt(0) === '1') { digits = digits.slice(1); }
+			digits = digits.slice(0, 10);
+			if (digits.length <= 3) { return digits; }
+			var areaCode = digits.slice(0, 3);
+			var restOfNumber = digits.slice(3);
+			if (restOfNumber.length <= 3) { return '(' + areaCode + ') ' + restOfNumber; }
+			return '(' + areaCode + ') ' + restOfNumber.slice(0, 3) + '-' + restOfNumber.slice(3);
+		}
+
+		function phoneProblem(rawValue) {
+			var digits = phoneDigits(rawValue);
+			if (!digits) { return ''; }
+			if (digits.length !== 10) {
+				return 'Please enter a 10 digit phone number, for example (403) 555-0123.';
+			}
+			if (!/^[2-9]/.test(digits)) {
+				return 'Please check the area code, for example (403) 555-0123.';
+			}
+			return '';
+		}
+
+		function validateField(input) {
+			var name = input.name;
+			var value = String(input.value || '').trim();
+			var problem = '';
+
+			if (name === 'parent_name' || name === 'student_name') {
+				if (!value) {
+					problem = 'Please enter a name.';
+				} else if (value.length < 2) {
+					problem = 'Please enter the full name.';
+				}
+			} else if (name === 'student_grade') {
+				if (!value) { problem = 'Please choose a grade.'; }
+			} else if (name === 'email') {
+				problem = emailProblem(value);
+			} else if (name === 'phone') {
+				problem = phoneProblem(value);
+			}
+
+			setFieldError(input, problem);
+			return !problem;
+		}
+
+		var fieldsToValidate = ['parent_name', 'student_name', 'student_grade', 'email', 'phone'];
+
+		/* ---------------------- phone formatting ---------------------- */
+		/* Reformat while typing and keep the caret next to the same digit, so a
+		   correction in the middle of the number does not jump to the end. */
+		function applyPhoneFormat(phoneInput) {
+			var start = phoneInput.selectionStart;
+			var digitsBeforeCaret = start === null ? 0 : phoneDigits(phoneInput.value.slice(0, start)).length;
+			var formatted = formatPhoneDigits(phoneInput.value);
+			if (formatted === phoneInput.value) { return; }
+
+			phoneInput.value = formatted;
+			if (start === null || document.activeElement !== phoneInput) { return; }
+
+			var position = 0;
+			var digitsSeen = 0;
+			while (position < formatted.length && digitsSeen < digitsBeforeCaret) {
+				if (/\d/.test(formatted.charAt(position))) { digitsSeen += 1; }
+				position += 1;
+			}
+			phoneInput.setSelectionRange(position, position);
+		}
+
+		/* ---------------------- forms ---------------------- */
+		/* Public form submission, per PUBLICWEBSITE-GUIDE--form-submission.txt at the workspace
+		   root: one POST of JSON to the CMS, then read the status and show a message. There is
+		   no second call and no read access.
+		   Set formApiEndpoint to the CMS host, for example
+		   'https://cms.example.com/api/public/forms/submit'. A form may override it with
+		   data-gw-form-endpoint, and data-gw-cms-object-type is sent as cmsObjectType when a
+		   submission belongs to one specific application (leave it empty to use the CMS
+		   default, form-submission-uniconbaseapps). While the endpoint is still the
+		   placeholder the page falls back to the CMS platform bind, and in a local preview it
+		   says the service is not connected instead of losing what the visitor typed.
+		   This page always sends cmsObjectType explicitly: form-submissions-uniconbaseapps
+		   is the general form application used when a page has no more specific one. */
+		var formApiEndpoint = 'https://futurebridgeacademyca.uniconhub.com/api/public/forms/submit';
+		var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
+		var formFieldMaxLength = 4000;
+
+		var forms = Array.prototype.slice.call(root.querySelectorAll('form[data-gw-form]'));
+
+		function setFormStatus(form, message, state) {
+			var status = form.querySelector('[data-gw-form-status]');
+			if (!status) { return; }
+			status.textContent = message || '';
+			status.classList.remove('is-ok', 'is-error');
+			if (state) { status.classList.add('is-' + state); }
+			/* keep the answer in sight, especially on a phone with the keyboard open */
+			if (state && status.scrollIntoView) {
+				status.scrollIntoView({ block: 'center', behavior: 'smooth' });
+			}
+		}
+
+		function cleanFieldValue(value) {
+			var text = value === null || value === undefined ? '' : String(value);
+			return text.trim().slice(0, formFieldMaxLength);
+		}
+
+		function collectFormValues(form) {
+			var values = {};
+
+			Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+				var fieldType = field.type;
+				if (!field.name || field.disabled) { return; }
+				if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+					fieldType === 'reset') { return; }
+				if (fieldType === 'checkbox') {
+					if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+					return;
+				}
+				if (fieldType === 'radio') {
+					if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+					return;
+				}
+				if (field.name === 'email') {
+					values[field.name] = cleanFieldValue(normalizeEmailAddress(field.value));
+					return;
+				}
+				if (field.name === 'phone') {
+					values[field.name] = cleanFieldValue(formatPhoneDigits(field.value));
+					return;
+				}
+				values[field.name] = cleanFieldValue(field.value);
+			});
+
+			return values;
+		}
+
+		function endpointForForm(form) {
+			var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+			var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+			/* an empty value or an unreplaced placeholder means "not configured" */
+			if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+			return endpoint;
+		}
+
+		function cmsObjectTypeForForm(form) {
+			var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+			return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+		}
+
+		/* Section 8.10 of webpage-widget-flow-ssot.html, D-PFI-27: the form channel
+		   accepts the same folder keys as the keyed write path -
+		     typeId            a flat folder ID that already exists (wins)
+		     folder.name       find-or-create a TOP-LEVEL folder in cmsObjectType
+		     folder.tree[]     find-or-create a path, max depth 5 / 10 nodes
+		   The CMS uses the id when it exists and falls back to the name when it does
+		   not, so BOTH are sent when an id is configured: a stale or unknown id can
+		   never lose the folder because the name creates or matches it. The CMS
+		   consumes the declaration, stamps the resolved id as the object's typeId and
+		   never stores the declaration itself. Empty values and the UI sentinel
+		   'default-one-folder' are not sent, so the three-level fallback (app
+		   defaultFolderStructure, then a YYYY-MM folder) applies. */
+		function folderNameForForm(form) {
+			var rawFolderName = form.getAttribute('data-gw-form-folder');
+			var folderName = rawFolderName === null ? '' : String(rawFolderName).trim();
+			if (!folderName || folderName === 'default-one-folder') { return ''; }
+			return folderName.slice(0, 120);
+		}
+
+		function folderIdForForm(form) {
+			var rawFolderId = form.getAttribute('data-gw-form-folder-id');
+			var folderId = rawFolderId === null ? '' : String(rawFolderId).trim();
+			if (!folderId || folderId === 'default-one-folder') { return ''; }
+			/* an unreplaced placeholder means "not configured yet" */
+			if (folderId.indexOf('<') !== -1 || folderId.indexOf('{{') !== -1) { return ''; }
+			return folderId.slice(0, 160);
+		}
+
+		/* Object name, section 8.10 / D-PFI-30: objectName (final text) wins;
+		   nameTemplate is rendered by the CMS from the submitted values, so
+		   {{student_name}} becomes the name this visitor typed. Neither key is
+		   sent when both are empty - the CMS then uses the application's
+		   formIntake.nameTemplate or its own default. The object id and slug are
+		   never affected by either key. */
+		function objectNameForForm(form) {
+			var rawObjectName = form.getAttribute('data-gw-form-object-name');
+			var objectName = rawObjectName === null ? '' : String(rawObjectName).trim();
+			if (!objectName) { return ''; }
+			return objectName.slice(0, 200);
+		}
+
+		function nameTemplateForForm(form) {
+			var rawNameTemplate = form.getAttribute('data-gw-form-name-template');
+			var nameTemplate = rawNameTemplate === null ? '' : String(rawNameTemplate).trim();
+			if (!nameTemplate) { return ''; }
+			return nameTemplate.slice(0, 200);
+		}
+
+		function formErrorMessage(statusCode) {
+			if (statusCode === 400) {
+				return 'We could not accept this registration. Please check the fields and try again.';
+			}
+			if (statusCode === 403) {
+				return 'The registration service is not available right now. Please email info@futurebridgeacademy.ca and we will register the place for you.';
+			}
+			if (statusCode === 429) {
+				return 'Too many attempts from this connection. Please wait a minute and try again.';
+			}
+			/* 502/503/504 come from the gateway, not from the form: the write may have landed */
+			if (statusCode === 502 || statusCode === 503 || statusCode === 504) {
+				return 'The registration service did not answer in time. Please do not send the form again just yet - email info@futurebridgeacademy.ca and we will check whether your place was saved.';
+			}
+			return 'We could not send this just now. Please try again. If it still fails, email info@futurebridgeacademy.ca.';
+		}
+
+		function sendFormToApi(form, endpoint) {
+			var values = collectFormValues(form);
+			var honeypotValue = values.gw_hp || values.website || values.company || '';
+			var cmsObjectType = cmsObjectTypeForForm(form);
+			var targetFolderName = folderNameForForm(form);
+			var targetFolderId = folderIdForForm(form);
+			var targetObjectName = objectNameForForm(form);
+			var targetNameTemplate = nameTemplateForForm(form);
+			var submitButton = form.querySelector('[type="submit"]');
+
+			/* the honeypot travels at the root of the payload, never inside values */
+			delete values.gw_hp;
+			delete values.website;
+			delete values.company;
+
+			var payload = {
+				formTypeId: form.getAttribute('data-gw-form-type') || '',
+				page: window.location.pathname,
+				submittedAt: new Date().toISOString(),
+				gw_hp: honeypotValue,
+				values: values
+			};
+
+			if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+			/* the folder target travels at the root, as a SIBLING of values.
+			   BOTH are sent when an id is configured: the CMS uses the id when it
+			   exists and falls back to the name (create or match) when it does not. */
+			if (targetFolderId) { payload.typeId = targetFolderId; }
+			if (targetFolderName) { payload.folder = { name: targetFolderName }; }
+
+			/* object name: the literal objectName wins, otherwise the template the
+			   CMS renders from values (student name in this form) */
+			if (targetObjectName) {
+				payload.objectName = targetObjectName;
+			} else if (targetNameTemplate) {
+				payload.nameTemplate = targetNameTemplate;
+			}
+
+			form.classList.add('gw-busy');
+			form.setAttribute('aria-busy', 'true');
+			if (submitButton) { submitButton.disabled = true; }
+			setFormStatus(form, 'Sending...');
+
+			window.fetch(endpoint, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+				body: JSON.stringify(payload)
+			}).then(function (response) {
+				return response.text().then(function (bodyText) {
+					var body = {};
+					try { body = bodyText ? JSON.parse(bodyText) : {}; }
+					catch (err) { body = {}; }
+					return { status: response.status, body: body };
+				});
+			}).then(function (result) {
+				var accepted = result.status >= 200 && result.status < 300 &&
+					!(result.body && result.body.ok === false);
+
+				if (!accepted) {
+					/* the administrator needs the reason the CMS gave; the visitor gets the friendly text */
+					window.console.error('[FORM] The CMS rejected this submission: HTTP ' + result.status +
+						'. Response: ' + JSON.stringify(result.body) + '. Endpoint: ' + endpoint);
+					setFormStatus(form, formErrorMessage(result.status), 'error');
+					return;
+				}
+
+				/* 200 { ok, id, folderId }. An empty folderId means the CMS stored the
+				   submission UNFILED (the folder could not be created), so it will not
+				   appear in the application's object list. Console only: the visitor
+				   does not need to know, the administrator does. */
+				if ((targetFolderId || targetFolderName) && result.body && !result.body.folderId) {
+					window.console.warn('[FORM] Stored without a folder: the answer carried no folderId. ' +
+						'Check the folder declaration, the destination application and its formIntake settings.');
+				}
+
+				form.reset();
+				Array.prototype.forEach.call(form.querySelectorAll('.is-invalid'), function (field) {
+					clearFieldError(field);
+				});
+				setFormStatus(form, 'Thank you. Your place for the CEMC trial exam is registered.', 'ok');
+			}).catch(function (networkError) {
+				window.console.error('[FORM] The submission did not reach the CMS: ' +
+					(networkError && networkError.message ? networkError.message : 'network error'));
+				setFormStatus(form, formErrorMessage(0), 'error');
+			}).then(function () {
+				form.classList.remove('gw-busy');
+				form.removeAttribute('aria-busy');
+				if (submitButton) { submitButton.disabled = false; }
+			});
+		}
+
+		if (forms.length) {
+			var platform = window.gw;
+			var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+			forms.forEach(function (form) {
+				fieldsToValidate.forEach(function (fieldName) {
+					var field = form.elements[fieldName];
+					if (!field) { return; }
+
+					if (field.getAttribute('data-trial-phone') !== null) {
+						field.addEventListener('input', function () {
+							applyPhoneFormat(field);
+							if (field.classList.contains('is-invalid')) { validateField(field); }
+						});
+					}
+
+					if (fieldName === 'email') {
+						field.addEventListener('input', function () {
+							/* a pasted address often brings a trailing space */
+							var withoutSpaces = field.value.replace(/\s+/g, '');
+							if (withoutSpaces !== field.value) { field.value = withoutSpaces; }
+							if (field.classList.contains('is-invalid')) { validateField(field); }
+						});
+						field.addEventListener('blur', function () {
+							field.value = normalizeEmailAddress(field.value);
+							validateField(field);
+						});
+						return;
+					}
+
+					field.addEventListener('blur', function () { validateField(field); });
+					field.addEventListener('input', function () {
+						if (field.classList.contains('is-invalid')) { validateField(field); }
+					});
+				});
+			});
+
+			if (usesApi) {
+				forms.forEach(function (form) {
+					form.addEventListener('submit', function (event) {
+						var endpoint = endpointForForm(form);
+						/* no endpoint: leave the event alone for another binder */
+						if (!endpoint) { return; }
+						/* THIS PAGE OWNS THE SUBMIT. Capture phase plus stopImmediatePropagation
+						   keeps a second binder (the CMS shell binds form[data-gw-form] and wrote
+						   "Something went wrong" into the same status element) from posting a second
+						   copy and flashing its own error before this page answers. */
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						if (form.classList.contains('gw-busy')) { return; }
+
+						/* controlled validation: nothing leaves the page until every field is good */
+						var firstInvalidField = null;
+						fieldsToValidate.forEach(function (fieldName) {
+							var field = form.elements[fieldName];
+							if (!field) { return; }
+							var isValid = validateField(field);
+							if (!isValid && !firstInvalidField) { firstInvalidField = field; }
+						});
+
+						if (firstInvalidField) {
+							setFormStatus(form, 'Please check the highlighted fields.', 'error');
+							if (firstInvalidField.focus) { firstInvalidField.focus(); }
+							return;
+						}
+
+						sendFormToApi(form, endpoint);
+					}, true);
+				});
+			} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+				platform.forms.bind(root);
+			} else {
+				forms.forEach(function (form) {
+					form.addEventListener('submit', function (event) {
+						event.preventDefault();
+						setFormStatus(form, 'The form service is not connected in this preview.');
+					});
+				});
+			}
+		}
+	})();
+	</script>
+
+</div>
