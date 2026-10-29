@@ -1,4 +1,4 @@
-/* build 2026-10-12-1 */
+/* build 2026-10-12-5 */
 /* ── SharedCal ─ Shared Calendar ──
    One shared calendar for every department: one-time + recurring
    events, location planning, and always-visible conflict flags.
@@ -6,7 +6,7 @@
 (function () {
 	"use strict";
 
-	var TOOL_BUILD = '2026-10-12-1';
+	var TOOL_BUILD = '2026-10-12-5';
 
 	/* ── SDK handle + fallback shim ── */
 	var tool = (typeof window !== "undefined" && window.tool) ? window.tool : null;
@@ -34,6 +34,7 @@
 	function toISO(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
 	function parseISO(s) { if (!s) return null; var p = String(s).split("-").map(Number); return new Date(p[0], (p[1] || 1) - 1, p[2] || 1); }
 	function todayISO() { return toISO(new Date()); }
+	function selectedISO() { return toISO(selectedDate); }
 	function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
 	function startOfWeek(d) { var x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
 	function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
@@ -82,10 +83,12 @@
 	};
 	var currentPage = "calendar";
 	var calDate = new Date();
+	var selectedDate = new Date();   // last date the user picked on the calendar (used to preselect new events)
 	var calView = "month";
 	var currentUser = null;
 	var isReadOnly = false;
 	var _noIdentity = false;   // true when the host exposes no user/session API (host enforces permissions)
+	var _hydrated = false;     // false until the saved value has been received at least once (blocks empty-DB writes)
 	var conflictKeySet = {};   // keys of occurrences currently in conflict (calendar range)
 	var filteredOccs = [];     // occurrences currently shown in calendar
 
@@ -96,8 +99,59 @@
 	function deptColor(id) { var d = deptById(id); return d ? d.color : "#64748b"; }
 	function locName(id) { var l = locById(id); return l ? l.name : "No location"; }
 
+	/* ── Merge helpers (live/socket collaboration) ──
+	   When the host pushes another user's value, UNION it with our local
+	   state instead of replacing it — otherwise a stale or empty snapshot
+	   from a concurrent editor wipes departments/events. For the same id,
+	   the copy with the newest `updatedAt` wins. */
+	function entityStamp(e) { var t = Date.parse(e && e.updatedAt); return isNaN(t) ? 0 : t; }
+	function mergeEntities(kind, remote) {
+		var target = kind === "events" ? DB.events : (kind === "departments" ? DB.departments : DB.locations);
+		var map = {};
+		target.forEach(function (x) { if (x && x.id) map[x.id] = x; });
+		(remote || []).forEach(function (r) {
+			if (!r || !r.id) return;
+			var local = map[r.id];
+			if (!local) { map[r.id] = r; return; }
+			if (entityStamp(r) > entityStamp(local)) map[r.id] = r;
+		});
+		var merged = Object.keys(map).map(function (k) { return map[k]; });
+		if (kind === "events") DB.events = merged;
+		else if (kind === "departments") DB.departments = merged;
+		else DB.locations = merged;
+	}
+
+	/* Merge a full saved-value object into the local DB (union by id). */
+	function mergeFromValue(v) {
+		if (!v || typeof v !== "object" || Array.isArray(v)) return;
+		if (Array.isArray(v.departments)) mergeEntities("departments", v.departments);
+		if (Array.isArray(v.locations)) mergeEntities("locations", v.locations);
+		if (Array.isArray(v.events)) mergeEntities("events", v.events);
+	}
+
+	/* Pull the latest saved value from the host and merge it in, so we never
+	   write a stale snapshot over data the host has already received. */
+	function syncFromHost() {
+		var v = null;
+		try { v = tool.getValue(); } catch (e) { v = null; }
+		if (v && typeof v === "object" && !Array.isArray(v)) { _hydrated = true; mergeFromValue(v); }
+	}
+
+	/* True once the saved value has been received at least once (or the object
+	   is confirmed empty). Until then, block writes so a client that has not
+	   received the live value cannot overwrite existing data with an empty DB. */
+	function ensureHydrated() {
+		if (_hydrated) return true;
+		var v = null;
+		try { v = tool.getValue(); } catch (e) { v = null; }
+		if (v && typeof v === "object" && !Array.isArray(v)) { _hydrated = true; mergeFromValue(v); return true; }
+		notify("Still syncing the shared calendar — please wait a moment and try again.", "warning");
+		return false;
+	}
+
 	/* ── Persistence ── */
 	function persist() {
+		syncFromHost();
 		try { tool.setValue(DB); } catch (e) { }
 		updateNavBadges();
 		try { tool.reportValid(true, ""); } catch (e) { }
@@ -123,6 +177,7 @@
 		var btn = $("#theme-toggle"); if (btn) btn.textContent = t === "dark" ? "☀️" : "🌙";
 	}
 	function toggleTheme() {
+		if (!ensureHydrated()) return;
 		applyTheme(DB._theme === "dark" ? "light" : "dark");
 		persist();
 	}
@@ -345,6 +400,7 @@
 			var cls = "cal-cell";
 			if (d.getMonth() !== calDate.getMonth()) cls += " other-month";
 			if (iso === today) cls += " today";
+			if (iso === selectedISO()) cls += " selected";
 			html += '<div class="' + cls + '" data-day="' + iso + '">';
 			html += '<span class="cal-date">' + d.getDate() + '</span>';
 			var occs = occsForDate(iso);
@@ -369,7 +425,7 @@
 		for (var i = 0; i < 7; i++) {
 			var d = addDays(range.from, i);
 			var iso = toISO(d);
-			var cls = "day-col" + (iso === today ? " today" : "");
+			var cls = "day-col" + (iso === today ? " today" : "") + (iso === selectedISO() ? " selected" : "");
 			html += '<div class="' + cls + '" data-day="' + iso + '">';
 			html += '<div class="day-head"><span class="day-dow">' + dow[i] + '</span>';
 			html += '<span class="day-num' + (iso === today ? ' today-num' : '') + '">' + d.getDate() + '</span></div>';
@@ -426,9 +482,9 @@
 			};
 		});
 		$$("[data-day]", container).forEach(function (cell) {
-			cell.onclick = function () {
+			cell.onclick = function (e) {
 				var d = parseISO(cell.dataset.day);
-				if (d) { calDate = d; calView = "day"; setViewButtons(); renderCalendar(); }
+				if (d) { selectedDate = d; e.stopPropagation(); renderCalendar(); }
 			};
 		});
 	}
@@ -470,7 +526,7 @@
 		var box = $("#events-list");
 		if (!visible.length) {
 			box.innerHTML = '<div class="empty-state"><div class="empty-icon">🗓</div><h3>No events yet</h3><p>Start by adding a one-time or recurring entry to the shared calendar.</p>' + (locked() ? '' : '<button class="btn btn-primary" id="btn-add-event-empty">+ New Event</button>') + '</div>';
-			var b = $("#btn-add-event-empty"); if (b) b.onclick = function () { openEventModal(null, todayISO()); };
+			var b = $("#btn-add-event-empty"); if (b) b.onclick = function () { openEventModal(null, selectedISO()); };
 			return;
 		}
 		if (!list.length) {
@@ -625,10 +681,10 @@
 		if (!existing && locked()) { notify("You do not have permission to add events.", "warning"); return; }
 
 		var title = ev ? esc(ev.title) : "";
-		var deptId = ev ? ev.deptId : (DB.departments[0] ? DB.departments[0].id : "");
+		var deptId = ev ? (ev.deptId || "") : "";
 		var locationId = ev ? (ev.locationId || "") : "";
 		var category = ev ? (ev.category || "Meeting") : "Meeting";
-		var date = ev ? ev.date : (presetDate || todayISO());
+		var date = ev ? ev.date : (presetDate || selectedISO());
 		var allDay = ev ? !!ev.allDay : false;
 		var startTime = ev ? (ev.startTime || "09:00") : "09:00";
 		var endTime = ev ? (ev.endTime || "10:00") : "10:00";
@@ -639,7 +695,7 @@
 		var status = ev ? (ev.status || "active") : "active";
 		var visibility = ev ? visibilityOf(ev) : defaultVisibility();
 
-		var deptOptions = DB.departments.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === deptId ? " selected" : "") + '>' + esc(d.name) + '</option>'; }).join("");
+		var deptOptions = '<option value="">Select department…</option>' + DB.departments.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === deptId ? " selected" : "") + '>' + esc(d.name) + '</option>'; }).join("");
 		var locOptions = '<option value="">No location</option>' + DB.locations.map(function (l) { return '<option value="' + esc(l.id) + '"' + (l.id === locationId ? " selected" : "") + '>' + esc(l.name) + '</option>'; }).join("");
 		var catOptions = CATEGORIES.map(function (c) { return '<option value="' + esc(c) + '"' + (c === category ? " selected" : "") + '>' + esc(c) + '</option>'; }).join("");
 		var repOptions = REPEATS.map(function (r) { return '<option value="' + r.v + '"' + (r.v === repeat ? " selected" : "") + '>' + r.label + '</option>'; }).join("");
@@ -647,7 +703,7 @@
 		var body =
 			'<div class="form-grid">' +
 			'<div class="form-field full"><label class="form-label">Title <span class="req">*</span></label><input type="text" class="text-input" id="f-title" value="' + title + '" placeholder="e.g. Midterm Exam — Biology 101"></div>' +
-			'<div class="form-field"><label class="form-label">Department <span class="req">*</span></label><select class="select-input" id="f-dept">' + deptOptions + '</select></div>' +
+			'<div class="form-field"><label class="form-label">Department <span class="req">*</span></label><select class="select-input" id="f-dept">' + deptOptions + '</select><span class="field-error" id="f-dept-error" style="display:none">Please choose a department</span></div>' +
 			'<div class="form-field"><label class="form-label">Category</label><select class="select-input" id="f-category">' + catOptions + '</select></div>' +
 			'<div class="form-field"><label class="form-label">Date <span class="req">*</span></label><input type="date" class="text-input" id="f-date" value="' + date + '"></div>' +
 			'<div class="form-field"><label class="form-label">Location</label><select class="select-input" id="f-location">' + locOptions + '</select></div>' +
@@ -684,6 +740,15 @@
 		$("#f-save").onclick = function () { submitEventForm(existing, selectedVisibility); };
 		$("#modal-cancel").onclick = closeModal;
 
+		// clear the inline department error as soon as a department is chosen
+		var deptSelect = $("#f-dept");
+		if (deptSelect) deptSelect.onchange = function () {
+			if (deptSelect.value) {
+				deptSelect.classList.remove("invalid");
+				var derr = $("#f-dept-error"); if (derr) derr.style.display = "none";
+			}
+		};
+
 		// toggle time fields with all-day
 		var allDayCb = $("#f-allday");
 		function syncTimeFields() {
@@ -698,6 +763,7 @@
 	}
 
 	function submitEventForm(existing, visibility) {
+		if (!ensureHydrated()) return;
 		var title = ($("#f-title").value || "").trim();
 		var deptId = $("#f-dept").value;
 		var category = $("#f-category").value;
@@ -714,7 +780,12 @@
 		visibility = (visibility === "public") ? "public" : (visibility === "private" ? "private" : defaultVisibility());
 
 		if (!title) { notify("Please enter a title.", "warning"); return; }
-		if (!deptId) { notify("Please choose a department.", "warning"); return; }
+		if (!deptId) {
+			var deptSel = $("#f-dept"), derr = $("#f-dept-error");
+			if (deptSel) { deptSel.classList.add("invalid"); try { deptSel.focus(); } catch (e) { } }
+			if (derr) derr.style.display = "block";
+			return;
+		}
 		if (!date) { notify("Please choose a date.", "warning"); return; }
 		if (!allDay && endTime && startTime && endTime <= startTime) { notify("End time must be after start time.", "warning"); return; }
 		if (repeat !== "none" && repeatUntil && repeatUntil < date) { notify("Repeat-until must be after the start date.", "warning"); return; }
@@ -807,6 +878,7 @@
 			'<button class="btn btn-ghost" id="del-cancel">Cancel</button><button class="btn btn-danger" id="del-confirm">Delete</button>');
 		$("#del-cancel").onclick = closeModal;
 		$("#del-confirm").onclick = function () {
+			if (!ensureHydrated()) return;
 			DB.events = DB.events.filter(function (e) { return e.id !== id; });
 			persist(); closeModal(); renderCurrentPage(); notify("Event deleted", "success");
 		};
@@ -837,6 +909,7 @@
 		$("#dt-close").onclick = closeModal;
 		var ed = $("#dt-edit"); if (ed) ed.onclick = function () { openEventModal(ev.id, null); };
 		var pb = $("#dt-publish"); if (pb) pb.onclick = function () {
+			if (!ensureHydrated()) return;
 			ev.visibility = "public";
 			ev.updatedBy = currentUser ? currentUser.id : "local";
 			ev.updatedByName = currentUser ? currentUser.name : "Local User";
@@ -877,10 +950,13 @@
 			};
 		});
 		$("#d-save").onclick = function () {
+			if (!ensureHydrated()) return;
 			var n = ($("#d-name").value || "").trim();
 			if (!n) { notify("Please enter a name.", "warning"); return; }
-			if (d) { d.name = n; d.color = selColor; d.head = $("#d-head").value.trim(); d.notes = $("#d-notes").value.trim(); }
-			else DB.departments.push({ id: uid(), name: n, color: selColor, head: $("#d-head").value.trim(), notes: $("#d-notes").value.trim() });
+			var nowIso = new Date().toISOString();
+			var stampName = currentUser ? currentUser.name : "Local User";
+			if (d) { d.name = n; d.color = selColor; d.head = $("#d-head").value.trim(); d.notes = $("#d-notes").value.trim(); d.updatedAt = nowIso; d.updatedBy = stampName; }
+			else DB.departments.push({ id: uid(), name: n, color: selColor, head: $("#d-head").value.trim(), notes: $("#d-notes").value.trim(), createdAt: nowIso, updatedAt: nowIso, updatedBy: stampName });
 			persist(); closeModal(); renderCurrentPage(); notify("Department saved ✓", "success");
 		};
 		$("#modal-cancel").onclick = closeModal;
@@ -896,6 +972,7 @@
 			'<button class="btn btn-ghost" id="dd-cancel">Cancel</button><button class="btn btn-danger" id="dd-confirm">Delete</button>');
 		$("#dd-cancel").onclick = closeModal;
 		$("#dd-confirm").onclick = function () {
+			if (!ensureHydrated()) return;
 			DB.departments = DB.departments.filter(function (x) { return x.id !== id; });
 			persist(); closeModal(); renderCurrentPage(); notify("Department deleted", "success");
 		};
@@ -923,10 +1000,13 @@
 			'</div>';
 		openModal(l ? "Edit Location" : "Add Location", body, confirmFooter("l-save", l ? "Save" : "Add", "Cancel", false));
 		$("#l-save").onclick = function () {
+			if (!ensureHydrated()) return;
 			var n = ($("#l-name").value || "").trim();
 			if (!n) { notify("Please enter a name.", "warning"); return; }
-			if (l) { l.name = n; l.type = $("#l-type").value; l.capacity = $("#l-cap").value; l.building = $("#l-building").value.trim(); l.notes = $("#l-notes").value.trim(); }
-			else DB.locations.push({ id: uid(), name: n, type: $("#l-type").value, capacity: $("#l-cap").value, building: $("#l-building").value.trim(), notes: $("#l-notes").value.trim() });
+			var nowIso = new Date().toISOString();
+			var stampName = currentUser ? currentUser.name : "Local User";
+			if (l) { l.name = n; l.type = $("#l-type").value; l.capacity = $("#l-cap").value; l.building = $("#l-building").value.trim(); l.notes = $("#l-notes").value.trim(); l.updatedAt = nowIso; l.updatedBy = stampName; }
+			else DB.locations.push({ id: uid(), name: n, type: $("#l-type").value, capacity: $("#l-cap").value, building: $("#l-building").value.trim(), notes: $("#l-notes").value.trim(), createdAt: nowIso, updatedAt: nowIso, updatedBy: stampName });
 			persist(); closeModal(); renderCurrentPage(); notify("Location saved ✓", "success");
 		};
 		$("#modal-cancel").onclick = closeModal;
@@ -942,6 +1022,7 @@
 			'<button class="btn btn-ghost" id="ld-cancel">Cancel</button><button class="btn btn-danger" id="ld-confirm">Delete</button>');
 		$("#ld-cancel").onclick = closeModal;
 		$("#ld-confirm").onclick = function () {
+			if (!ensureHydrated()) return;
 			DB.locations = DB.locations.filter(function (x) { return x.id !== id; });
 			DB.events.forEach(function (e) { if (e.locationId === id) e.locationId = null; });
 			persist(); closeModal(); renderCurrentPage(); notify("Location deleted", "success");
@@ -1013,6 +1094,7 @@
 
 	function refreshPermissionUI() {
 		renderUserBadge();
+		updateNavBadges();
 		// hide write-only chrome for locked users
 		["#btn-add-event-top", "#btn-quick-event", "#btn-add-event", "#btn-add-department", "#btn-add-location"].forEach(function (sel) {
 			var b = $(sel); if (b) b.style.display = locked() ? "none" : "";
@@ -1058,9 +1140,9 @@
 	   ══════════════════════════════════════════════ */
 	function wireStatic() {
 		$$(".nav-item").forEach(function (n) { n.onclick = function () { navigate(n.dataset.page); }; });
-		$("#btn-quick-event").onclick = function () { openEventModal(null, todayISO()); };
-		$("#btn-add-event-top").onclick = function () { openEventModal(null, todayISO()); };
-		$("#btn-add-event").onclick = function () { openEventModal(null, todayISO()); };
+		$("#btn-quick-event").onclick = function () { openEventModal(null, selectedISO()); };
+		$("#btn-add-event-top").onclick = function () { openEventModal(null, selectedISO()); };
+		$("#btn-add-event").onclick = function () { openEventModal(null, selectedISO()); };
 		$("#btn-add-department").onclick = function () { openDepartmentModal(null); };
 		$("#btn-add-location").onclick = function () { openLocationModal(null); };
 		$("#btn-refresh-conflicts").onclick = function () { renderConflicts(); notify("Conflicts refreshed", "info"); };
@@ -1072,8 +1154,11 @@
 
 		$("#cal-prev").onclick = function () { shiftCal(-1); };
 		$("#cal-next").onclick = function () { shiftCal(1); };
-		$("#cal-today").onclick = function () { calDate = new Date(); renderCalendar(); };
-		$$(".cal-view-btn").forEach(function (b) { b.onclick = function () { calView = b.dataset.view; setViewButtons(); renderCalendar(); }; });
+		$("#cal-today").onclick = function () { calDate = new Date(); selectedDate = new Date(); renderCalendar(); };
+		$$(".cal-view-btn").forEach(function (b) { b.onclick = function () {
+			if (b.dataset.view === "day") calDate = new Date(selectedDate);
+			calView = b.dataset.view; setViewButtons(); renderCalendar();
+		}; });
 
 		// filters
 		$("#filter-dept").onchange = renderCalendar;
@@ -1094,17 +1179,17 @@
 	function shiftCal(dir) {
 		if (calView === "month") calDate = addMonths(calDate, dir);
 		else if (calView === "week") calDate = addDays(calDate, dir * 7);
-		else calDate = addDays(calDate, dir);
+		else { calDate = addDays(calDate, dir); selectedDate = new Date(calDate); }
 		renderCalendar();
 	}
 
 	/* ── Boot ── */
 	tool.onReady(function (value) {
 		console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' SharedCal starting...');
-		if (value && typeof value === "object" && !Array.isArray(value)) {
-			if (Array.isArray(value.departments)) DB.departments = value.departments;
-			if (Array.isArray(value.locations)) DB.locations = value.locations;
-			if (Array.isArray(value.events)) DB.events = value.events;
+		var gotValue = value && typeof value === "object" && !Array.isArray(value);
+		if (gotValue) {
+			_hydrated = true;
+			mergeFromValue(value);
 			if (value._theme === "dark" || value._theme === "light") DB._theme = value._theme;
 			if (value._view === "month" || value._view === "week" || value._view === "day") { DB._view = value._view; calView = value._view; }
 		}
@@ -1119,23 +1204,24 @@
 		renderUserBadge();
 		setViewButtons();
 		navigate("calendar");
-		persist();
+		updateNavBadges();
+		try { tool.reportValid(true, ""); } catch (e) { }
+		resize();
 
 		tool.onReadonlyChange(function (ro) { isReadOnly = !!ro; refreshPermissionUI(); });
 		tool.onUserChange(function (u) { currentUser = u || getUserSafe(); if (currentUser) _noIdentity = false; refreshPermissionUI(); });
 		tool.onValueChange(function (v) {
-			if (v && typeof v === "object") {
-				if (Array.isArray(v.departments)) DB.departments = v.departments;
-				if (Array.isArray(v.locations)) DB.locations = v.locations;
-				if (Array.isArray(v.events)) DB.events = v.events;
-			}
+			if (v && typeof v === "object" && !Array.isArray(v)) { _hydrated = true; mergeFromValue(v); }
+			updateNavBadges();
 			renderCurrentPage();
+			resize();
 		});
 
 		currentUser = getUserSafe();
 		isReadOnly = tool.isReadOnly();
 		refreshPermissionUI();
 		startUserPolling();
+		startHydration();
 	});
 
 	/* ── Identity bootstrap (the session may arrive after onReady) ── */
@@ -1153,5 +1239,28 @@
 			else { _noIdentity = true; refreshPermissionUI(); }
 		}
 		setTimeout(step, delays[0]);
+	}
+
+	/* ── Value hydration (the saved value may arrive after onReady) ── */
+	function startHydration() {
+		if (_hydrated) return;
+		var delays = [200, 400, 800, 1600];
+		var attempt = 0;
+		function step() {
+			if (_hydrated) return;
+			var v = null; try { v = tool.getValue(); } catch (e) { v = null; }
+			if (v && typeof v === "object" && !Array.isArray(v)) {
+				_hydrated = true;
+				mergeFromValue(v);
+				updateNavBadges();
+				renderCurrentPage();
+				resize();
+				return;
+			}
+			attempt++;
+			if (attempt < delays.length) setTimeout(step, delays[attempt]);
+			else _hydrated = true;
+		}
+		step();
 	}
 })();
