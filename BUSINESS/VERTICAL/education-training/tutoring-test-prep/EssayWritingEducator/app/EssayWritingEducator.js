@@ -60,6 +60,8 @@ var subjectDefinitionStatus = 'none';
 var subjectDefinitionErrorText = '';
 var subjectDefinitionWarningShown = false;
 var applyDefinitionRubricsArmed = false;
+var availableSubjectDefinitions = [];
+var subjectPickerWarningShown = false;
 
 /* ── Small helpers ── */
 function elementById(id) { return document.getElementById(id); }
@@ -169,6 +171,11 @@ function getEssayInstructions() {
   if (activeSubjectDefinition && activeSubjectDefinition.instructions) return activeSubjectDefinition.instructions;
   return String(tool.param('essayInstructions', '') || '').trim();
 }
+function getEssayInstructionsHtml() {
+  if (activeSubjectDefinition && activeSubjectDefinition.instructionsHtml) return activeSubjectDefinition.instructionsHtml;
+  var plainInstructions = getEssayInstructions();
+  return plainInstructions ? plainTextToEditorHtml(plainInstructions) : '';
+}
 function getEssayLanguage() {
   if (activeSubjectDefinition && activeSubjectDefinition.language) return activeSubjectDefinition.language;
   return String(tool.param('essayLanguage', 'English') || 'English').trim() || 'English';
@@ -178,6 +185,12 @@ function getMinimumWordCount() {
     return activeSubjectDefinition.minimumWordCount;
   }
   return Math.floor(toNumber(tool.param('minimumWordCount', ''), 0));
+}
+function getMaximumWordCount() {
+  if (activeSubjectDefinition && typeof activeSubjectDefinition.maximumWordCount === 'number' && activeSubjectDefinition.maximumWordCount > 0) {
+    return activeSubjectDefinition.maximumWordCount;
+  }
+  return Math.floor(toNumber(tool.param('maximumWordCount', ''), 0));
 }
 function isEvaluationServiceAllowed() { return String(tool.param('allowAi', '')).toLowerCase() === 'yes'; }
 
@@ -194,11 +207,17 @@ function parseSubjectDefinitionData(rawValue) {
   var subject = String(definitionData.subject || '').trim();
   var parsedRubrics = Array.isArray(definitionData.rubrics) ? definitionData.rubrics : [];
   if (!subject && !parsedRubrics.length) return null;
+  var instructionsPlain = String(definitionData.instructions || '').trim();
+  var instructionsHtml = String(definitionData.instructionsHtml || '').trim();
+  if (!instructionsPlain && instructionsHtml) instructionsPlain = htmlToPlainText(instructionsHtml);
+  if (!instructionsHtml && instructionsPlain) instructionsHtml = plainTextToEditorHtml(instructionsPlain);
   return {
     subject: subject,
-    instructions: String(definitionData.instructions || '').trim(),
+    instructions: instructionsPlain,
+    instructionsHtml: instructionsHtml,
     language: String(definitionData.language || '').trim() || 'English',
     minimumWordCount: Math.max(0, Math.floor(toNumber(definitionData.minimumWordCount, 0))),
+    maximumWordCount: Math.max(0, Math.floor(toNumber(definitionData.maximumWordCount, 0))),
     rubrics: parsedRubrics.map(function (rubric) {
       return {
         id: String(rubric.id || makeId('rubric')),
@@ -221,10 +240,10 @@ function failSubjectDefinitionLoad(errorText) {
   }
   renderWholeTool();
 }
-function applySubjectDefinition(definition) {
+function applySubjectDefinition(definition, forceRubrics) {
   activeSubjectDefinition = definition;
   subjectDefinitionStatus = 'loaded';
-  if (definition.rubrics.length && rubricsArePristineBase(essayState.rubrics)) {
+  if (definition.rubrics.length && (forceRubrics || rubricsArePristineBase(essayState.rubrics))) {
     essayState.rubrics = definition.rubrics.map(function (rubric) {
       return { id: rubric.id, name: rubric.name, weight: rubric.weight, description: rubric.description, builtIn: rubric.builtIn };
     });
@@ -240,30 +259,12 @@ function definitionRubricsDifferFromCurrent() {
   return JSON.stringify(activeSubjectDefinition.rubrics) !== JSON.stringify(essayState.rubrics);
 }
 function loadSubjectDefinition() {
+  var selectedId = essayState.selectedDefinitionId || '';
   var definitionId = getSubjectDefinitionId();
   var definitionJson = getSubjectDefinitionJson();
-  if (!definitionId && !definitionJson) {
-    subjectDefinitionStatus = 'none';
-    return;
-  }
-  if (definitionId) {
-    subjectDefinitionStatus = 'loading';
-    if (typeof tool.requestObjects !== 'function') {
-      failSubjectDefinitionLoad('object access is not available in this CMS. Configure the evaluator parameters essaySubject, essayInstructions and essayLanguage directly instead.');
-      return;
-    }
-    tool.requestObjects('get', { mainObjectType: getSubjectDefinitionsType(), objectId: definitionId }, function (error, result) {
-      if (error || !result || !result.object) {
-        failSubjectDefinitionLoad(error || 'the definition object was not found.');
-        return;
-      }
-      var definition = parseSubjectDefinitionData(result.object);
-      if (!definition) { failSubjectDefinitionLoad('the definition object has no valid subject data.'); return; }
-      definition.definitionId = definitionId;
-      definition.definitionName = result.object.name || '';
-      applySubjectDefinition(definition);
-    });
-  } else {
+  if (selectedId) { loadSubjectDefinitionById(selectedId, false); return; }
+  if (definitionId) { loadSubjectDefinitionById(definitionId, false); return; }
+  if (definitionJson) {
     var parsedRawJson = null;
     try { parsedRawJson = JSON.parse(definitionJson); } catch (error) { parsedRawJson = null; }
     var definition = parseSubjectDefinitionData(parsedRawJson);
@@ -272,8 +273,28 @@ function loadSubjectDefinition() {
       return;
     }
     definition.definitionName = definition.subject || 'Pasted definition';
-    applySubjectDefinition(definition);
+    applySubjectDefinition(definition, false);
+    return;
   }
+  subjectDefinitionStatus = 'none';
+}
+function loadSubjectDefinitionById(definitionId, forceRubrics) {
+  subjectDefinitionStatus = 'loading';
+  if (typeof tool.requestObjects !== 'function') {
+    failSubjectDefinitionLoad('object access is not available in this CMS. Configure the evaluator parameters essaySubject, essayInstructions and essayLanguage directly instead.');
+    return;
+  }
+  tool.requestObjects('get', { mainObjectType: getSubjectDefinitionsType(), objectId: definitionId }, function (error, result) {
+    if (error || !result || !result.object) {
+      failSubjectDefinitionLoad(error || 'the definition object was not found.');
+      return;
+    }
+    var definition = parseSubjectDefinitionData(result.object);
+    if (!definition) { failSubjectDefinitionLoad('the definition object has no valid subject data.'); return; }
+    definition.definitionId = definitionId;
+    definition.definitionName = result.object.name || '';
+    applySubjectDefinition(definition, forceRubrics);
+  });
 }
 function applySubjectDefinitionRubrics() {
   if (!canManageRubrics()) { tool.notify('You do not have permission to change the rubrics.', 'warning'); return; }
@@ -300,6 +321,100 @@ function applySubjectDefinitionRubrics() {
 function updateApplyDefinitionButtonText() {
   var button = elementById('btn-apply-definition-rubrics');
   if (button) button.textContent = applyDefinitionRubricsArmed ? '⚠ Confirm Apply?' : '↧ Apply Rubrics from Definition';
+}
+
+/* ── Subject picker (each instance selects one definition) ── */
+function definitionWordLimitLabel(definition) {
+  var minimumWords = definition ? Math.max(0, Math.floor(toNumber(definition.minimumWordCount, 0))) : 0;
+  var maximumWords = definition ? Math.max(0, Math.floor(toNumber(definition.maximumWordCount, 0))) : 0;
+  if (minimumWords > 0 && maximumWords > 0) return minimumWords + '-' + maximumWords + ' words';
+  if (minimumWords > 0) return 'min ' + minimumWords + ' words';
+  if (maximumWords > 0) return 'max ' + maximumWords + ' words';
+  return 'no word limit';
+}
+function openSubjectPicker() {
+  if (!canManageRubrics()) { tool.notify('You do not have permission to choose the essay subject.', 'warning'); return; }
+  if (typeof tool.requestObjects !== 'function') {
+    tool.notify('Object access is not available. Enable allowObjectCRUD on this field or configure the subject through the field parameters.', 'error');
+    return;
+  }
+  openModal('Choose Essay Subject',
+    '<p class="ewe-modal-hint">Select the subject definition this educator instance will use. The definition supplies the subject, instructions, word limits and rubrics.</p>' +
+    '<div id="ewe-subject-picker-list"><div class="ewe-picker-loading">Loading subjects…</div></div>');
+  tool.requestObjects('query', { mainObjectType: getSubjectDefinitionsType() }, function (error, result) {
+    if (error) {
+      availableSubjectDefinitions = [];
+      if (!subjectPickerWarningShown) {
+        subjectPickerWarningShown = true;
+        tool.notify('Could not load the subject list: ' + error, 'warning');
+      }
+    } else {
+      var objects = [];
+      if (result) {
+        if (Array.isArray(result)) objects = result;
+        else if (Array.isArray(result.objects)) objects = result.objects;
+        else if (Array.isArray(result.items)) objects = result.items;
+        else if (Array.isArray(result.data)) objects = result.data;
+      }
+      availableSubjectDefinitions = objects;
+    }
+    renderSubjectPickerList();
+  });
+}
+function renderSubjectPickerList() {
+  var list = elementById('ewe-subject-picker-list');
+  if (!list) return;
+  var html = '<button class="ewe-subject-picker-item ewe-subject-picker-none" data-act="clear-subject">' +
+    '<span class="ewe-subject-picker-name">Use field parameters instead (no definition)</span>' +
+    '<span class="ewe-subject-picker-meta">Fall back to the essaySubject and essayInstructions parameters.</span></button>';
+  availableSubjectDefinitions.forEach(function (object) {
+    var definition = parseSubjectDefinitionData(object);
+    if (!definition) return;
+    var objectId = object.id || object._id || object.contentId || '';
+    var isCurrent = essayState.selectedDefinitionId === objectId;
+    var metaParts = [];
+    if (definition.language) metaParts.push(definition.language);
+    metaParts.push(definitionWordLimitLabel(definition));
+    metaParts.push((definition.rubrics.length || 0) + ' rubrics');
+    html += '<button class="ewe-subject-picker-item' + (isCurrent ? ' ewe-subject-picker-current' : '') + '" data-act="select-subject" data-id="' + escapeHtml(objectId) + '">' +
+      '<span class="ewe-subject-picker-name">' + escapeHtml(definition.subject || object.name || 'Unnamed subject') +
+        (isCurrent ? ' <span class="ewe-subject-picker-inuse">✓ in use</span>' : '') + '</span>' +
+      '<span class="ewe-subject-picker-meta">' + escapeHtml(metaParts.join(' · ')) + '</span>' +
+      '</button>';
+  });
+  if (!availableSubjectDefinitions.length) {
+    html += '<div class="ewe-picker-empty">No subject definitions found. Create one with the Essay Subject Builder first.</div>';
+  }
+  list.innerHTML = html;
+}
+function selectSubjectFromPicker(objectId) {
+  var matchedObject = null;
+  for (var i = 0; i < availableSubjectDefinitions.length; i++) {
+    var candidateId = availableSubjectDefinitions[i].id || availableSubjectDefinitions[i]._id || availableSubjectDefinitions[i].contentId || '';
+    if (candidateId === objectId) { matchedObject = availableSubjectDefinitions[i]; break; }
+  }
+  if (!matchedObject) { tool.notify('The selected subject could not be found. Reopen the picker and try again.', 'warning'); return; }
+  var definition = parseSubjectDefinitionData(matchedObject);
+  if (!definition) { tool.notify('The selected subject has no valid data.', 'warning'); return; }
+  definition.definitionId = objectId;
+  definition.definitionName = matchedObject.name || definition.subject || 'Selected subject';
+  essayState.selectedDefinitionId = objectId;
+  applySubjectDefinition(definition, true);
+  persistNow();
+  requestParentSave(true);
+  closeModal();
+  tool.notify('Essay subject "' + definition.subject + '" selected.', 'success');
+}
+function clearSubjectSelection() {
+  essayState.selectedDefinitionId = '';
+  activeSubjectDefinition = null;
+  subjectDefinitionStatus = 'none';
+  subjectDefinitionErrorText = '';
+  persistNow();
+  requestParentSave(true);
+  closeModal();
+  renderWholeTool();
+  tool.notify('Subject cleared. The evaluator now uses its field parameters.', 'info');
 }
 
 /* ── Identity and permissions ── */
@@ -364,7 +479,7 @@ function copyBaseRubrics() {
   });
 }
 function createDefaultEssayState() {
-  return { version: 2, essay: { html: '', lastEditedAt: null }, rubrics: copyBaseRubrics(), evaluations: [] };
+  return { version: 2, essay: { html: '', lastEditedAt: null }, rubrics: copyBaseRubrics(), evaluations: [], selectedDefinitionId: '' };
 }
 function clampWeight(value) {
   var number = Math.floor(toNumber(value, 10));
@@ -374,7 +489,8 @@ function clampWeight(value) {
 }
 function normalizeEssayState(rawValue) {
   if (!rawValue || typeof rawValue !== 'object') return createDefaultEssayState();
-  var output = { version: typeof rawValue.version === 'number' ? rawValue.version : 2, essay: { html: '', lastEditedAt: null }, rubrics: [], evaluations: [] };
+  var output = { version: typeof rawValue.version === 'number' ? rawValue.version : 2, essay: { html: '', lastEditedAt: null }, rubrics: [], evaluations: [], selectedDefinitionId: '' };
+  if (typeof rawValue.selectedDefinitionId === 'string') output.selectedDefinitionId = rawValue.selectedDefinitionId.slice(0, 120);
   if (rawValue.essay && typeof rawValue.essay === 'object') {
     if (typeof rawValue.essay.html === 'string') output.essay.html = rawValue.essay.html;
     else if (typeof rawValue.essay.text === 'string' && rawValue.essay.text) output.essay.html = plainTextToEditorHtml(rawValue.essay.text);
@@ -458,17 +574,21 @@ function renderAssignment() {
   } else {
     subjectLine.textContent = subject;
   }
-  var instructions = getEssayInstructions();
+  var instructionsHtml = getEssayInstructionsHtml();
   var instructionsLine = elementById('ewe-instructions-line');
-  if (instructions) {
-    instructionsLine.textContent = instructions;
+  if (instructionsHtml) {
+    instructionsLine.innerHTML = sanitizeStoredHtml(instructionsHtml);
     instructionsLine.style.display = '';
   } else {
+    instructionsLine.innerHTML = '';
     instructionsLine.style.display = 'none';
   }
   var metaParts = ['Essay language: ' + escapeHtml(getEssayLanguage())];
   var minimum = getMinimumWordCount();
-  if (minimum > 0) metaParts.push('Minimum length: ' + minimum + ' words');
+  var maximum = getMaximumWordCount();
+  if (minimum > 0 && maximum > 0) metaParts.push('Length: ' + minimum + '-' + maximum + ' words');
+  else if (minimum > 0) metaParts.push('Minimum length: ' + minimum + ' words');
+  else if (maximum > 0) metaParts.push('Maximum length: ' + maximum + ' words');
   if (subjectDefinitionStatus === 'loaded' && activeSubjectDefinition) {
     metaParts.push('Subject definition: ' + escapeHtml(activeSubjectDefinition.definitionName || activeSubjectDefinition.subject || 'loaded'));
   }
@@ -484,11 +604,14 @@ function updateEssayCounts() {
   var wordCount = countWords(plainText);
   var parts = [wordCount + (wordCount === 1 ? ' word' : ' words'), plainText.length + ' characters'];
   var minimum = getMinimumWordCount();
+  var maximum = getMaximumWordCount();
   var belowMinimum = minimum > 0 && wordCount > 0 && wordCount < minimum;
+  var aboveMaximum = maximum > 0 && wordCount > maximum;
   if (belowMinimum) parts.push((minimum - wordCount) + ' below the ' + minimum + '-word minimum');
+  else if (aboveMaximum) parts.push((wordCount - maximum) + ' above the ' + maximum + '-word maximum');
   var countElement = elementById('ewe-word-count');
   countElement.textContent = parts.join(' · ');
-  countElement.className = belowMinimum ? 'ewe-word-warn' : '';
+  countElement.className = (belowMinimum || aboveMaximum) ? 'ewe-word-warn' : '';
   var editor = elementById('ewe-editor');
   if (editor) editor.classList.toggle('ewe-editor-empty', wordCount === 0);
 }
@@ -1231,6 +1354,11 @@ function evaluateEssayWithAi() {
     tool.notify('Your essay is ' + wordCount + ' words. The minimum for this assignment is ' + minimum + ' words.', 'warning');
     return;
   }
+  var maximum = getMaximumWordCount();
+  if (maximum > 0 && wordCount > maximum) {
+    tool.notify('Your essay is ' + wordCount + ' words. The maximum for this assignment is ' + maximum + ' words.', 'warning');
+    return;
+  }
   evaluationInProgress = true;
   updateEvaluateButtonState();
   var prompt = buildEvaluationPrompt(plainEssayText);
@@ -1320,6 +1448,9 @@ function handleGlobalClick(event) {
     else if (action === 'delete-rubric') { if (canManageRubrics()) removeRubric(actionNode.getAttribute('data-id')); }
     else if (action === 'reset-rubrics') { if (canManageRubrics()) handleResetRubrics(); }
     else if (action === 'apply-definition-rubrics') applySubjectDefinitionRubrics();
+    else if (action === 'open-subject-picker') openSubjectPicker();
+    else if (action === 'select-subject') selectSubjectFromPicker(actionNode.getAttribute('data-id'));
+    else if (action === 'clear-subject') clearSubjectSelection();
     else if (action === 'close-modal') closeModal();
     else if (action === 'modal-cancel') closeModal();
     else if (action === 'modal-save') saveRubricFromEditor();
@@ -1391,8 +1522,9 @@ function declareConfiguration() {
       { name: 'essayInstructions', label: 'Essay Instructions', type: 'text', default: '', severity: 'optional', hint: 'Extra instructions for the student: required length, sections to include, style, citation rules, etc.' },
       { name: 'essayLanguage', label: 'Essay Language', type: 'text', default: 'English', severity: 'optional', hint: 'Language the essay is written in. The evaluator works in this language.' },
       { name: 'minimumWordCount', label: 'Minimum Word Count', type: 'number', default: '', severity: 'goodToHave', hint: 'Optional minimum length. The tool warns the student when the essay is shorter than this many words.' },
+      { name: 'maximumWordCount', label: 'Maximum Word Count', type: 'number', default: '', severity: 'goodToHave', hint: 'Optional maximum length. The tool warns the student when the essay is longer than this many words. Competitions often set both limits.' },
       { name: 'allowAi', label: 'Allow Evaluation Service', type: 'toggle', default: 'yes', severity: 'mandatory', hint: "The field setting allowAi must be 'yes' for the evaluation service to work." },
-      { name: 'subjectDefinitionId', label: 'Subject Definition ID', type: 'text', default: '', severity: 'goodToHave', hint: 'Optional. ID of a saved definition created by Essay Subject Builder. The definition supplies the subject, instructions, language, minimum word count and rubrics.' },
+      { name: 'subjectDefinitionId', label: 'Subject Definition ID', type: 'text', default: '', severity: 'optional', hint: 'Optional fallback. ID of a saved definition created by Essay Subject Builder. Prefer selecting the subject inside the tool with the Choose Subject button.' },
       { name: 'subjectDefinitionJson', label: 'Subject Definition JSON', type: 'text', default: '', severity: 'optional', hint: 'Optional fallback. Paste the definition JSON copied from Essay Subject Builder. Ignored when subjectDefinitionId is set.' },
       { name: 'subjectDefinitionsType', label: 'Subject Definitions Type', type: 'text', default: 'essay-subject-definitions-uniconbaseapps', severity: 'optional', hint: 'CMS object type where subject definitions are stored. Keep the default unless you use a custom type.' }
     ]);
@@ -1409,19 +1541,19 @@ function declareConfiguration() {
 }
 function reportMissingConfiguration() {
   var missing = [];
-  if (!hasSubjectDefinitionSource() && !getEssaySubject()) {
+  if (!hasSubjectDefinitionSource() && !essayState.selectedDefinitionId && !getEssaySubject()) {
     missing.push({
       name: 'essaySubject', label: 'Essay Subject', type: 'text', default: '',
       hint: 'The subject or topic the student must write about. Shown at the top of the editor.',
-      reason: 'The student has nothing to write about until a subject is configured.',
+      reason: 'The student has nothing to write about until a subject is configured or selected.',
       severity: 'mandatory'
     });
   }
-  if (!hasSubjectDefinitionSource()) {
+  if (!hasSubjectDefinitionSource() && !essayState.selectedDefinitionId) {
     missing.push({
       name: 'subjectDefinitionId', label: 'Subject Definition ID', type: 'text', default: '',
-      hint: 'Optional. ID of a saved definition created by Essay Subject Builder. Supplies subject, instructions, language, minimum word count and rubrics.',
-      reason: 'Either essaySubject or a subject definition must be configured.',
+      hint: 'Optional. Teachers can also select a subject definition inside the tool with the Choose Subject button.',
+      reason: 'Either a subject definition or the essaySubject parameter must be configured.',
       severity: 'goodToHave'
     });
   }

@@ -279,10 +279,23 @@ WHERE THIS IS WIRED IN THIS REPO
     formpages/2026-11-07-ottawa-cemc-trial-exam-registration.html      (violet)
     formpages/2026-11-07-victoria-cemc-trial-exam-registration.html    (teal)
 
-  The file name, the route, data-gw-form-type and data-gw-form-folder are the
+  The file name, the route, data-fba-form-type and data-fba-form-folder are the
   SAME string on each page, so one submission lands in exactly one city folder.
   Only Vancouver has a confirmed venue; the other five answer "Venue to be
   confirmed", carry no Google Maps link and store venue_city=TBC.
+
+  OWN NAMESPACE (29 Oct 2026 - IMPORTANT): these six pages do NOT use the
+  data-gw-form protocol. The CMS shell also binds form[data-gw-form], posts to
+  the RETIRED /api/forms/submit, gets a 400 and writes "Something went wrong.
+  Please try again." into [data-gw-form-status], so one visitor submit ran twice
+  and flashed that error for a second before the page's own answer appeared.
+  The pages therefore carry data-fba-form, data-fba-form-type,
+  data-fba-form-folder, data-fba-form-folder-id, data-fba-form-name-template,
+  data-fba-form-object-name, data-fba-form-endpoint, data-fba-cms-object-type and
+  data-fba-form-status, and they take the submit event in the CAPTURE phase with
+  stopImmediatePropagation() (clicks on the submit button stop propagating too).
+  A page that owns its own fetch must do the same; a page that instead calls
+  gw.forms.bind() keeps the data-gw-form protocol and the shell handling.
 
   Still open: the site origin allowlist. Checked on 17 Oct 2026 - a preflight
   from https://futurebridgeacademy.ca answers 403 ORIGIN_NOT_ALLOWED while the

@@ -29,8 +29,8 @@
          folder: { name }   find-or-create a TOP-LEVEL folder (server slugifies)
          folder: { tree }   find-or-create a path, max depth 5 / 10 nodes
        This page sends BOTH keys, so the CMS can match an existing folder or
-       create it: data-gw-form-folder-id (empty until the folder exists, then the
-       real id) becomes payload.typeId, and data-gw-form-folder
+       create it: data-fba-form-folder-id (empty until the folder exists, then the
+       real id) becomes payload.typeId, and data-fba-form-folder
        ("2026-11-07-victoria-cemc-trial-exam-registration") becomes
        payload.folder = { name }. The CMS uses the id when it exists and falls
        back to the name, which is find-or-created and reused afterwards. The
@@ -39,16 +39,28 @@
        list, which lists strictly per folder; a malformed declaration answers
        400 INVALID_FOLDER_TARGET / FOLDER_TREE_INVALID; a folder that cannot be
        created still stores the record, unfiled, and answers 200 without
-       folderId. Set data-gw-form-folder-id instead when the folder already
+       folderId. Set data-fba-form-folder-id instead when the folder already
        exists and you know its id.
      - OBJECT NAME (same section, D-PFI-30): the form also names the record. This
-       page sets data-gw-form-name-template="{{student_name}}", so the CMS renders
+       page sets data-fba-form-name-template="{{student_name}}", so the CMS renders
        the name from the submitted values and the object list shows "Ada Yilmaz"
-       inside the folder above instead of a timestamp. data-gw-form-object-name
+       inside the folder above instead of a timestamp. data-fba-form-object-name
        (a fixed literal) wins over the template if it is ever set; the object id
        and slug are never changed by either key. Neither key is sent when both
        attributes are empty, and the CMS then falls back to the application's
        formIntake.nameTemplate or its own default name.
+     - WHY data-fba-* AND NOT data-gw-* (29 Oct 2026): the CMS shell also binds
+       form[data-gw-form]. It posts to the RETIRED /api/forms/submit, gets a 400
+       and writes "Something went wrong. Please try again." into
+       [data-gw-form-status] - so one submit ran twice and the visitor saw that
+       error flash for a second before this page answered. This page owns its
+       form, so every form marker lives in its own namespace: data-fba-form,
+       data-fba-form-type, data-fba-form-folder, data-fba-form-folder-id,
+       data-fba-form-name-template, data-fba-form-object-name,
+       data-fba-form-endpoint, data-fba-cms-object-type and data-fba-form-status.
+       The submit event is also taken in the CAPTURE phase with
+       stopImmediatePropagation(), and clicks on the submit button stop
+       propagating, so no second binder can post the same form.
      - Fields: parent_name, student_name, student_grade, email, phone (optional),
        consent (optional email opt-in). Five hidden fields record WHICH exam the
        registration belongs to (exam, exam_date, city, area, venue_city) so a city
@@ -82,21 +94,21 @@
      The style, the fields and the script are shared. Change only these:
        1. File name + route comment: <YYYY-MM-DD>-<city>-<exam-slug>-registration.html
        2. h1, hero lede, the three hero chips and the two detail cards
-       3. data-gw-form-type           -> <YYYY-MM-DD>-<city>-<exam-slug>-registration
+       3. data-fba-form-type           -> <YYYY-MM-DD>-<city>-<exam-slug>-registration
                                          (the SAME string as the file name without
                                          .html and as the CMS folder name, so one
                                          string identifies the page, the label and
                                          the target folder)
        4. the five hidden inputs      -> exam, exam_date, city, area, venue_city
-       5. data-gw-form-folder         -> the SAME string again: it is the folder
+       5. data-fba-form-folder         -> the SAME string again: it is the folder
                                          name the CMS creates or matches for this
                                          instance under the destination app
-          data-gw-form-folder-id      -> paste the real folder id once the folder
+          data-fba-form-folder-id      -> paste the real folder id once the folder
                                          exists; empty is ignored. Both travel in
                                          the payload, the id wins when it resolves
-       5b. data-gw-form-name-template -> the CMS object name, rendered from the
+       5b. data-fba-form-name-template -> the CMS object name, rendered from the
                                          answers: {{student_name}}. Use
-                                         data-gw-form-object-name for a fixed text
+                                         data-fba-form-object-name for a fixed text
                                          (it wins over the template).
        6. the Google Maps directions link (destination = the new address)
        7. formDefaultCmsObjectType    -> form-submissions-uniconbaseapps unless the
@@ -191,16 +203,16 @@
 
 				<!-- Folder target (section 8.10, D-PFI-27). Both are sent; the CMS uses
 				     the id when it exists and otherwise creates or matches the name:
-				       data-gw-form-folder-id  -> payload.typeId  (paste the folder id here)
-				       data-gw-form-folder     -> payload.folder = { name }
+				       data-fba-form-folder-id  -> payload.typeId  (paste the folder id here)
+				       data-fba-form-folder     -> payload.folder = { name }
 				     Leave the id empty until the folder exists; empty is ignored.
 				     Object name (D-PFI-30): the template is rendered by the CMS from the
 				     answers, so the record is titled with the student name. -->
-				<form class="fba-trial-form" data-gw-form
-					data-gw-form-type="2026-11-07-victoria-cemc-trial-exam-registration"
-					data-gw-form-folder-id=""
-					data-gw-form-folder="2026-11-07-victoria-cemc-trial-exam-registration"
-					data-gw-form-name-template="{{student_name}}" novalidate>
+				<form class="fba-trial-form" data-fba-form
+					data-fba-form-type="2026-11-07-victoria-cemc-trial-exam-registration"
+					data-fba-form-folder-id=""
+					data-fba-form-folder="2026-11-07-victoria-cemc-trial-exam-registration"
+					data-fba-form-name-template="{{student_name}}" novalidate>
 					<div class="fba-trial-form-head">
 						<h2>Register for this exam</h2>
 						<p>One form per student. It takes under a minute.</p>
@@ -277,7 +289,7 @@
 						aria-hidden="true">
 
 					<div class="fba-trial-actions">
-						<div class="fba-trial-status" data-gw-form-status role="status"></div>
+						<div class="fba-trial-status" data-fba-form-status role="status"></div>
 						<button class="fba-trial-submit" type="submit">Register for the exam</button>
 					</div>
 
@@ -1143,7 +1155,7 @@
 		   no second call and no read access.
 		   Set formApiEndpoint to the CMS host, for example
 		   'https://cms.example.com/api/public/forms/submit'. A form may override it with
-		   data-gw-form-endpoint, and data-gw-cms-object-type is sent as cmsObjectType when a
+		   data-fba-form-endpoint, and data-fba-cms-object-type is sent as cmsObjectType when a
 		   submission belongs to one specific application (leave it empty to use the CMS
 		   default, form-submission-uniconbaseapps). While the endpoint is still the
 		   placeholder the page falls back to the CMS platform bind, and in a local preview it
@@ -1154,10 +1166,10 @@
 		var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
 		var formFieldMaxLength = 4000;
 
-		var forms = Array.prototype.slice.call(root.querySelectorAll('form[data-gw-form]'));
+		var forms = Array.prototype.slice.call(root.querySelectorAll('form[data-fba-form]'));
 
 		function setFormStatus(form, message, state) {
-			var status = form.querySelector('[data-gw-form-status]');
+			var status = form.querySelector('[data-fba-form-status]');
 			if (!status) { return; }
 			status.textContent = message || '';
 			status.classList.remove('is-ok', 'is-error');
@@ -1204,7 +1216,7 @@
 		}
 
 		function endpointForForm(form) {
-			var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+			var ownEndpoint = form.getAttribute('data-fba-form-endpoint');
 			var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
 			/* an empty value or an unreplaced placeholder means "not configured" */
 			if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
@@ -1212,7 +1224,7 @@
 		}
 
 		function cmsObjectTypeForForm(form) {
-			var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+			var ownObjectType = form.getAttribute('data-fba-cms-object-type');
 			return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
 		}
 
@@ -1229,14 +1241,14 @@
 		   'default-one-folder' are not sent, so the three-level fallback (app
 		   defaultFolderStructure, then a YYYY-MM folder) applies. */
 		function folderNameForForm(form) {
-			var rawFolderName = form.getAttribute('data-gw-form-folder');
+			var rawFolderName = form.getAttribute('data-fba-form-folder');
 			var folderName = rawFolderName === null ? '' : String(rawFolderName).trim();
 			if (!folderName || folderName === 'default-one-folder') { return ''; }
 			return folderName.slice(0, 120);
 		}
 
 		function folderIdForForm(form) {
-			var rawFolderId = form.getAttribute('data-gw-form-folder-id');
+			var rawFolderId = form.getAttribute('data-fba-form-folder-id');
 			var folderId = rawFolderId === null ? '' : String(rawFolderId).trim();
 			if (!folderId || folderId === 'default-one-folder') { return ''; }
 			/* an unreplaced placeholder means "not configured yet" */
@@ -1251,14 +1263,14 @@
 		   formIntake.nameTemplate or its own default. The object id and slug are
 		   never affected by either key. */
 		function objectNameForForm(form) {
-			var rawObjectName = form.getAttribute('data-gw-form-object-name');
+			var rawObjectName = form.getAttribute('data-fba-form-object-name');
 			var objectName = rawObjectName === null ? '' : String(rawObjectName).trim();
 			if (!objectName) { return ''; }
 			return objectName.slice(0, 200);
 		}
 
 		function nameTemplateForForm(form) {
-			var rawNameTemplate = form.getAttribute('data-gw-form-name-template');
+			var rawNameTemplate = form.getAttribute('data-fba-form-name-template');
 			var nameTemplate = rawNameTemplate === null ? '' : String(rawNameTemplate).trim();
 			if (!nameTemplate) { return ''; }
 			return nameTemplate.slice(0, 200);
@@ -1297,7 +1309,7 @@
 			delete values.company;
 
 			var payload = {
-				formTypeId: form.getAttribute('data-gw-form-type') || '',
+				formTypeId: form.getAttribute('data-fba-form-type') || '',
 				page: window.location.pathname,
 				submittedAt: new Date().toISOString(),
 				gw_hp: honeypotValue,
@@ -1412,12 +1424,20 @@
 
 			if (usesApi) {
 				forms.forEach(function (form) {
+					/* the shell also answers delegated clicks on submit buttons */
+					form.addEventListener('click', function (event) {
+						var clickedElement = event.target;
+						if (clickedElement && clickedElement.closest && clickedElement.closest('.fba-trial-submit')) {
+							event.stopPropagation();
+						}
+					}, true);
+
 					form.addEventListener('submit', function (event) {
 						var endpoint = endpointForForm(form);
 						/* no endpoint: leave the event alone for another binder */
 						if (!endpoint) { return; }
 						/* THIS PAGE OWNS THE SUBMIT. Capture phase plus stopImmediatePropagation
-						   keeps a second binder (the CMS shell binds form[data-gw-form] and wrote
+						   keeps a second binder (the CMS shell binds form[data-fba-form] and wrote
 						   "Something went wrong" into the same status element) from posting a second
 						   copy and flashing its own error before this page answers. */
 						event.preventDefault();

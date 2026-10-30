@@ -98,9 +98,11 @@ body.th-bare #app-container { height: 100vh; }
     productData: {
       data_categoriesBased: {
         subject: 'The Importance of Reading in the Digital Age',
-        instructions: 'Write a persuasive essay of at least 300 words explaining why reading still matters in the digital age. Use a clear introduction, body paragraphs with examples, and a strong conclusion.',
+        instructions: 'Write a persuasive essay explaining why reading still matters in the digital age. Use a clear introduction, body paragraphs with examples, and a strong conclusion.',
+        instructionsHtml: '<p><b>Persuasive essay.</b> Explain why reading still matters in the digital age.</p><ul><li>Clear introduction, body paragraphs with examples, strong conclusion.</li><li>Address at least one counter-argument.</li></ul>',
         language: 'English',
         minimumWordCount: 300,
+        maximumWordCount: 600,
         rubrics: [
           { id: 'contentIdeas', name: 'Content & Ideas', weight: 25, builtIn: true, description: 'Depth and relevance of the ideas, originality of thought, engagement with the subject, and development of the main argument.' },
           { id: 'organizationStructure', name: 'Organization & Structure', weight: 18, builtIn: true, description: 'Clear introduction, body and conclusion; logical paragraphing; smooth transitions; coherent overall flow.' },
@@ -115,6 +117,37 @@ body.th-bare #app-container { height: 100vh; }
         builtBy: { userId: 'u_teacher', userName: 'Ms. Rodriguez' }
       }
     }
+  };
+
+  var SUBJECT_DEFINITION_EXTRA_A = {
+    id: 'def_history', _id: 'def_history', name: 'History - Causes of WWI', cmsObjectType: 'essay-subject-definitions-uniconbaseapps',
+    productData: { data_categoriesBased: {
+      subject: 'The Main Causes of World War I',
+      instructions: 'Analyze the long-term and short-term causes of World War I.',
+      instructionsHtml: '<p>Analyze the <b>long-term</b> and <b>short-term</b> causes of World War I.</p><ol><li>Introduce the alliances and rivalries before 1914.</li><li>Explain the July Crisis of 1914.</li></ol>',
+      language: 'English', minimumWordCount: 500, maximumWordCount: 900,
+      rubrics: [
+        { id: 'contentIdeas', name: 'Content & Ideas', weight: 30, builtIn: true, description: 'Depth and relevance of the ideas.' },
+        { id: 'organizationStructure', name: 'Organization & Structure', weight: 20, builtIn: true, description: 'Clear structure.' },
+        { id: 'evidenceArgumentation', name: 'Evidence & Argumentation', weight: 20, builtIn: true, description: 'Evidence.' },
+        { id: 'languageStyle', name: 'Language & Style', weight: 15, builtIn: true, description: 'Language.' },
+        { id: 'grammarMechanics', name: 'Grammar & Mechanics', weight: 15, builtIn: true, description: 'Mechanics.' }
+      ], baseRubricVersion: 'ewe-base-v1', updatedAt: '2026-09-12T10:00:00.000Z'
+    } }
+  };
+  var SUBJECT_DEFINITION_EXTRA_B = {
+    id: 'def_science', _id: 'def_science', name: 'Science - Climate Change', cmsObjectType: 'essay-subject-definitions-uniconbaseapps',
+    productData: { data_categoriesBased: {
+      subject: 'Should Cities Ban Combustion Cars?',
+      instructions: 'Argue for or against banning combustion engine cars in city centres.',
+      instructionsHtml: '',
+      language: 'English', minimumWordCount: 400, maximumWordCount: 0,
+      rubrics: [
+        { id: 'contentIdeas', name: 'Content & Ideas', weight: 40, builtIn: true, description: 'Ideas.' },
+        { id: 'organizationStructure', name: 'Organization & Structure', weight: 30, builtIn: true, description: 'Structure.' },
+        { id: 'evidenceArgumentation', name: 'Evidence & Argumentation', weight: 30, builtIn: true, description: 'Evidence.' }
+      ], baseRubricVersion: 'ewe-base-v1', updatedAt: '2026-09-14T10:00:00.000Z'
+    } }
   };
 
   function buildSampleEvaluation() {
@@ -258,6 +291,8 @@ body.th-bare #app-container { height: 100vh; }
   }
 
   _user = HARNESS_USERS.editor;
+  var roleQuery = new URLSearchParams(window.location.search).get('role');
+  if (roleQuery && HARNESS_USERS[roleQuery]) _user = HARNESS_USERS[roleQuery];
 
   window.tool = {
     getValue: function() { return _value; },
@@ -274,6 +309,7 @@ body.th-bare #app-container { height: 100vh; }
         essayInstructions: 'Write a persuasive essay of at least 300 words explaining why reading still matters in the digital age. Use a clear introduction, body paragraphs with examples, and a strong conclusion.',
         essayLanguage: 'English',
         minimumWordCount: '300',
+        maximumWordCount: '',
         allowAi: 'yes',
         subjectDefinitionId: '',
         subjectDefinitionJson: '',
@@ -311,9 +347,17 @@ body.th-bare #app-container { height: 100vh; }
     requestSave: function(callback) { setTimeout(function() { callback(null, true); }, 100); },
     requestObjects: function(action, params, callback) {
       setTimeout(function() {
-        if (action === 'get' && params.mainObjectType === 'essay-subject-definitions-uniconbaseapps') {
+        if (action === 'query' && params.mainObjectType === 'essay-subject-definitions-uniconbaseapps') {
+          console.log('[mock requestObjects query] subject definitions');
+          callback(null, { objects: [SUBJECT_DEFINITION_SAMPLE, SUBJECT_DEFINITION_EXTRA_A, SUBJECT_DEFINITION_EXTRA_B] });
+        } else if (action === 'get' && params.mainObjectType === 'essay-subject-definitions-uniconbaseapps') {
           if (params.objectId === 'def_missing') { callback('Definition object not found', null); return; }
-          var copy = JSON.parse(JSON.stringify(SUBJECT_DEFINITION_SAMPLE));
+          var allObjects = [SUBJECT_DEFINITION_SAMPLE, SUBJECT_DEFINITION_EXTRA_A, SUBJECT_DEFINITION_EXTRA_B];
+          var matched = null;
+          for (var i = 0; i < allObjects.length; i++) {
+            if ((allObjects[i].id || allObjects[i]._id) === params.objectId) { matched = allObjects[i]; break; }
+          }
+          var copy = matched ? JSON.parse(JSON.stringify(matched)) : JSON.parse(JSON.stringify(SUBJECT_DEFINITION_SAMPLE));
           copy.id = params.objectId;
           copy._id = params.objectId;
           console.log('[mock requestObjects get]', params.objectId);
@@ -372,7 +416,7 @@ body.th-bare #app-container { height: 100vh; }
 
 <script>
 /* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
-var EMBEDDED_HTML = "\u003cdiv id=\"ewe-app\" class=\"ewe-app\">\r\n  \u003cdiv class=\"ewe-stage\">\r\n    \u003cheader class=\"ewe-topbar\">\r\n      \u003cbutton class=\"ewe-btn ewe-btn-ghost ewe-btn-small\" data-act=\"toggle-rubrics\">⚖️ Rubrics\u003c/button>\r\n      \u003cdiv class=\"ewe-topbar-right\">\r\n        \u003cbutton class=\"ewe-score-chip ewe-score-chip-hidden\" id=\"ewe-score-chip\" data-act=\"toggle-evaluation\" title=\"Open the full evaluation\">\r\n          \u003cspan class=\"ewe-score-chip-dot\" id=\"ewe-score-chip-dot\">\u003c/span>\r\n          \u003cspan class=\"ewe-score-chip-value\" id=\"ewe-score-chip-value\">0\u003c/span>\r\n          \u003cspan class=\"ewe-score-chip-scale\">/ 100\u003c/span>\r\n        \u003c/button>\r\n        \u003cbutton class=\"ewe-btn ewe-btn-primary ewe-write-only\" id=\"ewe-evaluate-button\" data-act=\"evaluate\">✨ Evaluate My Essay\u003c/button>\r\n      \u003c/div>\r\n    \u003c/header>\r\n\r\n    \u003cmain class=\"ewe-writing-area\">\r\n      \u003carticle class=\"ewe-page\">\r\n        \u003cdiv class=\"ewe-assignment\">\r\n          \u003cdiv class=\"ewe-subject-line\" id=\"ewe-subject-line\">\u003c/div>\r\n          \u003cdiv class=\"ewe-instructions-line\" id=\"ewe-instructions-line\">\u003c/div>\r\n          \u003cdiv class=\"ewe-assignment-meta\" id=\"ewe-assignment-meta\">\u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"ewe-format-bar\">\r\n          \u003cselect class=\"ewe-format-select ewe-format-paragraph\" id=\"ewe-format-paragraph\" title=\"Paragraph style\">\r\n            \u003coption value=\"p\">Normal text\u003c/option>\r\n            \u003coption value=\"h2\">Heading\u003c/option>\r\n            \u003coption value=\"h3\">Subheading\u003c/option>\r\n            \u003coption value=\"blockquote\">Quote\u003c/option>\r\n          \u003c/select>\r\n          \u003cspan class=\"ewe-format-sep\">\u003c/span>\r\n          \u003cbutton class=\"ewe-format-btn ewe-format-bold\" id=\"ewe-format-bold\" data-act=\"format-bold\" title=\"Bold (Ctrl+B)\">B\u003c/button>\r\n          \u003cbutton class=\"ewe-format-btn ewe-format-italic\" id=\"ewe-format-italic\" data-act=\"format-italic\" title=\"Italic (Ctrl+I)\">I\u003c/button>\r\n          \u003cspan class=\"ewe-format-sep\">\u003c/span>\r\n          \u003cselect class=\"ewe-format-select ewe-format-size\" id=\"ewe-format-size\" title=\"Font size\">\r\n            \u003coption value=\"2\">Small\u003c/option>\r\n            \u003coption value=\"3\" selected>Normal\u003c/option>\r\n            \u003coption value=\"4\">Large\u003c/option>\r\n          \u003c/select>\r\n        \u003c/div>\r\n        \u003cdiv class=\"ewe-editor\" id=\"ewe-editor\" contenteditable=\"true\" spellcheck=\"true\">\u003c/div>\r\n        \u003cdiv class=\"ewe-page-meta\">\u003cspan id=\"ewe-word-count\">0 words\u003c/span>\u003c/div>\r\n      \u003c/article>\r\n      \u003cp class=\"ewe-motto\">You write, we evaluate, we never touch your essay, you make all the improvement while improving yourself.\u003c/p>\r\n    \u003c/main>\r\n  \u003c/div>\r\n\r\n  \u003caside class=\"ewe-panel\" id=\"ewe-rubrics-panel\" aria-hidden=\"true\">\r\n    \u003cdiv class=\"ewe-panel-head\">\r\n      \u003ch2 class=\"ewe-panel-title\">⚖️ Evaluation Rubrics\u003c/h2>\r\n      \u003cbutton class=\"ewe-panel-close\" data-act=\"close-panel\" aria-label=\"Close panel\">✕\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv class=\"ewe-panel-body\">\r\n      \u003cspan class=\"ewe-weight-summary\" id=\"ewe-weight-summary\">\u003c/span>\r\n      \u003cp class=\"ewe-rubric-intro\">Each rubric contributes its weight to the final 100-point score. The teacher can customize these criteria.\u003c/p>\r\n      \u003cdiv id=\"ewe-definition-rubric-block\">\u003c/div>\r\n      \u003cdiv id=\"ewe-rubric-list\">\u003c/div>\r\n      \u003cdiv class=\"ewe-card-actions ewe-rubric-actions\">\r\n        \u003cbutton class=\"ewe-btn ewe-btn-ghost ewe-admin-only\" data-act=\"add-rubric\">＋ Add Rubric\u003c/button>\r\n        \u003cbutton class=\"ewe-btn ewe-btn-danger-ghost ewe-admin-only\" id=\"btn-reset-rubrics\" data-act=\"reset-rubrics\">↺ Reset to Base\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/aside>\r\n\r\n  \u003caside class=\"ewe-panel\" id=\"ewe-eval-panel\" aria-hidden=\"true\">\r\n    \u003cdiv class=\"ewe-panel-head\">\r\n      \u003ch2 class=\"ewe-panel-title\">🏆 Evaluation\u003c/h2>\r\n      \u003cspan class=\"ewe-eval-count-chip\" id=\"ewe-eval-count-chip\">\u003c/span>\r\n      \u003cbutton class=\"ewe-panel-close\" data-act=\"close-panel\" aria-label=\"Close panel\">✕\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv class=\"ewe-panel-body\" id=\"ewe-eval-body\">\u003c/div>\r\n  \u003c/aside>\r\n\r\n  \u003cdiv class=\"ewe-modal-overlay\" id=\"ewe-modal-overlay\">\r\n    \u003cdiv class=\"ewe-modal\" role=\"dialog\" aria-modal=\"true\">\r\n      \u003cdiv class=\"ewe-modal-head\">\r\n        \u003ch3 id=\"ewe-modal-title\">Modal\u003c/h3>\r\n        \u003cbutton class=\"ewe-modal-close\" data-act=\"close-modal\" aria-label=\"Close\">✕\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"ewe-modal-body\" id=\"ewe-modal-body\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\u003c/div>";
+var EMBEDDED_HTML = "\u003cdiv id=\"ewe-app\" class=\"ewe-app\">\r\n  \u003cdiv class=\"ewe-stage\">\r\n    \u003cheader class=\"ewe-topbar\">\r\n      \u003cbutton class=\"ewe-btn ewe-btn-ghost ewe-btn-small\" data-act=\"toggle-rubrics\">⚖️ Rubrics\u003c/button>\r\n      \u003cdiv class=\"ewe-topbar-right\">\r\n        \u003cbutton class=\"ewe-score-chip ewe-score-chip-hidden\" id=\"ewe-score-chip\" data-act=\"toggle-evaluation\" title=\"Open the full evaluation\">\r\n          \u003cspan class=\"ewe-score-chip-dot\" id=\"ewe-score-chip-dot\">\u003c/span>\r\n          \u003cspan class=\"ewe-score-chip-value\" id=\"ewe-score-chip-value\">0\u003c/span>\r\n          \u003cspan class=\"ewe-score-chip-scale\">/ 100\u003c/span>\r\n        \u003c/button>\r\n        \u003cbutton class=\"ewe-btn ewe-btn-primary ewe-write-only\" id=\"ewe-evaluate-button\" data-act=\"evaluate\">✨ Evaluate My Essay\u003c/button>\r\n      \u003c/div>\r\n    \u003c/header>\r\n\r\n    \u003cmain class=\"ewe-writing-area\">\r\n      \u003carticle class=\"ewe-page\">\r\n        \u003cdiv class=\"ewe-assignment\">\r\n          \u003cdiv class=\"ewe-assignment-head\">\r\n            \u003cdiv class=\"ewe-subject-line\" id=\"ewe-subject-line\">\u003c/div>\r\n            \u003cbutton class=\"ewe-btn ewe-btn-ghost ewe-btn-small ewe-admin-only\" id=\"ewe-subject-picker-button\" data-act=\"open-subject-picker\" title=\"Choose which subject definition this instance uses\">📚 Choose Subject\u003c/button>\r\n          \u003c/div>\r\n          \u003cdiv class=\"ewe-instructions-line\" id=\"ewe-instructions-line\">\u003c/div>\r\n          \u003cdiv class=\"ewe-assignment-meta\" id=\"ewe-assignment-meta\">\u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"ewe-format-bar\">\r\n          \u003cselect class=\"ewe-format-select ewe-format-paragraph\" id=\"ewe-format-paragraph\" title=\"Paragraph style\">\r\n            \u003coption value=\"p\">Normal text\u003c/option>\r\n            \u003coption value=\"h2\">Heading\u003c/option>\r\n            \u003coption value=\"h3\">Subheading\u003c/option>\r\n            \u003coption value=\"blockquote\">Quote\u003c/option>\r\n          \u003c/select>\r\n          \u003cspan class=\"ewe-format-sep\">\u003c/span>\r\n          \u003cbutton class=\"ewe-format-btn ewe-format-bold\" id=\"ewe-format-bold\" data-act=\"format-bold\" title=\"Bold (Ctrl+B)\">B\u003c/button>\r\n          \u003cbutton class=\"ewe-format-btn ewe-format-italic\" id=\"ewe-format-italic\" data-act=\"format-italic\" title=\"Italic (Ctrl+I)\">I\u003c/button>\r\n          \u003cspan class=\"ewe-format-sep\">\u003c/span>\r\n          \u003cselect class=\"ewe-format-select ewe-format-size\" id=\"ewe-format-size\" title=\"Font size\">\r\n            \u003coption value=\"2\">Small\u003c/option>\r\n            \u003coption value=\"3\" selected>Normal\u003c/option>\r\n            \u003coption value=\"4\">Large\u003c/option>\r\n          \u003c/select>\r\n        \u003c/div>\r\n        \u003cdiv class=\"ewe-editor\" id=\"ewe-editor\" contenteditable=\"true\" spellcheck=\"true\">\u003c/div>\r\n        \u003cdiv class=\"ewe-page-meta\">\u003cspan id=\"ewe-word-count\">0 words\u003c/span>\u003c/div>\r\n      \u003c/article>\r\n      \u003cp class=\"ewe-motto\">You write, we evaluate, we never touch your essay, you make all the improvement while improving yourself.\u003c/p>\r\n    \u003c/main>\r\n  \u003c/div>\r\n\r\n  \u003caside class=\"ewe-panel\" id=\"ewe-rubrics-panel\" aria-hidden=\"true\">\r\n    \u003cdiv class=\"ewe-panel-head\">\r\n      \u003ch2 class=\"ewe-panel-title\">⚖️ Evaluation Rubrics\u003c/h2>\r\n      \u003cbutton class=\"ewe-panel-close\" data-act=\"close-panel\" aria-label=\"Close panel\">✕\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv class=\"ewe-panel-body\">\r\n      \u003cspan class=\"ewe-weight-summary\" id=\"ewe-weight-summary\">\u003c/span>\r\n      \u003cp class=\"ewe-rubric-intro\">Each rubric contributes its weight to the final 100-point score. The teacher can customize these criteria.\u003c/p>\r\n      \u003cdiv id=\"ewe-definition-rubric-block\">\u003c/div>\r\n      \u003cdiv id=\"ewe-rubric-list\">\u003c/div>\r\n      \u003cdiv class=\"ewe-card-actions ewe-rubric-actions\">\r\n        \u003cbutton class=\"ewe-btn ewe-btn-ghost ewe-admin-only\" data-act=\"add-rubric\">＋ Add Rubric\u003c/button>\r\n        \u003cbutton class=\"ewe-btn ewe-btn-danger-ghost ewe-admin-only\" id=\"btn-reset-rubrics\" data-act=\"reset-rubrics\">↺ Reset to Base\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/aside>\r\n\r\n  \u003caside class=\"ewe-panel\" id=\"ewe-eval-panel\" aria-hidden=\"true\">\r\n    \u003cdiv class=\"ewe-panel-head\">\r\n      \u003ch2 class=\"ewe-panel-title\">🏆 Evaluation\u003c/h2>\r\n      \u003cspan class=\"ewe-eval-count-chip\" id=\"ewe-eval-count-chip\">\u003c/span>\r\n      \u003cbutton class=\"ewe-panel-close\" data-act=\"close-panel\" aria-label=\"Close panel\">✕\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv class=\"ewe-panel-body\" id=\"ewe-eval-body\">\u003c/div>\r\n  \u003c/aside>\r\n\r\n  \u003cdiv class=\"ewe-modal-overlay\" id=\"ewe-modal-overlay\">\r\n    \u003cdiv class=\"ewe-modal\" role=\"dialog\" aria-modal=\"true\">\r\n      \u003cdiv class=\"ewe-modal-head\">\r\n        \u003ch3 id=\"ewe-modal-title\">Modal\u003c/h3>\r\n        \u003cbutton class=\"ewe-modal-close\" data-act=\"close-modal\" aria-label=\"Close\">✕\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"ewe-modal-body\" id=\"ewe-modal-body\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\u003c/div>";
 </script>
 
 <script>
@@ -392,6 +436,11 @@ var EMBEDDED_HTML = "\u003cdiv id=\"ewe-app\" class=\"ewe-app\">\r\n  \u003cdiv 
   function openRequestedPanel() {
     var pageQuery = new URLSearchParams(window.location.search);
     var panelName = pageQuery.get('panel');
+    if (pageQuery.get('picker') === '1') {
+      setTimeout(function() {
+        try { window.openSubjectPicker(); } catch (error) {}
+      }, 900);
+    }
     if (panelName !== 'evaluation' && panelName !== 'rubrics') return;
     setTimeout(function() {
       try {

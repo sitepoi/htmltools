@@ -34,6 +34,10 @@
 .esb-title-main { font-size: 15px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .esb-title-sub { font-size: 11.5px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .esb-topbar-right { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.esb-save-state { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.esb-save-state-none { color: #64748b; background: #f1f5f9; border: 1px solid #e2e8f0; }
+.esb-save-state-ok { color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; }
+.esb-save-state-warn { color: #92400e; background: #fffbeb; border: 1px solid #fde68a; }
 
 /* ── Buttons ── */
 .esb-btn {
@@ -65,6 +69,15 @@
 .esb-card-title { margin: 0 0 2px; font-size: 15.5px; font-weight: 700; color: #0f172a; }
 .esb-card-sub { margin: 4px 0 14px; font-size: 12.5px; color: #64748b; }
 .esb-card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.esb-section-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.esb-section-head-text { min-width: 0; }
+.esb-section-head-text .esb-card-sub { margin-bottom: 0; }
+.esb-section-num {
+  flex: 0 0 30px; width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; margin-top: 2px;
+}
 
 /* ── Fields ── */
 .esb-field { margin-bottom: 12px; }
@@ -81,9 +94,50 @@
 .esb-input:disabled { background: #f8fafc; color: #64748b; cursor: not-allowed; }
 .esb-textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
 .esb-hint { margin-top: 5px; font-size: 11.5px; color: #94a3b8; }
+.esb-field-row-3 { align-items: flex-start; }
+.esb-word-limit-hint { font-size: 12px; margin-top: 6px; min-height: 0; }
+.esb-word-limit-hint.esb-word-limit-ok { color: #15803d; }
+.esb-word-limit-hint.esb-word-limit-warn { color: #b45309; font-weight: 600; }
+
+/* ── Rich instructions editor ── */
+.esb-rich-box {
+  border: 1px solid #d8dee9; border-radius: 9px; background: #ffffff; overflow: hidden;
+  transition: border-color .15s, box-shadow .15s;
+}
+.esb-rich-box:focus-within { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, .12); }
+.esb-rich-toolbar {
+  display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+  padding: 6px 8px; border-bottom: 1px solid #eef1f6; background: #fbfcfe;
+}
+.esb-rich-btn {
+  min-width: 28px; height: 28px; border-radius: 6px; border: 1px solid transparent;
+  background: transparent; color: #475569; font-size: 12.5px; cursor: pointer;
+  font-family: inherit; padding: 0 7px;
+}
+.esb-rich-btn:hover:not(:disabled) { background: #eef1f6; }
+.esb-rich-btn:disabled { opacity: .45; cursor: not-allowed; }
+.esb-rich-btn.esb-rich-on { background: #e0e7ff; color: #4338ca; border-color: #c7d2fe; }
+.esb-rich-bold { font-weight: 800; }
+.esb-rich-italic { font-style: italic; }
+.esb-rich-underline { text-decoration: underline; }
+.esb-rich-list { font-weight: 600; }
+.esb-rich-sep { width: 1px; height: 18px; background: #e2e8f0; margin: 0 5px; }
+.esb-rich-editor {
+  min-height: 110px; max-height: 320px; overflow-y: auto; padding: 10px 12px;
+  font-size: 13.5px; line-height: 1.55; color: #1e293b; outline: none;
+}
+.esb-rich-editor:empty::before { content: 'e.g. Write a persuasive essay of at least 300 words... Use a clear introduction, body paragraphs and a conclusion.'; color: #94a3b8; }
+.esb-rich-editor p { margin: 0 0 6px; }
+.esb-rich-editor ul, .esb-rich-editor ol { margin: 0 0 6px; padding-left: 22px; }
+.esb-rich-editor[contenteditable='false'] { background: #f8fafc; color: #64748b; }
 
 /* ── Weight summary ── */
-.esb-weight-summary { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.esb-weight-bar-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.esb-weight-bar { flex: 1; height: 10px; background: #eef1f6; border-radius: 999px; overflow: hidden; }
+.esb-weight-bar-fill { height: 100%; width: 0%; background: #d97706; border-radius: 999px; transition: width .3s ease, background .3s ease; }
+.esb-weight-bar-fill.esb-weight-bar-complete { background: #16a34a; }
+.esb-weight-bar-fill.esb-weight-bar-over { background: #dc2626; }
+.esb-weight-summary { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 .esb-weight-ok { color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; }
 .esb-weight-warn { color: #92400e; background: #fffbeb; border: 1px solid #fde68a; }
 .esb-weight-summary .esb-weight-ok, .esb-weight-summary .esb-weight-warn { display: inline-block; padding: 4px 10px; border-radius: 999px; }

@@ -186,14 +186,14 @@
 	}
 
 	.row {
-		--teacher-colour: var(--brand-1);
+		--row-colour: var(--brand-1);
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-columns: minmax(0, 1fr);
 		align-items: center;
-		gap: 0.5cqw 2.4cqw;
-		padding: 1.6cqw 3cqw;
+		gap: 0.4cqw;
+		padding: 1.7cqw 3cqw;
 		border: 1px solid var(--line);
-		border-left: 0.9cqw solid var(--teacher-colour);
+		border-left: 0.9cqw solid var(--row-colour);
 		border-radius: 2.8cqw;
 		background: var(--soft);
 		break-inside: avoid;
@@ -205,17 +205,6 @@
 		letter-spacing: -0.01em;
 		line-height: 1.1;
 		color: var(--brand-2-deep);
-	}
-
-	.teacher {
-		justify-self: end;
-		padding: 0.7cqw 2.2cqw;
-		border-radius: 999px;
-		background: #FFF1EA;
-		color: var(--teacher-colour);
-		font-size: 2.5cqw;
-		font-weight: 800;
-		white-space: nowrap;
 	}
 
 	.when {
@@ -236,9 +225,9 @@
 
 	.when .sep { color: var(--brand-1); }
 
-	.row-said { --teacher-colour: var(--brand-1); }
-	.row-sevinc { --teacher-colour: var(--brand-2); }
-	.row-sevinc .teacher { background: #EAF2F9; }
+	/* the row colour separates the two teaching days, not a teacher */
+	.row-thursday { --row-colour: var(--brand-1); }
+	.row-friday { --row-colour: var(--brand-2); }
 
 	/* ---------------- footer ---------------- */
 	.foot {
@@ -349,27 +338,23 @@
 
 			<div class="rows">
 
-				<div class="row row-said">
+				<div class="row row-thursday">
 					<span class="grade">Grade 10</span>
-					<span class="teacher">Said hoca</span>
 					<p class="when">Thursday <b>5:00 <span class="sep">&ndash;</span> 6:00 PM</b></p>
 				</div>
 
-				<div class="row row-sevinc">
+				<div class="row row-thursday">
 					<span class="grade">Grade 9</span>
-					<span class="teacher">Sevinc hoca</span>
 					<p class="when">Thursday <b>6:30 <span class="sep">&ndash;</span> 7:30 PM</b></p>
 				</div>
 
-				<div class="row row-sevinc">
+				<div class="row row-friday">
 					<span class="grade">Grade 8</span>
-					<span class="teacher">Sevinc hoca</span>
 					<p class="when">Friday <b>6:00 <span class="sep">&ndash;</span> 7:00 PM</b></p>
 				</div>
 
-				<div class="row row-sevinc">
+				<div class="row row-friday">
 					<span class="grade">Grade 7</span>
-					<span class="teacher">Sevinc hoca</span>
 					<p class="when">Friday <b>7:00 <span class="sep">&ndash;</span> 8:00 PM</b></p>
 				</div>
 

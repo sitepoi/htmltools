@@ -89,8 +89,11 @@
 
 /* ── Assignment block ── */
 .ewe-assignment { flex: 0 0 auto; padding: 18px 24px 14px; border-bottom: 1px solid #f1f5f9; }
-.ewe-subject-line { font-size: 17px; font-weight: 700; color: #0f172a; line-height: 1.4; }
-.ewe-instructions-line { margin-top: 6px; font-size: 13px; color: #64748b; white-space: pre-wrap; }
+.ewe-assignment-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ewe-subject-line { font-size: 17px; font-weight: 700; color: #0f172a; line-height: 1.4; flex: 1; min-width: 0; }
+.ewe-instructions-line { margin-top: 6px; font-size: 13px; color: #64748b; line-height: 1.55; }
+.ewe-instructions-line p { margin: 0 0 6px; }
+.ewe-instructions-line ul, .ewe-instructions-line ol { margin: 0 0 6px; padding-left: 20px; }
 .ewe-assignment-meta { margin-top: 8px; font-size: 12px; color: #94a3b8; }
 .ewe-alert { border-radius: 10px; padding: 10px 12px; font-size: 13px; }
 .ewe-alert-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
@@ -365,6 +368,22 @@
 .ewe-form-hint.ewe-form-hint-error { color: #dc2626; font-weight: 600; }
 .ewe-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .ewe-modal-hint { font-size: 12.5px; color: #64748b; }
+
+/* ── Subject picker ── */
+.ewe-picker-loading { font-size: 13px; color: #94a3b8; padding: 14px 4px; }
+.ewe-picker-empty { font-size: 13px; color: #64748b; padding: 14px 4px; }
+.ewe-subject-picker-item {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  border: 1px solid #e5e9f2; background: #ffffff; border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 8px; font-family: inherit;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.ewe-subject-picker-item:hover { border-color: #c7d2fe; background: #f8faff; }
+.ewe-subject-picker-item.ewe-subject-picker-current { border-color: #4f46e5; background: #eef2ff; }
+.ewe-subject-picker-item.ewe-subject-picker-none { border-style: dashed; background: #fbfcfe; }
+.ewe-subject-picker-name { display: block; font-size: 13.5px; font-weight: 700; color: #1e293b; }
+.ewe-subject-picker-meta { display: block; font-size: 12px; color: #64748b; margin-top: 2px; }
+.ewe-subject-picker-inuse { color: #4f46e5; font-weight: 700; font-size: 12px; }
 .ewe-copy-area {
   width: 100%; min-height: 180px; margin-top: 10px; padding: 10px;
   font-family: Consolas, Menlo, monospace; font-size: 12.5px; line-height: 1.5;

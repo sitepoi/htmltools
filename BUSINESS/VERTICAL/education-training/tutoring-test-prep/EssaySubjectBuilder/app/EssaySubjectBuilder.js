@@ -76,6 +76,45 @@ function formatShortDateTime(isoString) {
 }
 function safeResize() { try { tool.resize(); } catch (error) {} }
 
+/* ── Rich text conversion helpers (instructions editor) ── */
+function extractTextFromNode(node) {
+  var blockLevelTags = { P: true, DIV: true, H1: true, H2: true, H3: true, H4: true, H5: true, LI: true, BLOCKQUOTE: true, PRE: true };
+  var output = '';
+  var children = node.childNodes;
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    if (child.nodeType === 3) {
+      output += child.nodeValue;
+    } else if (child.nodeType === 1) {
+      var tagName = child.tagName.toUpperCase();
+      if (tagName === 'BR') { output += '\n'; continue; }
+      output += extractTextFromNode(child);
+      if (blockLevelTags[tagName]) output += '\n';
+    }
+  }
+  return output;
+}
+function htmlToPlainText(html) {
+  var container = document.createElement('div');
+  container.innerHTML = String(html || '');
+  var output = extractTextFromNode(container);
+  return output.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim();
+}
+function plainTextToEditorHtml(text) {
+  var paragraphs = String(text || '').split(/\n+/)
+    .map(function (paragraph) { return paragraph.trim(); })
+    .filter(function (paragraph) { return paragraph; });
+  if (!paragraphs.length) return '';
+  return paragraphs.map(function (paragraph) { return '<p>' + escapeHtml(paragraph) + '</p>'; }).join('');
+}
+function sanitizeStoredHtml(html) {
+  return String(html || '')
+    .replace(/<\s*script[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, '')
+    .replace(/<\s*(iframe|object|embed|style)[^>]*>[\s\S]*?<\s*\/\s*(iframe|object|embed|style)\s*>/gi, '')
+    .replace(/<\s*(iframe|object|embed|style)[^>]*\/?\s*>/gi, '')
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+}
+
 /* ── Params ── */
 function getDefinitionsObjectType() {
   return String(tool.param('definitionsObjectType', SUBJECT_DEFINITIONS_OBJECT_TYPE) || '').trim() || SUBJECT_DEFINITIONS_OBJECT_TYPE;
@@ -140,11 +179,13 @@ function copyBaseRubrics() {
 }
 function createDefaultBuilderState() {
   return {
-    version: 1,
+    version: 2,
     subject: '',
     instructions: '',
+    instructionsHtml: '',
     language: 'English',
     minimumWordCount: 0,
+    maximumWordCount: 0,
     rubrics: copyBaseRubrics(),
     definitionId: '',
     savedAt: null,
@@ -168,9 +209,15 @@ function normalizeBuilderState(rawValue) {
   var output = createDefaultBuilderState();
   if (typeof rawValue.version === 'number') output.version = rawValue.version;
   if (typeof rawValue.subject === 'string') output.subject = rawValue.subject.slice(0, 200);
-  if (typeof rawValue.instructions === 'string') output.instructions = rawValue.instructions.slice(0, 2000);
+  if (typeof rawValue.instructions === 'string') output.instructions = rawValue.instructions.slice(0, 4000);
+  if (typeof rawValue.instructionsHtml === 'string' && rawValue.instructionsHtml) {
+    output.instructionsHtml = sanitizeStoredHtml(rawValue.instructionsHtml).slice(0, 20000);
+  } else if (output.instructions) {
+    output.instructionsHtml = plainTextToEditorHtml(output.instructions);
+  }
   if (typeof rawValue.language === 'string') output.language = rawValue.language.slice(0, 40);
   output.minimumWordCount = Math.max(0, Math.min(100000, Math.floor(toNumber(rawValue.minimumWordCount, 0))));
+  output.maximumWordCount = Math.max(0, Math.min(100000, Math.floor(toNumber(rawValue.maximumWordCount, 0))));
   if (Array.isArray(rawValue.rubrics) && rawValue.rubrics.length) {
     output.rubrics = [];
     rawValue.rubrics.forEach(function (rubric) {
@@ -247,8 +294,10 @@ function definitionContentSignature() {
   return JSON.stringify({
     subject: builderState.subject.trim(),
     instructions: builderState.instructions.trim(),
+    instructionsHtml: String(builderState.instructionsHtml || '').trim(),
     language: builderState.language.trim() || 'English',
     minimumWordCount: Math.max(0, Math.floor(toNumber(builderState.minimumWordCount, 0))),
+    maximumWordCount: Math.max(0, Math.floor(toNumber(builderState.maximumWordCount, 0))),
     rubrics: builderState.rubrics.map(function (rubric) {
       return { id: rubric.id, name: rubric.name, weight: rubric.weight, description: rubric.description, builtIn: rubric.builtIn };
     })
@@ -257,11 +306,15 @@ function definitionContentSignature() {
 function buildDefinitionData() {
   var builtByName = (currentUser && currentUser.name) ? currentUser.name : 'CMS user';
   var builtById = (currentUser && currentUser.id) ? currentUser.id : '';
+  var instructionsPlain = builderState.instructions.trim() || htmlToPlainText(builderState.instructionsHtml);
+  var instructionsHtml = String(builderState.instructionsHtml || '').trim() || plainTextToEditorHtml(instructionsPlain);
   return {
     subject: builderState.subject.trim(),
-    instructions: builderState.instructions.trim(),
+    instructions: instructionsPlain.slice(0, 4000),
+    instructionsHtml: instructionsHtml.slice(0, 20000),
     language: builderState.language.trim() || 'English',
     minimumWordCount: Math.max(0, Math.floor(toNumber(builderState.minimumWordCount, 0))),
+    maximumWordCount: Math.max(0, Math.floor(toNumber(builderState.maximumWordCount, 0))),
     rubrics: builderState.rubrics.map(function (rubric) {
       return { id: rubric.id, name: rubric.name, weight: rubric.weight, description: rubric.description, builtIn: rubric.builtIn };
     }),
@@ -279,6 +332,11 @@ function collectDefinitionProblems() {
     if (total < 100) problems.push('Rubric weights total ' + total + '%. Assign the remaining ' + (100 - total) + '%.');
     else problems.push('Rubric weights total ' + total + '%. Reduce the weights by ' + (total - 100) + '%.');
   }
+  var minimumWords = Math.max(0, Math.floor(toNumber(builderState.minimumWordCount, 0)));
+  var maximumWords = Math.max(0, Math.floor(toNumber(builderState.maximumWordCount, 0)));
+  if (minimumWords > 0 && maximumWords > 0 && minimumWords > maximumWords) {
+    problems.push('The minimum word count (' + minimumWords + ') is higher than the maximum (' + maximumWords + ').');
+  }
   return problems;
 }
 
@@ -287,6 +345,8 @@ function renderWholeTool() {
   renderAssignmentInputs();
   renderRubricSection();
   renderDefinitionStatus();
+  updateWordLimitHint();
+  updateSaveState();
   lockUserInterface();
   safeResize();
 }
@@ -297,9 +357,49 @@ function setInputValueUnlessFocused(inputId, value) {
 }
 function renderAssignmentInputs() {
   setInputValueUnlessFocused('esb-subject-input', builderState.subject);
-  setInputValueUnlessFocused('esb-instructions-input', builderState.instructions);
   setInputValueUnlessFocused('esb-language-input', builderState.language);
   setInputValueUnlessFocused('esb-minimum-words-input', builderState.minimumWordCount > 0 ? builderState.minimumWordCount : '');
+  setInputValueUnlessFocused('esb-maximum-words-input', builderState.maximumWordCount > 0 ? builderState.maximumWordCount : '');
+  var instructionsEditor = elementById('esb-instructions-editor');
+  if (instructionsEditor && document.activeElement !== instructionsEditor) {
+    instructionsEditor.innerHTML = sanitizeStoredHtml(builderState.instructionsHtml || plainTextToEditorHtml(builderState.instructions));
+  }
+}
+function updateWordLimitHint() {
+  var hint = elementById('esb-word-limit-hint');
+  if (!hint) return;
+  var minimumWords = Math.max(0, Math.floor(toNumber(builderState.minimumWordCount, 0)));
+  var maximumWords = Math.max(0, Math.floor(toNumber(builderState.maximumWordCount, 0)));
+  if (minimumWords > 0 && maximumWords > 0 && minimumWords > maximumWords) {
+    hint.textContent = 'The minimum (' + minimumWords + ') cannot be higher than the maximum (' + maximumWords + ').';
+    hint.className = 'esb-word-limit-hint esb-word-limit-warn';
+  } else if (minimumWords > 0 && maximumWords > 0) {
+    hint.textContent = 'Students must write between ' + minimumWords + ' and ' + maximumWords + ' words.';
+    hint.className = 'esb-word-limit-hint esb-word-limit-ok';
+  } else if (minimumWords > 0) {
+    hint.textContent = 'Students must write at least ' + minimumWords + ' words.';
+    hint.className = 'esb-word-limit-hint esb-word-limit-ok';
+  } else if (maximumWords > 0) {
+    hint.textContent = 'Students may write at most ' + maximumWords + ' words.';
+    hint.className = 'esb-word-limit-hint esb-word-limit-ok';
+  } else {
+    hint.textContent = 'No word limits are set for this assignment.';
+    hint.className = 'esb-word-limit-hint';
+  }
+}
+function updateSaveState() {
+  var saveState = elementById('esb-save-state');
+  if (!saveState) return;
+  if (!builderState.definitionId) {
+    saveState.textContent = 'Not saved yet';
+    saveState.className = 'esb-save-state esb-save-state-none';
+  } else if (lastSavedDefinitionSignature !== null && lastSavedDefinitionSignature !== definitionContentSignature()) {
+    saveState.textContent = '● Unsaved changes';
+    saveState.className = 'esb-save-state esb-save-state-warn';
+  } else {
+    saveState.textContent = '✓ Definition saved';
+    saveState.className = 'esb-save-state esb-save-state-ok';
+  }
 }
 function renderRubricSection() {
   var baseList = elementById('esb-base-rubric-list');
@@ -349,6 +449,11 @@ function updateWeightSummary() {
   } else {
     summary.innerHTML = '<span class="esb-weight-warn">Total weight: ' + total + '% - reduce by ' + (total - 100) + '%</span>';
   }
+  var barFill = elementById('esb-weight-bar-fill');
+  if (barFill) {
+    barFill.style.width = Math.min(100, total) + '%';
+    barFill.className = 'esb-weight-bar-fill' + (total === 100 ? ' esb-weight-bar-complete' : (total > 100 ? ' esb-weight-bar-over' : ''));
+  }
 }
 function renderDefinitionStatus() {
   var container = elementById('esb-definition-status');
@@ -381,17 +486,65 @@ function renderDefinitionStatus() {
   html += '<div class="esb-connect">' +
     '<div class="esb-connect-title">How to use this definition in the Essay Writing Educator</div>' +
     '<ol>' +
-      '<li>Open the field settings of the Essay Writing Educator field.</li>' +
-      '<li>Set the parameter <code>subjectDefinitionId</code> to ' +
-        (builderState.definitionId ? '<code>' + escapeHtml(builderState.definitionId) + '</code>' : 'the definition id shown here after saving') +
-        '. The evaluator then uses this definition\'s subject, instructions, language, minimum word count and rubrics.</li>' +
-      '<li>When using <code>subjectDefinitionId</code>, the evaluator field also needs <code>allowObjectCRUD: yes</code> and this entry in <code>allowedObjectTypes</code>:' +
+      '<li>Open any Essay Writing Educator field (each instance picks its own subject).</li>' +
+      '<li>Click the <b>📚 Choose Subject</b> button (teachers and admins see it next to the subject line) and select this subject from the list.</li>' +
+      '<li>For the picker to work, the evaluator field needs <code>allowObjectCRUD: yes</code> and this entry in <code>allowedObjectTypes</code>:' +
         '<pre>{\n  "mainObjectType": "' + escapeHtml(getDefinitionsObjectType()) + '",\n  "role": "editor",\n  "scope": "shared"\n}</pre></li>' +
       '<li>Alternative without object access: paste the <b>Copy Definition JSON</b> text into the evaluator parameter <code>subjectDefinitionJson</code>.</li>' +
     '</ol>' +
   '</div>';
 
   container.innerHTML = html;
+}
+
+/* ── Instructions rich editor ── */
+function applyInstructionsFormat(command) {
+  var editor = elementById('esb-instructions-editor');
+  if (!editor) return;
+  editor.focus();
+  try { document.execCommand(command, false, null); } catch (error) {}
+  handleInstructionsEditorInput();
+  syncInstructionsToolbar();
+}
+function handleInstructionsEditorInput() {
+  var editor = elementById('esb-instructions-editor');
+  if (!editor) return;
+  builderState.instructionsHtml = editor.innerHTML;
+  builderState.instructions = htmlToPlainText(editor.innerHTML);
+  schedulePersist();
+  renderDefinitionStatus();
+}
+function handleInstructionsEditorPaste(event) {
+  event.preventDefault();
+  var clipboardData = event.clipboardData || window.clipboardData;
+  var pastedText = clipboardData && typeof clipboardData.getData === 'function' ? clipboardData.getData('text/plain') : '';
+  if (pastedText) {
+    try { document.execCommand('insertText', false, pastedText); } catch (error) {}
+  }
+}
+function syncInstructionsToolbar() {
+  var editor = elementById('esb-instructions-editor');
+  var selectionInsideEditor = false;
+  if (editor) {
+    var activeElement = document.activeElement;
+    selectionInsideEditor = activeElement === editor || (editor.contains && editor.contains(activeElement));
+  }
+  var actionToStateName = { 'ins-bold': 'bold', 'ins-italic': 'italic', 'ins-underline': 'underline' };
+  Object.keys(actionToStateName).forEach(function (actionName) {
+    var isOn = false;
+    if (selectionInsideEditor) {
+      try { isOn = document.queryCommandState(actionToStateName[actionName]); } catch (error) {}
+    }
+    var buttons = document.querySelectorAll('[data-act="' + actionName + '"]');
+    for (var i = 0; i < buttons.length; i++) buttons[i].classList.toggle('esb-rich-on', isOn);
+  });
+}
+function setInstructionsToolbarEnabled(enabled) {
+  var toolbar = elementById('esb-instructions-editor');
+  if (!toolbar) return;
+  var root = elementById('esb-app');
+  var buttons = root ? root.querySelectorAll('.esb-rich-btn') : [];
+  for (var i = 0; i < buttons.length; i++) buttons[i].disabled = !enabled;
 }
 
 /* ── Rubric editor modal ── */
@@ -582,10 +735,13 @@ function lockUserInterface() {
   if (!root) return;
   var canEdit = canEditDefinition();
   root.classList.toggle('esb-can-write', canEdit);
-  ['esb-subject-input', 'esb-instructions-input', 'esb-language-input', 'esb-minimum-words-input'].forEach(function (id) {
+  ['esb-subject-input', 'esb-language-input', 'esb-minimum-words-input', 'esb-maximum-words-input'].forEach(function (id) {
     var input = elementById(id);
     if (input) input.disabled = !canEdit;
   });
+  var instructionsEditor = elementById('esb-instructions-editor');
+  if (instructionsEditor) instructionsEditor.setAttribute('contenteditable', canEdit ? 'true' : 'false');
+  setInstructionsToolbarEnabled(canEdit);
   var weightInputs = root.querySelectorAll('.esb-weight-input');
   for (var i = 0; i < weightInputs.length; i++) weightInputs[i].disabled = !canEdit;
   var saveButton = elementById('esb-save-definition-button');
@@ -596,12 +752,15 @@ function lockUserInterface() {
 function handleAssignmentFieldInput(target) {
   var id = target.id;
   if (id === 'esb-subject-input') builderState.subject = target.value;
-  else if (id === 'esb-instructions-input') builderState.instructions = target.value;
   else if (id === 'esb-language-input') builderState.language = target.value;
   else if (id === 'esb-minimum-words-input') {
     builderState.minimumWordCount = Math.max(0, Math.min(100000, Math.floor(toNumber(target.value, 0))));
   }
+  else if (id === 'esb-maximum-words-input') {
+    builderState.maximumWordCount = Math.max(0, Math.min(100000, Math.floor(toNumber(target.value, 0))));
+  }
   schedulePersist();
+  updateWordLimitHint();
   renderDefinitionStatus();
 }
 function handleWeightInput(target) {
@@ -621,8 +780,8 @@ function handleGlobalInput(event) {
     return;
   }
   if (!target.id) return;
-  if (target.id === 'esb-subject-input' || target.id === 'esb-instructions-input' ||
-      target.id === 'esb-language-input' || target.id === 'esb-minimum-words-input') {
+  if (target.id === 'esb-subject-input' || target.id === 'esb-language-input' ||
+      target.id === 'esb-minimum-words-input' || target.id === 'esb-maximum-words-input') {
     handleAssignmentFieldInput(target);
   }
 }
@@ -637,6 +796,11 @@ function handleGlobalClick(event) {
     else if (action === 'restore-base-weights') { if (canEditDefinition()) restoreBaseRubricWeights(); }
     else if (action === 'copy-definition-json') copyDefinitionJsonToClipboard();
     else if (action === 'copy-definition-id') copyDefinitionIdToClipboard();
+    else if (action === 'ins-bold') applyInstructionsFormat('bold');
+    else if (action === 'ins-italic') applyInstructionsFormat('italic');
+    else if (action === 'ins-underline') applyInstructionsFormat('underline');
+    else if (action === 'ins-bullet-list') applyInstructionsFormat('insertUnorderedList');
+    else if (action === 'ins-numbered-list') applyInstructionsFormat('insertOrderedList');
     else if (action === 'close-modal') closeModal();
     else if (action === 'modal-cancel') closeModal();
     else if (action === 'modal-save') saveSubjectRubricFromEditor();
@@ -660,8 +824,20 @@ function bindGlobalEvents() {
   document.addEventListener('click', handleGlobalClick);
   document.addEventListener('input', handleGlobalInput);
   document.addEventListener('keydown', handleGlobalKeydown);
+  document.addEventListener('selectionchange', function () { syncInstructionsToolbar(); });
   var modalOverlay = elementById('esb-modal-overlay');
   if (modalOverlay) modalOverlay.addEventListener('input', handleModalInput);
+  var instructionsEditor = elementById('esb-instructions-editor');
+  if (instructionsEditor) {
+    instructionsEditor.addEventListener('input', handleInstructionsEditorInput);
+    instructionsEditor.addEventListener('paste', handleInstructionsEditorPaste);
+    instructionsEditor.addEventListener('keyup', function () { syncInstructionsToolbar(); });
+    instructionsEditor.addEventListener('mouseup', function () { syncInstructionsToolbar(); });
+  }
+  var richButtons = document.querySelectorAll('.esb-rich-btn');
+  for (var i = 0; i < richButtons.length; i++) {
+    richButtons[i].addEventListener('mousedown', function (event) { event.preventDefault(); });
+  }
 }
 
 /* ── Configuration reporting ── */
@@ -682,9 +858,11 @@ function declareConfiguration() {
       description: 'One essay subject definition: assignment fields, the full rubric set (system base plus subject rubrics) and the saved definition object id.',
       properties: {
         subject: { type: 'string', description: 'The essay subject shown to the student.' },
-        instructions: { type: 'string', description: 'Extra instructions for the student.' },
+        instructions: { type: 'string', description: 'Plain-text instructions (used by the evaluator prompt and snapshots).' },
+        instructionsHtml: { type: 'string', description: 'Formatted instructions shown to the student (bold, italics, lists).' },
         language: { type: 'string', description: 'Language the essay is written in.' },
         minimumWordCount: { type: 'number', description: 'Minimum essay length in words. 0 means no minimum.' },
+        maximumWordCount: { type: 'number', description: 'Maximum essay length in words. 0 means no maximum. Competitions often set both limits.' },
         rubrics: { type: 'array', description: 'Full rubric list: the system base rubrics plus subject rubrics. Each item: id, name, weight (percent), description, builtIn.' },
         definitionId: { type: 'string', description: 'CMS object id of the saved definition.' },
         savedAt: { type: 'string', description: 'ISO timestamp of the last save.' },
