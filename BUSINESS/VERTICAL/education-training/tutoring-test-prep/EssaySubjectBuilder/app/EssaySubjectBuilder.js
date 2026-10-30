@@ -26,7 +26,10 @@ var BASE_RUBRICS = [
   }
 ];
 
-var SUBJECT_DEFINITIONS_OBJECT_TYPE = 'essay-subject-definitions-uniconbaseapps';
+/* The CMS object type of this app's own records. The Essay Writing Educator
+   lists these records in its "Choose Subject" picker - no extra object is
+   created; the definition IS this record's value. */
+var SUBJECT_RECORDS_OBJECT_TYPE = 'essay-subject-builder-uniconbaseapps';
 var BASE_RUBRIC_VERSION = 'ewe-base-v1';
 var MAX_TOTAL_RUBRIC_COUNT = 8;
 var MAX_SUBJECT_RUBRIC_COUNT = 3;
@@ -116,10 +119,7 @@ function sanitizeStoredHtml(html) {
 }
 
 /* ── Params ── */
-function getDefinitionsObjectType() {
-  return String(tool.param('definitionsObjectType', SUBJECT_DEFINITIONS_OBJECT_TYPE) || '').trim() || SUBJECT_DEFINITIONS_OBJECT_TYPE;
-}
-function isObjectCrudAllowed() { return String(tool.param('allowObjectCRUD', '')).toLowerCase() === 'yes'; }
+/* No required parameters. The definition is saved directly into this record's own value. */
 
 /* ── Identity and permissions ── */
 function getUserSafely() {
@@ -262,7 +262,7 @@ function schedulePersist() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(persistNow, 350);
 }
-function requestParentSave(announceSuccess) {
+function requestParentSave(onSavedCallback) {
   if (!canEditDefinition()) return;
   try {
     tool.requestSave(function (error, accepted) {
@@ -273,7 +273,7 @@ function requestParentSave(announceSuccess) {
         }
         return;
       }
-      if (announceSuccess) tool.notify('Draft saved to the CMS record.', 'success');
+      if (onSavedCallback) onSavedCallback();
     });
   } catch (error) {}
 }
@@ -390,14 +390,14 @@ function updateWordLimitHint() {
 function updateSaveState() {
   var saveState = elementById('esb-save-state');
   if (!saveState) return;
-  if (!builderState.definitionId) {
+  if (!builderState.savedAt) {
     saveState.textContent = 'Not saved yet';
     saveState.className = 'esb-save-state esb-save-state-none';
   } else if (lastSavedDefinitionSignature !== null && lastSavedDefinitionSignature !== definitionContentSignature()) {
     saveState.textContent = '● Unsaved changes';
     saveState.className = 'esb-save-state esb-save-state-warn';
   } else {
-    saveState.textContent = '✓ Definition saved';
+    saveState.textContent = '✓ Saved';
     saveState.className = 'esb-save-state esb-save-state-ok';
   }
 }
@@ -460,36 +460,32 @@ function renderDefinitionStatus() {
   var html = '';
   var problems = collectDefinitionProblems();
 
-  if (!isObjectCrudAllowed()) {
-    html += '<div class="esb-alert esb-alert-warn">Definition storage is not enabled for this field. ' +
-      'Set the field setting <code>allowObjectCRUD</code> to <code>yes</code> (and add the definition type to <code>allowedObjectTypes</code>), ' +
-      'or use <b>Copy Definition JSON</b> and paste it into the evaluator\'s <code>subjectDefinitionJson</code> parameter instead.</div>';
-  } else if (builderState.definitionId) {
-    html += '<div class="esb-status-row"><span class="esb-status-ok">● Saved</span>' +
-      '<span>Definition id:</span> <code>' + escapeHtml(builderState.definitionId) + '</code>' +
-      '<button class="esb-btn esb-btn-ghost esb-write-only" data-act="copy-definition-id" style="padding:3px 10px;font-size:12px;">📋 Copy</button></div>' +
-      '<div class="esb-hint">Saved ' + formatShortDateTime(builderState.savedAt) + ' - definition version ' + builderState.savedDefinitionVersion + '.</div>';
+  if (builderState.savedAt) {
+    html += '<div class="esb-status-row"><span class="esb-status-ok">✓ Auto-saved to this CMS record</span>' +
+      '<span>Last saved ' + formatShortDateTime(builderState.savedAt) + '.</span></div>' +
+      '<div class="esb-hint">The Essay Writing Educator reads this record when you select the subject there.</div>';
     if (lastSavedDefinitionSignature !== null && lastSavedDefinitionSignature !== definitionContentSignature()) {
-      html += '<div class="esb-alert esb-alert-warn">There are unsaved changes. Click <b>Save Definition</b> again to update the stored definition.</div>';
+      html += '<div class="esb-alert esb-alert-warn">You have unsaved changes - they are saved when you leave a field.</div>';
     }
   } else {
-    html += '<div class="esb-alert esb-alert-info">Not saved yet. Review the assignment and rubrics, then click <b>Save Definition</b>. ' +
-      'The definition is stored as a CMS object that the Essay Writing Educator can load.</div>';
+    html += '<div class="esb-alert esb-alert-info">Changes are saved to this CMS record automatically when you leave a field. ' +
+      'Fill in the assignment and rubrics, then the Essay Writing Educator can select this subject.</div>';
   }
 
   if (problems.length) {
-    html += '<div class="esb-alert esb-alert-warn">Before saving:<ul class="esb-problem-list">' +
+    html += '<div class="esb-alert esb-alert-warn">To finish this definition:<ul class="esb-problem-list">' +
       problems.map(function (problem) { return '<li>' + escapeHtml(problem) + '</li>'; }).join('') +
       '</ul></div>';
   }
 
   html += '<div class="esb-connect">' +
-    '<div class="esb-connect-title">How to use this definition in the Essay Writing Educator</div>' +
+    '<div class="esb-connect-title">How the Essay Writing Educator uses this subject</div>' +
     '<ol>' +
       '<li>Open any Essay Writing Educator field (each instance picks its own subject).</li>' +
       '<li>Click the <b>📚 Choose Subject</b> button (teachers and admins see it next to the subject line) and select this subject from the list.</li>' +
-      '<li>For the picker to work, the evaluator field needs <code>allowObjectCRUD: yes</code> and this entry in <code>allowedObjectTypes</code>:' +
-        '<pre>{\n  "mainObjectType": "' + escapeHtml(getDefinitionsObjectType()) + '",\n  "role": "editor",\n  "scope": "shared"\n}</pre></li>' +
+      '<li>For the picker to list this app\'s records, the evaluator field needs <code>allowObjectCRUD: yes</code> and this entry in <code>allowedObjectTypes</code>:' +
+        '<pre>{\n  "mainObjectType": "' + escapeHtml(SUBJECT_RECORDS_OBJECT_TYPE) + '",\n  "role": "editor",\n  "scope": "shared",\n  "targetCollection": "private"\n}</pre></li>' +
+      '<li>Note: this app\'s records are stored in the CMS private object collection, so <code>"targetCollection": "private"</code> is required above - without it the picker queries the public collection and finds nothing.</li>' +
       '<li>Alternative without object access: paste the <b>Copy Definition JSON</b> text into the evaluator parameter <code>subjectDefinitionJson</code>.</li>' +
     '</ol>' +
   '</div>';
@@ -627,7 +623,7 @@ function saveSubjectRubricFromEditor() {
     builderState.rubrics.push({ id: makeId('rubric'), name: name, description: description, weight: weight, builtIn: false });
     tool.notify('Subject rubric "' + name + '" added.', 'success');
   }
-  persistNow();
+  autoSaveNow();
   closeModal();
   renderWholeTool();
 }
@@ -635,7 +631,7 @@ function removeSubjectRubric(rubricId) {
   var rubric = findRubricById(rubricId);
   if (!rubric || rubric.builtIn) { tool.notify('Only subject rubrics can be removed. The system base rubric always stays.', 'warning'); return; }
   builderState.rubrics = builderState.rubrics.filter(function (item) { return item.id !== rubricId; });
-  persistNow();
+  autoSaveNow();
   renderWholeTool();
   tool.notify('Subject rubric "' + rubric.name + '" removed.', 'info');
 }
@@ -644,70 +640,25 @@ function restoreBaseRubricWeights() {
     var rubric = findRubricById(baseRubric.id);
     if (rubric) rubric.weight = baseRubric.weight;
   });
-  persistNow();
+  autoSaveNow();
   renderWholeTool();
   tool.notify('Base rubric weights restored to 30/20/20/15/15.', 'success');
 }
 
-/* ── Saving the definition ── */
-function saveDefinitionToCms() {
-  if (!canEditDefinition()) { tool.notify('You do not have permission to save the definition.', 'warning'); return; }
-  if (!isObjectCrudAllowed()) {
-    tool.notify('Definition storage is not enabled. Set allowObjectCRUD to yes in the field settings.', 'error');
-    renderDefinitionStatus();
-    return;
-  }
-  var problems = collectDefinitionProblems();
-  if (problems.length) {
-    tool.notify(problems[0], 'warning');
-    renderDefinitionStatus();
-    return;
-  }
-  var definitionData = buildDefinitionData();
-  var saveButton = elementById('esb-save-definition-button');
-  if (saveButton) { saveButton.disabled = true; saveButton.textContent = '⏳ Saving...'; }
-  var finishSave = function (error, result) {
-    if (saveButton) { saveButton.disabled = false; saveButton.textContent = '💾 Save Definition'; }
-    if (error || !result) {
-      tool.notify('Definition save failed: ' + (error || 'no response from the CMS'), 'error');
-      renderDefinitionStatus();
-      return;
-    }
-    if (result.object && result.object.id) builderState.definitionId = result.object.id;
+/* ── Auto-save (flushes to the CMS record when a field is left) ── */
+function autoSaveNow() {
+  persistNow();
+  requestParentSave(function () {
     builderState.savedAt = new Date().toISOString();
-    builderState.savedDefinitionVersion += 1;
     lastSavedDefinitionSignature = definitionContentSignature();
-    persistNow();
-    requestParentSave(true);
+    updateSaveState();
     renderDefinitionStatus();
-    tool.notify('Subject definition saved. Copy the definition id and configure it on the evaluator field.', 'success');
-  };
-  try {
-    if (builderState.definitionId) {
-      tool.requestObjects('update', {
-        mainObjectType: getDefinitionsObjectType(),
-        objectId: builderState.definitionId,
-        productData: { data_categoriesBased: definitionData }
-      }, finishSave);
-    } else {
-      tool.requestObjects('create', {
-        mainObjectType: getDefinitionsObjectType(),
-        name: definitionData.subject || 'Essay Subject Definition',
-        productData: { data_categoriesBased: definitionData }
-      }, finishSave);
-    }
-  } catch (error) {
-    finishSave('object storage is unavailable in this CMS', null);
-  }
+  });
 }
 
 /* ── Copy helpers ── */
 function copyDefinitionJsonToClipboard() {
   copyTextToClipboard(JSON.stringify(buildDefinitionData(), null, 2));
-}
-function copyDefinitionIdToClipboard() {
-  if (!builderState.definitionId) { tool.notify('Save the definition first.', 'warning'); return; }
-  copyTextToClipboard(builderState.definitionId);
 }
 function copyTextToClipboard(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -744,8 +695,6 @@ function lockUserInterface() {
   setInstructionsToolbarEnabled(canEdit);
   var weightInputs = root.querySelectorAll('.esb-weight-input');
   for (var i = 0; i < weightInputs.length; i++) weightInputs[i].disabled = !canEdit;
-  var saveButton = elementById('esb-save-definition-button');
-  if (saveButton) saveButton.disabled = !canEdit;
 }
 
 /* ── Events ── */
@@ -789,13 +738,11 @@ function handleGlobalClick(event) {
   var actionNode = closestNodeWithAction(event.target);
   if (actionNode) {
     var action = actionNode.getAttribute('data-act');
-    if (action === 'save-definition') saveDefinitionToCms();
-    else if (action === 'add-subject-rubric') { if (canEditDefinition()) openSubjectRubricEditor(null); }
+    if (action === 'add-subject-rubric') { if (canEditDefinition()) openSubjectRubricEditor(null); }
     else if (action === 'edit-subject-rubric') { if (canEditDefinition()) openSubjectRubricEditor(actionNode.getAttribute('data-id')); }
     else if (action === 'delete-subject-rubric') { if (canEditDefinition()) removeSubjectRubric(actionNode.getAttribute('data-id')); }
     else if (action === 'restore-base-weights') { if (canEditDefinition()) restoreBaseRubricWeights(); }
     else if (action === 'copy-definition-json') copyDefinitionJsonToClipboard();
-    else if (action === 'copy-definition-id') copyDefinitionIdToClipboard();
     else if (action === 'ins-bold') applyInstructionsFormat('bold');
     else if (action === 'ins-italic') applyInstructionsFormat('italic');
     else if (action === 'ins-underline') applyInstructionsFormat('underline');
@@ -820,10 +767,20 @@ function handleGlobalKeydown(event) {
 function handleModalInput(event) {
   if (event.target && event.target.id === 'esb-rubric-weight') updateRubricWeightHint();
 }
+function handleGlobalFocusOut(event) {
+  var target = event.target;
+  if (!target) return;
+  var isAssignmentField = target.id === 'esb-subject-input' || target.id === 'esb-language-input' ||
+    target.id === 'esb-minimum-words-input' || target.id === 'esb-maximum-words-input' ||
+    target.id === 'esb-instructions-editor';
+  var isWeightField = target.classList && target.classList.contains('esb-weight-input');
+  if (isAssignmentField || isWeightField) autoSaveNow();
+}
 function bindGlobalEvents() {
   document.addEventListener('click', handleGlobalClick);
   document.addEventListener('input', handleGlobalInput);
   document.addEventListener('keydown', handleGlobalKeydown);
+  document.addEventListener('focusout', handleGlobalFocusOut);
   document.addEventListener('selectionchange', function () { syncInstructionsToolbar(); });
   var modalOverlay = elementById('esb-modal-overlay');
   if (modalOverlay) modalOverlay.addEventListener('input', handleModalInput);
@@ -843,19 +800,9 @@ function bindGlobalEvents() {
 /* ── Configuration reporting ── */
 function declareConfiguration() {
   try {
-    tool.declareParams([
-      {
-        name: 'allowObjectCRUD', label: 'Allow Definition Storage', type: 'toggle', default: 'yes', severity: 'mandatory',
-        hint: "The field setting allowObjectCRUD must be 'yes' for definitions to be saved as CMS objects."
-      },
-      {
-        name: 'definitionsObjectType', label: 'Definitions Object Type', type: 'text', default: SUBJECT_DEFINITIONS_OBJECT_TYPE, severity: 'optional',
-        hint: 'CMS object type where essay subject definitions are stored. Keep the default unless you use a custom type.'
-      }
-    ]);
     tool.declareOutput({
       type: 'object',
-      description: 'One essay subject definition: assignment fields, the full rubric set (system base plus subject rubrics) and the saved definition object id.',
+      description: 'One essay subject definition stored in this CMS record\'s own value: assignment fields plus the full rubric set (system base plus subject rubrics).',
       properties: {
         subject: { type: 'string', description: 'The essay subject shown to the student.' },
         instructions: { type: 'string', description: 'Plain-text instructions (used by the evaluator prompt and snapshots).' },
@@ -864,36 +811,16 @@ function declareConfiguration() {
         minimumWordCount: { type: 'number', description: 'Minimum essay length in words. 0 means no minimum.' },
         maximumWordCount: { type: 'number', description: 'Maximum essay length in words. 0 means no maximum. Competitions often set both limits.' },
         rubrics: { type: 'array', description: 'Full rubric list: the system base rubrics plus subject rubrics. Each item: id, name, weight (percent), description, builtIn.' },
-        definitionId: { type: 'string', description: 'CMS object id of the saved definition.' },
-        savedAt: { type: 'string', description: 'ISO timestamp of the last save.' },
-        savedDefinitionVersion: { type: 'number', description: 'How many times the definition was saved.' }
+        savedAt: { type: 'string', description: 'ISO timestamp of the last auto-save.' }
       }
     });
   } catch (error) {}
 }
-function reportMissingConfiguration() {
-  var missing = [];
-  if (!isObjectCrudAllowed()) {
-    missing.push({
-      name: 'allowObjectCRUD', label: 'Allow Definition Storage', type: 'toggle', default: 'yes',
-      hint: "The field setting allowObjectCRUD must be 'yes' for definitions to be saved as CMS objects.",
-      reason: 'Definitions cannot be saved while object storage is disabled.',
-      severity: 'mandatory'
-    });
-  }
-  if (missing.length) {
-    try {
-      tool.reportMissingParams(missing, 'Essay Subject Builder needs object storage enabled before it can save definitions.');
-    } catch (error) {}
-  }
-}
-
 /* ── Entry point ── */
 tool.onReady(function (initialValue) {
   builderState = normalizeBuilderState(initialValue);
   lastSavedDefinitionSignature = builderState.definitionId ? definitionContentSignature() : null;
   declareConfiguration();
-  reportMissingConfiguration();
   try { tool.reportValid(true, ''); } catch (error) {}
   bindGlobalEvents();
   refreshCurrentUser();

@@ -48,7 +48,6 @@ body { padding-top: 34px !important; margin: 0; }
 /* ── Mock tool SDK ── */
 (function() {
   var STORAGE_KEY = 'essay_subject_builder_test_db';
-  var OBJECTS_KEY = 'essay_subject_builder_test_objects';
   var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
   var _readOnly = false, _user = null, _fields = {}, _value = null;
 
@@ -75,7 +74,6 @@ body { padding-top: 34px !important; margin: 0; }
       { id: 'persuasiveAppeal', name: 'Persuasive Appeal', weight: 10, builtIn: false, description: 'How convincingly the essay persuades the reader; strength of the call to action and emotional and logical appeal.' },
       { id: 'useOfEvidence', name: 'Use of Evidence', weight: 7, builtIn: false, description: 'How well the essay integrates specific examples, quotes, facts and data to support every claim.' }
     ],
-    definitionId: '',
     savedAt: null,
     savedDefinitionVersion: 0
   };
@@ -85,11 +83,6 @@ body { padding-top: 34px !important; margin: 0; }
     catch(e) { _value = null; }
   }
   function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
-  function loadDefinitionObjects() {
-    try { var raw = localStorage.getItem(OBJECTS_KEY); return raw ? JSON.parse(raw) : []; }
-    catch(e) { return []; }
-  }
-  function saveDefinitionObjects(list) { try { localStorage.setItem(OBJECTS_KEY, JSON.stringify(list)); } catch(e) {} }
 
   _user = HARNESS_USERS.editor;
 
@@ -103,13 +96,8 @@ body { padding-top: 34px !important; margin: 0; }
     watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
     onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
     param: function(name, fallback) {
-      var defaults = {
-        allowObjectCRUD: 'yes',
-        definitionsObjectType: 'essay-subject-definitions-uniconbaseapps'
-      };
       var fromUrl = new URLSearchParams(window.location.search).get(name);
       if (fromUrl !== null && fromUrl !== '') return fromUrl;
-      if (Object.prototype.hasOwnProperty.call(defaults, name)) return defaults[name];
       return fallback;
     },
     isReadOnly: function() { return _readOnly; },
@@ -138,44 +126,6 @@ body { padding-top: 34px !important; margin: 0; }
     declareOutput: function() {},
     declareParams: function() {},
     requestSave: function(callback) { setTimeout(function() { callback(null, true); }, 100); },
-    requestObjects: function(action, params, callback) {
-      setTimeout(function() {
-        var objects = loadDefinitionObjects();
-        if (action === 'create') {
-          var createdObject = {
-            id: 'def_' + Date.now().toString(36),
-            _id: 'def_' + Date.now().toString(36),
-            name: params.name,
-            cmsObjectType: params.mainObjectType,
-            productData: params.productData,
-            created: new Date().toISOString(),
-            updated: new Date().toISOString()
-          };
-          objects.push(createdObject);
-          saveDefinitionObjects(objects);
-          console.log('[mock requestObjects create]', createdObject.id, createdObject.name);
-          callback(null, { object: createdObject });
-        } else if (action === 'update') {
-          var foundObject = null;
-          for (var i = 0; i < objects.length; i++) if (objects[i].id === params.objectId) { foundObject = objects[i]; break; }
-          if (!foundObject) { callback('Object not found: ' + params.objectId, null); return; }
-          if (params.productData) foundObject.productData = params.productData;
-          if (params.name) foundObject.name = params.name;
-          foundObject.updated = new Date().toISOString();
-          saveDefinitionObjects(objects);
-          console.log('[mock requestObjects update]', foundObject.id);
-          callback(null, { ok: true });
-        } else if (action === 'get') {
-          var matchedObject = null;
-          for (var j = 0; j < objects.length; j++) if (objects[j].id === params.objectId) { matchedObject = objects[j]; break; }
-          callback(null, { object: matchedObject });
-        } else if (action === 'query') {
-          callback(null, { objects: objects });
-        } else {
-          callback('Unknown action: ' + action, null);
-        }
-      }, 150);
-    },
     onReady: function(cb) { load(); cb(_value, _fields); },
     _loadSampleData: function() {
       save(JSON.parse(JSON.stringify(SAMPLE_DEFINITION)));
@@ -183,7 +133,6 @@ body { padding-top: 34px !important; margin: 0; }
     },
     _clearData: function() {
       localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(OBJECTS_KEY);
       window.location.reload();
     },
     _setUserRole: function(role) {
@@ -193,7 +142,6 @@ body { padding-top: 34px !important; margin: 0; }
     _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
     _dump: function() {
       console.log('Essay Subject Builder DB:', JSON.parse(JSON.stringify(_value)));
-      console.log('Essay Subject Builder objects:', loadDefinitionObjects());
     }
   };
 
@@ -224,7 +172,7 @@ body { padding-top: 34px !important; margin: 0; }
 
 <script>
 /* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
-var EMBEDDED_HTML = '<div id="esb-app" class="esb-app">  <header class="esb-topbar">    <div class="esb-topbar-title">      <span class="esb-logo">✍️</span>      <div class="esb-title-block">        <div class="esb-title-main">Essay Subject Builder</div>        <div class="esb-title-sub">One essay subject definition for the Essay Writing Educator</div>      </div>    </div>    <div class="esb-topbar-right">      <span class="esb-save-state esb-save-state-none" id="esb-save-state">Not saved yet</span>      <button class="esb-btn esb-btn-primary esb-write-only" id="esb-save-definition-button" data-act="save-definition">💾 Save Definition</button>    </div>  </header>  <main class="esb-scroll">    <div class="esb-page">      <section class="esb-card">        <div class="esb-section-head">          <span class="esb-section-num">1</span>          <div class="esb-section-head-text">            <h2 class="esb-card-title">Assignment</h2>            <p class="esb-card-sub">What the student will write. These values are shown to the student and sent to the evaluator.</p>          </div>        </div>        <div class="esb-field">          <label class="esb-label" for="esb-subject-input">Essay subject <span class="esb-required">required</span></label>          <input class="esb-input" id="esb-subject-input" type="text" maxlength="200" placeholder="e.g. The Importance of Reading in the Digital Age">          <div class="esb-hint">Shown to the student at the top of the writing page.</div>        </div>        <div class="esb-field">          <label class="esb-label" for="esb-instructions-editor">Instructions</label>          <div class="esb-rich-box">            <div class="esb-rich-toolbar">              <button class="esb-rich-btn esb-rich-bold" data-act="ins-bold" title="Bold (Ctrl+B)">B</button>              <button class="esb-rich-btn esb-rich-italic" data-act="ins-italic" title="Italic (Ctrl+I)">I</button>              <button class="esb-rich-btn esb-rich-underline" data-act="ins-underline" title="Underline (Ctrl+U)">U</button>              <span class="esb-rich-sep"></span>              <button class="esb-rich-btn esb-rich-list" data-act="ins-bullet-list" title="Bullet list">• List</button>              <button class="esb-rich-btn esb-rich-list" data-act="ins-numbered-list" title="Numbered list">1. List</button>            </div>            <div class="esb-rich-editor" id="esb-instructions-editor" contenteditable="true" spellcheck="true"></div>          </div>          <div class="esb-hint">Required length, structure, style, citation rules - anything the student must follow. Format with bold, italics and lists.</div>        </div>        <div class="esb-field-row esb-field-row-3">          <div class="esb-field">            <label class="esb-label" for="esb-language-input">Language</label>            <input class="esb-input" id="esb-language-input" type="text" maxlength="40" placeholder="English">          </div>          <div class="esb-field">            <label class="esb-label" for="esb-minimum-words-input">Minimum words</label>            <input class="esb-input" id="esb-minimum-words-input" type="number" min="0" max="100000" step="50" placeholder="0">            <div class="esb-hint">0 means no minimum.</div>          </div>          <div class="esb-field">            <label class="esb-label" for="esb-maximum-words-input">Maximum words</label>            <input class="esb-input" id="esb-maximum-words-input" type="number" min="0" max="100000" step="50" placeholder="0">            <div class="esb-hint">0 means no maximum. Competitions often set both limits.</div>          </div>        </div>        <div class="esb-word-limit-hint" id="esb-word-limit-hint"></div>      </section>      <section class="esb-card">        <div class="esb-section-head">          <span class="esb-section-num">2</span>          <div class="esb-section-head-text">            <h2 class="esb-card-title">Evaluation Rubrics</h2>            <p class="esb-card-sub">The system base rubric always applies. Subject rubrics are added on top of it. The total weight must equal exactly 100%.</p>          </div>        </div>        <div class="esb-weight-bar-wrap">          <div class="esb-weight-bar"><div class="esb-weight-bar-fill" id="esb-weight-bar-fill"></div></div>          <span class="esb-weight-summary" id="esb-weight-summary"></span>        </div>        <div class="esb-rubric-group">          <div class="esb-group-label">System base rubric <span class="esb-badge">system</span></div>          <div id="esb-base-rubric-list"></div>        </div>        <div class="esb-rubric-group">          <div class="esb-group-label">Subject rubrics <span class="esb-badge esb-badge-subject">subject</span></div>          <div id="esb-subject-rubric-list"></div>          <div class="esb-subject-rubric-actions">            <button class="esb-btn esb-btn-ghost esb-write-only" data-act="add-subject-rubric">＋ Add Subject Rubric</button>          </div>        </div>        <div class="esb-rubric-actions">          <button class="esb-btn esb-btn-danger-ghost esb-write-only" data-act="restore-base-weights">↺ Restore Base Weights</button>        </div>      </section>      <section class="esb-card">        <div class="esb-section-head">          <span class="esb-section-num">3</span>          <div class="esb-section-head-text">            <h2 class="esb-card-title">Save & Connect</h2>            <p class="esb-card-sub">Save the subject as a definition. Every Essay Writing Educator instance can then select it.</p>          </div>        </div>        <div id="esb-definition-status"></div>        <div class="esb-card-actions">          <button class="esb-btn esb-btn-ghost esb-write-only" data-act="copy-definition-json">📋 Copy Definition JSON</button>        </div>      </section>    </div>  </main>  <div class="esb-modal-overlay" id="esb-modal-overlay">    <div class="esb-modal" role="dialog" aria-modal="true">      <div class="esb-modal-head">        <h3 id="esb-modal-title">Modal</h3>        <button class="esb-modal-close" data-act="close-modal" aria-label="Close">✕</button>      </div>      <div class="esb-modal-body" id="esb-modal-body"></div>    </div>  </div></div>';
+var EMBEDDED_HTML = '<div id="esb-app" class="esb-app">  <header class="esb-topbar">    <div class="esb-topbar-title">      <span class="esb-logo">✍️</span>      <div class="esb-title-block">        <div class="esb-title-main">Essay Subject Builder</div>        <div class="esb-title-sub">One essay subject definition for the Essay Writing Educator</div>      </div>    </div>    <div class="esb-topbar-right">      <span class="esb-save-state esb-save-state-none" id="esb-save-state">Not saved yet</span>    </div>  </header>  <main class="esb-scroll">    <div class="esb-page">      <section class="esb-card">        <div class="esb-section-head">          <span class="esb-section-num">1</span>          <div class="esb-section-head-text">            <h2 class="esb-card-title">Assignment</h2>            <p class="esb-card-sub">What the student will write. These values are shown to the student and sent to the evaluator.</p>          </div>        </div>        <div class="esb-field">          <label class="esb-label" for="esb-subject-input">Essay subject <span class="esb-required">required</span></label>          <input class="esb-input" id="esb-subject-input" type="text" maxlength="200" placeholder="e.g. The Importance of Reading in the Digital Age">          <div class="esb-hint">Shown to the student at the top of the writing page.</div>        </div>        <div class="esb-field">          <label class="esb-label" for="esb-instructions-editor">Instructions</label>          <div class="esb-rich-box">            <div class="esb-rich-toolbar">              <button class="esb-rich-btn esb-rich-bold" data-act="ins-bold" title="Bold (Ctrl+B)">B</button>              <button class="esb-rich-btn esb-rich-italic" data-act="ins-italic" title="Italic (Ctrl+I)">I</button>              <button class="esb-rich-btn esb-rich-underline" data-act="ins-underline" title="Underline (Ctrl+U)">U</button>              <span class="esb-rich-sep"></span>              <button class="esb-rich-btn esb-rich-list" data-act="ins-bullet-list" title="Bullet list">• List</button>              <button class="esb-rich-btn esb-rich-list" data-act="ins-numbered-list" title="Numbered list">1. List</button>            </div>            <div class="esb-rich-editor" id="esb-instructions-editor" contenteditable="true" spellcheck="true"></div>          </div>          <div class="esb-hint">Required length, structure, style, citation rules - anything the student must follow. Format with bold, italics and lists.</div>        </div>        <div class="esb-field-row esb-field-row-3">          <div class="esb-field">            <label class="esb-label" for="esb-language-input">Language</label>            <input class="esb-input" id="esb-language-input" type="text" maxlength="40" placeholder="English">          </div>          <div class="esb-field">            <label class="esb-label" for="esb-minimum-words-input">Minimum words</label>            <input class="esb-input" id="esb-minimum-words-input" type="number" min="0" max="100000" step="50" placeholder="0">            <div class="esb-hint">0 means no minimum.</div>          </div>          <div class="esb-field">            <label class="esb-label" for="esb-maximum-words-input">Maximum words</label>            <input class="esb-input" id="esb-maximum-words-input" type="number" min="0" max="100000" step="50" placeholder="0">            <div class="esb-hint">0 means no maximum. Competitions often set both limits.</div>          </div>        </div>        <div class="esb-word-limit-hint" id="esb-word-limit-hint"></div>      </section>      <section class="esb-card">        <div class="esb-section-head">          <span class="esb-section-num">2</span>          <div class="esb-section-head-text">            <h2 class="esb-card-title">Evaluation Rubrics</h2>            <p class="esb-card-sub">The system base rubric always applies. Subject rubrics are added on top of it. The total weight must equal exactly 100%.</p>          </div>        </div>        <div class="esb-weight-bar-wrap">          <div class="esb-weight-bar"><div class="esb-weight-bar-fill" id="esb-weight-bar-fill"></div></div>          <span class="esb-weight-summary" id="esb-weight-summary"></span>        </div>        <div class="esb-rubric-group">          <div class="esb-group-label">System base rubric <span class="esb-badge">system</span></div>          <div id="esb-base-rubric-list"></div>        </div>        <div class="esb-rubric-group">          <div class="esb-group-label">Subject rubrics <span class="esb-badge esb-badge-subject">subject</span></div>          <div id="esb-subject-rubric-list"></div>          <div class="esb-subject-rubric-actions">            <button class="esb-btn esb-btn-ghost esb-write-only" data-act="add-subject-rubric">＋ Add Subject Rubric</button>          </div>        </div>        <div class="esb-rubric-actions">          <button class="esb-btn esb-btn-danger-ghost esb-write-only" data-act="restore-base-weights">↺ Restore Base Weights</button>        </div>      </section>      <section class="esb-card">        <div class="esb-section-head">          <span class="esb-section-num">3</span>          <div class="esb-section-head-text">            <h2 class="esb-card-title">Save & Connect</h2>            <p class="esb-card-sub">Save the subject as a definition. Every Essay Writing Educator instance can then select it.</p>          </div>        </div>        <div id="esb-definition-status"></div>        <div class="esb-card-actions">          <button class="esb-btn esb-btn-ghost esb-write-only" data-act="copy-definition-json">📋 Copy Definition JSON</button>        </div>      </section>    </div>  </main>  <div class="esb-modal-overlay" id="esb-modal-overlay">    <div class="esb-modal" role="dialog" aria-modal="true">      <div class="esb-modal-head">        <h3 id="esb-modal-title">Modal</h3>        <button class="esb-modal-close" data-act="close-modal" aria-label="Close">✕</button>      </div>      <div class="esb-modal-body" id="esb-modal-body"></div>    </div>  </div></div>';
 </script>
 
 <script>

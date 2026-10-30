@@ -27,7 +27,7 @@ var BASE_RUBRICS = [
 ];
 
 var MAX_RUBRIC_COUNT = 8;
-var SUBJECT_DEFINITIONS_OBJECT_TYPE = 'essay-subject-definitions-uniconbaseapps';
+var SUBJECT_DEFINITIONS_OBJECT_TYPE = 'essay-subject-builder-uniconbaseapps';
 var IDENTITY_POLL_DELAYS = [400, 1200, 2600, 5000];
 var MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 var GRADE_BANDS = [
@@ -39,6 +39,7 @@ var GRADE_BANDS = [
 ];
 
 var CHART_COLORS = ['#4f46e5', '#16a34a', '#d97706', '#dc2626', '#0891b2', '#7c3aed', '#db2777', '#65a30d'];
+var KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm', '1234567890'];
 
 var essayState = null;
 var currentUser = null;
@@ -55,6 +56,7 @@ var resetRubricsArmed = false;
 var activePanelName = null;
 var activeEvaluationView = 'feedback';
 var versionMenuOpen = false;
+var blockedEvaluationReasons = null;
 var activeSubjectDefinition = null;
 var subjectDefinitionStatus = 'none';
 var subjectDefinitionErrorText = '';
@@ -62,6 +64,7 @@ var subjectDefinitionWarningShown = false;
 var applyDefinitionRubricsArmed = false;
 var availableSubjectDefinitions = [];
 var subjectPickerWarningShown = false;
+var subjectPickerErrorText = '';
 
 /* ── Small helpers ── */
 function elementById(id) { return document.getElementById(id); }
@@ -159,6 +162,81 @@ function sanitizeStoredHtml(html) {
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 }
 
+/* ── Free, local essay readiness check (no evaluation service call needed) ── */
+function tokenHasKeyboardMash(token) {
+  if (token.length < 4) return false;
+  for (var rowIndex = 0; rowIndex < KEYBOARD_ROWS.length; rowIndex++) {
+    var row = KEYBOARD_ROWS[rowIndex];
+    for (var start = 0; start + 4 <= row.length; start++) {
+      var sequence = row.slice(start, start + 4);
+      var reversed = sequence.split('').reverse().join('');
+      if (token.indexOf(sequence) !== -1 || token.indexOf(reversed) !== -1) return true;
+    }
+  }
+  return false;
+}
+function isRealWordToken(token) {
+  var clean = token.replace(/[^a-z0-9]/g, '');
+  if (clean.length < 2) return false;
+  if (/^\d+$/.test(clean)) return false;
+  if (!/[aeiouy\u00C0-\u024F]/.test(clean)) return false;
+  if (tokenHasKeyboardMash(clean)) return false;
+  var distinctCharacters = {};
+  for (var i = 0; i < clean.length; i++) distinctCharacters[clean.charAt(i)] = true;
+  var distinctCount = 0;
+  for (var key in distinctCharacters) { if (Object.prototype.hasOwnProperty.call(distinctCharacters, key)) distinctCount++; }
+  if (distinctCount < 2) return false;
+  if (clean.length >= 6 && distinctCount <= 2) return false;
+  return true;
+}
+function analyzeEssayReadiness(plainText) {
+  var result = { wordCount: 0, realWordRatio: 0, uniqueRatio: 0, mashCount: 0, blockingIssues: [], softNotes: [] };
+  if (/[\u0590-\u06FF\u0400-\u04FF\u3040-\u30FF\u4E00-\u9FFF]/.test(String(plainText || ''))) {
+    return result; /* non-Latin scripts: skip the Latin heuristics */
+  }
+  var tokens = String(plainText || '').toLowerCase().split(/\s+/).filter(function (token) { return token; });
+  result.wordCount = tokens.length;
+  var realCount = 0;
+  var uniqueTokens = {};
+  tokens.forEach(function (token) {
+    var cleaned = token.replace(/[^a-z0-9]/g, '');
+    if (!cleaned) return;
+    if (tokenHasKeyboardMash(cleaned)) result.mashCount++;
+    if (isRealWordToken(cleaned)) realCount++;
+    uniqueTokens[cleaned] = true;
+  });
+  var uniqueCount = 0;
+  for (var uniqueKey in uniqueTokens) { if (Object.prototype.hasOwnProperty.call(uniqueTokens, uniqueKey)) uniqueCount++; }
+  result.realWordRatio = result.wordCount ? realCount / result.wordCount : 0;
+  result.uniqueRatio = result.wordCount ? uniqueCount / result.wordCount : 0;
+  if (result.wordCount >= 12 && result.realWordRatio < 0.5) {
+    result.blockingIssues.push('Most of the text does not look like real words (' + Math.round(result.realWordRatio * 100) + '% recognizable). Write actual sentences about the subject before evaluating.');
+  }
+  if (result.wordCount >= 25 && result.uniqueRatio < 0.3) {
+    result.blockingIssues.push('The text repeats the same few words over and over. Add varied, meaningful sentences before evaluating.');
+  }
+  if (result.mashCount >= 3) {
+    result.blockingIssues.push('The text contains keyboard filler (like "asdf"). Replace it with real writing before evaluating.');
+  }
+  if (!result.blockingIssues.length && result.wordCount >= 20 && result.realWordRatio < 0.8) {
+    result.softNotes.push('Several words look unusual - check your spelling before evaluating.');
+  }
+  return result;
+}
+function updateReadinessNote(plainText) {
+  var note = elementById('ewe-readiness-note');
+  if (!note) return;
+  var readiness = analyzeEssayReadiness(plainText);
+  var messages = readiness.blockingIssues.concat(readiness.softNotes);
+  if (messages.length) {
+    note.textContent = messages[0];
+    note.style.display = '';
+  } else {
+    note.textContent = '';
+    note.style.display = 'none';
+  }
+}
+
 /* ── Params ── */
 function getSubjectDefinitionId() { return String(tool.param('subjectDefinitionId', '') || '').trim(); }
 function getSubjectDefinitionJson() { return String(tool.param('subjectDefinitionJson', '') || '').trim(); }
@@ -192,17 +270,41 @@ function getMaximumWordCount() {
   }
   return Math.floor(toNumber(tool.param('maximumWordCount', ''), 0));
 }
+function getQuickEvaluationThreshold() {
+  if (activeSubjectDefinition && typeof activeSubjectDefinition.quickEvaluationThreshold === 'number' && activeSubjectDefinition.quickEvaluationThreshold > 0) {
+    return activeSubjectDefinition.quickEvaluationThreshold;
+  }
+  return Math.floor(toNumber(tool.param('quickEvaluationThreshold', '80'), 0));
+}
 function isEvaluationServiceAllowed() { return String(tool.param('allowAi', '')).toLowerCase() === 'yes'; }
 
 /* ── Subject definition loading (from Essay Subject Builder) ── */
 function getSubjectDefinitionsType() {
   return String(tool.param('subjectDefinitionsType', SUBJECT_DEFINITIONS_OBJECT_TYPE) || '').trim() || SUBJECT_DEFINITIONS_OBJECT_TYPE;
 }
+/* Builder records store the definition in the html-tool field's value, which
+   sits inside productData.data_categoriesBased under an unknown field id.
+   Walk the record data and return the first value that looks like a definition. */
+function findDefinitionValueInside(container) {
+  if (!container || typeof container !== 'object' || Array.isArray(container)) return null;
+  if (String(container.subject || '').trim() || Array.isArray(container.rubrics)) return container;
+  var keys = Object.keys(container);
+  for (var i = 0; i < keys.length; i++) {
+    var nestedValue = container[keys[i]];
+    if (nestedValue && typeof nestedValue === 'object' && !Array.isArray(nestedValue)) {
+      var found = findDefinitionValueInside(nestedValue);
+      if (found) return found;
+    }
+  }
+  return null;
+}
 function parseSubjectDefinitionData(rawValue) {
   if (!rawValue || typeof rawValue !== 'object') return null;
   var definitionData = rawValue;
   if (rawValue.productData && rawValue.productData.data_categoriesBased && typeof rawValue.productData.data_categoriesBased === 'object') {
-    definitionData = rawValue.productData.data_categoriesBased;
+    definitionData = findDefinitionValueInside(rawValue.productData.data_categoriesBased) || rawValue.productData.data_categoriesBased;
+  } else {
+    definitionData = findDefinitionValueInside(rawValue) || rawValue;
   }
   var subject = String(definitionData.subject || '').trim();
   var parsedRubrics = Array.isArray(definitionData.rubrics) ? definitionData.rubrics : [];
@@ -284,7 +386,7 @@ function loadSubjectDefinitionById(definitionId, forceRubrics) {
     failSubjectDefinitionLoad('object access is not available in this CMS. Configure the evaluator parameters essaySubject, essayInstructions and essayLanguage directly instead.');
     return;
   }
-  tool.requestObjects('get', { mainObjectType: getSubjectDefinitionsType(), objectId: definitionId }, function (error, result) {
+  tool.requestObjects('get', { mainObjectType: getSubjectDefinitionsType(), scope: 'shared', objectId: definitionId }, function (error, result) {
     if (error || !result || !result.object) {
       failSubjectDefinitionLoad(error || 'the definition object was not found.');
       return;
@@ -335,20 +437,23 @@ function definitionWordLimitLabel(definition) {
 function openSubjectPicker() {
   if (!canManageRubrics()) { tool.notify('You do not have permission to choose the essay subject.', 'warning'); return; }
   if (typeof tool.requestObjects !== 'function') {
-    tool.notify('Object access is not available. Enable allowObjectCRUD on this field or configure the subject through the field parameters.', 'error');
+    tool.notify('Object access is not available. Enable allowObjectCRUD on this field so the picker can list the Essay Subject Builder records.', 'error');
     return;
   }
+  subjectPickerErrorText = '';
   openModal('Choose Essay Subject',
     '<p class="ewe-modal-hint">Select the subject definition this educator instance will use. The definition supplies the subject, instructions, word limits and rubrics.</p>' +
     '<div id="ewe-subject-picker-list"><div class="ewe-picker-loading">Loading subjects…</div></div>');
-  tool.requestObjects('query', { mainObjectType: getSubjectDefinitionsType() }, function (error, result) {
+  tool.requestObjects('query', { mainObjectType: getSubjectDefinitionsType(), scope: 'shared' }, function (error, result) {
     if (error) {
+      subjectPickerErrorText = String(error || 'unknown error');
       availableSubjectDefinitions = [];
       if (!subjectPickerWarningShown) {
         subjectPickerWarningShown = true;
-        tool.notify('Could not load the subject list: ' + error, 'warning');
+        tool.notify('Could not load the subject list: ' + subjectPickerErrorText, 'warning');
       }
     } else {
+      subjectPickerErrorText = '';
       var objects = [];
       if (result) {
         if (Array.isArray(result)) objects = result;
@@ -364,9 +469,7 @@ function openSubjectPicker() {
 function renderSubjectPickerList() {
   var list = elementById('ewe-subject-picker-list');
   if (!list) return;
-  var html = '<button class="ewe-subject-picker-item ewe-subject-picker-none" data-act="clear-subject">' +
-    '<span class="ewe-subject-picker-name">Use field parameters instead (no definition)</span>' +
-    '<span class="ewe-subject-picker-meta">Fall back to the essaySubject and essayInstructions parameters.</span></button>';
+  var html = '';
   availableSubjectDefinitions.forEach(function (object) {
     var definition = parseSubjectDefinitionData(object);
     if (!definition) return;
@@ -383,7 +486,16 @@ function renderSubjectPickerList() {
       '</button>';
   });
   if (!availableSubjectDefinitions.length) {
-    html += '<div class="ewe-picker-empty">No subject definitions found. Create one with the Essay Subject Builder first.</div>';
+    html += '<div class="ewe-picker-empty">';
+    if (subjectPickerErrorText) {
+      html += '<strong>The CMS could not load the subject list: ' + escapeHtml(subjectPickerErrorText) + '</strong><br>' +
+        'Make sure this field has <code>allowObjectCRUD: yes</code> and this entry in <code>allowedObjectTypes</code>:' +
+        '<pre class="ewe-picker-config">{\n  "mainObjectType": "essay-subject-builder-uniconbaseapps",\n  "role": "editor",\n  "scope": "shared",\n  "targetCollection": "private"\n}</pre>';
+    } else {
+      html += 'No subject definitions found yet. Every record of the Essay Subject Builder app is one subject definition - create them there, then they appear in this list.' +
+        ' If definitions exist but still do not appear, check the entry above: it must include <code>"targetCollection": "private"</code>, because the builder stores its records in the private object collection.';
+    }
+    html += '</div>';
   }
   list.innerHTML = html;
 }
@@ -614,6 +726,7 @@ function updateEssayCounts() {
   countElement.className = (belowMinimum || aboveMaximum) ? 'ewe-word-warn' : '';
   var editor = elementById('ewe-editor');
   if (editor) editor.classList.toggle('ewe-editor-empty', wordCount === 0);
+  updateReadinessNote(plainText);
 }
 function updateEvaluateButtonState() {
   var button = elementById('ewe-evaluate-button');
@@ -909,9 +1022,13 @@ function renderEvaluationPanel() {
   updateScoreChip(evaluationCount ? essayState.evaluations[evaluationCount - 1] : null);
   var body = elementById('ewe-eval-body');
   if (!evaluationCount) {
-    body.innerHTML = '<div class="ewe-empty-state"><div class="ewe-empty-icon">🏆</div>' +
-      '<h3>No evaluation yet</h3>' +
-      '<p>Write your essay and click "Evaluate My Essay". You get a score out of 100 with a detailed rubric-by-rubric breakdown. Your text is never changed.</p></div>';
+    if (blockedEvaluationReasons && blockedEvaluationReasons.length) {
+      body.innerHTML = renderBlockedEmptyState();
+    } else {
+      body.innerHTML = '<div class="ewe-empty-state"><div class="ewe-empty-icon">🏆</div>' +
+        '<h3>No evaluation yet</h3>' +
+        '<p>Write your essay and click "Evaluate My Essay". You get a score out of 100 with a detailed rubric-by-rubric breakdown. Your text is never changed.</p></div>';
+    }
     return;
   }
   var selected = findEvaluationById(activeEvaluationId) || essayState.evaluations[evaluationCount - 1];
@@ -919,7 +1036,50 @@ function renderEvaluationPanel() {
   var content = activeEvaluationView === 'progress'
     ? renderProgressView()
     : renderVersionDropdown() + renderEvaluationDetail(selected);
-  body.innerHTML = renderEvaluationTabs() + content;
+  body.innerHTML = renderBlockedBanner() + renderEvaluationTabs() + content;
+}
+function renderBlockedBanner(expandCriteria) {
+  if (!blockedEvaluationReasons || !blockedEvaluationReasons.length) return '';
+  return '<div class="ewe-block-banner"><div class="ewe-block-banner-title">Evaluation not started</div>' +
+    '<ul class="ewe-block-banner-list">' + blockedEvaluationReasons.map(function (reason) {
+      return '<li>' + escapeHtml(reason) + '</li>';
+    }).join('') + '</ul>' +
+    '<details class="ewe-block-criteria"' + (expandCriteria ? ' open' : '') + '>' +
+      '<summary>See how your essay will be evaluated</summary>' +
+      renderCriteriaOverview() +
+    '</details></div>';
+}
+function renderBlockedEmptyState() {
+  return '<div class="ewe-empty-state ewe-blocked-state"><div class="ewe-empty-icon">🔍</div>' +
+    '<h3>Evaluation cannot start yet</h3>' +
+    '<p>Fix the points below, then click "Evaluate My Essay" again. This check is free - no evaluation was spent.</p></div>' +
+    renderBlockedBanner(true);
+}
+function renderCriteriaOverview() {
+  var html = '<div class="ewe-criteria-overview">' +
+    '<div class="ewe-criteria-head">' +
+      '<span class="ewe-criteria-title">How your essay will be evaluated</span>' +
+      '<span class="ewe-criteria-score-hint">Final score: 0 - 100</span>' +
+    '</div>' +
+    '<div class="ewe-criteria-grid">';
+  var totalWeight = totalRubricWeight();
+  essayState.rubrics.forEach(function (rubric) {
+    var share = totalWeight ? Math.round(rubric.weight / totalWeight * 100) : rubric.weight;
+    html += '<div class="ewe-criteria-card">' +
+      '<div class="ewe-criteria-card-top">' +
+        '<span class="ewe-criteria-name">' + escapeHtml(rubric.name) + '</span>' +
+        '<span class="ewe-criteria-weight">' + rubric.weight + '%</span>' +
+      '</div>' +
+      '<div class="ewe-criteria-bar"><span class="ewe-criteria-bar-fill" style="width:' + share + '%"></span></div>' +
+      '<div class="ewe-criteria-desc">' + escapeHtml(rubric.description) + '</div>' +
+    '</div>';
+  });
+  html += '</div><div class="ewe-band-guide">';
+  GRADE_BANDS.forEach(function (band) {
+    html += '<span class="ewe-band-chip">' + escapeHtml(band.label) + ' = ' + escapeHtml(band.title) + ' (' + band.minScore + '+)</span>';
+  });
+  html += '</div></div>';
+  return html;
 }
 function renderEvaluationTabs() {
   return '<div class="ewe-eval-tabs">' +
@@ -1126,6 +1286,9 @@ function renderEvaluationDetail(evaluation) {
   var html = '<div class="ewe-score-summary">' + scoreRingHtml(evaluation.totalScore) +
     '<div class="ewe-score-info">' +
       '<div class="ewe-score-badge ' + tone + '">Grade ' + band.label + ' - ' + band.title + '</div>' +
+      (evaluation.mode === 'quick'
+        ? '<span class="ewe-mode-badge ewe-mode-quick">Quick Check - short text</span>'
+        : '<span class="ewe-mode-badge ewe-mode-full">Full Rubric Evaluation</span>') +
       '<div class="ewe-score-meta">' + evaluation.essayWordCount + ' words evaluated</div>' +
       '<div class="ewe-score-meta">' + formatShortDateTime(evaluation.evaluatedAt) + ' · by ' + escapeHtml(evaluation.requestedBy || 'Evaluator') + '</div>' +
       (evaluation.subjectSnapshot ? '<div class="ewe-score-subject">' + escapeHtml(evaluation.subjectSnapshot) + '</div>' : '') +
@@ -1148,8 +1311,13 @@ function renderEvaluationDetail(evaluation) {
     }
     html += '</div>';
   }
-  html += '<div class="ewe-section-title">Rubric Breakdown</div>';
-  evaluation.rubricResults.forEach(function (result) { html += rubricResultCardHtml(result); });
+  if (evaluation.rubricResults && evaluation.rubricResults.length) {
+    html += '<div class="ewe-section-title">Rubric Breakdown</div>';
+    evaluation.rubricResults.forEach(function (result) { html += rubricResultCardHtml(result); });
+  } else if (evaluation.mode === 'quick') {
+    html += '<div class="ewe-section-title">About This Quick Check</div>';
+    html += '<p class="ewe-summary-text">Short texts get a compact review with one holistic score instead of the full rubric breakdown. Keep writing - a longer version unlocks the detailed rubric-by-rubric evaluation.</p>';
+  }
   if (evaluation.nextSteps.length) {
     html += '<div class="ewe-section-title">Next Steps</div><ol class="ewe-suggestions">' +
       evaluation.nextSteps.map(function (step) { return '<li>' + escapeHtml(step) + '</li>'; }).join('') +
@@ -1348,17 +1516,39 @@ function evaluateEssayWithAi() {
   if (!essayState.rubrics.length) { tool.notify('No rubrics are defined. Add evaluation criteria first.', 'error'); return; }
   var plainEssayText = htmlToPlainText(essayState.essay.html);
   var wordCount = countWords(plainEssayText);
-  if (!wordCount) { tool.notify('Write your essay first, then request an evaluation.', 'warning'); return; }
+  if (!wordCount) {
+    blockEvaluationWithReasons(['The essay is empty. Write your essay first, then request an evaluation.']);
+    return;
+  }
+  var readiness = analyzeEssayReadiness(plainEssayText);
+  if (readiness.blockingIssues.length) {
+    blockEvaluationWithReasons(readiness.blockingIssues);
+    updateReadinessNote(plainEssayText);
+    return;
+  }
   var minimum = getMinimumWordCount();
   if (minimum > 0 && wordCount < minimum) {
-    tool.notify('Your essay is ' + wordCount + ' words. The minimum for this assignment is ' + minimum + ' words.', 'warning');
+    blockEvaluationWithReasons(['Your essay is ' + wordCount + ' words. The minimum for this assignment is ' + minimum + ' words. Keep writing to unlock the full evaluation.']);
     return;
   }
   var maximum = getMaximumWordCount();
   if (maximum > 0 && wordCount > maximum) {
-    tool.notify('Your essay is ' + wordCount + ' words. The maximum for this assignment is ' + maximum + ' words.', 'warning');
+    blockEvaluationWithReasons(['Your essay is ' + wordCount + ' words. The maximum for this assignment is ' + maximum + ' words. Trim the essay, then evaluate again.']);
     return;
   }
+  var quickThreshold = getQuickEvaluationThreshold();
+  if (quickThreshold > 0 && wordCount < quickThreshold) {
+    startQuickEvaluation(plainEssayText, wordCount);
+    return;
+  }
+  startFullEvaluation(plainEssayText, wordCount);
+}
+function blockEvaluationWithReasons(reasons) {
+  blockedEvaluationReasons = Array.isArray(reasons) ? reasons.slice(0, 4) : [String(reasons)];
+  renderEvaluationPanel();
+  openPanel('evaluation');
+}
+function startFullEvaluation(plainEssayText, wordCount) {
   evaluationInProgress = true;
   updateEvaluateButtonState();
   var prompt = buildEvaluationPrompt(plainEssayText);
@@ -1374,6 +1564,7 @@ function evaluateEssayWithAi() {
     var evaluation = createEvaluationRecord(parsed, responseText, wordCount);
     essayState.evaluations.push(evaluation);
     activeEvaluationId = evaluation.id;
+    blockedEvaluationReasons = null;
     persistNow();
     requestParentSave(false);
     renderWholeTool();
@@ -1384,6 +1575,86 @@ function evaluateEssayWithAi() {
       tool.notify('Evaluation complete - ' + formatScore(evaluation.totalScore) + '/100.', 'success');
     }
   });
+}
+function startQuickEvaluation(plainEssayText, wordCount) {
+  evaluationInProgress = true;
+  updateEvaluateButtonState();
+  var prompt = buildQuickEvaluationPrompt(plainEssayText);
+  tool.requestAI(prompt, '', function (error, responseText) {
+    evaluationInProgress = false;
+    updateEvaluateButtonState();
+    if (!responseText) {
+      tool.notify('Evaluation failed: ' + (error || 'no response'), 'error');
+      return;
+    }
+    if (error) tool.notify('Notice: ' + error, 'warning');
+    var parsed = parseAiJsonResponse(responseText);
+    var evaluation = createQuickEvaluationRecord(parsed, responseText, wordCount);
+    essayState.evaluations.push(evaluation);
+    activeEvaluationId = evaluation.id;
+    blockedEvaluationReasons = null;
+    persistNow();
+    requestParentSave(false);
+    renderWholeTool();
+    openPanel('evaluation');
+    if (!parsed) {
+      tool.notify('Evaluation stored, but the response was not structured data. The raw text is shown in the panel.', 'warning');
+    } else {
+      tool.notify('Quick check complete - ' + formatScore(evaluation.totalScore) + '/100. Keep writing for a full rubric evaluation.', 'success');
+    }
+  });
+}
+function buildQuickEvaluationPrompt(essayText) {
+  return [
+    'You are a writing coach. The student wrote a SHORT text (' + countWords(essayText) + ' words). Give a compact, encouraging quick check. NEVER rewrite or correct the text - only comment on it and suggest what to do next. Respond ONLY with valid JSON with exactly this shape:',
+    '{',
+    '  "quickScore": 72,',
+    '  "overallSummary": "2-3 sentence summary of the overall quality",',
+    '  "overallStrengths": ["2 specific strengths, quoting the actual text"],',
+    '  "overallWeaknesses": ["2 specific weaknesses, quoting the actual text"],',
+    '  "nextSteps": ["3 prioritized, concrete actions for the longer version"]',
+    '}',
+    '',
+    'ESSAY SUBJECT: ' + getEssaySubject(),
+    'ESSAY INSTRUCTIONS: ' + (getEssayInstructions() || 'None provided.'),
+    'ESSAY LANGUAGE: ' + getEssayLanguage(),
+    '',
+    'STUDENT TEXT:',
+    '"""',
+    essayText,
+    '"""',
+    '',
+    'RULES: quickScore must be a number 0-100. Quote the actual text. Be specific and kind. Keep the whole response compact. Output ONLY the JSON.'
+  ].join('\n');
+}
+function createQuickEvaluationRecord(parsed, rawResponse, essayWordCount) {
+  var requestedByName = (currentUser && currentUser.name) ? currentUser.name : 'Evaluator';
+  var record = {
+    id: makeId('evaluation'),
+    evaluatedAt: new Date().toISOString(),
+    essayWordCount: essayWordCount,
+    subjectSnapshot: getEssaySubject(),
+    instructionsSnapshot: getEssayInstructions(),
+    requestedBy: requestedByName,
+    totalScore: 0,
+    mode: 'quick',
+    overallSummary: '',
+    overallStrengths: [],
+    overallWeaknesses: [],
+    nextSteps: [],
+    rubricResults: [],
+    rawResponse: null
+  };
+  if (!parsed) {
+    record.rawResponse = rawResponse;
+    return record;
+  }
+  record.totalScore = typeof parsed.quickScore === 'number' ? clampScore(parsed.quickScore) : 0;
+  record.overallSummary = String(parsed.overallSummary || '').slice(0, 4000);
+  record.overallStrengths = toStringArray(parsed.overallStrengths);
+  record.overallWeaknesses = toStringArray(parsed.overallWeaknesses);
+  record.nextSteps = toStringArray(parsed.nextSteps);
+  return record;
 }
 
 /* ── Lock UI per role ── */
@@ -1523,10 +1794,11 @@ function declareConfiguration() {
       { name: 'essayLanguage', label: 'Essay Language', type: 'text', default: 'English', severity: 'optional', hint: 'Language the essay is written in. The evaluator works in this language.' },
       { name: 'minimumWordCount', label: 'Minimum Word Count', type: 'number', default: '', severity: 'goodToHave', hint: 'Optional minimum length. The tool warns the student when the essay is shorter than this many words.' },
       { name: 'maximumWordCount', label: 'Maximum Word Count', type: 'number', default: '', severity: 'goodToHave', hint: 'Optional maximum length. The tool warns the student when the essay is longer than this many words. Competitions often set both limits.' },
+      { name: 'quickEvaluationThreshold', label: 'Quick Evaluation Threshold', type: 'number', default: '80', severity: 'optional', hint: 'Essays shorter than this many words get a compact quick check (summary + top suggestions + one holistic score) instead of the full rubric evaluation. Set 0 to always use the full evaluation.' },
       { name: 'allowAi', label: 'Allow Evaluation Service', type: 'toggle', default: 'yes', severity: 'mandatory', hint: "The field setting allowAi must be 'yes' for the evaluation service to work." },
       { name: 'subjectDefinitionId', label: 'Subject Definition ID', type: 'text', default: '', severity: 'optional', hint: 'Optional fallback. ID of a saved definition created by Essay Subject Builder. Prefer selecting the subject inside the tool with the Choose Subject button.' },
       { name: 'subjectDefinitionJson', label: 'Subject Definition JSON', type: 'text', default: '', severity: 'optional', hint: 'Optional fallback. Paste the definition JSON copied from Essay Subject Builder. Ignored when subjectDefinitionId is set.' },
-      { name: 'subjectDefinitionsType', label: 'Subject Definitions Type', type: 'text', default: 'essay-subject-definitions-uniconbaseapps', severity: 'optional', hint: 'CMS object type where subject definitions are stored. Keep the default unless you use a custom type.' }
+      { name: 'subjectDefinitionsType', label: 'Subject Definitions Type', type: 'text', default: 'essay-subject-builder-uniconbaseapps', severity: 'optional', hint: 'CMS object type of the Essay Subject Builder records that hold the subject definitions. Keep the default unless you use a custom type.' }
     ]);
     tool.declareOutput({
       type: 'object',
@@ -1534,7 +1806,7 @@ function declareConfiguration() {
       properties: {
         essay: { type: 'object', description: 'The essay content (formatted HTML from the rich text editor) and its last edit time.' },
         rubrics: { type: 'array', description: 'Evaluation criteria. Each item: id, name, weight (percent), description, builtIn.' },
-        evaluations: { type: 'array', description: 'Evaluation records: totalScore (0-100), overallSummary, overallStrengths, overallWeaknesses, nextSteps, rubricResults (per-rubric score, comment, strengths, suggestions).' }
+        evaluations: { type: 'array', description: 'Evaluation records. Full evaluations carry rubricResults (per-rubric score, comment, strengths, suggestions). Short texts produce compact quick checks (mode "quick") with one holistic score. Both store totalScore (0-100), overallSummary, overallStrengths, overallWeaknesses, nextSteps.' }
       }
     });
   } catch (error) {}

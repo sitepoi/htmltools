@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Future Bridge Academy - Online math lessons for Western Canada</title>
+
+<!-- The website's own display face. If it cannot load, the system sans below
+     takes over, so the card never breaks - it only loses its character. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+	href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&display=swap">
+<style>
+	/* =========================================================================
+	   FUTURE BRIDGE ACADEMY - ONLINE MATH LESSONS, WESTERN CANADA
+	   One compact 4:5 card for Vancouver, Calgary and Edmonton.
+	   Every size inside the card is in cqw / cqh, so the layout is identical at
+	   any width: 366 px on a phone, 440 px on screen, 880 px for a 2x capture.
+
+	   DESIGN RULES (keep these when editing)
+	     1. One masthead band, one content panel, one footer band. No photo.
+	     2. Colour has a job: navy = structure, orange = the day names,
+	        gold = the single call to action. Nothing else is coloured.
+	     3. The schedule is a TABLE, because every grade sits on a different day:
+	        day | grade | Vancouver time | Calgary & Edmonton time. Grade order
+	        is 5 to 10, so a parent finds their year without reading down.
+	     4. Type scale is deliberate: 7.4 / 5.1 / 3.4 / 2.5 / 1.8 cqw. Two faces:
+	        Bricolage Grotesque (the website's display face) for the headline and
+	        the grade names, Segoe UI for the small caps and the times, where
+	        legibility and tabular numerals matter more than character.
+	     5. Two time zones are shown everywhere - the west runs one hour apart.
+
+	   HOW TO EXPORT
+	     Image : click Hide bar, then capture the card (440 x 550 CSS px,
+	             or 2x for 880 x 1100).
+	     PDF   : click Print / Save as PDF - the page is set to the card size,
+	             so the PDF is exactly this card, not an A4 sheet with margins.
+	   ========================================================================= */
+	:root {
+		--navy: #00365F;
+		--navy-2: #004E89;
+		--ink: #102A43;
+		--muted: #5A6B84;
+		--line: #E3E9F1;
+		--accent: #FF6B35;
+		--gold: #FFD23F;
+	}
+
+	* {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+
+	body {
+		font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+		color: var(--ink);
+		background: #DCE4EE;
+		line-height: 1.35;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	/* ---------------- export bar (never printed, never captured) ---------------- */
+	.bar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		padding: 9px 14px;
+		background: #1F2937;
+		color: #E5E7EB;
+		font-size: 12px;
+	}
+
+	.bar b { font-size: 12.5px; color: #fff; }
+	.bar .grow { flex: 1 1 auto; }
+
+	.bar button {
+		padding: 6px 13px;
+		border: 0;
+		border-radius: 8px;
+		background: var(--gold);
+		color: #1F2937;
+		font: inherit;
+		font-weight: 800;
+		cursor: pointer;
+	}
+
+	.bar button.ghost {
+		background: transparent;
+		border: 1px solid #4B5563;
+		color: #E5E7EB;
+		font-weight: 600;
+	}
+
+	/* ---------------- the card ---------------- */
+	.stage {
+		display: flex;
+		justify-content: center;
+		padding: 16px 12px 28px;
+	}
+
+	.card {
+		position: relative;
+		width: 100%;
+		max-width: 440px;
+		aspect-ratio: 4 / 5;
+		container-type: size;
+		display: flex;
+		flex-direction: column;
+		background: #fff;
+		border-radius: 14px;
+		overflow: hidden;
+		box-shadow: 0 18px 44px rgba(16, 42, 67, 0.2);
+	}
+
+	/* ---------------- masthead ---------------- */
+	.head {
+		position: relative;
+		flex: 0 0 auto;
+		height: 23cqh;
+		padding: 4.2cqw 5.4cqw 3.8cqw;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		color: #fff;
+		background:
+			radial-gradient(120% 130% at 100% 0%, rgba(255, 255, 255, 0.12), transparent 58%),
+			linear-gradient(142deg, var(--navy) 0%, var(--navy-2) 100%);
+	}
+
+	.head::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 0.55cqw;
+		background: var(--gold);
+	}
+
+	.head-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 3cqw;
+	}
+
+	.logo {
+		display: block;
+		height: 7.4cqw;
+		width: auto;
+		filter: brightness(0) invert(1);
+	}
+
+	.head-tag {
+		font-size: 2.1cqw;
+		font-weight: 700;
+		letter-spacing: 0.15em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.82);
+		white-space: nowrap;
+	}
+
+	h1 {
+		font-family: 'Bricolage Grotesque', 'Segoe UI', -apple-system, sans-serif;
+		font-size: 7.4cqw;
+		line-height: 1.04;
+		letter-spacing: -0.03em;
+		font-weight: 700;
+		text-wrap: balance;
+	}
+
+	h1 .hl {
+		display: block;
+		color: var(--gold);
+	}
+
+	/* ---------------- schedule table ---------------- */
+	.body {
+		flex: 1 1 auto;
+		min-height: 0;
+		padding: 3.2cqw 5.4cqw 2.2cqw;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.section-head {
+		display: flex;
+		align-items: center;
+		gap: 2.6cqw;
+		flex: 0 0 auto;
+	}
+
+	.section-title {
+		font-size: 2.2cqw;
+		font-weight: 700;
+		letter-spacing: 0.15em;
+		text-transform: uppercase;
+		color: var(--navy-2);
+		white-space: nowrap;
+	}
+
+	.section-rule {
+		flex: 1 1 auto;
+		height: 1px;
+		background: var(--line);
+	}
+
+	.section-note {
+		font-size: 2.1cqw;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		color: var(--muted);
+		white-space: nowrap;
+	}
+
+	.table {
+		flex: 1 1 auto;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		margin-top: 1.6cqw;
+	}
+
+	/* day | grade | Vancouver | Calgary & Edmonton */
+	.table-head,
+	.row {
+		display: grid;
+		grid-template-columns: 18cqw minmax(0, 1fr) 15.5cqw 18cqw;
+		gap: 2.2cqw;
+	}
+
+	.table-head {
+		flex: 0 0 auto;
+		align-items: end;
+		padding-bottom: 1.1cqw;
+		border-bottom: 1px solid var(--line);
+	}
+
+	.th {
+		font-size: 1.8cqw;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--muted);
+		text-align: right;
+		line-height: 1.2;
+	}
+
+	.th-zone {
+		font-weight: 700;
+		color: var(--muted);
+	}
+
+	.th-city {
+		color: var(--navy-2);
+	}
+
+	.row {
+		flex: 1 1 0;
+		min-height: 0;
+		align-items: stretch;
+		border-bottom: 1px solid var(--line);
+		break-inside: avoid;
+	}
+
+	.row:last-child { border-bottom: 0; }
+
+	/* the cells fill the row height, so the zone divider is continuous */
+	.row > span {
+		display: flex;
+		align-items: center;
+		min-width: 0;
+	}
+
+	.day {
+		font-size: 2.5cqw;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--accent);
+	}
+
+	.grade {
+		font-family: 'Bricolage Grotesque', 'Segoe UI', -apple-system, sans-serif;
+		font-size: 5.4cqw;
+		/* semibold display face: size carries the hierarchy, weight does not shout */
+		font-weight: 600;
+		letter-spacing: -0.005em;
+		line-height: 1.14;
+		color: var(--navy);
+	}
+
+	.time {
+		font-size: 3.4cqw;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink);
+		justify-content: flex-end;
+		white-space: nowrap;
+	}
+
+	/* a quiet vertical rule between the two zones */
+	/* keep the Pacific number clear of the zone divider */
+	.time-pt {
+		padding-right: 1.8cqw;
+	}
+
+		.time-mt {
+		border-left: 1px solid var(--line);
+		padding-left: 2.4cqw;
+	}
+
+	/* ---------------- footer ---------------- */
+	.foot {
+		flex: 0 0 auto;
+		padding: 2.8cqw 5.4cqw 3cqw;
+		background: var(--navy);
+		color: #fff;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.7cqw 3cqw;
+	}
+
+	.foot-site {
+		font-size: 2.7cqw;
+		font-weight: 700;
+		letter-spacing: 0.01em;
+		color: #fff;
+		text-decoration: none;
+		overflow-wrap: anywhere;
+	}
+
+	.foot-mail {
+		grid-column: 1;
+		font-size: 2.2cqw;
+		color: rgba(255, 255, 255, 0.74);
+		text-decoration: none;
+		overflow-wrap: anywhere;
+	}
+
+	.foot-cta {
+		grid-column: 2;
+		grid-row: 1 / span 2;
+		padding: 2.1cqw 3.2cqw;
+		border-radius: 1.8cqw;
+		background: var(--gold);
+		color: #0B1F33;
+		font-size: 2.3cqw;
+		font-weight: 700;
+		letter-spacing: 0.01em;
+		text-decoration: none;
+		text-align: center;
+		white-space: nowrap;
+	}
+
+	/* ---------------- print: the card IS the page ---------------- */
+	@page { size: 116.4mm 145.5mm; margin: 0; }
+
+	@media print {
+		html,
+		body { background: #fff !important; }
+
+		*,
+		*::before,
+		*::after {
+			box-shadow: none !important;
+			text-shadow: none !important;
+		}
+
+		.bar { display: none !important; }
+
+		.stage {
+			display: block;
+			padding: 0;
+		}
+
+		.card {
+			width: 116.4mm;
+			height: 145.5mm;
+			max-width: none;
+			aspect-ratio: auto;
+			border-radius: 0;
+		}
+
+		a { text-decoration: none; color: inherit; }
+	}
+
+	/* ---------------- very small phones ---------------- */
+	@media (max-width: 360px) {
+		.stage { padding: 10px 8px 20px; }
+		.card { border-radius: 12px; }
+	}
+</style>
+</head>
+<body>
+
+<div class="bar" id="exportBar">
+	<b>Math lessons card - Western Canada</b>
+	<span>4:5 card, one screen. Hide this bar for a screenshot, or print to PDF at the card size.</span>
+	<span class="grow"></span>
+	<button type="button" onclick="window.print()">Print / Save as PDF</button>
+	<button type="button" class="ghost" onclick="document.getElementById('exportBar').style.display='none'">Hide bar</button>
+</div>
+
+<div class="stage">
+	<article class="card">
+
+		<header class="head">
+			<div class="head-top">
+				<img class="logo"
+					src="Future-Bridge-Academy%20-Full-Logo-transparent.png"
+					alt="Future Bridge Academy">
+				<span class="head-tag">Online &middot; Western Canada</span>
+			</div>
+			<h1>Math lessons <span class="hl">Grades 5 to 10</span></h1>
+		</header>
+
+		<div class="body">
+			<div class="section-head">
+				<span class="section-title">Weekly schedule</span>
+				<span class="section-rule"></span>
+				<span class="section-note">One hour</span>
+			</div>
+
+			<div class="table">
+
+				<div class="table-head">
+					<span></span>
+					<span></span>
+					<span class="th"><span class="th-city">Vancouver</span><br><span class="th-zone">Pacific</span></span>
+					<span class="th"><span class="th-city">Calgary &amp; Edmonton</span><br><span class="th-zone">Mountain</span></span>
+				</div>
+
+				<div class="row">
+					<span class="day">Saturday</span>
+					<span class="grade">Grade 5</span>
+					<span class="time time-pt">9:00 AM</span>
+					<span class="time time-mt">10:00 AM</span>
+				</div>
+
+				<div class="row">
+					<span class="day">Tuesday</span>
+					<span class="grade">Grade 6</span>
+					<span class="time time-pt">7:00 PM</span>
+					<span class="time time-mt">8:00 PM</span>
+				</div>
+
+				<div class="row">
+					<span class="day">Wednesday</span>
+					<span class="grade">Grade 7</span>
+					<span class="time time-pt">6:00 PM</span>
+					<span class="time time-mt">7:00 PM</span>
+				</div>
+
+				<div class="row">
+					<span class="day">Thursday</span>
+					<span class="grade">Grade 8</span>
+					<span class="time time-pt">6:00 PM</span>
+					<span class="time time-mt">7:00 PM</span>
+				</div>
+
+				<div class="row">
+					<span class="day">Thursday</span>
+					<span class="grade">Grade 9</span>
+					<span class="time time-pt">7:00 PM</span>
+					<span class="time time-mt">8:00 PM</span>
+				</div>
+
+				<div class="row">
+					<span class="day">Monday</span>
+					<span class="grade">Grade 10</span>
+					<span class="time time-pt">6:00 PM</span>
+					<span class="time time-mt">7:00 PM</span>
+				</div>
+
+			</div>
+		</div>
+
+		<footer class="foot">
+			<a class="foot-site" href="https://futurebridgeacademy.ca">futurebridgeacademy.ca</a>
+			<a class="foot-mail" href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a>
+			<a class="foot-cta"
+				href="mailto:info@futurebridgeacademy.ca?subject=Math%20lessons%20in%20Western%20Canada">Email us to enrol</a>
+		</footer>
+
+	</article>
+</div>
+
+</body>
+</html>

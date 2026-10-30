@@ -234,10 +234,38 @@
          ships, move its finished task here from section 15. -->
     <tr>
       <td>C-01</td>
-      <td>[What already works - a user-visible or system behavior]</td>
-      <td><code>[file-or-function that implements it]</code></td>
-      <td>[vX.Y.Z or YYYY-MM-DD]</td>
-      <td>D-EWE-NN / release-log row / verified in code on YYYY-MM-DD]</td>
+      <td>Full weighted-rubric evaluation out of 100 with per-rubric scores, comments, strengths, suggestions and next steps; evaluation history and progress charts (overall + per rubric).</td>
+      <td><code>EssayWritingEducator.js: startFullEvaluation / renderEvaluationDetail / renderProgressView</code></td>
+      <td>2026-09-10</td>
+      <td>Verified in code 2026-10-29</td>
+    </tr>
+    <tr>
+      <td>C-02</td>
+      <td>Subject definitions loaded from the Essay Subject Builder (subject, instructions, language, word limits, rubrics) via subjectDefinitionId or the in-tool subject picker.</td>
+      <td><code>EssayWritingEducator.js: loadSubjectDefinition / applySubjectDefinition</code></td>
+      <td>2026-09-10</td>
+      <td>Verified in code 2026-10-29</td>
+    </tr>
+    <tr>
+      <td>C-03</td>
+      <td>Free local readiness gate: keyboard filler, non-word ratio and repetition checks block the evaluation before any service call, so nonsense text costs zero tokens.</td>
+      <td><code>EssayWritingEducator.js: analyzeEssayReadiness / evaluateEssayWithAi</code></td>
+      <td>2026-10-29</td>
+      <td>D-EWE readiness gate; Temp/ewe-readiness-smoke.cjs</td>
+    </tr>
+    <tr>
+      <td>C-04</td>
+      <td>Blocked evaluation opens the evaluation drawer with the exact reasons plus a fancy criteria overview (rubric cards with weight bars and the grade-band guide) instead of a short toast.</td>
+      <td><code>EssayWritingEducator.js: blockEvaluationWithReasons / renderCriteriaOverview</code></td>
+      <td>2026-10-29</td>
+      <td>D-EWE blocked drawer; Temp/ewe-readiness-smoke.cjs</td>
+    </tr>
+    <tr>
+      <td>C-05</td>
+      <td>Quick evaluation mode: essays shorter than the quick threshold (default 80 words) get a compact quick check (summary, 2 strengths, 2 weaknesses, 3 steps, one holistic score) instead of the expensive full rubric run.</td>
+      <td><code>EssayWritingEducator.js: startQuickEvaluation / createQuickEvaluationRecord</code></td>
+      <td>2026-10-29</td>
+      <td>D-EWE quick mode; Temp/ewe-readiness-smoke.cjs</td>
     </tr>
   </table>
   <p class="note">When adopting this template for an existing tool, fill
@@ -529,6 +557,166 @@
     </details>
   </div>
   END OF TEMPLATE SAMPLE -->
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Adaptive weak-spot coaching</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> The full evaluation automatically gives the deepest feedback to the rubrics where the student lost the most points across the whole history, and a lighter pass for stable strengths.</p>
+        <p><strong>Why:</strong> Turns the tool into a self-learning coach: every round targets the real gap instead of repeating the same generic advice. Still never writes for the student.</p>
+        <p><strong>Discussion / outcome:</strong> Needs per-rubric averages (already computed for charts) passed into buildEvaluationPrompt as a FOCUS block.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Rubric mastery tracker</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A rubric earns a "mastered" badge when it scores 85+ in two consecutive versions. The Progress tab shows which skills are mastered, growing, or stuck.</p>
+        <p><strong>Why:</strong> Students see learning as skill-by-skill progress, which is the core motivation loop of self-paced education.</p>
+        <p><strong>Discussion / outcome:</strong> Pure local computation from the existing rubricResults history.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Mini-lessons linked to weak rubrics</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Each rubric can carry a teacher-curated help text or link. When that rubric scores low, its feedback card shows the lesson right there.</p>
+        <p><strong>Why:</strong> Just-in-time teaching - the student learns the missing skill exactly when the feedback points at it.</p>
+        <p><strong>Discussion / outcome:</strong> Needs one optional field per rubric (helpUrl or helpText) and a small card in rubricResultCardHtml.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Spaced revision nudge</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> After an evaluation, the score chip shows a gentle "Revise in 2 days" hint; after that time it suggests evaluating the revised draft again.</p>
+        <p><strong>Why:</strong> Spaced practice improves retention - the tool coaches the revise-reflect-repeat loop without pushing the student.</p>
+        <p><strong>Discussion / outcome:</strong> Time-based, no service calls; only the chip hint changes.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Explain-my-score follow-up questions</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A small input under each evaluation: "Ask about this feedback". The question is sent with the evaluation as context and the answer appears as a Q&A card.</p>
+        <p><strong>Why:</strong> Feedback becomes a conversation; confusion is resolved without the teacher, using the existing evaluation channel.</p>
+        <p><strong>Discussion / outcome:</strong> Moderate effort; reuse requestAI with the evaluation JSON as context.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Example-based "see a stronger sentence"</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> For a weak sentence, show one example of a stronger version inside the feedback panel only. The example is never inserted into the essay.</p>
+        <p><strong>Why:</strong> Teaches by model without cheating - the student still writes the final sentence themselves, honoring the never-touch promise.</p>
+        <p><strong>Discussion / outcome:</strong> Must stay strictly panel-only; add a sentence-selection step first.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">Character limits in addition to word limits</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Add minimumCharacterCount / maximumCharacterCount parameters that gate evaluation exactly like the word limits, with the reason shown in the evaluation drawer.</p>
+        <p><strong>Why:</strong> Some assignments (application forms, abstracts) are character-limited; today only word limits exist.</p>
+        <p><strong>Discussion / outcome:</strong> Small: mirror the word-gate blockEvaluationWithReasons pattern.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-08" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-08</span>
+        <span class="idea-title">Revision plan generator</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-08 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> One click turns all suggestions and next steps into an ordered, checkable revision plan grouped by rubric, with effort hints (small / medium / large).</p>
+        <p><strong>Why:</strong> Feedback becomes an actionable sequence the student follows - planning, not writing, stays with the student.</p>
+        <p><strong>Discussion / outcome:</strong> Builds on the existing checkable next-steps idea; mostly local ordering logic.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-09" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-09</span>
+        <span class="idea-title">Supervisor dashboard across all students</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-09 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Every evaluation also writes a light summary row to a shared CMS object type, so a supervisor tab (or Object Manager view) lists all students with latest scores and trends.</p>
+        <p><strong>Why:</strong> The single-essay-per-student model scales to a whole class; matches how SelfPacedEducation is supervised per curriculum and student.</p>
+        <p><strong>Discussion / outcome:</strong> Hard: needs requestObjects authorization, a new type id and a supervisor UI.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-10" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-10</span>
+        <span class="idea-title">Originality screening via a CMS bridge</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-10 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Compare the essay against known sources for an academic-integrity signal. The sandbox forbids external calls, so this needs a CMS-hosted bridge service.</p>
+        <p><strong>Why:</strong> Prevents copy-paste submissions; keeps the tool honest without blocking legitimate help.</p>
+        <p><strong>Discussion / outcome:</strong> Hardest item; blocked on a platform service. Marked waiting until the CMS offers one.</p>
+      </div>
+    </details>
+  </div>
 
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
   <p>[Preparation: what accounts, tenants, browsers, and test data the pass
