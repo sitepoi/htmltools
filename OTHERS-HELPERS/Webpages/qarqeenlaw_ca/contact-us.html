@@ -8,8 +8,7 @@
     hidden honeypot named "gw_hp", [data-gw-form-status] live region
   - Form facts: endpoint https://qarqeenlawca.uniconhub.com/api/public/forms/submit
     (domain pattern domainWithoutDots.uniconhub.com - VERIFY before go-live),
-    cmsObjectType "qarqeen-contact-us-forms-uniconbaseapps"
-    (CMS CONFIG NEEDED - create this object type in the CMS),
+    cmsObjectType "form-submissions-uniconbaseapps" (the standard form type),
     site origin https://www.qarqeenlaw.ca must be on the CMS allowlist
   - SEO for the CMS page object (slug "contact-us"):
     title "Contact Us - Qarqeen Law"
@@ -87,7 +86,7 @@
 
 			<div class="ql-ct-form-card ql-ct-reveal">
 				<form class="ql-ct-form-el" data-gw-form data-gw-form-type="contact-message"
-					data-gw-cms-object-type="qarqeen-contact-us-forms-uniconbaseapps">
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
 					<div class="ql-ct-form-fields">
 						<label class="ql-ct-field">
 							<span class="ql-ct-field-label">Your name <em>required</em></span>
@@ -181,6 +180,9 @@
 
 		.ql-ct-kicker {
 			margin: 0 0 12px;
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
 			font-size: 13px;
 			font-weight: 700;
 			letter-spacing: 0.18em;
@@ -212,6 +214,8 @@
 			z-index: -1;
 			background:
 				radial-gradient(70% 90% at 100% 0%, rgba(194, 161, 95, 0.22), transparent 55%),
+				linear-gradient(155deg, rgba(10, 22, 38, 0.95) 0%, rgba(10, 22, 38, 0.88) 55%, rgba(10, 22, 38, 0.82) 100%),
+				url('https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-07-05-GG3FLZ24F9-qarqeenlaw%2FUntitled-(1080-x-1080-px)-(600-x-1080-px)-(1424-x-716-px)-GDNL.jpg?alt=media&token=e97a872a-5515-40c5-a4ec-c9d978b9382c') center / cover no-repeat,
 				radial-gradient(55% 70% at 0% 100%, rgba(28, 61, 99, 0.5), transparent 60%),
 				repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 56px);
 		}
@@ -264,7 +268,7 @@
 			background: #fff;
 			border: 1px solid var(--ql-line);
 			border-top: 3px solid var(--ql-gold);
-			border-radius: 18px;
+			border-radius: 8px;
 			padding: 26px;
 			text-decoration: none;
 			transition: transform 0.25s ease, box-shadow 0.25s ease;
@@ -281,7 +285,7 @@
 			justify-content: center;
 			width: 48px;
 			height: 48px;
-			border-radius: 13px;
+			border-radius: 6px;
 			background:
 				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.25), transparent 60%),
 				var(--ql-navy);
@@ -388,7 +392,7 @@
 			background: #fff;
 			border: 1px solid var(--ql-line);
 			border-top: 4px solid var(--ql-gold);
-			border-radius: 20px;
+			border-radius: 8px;
 			padding: 30px;
 			box-shadow: 0 30px 55px -30px rgba(15, 30, 51, 0.45);
 		}
@@ -428,7 +432,7 @@
 			width: 100%;
 			padding: 12px 14px;
 			border: 1.5px solid var(--ql-line);
-			border-radius: 10px;
+			border-radius: 4px;
 			background: #fff;
 			font-family: inherit;
 			font-size: 15px;
@@ -469,11 +473,12 @@
 			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
 			color: #fff;
 			border: 0;
-			border-radius: 999px;
+			border-radius: 4px;
 			font-family: inherit;
-			font-size: 15px;
+			font-size: 13px;
 			font-weight: 700;
-			letter-spacing: 0.02em;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
 			cursor: pointer;
 			box-shadow: 0 14px 26px -14px rgba(156, 123, 59, 0.9);
 			transition: transform 0.2s ease;
@@ -548,6 +553,14 @@
 				grid-template-columns: 1fr;
 			}
 		}
+	
+		.ql-ct-kicker::before {
+			content: '';
+			width: 26px;
+			height: 1px;
+			background: currentColor;
+			flex: 0 0 auto;
+		}
 	</style>
 
 
@@ -572,7 +585,7 @@
 
 			/* ---------------- contact form (public form contract) ---------------- */
 			var formApiEndpoint = 'https://qarqeenlawca.uniconhub.com/api/public/forms/submit';
-			var formDefaultCmsObjectType = 'qarqeen-contact-us-forms-uniconbaseapps';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
 			var formFieldMaxLength = 4000;
 
 			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));

@@ -259,11 +259,11 @@
 							<span class="fba-trial-error" data-trial-error role="alert"></span>
 						</label>
 						<label class="fba-trial-field fba-trial-field-wide">
-							<span class="fba-trial-label">Phone <em>optional</em></span>
+							<span class="fba-trial-label">Phone <em>required</em></span>
 							<input type="tel" name="phone" inputmode="tel" autocomplete="tel" enterkeyhint="send"
 								maxlength="14" placeholder="(250) 555-0123" data-trial-phone
-								aria-describedby="fba-trial-phone-hint">
-							<span class="fba-trial-hint" id="fba-trial-phone-hint">Only used if we need to reach you on
+								aria-describedby="fba-trial-phone-hint" required>
+							<span class="fba-trial-hint" id="fba-trial-phone-hint">So we can reach you on
 								the day.</span>
 							<span class="fba-trial-error" data-trial-error role="alert"></span>
 						</label>
@@ -1093,7 +1093,7 @@
 
 		function phoneProblem(rawValue) {
 			var digits = phoneDigits(rawValue);
-			if (!digits) { return ''; }
+			if (!digits) { return 'Please enter your phone number.'; }
 			if (digits.length !== 10) {
 				return 'Please enter a 10 digit phone number, for example (250) 555-0123.';
 			}

@@ -5,7 +5,8 @@
   - One parent <div class="ql-header">; no document tags, no libraries
   - All CSS is scoped under .ql-header so it cannot leak into page content
   - No <header> / <nav> / <footer> element tags (plain divs + ARIA roles)
-  - Brand = wordmark drawn with text + an inline scales mark (no image file)
+  - Brand = the Qarqeen Law logo, loaded from its storage URL (dark
+    artwork on white - the header is white so it sits perfectly)
   - Design tokens (--ql-*) are repeated in every page file so each page is
     self-contained; keep them in sync when the palette changes
   - Nav link targets (CMS route form, never .html): / (home), /about-us,
@@ -46,18 +47,16 @@
 		</div>
 	</div>
 
-	<!-- ------------------------------ main bar ------------------------------ -->
+			<!-- ------------------------------ main bar ------------------------------ -->
 	<div class="ql-hd-bar">
+		<div class="ql-hd-scrim" data-ql-scrim aria-hidden="true"></div>
 		<div class="ql-hd-wrap ql-hd-bar-inner">
 
 			<a class="ql-hd-brand" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
-				<span class="ql-hd-mark" aria-hidden="true">
-					<svg class="ql-hd-ico ql-hd-mark-ico"><use href="#ql-i-scales"></use></svg>
-				</span>
-				<span class="ql-hd-word">
-					<span class="ql-hd-word-main">Qarqeen</span>
-					<span class="ql-hd-word-sub">Law</span>
-				</span>
+				<img class="ql-hd-logo"
+					src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-06-13-A2YEHR6QT7-qarqeenlaw%2FQarqeen-Law-Logo-200-50-px-7NG7.png?alt=media&amp;token=cc7b16d8-3c18-4110-a8fc-cfc5a366acd5"
+					alt="Qarqeen Law" width="200" height="50"
+					decoding="async" fetchpriority="high">
 			</a>
 
 			<div class="ql-hd-nav" id="ql-hd-menu" role="navigation" aria-label="Main menu">
@@ -131,6 +130,14 @@
 			width: 0;
 			height: 0;
 			overflow: hidden;
+		}
+
+		.ql-hd-scrim {
+			display: none;
+			position: fixed;
+			inset: 0;
+			z-index: 1;
+			background: rgba(10, 22, 38, 0.5);
 		}
 
 		.ql-hd-ico {
@@ -208,57 +215,17 @@
 		.ql-hd-brand {
 			display: inline-flex;
 			align-items: center;
-			gap: 12px;
 			flex: 0 0 auto;
-			text-decoration: none;
 		}
 
-		.ql-hd-mark {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			width: 44px;
-			height: 44px;
-			border: 1.5px solid var(--ql-gold);
-			border-radius: 10px;
-			background:
-				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.22), transparent 60%),
-				var(--ql-navy);
-			color: var(--ql-gold-soft);
-			box-shadow: 0 8px 18px -10px rgba(15, 30, 51, 0.6);
+		.ql-hd-logo {
+			height: 40px;
+			width: auto;
+			display: block;
 		}
 
-		.ql-hd-mark-ico {
-			width: 24px;
-			height: 24px;
-		}
-
-		.ql-header.is-compact .ql-hd-mark {
-			width: 38px;
-			height: 38px;
-		}
-
-		.ql-hd-word {
-			display: flex;
-			flex-direction: column;
-			line-height: 1.1;
-		}
-
-		.ql-hd-word-main {
-			font-family: Georgia, 'Times New Roman', serif;
-			font-size: 22px;
-			font-weight: 700;
-			letter-spacing: 0.02em;
-			color: var(--ql-navy);
-		}
-
-		.ql-hd-word-sub {
-			font-size: 11px;
-			font-weight: 700;
-			letter-spacing: 0.42em;
-			text-transform: uppercase;
-			color: var(--ql-gold-deep);
-			margin-top: 2px;
+		.ql-header.is-compact .ql-hd-logo {
+			height: 34px;
 		}
 
 		.ql-hd-nav {
@@ -286,9 +253,10 @@
 			padding: 12px 13px;
 			color: var(--ql-ink);
 			text-decoration: none;
-			font-size: 15px;
-			font-weight: 600;
-			letter-spacing: 0.03em;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
 			background: none;
 			border: 0;
 			cursor: pointer;
@@ -326,10 +294,11 @@
 			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
 			color: #fff;
 			font-weight: 700;
-			font-size: 14.5px;
-			letter-spacing: 0.04em;
+			font-size: 12.5px;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
 			text-decoration: none;
-			border-radius: 999px;
+			border-radius: 4px;
 			box-shadow: 0 8px 18px -10px rgba(156, 123, 59, 0.9);
 			transition: transform 0.2s ease, box-shadow 0.2s ease;
 			flex: 0 0 auto;
@@ -351,7 +320,7 @@
 			padding: 10px;
 			background: none;
 			border: 1px solid var(--ql-line);
-			border-radius: 10px;
+			border-radius: 4px;
 			cursor: pointer;
 		}
 
@@ -399,12 +368,24 @@
 		}
 
 		@media (max-width: 920px) {
+			.ql-hd-bar-inner {
+				position: relative;
+				z-index: 2;
+			}
+
 			.ql-hd-burger {
 				display: inline-flex;
+				position: relative;
+				z-index: 4;
+			}
+
+			.ql-header.is-menu-open .ql-hd-scrim {
+				display: block;
 			}
 
 			.ql-hd-nav {
 				position: fixed;
+				z-index: 3;
 				top: 0;
 				right: 0;
 				bottom: 0;
@@ -474,76 +455,178 @@
 		(function () {
 			'use strict';
 
-			var headerRoot = document.querySelector('.ql-header');
-			/* idempotent: safe on every CMS load and every SPA navigation */
-			if (!headerRoot || headerRoot.getAttribute('data-ql-header-ready') === '1') { return; }
-			headerRoot.setAttribute('data-ql-header-ready', '1');
+			/* The platform mounts the chrome fresh on EVERY SPA navigation. Keep
+			   one stable stylesheet in the document head so the header can never
+			   be left unstyled when a previous mount (and its inline style) is
+			   removed. */
+			function ensureHeaderStyles() {
+				if (document.getElementById('ql-header-css')) { return; }
+				var anyHeader = document.querySelector('.ql-header');
+				var inlineStyle = anyHeader ? anyHeader.querySelector('style') : null;
+				if (!inlineStyle) { return; }
+				var headStyle = document.createElement('style');
+				headStyle.id = 'ql-header-css';
+				headStyle.textContent = inlineStyle.textContent;
+				document.head.appendChild(headStyle);
+			}
 
-			var burgerButton = headerRoot.querySelector('.ql-hd-burger');
+			ensureHeaderStyles();
 
-			/* ---------------- mobile menu ---------------- */
-			function closeMobileMenu() {
+			function closeMobileMenu(headerRoot) {
 				if (!headerRoot.classList.contains('is-menu-open')) { return; }
 				headerRoot.classList.remove('is-menu-open');
-				burgerButton.setAttribute('aria-expanded', 'false');
+				var burger = headerRoot.querySelector('.ql-hd-burger');
+				if (burger) { burger.setAttribute('aria-expanded', 'false'); }
 			}
 
-			function openMobileMenu() {
-				headerRoot.classList.add('is-menu-open');
-				burgerButton.setAttribute('aria-expanded', 'true');
+			function syncActivePages(headerRoot) {
+				var currentPath = window.location.pathname || '/';
+				Array.prototype.forEach.call(
+					headerRoot.querySelectorAll('a[data-page]'),
+					function (pageLink) {
+						var pageKey = pageLink.getAttribute('data-page');
+						var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+						var isActive = currentPath === pagePath;
+						pageLink.classList.toggle('is-active', isActive);
+						if (isActive) { pageLink.setAttribute('aria-current', 'page'); }
+						else { pageLink.removeAttribute('aria-current'); }
+					}
+				);
 			}
 
-			burgerButton.addEventListener('click', function () {
-				if (headerRoot.classList.contains('is-menu-open')) { closeMobileMenu(); }
-				else { openMobileMenu(); }
-			});
-
-			/* a chosen nav link closes the drawer so the page switch is visible */
-			Array.prototype.forEach.call(headerRoot.querySelectorAll('.ql-hd-list a, .ql-hd-cta'), function (navLink) {
-				navLink.addEventListener('click', closeMobileMenu);
-			});
-
-			document.addEventListener('click', function (event) {
-				if (!headerRoot.contains(event.target)) { closeMobileMenu(); }
-			});
-
-			document.addEventListener('keydown', function (event) {
-				if (event.key === 'Escape') { closeMobileMenu(); }
-			});
-
-			/* ---------------- compact bar on scroll ---------------- */
-			var ticking = false;
-
-			function updateBarCompactness() {
-				ticking = false;
-				var isCompact = window.scrollY > 24;
-				headerRoot.classList.toggle('is-compact', isCompact);
+			function syncAllHeaders() {
+				Array.prototype.forEach.call(
+					document.querySelectorAll('.ql-header[data-ql-header]'),
+					syncActivePages
+				);
 			}
 
-			function requestBarUpdate() {
-				if (ticking) { return; }
-				ticking = true;
-				window.requestAnimationFrame(updateBarCompactness);
-			}
+			/* Initialise every header element that is not initialised yet. A new
+			   element is injected per navigation, so this initialises once per
+			   mount and never twice on the same DOM. */
+			Array.prototype.forEach.call(
+				document.querySelectorAll('.ql-header[data-ql-header]'),
+				function (headerRoot) {
+					if (headerRoot.getAttribute('data-ql-header-ready') === '1') { return; }
+					headerRoot.setAttribute('data-ql-header-ready', '1');
 
-			window.addEventListener('scroll', requestBarUpdate, { passive: true });
-			updateBarCompactness();
+					/* a fresh mount always starts with the drawer closed */
+					headerRoot.classList.remove('is-menu-open');
 
-			/* ---------------- active page highlight ---------------- */
-			var currentPath = window.location.pathname || '/';
-			var pageLinks = Array.prototype.slice.call(
-				headerRoot.querySelectorAll('a[data-page], button[data-page]')
+					var burgerButton = headerRoot.querySelector('.ql-hd-burger');
+					if (burgerButton) {
+						burgerButton.setAttribute('aria-expanded', 'false');
+						burgerButton.addEventListener('click', function () {
+							if (headerRoot.classList.contains('is-menu-open')) {
+								closeMobileMenu(headerRoot);
+								return;
+							}
+							headerRoot.classList.add('is-menu-open');
+							burgerButton.setAttribute('aria-expanded', 'true');
+						});
+					}
+
+					/* the scrim is the only outside-click closer, so clicks in the page
+					   content can never affect the header on their own */
+					var scrim = headerRoot.querySelector('[data-ql-scrim]');
+					if (scrim) {
+						scrim.addEventListener('click', function () { closeMobileMenu(headerRoot); });
+					}
+
+					headerRoot.addEventListener('keydown', function (event) {
+						if (event.key === 'Escape') { closeMobileMenu(headerRoot); }
+					});
+
+					/* ---------------- compact bar on scroll ---------------- */
+					function updateBarCompactness() {
+						headerRoot.classList.toggle('is-compact', window.scrollY > 24);
+					}
+					headerRoot.qlUpdateCompactness = updateBarCompactness;
+					updateBarCompactness();
+
+					/* ---------------- active page highlight ---------------- */
+					syncActivePages(headerRoot);
+				}
 			);
 
-			pageLinks.forEach(function (pageLink) {
-				var pageKey = pageLink.getAttribute('data-page');
-				var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
-				var isActive = currentPath === pagePath;
-				pageLink.classList.toggle('is-active', isActive);
-				if (isActive && pageLink.tagName === 'A') {
-					pageLink.setAttribute('aria-current', 'page');
+			/* ---------------- one set of global listeners per window ---------------- */
+			if (!window.__qlHeaderGlobalsBound) {
+				window.__qlHeaderGlobalsBound = true;
+
+				var compactTicking = false;
+				window.addEventListener('scroll', function () {
+					if (compactTicking) { return; }
+					compactTicking = true;
+					window.requestAnimationFrame(function () {
+						compactTicking = false;
+						Array.prototype.forEach.call(
+							document.querySelectorAll('.ql-header[data-ql-header]'),
+							function (headerRoot) {
+								if (typeof headerRoot.qlUpdateCompactness === 'function') {
+									headerRoot.qlUpdateCompactness();
+								}
+							}
+						);
+					});
+				}, { passive: true });
+
+				/* ---------------- back to the top on page navigation ---------------- */
+				/* When the pages run inside an app shell (for example Next.js) a
+				   client-side route change keeps the previous scroll offset. Every
+				   internal link click resets the window AND every scrollable ancestor
+				   to the top, repeated shortly after so a late-rendered page also
+				   starts at the top. */
+				if (!window.__qlScrollResetBound) {
+					window.__qlScrollResetBound = true;
+
+					var resetPageScroll = function () {
+						if (window.location.hash) { return; }
+						try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+						catch (scrollError) { window.scrollTo(0, 0); }
+						var scrollRoot = document.scrollingElement || document.documentElement;
+						if (scrollRoot) { scrollRoot.scrollTop = 0; }
+						var ancestor = document.querySelector('.ql-header');
+						ancestor = ancestor ? ancestor.parentElement : null;
+						while (ancestor && ancestor !== document.body && ancestor !== document.documentElement) {
+							var ancestorStyle = window.getComputedStyle(ancestor);
+							if (/(auto|scroll)/.test(ancestorStyle.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+								ancestor.scrollTop = 0;
+							}
+							ancestor = ancestor.parentElement;
+						}
+					};
+
+					var schedulePageScrollReset = function () {
+						resetPageScroll();
+						window.requestAnimationFrame(resetPageScroll);
+						window.setTimeout(resetPageScroll, 180);
+						window.setTimeout(resetPageScroll, 600);
+					};
+
+					document.addEventListener('click', function (event) {
+						var target = event.target;
+						var anchor = target && target.closest ? target.closest('a[href]') : null;
+						if (!anchor) { return; }
+						var href = anchor.getAttribute('href') || '';
+						if (href.charAt(0) !== '/' || href.indexOf('//') === 0) { return; }
+						if (href.indexOf('#') !== -1) { return; }
+						if (anchor.getAttribute('target') === '_blank') { return; }
+						schedulePageScrollReset();
+					});
 				}
-			});
+
+				/* keep the active link right when the page changes */
+				document.addEventListener('gw:content-ready', function () {
+					syncAllHeaders();
+					resetPageScroll();
+				});
+				if (window.gw && typeof window.gw.onRouteChange === 'function') {
+					window.gw.onRouteChange(function () {
+						syncAllHeaders();
+						resetPageScroll();
+					});
+				}
+			}
 		})();
 	</script>
 

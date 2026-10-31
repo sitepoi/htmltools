@@ -1,0 +1,2153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PREVIEW - Immigration Law - Qarqeen Law</title>
+<style>
+  /* preview shell only - never ship this */
+  body { margin: 0; padding: 0; background: #f5f1e8; }
+  .preview-note { position: fixed; bottom: 14px; right: 14px; z-index: 9999; background: #0a1626; color: #e8dcbd; font: 600 12px/1.4 "Segoe UI", sans-serif; padding: 8px 12px; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+</style>
+</head>
+<body>
+<!--
+  =========================================================================
+  SITE HEADER - central chrome component for the Qarqeen Law website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="ql-header">; no document tags, no libraries
+  - All CSS is scoped under .ql-header so it cannot leak into page content
+  - No <header> / <nav> / <footer> element tags (plain divs + ARIA roles)
+  - Brand = the Qarqeen Law logo, loaded from its storage URL (dark
+    artwork on white - the header is white so it sits perfectly)
+  - Design tokens (--ql-*) are repeated in every page file so each page is
+    self-contained; keep them in sync when the palette changes
+  - Nav link targets (CMS route form, never .html): / (home), /about-us,
+    /our-team, /legal-services, /contact-us, /book-consultation.
+    The main button points at /book-consultation
+  - Facts: phone +1 604 704 6220, email info@qarqeenlaw.ca,
+    Vancouver BC (main office) and Victoria BC (satellite office)
+  =========================================================================
+-->
+<div class="ql-header" data-ql-header>
+
+	<!-- ---------- inline icon sprite (no external requests, no library) ---------- -->
+	<svg class="ql-hd-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+		<symbol id="ql-i-phone" viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></symbol>
+		<symbol id="ql-i-mail" viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></symbol>
+		<symbol id="ql-i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="3" /></symbol>
+		<symbol id="ql-i-chevron" viewBox="0 0 24 24"><path d="m7.6 9.8 4.4 4.4 4.4-4.4" /></symbol>
+		<symbol id="ql-i-arrow" viewBox="0 0 24 24"><path d="M4.6 12h14" /><path d="m13.4 7 5 5-5 5" /></symbol>
+		<symbol id="ql-i-check" viewBox="0 0 24 24"><path d="m5.6 12.4 4 4 8.8-9" /></symbol>
+		<symbol id="ql-i-scales" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></symbol>
+		<symbol id="ql-i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M3 11h18" /></symbol>
+	</svg>
+
+	<!-- ---------------------- top information strip ---------------------- -->
+	<div class="ql-hd-top">
+		<div class="ql-hd-wrap ql-hd-top-inner">
+			<p class="ql-hd-top-note">Legal counsel in Vancouver and Victoria, British Columbia</p>
+			<div class="ql-hd-top-links">
+				<a class="ql-hd-top-link" href="tel:+16047046220">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-phone"></use></svg>
+					+1 604 704 6220
+				</a>
+				<a class="ql-hd-top-link ql-hd-top-mail" href="mailto:info@qarqeenlaw.ca">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-mail"></use></svg>
+					info@qarqeenlaw.ca
+				</a>
+			</div>
+		</div>
+	</div>
+
+			<!-- ------------------------------ main bar ------------------------------ -->
+	<div class="ql-hd-bar">
+		<div class="ql-hd-scrim" data-ql-scrim aria-hidden="true"></div>
+		<div class="ql-hd-wrap ql-hd-bar-inner">
+
+			<a class="ql-hd-brand" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
+				<img class="ql-hd-logo"
+					src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-06-13-A2YEHR6QT7-qarqeenlaw%2FQarqeen-Law-Logo-200-50-px-7NG7.png?alt=media&amp;token=cc7b16d8-3c18-4110-a8fc-cfc5a366acd5"
+					alt="Qarqeen Law" width="200" height="50"
+					decoding="async" fetchpriority="high">
+			</a>
+
+			<div class="ql-hd-nav" id="ql-hd-menu" role="navigation" aria-label="Main menu">
+				<ul class="ql-hd-list">
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/" href="/" data-page="home">Home</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/about-us" href="/about-us" data-page="about-us">About Us</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/our-team" href="/our-team" data-page="our-team">Our Team</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/legal-services" href="/legal-services" data-page="legal-services">Legal Services</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">Contact Us</a>
+					</li>
+				</ul>
+
+				<a class="ql-hd-cta" data-ic-nav-href="/book-consultation" href="/book-consultation" data-page="book-consultation">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-calendar"></use></svg>
+					Book Consultation
+				</a>
+			</div>
+
+			<button type="button" class="ql-hd-burger" aria-expanded="false" aria-controls="ql-hd-menu"
+				aria-label="Open menu">
+				<span class="ql-hd-burger-box" aria-hidden="true">
+					<span></span><span></span><span></span>
+				</span>
+			</button>
+		</div>
+	</div>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.ql-header {
+			--ql-navy: #0f1e33;
+			--ql-navy-deep: #0a1626;
+			--ql-navy-2: #16283f;
+			--ql-paper: #fdfcf9;
+			--ql-ivory: #f5f1e8;
+			--ql-ink: #1c2531;
+			--ql-muted: #5d6875;
+			--ql-gold: #c2a15f;
+			--ql-gold-deep: #9c7b3b;
+			--ql-gold-soft: #e8dcbd;
+			--ql-line: #e5dfd2;
+			position: relative;
+			z-index: 60;
+			width: 100%;
+			background: var(--ql-paper);
+			color: var(--ql-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+			box-shadow: 0 10px 30px -18px rgba(15, 30, 51, 0.35);
+		}
+
+		.ql-header,
+		.ql-header *,
+		.ql-header *::before,
+		.ql-header *::after {
+			box-sizing: border-box;
+		}
+
+		.ql-hd-sprite {
+			position: absolute;
+			width: 0;
+			height: 0;
+			overflow: hidden;
+		}
+
+		.ql-hd-scrim {
+			display: none;
+			position: fixed;
+			inset: 0;
+			z-index: 1;
+			background: rgba(10, 22, 38, 0.5);
+		}
+
+		.ql-hd-ico {
+			width: 1em;
+			height: 1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		.ql-hd-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		/* ---------- top strip ---------- */
+		.ql-hd-top {
+			background: linear-gradient(90deg, var(--ql-navy-deep), var(--ql-navy) 70%, #1a3352);
+			color: #dbe4ef;
+			font-size: 13.5px;
+		}
+
+		.ql-hd-top-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			min-height: 36px;
+		}
+
+		.ql-hd-top-note {
+			margin: 0;
+			letter-spacing: 0.04em;
+		}
+
+		.ql-hd-top-links {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.ql-hd-top-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			color: #dbe4ef;
+			text-decoration: none;
+			letter-spacing: 0.02em;
+		}
+
+		.ql-hd-top-link:hover {
+			color: var(--ql-gold-soft);
+		}
+
+		/* ---------- main bar ---------- */
+		.ql-hd-bar {
+			position: relative;
+			background: var(--ql-paper);
+			border-bottom: 1px solid var(--ql-line);
+		}
+
+		.ql-hd-bar-inner {
+			display: flex;
+			align-items: center;
+			gap: 24px;
+			min-height: 80px;
+		}
+
+		.ql-hd-brand {
+			display: inline-flex;
+			align-items: center;
+			flex: 0 0 auto;
+		}
+
+		.ql-hd-logo {
+			height: 40px;
+			width: auto;
+			display: block;
+		}
+
+		.ql-header.is-compact .ql-hd-logo {
+			height: 34px;
+		}
+
+		.ql-hd-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 24px;
+			flex: 1 1 auto;
+			margin-left: auto;
+		}
+
+		.ql-hd-list {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.ql-hd-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 12px 13px;
+			color: var(--ql-ink);
+			text-decoration: none;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			background: none;
+			border: 0;
+			cursor: pointer;
+			font-family: inherit;
+			position: relative;
+		}
+
+		.ql-hd-link::after {
+			content: '';
+			position: absolute;
+			left: 13px;
+			right: 13px;
+			bottom: 6px;
+			height: 2px;
+			background: var(--ql-gold);
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform 0.25s ease;
+		}
+
+		.ql-hd-link:hover::after,
+		.ql-hd-link.is-active::after {
+			transform: scaleX(1);
+		}
+
+		.ql-hd-link.is-active {
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-hd-cta {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 11px 20px;
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			font-weight: 700;
+			font-size: 12.5px;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			text-decoration: none;
+			border-radius: 4px;
+			box-shadow: 0 8px 18px -10px rgba(156, 123, 59, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			flex: 0 0 auto;
+		}
+
+		.ql-hd-cta:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 12px 22px -10px rgba(156, 123, 59, 0.95);
+		}
+
+		.ql-hd-cta.is-active {
+			background: var(--ql-navy);
+		}
+
+		/* ---------- burger ---------- */
+		.ql-hd-burger {
+			display: none;
+			margin-left: auto;
+			padding: 10px;
+			background: none;
+			border: 1px solid var(--ql-line);
+			border-radius: 4px;
+			cursor: pointer;
+		}
+
+		.ql-hd-burger-box {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+			width: 22px;
+		}
+
+		.ql-hd-burger-box span {
+			height: 2px;
+			background: var(--ql-navy);
+			border-radius: 2px;
+			transition: transform 0.25s ease, opacity 0.25s ease;
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(1) {
+			transform: translateY(7px) rotate(45deg);
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(2) {
+			opacity: 0;
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(3) {
+			transform: translateY(-7px) rotate(-45deg);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1060px) {
+			.ql-hd-list {
+				gap: 0;
+			}
+
+			.ql-hd-link {
+				padding-left: 10px;
+				padding-right: 10px;
+				font-size: 14.5px;
+			}
+
+			.ql-hd-nav {
+				gap: 12px;
+			}
+		}
+
+		@media (max-width: 920px) {
+			.ql-hd-bar-inner {
+				position: relative;
+				z-index: 2;
+			}
+
+			.ql-hd-burger {
+				display: inline-flex;
+				position: relative;
+				z-index: 4;
+			}
+
+			.ql-header.is-menu-open .ql-hd-scrim {
+				display: block;
+			}
+
+			.ql-hd-nav {
+				position: fixed;
+				z-index: 3;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				width: min(360px, 88vw);
+				margin: 0;
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				gap: 8px;
+				background: var(--ql-paper);
+				box-shadow: -24px 0 60px rgba(10, 22, 38, 0.35);
+				padding: 74px 22px 26px;
+				overflow-y: auto;
+				transform: translateX(105%);
+				transition: transform 0.3s ease;
+			}
+
+			.ql-header.is-menu-open .ql-hd-nav {
+				transform: translateX(0);
+			}
+
+			.ql-hd-list {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 2px;
+			}
+
+			.ql-hd-link {
+				width: 100%;
+				justify-content: space-between;
+				padding: 13px 12px;
+				border-bottom: 1px solid var(--ql-line);
+				font-size: 16px;
+			}
+
+			.ql-hd-link::after {
+				display: none;
+			}
+
+			.ql-hd-link.is-active {
+				background: var(--ql-ivory);
+				border-radius: 8px;
+			}
+
+			.ql-hd-cta {
+				justify-content: center;
+				margin-top: 6px;
+			}
+
+			.ql-hd-top-note {
+				display: none;
+			}
+
+			.ql-hd-top-inner {
+				justify-content: center;
+			}
+
+			.ql-hd-top-mail {
+				display: none;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			/* The platform mounts the chrome fresh on EVERY SPA navigation. Keep
+			   one stable stylesheet in the document head so the header can never
+			   be left unstyled when a previous mount (and its inline style) is
+			   removed. */
+			function ensureHeaderStyles() {
+				if (document.getElementById('ql-header-css')) { return; }
+				var anyHeader = document.querySelector('.ql-header');
+				var inlineStyle = anyHeader ? anyHeader.querySelector('style') : null;
+				if (!inlineStyle) { return; }
+				var headStyle = document.createElement('style');
+				headStyle.id = 'ql-header-css';
+				headStyle.textContent = inlineStyle.textContent;
+				document.head.appendChild(headStyle);
+			}
+
+			ensureHeaderStyles();
+
+			function closeMobileMenu(headerRoot) {
+				if (!headerRoot.classList.contains('is-menu-open')) { return; }
+				headerRoot.classList.remove('is-menu-open');
+				var burger = headerRoot.querySelector('.ql-hd-burger');
+				if (burger) { burger.setAttribute('aria-expanded', 'false'); }
+			}
+
+			function syncActivePages(headerRoot) {
+				var currentPath = window.location.pathname || '/';
+				Array.prototype.forEach.call(
+					headerRoot.querySelectorAll('a[data-page]'),
+					function (pageLink) {
+						var pageKey = pageLink.getAttribute('data-page');
+						var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+						var isActive = currentPath === pagePath;
+						pageLink.classList.toggle('is-active', isActive);
+						if (isActive) { pageLink.setAttribute('aria-current', 'page'); }
+						else { pageLink.removeAttribute('aria-current'); }
+					}
+				);
+			}
+
+			function syncAllHeaders() {
+				Array.prototype.forEach.call(
+					document.querySelectorAll('.ql-header[data-ql-header]'),
+					syncActivePages
+				);
+			}
+
+			/* Initialise every header element that is not initialised yet. A new
+			   element is injected per navigation, so this initialises once per
+			   mount and never twice on the same DOM. */
+			Array.prototype.forEach.call(
+				document.querySelectorAll('.ql-header[data-ql-header]'),
+				function (headerRoot) {
+					if (headerRoot.getAttribute('data-ql-header-ready') === '1') { return; }
+					headerRoot.setAttribute('data-ql-header-ready', '1');
+
+					/* a fresh mount always starts with the drawer closed */
+					headerRoot.classList.remove('is-menu-open');
+
+					var burgerButton = headerRoot.querySelector('.ql-hd-burger');
+					if (burgerButton) {
+						burgerButton.setAttribute('aria-expanded', 'false');
+						burgerButton.addEventListener('click', function () {
+							if (headerRoot.classList.contains('is-menu-open')) {
+								closeMobileMenu(headerRoot);
+								return;
+							}
+							headerRoot.classList.add('is-menu-open');
+							burgerButton.setAttribute('aria-expanded', 'true');
+						});
+					}
+
+					/* the scrim is the only outside-click closer, so clicks in the page
+					   content can never affect the header on their own */
+					var scrim = headerRoot.querySelector('[data-ql-scrim]');
+					if (scrim) {
+						scrim.addEventListener('click', function () { closeMobileMenu(headerRoot); });
+					}
+
+					headerRoot.addEventListener('keydown', function (event) {
+						if (event.key === 'Escape') { closeMobileMenu(headerRoot); }
+					});
+
+					/* ---------------- compact bar on scroll ---------------- */
+					function updateBarCompactness() {
+						headerRoot.classList.toggle('is-compact', window.scrollY > 24);
+					}
+					headerRoot.qlUpdateCompactness = updateBarCompactness;
+					updateBarCompactness();
+
+					/* ---------------- active page highlight ---------------- */
+					syncActivePages(headerRoot);
+				}
+			);
+
+			/* ---------------- one set of global listeners per window ---------------- */
+			if (!window.__qlHeaderGlobalsBound) {
+				window.__qlHeaderGlobalsBound = true;
+
+				var compactTicking = false;
+				window.addEventListener('scroll', function () {
+					if (compactTicking) { return; }
+					compactTicking = true;
+					window.requestAnimationFrame(function () {
+						compactTicking = false;
+						Array.prototype.forEach.call(
+							document.querySelectorAll('.ql-header[data-ql-header]'),
+							function (headerRoot) {
+								if (typeof headerRoot.qlUpdateCompactness === 'function') {
+									headerRoot.qlUpdateCompactness();
+								}
+							}
+						);
+					});
+				}, { passive: true });
+
+				/* ---------------- back to the top on page navigation ---------------- */
+				/* When the pages run inside an app shell (for example Next.js) a
+				   client-side route change keeps the previous scroll offset. Every
+				   internal link click resets the window AND every scrollable ancestor
+				   to the top, repeated shortly after so a late-rendered page also
+				   starts at the top. */
+				if (!window.__qlScrollResetBound) {
+					window.__qlScrollResetBound = true;
+
+					var resetPageScroll = function () {
+						if (window.location.hash) { return; }
+						try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+						catch (scrollError) { window.scrollTo(0, 0); }
+						var scrollRoot = document.scrollingElement || document.documentElement;
+						if (scrollRoot) { scrollRoot.scrollTop = 0; }
+						var ancestor = document.querySelector('.ql-header');
+						ancestor = ancestor ? ancestor.parentElement : null;
+						while (ancestor && ancestor !== document.body && ancestor !== document.documentElement) {
+							var ancestorStyle = window.getComputedStyle(ancestor);
+							if (/(auto|scroll)/.test(ancestorStyle.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+								ancestor.scrollTop = 0;
+							}
+							ancestor = ancestor.parentElement;
+						}
+					};
+
+					var schedulePageScrollReset = function () {
+						resetPageScroll();
+						window.requestAnimationFrame(resetPageScroll);
+						window.setTimeout(resetPageScroll, 180);
+						window.setTimeout(resetPageScroll, 600);
+					};
+
+					document.addEventListener('click', function (event) {
+						var target = event.target;
+						var anchor = target && target.closest ? target.closest('a[href]') : null;
+						if (!anchor) { return; }
+						var href = anchor.getAttribute('href') || '';
+						if (href.charAt(0) !== '/' || href.indexOf('//') === 0) { return; }
+						if (href.indexOf('#') !== -1) { return; }
+						if (anchor.getAttribute('target') === '_blank') { return; }
+						schedulePageScrollReset();
+					});
+				}
+
+				/* keep the active link right when the page changes */
+				document.addEventListener('gw:content-ready', function () {
+					syncAllHeaders();
+					resetPageScroll();
+				});
+				if (window.gw && typeof window.gw.onRouteChange === 'function') {
+					window.gw.onRouteChange(function () {
+						syncAllHeaders();
+						resetPageScroll();
+					});
+				}
+			}
+		})();
+	</script>
+
+</div>
+
+<!--
+  =========================================================================
+  IMMIGRATION LAW - fragment for the Qarqeen Law website (route /immigration-law)
+  - One parent <div class="ql-page ql-service"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are scoped under .ql-service so nothing leaks
+  - Copy follows the live site immigration law text
+  - SEO for the CMS page object (slug "immigration-law"):
+    title "Immigration Law - Qarqeen Law"
+    description "Qarqeen Law guides you through Canadian immigration law,
+    from visa applications to permanent residency. Serving Vancouver and
+    Victoria, British Columbia."
+  =========================================================================
+-->
+<div class="ql-page ql-service">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="ql-sd-hero">
+		<div class="ql-sd-hero-bg" aria-hidden="true"></div>
+		<div class="ql-sd-wrap ql-sd-hero-grid">
+			<div class="ql-sd-hero-copy">
+				<p class="ql-sd-kicker">Practice area &middot; Immigration law</p>
+				<h1 class="ql-sd-hero-title">Immigration law,<br><span class="ql-sd-hero-accent">guided step by step</span></h1>
+				<p class="ql-sd-hero-lede">
+					Navigating Canadian immigration law can be complex, but our expert team is here to
+					guide you through every step.
+				</p>
+				<div class="ql-sd-hero-actions">
+					<a class="ql-sd-btn ql-sd-btn-gold" data-ic-nav-href="/book-consultation" href="/book-consultation">
+						Book a consultation <span aria-hidden="true">&rarr;</span>
+					</a>
+					<a class="ql-sd-btn ql-sd-btn-ghost" data-ic-nav-href="/legal-services" href="/legal-services">
+						All legal services
+					</a>
+				</div>
+			</div>
+
+			<div class="ql-sd-hero-visual" aria-hidden="true">
+				<div class="ql-sd-hero-tile">
+					<span class="ql-sd-hero-num">I</span>
+					<svg class="ql-sd-hero-icon" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" /></svg>
+				</div>
+				<p class="ql-sd-hero-caption">Vancouver &amp; Victoria, British Columbia</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= OVERVIEW ============================= -->
+	<section class="ql-sd-overview">
+		<div class="ql-sd-wrap ql-sd-overview-grid">
+			<div class="ql-sd-overview-copy ql-sd-reveal">
+				<p class="ql-sd-kicker">Overview</p>
+				<h2 class="ql-sd-sec-title">Comprehensive immigration services, tailored to you</h2>
+				<p class="ql-sd-overview-text">
+					Canadian immigration law is complex and challenging to navigate due to its
+					multi-faceted and constantly evolving nature. At Qarqeen Law, we assist with all
+					aspects of Canadian immigration law.
+				</p>
+				<p class="ql-sd-overview-text">
+					Qarqeen Law also provides immigration litigation services, from mandamus
+					applications to admissibility hearings. We start by listening - then we explain
+					what applies to your situation, what each option involves and what to expect
+					along the way.
+				</p>
+			</div>
+
+			<aside class="ql-sd-checklist ql-sd-reveal">
+				<p class="ql-sd-checklist-title">What we help with</p>
+				<p class="ql-sd-checklist-group">Applications</p>
+				<ul class="ql-sd-checklist-list">
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Permanent Residence Applications</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Express Entry</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Spousal Sponsorships</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> BC Provincial Nominee Program</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Visitor and Business Visa Applications</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Super Visa Applications</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Study Permit Applications</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Visitor Records</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Work Permit Applications</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Labour Market Impact Assessment Applications (LMIA)</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Citizenship Applications</li>
+				</ul>
+				<p class="ql-sd-checklist-group">Immigration litigation</p>
+				<ul class="ql-sd-checklist-list">
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Mandamus Applications</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Federal Court Appeals</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Cessation and Vacation Applications</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Immigration Detention Reviews</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Admissibility Hearings</li>
+					<li><span class="ql-sd-check" aria-hidden="true"></span> Stay of Removals and Deportations</li>
+				</ul>
+				<a class="ql-sd-aside-link" data-ic-nav-href="/book-consultation" href="/book-consultation">
+					Book an immigration consultation <span aria-hidden="true">&rarr;</span>
+				</a>
+			</aside>
+		</div>
+	</section>
+
+	<!-- ============================== HOW ============================== -->
+	<section class="ql-sd-how">
+		<div class="ql-sd-wrap">
+			<div class="ql-sd-sec-head ql-sd-reveal">
+				<p class="ql-sd-kicker">How we work</p>
+				<h2 class="ql-sd-sec-title">Three steps, clear throughout</h2>
+			</div>
+
+			<div class="ql-sd-how-grid">
+				<div class="ql-sd-how-step ql-sd-reveal">
+					<span class="ql-sd-how-num" aria-hidden="true">1</span>
+					<h3 class="ql-sd-how-title">We listen and review</h3>
+					<p class="ql-sd-how-text">
+						You tell us about your situation and we review every detail carefully before we
+						advise.
+					</p>
+				</div>
+				<div class="ql-sd-how-step ql-sd-reveal">
+					<span class="ql-sd-how-num" aria-hidden="true">2</span>
+					<h3 class="ql-sd-how-title">We explain your options</h3>
+					<p class="ql-sd-how-text">
+						Plain-language advice on what applies to you, what each option involves and what
+						comes next.
+					</p>
+				</div>
+				<div class="ql-sd-how-step ql-sd-reveal">
+					<span class="ql-sd-how-num" aria-hidden="true">3</span>
+					<h3 class="ql-sd-how-title">We move forward together</h3>
+					<p class="ql-sd-how-text">
+						With a clear plan and regular updates, we prepare, file and support you at every
+						stage.
+					</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- =============================== FAQ =============================== -->
+	<section class="ql-sd-faq">
+		<div class="ql-sd-wrap">
+			<div class="ql-sd-sec-head ql-sd-reveal">
+				<p class="ql-sd-kicker">Common questions</p>
+				<h2 class="ql-sd-sec-title">Quick answers</h2>
+			</div>
+
+			<div class="ql-sd-faq-list ql-sd-reveal">
+				<details class="ql-sd-faq-item">
+					<summary>How long does an immigration matter take?</summary>
+					<p>
+						Processing times depend on the program, the application type and your
+						circumstances. We review your matter and give you a realistic picture before
+						you start.
+					</p>
+				</details>
+				<details class="ql-sd-faq-item">
+					<summary>Do I need a lawyer for my application?</summary>
+					<p>
+						A lawyer can review your situation, spot issues early and prepare a complete
+						application. Many clients book a consultation simply to understand their
+						options.
+					</p>
+				</details>
+				<details class="ql-sd-faq-item">
+					<summary>What should I bring to the consultation?</summary>
+					<p>
+						Bring the documents you already have about your status and history. We will
+						tell you exactly what else we need.
+					</p>
+				</details>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= RELATED ============================= -->
+	<section class="ql-sd-related">
+		<div class="ql-sd-wrap">
+			<div class="ql-sd-sec-head ql-sd-reveal">
+				<p class="ql-sd-kicker">Related services</p>
+				<h2 class="ql-sd-sec-title">Other practice areas</h2>
+			</div>
+
+			<div class="ql-sd-related-grid">
+				<a class="ql-sd-related-card ql-sd-reveal" data-ic-nav-href="/refugee-law" href="/refugee-law">
+					<span class="ql-sd-related-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="m9.2 11.8 2 2 3.6-4" /></svg>
+					</span>
+					<span class="ql-sd-related-name">Refugee Law</span>
+					<span class="ql-sd-related-go">Explore <span aria-hidden="true">&rarr;</span></span>
+				</a>
+				<a class="ql-sd-related-card ql-sd-reveal" data-ic-nav-href="/family-law" href="/family-law">
+					<span class="ql-sd-related-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+					</span>
+					<span class="ql-sd-related-name">Family Law</span>
+					<span class="ql-sd-related-go">Explore <span aria-hidden="true">&rarr;</span></span>
+				</a>
+				<a class="ql-sd-related-card ql-sd-reveal" data-ic-nav-href="/litigation" href="/litigation">
+					<span class="ql-sd-related-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M3 12h18" /></svg>
+					</span>
+					<span class="ql-sd-related-name">Litigation</span>
+					<span class="ql-sd-related-go">Explore <span aria-hidden="true">&rarr;</span></span>
+				</a>
+				<a class="ql-sd-related-card ql-sd-reveal" data-ic-nav-href="/wills-and-estates" href="/wills-and-estates">
+					<span class="ql-sd-related-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
+					</span>
+					<span class="ql-sd-related-name">Wills and Estates</span>
+					<span class="ql-sd-related-go">Explore <span aria-hidden="true">&rarr;</span></span>
+				</a>
+				<a class="ql-sd-related-card ql-sd-reveal" data-ic-nav-href="/legal-services" href="/legal-services">
+					<span class="ql-sd-related-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+					</span>
+					<span class="ql-sd-related-name">All legal services</span>
+					<span class="ql-sd-related-go">View all <span aria-hidden="true">&rarr;</span></span>
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- =============================== CTA ============================== -->
+	<section class="ql-sd-cta">
+		<div class="ql-sd-wrap ql-sd-cta-inner ql-sd-reveal">
+			<p class="ql-sd-kicker ql-sd-kicker-light">Book a consultation</p>
+			<h2 class="ql-sd-cta-title">Speak with a lawyer about your immigration matter.</h2>
+			<p class="ql-sd-cta-text">
+				Tell us what you are facing and we will help you understand your options - clearly
+				and honestly.
+			</p>
+			<div class="ql-sd-cta-actions">
+				<a class="ql-sd-btn ql-sd-btn-gold" data-ic-nav-href="/book-consultation" href="/book-consultation">
+					Book a consultation <span aria-hidden="true">&rarr;</span>
+				</a>
+				<a class="ql-sd-btn ql-sd-btn-light" href="tel:+16047046220">Call +1 604 704 6220</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.ql-service {
+			--ql-navy: #0f1e33;
+			--ql-navy-deep: #0a1626;
+			--ql-navy-2: #16283f;
+			--ql-paper: #fdfcf9;
+			--ql-ivory: #f5f1e8;
+			--ql-ink: #1c2531;
+			--ql-muted: #5d6875;
+			--ql-gold: #c2a15f;
+			--ql-gold-deep: #9c7b3b;
+			--ql-gold-soft: #e8dcbd;
+			--ql-line: #e5dfd2;
+			--ql-display: Georgia, 'Times New Roman', serif;
+			position: relative;
+			width: 100%;
+			background: var(--ql-paper);
+			color: var(--ql-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.ql-service,
+		.ql-service *,
+		.ql-service *::before,
+		.ql-service *::after {
+			box-sizing: border-box;
+		}
+
+		.ql-service img {
+			max-width: 100%;
+		}
+
+		.ql-sd-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.ql-sd-kicker {
+			margin: 0 0 12px;
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-sd-kicker-light {
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-sd-sec-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-size: clamp(25px, 3.2vw, 38px);
+			line-height: 1.15;
+			font-weight: 700;
+			color: var(--ql-navy);
+		}
+
+		.ql-sd-sec-head {
+			margin-bottom: 34px;
+		}
+
+		.ql-sd-check {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			background: var(--ql-gold);
+			flex: 0 0 auto;
+			position: relative;
+		}
+
+		.ql-sd-check::after {
+			content: '';
+			width: 8px;
+			height: 4px;
+			border-left: 2px solid #fff;
+			border-bottom: 2px solid #fff;
+			transform: rotate(-45deg) translate(1px, -1px);
+		}
+
+		.ql-sd-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 13px 24px;
+			border-radius: 4px;
+			font-weight: 700;
+			font-size: 13px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+		}
+
+		.ql-sd-btn-gold {
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			box-shadow: 0 14px 26px -14px rgba(156, 123, 59, 0.85);
+		}
+
+		.ql-sd-btn-gold:hover {
+			transform: translateY(-2px);
+		}
+
+		.ql-sd-btn-ghost {
+			border: 1.5px solid rgba(232, 220, 189, 0.5);
+			color: #eef2f7;
+		}
+
+		.ql-sd-btn-ghost:hover {
+			border-color: var(--ql-gold-soft);
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-sd-btn-light {
+			border: 1.5px solid rgba(255, 255, 255, 0.5);
+			color: #fff;
+		}
+
+		.ql-sd-btn-light:hover {
+			background: rgba(255, 255, 255, 0.1);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.ql-sd-hero {
+			position: relative;
+			padding: 84px 0;
+			background: linear-gradient(155deg, var(--ql-navy) 0%, var(--ql-navy-deep) 100%);
+			color: #eef2f7;
+			isolation: isolate;
+		}
+
+		.ql-sd-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -1;
+			background:
+				radial-gradient(70% 90% at 100% 0%, rgba(194, 161, 95, 0.22), transparent 55%),
+				radial-gradient(55% 70% at 0% 100%, rgba(28, 61, 99, 0.5), transparent 60%),
+				repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 56px);
+		}
+
+		.ql-sd-hero::after {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			height: 3px;
+			background: linear-gradient(90deg, transparent, var(--ql-gold), transparent);
+		}
+
+		.ql-sd-hero-grid {
+			display: grid;
+			grid-template-columns: 1.05fr 0.95fr;
+			align-items: center;
+			gap: 52px;
+		}
+
+		.ql-sd-hero-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-weight: 700;
+			font-size: clamp(32px, 4.2vw, 52px);
+			line-height: 1.08;
+			text-wrap: balance;
+		}
+
+		.ql-sd-hero-accent {
+			color: var(--ql-gold-soft);
+			font-style: italic;
+		}
+
+		.ql-sd-hero-lede {
+			margin: 18px 0 0;
+			font-size: 16.5px;
+			color: #c3cfdd;
+			max-width: 560px;
+		}
+
+		.ql-sd-hero-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 14px;
+			margin-top: 28px;
+		}
+
+		.ql-sd-hero-visual {
+			position: relative;
+		}
+
+		.ql-sd-hero-tile {
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 8px;
+			aspect-ratio: 4 / 3.1;
+			background:
+				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.28), transparent 60%),
+				linear-gradient(150deg, var(--ql-navy-2), var(--ql-navy-deep));
+			border: 1.5px solid rgba(232, 220, 189, 0.3);
+			box-shadow: 0 36px 64px -30px rgba(3, 10, 20, 0.8);
+			overflow: hidden;
+		}
+
+		.ql-sd-hero-num {
+			position: absolute;
+			top: 12px;
+			right: 22px;
+			font-family: var(--ql-display);
+			font-size: 96px;
+			font-weight: 700;
+			line-height: 1;
+			color: rgba(232, 220, 189, 0.14);
+		}
+
+		.ql-sd-hero-icon {
+			width: 110px;
+			height: 110px;
+			fill: none;
+			stroke: var(--ql-gold-soft);
+			stroke-width: 1.2;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.ql-sd-hero-caption {
+			position: absolute;
+			left: 18px;
+			bottom: -18px;
+			margin: 0;
+			background: var(--ql-paper);
+			border-left: 3px solid var(--ql-gold);
+			border-radius: 4px;
+			box-shadow: 0 16px 30px -16px rgba(3, 10, 20, 0.6);
+			padding: 9px 16px;
+			font-size: 13.5px;
+			font-weight: 600;
+			color: var(--ql-navy);
+		}
+
+		/* ----------------------------- overview ----------------------------- */
+		.ql-sd-overview {
+			padding: 92px 0;
+		}
+
+		.ql-sd-overview-grid {
+			display: grid;
+			grid-template-columns: 1.05fr 0.95fr;
+			align-items: start;
+			gap: 54px;
+		}
+
+		.ql-sd-overview-text {
+			margin: 16px 0 0;
+			color: var(--ql-muted);
+			font-size: 16.5px;
+		}
+
+		.ql-sd-checklist {
+			background: #fff;
+			border: 1px solid var(--ql-line);
+			border-top: 4px solid var(--ql-gold);
+			border-radius: 8px;
+			padding: 28px;
+			box-shadow: 0 30px 55px -30px rgba(15, 30, 51, 0.45);
+		}
+
+		.ql-sd-checklist-title {
+			margin: 0 0 16px;
+			font-family: var(--ql-display);
+			font-size: 21px;
+			font-weight: 700;
+			color: var(--ql-navy);
+		}
+
+		.ql-sd-checklist-group {
+			margin: 14px 0 10px;
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-sd-checklist-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 13px;
+		}
+
+		.ql-sd-checklist-list li {
+			display: flex;
+			align-items: flex-start;
+			gap: 11px;
+			font-weight: 600;
+			font-size: 15px;
+			color: var(--ql-navy);
+		}
+
+		.ql-sd-checklist-list .ql-sd-check {
+			margin-top: 3px;
+		}
+
+		.ql-sd-aside-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-top: 22px;
+			font-weight: 700;
+			font-size: 14.5px;
+			color: var(--ql-gold-deep);
+			text-decoration: none;
+		}
+
+		.ql-sd-aside-link:hover {
+			color: var(--ql-navy);
+		}
+
+		/* ------------------------------- how ------------------------------- */
+		.ql-sd-how {
+			padding: 94px 0;
+			background:
+				repeating-linear-gradient(90deg, rgba(194, 161, 95, 0.05) 0 1px, transparent 1px 44px),
+				var(--ql-ivory);
+			border-top: 1px solid var(--ql-line);
+			border-bottom: 1px solid var(--ql-line);
+		}
+
+		.ql-sd-how-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 20px;
+		}
+
+		.ql-sd-how-step {
+			background: var(--ql-paper);
+			border: 1px solid var(--ql-line);
+			border-radius: 8px;
+			padding: 28px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+		}
+
+		.ql-sd-how-step:hover {
+			transform: translateY(-4px);
+			border-color: var(--ql-gold-soft);
+			box-shadow: 0 22px 38px -24px rgba(15, 30, 51, 0.45);
+		}
+
+		.ql-sd-how-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 46px;
+			height: 46px;
+			border-radius: 50%;
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			font-family: var(--ql-display);
+			font-size: 19px;
+			font-weight: 700;
+			box-shadow: 0 10px 20px -10px rgba(156, 123, 59, 0.9);
+		}
+
+		.ql-sd-how-title {
+			margin: 16px 0 0;
+			font-family: var(--ql-display);
+			font-size: 20px;
+			line-height: 1.3;
+			color: var(--ql-navy);
+		}
+
+		.ql-sd-how-text {
+			margin: 9px 0 0;
+			font-size: 14.5px;
+			color: var(--ql-muted);
+		}
+
+		/* ------------------------------- faq ------------------------------- */
+		.ql-sd-faq {
+			padding: 92px 0;
+		}
+
+		.ql-sd-faq-list {
+			max-width: 860px;
+			display: flex;
+			flex-direction: column;
+			gap: 14px;
+		}
+
+		.ql-sd-faq-item {
+			background: #fff;
+			border: 1px solid var(--ql-line);
+			border-radius: 6px;
+			padding: 0 24px;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.ql-sd-faq-item[open] {
+			border-color: var(--ql-gold-soft);
+			box-shadow: 0 18px 34px -24px rgba(15, 30, 51, 0.45);
+		}
+
+		.ql-sd-faq-item summary {
+			padding: 18px 0;
+			cursor: pointer;
+			font-family: var(--ql-display);
+			font-size: 17.5px;
+			font-weight: 700;
+			color: var(--ql-navy);
+			list-style: none;
+			position: relative;
+			padding-right: 34px;
+		}
+
+		.ql-sd-faq-item summary::-webkit-details-marker {
+			display: none;
+		}
+
+		.ql-sd-faq-item summary::after {
+			content: '+';
+			position: absolute;
+			right: 0;
+			top: 50%;
+			transform: translateY(-50%);
+			font-family: var(--ql-display);
+			font-size: 22px;
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-sd-faq-item[open] summary::after {
+			content: '\2212';
+		}
+
+		.ql-sd-faq-item p {
+			margin: 0;
+			padding: 0 0 18px;
+			font-size: 14.5px;
+			color: var(--ql-muted);
+		}
+
+		/* ----------------------------- related ----------------------------- */
+		.ql-sd-related {
+			padding: 92px 0;
+			background:
+				repeating-linear-gradient(90deg, rgba(194, 161, 95, 0.05) 0 1px, transparent 1px 44px),
+				var(--ql-ivory);
+			border-top: 1px solid var(--ql-line);
+		}
+
+		.ql-sd-related-grid {
+			display: grid;
+			grid-template-columns: repeat(5, 1fr);
+			gap: 16px;
+		}
+
+		.ql-sd-related-card {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			background: var(--ql-paper);
+			border: 1px solid var(--ql-line);
+			border-radius: 6px;
+			padding: 22px 20px;
+			text-decoration: none;
+			transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+		}
+
+		.ql-sd-related-card:hover {
+			transform: translateY(-4px);
+			border-color: var(--ql-gold-soft);
+			box-shadow: 0 20px 36px -24px rgba(15, 30, 51, 0.45);
+		}
+
+		.ql-sd-related-ico {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 46px;
+			height: 46px;
+			border-radius: 6px;
+			background:
+				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.25), transparent 60%),
+				var(--ql-navy);
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-sd-related-ico svg {
+			width: 23px;
+			height: 23px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.ql-sd-related-name {
+			font-family: var(--ql-display);
+			font-size: 16px;
+			font-weight: 700;
+			color: var(--ql-navy);
+			line-height: 1.3;
+		}
+
+		.ql-sd-related-go {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			margin-top: auto;
+			font-weight: 700;
+			font-size: 13.5px;
+			color: var(--ql-gold-deep);
+		}
+
+		/* ------------------------------- cta ------------------------------- */
+		.ql-sd-cta {
+			position: relative;
+			padding: 88px 0;
+			background:
+				radial-gradient(80% 130% at 85% 0%, rgba(194, 161, 95, 0.2), transparent 55%),
+				linear-gradient(150deg, var(--ql-navy), var(--ql-navy-deep));
+			color: #eef2f7;
+		}
+
+		.ql-sd-cta::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: 0;
+			height: 3px;
+			background: linear-gradient(90deg, transparent, var(--ql-gold), transparent);
+		}
+
+		.ql-sd-cta-inner {
+			max-width: 780px;
+			text-align: center;
+		}
+
+		.ql-sd-cta-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-size: clamp(26px, 3.6vw, 40px);
+			line-height: 1.18;
+			color: #fff;
+		}
+
+		.ql-sd-cta-text {
+			margin: 14px auto 0;
+			max-width: 600px;
+			color: #c3cfdd;
+			font-size: 16px;
+		}
+
+		.ql-sd-cta-actions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 14px;
+			margin-top: 28px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.ql-sd-reveal {
+			opacity: 0;
+			transform: translateY(24px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.ql-sd-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.ql-service.is-reduced-motion .ql-sd-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.ql-sd-hero-grid,
+			.ql-sd-overview-grid {
+				grid-template-columns: 1fr;
+				gap: 44px;
+			}
+
+			.ql-sd-hero-visual {
+				max-width: 560px;
+			}
+
+			.ql-sd-related-grid {
+				grid-template-columns: repeat(3, 1fr);
+			}
+		}
+
+		@media (max-width: 760px) {
+			.ql-sd-how-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.ql-sd-related-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+		}
+
+		@media (max-width: 480px) {
+			.ql-sd-related-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	
+		.ql-sd-kicker::before {
+			content: '';
+			width: 26px;
+			height: 1px;
+			background: currentColor;
+			flex: 0 0 auto;
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.ql-service');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-ql-imm-ready') === '1') { return; }
+			pageRoot.setAttribute('data-ql-imm-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.ql-sd-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>
+
+<!--
+  =========================================================================
+  SITE FOOTER - central chrome component for the Qarqeen Law website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="ql-footer">; no document tags, no libraries
+  - All CSS is scoped under .ql-footer so it cannot leak into page content
+  - No <footer> / <nav> / <header> element tags (plain divs + ARIA roles)
+  - Carries the mandatory legal disclaimer band (law firm requirement)
+  - Brand = the Qarqeen Law logo from its storage URL (dark artwork on
+    white - shown on a white chip so it keeps its brand colors on navy)
+  - Shows the legal operating name "Qarqeen Law Corporation" (mandatory)
+  =========================================================================
+-->
+<div class="ql-footer" data-ql-footer>
+
+	<!-- ------------------------ consultation band ------------------------ -->
+	<div class="ql-ft-cta">
+		<div class="ql-ft-wrap ql-ft-cta-inner">
+			<div class="ql-ft-cta-copy">
+				<p class="ql-ft-cta-kicker">Book a consultation</p>
+				<p class="ql-ft-cta-title">Speak with a lawyer about your matter.</p>
+				<p class="ql-ft-cta-text">Tell us what you are facing and we will arrange a consultation - clear
+					answers and a practical way forward.</p>
+			</div>
+			<div class="ql-ft-cta-actions">
+				<a class="ql-ft-btn" data-ic-nav-href="/book-consultation" href="/book-consultation">Book a consultation</a>
+				<a class="ql-ft-btn-phone" href="tel:+16047046220">+1 604 704 6220</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="ql-ft-main">
+		<div class="ql-ft-wrap">
+			<div class="ql-ft-grid">
+
+				<!-- ------------------------- brand ------------------------- -->
+				<div class="ql-ft-brand">
+					<a class="ql-ft-logo" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
+						<img class="ql-ft-logo-img"
+							src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-06-13-A2YEHR6QT7-qarqeenlaw%2FQarqeen-Law-Logo-200-50-px-7NG7.png?alt=media&amp;token=cc7b16d8-3c18-4110-a8fc-cfc5a366acd5"
+							alt="Qarqeen Law" width="200" height="50"
+							loading="lazy" decoding="async">
+					</a>
+					<p class="ql-ft-mission">
+						Qarqeen Law provides cost-effective, high-quality legal services from Vancouver,
+						British Columbia, with a satellite office in Victoria.
+					</p>
+					<p class="ql-ft-tagline">Your legal rights defenders.</p>
+					<p class="ql-ft-legal-entity">Qarqeen Law Corporation</p>
+				</div>
+
+				<!-- --------------------- practice areas --------------------- -->
+				<div class="ql-ft-col">
+					<p class="ql-ft-head">Practice areas</p>
+					<ul class="ql-ft-links">
+						<li><a data-ic-nav-href="/immigration-law" href="/immigration-law">Immigration Law</a></li>
+						<li><a data-ic-nav-href="/refugee-law" href="/refugee-law">Refugee Law</a></li>
+						<li><a data-ic-nav-href="/family-law" href="/family-law">Family Law</a></li>
+						<li><a data-ic-nav-href="/litigation" href="/litigation">Litigation</a></li>
+						<li><a data-ic-nav-href="/wills-and-estates" href="/wills-and-estates">Wills and Estates</a></li>
+					</ul>
+				</div>
+
+				<!-- ------------------------ company ------------------------ -->
+				<div class="ql-ft-col">
+					<p class="ql-ft-head">Company</p>
+					<ul class="ql-ft-links">
+						<li><a data-ic-nav-href="/" href="/">Home</a></li>
+						<li><a data-ic-nav-href="/about-us" href="/about-us">About us</a></li>
+						<li><a data-ic-nav-href="/our-team" href="/our-team">Our team</a></li>
+						<li><a data-ic-nav-href="/contact-us" href="/contact-us">Contact us</a></li>
+						<li><a data-ic-nav-href="/book-consultation" href="/book-consultation">Book consultation</a></li>
+					</ul>
+				</div>
+
+				<!-- ------------------------ contact ------------------------ -->
+				<div class="ql-ft-col ql-ft-col-contact">
+					<p class="ql-ft-head">Get in touch</p>
+					<ul class="ql-ft-contact-list">
+						<li>
+							<a href="tel:+16047046220">+1 604 704 6220</a>
+						</li>
+						<li>
+							<a href="mailto:info@qarqeenlaw.ca">info@qarqeenlaw.ca</a>
+						</li>
+					</ul>
+					<p class="ql-ft-offices-head">Offices</p>
+					<p class="ql-ft-offices">Vancouver, British Columbia (main office)<br>
+						Victoria, British Columbia (satellite office)</p>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+	<!-- --------------------------- disclaimer --------------------------- -->
+	<div class="ql-ft-disclaimer">
+		<div class="ql-ft-wrap">
+			<p class="ql-ft-disclaimer-text">
+				<strong>Legal disclaimer:</strong> The contents and information contained on this website are for
+				general purposes only. They are not meant to be legal advice, nor do they create a lawyer-client
+				relationship. If you require information, legal advice, or a legal opinion, please contact us to
+				schedule a consultation.
+			</p>
+		</div>
+	</div>
+
+	<!-- --------------------------- bottom bar --------------------------- -->
+	<div class="ql-ft-bottom">
+		<div class="ql-ft-wrap ql-ft-bottom-inner">
+			<p class="ql-ft-copy">
+				&copy; <span class="ql-ft-year">2026</span> Qarqeen Law Corporation. All rights reserved.
+			</p>
+			<div class="ql-ft-bottom-side">
+				<p class="ql-ft-legal">Vancouver &middot; Victoria &middot; British Columbia</p>
+				<button type="button" class="ql-ft-top">
+					<span aria-hidden="true">&uarr;</span> Back to top
+				</button>
+			</div>
+		</div>
+	</div>
+
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.ql-footer {
+			--ql-navy: #0f1e33;
+			--ql-navy-deep: #0a1626;
+			--ql-navy-2: #16283f;
+			--ql-paper: #fdfcf9;
+			--ql-ivory: #f5f1e8;
+			--ql-ink: #1c2531;
+			--ql-muted: #5d6875;
+			--ql-gold: #c2a15f;
+			--ql-gold-deep: #9c7b3b;
+			--ql-gold-soft: #e8dcbd;
+			--ql-line: #e5dfd2;
+			position: relative;
+			z-index: 10;
+			width: 100%;
+			color: #dbe4ef;
+			background: linear-gradient(160deg, var(--ql-navy) 0%, var(--ql-navy-deep) 100%);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.ql-footer,
+		.ql-footer *,
+		.ql-footer *::before,
+		.ql-footer *::after {
+			box-sizing: border-box;
+		}
+
+		.ql-footer::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background:
+				repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.014) 0 2px, transparent 2px 46px),
+				radial-gradient(90% 70% at 90% 0%, rgba(194, 161, 95, 0.12), transparent 60%);
+			pointer-events: none;
+		}
+
+		.ql-ft-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.ql-ft-ico {
+			width: 1.1em;
+			height: 1.1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		/* ---------- cta band ---------- */
+		.ql-ft-cta {
+			background:
+				radial-gradient(80% 140% at 15% 0%, rgba(194, 161, 95, 0.18), transparent 55%),
+				var(--ql-navy-2);
+			border-top: 3px solid var(--ql-gold);
+		}
+
+		.ql-ft-cta-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 24px;
+			padding-top: 30px;
+			padding-bottom: 30px;
+		}
+
+		.ql-ft-cta-kicker {
+			margin: 0 0 4px;
+			font-size: 12.5px;
+			font-weight: 700;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-cta-title {
+			margin: 0;
+			font-family: Georgia, 'Times New Roman', serif;
+			font-size: 26px;
+			font-weight: 700;
+			line-height: 1.25;
+			color: #fff;
+		}
+
+		.ql-ft-cta-text {
+			margin: 6px 0 0;
+			font-size: 14.5px;
+			max-width: 560px;
+			color: #c3cfdd;
+		}
+
+		.ql-ft-cta-actions {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex: 0 0 auto;
+		}
+
+		.ql-ft-btn {
+			display: inline-flex;
+			align-items: center;
+			padding: 12px 22px;
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			font-weight: 700;
+			font-size: 12.5px;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			text-decoration: none;
+			border-radius: 4px;
+			box-shadow: 0 10px 20px -10px rgba(156, 123, 59, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.ql-ft-btn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 14px 24px -10px rgba(156, 123, 59, 1);
+		}
+
+		.ql-ft-btn-phone {
+			display: inline-flex;
+			align-items: center;
+			padding: 12px 20px;
+			border: 1.5px solid rgba(232, 220, 189, 0.55);
+			color: #eef2f7;
+			font-weight: 700;
+			font-size: 14.5px;
+			text-decoration: none;
+			border-radius: 4px;
+			transition: background 0.2s ease;
+		}
+
+		.ql-ft-btn-phone:hover {
+			background: rgba(255, 255, 255, 0.1);
+		}
+
+		/* ---------- main grid ---------- */
+		.ql-ft-main {
+			padding-top: 54px;
+			padding-bottom: 44px;
+		}
+
+		.ql-ft-grid {
+			display: grid;
+			grid-template-columns: 1.5fr 1fr 0.95fr 1.2fr;
+			gap: 40px;
+		}
+
+		.ql-ft-logo {
+			display: inline-flex;
+			align-items: center;
+			text-decoration: none;
+		}
+
+		.ql-ft-logo-img {
+			height: 40px;
+			width: auto;
+			display: block;
+			padding: 8px 12px;
+			background: #fff;
+			border-radius: 6px;
+		}
+
+		.ql-ft-mission {
+			margin: 16px 0 0;
+			font-size: 14px;
+			color: #b9c6d4;
+			max-width: 340px;
+		}
+
+		.ql-ft-tagline {
+			margin: 12px 0 0;
+			font-family: Georgia, 'Times New Roman', serif;
+			font-style: italic;
+			font-size: 15px;
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-legal-entity {
+			margin: 14px 0 0;
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: #8fa0b3;
+		}
+
+		.ql-ft-head {
+			margin: 0 0 14px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-links {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.ql-ft-links a {
+			color: #dbe4ef;
+			text-decoration: none;
+			font-size: 14.5px;
+			transition: color 0.18s ease, padding-left 0.18s ease;
+		}
+
+		.ql-ft-links a:hover {
+			color: #fff;
+			padding-left: 4px;
+		}
+
+		.ql-ft-contact-list {
+			list-style: none;
+			margin: 0 0 18px;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.ql-ft-contact-list a {
+			color: #dbe4ef;
+			text-decoration: none;
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.ql-ft-contact-list a:hover {
+			color: #fff;
+		}
+
+		.ql-ft-offices-head {
+			margin: 0 0 6px;
+			font-size: 12.5px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: #8fa0b3;
+		}
+
+		.ql-ft-offices {
+			margin: 0;
+			font-size: 14px;
+			color: #b9c6d4;
+		}
+
+		/* ---------- disclaimer ---------- */
+		.ql-ft-disclaimer {
+			border-top: 1px solid rgba(232, 220, 189, 0.14);
+			padding-top: 18px;
+			padding-bottom: 18px;
+		}
+
+		.ql-ft-disclaimer-text {
+			margin: 0;
+			font-size: 12.5px;
+			line-height: 1.65;
+			color: #8fa0b3;
+			max-width: 980px;
+		}
+
+		.ql-ft-disclaimer-text strong {
+			color: #aebcca;
+		}
+
+		/* ---------- bottom bar ---------- */
+		.ql-ft-bottom {
+			border-top: 1px solid rgba(232, 220, 189, 0.14);
+			padding-top: 18px;
+			padding-bottom: 18px;
+		}
+
+		.ql-ft-bottom-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+		}
+
+		.ql-ft-copy {
+			margin: 0;
+			font-size: 13.5px;
+			color: #9fb0c1;
+		}
+
+		.ql-ft-bottom-side {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.ql-ft-legal {
+			margin: 0;
+			font-size: 13px;
+			color: #7f91a4;
+		}
+
+		.ql-ft-top {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			padding: 8px 14px;
+			background: rgba(255, 255, 255, 0.06);
+			color: #dbe4ef;
+			border: 1px solid rgba(232, 220, 189, 0.25);
+			border-radius: 4px;
+			font-size: 13px;
+			font-family: inherit;
+			cursor: pointer;
+			transition: background 0.2s ease;
+		}
+
+		.ql-ft-top:hover {
+			background: rgba(255, 255, 255, 0.12);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 980px) {
+			.ql-ft-grid {
+				grid-template-columns: 1fr 1fr;
+				gap: 32px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.ql-ft-cta-inner {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.ql-ft-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.ql-ft-bottom-inner {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.ql-ft-bottom-side {
+				flex-wrap: wrap;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			/* The platform mounts the chrome fresh on EVERY SPA navigation. Keep
+			   one stable stylesheet in the document head so the footer can never
+			   be left unstyled when a previous mount (and its inline style) is
+			   removed. */
+			if (!document.getElementById('ql-footer-css')) {
+				var anyFooter = document.querySelector('.ql-footer');
+				var inlineFooterStyle = anyFooter ? anyFooter.querySelector('style') : null;
+				if (inlineFooterStyle) {
+					var footerHeadStyle = document.createElement('style');
+					footerHeadStyle.id = 'ql-footer-css';
+					footerHeadStyle.textContent = inlineFooterStyle.textContent;
+					document.head.appendChild(footerHeadStyle);
+				}
+			}
+
+			/* ---------------- back to the top on page navigation ---------------- */
+			/* App shells (for example Next.js) keep the previous scroll offset on a
+			   client-side route change. Reset the window and every scrollable
+			   ancestor on internal link clicks, repeated shortly after so a late
+			   render also starts at the top. The header script may bind this
+			   already, so one shared guard keeps it single. */
+			if (!window.__qlScrollResetBound) {
+				window.__qlScrollResetBound = true;
+
+				var resetPageScroll = function () {
+					if (window.location.hash) { return; }
+					try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+					catch (scrollError) { window.scrollTo(0, 0); }
+					var scrollRoot = document.scrollingElement || document.documentElement;
+					if (scrollRoot) { scrollRoot.scrollTop = 0; }
+					var ancestor = document.querySelector('.ql-footer');
+					ancestor = ancestor ? ancestor.parentElement : null;
+					while (ancestor && ancestor !== document.body && ancestor !== document.documentElement) {
+						var ancestorStyle = window.getComputedStyle(ancestor);
+						if (/(auto|scroll)/.test(ancestorStyle.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+							ancestor.scrollTop = 0;
+						}
+						ancestor = ancestor.parentElement;
+					}
+				};
+
+				var schedulePageScrollReset = function () {
+					resetPageScroll();
+					window.requestAnimationFrame(resetPageScroll);
+					window.setTimeout(resetPageScroll, 180);
+					window.setTimeout(resetPageScroll, 600);
+				};
+
+				document.addEventListener('click', function (event) {
+					var target = event.target;
+					var anchor = target && target.closest ? target.closest('a[href]') : null;
+					if (!anchor) { return; }
+					var href = anchor.getAttribute('href') || '';
+					if (href.charAt(0) !== '/' || href.indexOf('//') === 0) { return; }
+					if (href.indexOf('#') !== -1) { return; }
+					if (anchor.getAttribute('target') === '_blank') { return; }
+					schedulePageScrollReset();
+				});
+			}
+
+			/* Initialise every footer element that is not initialised yet. A new
+			   element is injected per navigation, so this runs once per mount. */
+			Array.prototype.forEach.call(
+				document.querySelectorAll('.ql-footer[data-ql-footer]'),
+				function (footerRoot) {
+					if (footerRoot.getAttribute('data-ql-footer-ready') === '1') { return; }
+					footerRoot.setAttribute('data-ql-footer-ready', '1');
+
+					/* ---------------- current year ---------------- */
+					var yearElement = footerRoot.querySelector('.ql-ft-year');
+					if (yearElement) {
+						yearElement.textContent = String(new Date().getFullYear());
+					}
+
+					/* ---------------- back to top ---------------- */
+					var backToTopButton = footerRoot.querySelector('.ql-ft-top');
+					if (backToTopButton) {
+						backToTopButton.addEventListener('click', function () {
+							window.scrollTo({ top: 0, behavior: 'smooth' });
+						});
+					}
+				}
+			);
+		})();
+	</script>
+
+</div>
+
+<div class="preview-note">LOCAL PREVIEW - header and footer are CMS chrome and never ship inside the page</div>
+</body>
+</html>

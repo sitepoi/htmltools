@@ -250,6 +250,9 @@
 
 		.ql-ab-kicker {
 			margin: 0 0 12px;
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
 			font-size: 13px;
 			font-weight: 700;
 			letter-spacing: 0.18em;
@@ -300,10 +303,11 @@
 			align-items: center;
 			gap: 10px;
 			padding: 13px 24px;
-			border-radius: 999px;
+			border-radius: 4px;
 			font-weight: 700;
-			font-size: 15px;
-			letter-spacing: 0.02em;
+			font-size: 13px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
 			text-decoration: none;
 			transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 		}
@@ -406,7 +410,7 @@
 		.ql-ab-hero-pills li {
 			padding: 8px 15px;
 			border: 1px solid rgba(232, 220, 189, 0.35);
-			border-radius: 999px;
+			border-radius: 4px;
 			font-size: 13.5px;
 			font-weight: 600;
 			color: #e8dcbd;
@@ -426,7 +430,7 @@
 
 		.ql-ab-hero-frame {
 			position: relative;
-			border-radius: 22px;
+			border-radius: 8px;
 			overflow: hidden;
 			box-shadow: 0 36px 64px -30px rgba(3, 10, 20, 0.8);
 			aspect-ratio: 4 / 3.4;
@@ -444,7 +448,7 @@
 			position: absolute;
 			inset: 13px;
 			border: 1.5px solid rgba(232, 220, 189, 0.55);
-			border-radius: 13px;
+			border-radius: 6px;
 			pointer-events: none;
 		}
 
@@ -455,7 +459,7 @@
 			margin: 0;
 			background: var(--ql-paper);
 			border-left: 3px solid var(--ql-gold);
-			border-radius: 10px;
+			border-radius: 4px;
 			box-shadow: 0 16px 30px -16px rgba(3, 10, 20, 0.6);
 			padding: 9px 16px;
 			font-size: 13.5px;
@@ -505,7 +509,7 @@
 
 		.ql-ab-story-frame {
 			position: relative;
-			border-radius: 22px;
+			border-radius: 8px;
 			overflow: hidden;
 			box-shadow: 0 32px 58px -28px rgba(15, 30, 51, 0.55);
 			background: var(--ql-ivory);
@@ -515,7 +519,7 @@
 			content: '';
 			position: absolute;
 			inset: 0;
-			border-radius: 22px;
+			border-radius: 8px;
 			box-shadow: inset 0 0 0 1.5px rgba(194, 161, 95, 0.35);
 			pointer-events: none;
 		}
@@ -584,7 +588,7 @@
 			position: relative;
 			background: #fff;
 			border: 1px solid var(--ql-line);
-			border-radius: 18px;
+			border-radius: 8px;
 			padding: 28px 28px 30px 88px;
 			transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 		}
@@ -648,7 +652,7 @@
 			background: var(--ql-paper);
 			border: 1px solid var(--ql-line);
 			border-top: 3px solid var(--ql-gold);
-			border-radius: 18px;
+			border-radius: 8px;
 			padding: 28px;
 		}
 
@@ -658,7 +662,7 @@
 			justify-content: center;
 			width: 50px;
 			height: 50px;
-			border-radius: 14px;
+			border-radius: 6px;
 			background:
 				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.25), transparent 60%),
 				var(--ql-navy);
@@ -781,6 +785,14 @@
 			.ql-ab-offices-grid {
 				grid-template-columns: 1fr;
 			}
+		}
+	
+		.ql-ab-kicker::before {
+			content: '';
+			width: 26px;
+			height: 1px;
+			background: currentColor;
+			flex: 0 0 auto;
 		}
 	</style>
 

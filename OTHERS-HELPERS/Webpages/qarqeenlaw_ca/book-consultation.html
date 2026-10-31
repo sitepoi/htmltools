@@ -8,9 +8,14 @@
     hidden honeypot named "gw_hp", [data-gw-form-status] live region
   - Form facts: endpoint https://qarqeenlawca.uniconhub.com/api/public/forms/submit
     (domain pattern domainWithoutDots.uniconhub.com - VERIFY before go-live),
-    cmsObjectType "qarqeen-consultation-request-forms-uniconbaseapps"
-    (CMS CONFIG NEEDED - create this object type in the CMS),
+    cmsObjectType "form-submissions-uniconbaseapps" (the standard form type),
     site origin https://www.qarqeenlaw.ca must be on the CMS allowlist
+  - Calendly: each lawyer card in the "Book online" section carries a
+    data-calendly-url attribute - paste the real Calendly event link there.
+    The section hides itself until at least one link is configured, and the
+    request form below stays available as the alternative.
+    (No in-page Calendly widget: the official embed needs an external
+    script, which the platform guardrails forbid for page fragments.)
   - SEO for the CMS page object (slug "book-consultation"):
     title "Book a Consultation - Qarqeen Law"
     description "Schedule a consultation with a Qarqeen Law lawyer. Choose
@@ -26,22 +31,72 @@
 			<p class="ql-bk-kicker">Book a consultation</p>
 			<h1 class="ql-bk-hero-title">Book a lawyer consultation</h1>
 			<p class="ql-bk-hero-lede">
-				Select the date and time that suit you, choose a lawyer, and we will confirm your
-				appointment by email or phone.
+				Book online with Calendly and pick the time that suits you - or send a request and we
+				will confirm your appointment by email or phone.
 			</p>
 		</div>
 	</section>
 
 	<!-- ============================== BOOKING ============================== -->
 	<section class="ql-bk-main">
-		<div class="ql-bk-wrap ql-bk-grid">
+		<div class="ql-bk-wrap">
 
-			<div class="ql-bk-form-card ql-bk-reveal">
-				<p class="ql-bk-form-kicker">Appointment form</p>
-				<h2 class="ql-bk-form-title">Tell us when and what suits you</h2>
+			<!-- ==================== BOOK ONLINE (CALENDLY) ==================== -->
+			<div class="ql-bk-schedule ql-bk-reveal" data-bk-schedule>
+				<div class="ql-bk-schedule-head">
+					<div>
+						<p class="ql-bk-form-kicker">Book online</p>
+						<h2 class="ql-bk-schedule-title">Schedule directly with Calendly</h2>
+					</div>
+					<p class="ql-bk-schedule-note">
+						Choose your lawyer and pick the time that suits you - booking opens in a new tab.
+					</p>
+				</div>
+
+				<div class="ql-bk-schedule-grid">
+					<div class="ql-bk-lawyer-card" data-bk-lawyer-card="rayhan-qarqeen">
+						<span class="ql-bk-lawyer-photo">
+							<img
+								src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-07-21-29XXF6H4HR-qarqeenlaw%2Frayhan-qarqeen-H94Q.jpeg?alt=media&amp;token=bef4f85e-ffe1-4c45-9393-5544f3ee63f9"
+								alt="Rayhan Qarqeen, founding lawyer" width="600" height="600"
+								loading="lazy" decoding="async">
+						</span>
+						<span class="ql-bk-lawyer-body">
+							<strong class="ql-bk-lawyer-name">Rayhan Qarqeen</strong>
+							<span class="ql-bk-lawyer-role">Founding Lawyer</span>
+							<a class="ql-bk-btn ql-bk-btn-gold" href="" target="_blank" rel="noopener noreferrer"
+								data-calendly-url="">
+								Schedule online <span aria-hidden="true">&rarr;</span>
+							</a>
+						</span>
+					</div>
+
+					<div class="ql-bk-lawyer-card" data-bk-lawyer-card="mehmet-tokkal">
+						<span class="ql-bk-lawyer-photo">
+							<img
+								src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-07-21-29XXF6H4HR-qarqeenlaw%2Fmehmet-tokkal-lawyer-qarqeenlaw-RR6P.jpg?alt=media&amp;token=91377067-c699-437f-8ba0-8856ed0ac51b"
+								alt="Mehmet Tokkal, associate lawyer" width="600" height="600"
+								loading="lazy" decoding="async">
+						</span>
+						<span class="ql-bk-lawyer-body">
+							<strong class="ql-bk-lawyer-name">Mehmet Tokkal</strong>
+							<span class="ql-bk-lawyer-role">Associate Lawyer</span>
+							<a class="ql-bk-btn ql-bk-btn-gold" href="" target="_blank" rel="noopener noreferrer"
+								data-calendly-url="">
+								Schedule online <span aria-hidden="true">&rarr;</span>
+							</a>
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="ql-bk-grid">
+				<div class="ql-bk-form-card ql-bk-reveal">
+				<p class="ql-bk-form-kicker" data-bk-form-kicker>Appointment form</p>
+				<h2 class="ql-bk-form-title" data-bk-form-title>Tell us when and what suits you</h2>
 
 				<form class="ql-bk-form-el" data-gw-form data-gw-form-type="consultation-request"
-					data-gw-cms-object-type="qarqeen-consultation-request-forms-uniconbaseapps">
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
 					<div class="ql-bk-form-fields">
 						<label class="ql-bk-field">
 							<span class="ql-bk-field-label">Lawyer <em>required</em></span>
@@ -156,6 +211,7 @@
 				</div>
 			</aside>
 
+			</div>
 		</div>
 	</section>
 
@@ -206,11 +262,38 @@
 
 		.ql-bk-kicker {
 			margin: 0 0 12px;
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
 			font-size: 13px;
 			font-weight: 700;
 			letter-spacing: 0.18em;
 			text-transform: uppercase;
 			color: var(--ql-gold-deep);
+		}
+
+		.ql-bk-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 13px 24px;
+			border-radius: 4px;
+			font-weight: 700;
+			font-size: 13px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+		}
+
+		.ql-bk-btn-gold {
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			box-shadow: 0 14px 26px -14px rgba(156, 123, 59, 0.85);
+		}
+
+		.ql-bk-btn-gold:hover {
+			transform: translateY(-2px);
 		}
 
 		/* ------------------------------ hero ------------------------------ */
@@ -228,6 +311,8 @@
 			z-index: -1;
 			background:
 				radial-gradient(70% 90% at 100% 0%, rgba(194, 161, 95, 0.22), transparent 55%),
+				linear-gradient(155deg, rgba(10, 22, 38, 0.95) 0%, rgba(10, 22, 38, 0.88) 55%, rgba(10, 22, 38, 0.82) 100%),
+				url('https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-07-05-GG3FLZ24F9-qarqeenlaw%2FUntitled-(1080-x-1080-px)-(600-x-1080-px)-(1424-x-716-px)-GDNL.jpg?alt=media&token=e97a872a-5515-40c5-a4ec-c9d978b9382c') center / cover no-repeat,
 				radial-gradient(55% 70% at 0% 100%, rgba(28, 61, 99, 0.5), transparent 60%),
 				repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 56px);
 		}
@@ -278,7 +363,7 @@
 			background: #fff;
 			border: 1px solid var(--ql-line);
 			border-top: 4px solid var(--ql-gold);
-			border-radius: 20px;
+			border-radius: 8px;
 			padding: 32px;
 			box-shadow: 0 30px 55px -30px rgba(15, 30, 51, 0.45);
 		}
@@ -339,7 +424,7 @@
 			width: 100%;
 			padding: 12px 14px;
 			border: 1.5px solid var(--ql-line);
-			border-radius: 10px;
+			border-radius: 4px;
 			background: #fff;
 			font-family: inherit;
 			font-size: 15px;
@@ -391,11 +476,12 @@
 			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
 			color: #fff;
 			border: 0;
-			border-radius: 999px;
+			border-radius: 4px;
 			font-family: inherit;
-			font-size: 15px;
+			font-size: 13px;
 			font-weight: 700;
-			letter-spacing: 0.02em;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
 			cursor: pointer;
 			box-shadow: 0 14px 26px -14px rgba(156, 123, 59, 0.9);
 			transition: transform 0.2s ease;
@@ -433,6 +519,112 @@
 			color: #9a8a6e;
 		}
 
+		/* --------------------------- book online --------------------------- */
+		.ql-bk-schedule {
+			background: #fff;
+			border: 1px solid var(--ql-line);
+			border-top: 4px solid var(--ql-gold);
+			border-radius: 8px;
+			padding: 32px;
+			margin-bottom: 44px;
+			box-shadow: 0 30px 55px -30px rgba(15, 30, 51, 0.45);
+		}
+
+		.ql-book .ql-bk-schedule.ql-bk-hidden,
+		.ql-book .ql-bk-lawyer-card.ql-bk-hidden {
+			display: none;
+		}
+
+		.ql-bk-schedule-head {
+			display: flex;
+			align-items: flex-end;
+			justify-content: space-between;
+			gap: 24px;
+			margin-bottom: 24px;
+		}
+
+		.ql-bk-schedule-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-size: 25px;
+			line-height: 1.2;
+			color: var(--ql-navy);
+		}
+
+		.ql-bk-schedule-note {
+			margin: 0;
+			font-size: 14px;
+			color: var(--ql-muted);
+			max-width: 400px;
+			text-align: right;
+		}
+
+		.ql-bk-schedule-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 18px;
+		}
+
+		.ql-bk-lawyer-card {
+			display: flex;
+			align-items: stretch;
+			gap: 18px;
+			background: var(--ql-ivory);
+			border: 1px solid var(--ql-line);
+			border-radius: 6px;
+			padding: 16px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.ql-bk-lawyer-card:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 18px 34px -22px rgba(15, 30, 51, 0.5);
+		}
+
+		.ql-bk-lawyer-photo {
+			flex: 0 0 96px;
+			width: 96px;
+			height: 96px;
+			border-radius: 6px;
+			overflow: hidden;
+			display: block;
+			background: #e8e2d4;
+		}
+
+		.ql-bk-lawyer-photo img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			object-position: top center;
+			display: block;
+		}
+
+		.ql-bk-lawyer-body {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+		}
+
+		.ql-bk-lawyer-name {
+			font-family: var(--ql-display);
+			font-size: 20px;
+			color: var(--ql-navy);
+			line-height: 1.2;
+		}
+
+		.ql-bk-lawyer-role {
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-bk-lawyer-body .ql-bk-btn {
+			margin-top: auto;
+			align-self: flex-start;
+		}
+
 		/* ------------------------------ aside ------------------------------ */
 		.ql-bk-aside {
 			display: flex;
@@ -445,7 +637,7 @@
 		.ql-bk-aside-block {
 			background: #fff;
 			border: 1px solid var(--ql-line);
-			border-radius: 18px;
+			border-radius: 8px;
 			padding: 26px;
 		}
 
@@ -558,12 +750,33 @@
 			.ql-bk-aside {
 				position: static;
 			}
+
+			.ql-bk-schedule-head {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.ql-bk-schedule-note {
+				text-align: left;
+			}
 		}
 
 		@media (max-width: 640px) {
 			.ql-bk-form-fields {
 				grid-template-columns: 1fr;
 			}
+
+			.ql-bk-schedule-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	
+		.ql-bk-kicker::before {
+			content: '';
+			width: 26px;
+			height: 1px;
+			background: currentColor;
+			flex: 0 0 auto;
 		}
 	</style>
 
@@ -587,9 +800,48 @@
 				pageRoot.classList.add('is-reduced-motion');
 			}
 
+			/* ---------------- Calendly schedule section ---------------- */
+			/* Each lawyer card below carries its Calendly event link in the
+			   data-calendly-url attribute. CMS CONFIG: paste the real Calendly
+			   links into those attributes. The whole section hides itself until
+			   at least one link is configured. */
+			var scheduleSection = pageRoot.querySelector('[data-bk-schedule]');
+			var scheduleCards = Array.prototype.slice.call(
+				pageRoot.querySelectorAll('[data-bk-lawyer-card]')
+			);
+			var configuredCards = [];
+
+			scheduleCards.forEach(function (card) {
+				var scheduleButton = card.querySelector('a[data-calendly-url]');
+				var bookingLink = scheduleButton
+					? String(scheduleButton.getAttribute('data-calendly-url') || '').trim()
+					: '';
+				var looksValid = bookingLink.length > 0 &&
+					bookingLink.indexOf('<') === -1 &&
+					bookingLink.indexOf('http') === 0;
+				if (!looksValid) {
+					card.classList.add('ql-bk-hidden');
+					return;
+				}
+				scheduleButton.href = bookingLink;
+				configuredCards.push(card);
+			});
+
+			if (scheduleSection) {
+				if (configuredCards.length === 0) {
+					scheduleSection.classList.add('ql-bk-hidden');
+				} else {
+					/* with online booking live, the request form becomes the secondary path */
+					var formKicker = pageRoot.querySelector('[data-bk-form-kicker]');
+					var formTitle = pageRoot.querySelector('[data-bk-form-title]');
+					if (formKicker) { formKicker.textContent = 'Request an appointment instead'; }
+					if (formTitle) { formTitle.textContent = 'Or request a time and we will confirm it'; }
+				}
+			}
+
 			/* ---------------- booking form (public form contract) ---------------- */
 			var formApiEndpoint = 'https://qarqeenlawca.uniconhub.com/api/public/forms/submit';
-			var formDefaultCmsObjectType = 'qarqeen-consultation-request-forms-uniconbaseapps';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
 			var formFieldMaxLength = 4000;
 
 			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));

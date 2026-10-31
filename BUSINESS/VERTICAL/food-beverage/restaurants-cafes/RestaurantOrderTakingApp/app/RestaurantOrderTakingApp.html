@@ -1,4 +1,4 @@
-<!-- build 2026-10-30-1 -->
+<!-- build 2026-10-31-3 -->
 <div class="roa" id="roa-root">
   <div class="roa-shell">
 
@@ -10,6 +10,16 @@
       <div class="roa-top-actions">
         <span class="roa-live" id="roa-live"><span class="roa-live-dot"></span>Live</span>
         <button type="button" class="roa-btn roa-btn-ghost roa-btn-small" id="roa-refresh">Refresh</button>
+        <div class="roa-menu" id="roa-menu">
+          <button type="button" class="roa-btn roa-btn-ghost roa-btn-small" id="roa-menu-btn" data-act="menu" aria-haspopup="true" aria-expanded="false">&#8942;</button>
+          <div class="roa-menu-panel" id="roa-menu-panel" hidden>
+            <button type="button" class="roa-menu-item" id="roa-menu-import" data-act="import-file">Import sample JSON...</button>
+            <button type="button" class="roa-menu-item" id="roa-menu-clear" data-act="clear-today">Remove all items from today</button>
+            <button type="button" class="roa-menu-item roa-menu-item-danger" id="roa-menu-clear-confirm" data-act="clear-today-confirm" hidden>Confirm remove today's orders</button>
+            <p class="roa-menu-hint">Temporary QA tools - they create and delete CMS order objects.</p>
+          </div>
+        </div>
+        <input type="file" id="roa-import-file" accept=".json,application/json" hidden>
       </div>
     </header>
 

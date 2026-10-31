@@ -6,6 +6,9 @@
   - All CSS is scoped under .ql-footer so it cannot leak into page content
   - No <footer> / <nav> / <header> element tags (plain divs + ARIA roles)
   - Carries the mandatory legal disclaimer band (law firm requirement)
+  - Brand = the Qarqeen Law logo from its storage URL (dark artwork on
+    white - shown on a white chip so it keeps its brand colors on navy)
+  - Shows the legal operating name "Qarqeen Law Corporation" (mandatory)
   =========================================================================
 -->
 <div class="ql-footer" data-ql-footer>
@@ -33,30 +36,28 @@
 				<!-- ------------------------- brand ------------------------- -->
 				<div class="ql-ft-brand">
 					<a class="ql-ft-logo" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
-						<span class="ql-ft-mark" aria-hidden="true">
-							<svg class="ql-ft-ico ql-ft-mark-ico" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg>
-						</span>
-						<span class="ql-ft-word">
-							<span class="ql-ft-word-main">Qarqeen</span>
-							<span class="ql-ft-word-sub">Law</span>
-						</span>
+						<img class="ql-ft-logo-img"
+							src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-06-13-A2YEHR6QT7-qarqeenlaw%2FQarqeen-Law-Logo-200-50-px-7NG7.png?alt=media&amp;token=cc7b16d8-3c18-4110-a8fc-cfc5a366acd5"
+							alt="Qarqeen Law" width="200" height="50"
+							loading="lazy" decoding="async">
 					</a>
 					<p class="ql-ft-mission">
 						Qarqeen Law provides cost-effective, high-quality legal services from Vancouver,
 						British Columbia, with a satellite office in Victoria.
 					</p>
 					<p class="ql-ft-tagline">Your legal rights defenders.</p>
+					<p class="ql-ft-legal-entity">Qarqeen Law Corporation</p>
 				</div>
 
 				<!-- --------------------- practice areas --------------------- -->
 				<div class="ql-ft-col">
 					<p class="ql-ft-head">Practice areas</p>
 					<ul class="ql-ft-links">
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Immigration Law</a></li>
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Refugee Law</a></li>
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Family Law</a></li>
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Litigation</a></li>
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Wills and Estates</a></li>
+						<li><a data-ic-nav-href="/immigration-law" href="/immigration-law">Immigration Law</a></li>
+						<li><a data-ic-nav-href="/refugee-law" href="/refugee-law">Refugee Law</a></li>
+						<li><a data-ic-nav-href="/family-law" href="/family-law">Family Law</a></li>
+						<li><a data-ic-nav-href="/litigation" href="/litigation">Litigation</a></li>
+						<li><a data-ic-nav-href="/wills-and-estates" href="/wills-and-estates">Wills and Estates</a></li>
 					</ul>
 				</div>
 
@@ -108,7 +109,7 @@
 	<div class="ql-ft-bottom">
 		<div class="ql-ft-wrap ql-ft-bottom-inner">
 			<p class="ql-ft-copy">
-				&copy; <span class="ql-ft-year">2026</span> Qarqeen Law. All rights reserved.
+				&copy; <span class="ql-ft-year">2026</span> Qarqeen Law Corporation. All rights reserved.
 			</p>
 			<div class="ql-ft-bottom-side">
 				<p class="ql-ft-legal">Vancouver &middot; Victoria &middot; British Columbia</p>
@@ -239,10 +240,11 @@
 			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
 			color: #fff;
 			font-weight: 700;
-			font-size: 14.5px;
-			letter-spacing: 0.03em;
+			font-size: 12.5px;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
 			text-decoration: none;
-			border-radius: 999px;
+			border-radius: 4px;
 			box-shadow: 0 10px 20px -10px rgba(156, 123, 59, 0.9);
 			transition: transform 0.2s ease, box-shadow 0.2s ease;
 		}
@@ -261,7 +263,7 @@
 			font-weight: 700;
 			font-size: 14.5px;
 			text-decoration: none;
-			border-radius: 999px;
+			border-radius: 4px;
 			transition: background 0.2s ease;
 		}
 
@@ -284,47 +286,16 @@
 		.ql-ft-logo {
 			display: inline-flex;
 			align-items: center;
-			gap: 11px;
 			text-decoration: none;
 		}
 
-		.ql-ft-mark {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			width: 44px;
-			height: 44px;
-			border: 1.5px solid var(--ql-gold);
-			border-radius: 10px;
-			background: rgba(194, 161, 95, 0.1);
-			color: var(--ql-gold-soft);
-		}
-
-		.ql-ft-mark-ico {
-			width: 23px;
-			height: 23px;
-		}
-
-		.ql-ft-word {
-			display: flex;
-			flex-direction: column;
-			line-height: 1.1;
-		}
-
-		.ql-ft-word-main {
-			font-family: Georgia, 'Times New Roman', serif;
-			font-size: 21px;
-			font-weight: 700;
-			color: #fff;
-		}
-
-		.ql-ft-word-sub {
-			font-size: 10.5px;
-			font-weight: 700;
-			letter-spacing: 0.42em;
-			text-transform: uppercase;
-			color: var(--ql-gold-soft);
-			margin-top: 2px;
+		.ql-ft-logo-img {
+			height: 40px;
+			width: auto;
+			display: block;
+			padding: 8px 12px;
+			background: #fff;
+			border-radius: 6px;
 		}
 
 		.ql-ft-mission {
@@ -340,6 +311,15 @@
 			font-style: italic;
 			font-size: 15px;
 			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-legal-entity {
+			margin: 14px 0 0;
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: #8fa0b3;
 		}
 
 		.ql-ft-head {
@@ -466,7 +446,7 @@
 			background: rgba(255, 255, 255, 0.06);
 			color: #dbe4ef;
 			border: 1px solid rgba(232, 220, 189, 0.25);
-			border-radius: 999px;
+			border-radius: 4px;
 			font-size: 13px;
 			font-family: inherit;
 			cursor: pointer;
@@ -512,24 +492,89 @@
 		(function () {
 			'use strict';
 
-			var footerRoot = document.querySelector('.ql-footer');
-			/* idempotent: safe on every CMS load and every SPA navigation */
-			if (!footerRoot || footerRoot.getAttribute('data-ql-footer-ready') === '1') { return; }
-			footerRoot.setAttribute('data-ql-footer-ready', '1');
-
-			/* ---------------- current year ---------------- */
-			var yearElement = footerRoot.querySelector('.ql-ft-year');
-			if (yearElement) {
-				yearElement.textContent = String(new Date().getFullYear());
+			/* The platform mounts the chrome fresh on EVERY SPA navigation. Keep
+			   one stable stylesheet in the document head so the footer can never
+			   be left unstyled when a previous mount (and its inline style) is
+			   removed. */
+			if (!document.getElementById('ql-footer-css')) {
+				var anyFooter = document.querySelector('.ql-footer');
+				var inlineFooterStyle = anyFooter ? anyFooter.querySelector('style') : null;
+				if (inlineFooterStyle) {
+					var footerHeadStyle = document.createElement('style');
+					footerHeadStyle.id = 'ql-footer-css';
+					footerHeadStyle.textContent = inlineFooterStyle.textContent;
+					document.head.appendChild(footerHeadStyle);
+				}
 			}
 
-			/* ---------------- back to top ---------------- */
-			var backToTopButton = footerRoot.querySelector('.ql-ft-top');
-			if (backToTopButton) {
-				backToTopButton.addEventListener('click', function () {
-					window.scrollTo({ top: 0, behavior: 'smooth' });
+			/* ---------------- back to the top on page navigation ---------------- */
+			/* App shells (for example Next.js) keep the previous scroll offset on a
+			   client-side route change. Reset the window and every scrollable
+			   ancestor on internal link clicks, repeated shortly after so a late
+			   render also starts at the top. The header script may bind this
+			   already, so one shared guard keeps it single. */
+			if (!window.__qlScrollResetBound) {
+				window.__qlScrollResetBound = true;
+
+				var resetPageScroll = function () {
+					if (window.location.hash) { return; }
+					try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+					catch (scrollError) { window.scrollTo(0, 0); }
+					var scrollRoot = document.scrollingElement || document.documentElement;
+					if (scrollRoot) { scrollRoot.scrollTop = 0; }
+					var ancestor = document.querySelector('.ql-footer');
+					ancestor = ancestor ? ancestor.parentElement : null;
+					while (ancestor && ancestor !== document.body && ancestor !== document.documentElement) {
+						var ancestorStyle = window.getComputedStyle(ancestor);
+						if (/(auto|scroll)/.test(ancestorStyle.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+							ancestor.scrollTop = 0;
+						}
+						ancestor = ancestor.parentElement;
+					}
+				};
+
+				var schedulePageScrollReset = function () {
+					resetPageScroll();
+					window.requestAnimationFrame(resetPageScroll);
+					window.setTimeout(resetPageScroll, 180);
+					window.setTimeout(resetPageScroll, 600);
+				};
+
+				document.addEventListener('click', function (event) {
+					var target = event.target;
+					var anchor = target && target.closest ? target.closest('a[href]') : null;
+					if (!anchor) { return; }
+					var href = anchor.getAttribute('href') || '';
+					if (href.charAt(0) !== '/' || href.indexOf('//') === 0) { return; }
+					if (href.indexOf('#') !== -1) { return; }
+					if (anchor.getAttribute('target') === '_blank') { return; }
+					schedulePageScrollReset();
 				});
 			}
+
+			/* Initialise every footer element that is not initialised yet. A new
+			   element is injected per navigation, so this runs once per mount. */
+			Array.prototype.forEach.call(
+				document.querySelectorAll('.ql-footer[data-ql-footer]'),
+				function (footerRoot) {
+					if (footerRoot.getAttribute('data-ql-footer-ready') === '1') { return; }
+					footerRoot.setAttribute('data-ql-footer-ready', '1');
+
+					/* ---------------- current year ---------------- */
+					var yearElement = footerRoot.querySelector('.ql-ft-year');
+					if (yearElement) {
+						yearElement.textContent = String(new Date().getFullYear());
+					}
+
+					/* ---------------- back to top ---------------- */
+					var backToTopButton = footerRoot.querySelector('.ql-ft-top');
+					if (backToTopButton) {
+						backToTopButton.addEventListener('click', function () {
+							window.scrollTo({ top: 0, behavior: 'smooth' });
+						});
+					}
+				}
+			);
 		})();
 	</script>
 

@@ -25,7 +25,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v1.3</span>
+      <span>v1.7</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -73,8 +73,8 @@
     <code>restaurant-orders</code> records.
   </p>
   <table>
-    <tr><th>Document version</th><td>1.3</td></tr>
-    <tr><th>Last updated</th><td>2026-10-30</td></tr>
+    <tr><th>Document version</th><td>1.4</td></tr>
+    <tr><th>Last updated</th><td>2026-10-31</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>the app part of this tool folder (html + css + js + test harness)</td></tr>
     <tr><th>Primary code areas</th><td><code>BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantOrderTakingApp/app/RestaurantOrderTakingApp.js</code>, <code>.../RestaurantOrderTakingApp.html</code>, <code>.../RestaurantOrderTakingApp.css</code>, <code>.../test-harness.html</code></td></tr>
@@ -189,7 +189,9 @@
     <tr><td>C-12</td><td>Tolerant optional write: acceptedAt + estimatedReadyAt fail separately without blocking the status change</td><td><code>writeCoreFields</code></td><td>2026-10-25</td><td>D-ROTA-04 / smoke asserts</td></tr>
     <tr><td>C-13</td><td>Test harness with localStorage order store, sample orders, role and read-only simulation, inline JS mode</td><td><code>test-harness.html</code></td><td>2026-10-25</td><td>verified in code</td></tr>
     <tr><td>C-14</td><td>Amounts always render as money: currency defaults to USD ($) with narrow symbols when currencyCode is not configured</td><td><code>fmtMoney / readConfig</code></td><td>2026-10-30</td><td>D-ROTA-12</td></tr>
-    <tr><td>C-15</td><td>Professional status color system: the lightest pastel tier as status backgrounds with the status's normal color as card borders, soft colored tabs, amber urgency and red lateness overrides based on time remaining</td><td><code>RestaurantOrderTakingApp.css</code></td><td>2026-10-30</td><td>D-ROTA-15 / D-ROTA-16</td></tr>
+    <tr><td>C-15</td><td>Professional status color system with clear semantics: new = blue, accepted = teal, in preparation = orange, ready = green, completed = purple, cancelled = gray, declined and late = red; amber = urgent, deep blue = long-waiting new (never red)</td><td><code>RestaurantOrderTakingApp.css</code></td><td>2026-10-31</td><td>D-ROTA-15 / D-ROTA-17 / D-ROTA-20</td></tr>
+    <tr><td>C-16</td><td>Detail popup status selector with all 7 statuses (forward AND back moves) + daily sequence chips #1..#N shown on cards, detail and toasts (the raw record number stays as a small "record X" note)</td><td><code>statusSelectHtml / assignDayNumbers / orderLabelOf</code></td><td>2026-10-31</td><td>D-ROTA-18 / D-ROTA-19</td></tr>
+    <tr><td>C-17</td><td>TEMPORARY QA menu (three dots): import a sample JSON file as real CMS orders and remove all of today's orders in one armed action; two sample files ship with the tool (demo with every option, 100-item load test)</td><td><code>importOrdersFromText / executeClearToday / app/samples/*</code></td><td>2026-10-31</td><td>D-ROTA-21 - to be removed before production</td></tr>
   </table>
   <p class="note">Capabilities listed here are in effect and must keep
   working unless a decision in section 11 reverses them.</p>
@@ -621,6 +623,94 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
       and the backgrounds should be a little softer.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-ROTA-17</td><td>2026-10-31</td>
+      <td>Color semantics revised so every color means one thing: new =
+      blue (incoming, needs a decision), accepted = teal (acknowledged),
+      in preparation = orange (work happening), ready/completed = green,
+      cancelled/finished = gray. Red is reserved for real problems (declined,
+      late). A new order waiting too long gets a DEEPER BLUE card with an
+      amber clock - never red.</td>
+      <td>User feedback: the New tab was orange while long-waiting new items
+      looked red, and red reads as a problem. The palette must match the
+      status and keep red for actual trouble.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-18</td><td>2026-10-31</td>
+      <td>The order detail popup gets a status selector listing ALL seven
+      statuses, so a status can be moved BACK (ready -> accepted -> new),
+      not only forward. Reactivating a terminal order brings it back on the
+      board immediately.</td>
+      <td>User feedback: only the one-way forward flow existed and a wrong
+      tap could not be undone from the board. The selector is disabled in
+      read-only views and while a write is in flight.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-19</td><td>2026-10-31</td>
+      <td>Orders placed today are numbered 1..N in placement order and shown
+      as a friendly daily chip (#1, #2, ...) on cards, in the detail popup
+      and in toasts. The raw record number (e.g. EFOC-8001) is no longer the
+      board-facing label; it stays in the CMS and is shown as a small
+      "record EFOC-8001" note in the detail popup. Orders from a previous
+      day keep their raw number until they become today's.</td>
+      <td>User feedback: the record number is meaningless on the kitchen
+      board - a simple daily counter starting at 1 is what staff read aloud.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-20</td><td>2026-10-31</td>
+      <td>Every status owns a clearly distinct color, including the
+      terminal ones: completed is now PURPLE (#7c3aed) instead of dark
+      green, so it can no longer be confused with ready (green) or
+      cancelled (gray). The finished TAB stays gray.</td>
+      <td>User feedback: cancelled and finished items looked like the same
+      color in the list. One hue per status - readable in one glance, no
+      extra tabs.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-21</td><td>2026-10-31</td>
+      <td>TEMPORARY QA feature: a three-dots action menu in the header with
+      "Import sample JSON..." (file picker - creates real CMS order objects
+      from a JSON array, batch first with sequential fallback) and
+      "Remove all items from today" (armed two-step that deletes every
+      order placed today). Two sample files live in app/samples/: the demo
+      (every option) and the 100-item load test. Relative time markers
+      (-45m, +25m, -26h) in the files are converted to real ISO times at
+      import so the samples always look like today. This whole menu is
+      removed before production (task T-14).</td>
+      <td>User feedback: needed a way to import sample data to review the UI
+      inside the CMS, and to wipe those imports afterwards.</td>
+      <td class="status-adopted">Adopted (temporary)</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-22</td><td>2026-10-31</td>
+      <td>The fresh-arrival cue was wrong after a sample import: every
+      imported order counted as "fresh" and wore an ORANGE ring that read
+      as red borders until the next poll. Fixed: a sample import loads
+      silently (no rings, no toasts), the ring is BLUE (new = blue, never
+      red) and it clears itself after 6 seconds instead of waiting for the
+      next poll.</td>
+      <td>User feedback + screenshot: all cards showed the same red border
+      on first load after importing the sample JSON, then went back to
+      their status colors.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-23</td><td>2026-10-31</td>
+      <td>Card readability pass: the remaining-time counter is a 15px
+      monospace pill with a border (amber when urgent, red when late); the
+      card ETA label is shortened (DELIVER 02:38 / READY 02:38 instead of
+      "est. ready time 02:38 AM"); notes clamp to 2 lines; titles are
+      slightly larger; terminal cards no longer repeat the placed time in
+      the sub row (it is already in the top-right corner).</td>
+      <td>User feedback: the countdown must be bigger and the card must be
+      readable at a glance; a professional kitchen card leads with timer,
+      title and status, and trims duplicated or long labels.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -673,6 +763,10 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
     <li><strong>Catalog registration and first ship.</strong> The tool is not
     yet registered in UNICON-TOOLS/tools-catalog nor shipped (group
     ROA-SHIP).</li>
+    <li><strong>Which role-based card layouts do the staff actually
+    need?</strong> Kitchen (prep-focused), cashier (money-focused) or both -
+    this decides the per-status card content matrix and the cardLayout
+    param (group ROA-CARDS, tasks T-09..T-13).</li>
   </ol>
 
   <h2 id="sec-tasklist">15. Development task list</h2>
@@ -820,6 +914,30 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
         </div>
       </details>
     </div>
+
+    <div class="task-item" data-task-id="T-14" data-group="ROA-SHIP" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-14</span>
+          <span class="task-title">Remove the temporary QA menu (sample import + remove today)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-14 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the QA import/remove menu
+          (D-ROTA-21) can create and DELETE CMS order objects - it must not
+          ship to production kitchens.</p>
+          <p><strong>How we will solve it:</strong> remove the three-dots
+          menu, the file input, the import/clear code and the sample files
+          from the tool before the first SHIP.</p>
+          <p><strong>Benefit:</strong> production keeps only real kitchen
+          features.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantOrderTakingApp.{html,css,js}</code>, <code>app/samples/*</code>.</p>
+          <p><strong>Status:</strong> not started - QA phase still using it.</p>
+        </div>
+      </details>
+    </div>
   </section>
 
   <section class="task-group" data-release-group="ROA-POLISH" data-group-status="planned">
@@ -918,6 +1036,149 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
           <p><strong>Benefit:</strong> smaller payloads and true load-more.</p>
           <p><strong>Files:</strong> platform SDK + this tool.</p>
           <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="ROA-CARDS" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Role-aware cards</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE BY ONE - discuss each</span>
+      <span class="task-group-progress" data-group-progress="ROA-CARDS">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="ROA-CARDS"></div></div>
+    <p class="task-group-note">Why these belong together: user idea (2026-10-31)
+    to design the cards differently per status and per role - kitchen staff
+    and the cashier need different fields on the same order. We apply them
+    ONE BY ONE after discussing each with the user, so every change is
+    reviewable. Industry references: KDS (kitchen display system) screens
+    strip everything but items, modifiers and timers; POS cashier views keep
+    totals, payment and customer contact front and center; both agree on
+    ONE color per status so the state reads at a glance.</p>
+
+    <div class="task-item" data-task-id="T-09" data-group="ROA-CARDS" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">Decide the per-status card content matrix</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> every status currently shows
+          the same fields; but a kitchen in prep cares about items and
+          modifiers while nobody needs the price on an in-preparation card.
+          Industry practice: the card content follows the status - new =
+          channel + summary + accept decision; in progress = items and
+          timers (price hidden); ready = customer + pickup/delivery target
+          (price back); finished = receipt view.</p>
+          <p><strong>How we will solve it:</strong> a table in the SSOT:
+          for each status, show/hide channel, price, address, note, ETA and
+          buttons; then apply it status by status.</p>
+          <p><strong>Benefit:</strong> less noise, faster decisions per role.</p>
+          <p><strong>Files:</strong> <code>cardHtml</code> matrix + CSS.</p>
+          <p><strong>Status:</strong> not started - open question Q6.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-10" data-group="ROA-CARDS" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Kitchen vs cashier card variants (cardLayout param)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> one board cannot serve both
+          roles: the kitchen needs prep content, the cashier needs money and
+          customer content. Industry practice: dedicated KDS screens for the
+          kitchen and POS-style views for the cashier on the same order data.</p>
+          <p><strong>How we will solve it:</strong> a tool param cardLayout
+          (board | kitchen | cashier) re-skins the card layout; the CMS admin
+          installs the same tool twice with different params if both screens
+          are needed side by side.</p>
+          <p><strong>Benefit:</strong> each role reads only its own fields.</p>
+          <p><strong>Files:</strong> <code>cardHtml</code>, params, CSS variants.</p>
+          <p><strong>Status:</strong> not started - after T-09.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-11" data-group="ROA-CARDS" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-11</span>
+          <span class="task-title">Kitchen card: items and timers first, price hidden while working</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> during prep the kitchen only
+          needs WHAT to cook and WHEN - price, payment and customer details
+          are noise. Industry practice: KDS cards show item lines with
+          modifiers and a prominent elapsed/ETA timer; money never appears
+          on a KDS.</p>
+          <p><strong>How we will solve it:</strong> per the T-09 matrix:
+          hide the total and payment for new/in-preparation cards, show
+          lines + modifiers inline, keep the channel only for delivery.</p>
+          <p><strong>Benefit:</strong> a glanceable prep board.</p>
+          <p><strong>Files:</strong> <code>cardHtml</code> + CSS.</p>
+          <p><strong>Status:</strong> not started - discuss first.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-12" data-group="ROA-CARDS" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-12</span>
+          <span class="task-title">Cashier card: totals, payment and customer contact first</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the cashier collects money
+          and hands over orders - they need the total, payment method, phone
+          and name on every card, including finished ones. Industry
+          practice: POS order tiles are receipt-first.</p>
+          <p><strong>How we will solve it:</strong> per the T-09 matrix: total
+          and payment always visible, customer name + phone on the card,
+          address only for delivery.</p>
+          <p><strong>Benefit:</strong> faster checkout and handover.</p>
+          <p><strong>Files:</strong> <code>cardHtml</code> + CSS.</p>
+          <p><strong>Status:</strong> not started - discuss first.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-13" data-group="ROA-CARDS" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-13</span>
+          <span class="task-title">Status color legend in the board header</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> with 7 distinct colors
+          (D-ROTA-20) new staff need a moment to learn the mapping.
+          Industry practice: KDS and POS systems print a small legend near
+          the board or make the tab pills themselves the legend.</p>
+          <p><strong>How we will solve it:</strong> a collapsible legend
+          row (colored dots + status names) under the header, using the
+          same tokens as the cards.</p>
+          <p><strong>Benefit:</strong> the color language teaches itself.</p>
+          <p><strong>Files:</strong> HTML + CSS + <code>renderTabs</code>.</p>
+          <p><strong>Status:</strong> not started - discuss first.</p>
         </div>
       </details>
     </div>
@@ -1041,6 +1302,76 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
     </details>
   </div>
 
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">Status-driven card content (fields per status)</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> each status gets its own card content -
+        e.g. no price while in preparation, channel only for delivery
+        orders, address only for delivery, note only when present.
+        Industry practice: KDS (kitchen display system) cards show items,
+        modifiers and timers only - money never appears on a KDS.</p>
+        <p><strong>Why:</strong> different statuses answer different
+        questions (what to cook vs what to charge).</p>
+        <p><strong>Discussion / outcome:</strong> new - see tasks T-09 and
+        T-11 in group ROA-CARDS.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-08" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-08</span>
+        <span class="idea-title">Role views: kitchen board vs cashier board</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-08 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> the same order data rendered two ways -
+        a kitchen view (prep-focused, timers, no money) and a cashier view
+        (receipt-first: total, payment, phone, name). Industry practice:
+        restaurants run dedicated KDS screens in the kitchen and POS tiles
+        at the register, both fed by the same orders.</p>
+        <p><strong>Why:</strong> the kitchen and the cashier need different
+        fields of the same order.</p>
+        <p><strong>Discussion / outcome:</strong> new - see tasks T-10 and
+        T-12 in group ROA-CARDS.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-09" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-09</span>
+        <span class="idea-title">Industry practice reference pack for restaurant boards</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-09 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> collect the patterns the board should
+        follow, from KDS and POS systems: (1) ONE color per status so the
+        state reads at a glance (adopted - D-ROTA-20); (2) timer-first
+        cards - elapsed/ETA clocks are the most important kitchen metric;
+        (3) role-split content - kitchen sees prep fields, cashier sees
+        money fields; (4) a small color legend so new staff learn the
+        mapping (T-13); (5) loud and urgent handling of the last minutes
+        before an ETA (adopted - amber then red); (6) one-tap primary
+        action per card (adopted - forward action button).</p>
+        <p><strong>Why:</strong> each pattern is a discussion checkpoint
+        with the user, applied one by one.</p>
+        <p><strong>Discussion / outcome:</strong> reference - drives the
+        ROA-CARDS task group decisions.</p>
+      </div>
+    </details>
+  </div>
+
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
   <p>Preparation: open <code>app/test-harness.html</code> with
   <code>?sample=1</code> (seeds 11 orders). Keep the console open - the tool
@@ -1100,7 +1431,24 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
   placement, completed-today visibility and urgency states; headless QA of
   the soft color board passed. 2026-10-30 (build 2026-10-30-3) - smoke
   suite 55/55 green incl. no fresh flash on first load and true status
-  colors from the first render; softer pastel palette verified headlessly.</p>
+  colors from the first render; softer pastel palette verified headlessly.
+  2026-10-31 (build 2026-10-31-1) - color semantics revised (D-ROTA-17);
+  smoke fixture made calendar-safe (todayPlusMinutesIso) so the suite holds
+  at any wall-clock time; headless QA of the new palette passed.
+  2026-10-31 (build 2026-10-31-2) - status selector in the detail popup with
+  backward moves (D-ROTA-18) and daily sequence number chips #1..#N
+  (D-ROTA-19); smoke suite 76/76 green incl. backward status moves, daily
+  numbering and selector rendering; headless QA of the chips and the
+  selector passed. 2026-10-31 (build 2026-10-31-3) - completed turns purple
+  so all 7 statuses read as distinct colors (D-ROTA-20); TEMPORARY QA menu
+  with sample JSON import + remove-today (D-ROTA-21) and two sample files;
+  smoke suite 93/93 green incl. import batch/fallback and clear-today
+  batch/fallback paths; headless QA of the menu and the purple palette
+  passed. 2026-10-31 (build 2026-10-31-4) - sample imports load silently
+  (no orange fresh rings, D-ROTA-22); the fresh ring is blue and clears in
+  6 seconds; countdown is a bigger pill and the card labels were trimmed
+  (D-ROTA-23); smoke suite 96/96 green; headless QA of the polished cards
+  passed.</p>
 
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -1246,7 +1594,7 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
 
   <div class="footer">
     Restaurant Order Taking App - single source of truth for all decisions
-    about this tool. Version 1.3, 2026-10-30.
+    about this tool. Version 1.4, 2026-10-31.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

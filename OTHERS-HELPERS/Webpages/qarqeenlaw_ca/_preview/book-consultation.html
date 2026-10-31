@@ -18,7 +18,8 @@
   - One parent <div class="ql-header">; no document tags, no libraries
   - All CSS is scoped under .ql-header so it cannot leak into page content
   - No <header> / <nav> / <footer> element tags (plain divs + ARIA roles)
-  - Brand = wordmark drawn with text + an inline scales mark (no image file)
+  - Brand = the Qarqeen Law logo, loaded from its storage URL (dark
+    artwork on white - the header is white so it sits perfectly)
   - Design tokens (--ql-*) are repeated in every page file so each page is
     self-contained; keep them in sync when the palette changes
   - Nav link targets (CMS route form, never .html): / (home), /about-us,
@@ -59,18 +60,16 @@
 		</div>
 	</div>
 
-	<!-- ------------------------------ main bar ------------------------------ -->
+			<!-- ------------------------------ main bar ------------------------------ -->
 	<div class="ql-hd-bar">
+		<div class="ql-hd-scrim" data-ql-scrim aria-hidden="true"></div>
 		<div class="ql-hd-wrap ql-hd-bar-inner">
 
 			<a class="ql-hd-brand" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
-				<span class="ql-hd-mark" aria-hidden="true">
-					<svg class="ql-hd-ico ql-hd-mark-ico"><use href="#ql-i-scales"></use></svg>
-				</span>
-				<span class="ql-hd-word">
-					<span class="ql-hd-word-main">Qarqeen</span>
-					<span class="ql-hd-word-sub">Law</span>
-				</span>
+				<img class="ql-hd-logo"
+					src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-06-13-A2YEHR6QT7-qarqeenlaw%2FQarqeen-Law-Logo-200-50-px-7NG7.png?alt=media&amp;token=cc7b16d8-3c18-4110-a8fc-cfc5a366acd5"
+					alt="Qarqeen Law" width="200" height="50"
+					decoding="async" fetchpriority="high">
 			</a>
 
 			<div class="ql-hd-nav" id="ql-hd-menu" role="navigation" aria-label="Main menu">
@@ -144,6 +143,14 @@
 			width: 0;
 			height: 0;
 			overflow: hidden;
+		}
+
+		.ql-hd-scrim {
+			display: none;
+			position: fixed;
+			inset: 0;
+			z-index: 1;
+			background: rgba(10, 22, 38, 0.5);
 		}
 
 		.ql-hd-ico {
@@ -221,57 +228,17 @@
 		.ql-hd-brand {
 			display: inline-flex;
 			align-items: center;
-			gap: 12px;
 			flex: 0 0 auto;
-			text-decoration: none;
 		}
 
-		.ql-hd-mark {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			width: 44px;
-			height: 44px;
-			border: 1.5px solid var(--ql-gold);
-			border-radius: 10px;
-			background:
-				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.22), transparent 60%),
-				var(--ql-navy);
-			color: var(--ql-gold-soft);
-			box-shadow: 0 8px 18px -10px rgba(15, 30, 51, 0.6);
+		.ql-hd-logo {
+			height: 40px;
+			width: auto;
+			display: block;
 		}
 
-		.ql-hd-mark-ico {
-			width: 24px;
-			height: 24px;
-		}
-
-		.ql-header.is-compact .ql-hd-mark {
-			width: 38px;
-			height: 38px;
-		}
-
-		.ql-hd-word {
-			display: flex;
-			flex-direction: column;
-			line-height: 1.1;
-		}
-
-		.ql-hd-word-main {
-			font-family: Georgia, 'Times New Roman', serif;
-			font-size: 22px;
-			font-weight: 700;
-			letter-spacing: 0.02em;
-			color: var(--ql-navy);
-		}
-
-		.ql-hd-word-sub {
-			font-size: 11px;
-			font-weight: 700;
-			letter-spacing: 0.42em;
-			text-transform: uppercase;
-			color: var(--ql-gold-deep);
-			margin-top: 2px;
+		.ql-header.is-compact .ql-hd-logo {
+			height: 34px;
 		}
 
 		.ql-hd-nav {
@@ -299,9 +266,10 @@
 			padding: 12px 13px;
 			color: var(--ql-ink);
 			text-decoration: none;
-			font-size: 15px;
-			font-weight: 600;
-			letter-spacing: 0.03em;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
 			background: none;
 			border: 0;
 			cursor: pointer;
@@ -339,10 +307,11 @@
 			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
 			color: #fff;
 			font-weight: 700;
-			font-size: 14.5px;
-			letter-spacing: 0.04em;
+			font-size: 12.5px;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
 			text-decoration: none;
-			border-radius: 999px;
+			border-radius: 4px;
 			box-shadow: 0 8px 18px -10px rgba(156, 123, 59, 0.9);
 			transition: transform 0.2s ease, box-shadow 0.2s ease;
 			flex: 0 0 auto;
@@ -364,7 +333,7 @@
 			padding: 10px;
 			background: none;
 			border: 1px solid var(--ql-line);
-			border-radius: 10px;
+			border-radius: 4px;
 			cursor: pointer;
 		}
 
@@ -412,12 +381,24 @@
 		}
 
 		@media (max-width: 920px) {
+			.ql-hd-bar-inner {
+				position: relative;
+				z-index: 2;
+			}
+
 			.ql-hd-burger {
 				display: inline-flex;
+				position: relative;
+				z-index: 4;
+			}
+
+			.ql-header.is-menu-open .ql-hd-scrim {
+				display: block;
 			}
 
 			.ql-hd-nav {
 				position: fixed;
+				z-index: 3;
 				top: 0;
 				right: 0;
 				bottom: 0;
@@ -487,76 +468,178 @@
 		(function () {
 			'use strict';
 
-			var headerRoot = document.querySelector('.ql-header');
-			/* idempotent: safe on every CMS load and every SPA navigation */
-			if (!headerRoot || headerRoot.getAttribute('data-ql-header-ready') === '1') { return; }
-			headerRoot.setAttribute('data-ql-header-ready', '1');
+			/* The platform mounts the chrome fresh on EVERY SPA navigation. Keep
+			   one stable stylesheet in the document head so the header can never
+			   be left unstyled when a previous mount (and its inline style) is
+			   removed. */
+			function ensureHeaderStyles() {
+				if (document.getElementById('ql-header-css')) { return; }
+				var anyHeader = document.querySelector('.ql-header');
+				var inlineStyle = anyHeader ? anyHeader.querySelector('style') : null;
+				if (!inlineStyle) { return; }
+				var headStyle = document.createElement('style');
+				headStyle.id = 'ql-header-css';
+				headStyle.textContent = inlineStyle.textContent;
+				document.head.appendChild(headStyle);
+			}
 
-			var burgerButton = headerRoot.querySelector('.ql-hd-burger');
+			ensureHeaderStyles();
 
-			/* ---------------- mobile menu ---------------- */
-			function closeMobileMenu() {
+			function closeMobileMenu(headerRoot) {
 				if (!headerRoot.classList.contains('is-menu-open')) { return; }
 				headerRoot.classList.remove('is-menu-open');
-				burgerButton.setAttribute('aria-expanded', 'false');
+				var burger = headerRoot.querySelector('.ql-hd-burger');
+				if (burger) { burger.setAttribute('aria-expanded', 'false'); }
 			}
 
-			function openMobileMenu() {
-				headerRoot.classList.add('is-menu-open');
-				burgerButton.setAttribute('aria-expanded', 'true');
+			function syncActivePages(headerRoot) {
+				var currentPath = window.location.pathname || '/';
+				Array.prototype.forEach.call(
+					headerRoot.querySelectorAll('a[data-page]'),
+					function (pageLink) {
+						var pageKey = pageLink.getAttribute('data-page');
+						var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+						var isActive = currentPath === pagePath;
+						pageLink.classList.toggle('is-active', isActive);
+						if (isActive) { pageLink.setAttribute('aria-current', 'page'); }
+						else { pageLink.removeAttribute('aria-current'); }
+					}
+				);
 			}
 
-			burgerButton.addEventListener('click', function () {
-				if (headerRoot.classList.contains('is-menu-open')) { closeMobileMenu(); }
-				else { openMobileMenu(); }
-			});
-
-			/* a chosen nav link closes the drawer so the page switch is visible */
-			Array.prototype.forEach.call(headerRoot.querySelectorAll('.ql-hd-list a, .ql-hd-cta'), function (navLink) {
-				navLink.addEventListener('click', closeMobileMenu);
-			});
-
-			document.addEventListener('click', function (event) {
-				if (!headerRoot.contains(event.target)) { closeMobileMenu(); }
-			});
-
-			document.addEventListener('keydown', function (event) {
-				if (event.key === 'Escape') { closeMobileMenu(); }
-			});
-
-			/* ---------------- compact bar on scroll ---------------- */
-			var ticking = false;
-
-			function updateBarCompactness() {
-				ticking = false;
-				var isCompact = window.scrollY > 24;
-				headerRoot.classList.toggle('is-compact', isCompact);
+			function syncAllHeaders() {
+				Array.prototype.forEach.call(
+					document.querySelectorAll('.ql-header[data-ql-header]'),
+					syncActivePages
+				);
 			}
 
-			function requestBarUpdate() {
-				if (ticking) { return; }
-				ticking = true;
-				window.requestAnimationFrame(updateBarCompactness);
-			}
+			/* Initialise every header element that is not initialised yet. A new
+			   element is injected per navigation, so this initialises once per
+			   mount and never twice on the same DOM. */
+			Array.prototype.forEach.call(
+				document.querySelectorAll('.ql-header[data-ql-header]'),
+				function (headerRoot) {
+					if (headerRoot.getAttribute('data-ql-header-ready') === '1') { return; }
+					headerRoot.setAttribute('data-ql-header-ready', '1');
 
-			window.addEventListener('scroll', requestBarUpdate, { passive: true });
-			updateBarCompactness();
+					/* a fresh mount always starts with the drawer closed */
+					headerRoot.classList.remove('is-menu-open');
 
-			/* ---------------- active page highlight ---------------- */
-			var currentPath = window.location.pathname || '/';
-			var pageLinks = Array.prototype.slice.call(
-				headerRoot.querySelectorAll('a[data-page], button[data-page]')
+					var burgerButton = headerRoot.querySelector('.ql-hd-burger');
+					if (burgerButton) {
+						burgerButton.setAttribute('aria-expanded', 'false');
+						burgerButton.addEventListener('click', function () {
+							if (headerRoot.classList.contains('is-menu-open')) {
+								closeMobileMenu(headerRoot);
+								return;
+							}
+							headerRoot.classList.add('is-menu-open');
+							burgerButton.setAttribute('aria-expanded', 'true');
+						});
+					}
+
+					/* the scrim is the only outside-click closer, so clicks in the page
+					   content can never affect the header on their own */
+					var scrim = headerRoot.querySelector('[data-ql-scrim]');
+					if (scrim) {
+						scrim.addEventListener('click', function () { closeMobileMenu(headerRoot); });
+					}
+
+					headerRoot.addEventListener('keydown', function (event) {
+						if (event.key === 'Escape') { closeMobileMenu(headerRoot); }
+					});
+
+					/* ---------------- compact bar on scroll ---------------- */
+					function updateBarCompactness() {
+						headerRoot.classList.toggle('is-compact', window.scrollY > 24);
+					}
+					headerRoot.qlUpdateCompactness = updateBarCompactness;
+					updateBarCompactness();
+
+					/* ---------------- active page highlight ---------------- */
+					syncActivePages(headerRoot);
+				}
 			);
 
-			pageLinks.forEach(function (pageLink) {
-				var pageKey = pageLink.getAttribute('data-page');
-				var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
-				var isActive = currentPath === pagePath;
-				pageLink.classList.toggle('is-active', isActive);
-				if (isActive && pageLink.tagName === 'A') {
-					pageLink.setAttribute('aria-current', 'page');
+			/* ---------------- one set of global listeners per window ---------------- */
+			if (!window.__qlHeaderGlobalsBound) {
+				window.__qlHeaderGlobalsBound = true;
+
+				var compactTicking = false;
+				window.addEventListener('scroll', function () {
+					if (compactTicking) { return; }
+					compactTicking = true;
+					window.requestAnimationFrame(function () {
+						compactTicking = false;
+						Array.prototype.forEach.call(
+							document.querySelectorAll('.ql-header[data-ql-header]'),
+							function (headerRoot) {
+								if (typeof headerRoot.qlUpdateCompactness === 'function') {
+									headerRoot.qlUpdateCompactness();
+								}
+							}
+						);
+					});
+				}, { passive: true });
+
+				/* ---------------- back to the top on page navigation ---------------- */
+				/* When the pages run inside an app shell (for example Next.js) a
+				   client-side route change keeps the previous scroll offset. Every
+				   internal link click resets the window AND every scrollable ancestor
+				   to the top, repeated shortly after so a late-rendered page also
+				   starts at the top. */
+				if (!window.__qlScrollResetBound) {
+					window.__qlScrollResetBound = true;
+
+					var resetPageScroll = function () {
+						if (window.location.hash) { return; }
+						try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+						catch (scrollError) { window.scrollTo(0, 0); }
+						var scrollRoot = document.scrollingElement || document.documentElement;
+						if (scrollRoot) { scrollRoot.scrollTop = 0; }
+						var ancestor = document.querySelector('.ql-header');
+						ancestor = ancestor ? ancestor.parentElement : null;
+						while (ancestor && ancestor !== document.body && ancestor !== document.documentElement) {
+							var ancestorStyle = window.getComputedStyle(ancestor);
+							if (/(auto|scroll)/.test(ancestorStyle.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+								ancestor.scrollTop = 0;
+							}
+							ancestor = ancestor.parentElement;
+						}
+					};
+
+					var schedulePageScrollReset = function () {
+						resetPageScroll();
+						window.requestAnimationFrame(resetPageScroll);
+						window.setTimeout(resetPageScroll, 180);
+						window.setTimeout(resetPageScroll, 600);
+					};
+
+					document.addEventListener('click', function (event) {
+						var target = event.target;
+						var anchor = target && target.closest ? target.closest('a[href]') : null;
+						if (!anchor) { return; }
+						var href = anchor.getAttribute('href') || '';
+						if (href.charAt(0) !== '/' || href.indexOf('//') === 0) { return; }
+						if (href.indexOf('#') !== -1) { return; }
+						if (anchor.getAttribute('target') === '_blank') { return; }
+						schedulePageScrollReset();
+					});
 				}
-			});
+
+				/* keep the active link right when the page changes */
+				document.addEventListener('gw:content-ready', function () {
+					syncAllHeaders();
+					resetPageScroll();
+				});
+				if (window.gw && typeof window.gw.onRouteChange === 'function') {
+					window.gw.onRouteChange(function () {
+						syncAllHeaders();
+						resetPageScroll();
+					});
+				}
+			}
 		})();
 	</script>
 
@@ -572,9 +655,14 @@
     hidden honeypot named "gw_hp", [data-gw-form-status] live region
   - Form facts: endpoint https://qarqeenlawca.uniconhub.com/api/public/forms/submit
     (domain pattern domainWithoutDots.uniconhub.com - VERIFY before go-live),
-    cmsObjectType "qarqeen-consultation-request-forms-uniconbaseapps"
-    (CMS CONFIG NEEDED - create this object type in the CMS),
+    cmsObjectType "form-submissions-uniconbaseapps" (the standard form type),
     site origin https://www.qarqeenlaw.ca must be on the CMS allowlist
+  - Calendly: each lawyer card in the "Book online" section carries a
+    data-calendly-url attribute - paste the real Calendly event link there.
+    The section hides itself until at least one link is configured, and the
+    request form below stays available as the alternative.
+    (No in-page Calendly widget: the official embed needs an external
+    script, which the platform guardrails forbid for page fragments.)
   - SEO for the CMS page object (slug "book-consultation"):
     title "Book a Consultation - Qarqeen Law"
     description "Schedule a consultation with a Qarqeen Law lawyer. Choose
@@ -590,22 +678,72 @@
 			<p class="ql-bk-kicker">Book a consultation</p>
 			<h1 class="ql-bk-hero-title">Book a lawyer consultation</h1>
 			<p class="ql-bk-hero-lede">
-				Select the date and time that suit you, choose a lawyer, and we will confirm your
-				appointment by email or phone.
+				Book online with Calendly and pick the time that suits you - or send a request and we
+				will confirm your appointment by email or phone.
 			</p>
 		</div>
 	</section>
 
 	<!-- ============================== BOOKING ============================== -->
 	<section class="ql-bk-main">
-		<div class="ql-bk-wrap ql-bk-grid">
+		<div class="ql-bk-wrap">
 
-			<div class="ql-bk-form-card ql-bk-reveal">
-				<p class="ql-bk-form-kicker">Appointment form</p>
-				<h2 class="ql-bk-form-title">Tell us when and what suits you</h2>
+			<!-- ==================== BOOK ONLINE (CALENDLY) ==================== -->
+			<div class="ql-bk-schedule ql-bk-reveal" data-bk-schedule>
+				<div class="ql-bk-schedule-head">
+					<div>
+						<p class="ql-bk-form-kicker">Book online</p>
+						<h2 class="ql-bk-schedule-title">Schedule directly with Calendly</h2>
+					</div>
+					<p class="ql-bk-schedule-note">
+						Choose your lawyer and pick the time that suits you - booking opens in a new tab.
+					</p>
+				</div>
+
+				<div class="ql-bk-schedule-grid">
+					<div class="ql-bk-lawyer-card" data-bk-lawyer-card="rayhan-qarqeen">
+						<span class="ql-bk-lawyer-photo">
+							<img
+								src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-07-21-29XXF6H4HR-qarqeenlaw%2Frayhan-qarqeen-H94Q.jpeg?alt=media&amp;token=bef4f85e-ffe1-4c45-9393-5544f3ee63f9"
+								alt="Rayhan Qarqeen, founding lawyer" width="600" height="600"
+								loading="lazy" decoding="async">
+						</span>
+						<span class="ql-bk-lawyer-body">
+							<strong class="ql-bk-lawyer-name">Rayhan Qarqeen</strong>
+							<span class="ql-bk-lawyer-role">Founding Lawyer</span>
+							<a class="ql-bk-btn ql-bk-btn-gold" href="" target="_blank" rel="noopener noreferrer"
+								data-calendly-url="">
+								Schedule online <span aria-hidden="true">&rarr;</span>
+							</a>
+						</span>
+					</div>
+
+					<div class="ql-bk-lawyer-card" data-bk-lawyer-card="mehmet-tokkal">
+						<span class="ql-bk-lawyer-photo">
+							<img
+								src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-07-21-29XXF6H4HR-qarqeenlaw%2Fmehmet-tokkal-lawyer-qarqeenlaw-RR6P.jpg?alt=media&amp;token=91377067-c699-437f-8ba0-8856ed0ac51b"
+								alt="Mehmet Tokkal, associate lawyer" width="600" height="600"
+								loading="lazy" decoding="async">
+						</span>
+						<span class="ql-bk-lawyer-body">
+							<strong class="ql-bk-lawyer-name">Mehmet Tokkal</strong>
+							<span class="ql-bk-lawyer-role">Associate Lawyer</span>
+							<a class="ql-bk-btn ql-bk-btn-gold" href="" target="_blank" rel="noopener noreferrer"
+								data-calendly-url="">
+								Schedule online <span aria-hidden="true">&rarr;</span>
+							</a>
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="ql-bk-grid">
+				<div class="ql-bk-form-card ql-bk-reveal">
+				<p class="ql-bk-form-kicker" data-bk-form-kicker>Appointment form</p>
+				<h2 class="ql-bk-form-title" data-bk-form-title>Tell us when and what suits you</h2>
 
 				<form class="ql-bk-form-el" data-gw-form data-gw-form-type="consultation-request"
-					data-gw-cms-object-type="qarqeen-consultation-request-forms-uniconbaseapps">
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
 					<div class="ql-bk-form-fields">
 						<label class="ql-bk-field">
 							<span class="ql-bk-field-label">Lawyer <em>required</em></span>
@@ -720,6 +858,7 @@
 				</div>
 			</aside>
 
+			</div>
 		</div>
 	</section>
 
@@ -770,11 +909,38 @@
 
 		.ql-bk-kicker {
 			margin: 0 0 12px;
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
 			font-size: 13px;
 			font-weight: 700;
 			letter-spacing: 0.18em;
 			text-transform: uppercase;
 			color: var(--ql-gold-deep);
+		}
+
+		.ql-bk-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 13px 24px;
+			border-radius: 4px;
+			font-weight: 700;
+			font-size: 13px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+		}
+
+		.ql-bk-btn-gold {
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			box-shadow: 0 14px 26px -14px rgba(156, 123, 59, 0.85);
+		}
+
+		.ql-bk-btn-gold:hover {
+			transform: translateY(-2px);
 		}
 
 		/* ------------------------------ hero ------------------------------ */
@@ -792,6 +958,8 @@
 			z-index: -1;
 			background:
 				radial-gradient(70% 90% at 100% 0%, rgba(194, 161, 95, 0.22), transparent 55%),
+				linear-gradient(155deg, rgba(10, 22, 38, 0.95) 0%, rgba(10, 22, 38, 0.88) 55%, rgba(10, 22, 38, 0.82) 100%),
+				url('https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-07-05-GG3FLZ24F9-qarqeenlaw%2FUntitled-(1080-x-1080-px)-(600-x-1080-px)-(1424-x-716-px)-GDNL.jpg?alt=media&token=e97a872a-5515-40c5-a4ec-c9d978b9382c') center / cover no-repeat,
 				radial-gradient(55% 70% at 0% 100%, rgba(28, 61, 99, 0.5), transparent 60%),
 				repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 56px);
 		}
@@ -842,7 +1010,7 @@
 			background: #fff;
 			border: 1px solid var(--ql-line);
 			border-top: 4px solid var(--ql-gold);
-			border-radius: 20px;
+			border-radius: 8px;
 			padding: 32px;
 			box-shadow: 0 30px 55px -30px rgba(15, 30, 51, 0.45);
 		}
@@ -903,7 +1071,7 @@
 			width: 100%;
 			padding: 12px 14px;
 			border: 1.5px solid var(--ql-line);
-			border-radius: 10px;
+			border-radius: 4px;
 			background: #fff;
 			font-family: inherit;
 			font-size: 15px;
@@ -955,11 +1123,12 @@
 			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
 			color: #fff;
 			border: 0;
-			border-radius: 999px;
+			border-radius: 4px;
 			font-family: inherit;
-			font-size: 15px;
+			font-size: 13px;
 			font-weight: 700;
-			letter-spacing: 0.02em;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
 			cursor: pointer;
 			box-shadow: 0 14px 26px -14px rgba(156, 123, 59, 0.9);
 			transition: transform 0.2s ease;
@@ -997,6 +1166,112 @@
 			color: #9a8a6e;
 		}
 
+		/* --------------------------- book online --------------------------- */
+		.ql-bk-schedule {
+			background: #fff;
+			border: 1px solid var(--ql-line);
+			border-top: 4px solid var(--ql-gold);
+			border-radius: 8px;
+			padding: 32px;
+			margin-bottom: 44px;
+			box-shadow: 0 30px 55px -30px rgba(15, 30, 51, 0.45);
+		}
+
+		.ql-book .ql-bk-schedule.ql-bk-hidden,
+		.ql-book .ql-bk-lawyer-card.ql-bk-hidden {
+			display: none;
+		}
+
+		.ql-bk-schedule-head {
+			display: flex;
+			align-items: flex-end;
+			justify-content: space-between;
+			gap: 24px;
+			margin-bottom: 24px;
+		}
+
+		.ql-bk-schedule-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-size: 25px;
+			line-height: 1.2;
+			color: var(--ql-navy);
+		}
+
+		.ql-bk-schedule-note {
+			margin: 0;
+			font-size: 14px;
+			color: var(--ql-muted);
+			max-width: 400px;
+			text-align: right;
+		}
+
+		.ql-bk-schedule-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 18px;
+		}
+
+		.ql-bk-lawyer-card {
+			display: flex;
+			align-items: stretch;
+			gap: 18px;
+			background: var(--ql-ivory);
+			border: 1px solid var(--ql-line);
+			border-radius: 6px;
+			padding: 16px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.ql-bk-lawyer-card:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 18px 34px -22px rgba(15, 30, 51, 0.5);
+		}
+
+		.ql-bk-lawyer-photo {
+			flex: 0 0 96px;
+			width: 96px;
+			height: 96px;
+			border-radius: 6px;
+			overflow: hidden;
+			display: block;
+			background: #e8e2d4;
+		}
+
+		.ql-bk-lawyer-photo img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			object-position: top center;
+			display: block;
+		}
+
+		.ql-bk-lawyer-body {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+		}
+
+		.ql-bk-lawyer-name {
+			font-family: var(--ql-display);
+			font-size: 20px;
+			color: var(--ql-navy);
+			line-height: 1.2;
+		}
+
+		.ql-bk-lawyer-role {
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-bk-lawyer-body .ql-bk-btn {
+			margin-top: auto;
+			align-self: flex-start;
+		}
+
 		/* ------------------------------ aside ------------------------------ */
 		.ql-bk-aside {
 			display: flex;
@@ -1009,7 +1284,7 @@
 		.ql-bk-aside-block {
 			background: #fff;
 			border: 1px solid var(--ql-line);
-			border-radius: 18px;
+			border-radius: 8px;
 			padding: 26px;
 		}
 
@@ -1122,12 +1397,33 @@
 			.ql-bk-aside {
 				position: static;
 			}
+
+			.ql-bk-schedule-head {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.ql-bk-schedule-note {
+				text-align: left;
+			}
 		}
 
 		@media (max-width: 640px) {
 			.ql-bk-form-fields {
 				grid-template-columns: 1fr;
 			}
+
+			.ql-bk-schedule-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	
+		.ql-bk-kicker::before {
+			content: '';
+			width: 26px;
+			height: 1px;
+			background: currentColor;
+			flex: 0 0 auto;
 		}
 	</style>
 
@@ -1151,9 +1447,48 @@
 				pageRoot.classList.add('is-reduced-motion');
 			}
 
+			/* ---------------- Calendly schedule section ---------------- */
+			/* Each lawyer card below carries its Calendly event link in the
+			   data-calendly-url attribute. CMS CONFIG: paste the real Calendly
+			   links into those attributes. The whole section hides itself until
+			   at least one link is configured. */
+			var scheduleSection = pageRoot.querySelector('[data-bk-schedule]');
+			var scheduleCards = Array.prototype.slice.call(
+				pageRoot.querySelectorAll('[data-bk-lawyer-card]')
+			);
+			var configuredCards = [];
+
+			scheduleCards.forEach(function (card) {
+				var scheduleButton = card.querySelector('a[data-calendly-url]');
+				var bookingLink = scheduleButton
+					? String(scheduleButton.getAttribute('data-calendly-url') || '').trim()
+					: '';
+				var looksValid = bookingLink.length > 0 &&
+					bookingLink.indexOf('<') === -1 &&
+					bookingLink.indexOf('http') === 0;
+				if (!looksValid) {
+					card.classList.add('ql-bk-hidden');
+					return;
+				}
+				scheduleButton.href = bookingLink;
+				configuredCards.push(card);
+			});
+
+			if (scheduleSection) {
+				if (configuredCards.length === 0) {
+					scheduleSection.classList.add('ql-bk-hidden');
+				} else {
+					/* with online booking live, the request form becomes the secondary path */
+					var formKicker = pageRoot.querySelector('[data-bk-form-kicker]');
+					var formTitle = pageRoot.querySelector('[data-bk-form-title]');
+					if (formKicker) { formKicker.textContent = 'Request an appointment instead'; }
+					if (formTitle) { formTitle.textContent = 'Or request a time and we will confirm it'; }
+				}
+			}
+
 			/* ---------------- booking form (public form contract) ---------------- */
 			var formApiEndpoint = 'https://qarqeenlawca.uniconhub.com/api/public/forms/submit';
-			var formDefaultCmsObjectType = 'qarqeen-consultation-request-forms-uniconbaseapps';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
 			var formFieldMaxLength = 4000;
 
 			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
@@ -1406,6 +1741,9 @@
   - All CSS is scoped under .ql-footer so it cannot leak into page content
   - No <footer> / <nav> / <header> element tags (plain divs + ARIA roles)
   - Carries the mandatory legal disclaimer band (law firm requirement)
+  - Brand = the Qarqeen Law logo from its storage URL (dark artwork on
+    white - shown on a white chip so it keeps its brand colors on navy)
+  - Shows the legal operating name "Qarqeen Law Corporation" (mandatory)
   =========================================================================
 -->
 <div class="ql-footer" data-ql-footer>
@@ -1433,30 +1771,28 @@
 				<!-- ------------------------- brand ------------------------- -->
 				<div class="ql-ft-brand">
 					<a class="ql-ft-logo" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
-						<span class="ql-ft-mark" aria-hidden="true">
-							<svg class="ql-ft-ico ql-ft-mark-ico" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg>
-						</span>
-						<span class="ql-ft-word">
-							<span class="ql-ft-word-main">Qarqeen</span>
-							<span class="ql-ft-word-sub">Law</span>
-						</span>
+						<img class="ql-ft-logo-img"
+							src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/QARQEENLAW%2FCMS_CONTENT%2FMEDIA%2Fmedia-library-4M7PTN-qarqeenlaw%2F2024-06-13-A2YEHR6QT7-qarqeenlaw%2FQarqeen-Law-Logo-200-50-px-7NG7.png?alt=media&amp;token=cc7b16d8-3c18-4110-a8fc-cfc5a366acd5"
+							alt="Qarqeen Law" width="200" height="50"
+							loading="lazy" decoding="async">
 					</a>
 					<p class="ql-ft-mission">
 						Qarqeen Law provides cost-effective, high-quality legal services from Vancouver,
 						British Columbia, with a satellite office in Victoria.
 					</p>
 					<p class="ql-ft-tagline">Your legal rights defenders.</p>
+					<p class="ql-ft-legal-entity">Qarqeen Law Corporation</p>
 				</div>
 
 				<!-- --------------------- practice areas --------------------- -->
 				<div class="ql-ft-col">
 					<p class="ql-ft-head">Practice areas</p>
 					<ul class="ql-ft-links">
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Immigration Law</a></li>
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Refugee Law</a></li>
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Family Law</a></li>
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Litigation</a></li>
-						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Wills and Estates</a></li>
+						<li><a data-ic-nav-href="/immigration-law" href="/immigration-law">Immigration Law</a></li>
+						<li><a data-ic-nav-href="/refugee-law" href="/refugee-law">Refugee Law</a></li>
+						<li><a data-ic-nav-href="/family-law" href="/family-law">Family Law</a></li>
+						<li><a data-ic-nav-href="/litigation" href="/litigation">Litigation</a></li>
+						<li><a data-ic-nav-href="/wills-and-estates" href="/wills-and-estates">Wills and Estates</a></li>
 					</ul>
 				</div>
 
@@ -1508,7 +1844,7 @@
 	<div class="ql-ft-bottom">
 		<div class="ql-ft-wrap ql-ft-bottom-inner">
 			<p class="ql-ft-copy">
-				&copy; <span class="ql-ft-year">2026</span> Qarqeen Law. All rights reserved.
+				&copy; <span class="ql-ft-year">2026</span> Qarqeen Law Corporation. All rights reserved.
 			</p>
 			<div class="ql-ft-bottom-side">
 				<p class="ql-ft-legal">Vancouver &middot; Victoria &middot; British Columbia</p>
@@ -1639,10 +1975,11 @@
 			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
 			color: #fff;
 			font-weight: 700;
-			font-size: 14.5px;
-			letter-spacing: 0.03em;
+			font-size: 12.5px;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
 			text-decoration: none;
-			border-radius: 999px;
+			border-radius: 4px;
 			box-shadow: 0 10px 20px -10px rgba(156, 123, 59, 0.9);
 			transition: transform 0.2s ease, box-shadow 0.2s ease;
 		}
@@ -1661,7 +1998,7 @@
 			font-weight: 700;
 			font-size: 14.5px;
 			text-decoration: none;
-			border-radius: 999px;
+			border-radius: 4px;
 			transition: background 0.2s ease;
 		}
 
@@ -1684,47 +2021,16 @@
 		.ql-ft-logo {
 			display: inline-flex;
 			align-items: center;
-			gap: 11px;
 			text-decoration: none;
 		}
 
-		.ql-ft-mark {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			width: 44px;
-			height: 44px;
-			border: 1.5px solid var(--ql-gold);
-			border-radius: 10px;
-			background: rgba(194, 161, 95, 0.1);
-			color: var(--ql-gold-soft);
-		}
-
-		.ql-ft-mark-ico {
-			width: 23px;
-			height: 23px;
-		}
-
-		.ql-ft-word {
-			display: flex;
-			flex-direction: column;
-			line-height: 1.1;
-		}
-
-		.ql-ft-word-main {
-			font-family: Georgia, 'Times New Roman', serif;
-			font-size: 21px;
-			font-weight: 700;
-			color: #fff;
-		}
-
-		.ql-ft-word-sub {
-			font-size: 10.5px;
-			font-weight: 700;
-			letter-spacing: 0.42em;
-			text-transform: uppercase;
-			color: var(--ql-gold-soft);
-			margin-top: 2px;
+		.ql-ft-logo-img {
+			height: 40px;
+			width: auto;
+			display: block;
+			padding: 8px 12px;
+			background: #fff;
+			border-radius: 6px;
 		}
 
 		.ql-ft-mission {
@@ -1740,6 +2046,15 @@
 			font-style: italic;
 			font-size: 15px;
 			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-legal-entity {
+			margin: 14px 0 0;
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: #8fa0b3;
 		}
 
 		.ql-ft-head {
@@ -1866,7 +2181,7 @@
 			background: rgba(255, 255, 255, 0.06);
 			color: #dbe4ef;
 			border: 1px solid rgba(232, 220, 189, 0.25);
-			border-radius: 999px;
+			border-radius: 4px;
 			font-size: 13px;
 			font-family: inherit;
 			cursor: pointer;
@@ -1912,24 +2227,89 @@
 		(function () {
 			'use strict';
 
-			var footerRoot = document.querySelector('.ql-footer');
-			/* idempotent: safe on every CMS load and every SPA navigation */
-			if (!footerRoot || footerRoot.getAttribute('data-ql-footer-ready') === '1') { return; }
-			footerRoot.setAttribute('data-ql-footer-ready', '1');
-
-			/* ---------------- current year ---------------- */
-			var yearElement = footerRoot.querySelector('.ql-ft-year');
-			if (yearElement) {
-				yearElement.textContent = String(new Date().getFullYear());
+			/* The platform mounts the chrome fresh on EVERY SPA navigation. Keep
+			   one stable stylesheet in the document head so the footer can never
+			   be left unstyled when a previous mount (and its inline style) is
+			   removed. */
+			if (!document.getElementById('ql-footer-css')) {
+				var anyFooter = document.querySelector('.ql-footer');
+				var inlineFooterStyle = anyFooter ? anyFooter.querySelector('style') : null;
+				if (inlineFooterStyle) {
+					var footerHeadStyle = document.createElement('style');
+					footerHeadStyle.id = 'ql-footer-css';
+					footerHeadStyle.textContent = inlineFooterStyle.textContent;
+					document.head.appendChild(footerHeadStyle);
+				}
 			}
 
-			/* ---------------- back to top ---------------- */
-			var backToTopButton = footerRoot.querySelector('.ql-ft-top');
-			if (backToTopButton) {
-				backToTopButton.addEventListener('click', function () {
-					window.scrollTo({ top: 0, behavior: 'smooth' });
+			/* ---------------- back to the top on page navigation ---------------- */
+			/* App shells (for example Next.js) keep the previous scroll offset on a
+			   client-side route change. Reset the window and every scrollable
+			   ancestor on internal link clicks, repeated shortly after so a late
+			   render also starts at the top. The header script may bind this
+			   already, so one shared guard keeps it single. */
+			if (!window.__qlScrollResetBound) {
+				window.__qlScrollResetBound = true;
+
+				var resetPageScroll = function () {
+					if (window.location.hash) { return; }
+					try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+					catch (scrollError) { window.scrollTo(0, 0); }
+					var scrollRoot = document.scrollingElement || document.documentElement;
+					if (scrollRoot) { scrollRoot.scrollTop = 0; }
+					var ancestor = document.querySelector('.ql-footer');
+					ancestor = ancestor ? ancestor.parentElement : null;
+					while (ancestor && ancestor !== document.body && ancestor !== document.documentElement) {
+						var ancestorStyle = window.getComputedStyle(ancestor);
+						if (/(auto|scroll)/.test(ancestorStyle.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+							ancestor.scrollTop = 0;
+						}
+						ancestor = ancestor.parentElement;
+					}
+				};
+
+				var schedulePageScrollReset = function () {
+					resetPageScroll();
+					window.requestAnimationFrame(resetPageScroll);
+					window.setTimeout(resetPageScroll, 180);
+					window.setTimeout(resetPageScroll, 600);
+				};
+
+				document.addEventListener('click', function (event) {
+					var target = event.target;
+					var anchor = target && target.closest ? target.closest('a[href]') : null;
+					if (!anchor) { return; }
+					var href = anchor.getAttribute('href') || '';
+					if (href.charAt(0) !== '/' || href.indexOf('//') === 0) { return; }
+					if (href.indexOf('#') !== -1) { return; }
+					if (anchor.getAttribute('target') === '_blank') { return; }
+					schedulePageScrollReset();
 				});
 			}
+
+			/* Initialise every footer element that is not initialised yet. A new
+			   element is injected per navigation, so this runs once per mount. */
+			Array.prototype.forEach.call(
+				document.querySelectorAll('.ql-footer[data-ql-footer]'),
+				function (footerRoot) {
+					if (footerRoot.getAttribute('data-ql-footer-ready') === '1') { return; }
+					footerRoot.setAttribute('data-ql-footer-ready', '1');
+
+					/* ---------------- current year ---------------- */
+					var yearElement = footerRoot.querySelector('.ql-ft-year');
+					if (yearElement) {
+						yearElement.textContent = String(new Date().getFullYear());
+					}
+
+					/* ---------------- back to top ---------------- */
+					var backToTopButton = footerRoot.querySelector('.ql-ft-top');
+					if (backToTopButton) {
+						backToTopButton.addEventListener('click', function () {
+							window.scrollTo({ top: 0, behavior: 'smooth' });
+						});
+					}
+				}
+			);
 		})();
 	</script>
 

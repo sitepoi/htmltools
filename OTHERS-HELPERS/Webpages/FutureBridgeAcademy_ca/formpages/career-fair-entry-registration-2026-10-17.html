@@ -46,7 +46,7 @@
 	<section class="fba-career-form-sec">
 		<div class="fba-wrap">
 
-			<form class="fba-career-form" data-gw-form data-gw-form-type="career-fair-entry">
+			<form class="fba-career-form" data-fba-form data-fba-form-type="career-fair-entry">
 				<div class="fba-career-form-head">
 					<h2>Register your entry</h2>
 					<p>Four details, and email only if you want it.</p>
@@ -78,6 +78,71 @@
 						<span class="fba-career-hint" id="fba-career-email-hint">We only email you about what you
 							ask for below.</span>
 					</label>
+
+					<label class="fba-career-field">
+						<span class="fba-career-label">City or area</span>
+						<select name="city" required data-fba-city aria-describedby="fba-career-city-hint">
+							<option value="">Choose your city or area</option>
+							<optgroup label="Greater Toronto Area">
+								<option>Toronto</option>
+								<option>Vaughan</option>
+								<option>Mississauga</option>
+								<option>Markham</option>
+								<option>Oakville</option>
+								<option>Burlington</option>
+								<option>Brampton</option>
+								<option>Scarborough</option>
+								<option>Richmond Hill</option>
+								<option>Newmarket</option>
+								<option>Pickering</option>
+								<option>Ajax</option>
+								<option>Whitby</option>
+								<option>Oshawa</option>
+								<option>Milton</option>
+								<option>Other GTA City</option>
+							</optgroup>
+							<optgroup label="Ontario">
+								<option>Ottawa</option>
+								<option>Hamilton</option>
+								<option>Kitchener/Waterloo</option>
+								<option>London</option>
+								<option>Windsor</option>
+								<option>Barrie</option>
+								<option>Guelph</option>
+								<option>Cambridge</option>
+								<option>Kingston</option>
+								<option>Peterborough</option>
+								<option>Niagara Falls Area</option>
+								<option>Other Ontario City</option>
+							</optgroup>
+							<optgroup label="Quebec">
+								<option>Montreal</option>
+								<option>Other Quebec City</option>
+							</optgroup>
+							<optgroup label="British Columbia">
+								<option>Vancouver Area</option>
+								<option>Victoria (Vancouver Island)</option>
+								<option>Kelowna</option>
+								<option>Other BC City</option>
+							</optgroup>
+							<optgroup label="Alberta">
+								<option>Calgary</option>
+								<option>Edmonton</option>
+								<option>Other Alberta City</option>
+							</optgroup>
+							<optgroup label="Saskatchewan">
+								<option>Regina</option>
+								<option>Other SK City</option>
+							</optgroup>
+							<optgroup label="Manitoba">
+								<option>Other Manitoba City</option>
+							</optgroup>
+							<option>Other</option>
+						</select>
+						<span class="fba-career-hint" id="fba-career-city-hint">Choose your city, or pick Other and type it. We use this to send the details that suit your city.</span>
+						<input type="text" name="city_other" maxlength="80" autocomplete="address-level2" placeholder="Which city?" hidden data-fba-city-other>
+						<input type="hidden" name="city_region" data-fba-city-region>
+					</label>
 				</div>
 
 				<div class="fba-career-consent">
@@ -98,7 +163,7 @@
 					aria-hidden="true">
 
 				<div class="fba-career-actions">
-					<div class="fba-career-status" data-gw-form-status role="status"></div>
+					<div class="fba-career-status" data-fba-form-status role="status"></div>
 					<button class="fba-career-submit" type="submit">Register my entry</button>
 				</div>
 
@@ -199,7 +264,8 @@
 			color: var(--fba-muted);
 		}
 
-		.fba-career .fba-career-field input {
+		.fba-career .fba-career-field input,
+		.fba-career .fba-career-field select {
 			width: 100%;
 			min-height: 54px;
 			padding: 15px 16px;
@@ -214,7 +280,18 @@
 			appearance: none;
 		}
 
-		.fba-career .fba-career-field input:focus {
+		/* the city list is long: give the select the same chevron the other pages have */
+		.fba-career .fba-career-field select {
+			background-image: linear-gradient(45deg, transparent 50%, var(--fba-muted) 50%),
+				linear-gradient(135deg, var(--fba-muted) 50%, transparent 50%);
+			background-position: calc(100% - 22px) 24px, calc(100% - 16px) 24px;
+			background-size: 6px 6px, 6px 6px;
+			background-repeat: no-repeat;
+			padding-right: 44px;
+		}
+
+		.fba-career .fba-career-field input:focus,
+		.fba-career .fba-career-field select:focus {
 			outline: 3px solid rgba(0, 78, 137, 0.16);
 			outline-offset: 1px;
 			border-color: rgba(0, 78, 137, 0.45);
@@ -404,6 +481,23 @@
 				content: none;
 			}
 		}
+
+		/* email and phone: inline message under the field */
+		.fba-career .fba-career-error {
+			display: block;
+			font-size: 0.78rem;
+			font-weight: 600;
+			line-height: 1.45;
+			color: #b42318;
+		}
+
+		.fba-career .fba-career-error:empty { display: none; }
+
+		.fba-career .fba-career-field input.is-invalid,
+		.fba-career .fba-career-field select.is-invalid,
+		.fba-career .fba-career-field textarea.is-invalid {
+			border-color: #d92d20;
+		}
 	</style>
 
 	<script>
@@ -421,7 +515,7 @@
 		   no second call and no read access.
 		   Set formApiEndpoint to the CMS host, for example
 		   'https://cms.example.com/api/public/forms/submit'. A form may override it with
-		   data-gw-form-endpoint, and data-gw-cms-object-type is sent as cmsObjectType when a
+		   data-fba-form-endpoint, and data-fba-cms-object-type is sent as cmsObjectType when a
 		   submission belongs to one specific application (leave it empty to use the CMS
 		   default, form-submission-uniconbaseapps). While the endpoint is still the
 		   placeholder the page falls back to the CMS platform bind, and in a local preview it
@@ -430,10 +524,10 @@
 		var formDefaultCmsObjectType = 'event-entry-registraton-uniconbaseapps';
 		var formFieldMaxLength = 4000;
 
-		var forms = Array.prototype.slice.call(root.querySelectorAll('form[data-gw-form]'));
+		var forms = Array.prototype.slice.call(root.querySelectorAll('form[data-fba-form]'));
 
 		function setFormStatus(form, message, state) {
-			var status = form.querySelector('[data-gw-form-status]');
+			var status = form.querySelector('[data-fba-form-status]');
 			if (!status) { return; }
 			status.textContent = message || '';
 			status.classList.remove('is-ok', 'is-error');
@@ -472,7 +566,7 @@
 		}
 
 		function endpointForForm(form) {
-			var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+			var ownEndpoint = form.getAttribute('data-fba-form-endpoint');
 			var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
 			/* an empty value or an unreplaced placeholder means "not configured" */
 			if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
@@ -480,7 +574,7 @@
 		}
 
 		function cmsObjectTypeForForm(form) {
-			var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+			var ownObjectType = form.getAttribute('data-fba-cms-object-type');
 			return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
 		}
 
@@ -509,7 +603,7 @@
 			delete values.company;
 
 			var payload = {
-				formTypeId: form.getAttribute('data-gw-form-type') || '',
+				formTypeId: form.getAttribute('data-fba-form-type') || '',
 				page: window.location.pathname,
 				submittedAt: new Date().toISOString(),
 				gw_hp: honeypotValue,
@@ -539,13 +633,18 @@
 					!(result.body && result.body.ok === false);
 
 				if (!accepted) {
+					/* the administrator needs the reason the CMS gave; the visitor gets the friendly text */
+					window.console.error('[FORM] The CMS rejected this submission: HTTP ' + result.status +
+						'. Response: ' + JSON.stringify(result.body));
 					setFormStatus(form, formErrorMessage(result.status), 'error');
 					return;
 				}
 
 				form.reset();
 				setFormStatus(form, 'Thank you. Your entry is registered. Enjoy the fair.', 'ok');
-			}).catch(function () {
+			}).catch(function (networkError) {
+				window.console.error('[FORM] The submission did not reach the CMS: ' +
+					(networkError && networkError.message ? networkError.message : 'network error'));
 				setFormStatus(form, formErrorMessage(0), 'error');
 			}).then(function () {
 				form.classList.remove('gw-busy');
@@ -560,12 +659,26 @@
 
 			if (usesApi) {
 				forms.forEach(function (form) {
+/* the shell also answers delegated clicks on submit buttons */
+					form.addEventListener('click', function (event) {
+						var clickedElement = event.target;
+						if (clickedElement && clickedElement.closest && clickedElement.closest('[type="submit"]')) {
+							event.stopPropagation();
+						}
+					}, true);
+					
 					form.addEventListener('submit', function (event) {
-						event.preventDefault();
 						var endpoint = endpointForForm(form);
-						if (!endpoint || form.classList.contains('gw-busy')) { return; }
+						/* no endpoint: leave the event alone for another binder */
+						if (!endpoint) { return; }
+						/* THIS PAGE OWNS THE SUBMIT. Capture phase plus stopImmediatePropagation
+						   stops the CMS shell's gwSubmitForm from posting a second copy to the
+						   retired /api/forms/submit (the 400 that flashed "Something went wrong"). */
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						if (form.classList.contains('gw-busy')) { return; }
 						sendFormToApi(form, endpoint);
-					});
+					}, true);
 				});
 			} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
 				platform.forms.bind(root);
@@ -580,5 +693,204 @@
 		}
 	})();
 	</script>
+
+<script>
+	/* ---------------------- city picker ---------------------- */
+	/* Native select with <optgroup>s; the group label is copied into city_region
+	   and an "Other ... City" answer reveals a text box. */
+	(function () {
+		var pageRoot = document.querySelector('.fba-career');
+		if (!pageRoot || pageRoot.getAttribute('data-fba-city-ready') === '1') { return; }
+		pageRoot.setAttribute('data-fba-city-ready', '1');
+
+		Array.prototype.forEach.call(pageRoot.querySelectorAll('form'), function (form) {
+			var citySelect = form.querySelector('select[data-fba-city]');
+			if (!citySelect) { return; }
+
+			var regionInput = form.querySelector('[data-fba-city-region]');
+			var otherInput = form.querySelector('[data-fba-city-other]');
+
+			function syncCity() {
+				var option = citySelect.options[citySelect.selectedIndex];
+				var parent = option ? option.parentNode : null;
+				var groupLabel = parent && parent.tagName === 'OPTGROUP'
+					? parent.getAttribute('label') : '';
+				var wantsOwnCity = Boolean(option && /^Other\b/.test(option.textContent.trim()));
+
+				if (regionInput) { regionInput.value = groupLabel; }
+				if (!otherInput) { return; }
+
+				otherInput.hidden = !wantsOwnCity;
+				otherInput.required = wantsOwnCity;
+				/* a disabled field is not collected, so an unused box never ships an empty key */
+				otherInput.disabled = !wantsOwnCity;
+				if (!wantsOwnCity) { otherInput.value = ''; }
+			}
+
+			citySelect.addEventListener('change', syncCity);
+			form.addEventListener('reset', function () {
+				window.setTimeout(syncCity, 0);
+			});
+			syncCity();
+		});
+	})();
+</script>
+
+<script>
+	/* ---------------------- email and phone guard ---------------------- */
+	/* Both are required on every form, and both are checked here so the
+	   message appears under the field instead of in a browser bubble:
+	     - email: spaces removed, domain lower-cased, name@domain.tld required
+	     - phone: formatted as (604) 555-0123 while typing, 10 digits required
+	   The page keeps the browser's own constraint validation, so nothing can
+	   be submitted while a field is wrong; the invalid event is turned into the
+	   inline message. */
+	(function () {
+		var pageRoot = document.querySelector('.fba-career');
+		if (!pageRoot || pageRoot.getAttribute('data-fba-fields-ready') === '1') { return; }
+		pageRoot.setAttribute('data-fba-fields-ready', '1');
+
+		var emailPattern = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+
+		function errorSlotFor(field) {
+			var holder = field.parentNode;
+			if (!holder) { return null; }
+			var slot = holder.querySelector('[data-fba-error]');
+			if (slot) { return slot; }
+			slot = document.createElement('span');
+			slot.className = 'fba-career-error';
+			slot.setAttribute('data-fba-error', '');
+			slot.setAttribute('role', 'alert');
+			holder.appendChild(slot);
+			return slot;
+		}
+
+		function showProblem(field, message) {
+			var slot = errorSlotFor(field);
+			if (slot) { slot.textContent = message || ''; }
+			field.classList.toggle('is-invalid', Boolean(message));
+			if (message) { field.setAttribute('aria-invalid', 'true'); }
+			else { field.removeAttribute('aria-invalid'); }
+		}
+
+		function normalizeEmail(rawValue) {
+			var value = String(rawValue || '').replace(/\s+/g, '');
+			var atIndex = value.lastIndexOf('@');
+			if (atIndex === -1) { return value; }
+			return value.slice(0, atIndex) + '@' + value.slice(atIndex + 1).toLowerCase();
+		}
+
+		function emailProblem(rawValue) {
+			var value = normalizeEmail(rawValue);
+			if (!value) { return 'Please enter your email address.'; }
+			if (value.length > 160) { return 'That email address is too long.'; }
+			if (value.indexOf('..') !== -1 || !emailPattern.test(value)) {
+				return 'Please check the email address. It should look like name@example.com.';
+			}
+			return '';
+		}
+
+		function phoneDigits(rawValue) { return String(rawValue || '').replace(/\D/g, ''); }
+
+		function formatPhone(rawValue) {
+			var digits = phoneDigits(rawValue);
+			if (digits.length === 11 && digits.charAt(0) === '1') { digits = digits.slice(1); }
+			digits = digits.slice(0, 10);
+			if (digits.length <= 3) { return digits; }
+			var areaCode = digits.slice(0, 3);
+			var rest = digits.slice(3);
+			if (rest.length <= 3) { return '(' + areaCode + ') ' + rest; }
+			return '(' + areaCode + ') ' + rest.slice(0, 3) + '-' + rest.slice(3);
+		}
+
+		function phoneProblem(rawValue) {
+			var digits = phoneDigits(rawValue);
+			if (!digits) { return 'Please enter your phone number.'; }
+			if (digits.length !== 10) { return 'Please enter a 10 digit phone number, for example (604) 555-0123.'; }
+			if (!/^[2-9]/.test(digits)) { return 'Please check the area code, for example (604) 555-0123.'; }
+			return '';
+		}
+
+		/* the browser keeps the constraint, this only sets its message */
+		function refreshField(field) {
+			if (field.type === 'email') { field.setCustomValidity(emailProblem(field.value)); }
+			else if (field.type === 'tel') { field.setCustomValidity(phoneProblem(field.value)); }
+
+			if (field.classList.contains('is-invalid')) {
+				showProblem(field, field.validationMessage);
+			}
+		}
+
+		function formatPhoneField(field) {
+			var start = field.selectionStart;
+			var digitsBeforeCaret = start === null ? 0 : phoneDigits(field.value.slice(0, start)).length;
+			var formatted = formatPhone(field.value);
+			if (formatted === field.value) { return; }
+
+			field.value = formatted;
+			if (start === null || document.activeElement !== field) { return; }
+
+			var position = 0;
+			var seen = 0;
+			while (position < formatted.length && seen < digitsBeforeCaret) {
+				if (/\d/.test(formatted.charAt(position))) { seen += 1; }
+				position += 1;
+			}
+			field.setSelectionRange(position, position);
+		}
+
+		Array.prototype.forEach.call(pageRoot.querySelectorAll('form'), function (form) {
+			var emailField = form.querySelector('input[type="email"], input[name="email"]');
+			var phoneField = form.querySelector('input[type="tel"], input[name="phone"]');
+
+			if (emailField) {
+				emailField.setAttribute('required', 'required');
+				emailField.setAttribute('maxlength', emailField.getAttribute('maxlength') || '160');
+				errorSlotFor(emailField);
+				emailField.addEventListener('input', function () {
+					/* a pasted address often brings a trailing space */
+					var withoutSpaces = emailField.value.replace(/\s+/g, '');
+					if (withoutSpaces !== emailField.value) { emailField.value = withoutSpaces; }
+					refreshField(emailField);
+				});
+				emailField.addEventListener('blur', function () {
+					emailField.value = normalizeEmail(emailField.value);
+					refreshField(emailField);
+					if (emailField.validationMessage) { showProblem(emailField, emailField.validationMessage); }
+				});
+			}
+
+			if (phoneField) {
+				phoneField.setAttribute('required', 'required');
+				errorSlotFor(phoneField);
+				phoneField.addEventListener('input', function () {
+					formatPhoneField(phoneField);
+					refreshField(phoneField);
+				});
+				phoneField.addEventListener('blur', function () {
+					refreshField(phoneField);
+					if (phoneField.validationMessage) { showProblem(phoneField, phoneField.validationMessage); }
+				});
+		}
+
+			/* the browser suppresses its own bubble: the message is inline */
+			form.addEventListener('invalid', function (event) {
+				event.preventDefault();
+				var field = event.target;
+				if (field && field.name && field.type !== 'hidden') {
+					showProblem(field, field.validationMessage || 'Please check this field.');
+			}
+			}, true);
+
+			form.addEventListener('reset', function () {
+				window.setTimeout(function () {
+					Array.prototype.forEach.call(form.querySelectorAll('.is-invalid'), function (field) {
+						showProblem(field, '');
+					});
+				}, 0);
+			});
+		});
+		})();
+</script>
 
 </div>

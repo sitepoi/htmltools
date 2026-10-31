@@ -1,4 +1,4 @@
-/* build 2026-10-30-3 */
+/* build 2026-10-31-4 */
 
 /* =====================================================================
    RestaurantOrderTakingApp - application-level ACTIVE ORDERS BOARD
@@ -16,7 +16,7 @@
 
 /* Tool build stamp - MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    bump on EVERY code change so stale CMS uploads are detectable. */
-var TOOL_BUILD = '2026-10-30-3';
+var TOOL_BUILD = '2026-10-31-4';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp starting...');
 
 (function () {
@@ -39,6 +39,8 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
   var ACTIVE_STATUSES = [STATUS_NEW, STATUS_ACCEPTED, STATUS_PREP, STATUS_READY];
   var TERMINAL_STATUSES = [STATUS_DONE, STATUS_DECLINED, STATUS_CANCELLED];
+  /* Workflow order for the status selector in the detail popup (D-ROTA-18). */
+  var STATUS_ORDER = [STATUS_NEW, STATUS_ACCEPTED, STATUS_PREP, STATUS_READY, STATUS_DONE, STATUS_DECLINED, STATUS_CANCELLED];
 
   var STATUS_META = {
     'new': { label: 'New', cls: 'new', next: STATUS_ACCEPTED, nextLabel: 'Accept', tab: 'new', action: 'accept' },
@@ -87,6 +89,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
   var MAX_BOARD_ITEMS = 200;
   var ARM_SECONDS = 6000;
+  var FRESH_FLASH_MS = 6000;   /* how long a just-arrived order keeps its ring */
   var UI_SAVE_DEBOUNCE = 300;
   var SEARCH_DEBOUNCE = 250;
   var URGENT_WINDOW_MINUTES = 5;
@@ -97,6 +100,8 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   var _orderById = {};         /* id -> normalized order */
   var _knownIds = {};          /* ids seen on the previous successful load */
   var _freshIds = {};          /* ids that appeared in the last load (new-order flash) */
+  var _freshClearTimer = null; /* clears the fresh rings after FRESH_FLASH_MS */
+  var _silentNextLoad = false; /* true right after a sample import - no fresh rings, no toasts */
   var _firstLoadDone = false;
 
   var _ui = { tab: 'all', sort: 'waiting', search: '' };
@@ -108,6 +113,11 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   var _etaMinutes = 0;         /* chosen minutes in the accept modal, 0 = none */
   var _armed = { orderId: '', status: '', timer: null };
   var _busy = {};              /* orderId -> true while a write is in flight */
+
+  var _menuOpen = false;       /* three-dots action menu visibility */
+  var _importBusy = false;     /* true while a sample import is running */
+  var _clearArmed = false;     /* true while the remove-today confirm is armed */
+  var _clearArmTimer = null;
 
   var _loading = false;
   var _error = '';
@@ -399,6 +409,29 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     order.onBoard = order.isActive || order.isToday || (order.isTerminal && order.statusChangedToday);
   }
 
+  /* Daily sequence numbers (D-ROTA-19): orders placed today get a simple
+     1-based number for the day - #1 is the first order of the day, #2 the
+     second, and so on. The raw record number (e.g. EFOC-8001) stays in the
+     CMS, but the board shows the friendly daily number as a chip. */
+  function assignDayNumbers(list) {
+    var todays = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].isToday && list[i].placeTs) todays.push(list[i]);
+    }
+    todays.sort(function (a, b) {
+      return (a.placeTs - b.placeTs) || String(a.id).localeCompare(String(b.id));
+    });
+    for (var j = 0; j < todays.length; j++) todays[j].dayNumber = j + 1;
+    return list;
+  }
+
+  /* Board-facing order label: the daily chip number when available, otherwise
+     the raw record number as stored on the order. */
+  function orderLabelOf(order) {
+    if (order.dayNumber) return '#' + order.dayNumber;
+    return order.orderNumber || ('#' + order.id);
+  }
+
   function findOrder(orderId) { return _orderById[orderId] || null; }
 
   function orderTitleOf(order) {
@@ -643,7 +676,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   function matchesSearch(order, query) {
     if (!query) return true;
     var hay = [
-      order.orderNumber, order.name, order.tableNumber,
+      orderLabelOf(order), order.orderNumber, order.name, order.tableNumber,
       order.customer.fullName, order.customer.name, order.customer.phone,
       addressLines(order.address).join(' '),
       order.address && order.address.street ? String(order.address.street) : ''
@@ -698,20 +731,27 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   }
 
   function applyOrders(rawList) {
+    var silentLoad = _silentNextLoad;
+    _silentNextLoad = false;
     var next = [];
     var nextById = {};
-    var freshIds = {};
-    var announce = _firstLoadDone && _cfg.newOrderNotifications;
-    var markFresh = _firstLoadDone; /* the FIRST load is the baseline - never flash it (D-ROTA-16) */
     for (var i = 0; i < rawList.length; i++) {
       var order = normalizeOrder(rawList[i]);
       if (!order.id) continue;
       next.push(order);
       nextById[order.id] = order;
-      if (!_knownIds[order.id]) {
-        if (markFresh) freshIds[order.id] = true;
-        if (announce && order.status === STATUS_NEW) {
-          notify('New order ' + (order.orderNumber || order.id) + ' - ' + orderTitleOf(order), 'info');
+    }
+    assignDayNumbers(next);
+
+    var freshIds = {};
+    var announce = _firstLoadDone && !silentLoad && _cfg.newOrderNotifications;
+    var markFresh = _firstLoadDone && !silentLoad; /* the FIRST load (and a sample import) never flashes (D-ROTA-16 / D-ROTA-22) */
+    for (var k = 0; k < next.length; k++) {
+      var freshOrder = next[k];
+      if (!_knownIds[freshOrder.id]) {
+        if (markFresh) freshIds[freshOrder.id] = true;
+        if (announce && freshOrder.status === STATUS_NEW) {
+          notify('New order ' + orderLabelOf(freshOrder) + ' - ' + orderTitleOf(freshOrder), 'info');
         }
       }
     }
@@ -720,6 +760,17 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     _knownIds = {};
     for (var k = 0; k < next.length; k++) _knownIds[next[k].id] = true;
     _freshIds = freshIds;
+
+    /* The fresh ring is a short attention cue - clear it after a few
+       seconds instead of waiting for the next poll (D-ROTA-22). */
+    if (_freshClearTimer) { clearTimeout(_freshClearTimer); _freshClearTimer = null; }
+    if (Object.keys(freshIds).length) {
+      _freshClearTimer = setTimeout(function () {
+        _freshClearTimer = null;
+        _freshIds = {};
+        renderBoard();
+      }, FRESH_FLASH_MS);
+    }
   }
 
   function softRefresh() {
@@ -839,7 +890,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       return;
     }
     var chosenMinutes = _etaMinutes;
-    var message = 'Order ' + (order.orderNumber || order.id) + ' accepted' +
+    var message = 'Order ' + orderLabelOf(order) + ' accepted' +
       (chosenMinutes > 0 ? ' - estimated ' + etaKindLabel(order) + ' ' + fmtTime(Date.now() + chosenMinutes * 60000) : '') + '.';
     closeModal();
     setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
@@ -847,6 +898,12 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
   function etaKindLabel(order) {
     return order.channelKey === 'delivery' ? 'delivery time' : 'ready time';
+  }
+
+  /* Short ETA label for the compact card row (the detail popup keeps the
+     full wording). */
+  function etaShortLabelOf(order) {
+    return order.channelKey === 'delivery' ? 'deliver' : 'ready';
   }
 
   /* ----------------------------------------------------- armed two-step */
@@ -1010,15 +1067,16 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
     var sub = cardSublineOf(order);
     html += '<div class="roa-card-sub">';
-    html += '<span class="roa-order-no">' + esc(order.orderNumber || ('#' + order.id)) + '</span>';
-    if (order.placeTs) html += '<span>' + esc(fmtTime(order.placeTs)) + '</span>';
+    html += '<span class="roa-order-no">' + esc(orderLabelOf(order)) + '</span>';
+    /* terminal cards already show the placed time in the top-right corner */
+    if (order.placeTs && !order.isTerminal) html += '<span>' + esc(fmtTime(order.placeTs)) + '</span>';
     if (sub) html += '<span>' + esc(sub) + '</span>';
     html += '</div>';
 
     html += '<div class="roa-card-meta">';
     html += '<span class="roa-status st-' + esc(meta.cls) + '">' + esc(meta.label) + '</span>';
     if (!order.isTerminal && order[ETA_FIELD]) {
-      html += '<span class="roa-est">est. ' + esc(etaKindLabel(order)) + ' ' + esc(fmtTime(order[ETA_FIELD])) + '</span>';
+      html += '<span class="roa-est">' + esc(etaShortLabelOf(order)) + ' ' + esc(fmtTime(order[ETA_FIELD])) + '</span>';
       html += countdownHtml(tsOf(order[ETA_FIELD]));
     }
     html += '</div>';
@@ -1200,6 +1258,24 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       '<span class="roa-v' + (valueClass ? ' ' + valueClass : '') + '">' + esc(value) + '</span></div>';
   }
 
+  /* Status selector for the detail popup (D-ROTA-18): any status can be
+     picked - forward OR back - not just the single next step of the
+     workflow. The board and the popup update immediately after saving. */
+  function statusSelectHtml(order) {
+    var disabled = (_readOnly || !_canWrite || isBusy(order.id)) ? ' disabled' : '';
+    var options = '';
+    for (var i = 0; i < STATUS_ORDER.length; i++) {
+      var key = STATUS_ORDER[i];
+      var selected = key === order.status ? ' selected' : '';
+      options += '<option value="' + esc(key) + '"' + selected + '>' + esc(statusMetaOf(key).label) + '</option>';
+    }
+    return '<select class="roa-status-select" id="roa-status-select"' + disabled + '>' + options + '</select>' +
+      '<div class="roa-status-hint">' +
+      (_readOnly || !_canWrite ? 'Status changes are not available in this view.' :
+        'Pick any status - forward or back. The board updates immediately.') +
+      '</div>';
+  }
+
   function renderDetail() {
     var host = $id('roa-detail');
     if (!host) return;
@@ -1216,7 +1292,10 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     html += '<button type="button" class="roa-btn roa-btn-ghost roa-btn-small" data-act="detail-back">&#8592; Back to orders</button>';
     html += '<div class="roa-detail-title">';
     html += '<span class="roa-channel">' + esc(channel.icon + ' ' + channel.label) + '</span>';
-    html += '<span class="roa-detail-number">' + esc(order.orderNumber || ('#' + order.id)) + '</span>';
+    html += '<span class="roa-detail-number">' + esc(orderLabelOf(order)) + '</span>';
+    if (order.dayNumber && order.orderNumber) {
+      html += '<span class="roa-detail-record" title="Record number stored on the order in the CMS">record ' + esc(order.orderNumber) + '</span>';
+    }
     html += '<span class="roa-status st-' + esc(meta.cls) + '">' + esc(meta.label) + '</span>';
     html += '</div>';
     html += '<div class="roa-detail-actions" id="roa-detail-actions">' + detailActionsHtml(order) + '</div>';
@@ -1227,6 +1306,10 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
     /* side column */
     html += '<div class="roa-detail-side">';
+
+    html += '<section class="roa-block"><h3 class="roa-block-title">Status</h3>';
+    html += statusSelectHtml(order);
+    html += '</section>';
 
     html += '<section class="roa-block"><h3 class="roa-block-title">Customer</h3>';
     html += rowHtml('Name', customer.fullName || customer.name || '-');
@@ -1530,6 +1613,203 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     notify('The CMS detail view is not available here.', 'warning');
   }
 
+  /* --------------------------------------------- sample data import */
+  /* TEMPORARY QA feature (D-ROTA-21): imports a sample JSON file as real
+     CMS order objects so the board UI can be reviewed inside the CMS. */
+
+  var SAMPLE_TIME_FIELDS = ['placedAt', 'statusChangedAt', 'acceptedAt', 'estimatedReadyAt', 'scheduledFor'];
+
+  /* Relative time markers in sample files: "-45m" = 45 minutes ago,
+     "+25m" = in 25 minutes, "-26h" = yesterday. Anything else (an ISO
+     string or a missing value) passes through untouched. */
+  function sampleTimeOf(value) {
+    if (value === undefined || value === null || value === '') return value;
+    if (typeof value !== 'string') return value;
+    var match = /^([+-]?\d+)([mh])$/.exec(String(value).trim());
+    if (!match) return value;
+    var minutes = parseInt(match[1], 10) * (match[2] === 'h' ? 60 : 1);
+    return new Date(Date.now() + minutes * 60000).toISOString();
+  }
+
+  function importPlanFromJson(parsed) {
+    var entries = Array.isArray(parsed) ? parsed :
+      (parsed && Array.isArray(parsed.orders) ? parsed.orders : null);
+    if (!entries) return { error: 'Expected a JSON array of order objects (each entry is the data_categoriesBased payload of one order).' };
+    if (!entries.length) return { error: 'The JSON file contains no orders.' };
+    return { entries: entries, count: entries.length };
+  }
+
+  function entryToCreateOp(entry) {
+    var dcb = (entry && typeof entry === 'object') ? entry : {};
+    var prepared = {};
+    for (var key in dcb) {
+      if (Object.prototype.hasOwnProperty.call(dcb, key)) prepared[key] = dcb[key];
+    }
+    for (var fieldIndex = 0; fieldIndex < SAMPLE_TIME_FIELDS.length; fieldIndex++) {
+      var timeField = SAMPLE_TIME_FIELDS[fieldIndex];
+      var convertedTime = sampleTimeOf(dcb[timeField]);
+      if (convertedTime !== undefined && convertedTime !== null) prepared[timeField] = convertedTime;
+    }
+    var recordNumber = dcb.orderNumber || '';
+    return {
+      action: 'create',
+      mainObjectType: _cfg.ordersType,
+      name: recordNumber ? ('Order ' + recordNumber) : 'Sample order',
+      productData: { data_categoriesBased: prepared }
+    };
+  }
+
+  function runSequentialImports(ops, index, total, done) {
+    if (index >= ops.length) { done(); return; }
+    var op = ops[index];
+    tool.requestObjects('create', {
+      mainObjectType: op.mainObjectType,
+      name: op.name,
+      productData: op.productData
+    }, function (err) {
+      if (err) {
+        _importBusy = false;
+        renderMenu();
+        notify('Import stopped at item ' + (index + 1) + ' of ' + total + ' - ' + err, 'error');
+        loadOrders(false);
+        return;
+      }
+      runSequentialImports(ops, index + 1, total, done);
+    });
+  }
+
+  function importOrdersFromText(text) {
+    if (_readOnly || !_canWrite) { notify('You cannot change orders in this view.', 'warning'); return; }
+    if (_importBusy) return;
+    var parsed = null;
+    try { parsed = JSON.parse(text); } catch (err) {
+      notify('The selected file is not valid JSON.', 'error');
+      return;
+    }
+    var plan = importPlanFromJson(parsed);
+    if (plan.error) { notify(plan.error, 'error'); return; }
+
+    var ops = [];
+    for (var i = 0; i < plan.entries.length; i++) ops.push(entryToCreateOp(plan.entries[i]));
+
+    _importBusy = true;
+    renderMenu();
+    notify('Importing ' + plan.count + ' sample order(s)...', 'info');
+
+    var done = function () {
+      _importBusy = false;
+      renderMenu();
+      notify('Imported ' + plan.count + ' sample order(s).', 'success');
+      _silentNextLoad = true; /* imported orders must not flash or toast (D-ROTA-22) */
+      loadOrders(false);
+    };
+
+    if (ops.length > 1) {
+      tool.requestObjects('batch', { operations: ops }, function (batchErr) {
+        if (!batchErr) { done(); return; }
+        runSequentialImports(ops, 0, plan.count, done);
+      });
+    } else {
+      runSequentialImports(ops, 0, plan.count, done);
+    }
+  }
+
+  /* --------------------------------------------- remove today's orders */
+  /* TEMPORARY QA feature (D-ROTA-21): deletes every order placed today so
+     imported samples can be wiped from the CMS in one action. */
+
+  function todayRemovalPlan() {
+    var ids = [];
+    for (var i = 0; i < _orders.length; i++) {
+      var order = _orders[i];
+      if (order.placeTs && order.isToday) ids.push(order.id);
+    }
+    return ids;
+  }
+
+  function runSequentialDeletes(ids, index, done) {
+    if (index >= ids.length) { done(); return; }
+    tool.requestObjects('delete', { mainObjectType: _cfg.ordersType, objectId: ids[index] }, function (err) {
+      if (err) console.warn('[RestaurantOrderTakingApp] delete failed: ' + err);
+      runSequentialDeletes(ids, index + 1, done);
+    });
+  }
+
+  function executeClearToday() {
+    disarmClearToday();
+    closeMenu();
+    var ids = todayRemovalPlan();
+    if (!ids.length) { notify('Nothing to remove.', 'info'); return; }
+    var ops = [];
+    for (var i = 0; i < ids.length; i++) {
+      ops.push({ action: 'delete', mainObjectType: _cfg.ordersType, objectId: ids[i] });
+    }
+    var finished = function () {
+      notify('Removed ' + ids.length + ' order(s) placed today.', 'success');
+      loadOrders(false);
+    };
+    if (ops.length > 1) {
+      tool.requestObjects('batch', { operations: ops }, function (batchErr) {
+        if (!batchErr) { finished(); return; }
+        runSequentialDeletes(ids, 0, finished);
+      });
+    } else {
+      runSequentialDeletes(ids, 0, finished);
+    }
+  }
+
+  function armClearToday() {
+    if (_readOnly || !_canWrite) { notify('You cannot change orders in this view.', 'warning'); return; }
+    if (_importBusy) return;
+    if (_clearArmed) { executeClearToday(); return; }
+    var ids = todayRemovalPlan();
+    if (!ids.length) { notify('No orders placed today to remove.', 'info'); closeMenu(); return; }
+    _clearArmed = true;
+    if (_clearArmTimer) clearTimeout(_clearArmTimer);
+    _clearArmTimer = setTimeout(function () {
+      disarmClearToday();
+      renderMenu();
+    }, ARM_SECONDS);
+    renderMenu();
+    notify('Remove ' + ids.length + ' order(s) placed today? Click the menu again within ' + (ARM_SECONDS / 1000) + ' seconds to confirm.', 'warning');
+  }
+
+  function disarmClearToday() {
+    _clearArmed = false;
+    if (_clearArmTimer) { clearTimeout(_clearArmTimer); _clearArmTimer = null; }
+  }
+
+  /* --------------------------------------------- three-dots action menu */
+
+  function renderMenu() {
+    var panel = $id('roa-menu-panel');
+    var importBtn = $id('roa-menu-import');
+    var clearBtn = $id('roa-menu-clear');
+    var confirmBtn = $id('roa-menu-clear-confirm');
+    var canUse = !_readOnly && _canWrite;
+    if (panel) panel.hidden = !_menuOpen;
+    if (importBtn) {
+      importBtn.disabled = !canUse || _importBusy;
+      importBtn.textContent = _importBusy ? 'Importing...' : 'Import sample JSON...';
+    }
+    if (clearBtn) {
+      clearBtn.disabled = !canUse;
+      clearBtn.hidden = !!_clearArmed;
+    }
+    if (confirmBtn) confirmBtn.hidden = !_clearArmed;
+  }
+
+  function toggleMenu(force) {
+    var btn = $id('roa-menu-btn');
+    _menuOpen = (force !== undefined) ? !!force : !_menuOpen;
+    if (btn) btn.setAttribute('aria-expanded', _menuOpen ? 'true' : 'false');
+    renderMenu();
+  }
+
+  function closeMenu() {
+    if (_menuOpen) toggleMenu(false);
+  }
+
   function handleAction(trigger) {
     var action = trigger.getAttribute('data-act');
     var orderId = trigger.closest ? (trigger.closest('[data-id]') ? trigger.closest('[data-id]').getAttribute('data-id') : '') : '';
@@ -1551,6 +1831,20 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       return;
     }
     if (action === 'modal-close') { closeModal(); return; }
+    if (action === 'menu') { toggleMenu(); return; }
+    if (action === 'import-file') {
+      closeMenu();
+      if (_readOnly || !_canWrite) { notify('You cannot change orders in this view.', 'warning'); return; }
+      if (_importBusy) return;
+      var fileInput = $id('roa-import-file');
+      if (fileInput) {
+        fileInput.value = '';
+        try { fileInput.click(); } catch (err) { notify('File picking is not available in this environment.', 'warning'); }
+      }
+      return;
+    }
+    if (action === 'clear-today') { armClearToday(); return; }
+    if (action === 'clear-today-confirm') { executeClearToday(); return; }
     if (action === 'eta-chip') { chooseEtaChip(parseInt(trigger.getAttribute('data-min') || '0', 10)); return; }
     if (action === 'accept-now') { _etaMinutes = 0; if (_acceptFor) acceptOrder(_acceptFor); return; }
     if (action === 'accept-eta') { if (_acceptFor) acceptOrder(_acceptFor); return; }
@@ -1559,8 +1853,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   function statusSuccessMessage(orderId, newStatus) {
     var order = findOrder(orderId);
     if (!order) return '';
-    var number = order.orderNumber || order.id;
-    return 'Order ' + number + ' set to ' + statusMetaOf(newStatus).label + '.';
+    return 'Order ' + orderLabelOf(order) + ' set to ' + statusMetaOf(newStatus).label + '.';
   }
 
   /* ------------------------------------------------------------- events */
@@ -1575,6 +1868,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       var target = event.target;
       var trigger = (target && target.closest) ? target.closest('[data-act]') : null;
       if (trigger) { handleAction(trigger); return; }
+      if (_menuOpen && target && target.closest && !target.closest('#roa-menu')) closeMenu();
       var card = (target && target.closest) ? target.closest('.roa-card[data-id]') : null;
       if (card) { openDetail(card.getAttribute('data-id')); return; }
       var modalCard = (target && target.closest) ? target.closest('.roa-modal-card') : null;
@@ -1588,6 +1882,10 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       var target = event.target;
       if (!target) return;
       if (target.id === 'roa-sort') { _ui.sort = target.value || 'waiting'; persistUiSoon(); renderBoard(); return; }
+      if (target.id === 'roa-status-select') {
+        if (_detailId) setOrderStatus(_detailId, target.value, statusSuccessMessage(_detailId, target.value));
+        return;
+      }
     });
 
     root.addEventListener('input', function (event) {
@@ -1607,8 +1905,21 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       refreshBtn.addEventListener('click', function () { loadOrders(false); });
     }
 
+    var importInput = $id('roa-import-file');
+    if (importInput && importInput.addEventListener && typeof FileReader !== 'undefined') {
+      importInput.addEventListener('change', function () {
+        var file = importInput.files && importInput.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () { importOrdersFromText(String(reader.result || '')); };
+        reader.onerror = function () { notify('Could not read the selected file.', 'error'); };
+        reader.readAsText(file);
+      });
+    }
+
     document.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape') return;
+      if (_menuOpen) { closeMenu(); return; }
       var modal = $id('roa-modal');
       if (modal && !modal.hidden) { closeModal(); return; }
       if (_detailId) { closeDetail(); renderBoard(); renderTop(); }
@@ -1743,12 +2054,22 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       build: TOOL_BUILD,
       normalizeOrder: normalizeOrder,
       statusKeyOf: statusKeyOf,
+      assignDayNumbers: assignDayNumbers,
+      orderLabelOf: orderLabelOf,
+      statusSelectHtml: statusSelectHtml,
+      sampleTimeOf: sampleTimeOf,
+      importPlanFromJson: importPlanFromJson,
+      entryToCreateOp: entryToCreateOp,
+      todayRemovalPlan: todayRemovalPlan,
+      importOrdersFromText: importOrdersFromText,
+      executeClearToday: executeClearToday,
       boardOrders: boardOrders,
       tabOrders: tabOrders,
       boardListFor: boardListFor,
       matchesSearch: matchesSearch,
       fmtElapsedClock: fmtElapsedClock,
       etaKindLabel: etaKindLabel,
+      etaShortLabelOf: etaShortLabelOf,
       countdownState: countdownState,
       findOrder: findOrder,
       openDetail: openDetail,
@@ -1760,4 +2081,4 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   }
 })();
 
-/* RESTAURANTORDERTAKINGAPP-JS-END build 2026-10-30-3 - if this line is missing in the CMS Tool Builder JS field, the JS was truncated */
+/* RESTAURANTORDERTAKINGAPP-JS-END build 2026-10-31-4 - if this line is missing in the CMS Tool Builder JS field, the JS was truncated */

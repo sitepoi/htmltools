@@ -1,4 +1,4 @@
-/* build 2026-10-30-3 */
+/* build 2026-10-31-4 */
 
 /* =====================================================================
    RestaurantOrderTakingApp - active orders board for the kitchen /
@@ -24,17 +24,26 @@
   --roa-radius: var(--radius, 14px);
   --roa-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  --roa-st-new: #d97706;
-  --roa-st-new-bg: #fef9e7;
-  --roa-st-accepted: #1d4ed8;
-  --roa-st-accepted-bg: #eff6ff;
-  --roa-st-prep: #c2410c;
+  /* Status color semantics (D-ROTA-17):
+     new = blue (incoming, needs a decision)
+     accepted = teal (acknowledged)
+     in-preparation = orange (work happening)
+     ready = green (go)
+     completed = purple (done - one hue per status, D-ROTA-20)
+     declined = red (rejected - a real problem)
+     cancelled = gray (neutral end)
+     LATE and urgent stay red / amber - red is reserved for real problems. */
+  --roa-st-new: #2563eb;
+  --roa-st-new-bg: #eff6ff;
+  --roa-st-accepted: #0d9488;
+  --roa-st-accepted-bg: #f0fdfa;
+  --roa-st-prep: #ea580c;
   --roa-st-prep-bg: #fff7ed;
-  --roa-st-ready: #15803d;
-  --roa-st-ready-bg: #ecfdf5;
-  --roa-st-done: #166534;
-  --roa-st-done-bg: #f0fdf4;
-  --roa-st-declined: #b91c1c;
+  --roa-st-ready: #16a34a;
+  --roa-st-ready-bg: #f0fdf4;
+  --roa-st-done: #7c3aed;
+  --roa-st-done-bg: #f5f3ff;
+  --roa-st-declined: #dc2626;
   --roa-st-declined-bg: #fef2f2;
   --roa-st-cancelled: #64748b;
   --roa-st-cancelled-bg: #f8fafc;
@@ -243,6 +252,85 @@
   color: var(--roa-ink);
 }
 
+.roa-status-select {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--roa-line);
+  border-radius: 10px;
+  background: var(--roa-paper);
+  color: var(--roa-ink-strong);
+  cursor: pointer;
+}
+
+.roa-status-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.roa-status-hint {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--roa-muted);
+}
+
+/* Three-dots action menu (temporary QA tools - D-ROTA-21) */
+.roa-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.roa-menu-btn {
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px 10px;
+}
+
+.roa-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 230px;
+  padding: 6px;
+  background: var(--roa-paper);
+  border: 1px solid var(--roa-line);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.roa-menu-item {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--roa-ink);
+  cursor: pointer;
+}
+
+.roa-menu-item:hover { background: var(--roa-paper-soft); }
+
+.roa-menu-item-danger {
+  color: var(--roa-danger);
+}
+
+.roa-menu-item-danger:hover { background: var(--roa-st-declined-bg); }
+
+.roa-menu-hint {
+  margin: 4px 4px 2px;
+  font-size: 11px;
+  color: var(--roa-muted);
+}
+
 .roa-legend {
   display: inline-flex;
   align-items: center;
@@ -293,8 +381,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 13px 14px 12px;
+  gap: 9px;
+  padding: 14px 15px 13px;
   background: var(--roa-paper);
   border: 1px solid var(--roa-line);
   border-left: 4px solid var(--roa-line);
@@ -317,12 +405,15 @@
 .roa-card.st-declined { background: var(--roa-st-declined-bg); border-color: var(--roa-st-declined); border-left-color: var(--roa-st-declined); }
 .roa-card.st-cancelled { background: var(--roa-st-cancelled-bg); border-color: var(--roa-st-cancelled); border-left-color: var(--roa-st-cancelled); }
 
-.roa-card.roa-card-fresh { box-shadow: 0 0 0 2px var(--roa-accent); }
+/* A just-arrived order gets a short BLUE ring (new = blue, never red) for
+   FRESH_FLASH_MS - sample imports are silent (D-ROTA-22). */
+.roa-card.roa-card-fresh { box-shadow: 0 0 0 2px var(--roa-st-new), 0 6px 16px rgba(37, 99, 235, 0.18); }
 
 /* Time-remaining overrides - declared AFTER the status colors so they win
-   (D-ROTA-15): long-waiting new orders and late orders turn red-tinted,
-   orders inside the last minutes turn amber. */
-.roa-card.roa-card-warn { background: var(--roa-st-declined-bg); border-color: var(--roa-danger); border-left-color: var(--roa-danger); }
+   (D-ROTA-17): a new order waiting too long gets a DEEPER BLUE attention
+   treatment (never red - red means a real problem like late or declined);
+   orders inside the last minutes turn amber; late orders turn red. */
+.roa-card.roa-card-warn { background: #dbeafe; border-color: #1d4ed8; border-left-color: #1d4ed8; }
 .roa-card.roa-card-urgent { background: #fffbeb; border-color: #f59e0b; border-left-color: #f59e0b; }
 .roa-card.roa-card-late { background: var(--roa-st-declined-bg); border-color: var(--roa-danger); border-left-color: var(--roa-danger); }
 
@@ -346,20 +437,22 @@
 
 .roa-elapsed {
   font-family: var(--roa-mono);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--roa-ink-strong);
   white-space: nowrap;
+  letter-spacing: -0.02em;
 }
 
-.roa-elapsed.roa-elapsed-warn { color: var(--roa-danger); }
+.roa-elapsed.roa-elapsed-warn { color: #b45309; }
 .roa-elapsed.roa-elapsed-ready { color: var(--roa-st-ready); }
 
 .roa-card-name {
   margin: 0;
-  font-size: 15.5px;
+  font-size: 16.5px;
   font-weight: 800;
   color: var(--roa-ink-strong);
+  letter-spacing: -0.01em;
   word-break: break-word;
 }
 
@@ -373,7 +466,17 @@
   flex-wrap: wrap;
 }
 
-.roa-order-no { font-family: var(--roa-mono); }
+.roa-order-no {
+  font-family: var(--roa-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--roa-paper);
+  border: 1px solid var(--roa-line);
+  color: var(--roa-ink);
+  white-space: nowrap;
+}
 
 .roa-card-meta {
   display: flex;
@@ -385,9 +488,9 @@
 .roa-status {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
+  padding: 3px 11px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -403,21 +506,42 @@
 .roa-status.st-cancelled { color: var(--roa-st-cancelled); background: var(--roa-st-cancelled-bg); }
 
 .roa-est {
-  font-size: 11.5px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--roa-muted);
 }
 
+/* The remaining-time counter is the most-read number on a kitchen card:
+   a bigger, bordered pill with a monospace face (D-ROTA-23). */
 .roa-countdown {
+  display: inline-flex;
+  align-items: center;
   font-family: var(--roa-mono);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--roa-paper);
+  border: 1px solid var(--roa-line);
   color: var(--roa-st-accepted);
   white-space: nowrap;
 }
 
-.roa-countdown-urgent { color: #b45309; }
-.roa-countdown-late { color: var(--roa-danger); }
+.roa-countdown-urgent {
+  color: #b45309;
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.roa-countdown-late {
+  color: var(--roa-danger);
+  border-color: var(--roa-danger);
+  background: var(--roa-st-declined-bg);
+}
 
 .roa-card-foot {
   display: flex;
@@ -448,6 +572,11 @@
   color: var(--roa-muted);
   border-top: 1px dashed var(--roa-line);
   padding-top: 7px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 /* ---------------------------------------------------------------- buttons */
@@ -522,11 +651,25 @@
 }
 
 .roa-detail-number {
+  display: inline-flex;
+  align-items: center;
   font-family: var(--roa-mono);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--roa-paper-soft);
+  border: 1px solid var(--roa-line);
   color: var(--roa-ink-strong);
-  word-break: break-word;
+  white-space: nowrap;
+}
+
+.roa-detail-record {
+  font-family: var(--roa-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--roa-muted);
+  white-space: nowrap;
 }
 
 .roa-detail-actions {
