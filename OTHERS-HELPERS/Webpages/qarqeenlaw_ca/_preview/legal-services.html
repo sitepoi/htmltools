@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PREVIEW - Legal Services - Qarqeen Law</title>
+<style>
+  /* preview shell only - never ship this */
+  body { margin: 0; padding: 0; background: #f5f1e8; }
+  .preview-note { position: fixed; bottom: 14px; right: 14px; z-index: 9999; background: #0a1626; color: #e8dcbd; font: 600 12px/1.4 "Segoe UI", sans-serif; padding: 8px 12px; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+</style>
+</head>
+<body>
+<!--
+  =========================================================================
+  SITE HEADER - central chrome component for the Qarqeen Law website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="ql-header">; no document tags, no libraries
+  - All CSS is scoped under .ql-header so it cannot leak into page content
+  - No <header> / <nav> / <footer> element tags (plain divs + ARIA roles)
+  - Brand = wordmark drawn with text + an inline scales mark (no image file)
+  - Design tokens (--ql-*) are repeated in every page file so each page is
+    self-contained; keep them in sync when the palette changes
+  - Nav link targets (CMS route form, never .html): / (home), /about-us,
+    /our-team, /legal-services, /contact-us, /book-consultation.
+    The main button points at /book-consultation
+  - Facts: phone +1 604 704 6220, email info@qarqeenlaw.ca,
+    Vancouver BC (main office) and Victoria BC (satellite office)
+  =========================================================================
+-->
+<div class="ql-header" data-ql-header>
+
+	<!-- ---------- inline icon sprite (no external requests, no library) ---------- -->
+	<svg class="ql-hd-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+		<symbol id="ql-i-phone" viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></symbol>
+		<symbol id="ql-i-mail" viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></symbol>
+		<symbol id="ql-i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="3" /></symbol>
+		<symbol id="ql-i-chevron" viewBox="0 0 24 24"><path d="m7.6 9.8 4.4 4.4 4.4-4.4" /></symbol>
+		<symbol id="ql-i-arrow" viewBox="0 0 24 24"><path d="M4.6 12h14" /><path d="m13.4 7 5 5-5 5" /></symbol>
+		<symbol id="ql-i-check" viewBox="0 0 24 24"><path d="m5.6 12.4 4 4 8.8-9" /></symbol>
+		<symbol id="ql-i-scales" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></symbol>
+		<symbol id="ql-i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M3 11h18" /></symbol>
+	</svg>
+
+	<!-- ---------------------- top information strip ---------------------- -->
+	<div class="ql-hd-top">
+		<div class="ql-hd-wrap ql-hd-top-inner">
+			<p class="ql-hd-top-note">Legal counsel in Vancouver and Victoria, British Columbia</p>
+			<div class="ql-hd-top-links">
+				<a class="ql-hd-top-link" href="tel:+16047046220">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-phone"></use></svg>
+					+1 604 704 6220
+				</a>
+				<a class="ql-hd-top-link ql-hd-top-mail" href="mailto:info@qarqeenlaw.ca">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-mail"></use></svg>
+					info@qarqeenlaw.ca
+				</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- ------------------------------ main bar ------------------------------ -->
+	<div class="ql-hd-bar">
+		<div class="ql-hd-wrap ql-hd-bar-inner">
+
+			<a class="ql-hd-brand" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
+				<span class="ql-hd-mark" aria-hidden="true">
+					<svg class="ql-hd-ico ql-hd-mark-ico"><use href="#ql-i-scales"></use></svg>
+				</span>
+				<span class="ql-hd-word">
+					<span class="ql-hd-word-main">Qarqeen</span>
+					<span class="ql-hd-word-sub">Law</span>
+				</span>
+			</a>
+
+			<div class="ql-hd-nav" id="ql-hd-menu" role="navigation" aria-label="Main menu">
+				<ul class="ql-hd-list">
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/" href="/" data-page="home">Home</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/about-us" href="/about-us" data-page="about-us">About Us</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/our-team" href="/our-team" data-page="our-team">Our Team</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/legal-services" href="/legal-services" data-page="legal-services">Legal Services</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">Contact Us</a>
+					</li>
+				</ul>
+
+				<a class="ql-hd-cta" data-ic-nav-href="/book-consultation" href="/book-consultation" data-page="book-consultation">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-calendar"></use></svg>
+					Book Consultation
+				</a>
+			</div>
+
+			<button type="button" class="ql-hd-burger" aria-expanded="false" aria-controls="ql-hd-menu"
+				aria-label="Open menu">
+				<span class="ql-hd-burger-box" aria-hidden="true">
+					<span></span><span></span><span></span>
+				</span>
+			</button>
+		</div>
+	</div>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.ql-header {
+			--ql-navy: #0f1e33;
+			--ql-navy-deep: #0a1626;
+			--ql-navy-2: #16283f;
+			--ql-paper: #fdfcf9;
+			--ql-ivory: #f5f1e8;
+			--ql-ink: #1c2531;
+			--ql-muted: #5d6875;
+			--ql-gold: #c2a15f;
+			--ql-gold-deep: #9c7b3b;
+			--ql-gold-soft: #e8dcbd;
+			--ql-line: #e5dfd2;
+			position: relative;
+			z-index: 60;
+			width: 100%;
+			background: var(--ql-paper);
+			color: var(--ql-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+			box-shadow: 0 10px 30px -18px rgba(15, 30, 51, 0.35);
+		}
+
+		.ql-header,
+		.ql-header *,
+		.ql-header *::before,
+		.ql-header *::after {
+			box-sizing: border-box;
+		}
+
+		.ql-hd-sprite {
+			position: absolute;
+			width: 0;
+			height: 0;
+			overflow: hidden;
+		}
+
+		.ql-hd-ico {
+			width: 1em;
+			height: 1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		.ql-hd-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		/* ---------- top strip ---------- */
+		.ql-hd-top {
+			background: linear-gradient(90deg, var(--ql-navy-deep), var(--ql-navy) 70%, #1a3352);
+			color: #dbe4ef;
+			font-size: 13.5px;
+		}
+
+		.ql-hd-top-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			min-height: 36px;
+		}
+
+		.ql-hd-top-note {
+			margin: 0;
+			letter-spacing: 0.04em;
+		}
+
+		.ql-hd-top-links {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.ql-hd-top-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			color: #dbe4ef;
+			text-decoration: none;
+			letter-spacing: 0.02em;
+		}
+
+		.ql-hd-top-link:hover {
+			color: var(--ql-gold-soft);
+		}
+
+		/* ---------- main bar ---------- */
+		.ql-hd-bar {
+			position: relative;
+			background: var(--ql-paper);
+			border-bottom: 1px solid var(--ql-line);
+		}
+
+		.ql-hd-bar-inner {
+			display: flex;
+			align-items: center;
+			gap: 24px;
+			min-height: 80px;
+		}
+
+		.ql-hd-brand {
+			display: inline-flex;
+			align-items: center;
+			gap: 12px;
+			flex: 0 0 auto;
+			text-decoration: none;
+		}
+
+		.ql-hd-mark {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			border: 1.5px solid var(--ql-gold);
+			border-radius: 10px;
+			background:
+				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.22), transparent 60%),
+				var(--ql-navy);
+			color: var(--ql-gold-soft);
+			box-shadow: 0 8px 18px -10px rgba(15, 30, 51, 0.6);
+		}
+
+		.ql-hd-mark-ico {
+			width: 24px;
+			height: 24px;
+		}
+
+		.ql-header.is-compact .ql-hd-mark {
+			width: 38px;
+			height: 38px;
+		}
+
+		.ql-hd-word {
+			display: flex;
+			flex-direction: column;
+			line-height: 1.1;
+		}
+
+		.ql-hd-word-main {
+			font-family: Georgia, 'Times New Roman', serif;
+			font-size: 22px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			color: var(--ql-navy);
+		}
+
+		.ql-hd-word-sub {
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.42em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+			margin-top: 2px;
+		}
+
+		.ql-hd-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 24px;
+			flex: 1 1 auto;
+			margin-left: auto;
+		}
+
+		.ql-hd-list {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.ql-hd-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 12px 13px;
+			color: var(--ql-ink);
+			text-decoration: none;
+			font-size: 15px;
+			font-weight: 600;
+			letter-spacing: 0.03em;
+			background: none;
+			border: 0;
+			cursor: pointer;
+			font-family: inherit;
+			position: relative;
+		}
+
+		.ql-hd-link::after {
+			content: '';
+			position: absolute;
+			left: 13px;
+			right: 13px;
+			bottom: 6px;
+			height: 2px;
+			background: var(--ql-gold);
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform 0.25s ease;
+		}
+
+		.ql-hd-link:hover::after,
+		.ql-hd-link.is-active::after {
+			transform: scaleX(1);
+		}
+
+		.ql-hd-link.is-active {
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-hd-cta {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 11px 20px;
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			font-weight: 700;
+			font-size: 14.5px;
+			letter-spacing: 0.04em;
+			text-decoration: none;
+			border-radius: 999px;
+			box-shadow: 0 8px 18px -10px rgba(156, 123, 59, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			flex: 0 0 auto;
+		}
+
+		.ql-hd-cta:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 12px 22px -10px rgba(156, 123, 59, 0.95);
+		}
+
+		.ql-hd-cta.is-active {
+			background: var(--ql-navy);
+		}
+
+		/* ---------- burger ---------- */
+		.ql-hd-burger {
+			display: none;
+			margin-left: auto;
+			padding: 10px;
+			background: none;
+			border: 1px solid var(--ql-line);
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		.ql-hd-burger-box {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+			width: 22px;
+		}
+
+		.ql-hd-burger-box span {
+			height: 2px;
+			background: var(--ql-navy);
+			border-radius: 2px;
+			transition: transform 0.25s ease, opacity 0.25s ease;
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(1) {
+			transform: translateY(7px) rotate(45deg);
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(2) {
+			opacity: 0;
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(3) {
+			transform: translateY(-7px) rotate(-45deg);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1060px) {
+			.ql-hd-list {
+				gap: 0;
+			}
+
+			.ql-hd-link {
+				padding-left: 10px;
+				padding-right: 10px;
+				font-size: 14.5px;
+			}
+
+			.ql-hd-nav {
+				gap: 12px;
+			}
+		}
+
+		@media (max-width: 920px) {
+			.ql-hd-burger {
+				display: inline-flex;
+			}
+
+			.ql-hd-nav {
+				position: fixed;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				width: min(360px, 88vw);
+				margin: 0;
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				gap: 8px;
+				background: var(--ql-paper);
+				box-shadow: -24px 0 60px rgba(10, 22, 38, 0.35);
+				padding: 74px 22px 26px;
+				overflow-y: auto;
+				transform: translateX(105%);
+				transition: transform 0.3s ease;
+			}
+
+			.ql-header.is-menu-open .ql-hd-nav {
+				transform: translateX(0);
+			}
+
+			.ql-hd-list {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 2px;
+			}
+
+			.ql-hd-link {
+				width: 100%;
+				justify-content: space-between;
+				padding: 13px 12px;
+				border-bottom: 1px solid var(--ql-line);
+				font-size: 16px;
+			}
+
+			.ql-hd-link::after {
+				display: none;
+			}
+
+			.ql-hd-link.is-active {
+				background: var(--ql-ivory);
+				border-radius: 8px;
+			}
+
+			.ql-hd-cta {
+				justify-content: center;
+				margin-top: 6px;
+			}
+
+			.ql-hd-top-note {
+				display: none;
+			}
+
+			.ql-hd-top-inner {
+				justify-content: center;
+			}
+
+			.ql-hd-top-mail {
+				display: none;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var headerRoot = document.querySelector('.ql-header');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!headerRoot || headerRoot.getAttribute('data-ql-header-ready') === '1') { return; }
+			headerRoot.setAttribute('data-ql-header-ready', '1');
+
+			var burgerButton = headerRoot.querySelector('.ql-hd-burger');
+
+			/* ---------------- mobile menu ---------------- */
+			function closeMobileMenu() {
+				if (!headerRoot.classList.contains('is-menu-open')) { return; }
+				headerRoot.classList.remove('is-menu-open');
+				burgerButton.setAttribute('aria-expanded', 'false');
+			}
+
+			function openMobileMenu() {
+				headerRoot.classList.add('is-menu-open');
+				burgerButton.setAttribute('aria-expanded', 'true');
+			}
+
+			burgerButton.addEventListener('click', function () {
+				if (headerRoot.classList.contains('is-menu-open')) { closeMobileMenu(); }
+				else { openMobileMenu(); }
+			});
+
+			/* a chosen nav link closes the drawer so the page switch is visible */
+			Array.prototype.forEach.call(headerRoot.querySelectorAll('.ql-hd-list a, .ql-hd-cta'), function (navLink) {
+				navLink.addEventListener('click', closeMobileMenu);
+			});
+
+			document.addEventListener('click', function (event) {
+				if (!headerRoot.contains(event.target)) { closeMobileMenu(); }
+			});
+
+			document.addEventListener('keydown', function (event) {
+				if (event.key === 'Escape') { closeMobileMenu(); }
+			});
+
+			/* ---------------- compact bar on scroll ---------------- */
+			var ticking = false;
+
+			function updateBarCompactness() {
+				ticking = false;
+				var isCompact = window.scrollY > 24;
+				headerRoot.classList.toggle('is-compact', isCompact);
+			}
+
+			function requestBarUpdate() {
+				if (ticking) { return; }
+				ticking = true;
+				window.requestAnimationFrame(updateBarCompactness);
+			}
+
+			window.addEventListener('scroll', requestBarUpdate, { passive: true });
+			updateBarCompactness();
+
+			/* ---------------- active page highlight ---------------- */
+			var currentPath = window.location.pathname || '/';
+			var pageLinks = Array.prototype.slice.call(
+				headerRoot.querySelectorAll('a[data-page], button[data-page]')
+			);
+
+			pageLinks.forEach(function (pageLink) {
+				var pageKey = pageLink.getAttribute('data-page');
+				var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+				var isActive = currentPath === pagePath;
+				pageLink.classList.toggle('is-active', isActive);
+				if (isActive && pageLink.tagName === 'A') {
+					pageLink.setAttribute('aria-current', 'page');
+				}
+			});
+		})();
+	</script>
+
+</div>
+
+<!--
+  =========================================================================
+  LEGAL SERVICES - fragment for the Qarqeen Law website (route /legal-services)
+  - One parent <div class="ql-page ql-services"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are scoped under .ql-services so nothing leaks
+  - Practice areas and copy follow the live site: immigration law, refugee
+    law, family law, litigation, wills and estates
+  - SEO for the CMS page object (slug "legal-services"):
+    title "Legal Services - Qarqeen Law"
+    description "Qarqeen Law practices immigration law, refugee law, family
+    law, litigation, and wills and estates. Serving Vancouver and Victoria,
+    British Columbia."
+  =========================================================================
+-->
+<div class="ql-page ql-services">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="ql-sv-hero">
+		<div class="ql-sv-hero-bg" aria-hidden="true"></div>
+		<div class="ql-sv-wrap ql-sv-hero-inner">
+			<p class="ql-sv-kicker">Our legal services</p>
+			<h1 class="ql-sv-hero-title">Legal services built<br><span class="ql-sv-hero-accent">around your matter</span></h1>
+			<p class="ql-sv-hero-lede">
+				We practice immigration law, refugee law, family law, litigation and wills and
+				estates - with clear counsel and strong representation in every area.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================= SERVICES ============================= -->
+	<section class="ql-sv-list">
+		<div class="ql-sv-wrap">
+
+			<div class="ql-sv-row ql-sv-reveal">
+				<div class="ql-sv-row-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" /></svg>
+				</div>
+				<div class="ql-sv-row-body">
+					<span class="ql-sv-row-num" aria-hidden="true">I</span>
+					<h2 class="ql-sv-row-title">Immigration Law</h2>
+					<p class="ql-sv-row-text">
+						Navigating Canadian immigration law can be complex, but our expert team is here to
+						guide you through every step. From visa applications to permanent residency, we
+						offer comprehensive immigration law services tailored to your unique needs. Trust
+						our dedicated professionals to provide clear, effective solutions and support you
+						in achieving your immigration goals.
+					</p>
+					<ul class="ql-sv-row-list">
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Visa applications</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Permanent residency</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Clear guidance at every step</li>
+					</ul>
+					<a class="ql-sv-row-link" data-ic-nav-href="/book-consultation" href="/book-consultation">
+						Book an immigration consultation <span aria-hidden="true">&rarr;</span>
+					</a>
+				</div>
+			</div>
+
+			<div class="ql-sv-row ql-sv-reveal">
+				<div class="ql-sv-row-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="m9.2 11.8 2 2 3.6-4" /></svg>
+				</div>
+				<div class="ql-sv-row-body">
+					<span class="ql-sv-row-num" aria-hidden="true">II</span>
+					<h2 class="ql-sv-row-title">Refugee Law</h2>
+					<p class="ql-sv-row-text">
+						Understanding Canadian refugee law can be challenging, but our skilled team is
+						committed to assisting you. We provide thorough services for refugee claims,
+						appeals and resettlement processes, ensuring you receive the support and
+						representation you need. Trust us to advocate for your rights and guide you
+						through the complexities of refugee law with compassion and expertise.
+					</p>
+					<ul class="ql-sv-row-list">
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Refugee claims</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Appeals</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Resettlement processes</li>
+					</ul>
+					<a class="ql-sv-row-link" data-ic-nav-href="/book-consultation" href="/book-consultation">
+						Book a refugee law consultation <span aria-hidden="true">&rarr;</span>
+					</a>
+				</div>
+			</div>
+
+			<div class="ql-sv-row ql-sv-reveal">
+				<div class="ql-sv-row-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+				</div>
+				<div class="ql-sv-row-body">
+					<span class="ql-sv-row-num" aria-hidden="true">III</span>
+					<h2 class="ql-sv-row-title">Family Law</h2>
+					<p class="ql-sv-row-text">
+						Navigating family law matters requires sensitivity and expertise, and our team is
+						here to provide both. We offer comprehensive services for divorce, child custody,
+						support agreements and more, ensuring your interests are protected. Trust our
+						experienced professionals to guide you through every step, providing the support
+						and advocacy you need during challenging times.
+					</p>
+					<ul class="ql-sv-row-list">
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Divorce</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Child custody</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Support agreements</li>
+					</ul>
+					<a class="ql-sv-row-link" data-ic-nav-href="/book-consultation" href="/book-consultation">
+						Book a family law consultation <span aria-hidden="true">&rarr;</span>
+					</a>
+				</div>
+			</div>
+
+			<div class="ql-sv-row ql-sv-reveal">
+				<div class="ql-sv-row-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M3 12h18" /></svg>
+				</div>
+				<div class="ql-sv-row-body">
+					<span class="ql-sv-row-num" aria-hidden="true">IV</span>
+					<h2 class="ql-sv-row-title">Litigation</h2>
+					<p class="ql-sv-row-text">
+						Our litigation services are designed to provide you with strong representation and
+						strategic solutions. Whether you are facing a commercial dispute, civil litigation
+						or any other legal challenge, our experienced team is dedicated to protecting your
+						interests. Rely on us to navigate the complexities of litigation with skill and
+						determination, ensuring the best possible outcome for your case.
+					</p>
+					<ul class="ql-sv-row-list">
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Commercial disputes</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Civil litigation</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Strategic solutions</li>
+					</ul>
+					<a class="ql-sv-row-link" data-ic-nav-href="/book-consultation" href="/book-consultation">
+						Book a litigation consultation <span aria-hidden="true">&rarr;</span>
+					</a>
+				</div>
+			</div>
+
+			<div class="ql-sv-row ql-sv-reveal">
+				<div class="ql-sv-row-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
+				</div>
+				<div class="ql-sv-row-body">
+					<span class="ql-sv-row-num" aria-hidden="true">V</span>
+					<h2 class="ql-sv-row-title">Wills and Estates</h2>
+					<p class="ql-sv-row-text">
+						Planning for the future is essential, and our wills and estates services are here
+						to help you secure your legacy. We offer expert guidance in drafting wills,
+						establishing trusts and managing estate administration, ensuring your wishes are
+						honoured and your loved ones are protected. Trust our knowledgeable team to
+						provide personalized solutions and support you in every step of the estate
+						planning process.
+					</p>
+					<ul class="ql-sv-row-list">
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Drafting wills</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Establishing trusts</li>
+						<li><span class="ql-sv-check" aria-hidden="true"></span> Estate administration</li>
+					</ul>
+					<a class="ql-sv-row-link" data-ic-nav-href="/book-consultation" href="/book-consultation">
+						Book a wills and estates consultation <span aria-hidden="true">&rarr;</span>
+					</a>
+				</div>
+			</div>
+
+		</div>
+	</section>
+
+	<!-- ============================= NOT SURE ============================= -->
+	<section class="ql-sv-unsure">
+		<div class="ql-sv-wrap ql-sv-unsure-inner ql-sv-reveal">
+			<p class="ql-sv-kicker">Not sure where your matter fits?</p>
+			<h2 class="ql-sv-unsure-title">Tell us what you are facing - we will point you in the right direction.</h2>
+			<p class="ql-sv-unsure-text">
+				Many matters touch more than one practice area. Book a consultation and we will
+				review your situation and explain which path fits best.
+			</p>
+			<a class="ql-sv-btn ql-sv-btn-gold" data-ic-nav-href="/book-consultation" href="/book-consultation">
+				Book a consultation <span aria-hidden="true">&rarr;</span>
+			</a>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.ql-services {
+			--ql-navy: #0f1e33;
+			--ql-navy-deep: #0a1626;
+			--ql-navy-2: #16283f;
+			--ql-paper: #fdfcf9;
+			--ql-ivory: #f5f1e8;
+			--ql-ink: #1c2531;
+			--ql-muted: #5d6875;
+			--ql-gold: #c2a15f;
+			--ql-gold-deep: #9c7b3b;
+			--ql-gold-soft: #e8dcbd;
+			--ql-line: #e5dfd2;
+			--ql-display: Georgia, 'Times New Roman', serif;
+			position: relative;
+			width: 100%;
+			background: var(--ql-paper);
+			color: var(--ql-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.ql-services,
+		.ql-services *,
+		.ql-services *::before,
+		.ql-services *::after {
+			box-sizing: border-box;
+		}
+
+		.ql-services img {
+			max-width: 100%;
+		}
+
+		.ql-sv-wrap {
+			width: 100%;
+			max-width: 1080px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.ql-sv-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-sv-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 13px 24px;
+			border-radius: 999px;
+			font-weight: 700;
+			font-size: 15px;
+			letter-spacing: 0.02em;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.ql-sv-btn-gold {
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			box-shadow: 0 14px 26px -14px rgba(156, 123, 59, 0.85);
+		}
+
+		.ql-sv-btn-gold:hover {
+			transform: translateY(-2px);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.ql-sv-hero {
+			position: relative;
+			padding: 84px 0;
+			background: linear-gradient(155deg, var(--ql-navy) 0%, var(--ql-navy-deep) 100%);
+			color: #eef2f7;
+			isolation: isolate;
+		}
+
+		.ql-sv-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -1;
+			background:
+				radial-gradient(70% 90% at 100% 0%, rgba(194, 161, 95, 0.22), transparent 55%),
+				radial-gradient(55% 70% at 0% 100%, rgba(28, 61, 99, 0.5), transparent 60%),
+				repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 56px);
+		}
+
+		.ql-sv-hero::after {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			height: 3px;
+			background: linear-gradient(90deg, transparent, var(--ql-gold), transparent);
+		}
+
+		.ql-sv-hero-inner {
+			max-width: 840px;
+			text-align: center;
+		}
+
+		.ql-sv-hero-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-weight: 700;
+			font-size: clamp(34px, 4.4vw, 54px);
+			line-height: 1.08;
+			text-wrap: balance;
+		}
+
+		.ql-sv-hero-accent {
+			color: var(--ql-gold-soft);
+			font-style: italic;
+		}
+
+		.ql-sv-hero-lede {
+			margin: 18px auto 0;
+			font-size: 16.5px;
+			color: #c3cfdd;
+			max-width: 640px;
+		}
+
+		/* ------------------------------ list ------------------------------ */
+		.ql-sv-list {
+			padding: 84px 0 60px;
+		}
+
+		.ql-sv-row {
+			display: grid;
+			grid-template-columns: 110px 1fr;
+			gap: 26px;
+			background: #fff;
+			border: 1px solid var(--ql-line);
+			border-top: 3px solid var(--ql-gold);
+			border-radius: 20px;
+			padding: 30px;
+			margin-bottom: 24px;
+			box-shadow: 0 24px 44px -30px rgba(15, 30, 51, 0.4);
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.ql-sv-row:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 32px 54px -30px rgba(15, 30, 51, 0.5);
+		}
+
+		.ql-sv-row-ico {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 84px;
+			height: 84px;
+			border-radius: 20px;
+			background:
+				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.25), transparent 60%),
+				var(--ql-navy);
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-sv-row-ico svg {
+			width: 38px;
+			height: 38px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.ql-sv-row-body {
+			position: relative;
+		}
+
+		.ql-sv-row-num {
+			position: absolute;
+			top: -4px;
+			right: 0;
+			font-family: var(--ql-display);
+			font-size: 34px;
+			font-weight: 700;
+			color: var(--ql-line);
+			line-height: 1;
+		}
+
+		.ql-sv-row-title {
+			margin: 0;
+			padding-right: 48px;
+			font-family: var(--ql-display);
+			font-size: 26px;
+			line-height: 1.2;
+			color: var(--ql-navy);
+		}
+
+		.ql-sv-row-text {
+			margin: 12px 0 0;
+			font-size: 15px;
+			color: var(--ql-muted);
+			max-width: 760px;
+		}
+
+		.ql-sv-row-list {
+			list-style: none;
+			margin: 16px 0 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px 22px;
+		}
+
+		.ql-sv-row-list li {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			font-weight: 600;
+			font-size: 14px;
+			color: var(--ql-navy);
+		}
+
+		.ql-sv-check {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 18px;
+			height: 18px;
+			border-radius: 50%;
+			background: var(--ql-gold);
+			position: relative;
+			flex: 0 0 auto;
+		}
+
+		.ql-sv-check::after {
+			content: '';
+			width: 7px;
+			height: 3.5px;
+			border-left: 2px solid #fff;
+			border-bottom: 2px solid #fff;
+			transform: rotate(-45deg) translate(0.5px, -0.5px);
+		}
+
+		.ql-sv-row-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-top: 18px;
+			font-weight: 700;
+			font-size: 14.5px;
+			color: var(--ql-gold-deep);
+			text-decoration: none;
+		}
+
+		.ql-sv-row-link:hover {
+			color: var(--ql-navy);
+		}
+
+		/* ------------------------------ unsure ------------------------------ */
+		.ql-sv-unsure {
+			position: relative;
+			padding: 80px 0 96px;
+			background:
+				radial-gradient(80% 130% at 85% 0%, rgba(194, 161, 95, 0.2), transparent 55%),
+				linear-gradient(150deg, var(--ql-navy), var(--ql-navy-deep));
+			color: #eef2f7;
+		}
+
+		.ql-sv-unsure::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: 0;
+			height: 3px;
+			background: linear-gradient(90deg, transparent, var(--ql-gold), transparent);
+		}
+
+		.ql-sv-unsure-inner {
+			max-width: 780px;
+			text-align: center;
+		}
+
+		.ql-sv-unsure-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-size: clamp(26px, 3.6vw, 40px);
+			line-height: 1.18;
+			color: #fff;
+		}
+
+		.ql-sv-unsure-text {
+			margin: 14px auto 0;
+			max-width: 600px;
+			color: #c3cfdd;
+			font-size: 16px;
+		}
+
+		.ql-sv-unsure .ql-sv-btn {
+			margin-top: 28px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.ql-sv-reveal {
+			opacity: 0;
+			transform: translateY(24px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.ql-sv-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.ql-services.is-reduced-motion .ql-sv-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 720px) {
+			.ql-sv-row {
+				grid-template-columns: 1fr;
+				gap: 18px;
+				padding: 24px;
+			}
+
+			.ql-sv-row-ico {
+				width: 64px;
+				height: 64px;
+				border-radius: 16px;
+			}
+
+			.ql-sv-row-ico svg {
+				width: 30px;
+				height: 30px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.ql-services');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-ql-services-ready') === '1') { return; }
+			pageRoot.setAttribute('data-ql-services-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.ql-sv-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>
+
+<!--
+  =========================================================================
+  SITE FOOTER - central chrome component for the Qarqeen Law website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="ql-footer">; no document tags, no libraries
+  - All CSS is scoped under .ql-footer so it cannot leak into page content
+  - No <footer> / <nav> / <header> element tags (plain divs + ARIA roles)
+  - Carries the mandatory legal disclaimer band (law firm requirement)
+  =========================================================================
+-->
+<div class="ql-footer" data-ql-footer>
+
+	<!-- ------------------------ consultation band ------------------------ -->
+	<div class="ql-ft-cta">
+		<div class="ql-ft-wrap ql-ft-cta-inner">
+			<div class="ql-ft-cta-copy">
+				<p class="ql-ft-cta-kicker">Book a consultation</p>
+				<p class="ql-ft-cta-title">Speak with a lawyer about your matter.</p>
+				<p class="ql-ft-cta-text">Tell us what you are facing and we will arrange a consultation - clear
+					answers and a practical way forward.</p>
+			</div>
+			<div class="ql-ft-cta-actions">
+				<a class="ql-ft-btn" data-ic-nav-href="/book-consultation" href="/book-consultation">Book a consultation</a>
+				<a class="ql-ft-btn-phone" href="tel:+16047046220">+1 604 704 6220</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="ql-ft-main">
+		<div class="ql-ft-wrap">
+			<div class="ql-ft-grid">
+
+				<!-- ------------------------- brand ------------------------- -->
+				<div class="ql-ft-brand">
+					<a class="ql-ft-logo" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
+						<span class="ql-ft-mark" aria-hidden="true">
+							<svg class="ql-ft-ico ql-ft-mark-ico" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg>
+						</span>
+						<span class="ql-ft-word">
+							<span class="ql-ft-word-main">Qarqeen</span>
+							<span class="ql-ft-word-sub">Law</span>
+						</span>
+					</a>
+					<p class="ql-ft-mission">
+						Qarqeen Law provides cost-effective, high-quality legal services from Vancouver,
+						British Columbia, with a satellite office in Victoria.
+					</p>
+					<p class="ql-ft-tagline">Your legal rights defenders.</p>
+				</div>
+
+				<!-- --------------------- practice areas --------------------- -->
+				<div class="ql-ft-col">
+					<p class="ql-ft-head">Practice areas</p>
+					<ul class="ql-ft-links">
+						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Immigration Law</a></li>
+						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Refugee Law</a></li>
+						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Family Law</a></li>
+						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Litigation</a></li>
+						<li><a data-ic-nav-href="/legal-services" href="/legal-services">Wills and Estates</a></li>
+					</ul>
+				</div>
+
+				<!-- ------------------------ company ------------------------ -->
+				<div class="ql-ft-col">
+					<p class="ql-ft-head">Company</p>
+					<ul class="ql-ft-links">
+						<li><a data-ic-nav-href="/" href="/">Home</a></li>
+						<li><a data-ic-nav-href="/about-us" href="/about-us">About us</a></li>
+						<li><a data-ic-nav-href="/our-team" href="/our-team">Our team</a></li>
+						<li><a data-ic-nav-href="/contact-us" href="/contact-us">Contact us</a></li>
+						<li><a data-ic-nav-href="/book-consultation" href="/book-consultation">Book consultation</a></li>
+					</ul>
+				</div>
+
+				<!-- ------------------------ contact ------------------------ -->
+				<div class="ql-ft-col ql-ft-col-contact">
+					<p class="ql-ft-head">Get in touch</p>
+					<ul class="ql-ft-contact-list">
+						<li>
+							<a href="tel:+16047046220">+1 604 704 6220</a>
+						</li>
+						<li>
+							<a href="mailto:info@qarqeenlaw.ca">info@qarqeenlaw.ca</a>
+						</li>
+					</ul>
+					<p class="ql-ft-offices-head">Offices</p>
+					<p class="ql-ft-offices">Vancouver, British Columbia (main office)<br>
+						Victoria, British Columbia (satellite office)</p>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+	<!-- --------------------------- disclaimer --------------------------- -->
+	<div class="ql-ft-disclaimer">
+		<div class="ql-ft-wrap">
+			<p class="ql-ft-disclaimer-text">
+				<strong>Legal disclaimer:</strong> The contents and information contained on this website are for
+				general purposes only. They are not meant to be legal advice, nor do they create a lawyer-client
+				relationship. If you require information, legal advice, or a legal opinion, please contact us to
+				schedule a consultation.
+			</p>
+		</div>
+	</div>
+
+	<!-- --------------------------- bottom bar --------------------------- -->
+	<div class="ql-ft-bottom">
+		<div class="ql-ft-wrap ql-ft-bottom-inner">
+			<p class="ql-ft-copy">
+				&copy; <span class="ql-ft-year">2026</span> Qarqeen Law. All rights reserved.
+			</p>
+			<div class="ql-ft-bottom-side">
+				<p class="ql-ft-legal">Vancouver &middot; Victoria &middot; British Columbia</p>
+				<button type="button" class="ql-ft-top">
+					<span aria-hidden="true">&uarr;</span> Back to top
+				</button>
+			</div>
+		</div>
+	</div>
+
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.ql-footer {
+			--ql-navy: #0f1e33;
+			--ql-navy-deep: #0a1626;
+			--ql-navy-2: #16283f;
+			--ql-paper: #fdfcf9;
+			--ql-ivory: #f5f1e8;
+			--ql-ink: #1c2531;
+			--ql-muted: #5d6875;
+			--ql-gold: #c2a15f;
+			--ql-gold-deep: #9c7b3b;
+			--ql-gold-soft: #e8dcbd;
+			--ql-line: #e5dfd2;
+			position: relative;
+			z-index: 10;
+			width: 100%;
+			color: #dbe4ef;
+			background: linear-gradient(160deg, var(--ql-navy) 0%, var(--ql-navy-deep) 100%);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.ql-footer,
+		.ql-footer *,
+		.ql-footer *::before,
+		.ql-footer *::after {
+			box-sizing: border-box;
+		}
+
+		.ql-footer::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background:
+				repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.014) 0 2px, transparent 2px 46px),
+				radial-gradient(90% 70% at 90% 0%, rgba(194, 161, 95, 0.12), transparent 60%);
+			pointer-events: none;
+		}
+
+		.ql-ft-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.ql-ft-ico {
+			width: 1.1em;
+			height: 1.1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		/* ---------- cta band ---------- */
+		.ql-ft-cta {
+			background:
+				radial-gradient(80% 140% at 15% 0%, rgba(194, 161, 95, 0.18), transparent 55%),
+				var(--ql-navy-2);
+			border-top: 3px solid var(--ql-gold);
+		}
+
+		.ql-ft-cta-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 24px;
+			padding-top: 30px;
+			padding-bottom: 30px;
+		}
+
+		.ql-ft-cta-kicker {
+			margin: 0 0 4px;
+			font-size: 12.5px;
+			font-weight: 700;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-cta-title {
+			margin: 0;
+			font-family: Georgia, 'Times New Roman', serif;
+			font-size: 26px;
+			font-weight: 700;
+			line-height: 1.25;
+			color: #fff;
+		}
+
+		.ql-ft-cta-text {
+			margin: 6px 0 0;
+			font-size: 14.5px;
+			max-width: 560px;
+			color: #c3cfdd;
+		}
+
+		.ql-ft-cta-actions {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex: 0 0 auto;
+		}
+
+		.ql-ft-btn {
+			display: inline-flex;
+			align-items: center;
+			padding: 12px 22px;
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			font-weight: 700;
+			font-size: 14.5px;
+			letter-spacing: 0.03em;
+			text-decoration: none;
+			border-radius: 999px;
+			box-shadow: 0 10px 20px -10px rgba(156, 123, 59, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.ql-ft-btn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 14px 24px -10px rgba(156, 123, 59, 1);
+		}
+
+		.ql-ft-btn-phone {
+			display: inline-flex;
+			align-items: center;
+			padding: 12px 20px;
+			border: 1.5px solid rgba(232, 220, 189, 0.55);
+			color: #eef2f7;
+			font-weight: 700;
+			font-size: 14.5px;
+			text-decoration: none;
+			border-radius: 999px;
+			transition: background 0.2s ease;
+		}
+
+		.ql-ft-btn-phone:hover {
+			background: rgba(255, 255, 255, 0.1);
+		}
+
+		/* ---------- main grid ---------- */
+		.ql-ft-main {
+			padding-top: 54px;
+			padding-bottom: 44px;
+		}
+
+		.ql-ft-grid {
+			display: grid;
+			grid-template-columns: 1.5fr 1fr 0.95fr 1.2fr;
+			gap: 40px;
+		}
+
+		.ql-ft-logo {
+			display: inline-flex;
+			align-items: center;
+			gap: 11px;
+			text-decoration: none;
+		}
+
+		.ql-ft-mark {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			border: 1.5px solid var(--ql-gold);
+			border-radius: 10px;
+			background: rgba(194, 161, 95, 0.1);
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-mark-ico {
+			width: 23px;
+			height: 23px;
+		}
+
+		.ql-ft-word {
+			display: flex;
+			flex-direction: column;
+			line-height: 1.1;
+		}
+
+		.ql-ft-word-main {
+			font-family: Georgia, 'Times New Roman', serif;
+			font-size: 21px;
+			font-weight: 700;
+			color: #fff;
+		}
+
+		.ql-ft-word-sub {
+			font-size: 10.5px;
+			font-weight: 700;
+			letter-spacing: 0.42em;
+			text-transform: uppercase;
+			color: var(--ql-gold-soft);
+			margin-top: 2px;
+		}
+
+		.ql-ft-mission {
+			margin: 16px 0 0;
+			font-size: 14px;
+			color: #b9c6d4;
+			max-width: 340px;
+		}
+
+		.ql-ft-tagline {
+			margin: 12px 0 0;
+			font-family: Georgia, 'Times New Roman', serif;
+			font-style: italic;
+			font-size: 15px;
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-head {
+			margin: 0 0 14px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-ft-links {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.ql-ft-links a {
+			color: #dbe4ef;
+			text-decoration: none;
+			font-size: 14.5px;
+			transition: color 0.18s ease, padding-left 0.18s ease;
+		}
+
+		.ql-ft-links a:hover {
+			color: #fff;
+			padding-left: 4px;
+		}
+
+		.ql-ft-contact-list {
+			list-style: none;
+			margin: 0 0 18px;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.ql-ft-contact-list a {
+			color: #dbe4ef;
+			text-decoration: none;
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.ql-ft-contact-list a:hover {
+			color: #fff;
+		}
+
+		.ql-ft-offices-head {
+			margin: 0 0 6px;
+			font-size: 12.5px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: #8fa0b3;
+		}
+
+		.ql-ft-offices {
+			margin: 0;
+			font-size: 14px;
+			color: #b9c6d4;
+		}
+
+		/* ---------- disclaimer ---------- */
+		.ql-ft-disclaimer {
+			border-top: 1px solid rgba(232, 220, 189, 0.14);
+			padding-top: 18px;
+			padding-bottom: 18px;
+		}
+
+		.ql-ft-disclaimer-text {
+			margin: 0;
+			font-size: 12.5px;
+			line-height: 1.65;
+			color: #8fa0b3;
+			max-width: 980px;
+		}
+
+		.ql-ft-disclaimer-text strong {
+			color: #aebcca;
+		}
+
+		/* ---------- bottom bar ---------- */
+		.ql-ft-bottom {
+			border-top: 1px solid rgba(232, 220, 189, 0.14);
+			padding-top: 18px;
+			padding-bottom: 18px;
+		}
+
+		.ql-ft-bottom-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+		}
+
+		.ql-ft-copy {
+			margin: 0;
+			font-size: 13.5px;
+			color: #9fb0c1;
+		}
+
+		.ql-ft-bottom-side {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.ql-ft-legal {
+			margin: 0;
+			font-size: 13px;
+			color: #7f91a4;
+		}
+
+		.ql-ft-top {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			padding: 8px 14px;
+			background: rgba(255, 255, 255, 0.06);
+			color: #dbe4ef;
+			border: 1px solid rgba(232, 220, 189, 0.25);
+			border-radius: 999px;
+			font-size: 13px;
+			font-family: inherit;
+			cursor: pointer;
+			transition: background 0.2s ease;
+		}
+
+		.ql-ft-top:hover {
+			background: rgba(255, 255, 255, 0.12);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 980px) {
+			.ql-ft-grid {
+				grid-template-columns: 1fr 1fr;
+				gap: 32px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.ql-ft-cta-inner {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.ql-ft-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.ql-ft-bottom-inner {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.ql-ft-bottom-side {
+				flex-wrap: wrap;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var footerRoot = document.querySelector('.ql-footer');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!footerRoot || footerRoot.getAttribute('data-ql-footer-ready') === '1') { return; }
+			footerRoot.setAttribute('data-ql-footer-ready', '1');
+
+			/* ---------------- current year ---------------- */
+			var yearElement = footerRoot.querySelector('.ql-ft-year');
+			if (yearElement) {
+				yearElement.textContent = String(new Date().getFullYear());
+			}
+
+			/* ---------------- back to top ---------------- */
+			var backToTopButton = footerRoot.querySelector('.ql-ft-top');
+			if (backToTopButton) {
+				backToTopButton.addEventListener('click', function () {
+					window.scrollTo({ top: 0, behavior: 'smooth' });
+				});
+			}
+		})();
+	</script>
+
+</div>
+
+<div class="preview-note">LOCAL PREVIEW - header and footer are CMS chrome and never ship inside the page</div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-/* build 2026-10-25-1 */
+/* build 2026-10-30-3 */
 
 /* =====================================================================
    RestaurantOrderTakingApp - active orders board for the kitchen /
@@ -25,19 +25,19 @@
   --roa-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   --roa-st-new: #d97706;
-  --roa-st-new-bg: #fef3c7;
+  --roa-st-new-bg: #fef9e7;
   --roa-st-accepted: #1d4ed8;
-  --roa-st-accepted-bg: #dbeafe;
+  --roa-st-accepted-bg: #eff6ff;
   --roa-st-prep: #c2410c;
-  --roa-st-prep-bg: #ffedd5;
+  --roa-st-prep-bg: #fff7ed;
   --roa-st-ready: #15803d;
-  --roa-st-ready-bg: #dcfce7;
+  --roa-st-ready-bg: #ecfdf5;
   --roa-st-done: #166534;
   --roa-st-done-bg: #f0fdf4;
   --roa-st-declined: #b91c1c;
-  --roa-st-declined-bg: #fee2e2;
+  --roa-st-declined-bg: #fef2f2;
   --roa-st-cancelled: #64748b;
-  --roa-st-cancelled-bg: #f1f5f9;
+  --roa-st-cancelled-bg: #f8fafc;
 
   box-sizing: border-box;
   color: var(--roa-ink);
@@ -164,9 +164,9 @@
   align-items: center;
   gap: 7px;
   padding: 7px 14px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 9px;
-  background: transparent;
+  background: var(--roa-paper-soft);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -174,11 +174,19 @@
   cursor: pointer;
 }
 
-.roa-tab:hover { color: var(--roa-ink-strong); background: var(--roa-paper-soft); }
+/* One soft color identity per tab (D-ROTA-15): pastel background + the
+   status's normal color as text and active ring. */
+.roa-tab-all { color: var(--roa-accent); background: var(--roa-accent-soft); }
+.roa-tab-new { color: var(--roa-st-new); background: var(--roa-st-new-bg); }
+.roa-tab-progress { color: var(--roa-st-prep); background: var(--roa-st-prep-bg); }
+.roa-tab-ready { color: var(--roa-st-ready); background: var(--roa-st-ready-bg); }
+.roa-tab-finished { color: var(--roa-st-cancelled); background: var(--roa-st-cancelled-bg); }
+
+.roa-tab:hover { filter: brightness(0.97); }
 
 .roa-tab.roa-tab-on {
-  color: var(--roa-accent);
-  background: var(--roa-accent-soft);
+  box-shadow: inset 0 0 0 1.5px currentColor;
+  font-weight: 800;
 }
 
 .roa-tab-count {
@@ -188,15 +196,9 @@
   font-size: 11px;
   font-weight: 800;
   text-align: center;
-  color: var(--roa-muted);
-  background: var(--roa-paper-soft);
-  border: 1px solid var(--roa-line);
-}
-
-.roa-tab-on .roa-tab-count {
-  color: var(--roa-accent);
+  color: inherit;
   background: var(--roa-paper);
-  border-color: currentColor;
+  border: 1px solid currentColor;
 }
 
 /* -------------------------------------------------------------- toolbar */
@@ -307,17 +309,22 @@
   transform: translateY(-1px);
 }
 
-.roa-card.st-new { border-left-color: var(--roa-st-new); }
-.roa-card.st-accepted { border-left-color: var(--roa-st-accepted); }
-.roa-card.st-prep { border-left-color: var(--roa-st-prep); }
-.roa-card.st-ready { border-left-color: var(--roa-st-ready); }
-.roa-card.st-done { border-left-color: var(--roa-st-done); }
-.roa-card.st-declined { border-left-color: var(--roa-st-declined); }
-.roa-card.st-cancelled { border-left-color: var(--roa-st-cancelled); }
-
-.roa-card.roa-card-warn { border-left-color: var(--roa-danger); background: #fffafa; }
+.roa-card.st-new { background: var(--roa-st-new-bg); border-color: var(--roa-st-new); border-left-color: var(--roa-st-new); }
+.roa-card.st-accepted { background: var(--roa-st-accepted-bg); border-color: var(--roa-st-accepted); border-left-color: var(--roa-st-accepted); }
+.roa-card.st-prep { background: var(--roa-st-prep-bg); border-color: var(--roa-st-prep); border-left-color: var(--roa-st-prep); }
+.roa-card.st-ready { background: var(--roa-st-ready-bg); border-color: var(--roa-st-ready); border-left-color: var(--roa-st-ready); }
+.roa-card.st-done { background: var(--roa-st-done-bg); border-color: var(--roa-st-done); border-left-color: var(--roa-st-done); }
+.roa-card.st-declined { background: var(--roa-st-declined-bg); border-color: var(--roa-st-declined); border-left-color: var(--roa-st-declined); }
+.roa-card.st-cancelled { background: var(--roa-st-cancelled-bg); border-color: var(--roa-st-cancelled); border-left-color: var(--roa-st-cancelled); }
 
 .roa-card.roa-card-fresh { box-shadow: 0 0 0 2px var(--roa-accent); }
+
+/* Time-remaining overrides - declared AFTER the status colors so they win
+   (D-ROTA-15): long-waiting new orders and late orders turn red-tinted,
+   orders inside the last minutes turn amber. */
+.roa-card.roa-card-warn { background: var(--roa-st-declined-bg); border-color: var(--roa-danger); border-left-color: var(--roa-danger); }
+.roa-card.roa-card-urgent { background: #fffbeb; border-color: #f59e0b; border-left-color: #f59e0b; }
+.roa-card.roa-card-late { background: var(--roa-st-declined-bg); border-color: var(--roa-danger); border-left-color: var(--roa-danger); }
 
 .roa-card-top {
   display: flex;
@@ -401,6 +408,17 @@
   color: var(--roa-muted);
 }
 
+.roa-countdown {
+  font-family: var(--roa-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--roa-st-accepted);
+  white-space: nowrap;
+}
+
+.roa-countdown-urgent { color: #b45309; }
+.roa-countdown-late { color: var(--roa-danger); }
+
 .roa-card-foot {
   display: flex;
   align-items: flex-end;
@@ -461,12 +479,26 @@
 
 /* ----------------------------------------------------------------- detail */
 
-.roa-detail {
-  margin: 0 2px;
+.roa-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.roa-detail-shell {
+  width: min(980px, 100%);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
   background: var(--roa-paper);
   border: 1px solid var(--roa-line);
   border-radius: var(--roa-radius);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.3);
   overflow: hidden;
 }
 
@@ -507,6 +539,7 @@
 .roa-detail-grid {
   display: grid;
   grid-template-columns: 330px 1fr;
+  overflow-y: auto;
 }
 
 .roa-detail-side {

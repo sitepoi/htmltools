@@ -1,0 +1,550 @@
+<!--
+  =========================================================================
+  SITE HEADER - central chrome component for the Qarqeen Law website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="ql-header">; no document tags, no libraries
+  - All CSS is scoped under .ql-header so it cannot leak into page content
+  - No <header> / <nav> / <footer> element tags (plain divs + ARIA roles)
+  - Brand = wordmark drawn with text + an inline scales mark (no image file)
+  - Design tokens (--ql-*) are repeated in every page file so each page is
+    self-contained; keep them in sync when the palette changes
+  - Nav link targets (CMS route form, never .html): / (home), /about-us,
+    /our-team, /legal-services, /contact-us, /book-consultation.
+    The main button points at /book-consultation
+  - Facts: phone +1 604 704 6220, email info@qarqeenlaw.ca,
+    Vancouver BC (main office) and Victoria BC (satellite office)
+  =========================================================================
+-->
+<div class="ql-header" data-ql-header>
+
+	<!-- ---------- inline icon sprite (no external requests, no library) ---------- -->
+	<svg class="ql-hd-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+		<symbol id="ql-i-phone" viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></symbol>
+		<symbol id="ql-i-mail" viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></symbol>
+		<symbol id="ql-i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="3" /></symbol>
+		<symbol id="ql-i-chevron" viewBox="0 0 24 24"><path d="m7.6 9.8 4.4 4.4 4.4-4.4" /></symbol>
+		<symbol id="ql-i-arrow" viewBox="0 0 24 24"><path d="M4.6 12h14" /><path d="m13.4 7 5 5-5 5" /></symbol>
+		<symbol id="ql-i-check" viewBox="0 0 24 24"><path d="m5.6 12.4 4 4 8.8-9" /></symbol>
+		<symbol id="ql-i-scales" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></symbol>
+		<symbol id="ql-i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M3 11h18" /></symbol>
+	</svg>
+
+	<!-- ---------------------- top information strip ---------------------- -->
+	<div class="ql-hd-top">
+		<div class="ql-hd-wrap ql-hd-top-inner">
+			<p class="ql-hd-top-note">Legal counsel in Vancouver and Victoria, British Columbia</p>
+			<div class="ql-hd-top-links">
+				<a class="ql-hd-top-link" href="tel:+16047046220">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-phone"></use></svg>
+					+1 604 704 6220
+				</a>
+				<a class="ql-hd-top-link ql-hd-top-mail" href="mailto:info@qarqeenlaw.ca">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-mail"></use></svg>
+					info@qarqeenlaw.ca
+				</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- ------------------------------ main bar ------------------------------ -->
+	<div class="ql-hd-bar">
+		<div class="ql-hd-wrap ql-hd-bar-inner">
+
+			<a class="ql-hd-brand" data-ic-nav-href="/" href="/" aria-label="Qarqeen Law - home">
+				<span class="ql-hd-mark" aria-hidden="true">
+					<svg class="ql-hd-ico ql-hd-mark-ico"><use href="#ql-i-scales"></use></svg>
+				</span>
+				<span class="ql-hd-word">
+					<span class="ql-hd-word-main">Qarqeen</span>
+					<span class="ql-hd-word-sub">Law</span>
+				</span>
+			</a>
+
+			<div class="ql-hd-nav" id="ql-hd-menu" role="navigation" aria-label="Main menu">
+				<ul class="ql-hd-list">
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/" href="/" data-page="home">Home</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/about-us" href="/about-us" data-page="about-us">About Us</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/our-team" href="/our-team" data-page="our-team">Our Team</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/legal-services" href="/legal-services" data-page="legal-services">Legal Services</a>
+					</li>
+					<li class="ql-hd-item">
+						<a class="ql-hd-link" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">Contact Us</a>
+					</li>
+				</ul>
+
+				<a class="ql-hd-cta" data-ic-nav-href="/book-consultation" href="/book-consultation" data-page="book-consultation">
+					<svg class="ql-hd-ico" aria-hidden="true"><use href="#ql-i-calendar"></use></svg>
+					Book Consultation
+				</a>
+			</div>
+
+			<button type="button" class="ql-hd-burger" aria-expanded="false" aria-controls="ql-hd-menu"
+				aria-label="Open menu">
+				<span class="ql-hd-burger-box" aria-hidden="true">
+					<span></span><span></span><span></span>
+				</span>
+			</button>
+		</div>
+	</div>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.ql-header {
+			--ql-navy: #0f1e33;
+			--ql-navy-deep: #0a1626;
+			--ql-navy-2: #16283f;
+			--ql-paper: #fdfcf9;
+			--ql-ivory: #f5f1e8;
+			--ql-ink: #1c2531;
+			--ql-muted: #5d6875;
+			--ql-gold: #c2a15f;
+			--ql-gold-deep: #9c7b3b;
+			--ql-gold-soft: #e8dcbd;
+			--ql-line: #e5dfd2;
+			position: relative;
+			z-index: 60;
+			width: 100%;
+			background: var(--ql-paper);
+			color: var(--ql-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+			box-shadow: 0 10px 30px -18px rgba(15, 30, 51, 0.35);
+		}
+
+		.ql-header,
+		.ql-header *,
+		.ql-header *::before,
+		.ql-header *::after {
+			box-sizing: border-box;
+		}
+
+		.ql-hd-sprite {
+			position: absolute;
+			width: 0;
+			height: 0;
+			overflow: hidden;
+		}
+
+		.ql-hd-ico {
+			width: 1em;
+			height: 1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		.ql-hd-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		/* ---------- top strip ---------- */
+		.ql-hd-top {
+			background: linear-gradient(90deg, var(--ql-navy-deep), var(--ql-navy) 70%, #1a3352);
+			color: #dbe4ef;
+			font-size: 13.5px;
+		}
+
+		.ql-hd-top-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			min-height: 36px;
+		}
+
+		.ql-hd-top-note {
+			margin: 0;
+			letter-spacing: 0.04em;
+		}
+
+		.ql-hd-top-links {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.ql-hd-top-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			color: #dbe4ef;
+			text-decoration: none;
+			letter-spacing: 0.02em;
+		}
+
+		.ql-hd-top-link:hover {
+			color: var(--ql-gold-soft);
+		}
+
+		/* ---------- main bar ---------- */
+		.ql-hd-bar {
+			position: relative;
+			background: var(--ql-paper);
+			border-bottom: 1px solid var(--ql-line);
+		}
+
+		.ql-hd-bar-inner {
+			display: flex;
+			align-items: center;
+			gap: 24px;
+			min-height: 80px;
+		}
+
+		.ql-hd-brand {
+			display: inline-flex;
+			align-items: center;
+			gap: 12px;
+			flex: 0 0 auto;
+			text-decoration: none;
+		}
+
+		.ql-hd-mark {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			border: 1.5px solid var(--ql-gold);
+			border-radius: 10px;
+			background:
+				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.22), transparent 60%),
+				var(--ql-navy);
+			color: var(--ql-gold-soft);
+			box-shadow: 0 8px 18px -10px rgba(15, 30, 51, 0.6);
+		}
+
+		.ql-hd-mark-ico {
+			width: 24px;
+			height: 24px;
+		}
+
+		.ql-header.is-compact .ql-hd-mark {
+			width: 38px;
+			height: 38px;
+		}
+
+		.ql-hd-word {
+			display: flex;
+			flex-direction: column;
+			line-height: 1.1;
+		}
+
+		.ql-hd-word-main {
+			font-family: Georgia, 'Times New Roman', serif;
+			font-size: 22px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			color: var(--ql-navy);
+		}
+
+		.ql-hd-word-sub {
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.42em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+			margin-top: 2px;
+		}
+
+		.ql-hd-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 24px;
+			flex: 1 1 auto;
+			margin-left: auto;
+		}
+
+		.ql-hd-list {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.ql-hd-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 12px 13px;
+			color: var(--ql-ink);
+			text-decoration: none;
+			font-size: 15px;
+			font-weight: 600;
+			letter-spacing: 0.03em;
+			background: none;
+			border: 0;
+			cursor: pointer;
+			font-family: inherit;
+			position: relative;
+		}
+
+		.ql-hd-link::after {
+			content: '';
+			position: absolute;
+			left: 13px;
+			right: 13px;
+			bottom: 6px;
+			height: 2px;
+			background: var(--ql-gold);
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform 0.25s ease;
+		}
+
+		.ql-hd-link:hover::after,
+		.ql-hd-link.is-active::after {
+			transform: scaleX(1);
+		}
+
+		.ql-hd-link.is-active {
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-hd-cta {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 11px 20px;
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			font-weight: 700;
+			font-size: 14.5px;
+			letter-spacing: 0.04em;
+			text-decoration: none;
+			border-radius: 999px;
+			box-shadow: 0 8px 18px -10px rgba(156, 123, 59, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			flex: 0 0 auto;
+		}
+
+		.ql-hd-cta:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 12px 22px -10px rgba(156, 123, 59, 0.95);
+		}
+
+		.ql-hd-cta.is-active {
+			background: var(--ql-navy);
+		}
+
+		/* ---------- burger ---------- */
+		.ql-hd-burger {
+			display: none;
+			margin-left: auto;
+			padding: 10px;
+			background: none;
+			border: 1px solid var(--ql-line);
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		.ql-hd-burger-box {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+			width: 22px;
+		}
+
+		.ql-hd-burger-box span {
+			height: 2px;
+			background: var(--ql-navy);
+			border-radius: 2px;
+			transition: transform 0.25s ease, opacity 0.25s ease;
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(1) {
+			transform: translateY(7px) rotate(45deg);
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(2) {
+			opacity: 0;
+		}
+
+		.ql-header.is-menu-open .ql-hd-burger-box span:nth-child(3) {
+			transform: translateY(-7px) rotate(-45deg);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1060px) {
+			.ql-hd-list {
+				gap: 0;
+			}
+
+			.ql-hd-link {
+				padding-left: 10px;
+				padding-right: 10px;
+				font-size: 14.5px;
+			}
+
+			.ql-hd-nav {
+				gap: 12px;
+			}
+		}
+
+		@media (max-width: 920px) {
+			.ql-hd-burger {
+				display: inline-flex;
+			}
+
+			.ql-hd-nav {
+				position: fixed;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				width: min(360px, 88vw);
+				margin: 0;
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				gap: 8px;
+				background: var(--ql-paper);
+				box-shadow: -24px 0 60px rgba(10, 22, 38, 0.35);
+				padding: 74px 22px 26px;
+				overflow-y: auto;
+				transform: translateX(105%);
+				transition: transform 0.3s ease;
+			}
+
+			.ql-header.is-menu-open .ql-hd-nav {
+				transform: translateX(0);
+			}
+
+			.ql-hd-list {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 2px;
+			}
+
+			.ql-hd-link {
+				width: 100%;
+				justify-content: space-between;
+				padding: 13px 12px;
+				border-bottom: 1px solid var(--ql-line);
+				font-size: 16px;
+			}
+
+			.ql-hd-link::after {
+				display: none;
+			}
+
+			.ql-hd-link.is-active {
+				background: var(--ql-ivory);
+				border-radius: 8px;
+			}
+
+			.ql-hd-cta {
+				justify-content: center;
+				margin-top: 6px;
+			}
+
+			.ql-hd-top-note {
+				display: none;
+			}
+
+			.ql-hd-top-inner {
+				justify-content: center;
+			}
+
+			.ql-hd-top-mail {
+				display: none;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var headerRoot = document.querySelector('.ql-header');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!headerRoot || headerRoot.getAttribute('data-ql-header-ready') === '1') { return; }
+			headerRoot.setAttribute('data-ql-header-ready', '1');
+
+			var burgerButton = headerRoot.querySelector('.ql-hd-burger');
+
+			/* ---------------- mobile menu ---------------- */
+			function closeMobileMenu() {
+				if (!headerRoot.classList.contains('is-menu-open')) { return; }
+				headerRoot.classList.remove('is-menu-open');
+				burgerButton.setAttribute('aria-expanded', 'false');
+			}
+
+			function openMobileMenu() {
+				headerRoot.classList.add('is-menu-open');
+				burgerButton.setAttribute('aria-expanded', 'true');
+			}
+
+			burgerButton.addEventListener('click', function () {
+				if (headerRoot.classList.contains('is-menu-open')) { closeMobileMenu(); }
+				else { openMobileMenu(); }
+			});
+
+			/* a chosen nav link closes the drawer so the page switch is visible */
+			Array.prototype.forEach.call(headerRoot.querySelectorAll('.ql-hd-list a, .ql-hd-cta'), function (navLink) {
+				navLink.addEventListener('click', closeMobileMenu);
+			});
+
+			document.addEventListener('click', function (event) {
+				if (!headerRoot.contains(event.target)) { closeMobileMenu(); }
+			});
+
+			document.addEventListener('keydown', function (event) {
+				if (event.key === 'Escape') { closeMobileMenu(); }
+			});
+
+			/* ---------------- compact bar on scroll ---------------- */
+			var ticking = false;
+
+			function updateBarCompactness() {
+				ticking = false;
+				var isCompact = window.scrollY > 24;
+				headerRoot.classList.toggle('is-compact', isCompact);
+			}
+
+			function requestBarUpdate() {
+				if (ticking) { return; }
+				ticking = true;
+				window.requestAnimationFrame(updateBarCompactness);
+			}
+
+			window.addEventListener('scroll', requestBarUpdate, { passive: true });
+			updateBarCompactness();
+
+			/* ---------------- active page highlight ---------------- */
+			var currentPath = window.location.pathname || '/';
+			var pageLinks = Array.prototype.slice.call(
+				headerRoot.querySelectorAll('a[data-page], button[data-page]')
+			);
+
+			pageLinks.forEach(function (pageLink) {
+				var pageKey = pageLink.getAttribute('data-page');
+				var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+				var isActive = currentPath === pagePath;
+				pageLink.classList.toggle('is-active', isActive);
+				if (isActive && pageLink.tagName === 'A') {
+					pageLink.setAttribute('aria-current', 'page');
+				}
+			});
+		})();
+	</script>
+
+</div>

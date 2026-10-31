@@ -237,6 +237,10 @@
     return new Date(Date.now() - minutes * 60000).toISOString();
   }
 
+  function minutesAheadIso(minutes) {
+    return new Date(Date.now() + minutes * 60000).toISOString();
+  }
+
   function hoursAgoIso(hours) {
     return new Date(Date.now() - hours * 3600000).toISOString();
   }
@@ -272,7 +276,9 @@
           totals: totals,
           status: status,
           statusChangedAt: (extra && extra.statusChangedAt) || placedAtIso,
-          internalNote: extra && extra.internalNote ? extra.internalNote : ''
+          internalNote: extra && extra.internalNote ? extra.internalNote : '',
+          acceptedAt: extra && extra.acceptedAt ? extra.acceptedAt : '',
+          estimatedReadyAt: extra && extra.estimatedReadyAt ? extra.estimatedReadyAt : ''
         }
       }
     };
@@ -307,7 +313,7 @@
       ],
       { subtotal: 18.0, deliveryFee: 2.0, tax: 1.4, total: 21.4 },
       'accepted', minutesAgoIso(18),
-      { address: { street: 'King Street No. 34B', city: 'New York', postal_code: '10001' }, statusChangedAt: minutesAgoIso(17), acceptedAt: minutesAgoIso(17) }));
+      { address: { street: 'King Street No. 34B', city: 'New York', postal_code: '10001' }, statusChangedAt: minutesAgoIso(17), acceptedAt: minutesAgoIso(17), estimatedReadyAt: minutesAheadIso(25) }));
 
     list.push(orderObject('EFOC-7709', 'on-premise',
       { fullName: '', name: '' },
@@ -326,7 +332,7 @@
       ],
       { subtotal: 7.2, deliveryFee: 2.0, tax: 0.64, total: 9.84 },
       'in-preparation', minutesAgoIso(12),
-      { address: { street: 'Lakeview Ave 4', city: 'New York' }, statusChangedAt: minutesAgoIso(10) }));
+      { address: { street: 'Lakeview Ave 4', city: 'New York' }, statusChangedAt: minutesAgoIso(10), estimatedReadyAt: minutesAgoIso(8) }));
 
     list.push(orderObject('EFOC-7707', 'pickup',
       { fullName: 'Marco Silva', phone: '+1 555 010 7707' },
@@ -344,7 +350,7 @@
       ],
       { subtotal: 11.0, deliveryFee: 2.0, tax: 0.91, total: 13.91 },
       'ready', minutesAgoIso(40),
-      { address: { street: 'King Street No. 34B', city: 'New York' }, statusChangedAt: minutesAgoIso(10) }));
+      { address: { street: 'King Street No. 34B', city: 'New York' }, statusChangedAt: minutesAgoIso(10), estimatedReadyAt: minutesAgoIso(12) }));
 
     list.push(orderObject('EFOC-7705', 'pickup',
       { fullName: 'Liam Turner', phone: '+1 555 010 7705' },
@@ -418,12 +424,24 @@
 
 <script>
 /* ── Tool HTML loader (fetch with embedded fallback for file://) ── */
-var EMBEDDED_HTML = "\u003c!-- build 2026-10-25-1 -->\r\n\u003cdiv class=\"roa\" id=\"roa-root\">\r\n  \u003cdiv class=\"roa-shell\">\r\n\r\n    \u003cheader class=\"roa-top\">\r\n      \u003cdiv class=\"roa-top-main\">\r\n        \u003ch1 class=\"roa-title\">Orders\u003c/h1>\r\n        \u003cp class=\"roa-top-sub\" id=\"roa-top-sub\">Active orders board\u003c/p>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-top-actions\">\r\n        \u003cspan class=\"roa-live\" id=\"roa-live\">\u003cspan class=\"roa-live-dot\">\u003c/span>Live\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-btn roa-btn-ghost roa-btn-small\" id=\"roa-refresh\">Refresh\u003c/button>\r\n      \u003c/div>\r\n    \u003c/header>\r\n\r\n    \u003cdiv class=\"roa-banner roa-banner-readonly\" id=\"roa-readonly\" hidden>\u003c/div>\r\n    \u003cdiv class=\"roa-banner roa-banner-config\" id=\"roa-config\" hidden>\u003c/div>\r\n\r\n    \u003cnav class=\"roa-tabs\" id=\"roa-tabs\">\u003c/nav>\r\n\r\n    \u003cdiv class=\"roa-toolbar\">\r\n      \u003cinput type=\"text\" class=\"roa-search\" id=\"roa-search\" placeholder=\"Search order number, customer, phone, table, address\">\r\n      \u003clabel class=\"roa-sortlabel\" for=\"roa-sort\">Sort\u003c/label>\r\n      \u003cselect class=\"roa-select\" id=\"roa-sort\">\r\n        \u003coption value=\"waiting\">Longest waiting first\u003c/option>\r\n        \u003coption value=\"newest\">Newest first\u003c/option>\r\n        \u003coption value=\"total\">Highest total first\u003c/option>\r\n      \u003c/select>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"roa-state\" id=\"roa-state\" hidden>\u003c/div>\r\n\r\n    \u003cmain class=\"roa-board\" id=\"roa-board\">\u003c/main>\r\n\r\n    \u003csection class=\"roa-detail\" id=\"roa-detail\" hidden>\u003c/section>\r\n\r\n    \u003cfooter class=\"roa-foot\">\r\n      \u003cspan class=\"roa-loaded\" id=\"roa-loaded\">\u003c/span>\r\n      \u003cspan class=\"roa-refreshed\" id=\"roa-refreshed\">\u003c/span>\r\n      \u003cspan class=\"roa-build\" id=\"roa-build\">tool build\u003c/span>\r\n    \u003c/footer>\r\n\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"roa-modal\" id=\"roa-modal\" hidden>\r\n    \u003cdiv class=\"roa-modal-card\" role=\"dialog\" aria-modal=\"true\">\r\n      \u003cdiv class=\"roa-modal-head\">\r\n        \u003cspan class=\"roa-modal-title\" id=\"roa-modal-title\">\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-modal-x\" data-act=\"modal-close\" aria-label=\"Close\">&#10005;\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-modal-body\" id=\"roa-modal-body\">\u003c/div>\r\n      \u003cdiv class=\"roa-modal-foot\" id=\"roa-modal-foot\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\u003c/div>\r\n";
+var EMBEDDED_HTML = "\u003c!-- build 2026-10-30-1 -->\r\n\u003cdiv class=\"roa\" id=\"roa-root\">\r\n  \u003cdiv class=\"roa-shell\">\r\n\r\n    \u003cheader class=\"roa-top\">\r\n      \u003cdiv class=\"roa-top-main\">\r\n        \u003ch1 class=\"roa-title\">Orders\u003c/h1>\r\n        \u003cp class=\"roa-top-sub\" id=\"roa-top-sub\">Active orders board\u003c/p>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-top-actions\">\r\n        \u003cspan class=\"roa-live\" id=\"roa-live\">\u003cspan class=\"roa-live-dot\">\u003c/span>Live\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-btn roa-btn-ghost roa-btn-small\" id=\"roa-refresh\">Refresh\u003c/button>\r\n      \u003c/div>\r\n    \u003c/header>\r\n\r\n    \u003cdiv class=\"roa-banner roa-banner-readonly\" id=\"roa-readonly\" hidden>\u003c/div>\r\n    \u003cdiv class=\"roa-banner roa-banner-config\" id=\"roa-config\" hidden>\u003c/div>\r\n\r\n    \u003cnav class=\"roa-tabs\" id=\"roa-tabs\">\u003c/nav>\r\n\r\n    \u003cdiv class=\"roa-toolbar\">\r\n      \u003cinput type=\"text\" class=\"roa-search\" id=\"roa-search\" placeholder=\"Search order number, customer, phone, table, address\">\r\n      \u003clabel class=\"roa-sortlabel\" for=\"roa-sort\">Sort\u003c/label>\r\n      \u003cselect class=\"roa-select\" id=\"roa-sort\">\r\n        \u003coption value=\"waiting\">Longest waiting first\u003c/option>\r\n        \u003coption value=\"newest\">Newest first\u003c/option>\r\n        \u003coption value=\"total\">Highest total first\u003c/option>\r\n      \u003c/select>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"roa-state\" id=\"roa-state\" hidden>\u003c/div>\r\n\r\n    \u003cmain class=\"roa-board\" id=\"roa-board\">\u003c/main>\r\n\r\n    \u003cfooter class=\"roa-foot\">\r\n      \u003cspan class=\"roa-loaded\" id=\"roa-loaded\">\u003c/span>\r\n      \u003cspan class=\"roa-refreshed\" id=\"roa-refreshed\">\u003c/span>\r\n      \u003cspan class=\"roa-build\" id=\"roa-build\">tool build\u003c/span>\r\n    \u003c/footer>\r\n\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"roa-modal\" id=\"roa-modal\" hidden>\r\n    \u003cdiv class=\"roa-modal-card\" role=\"dialog\" aria-modal=\"true\">\r\n      \u003cdiv class=\"roa-modal-head\">\r\n        \u003cspan class=\"roa-modal-title\" id=\"roa-modal-title\">\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-modal-x\" data-act=\"modal-close\" aria-label=\"Close\">&#10005;\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-modal-body\" id=\"roa-modal-body\">\u003c/div>\r\n      \u003cdiv class=\"roa-modal-foot\" id=\"roa-modal-foot\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"roa-detail-overlay\" id=\"roa-detail\" hidden>\u003c/div>\r\n\u003c/div>\r\n";
 
 (function () {
   var status = document.getElementById('th-status');
   var container = document.getElementById('app-container');
   var inlineMode = /[?&]inlinejs=1/.test(window.location.search);
+  var query = {};
+  window.location.search.replace(/^\?/, '').split('&').forEach(function (pair) {
+    if (!pair) return;
+    var bits = pair.split('=');
+    query[decodeURIComponent(bits[0])] = decodeURIComponent(bits[1] || '');
+  });
+
+  if (query.bare === '1') {
+    var bar = document.getElementById('th-bar');
+    if (bar) bar.style.display = 'none';
+    document.body.style.paddingTop = '0';
+  }
 
   function loadExternalJS() {
     status.textContent = 'Loading JS (external)...';
@@ -454,11 +472,16 @@ var EMBEDDED_HTML = "\u003c!-- build 2026-10-25-1 -->\r\n\u003cdiv class=\"roa\"
     container.innerHTML = html;
     if (inlineMode) loadInlineJS();
     else loadExternalJS();
-    var qs = /[?&](detail|accept)=1/.exec(window.location.search);
-    if (qs) {
+    /* Screenshot / QA click drivers:
+       ?page=documents  -> open the first order card (detail view)
+       ?detail=1        -> same, explicit
+       ?accept=1        -> open the accept dialog of the first new order */
+    var clickSelector = '';
+    if (query.page === 'documents' || query.detail === '1') clickSelector = '.roa-card[data-id]';
+    else if (query.accept === '1') clickSelector = '[data-act="accept"]';
+    if (clickSelector) {
       setTimeout(function () {
-        var selector = qs[1] === 'detail' ? '.roa-card[data-id]' : '[data-act="accept"]';
-        var target = document.querySelector(selector);
+        var target = document.querySelector(clickSelector);
         if (target) target.click();
       }, 1500);
     }

@@ -1,0 +1,787 @@
+<!--
+  =========================================================================
+  CONTACT US - fragment for the Qarqeen Law website (route /contact-us)
+  - One parent <div class="ql-page ql-contact"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are scoped under .ql-contact so nothing leaks
+  - The contact form follows the platform contract: <form data-gw-form>,
+    hidden honeypot named "gw_hp", [data-gw-form-status] live region
+  - Form facts: endpoint https://qarqeenlawca.uniconhub.com/api/public/forms/submit
+    (domain pattern domainWithoutDots.uniconhub.com - VERIFY before go-live),
+    cmsObjectType "qarqeen-contact-us-forms-uniconbaseapps"
+    (CMS CONFIG NEEDED - create this object type in the CMS),
+    site origin https://www.qarqeenlaw.ca must be on the CMS allowlist
+  - SEO for the CMS page object (slug "contact-us"):
+    title "Contact Us - Qarqeen Law"
+    description "Contact Qarqeen Law in Vancouver and Victoria, British
+    Columbia. Email info@qarqeenlaw.ca or call +1 604 704 6220."
+  =========================================================================
+-->
+<div class="ql-page ql-contact">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="ql-ct-hero">
+		<div class="ql-ct-hero-bg" aria-hidden="true"></div>
+		<div class="ql-ct-wrap ql-ct-hero-inner">
+			<p class="ql-ct-kicker">Contact us</p>
+			<h1 class="ql-ct-hero-title">We can help.</h1>
+			<p class="ql-ct-hero-lede">
+				If you need legal advice, fill out the form below and we will contact you as soon as
+				possible.
+			</p>
+		</div>
+	</section>
+
+	<!-- ========================== CONTACT CARDS ========================== -->
+	<section class="ql-ct-cards">
+		<div class="ql-ct-wrap">
+			<div class="ql-ct-cards-grid">
+				<a class="ql-ct-card ql-ct-reveal" href="mailto:info@qarqeenlaw.ca">
+					<span class="ql-ct-card-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></svg>
+					</span>
+					<span class="ql-ct-card-label">Email</span>
+					<span class="ql-ct-card-value">info@qarqeenlaw.ca</span>
+					<span class="ql-ct-card-hint">Write to us any time</span>
+				</a>
+				<a class="ql-ct-card ql-ct-reveal" href="tel:+16047046220">
+					<span class="ql-ct-card-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></svg>
+					</span>
+					<span class="ql-ct-card-label">Phone</span>
+					<span class="ql-ct-card-value">+1 604 704 6220</span>
+					<span class="ql-ct-card-hint">Call us during business hours</span>
+				</a>
+				<div class="ql-ct-card ql-ct-reveal">
+					<span class="ql-ct-card-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>
+					</span>
+					<span class="ql-ct-card-label">Offices</span>
+					<span class="ql-ct-card-value">Vancouver and Victoria, BC</span>
+					<span class="ql-ct-card-hint">Main office in Vancouver, satellite in Victoria</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- =============================== FORM ============================== -->
+	<section class="ql-ct-form">
+		<div class="ql-ct-wrap ql-ct-form-grid">
+			<div class="ql-ct-form-copy ql-ct-reveal">
+				<p class="ql-ct-kicker">Send us a message</p>
+				<h2 class="ql-ct-sec-title">Tell us how we can help</h2>
+				<p class="ql-ct-form-text">
+					Describe your matter in your own words. The more we understand, the better we can
+					advise - every message is treated confidentially.
+				</p>
+				<ul class="ql-ct-form-list">
+					<li><span class="ql-ct-check" aria-hidden="true"></span> We reply as soon as possible</li>
+					<li><span class="ql-ct-check" aria-hidden="true"></span> Confidential and professional handling</li>
+					<li><span class="ql-ct-check" aria-hidden="true"></span> Prefer to talk? Call +1 604 704 6220</li>
+				</ul>
+				<p class="ql-ct-form-note">
+					Sending a message does not create a lawyer-client relationship. See the legal
+					disclaimer at the bottom of the page.
+				</p>
+			</div>
+
+			<div class="ql-ct-form-card ql-ct-reveal">
+				<form class="ql-ct-form-el" data-gw-form data-gw-form-type="contact-message"
+					data-gw-cms-object-type="qarqeen-contact-us-forms-uniconbaseapps">
+					<div class="ql-ct-form-fields">
+						<label class="ql-ct-field">
+							<span class="ql-ct-field-label">Your name <em>required</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="ql-ct-field">
+							<span class="ql-ct-field-label">Email <em>required</em></span>
+							<input type="email" name="email" inputmode="email" autocomplete="email" required>
+						</label>
+						<label class="ql-ct-field">
+							<span class="ql-ct-field-label">Phone <em>optional</em></span>
+							<input type="tel" name="phone" inputmode="tel" autocomplete="tel">
+						</label>
+						<label class="ql-ct-field">
+							<span class="ql-ct-field-label">What is your matter about?</span>
+							<select name="service">
+								<option value="immigration-law">Immigration Law</option>
+								<option value="refugee-law">Refugee Law</option>
+								<option value="family-law">Family Law</option>
+								<option value="litigation">Litigation</option>
+								<option value="wills-and-estates">Wills and Estates</option>
+								<option value="not-sure">Not sure yet</option>
+							</select>
+						</label>
+					</div>
+
+					<label class="ql-ct-field ql-ct-field-wide">
+						<span class="ql-ct-field-label">Your message <em>required</em></span>
+						<textarea name="message" rows="5" required
+							placeholder="Tell us about your situation and how we can help..."></textarea>
+					</label>
+
+					<input class="ql-ct-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+						aria-hidden="true">
+
+					<div class="ql-ct-form-actions">
+						<button class="ql-ct-submit" type="submit">Send my message</button>
+						<div class="ql-ct-form-status" data-gw-form-status role="status"></div>
+					</div>
+					<p class="ql-ct-form-consent">We use these details only to answer your enquiry. We do not
+						pass them to anyone else.</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.ql-contact {
+			--ql-navy: #0f1e33;
+			--ql-navy-deep: #0a1626;
+			--ql-navy-2: #16283f;
+			--ql-paper: #fdfcf9;
+			--ql-ivory: #f5f1e8;
+			--ql-ink: #1c2531;
+			--ql-muted: #5d6875;
+			--ql-gold: #c2a15f;
+			--ql-gold-deep: #9c7b3b;
+			--ql-gold-soft: #e8dcbd;
+			--ql-line: #e5dfd2;
+			--ql-display: Georgia, 'Times New Roman', serif;
+			position: relative;
+			width: 100%;
+			background: var(--ql-paper);
+			color: var(--ql-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.ql-contact,
+		.ql-contact *,
+		.ql-contact *::before,
+		.ql-contact *::after {
+			box-sizing: border-box;
+		}
+
+		.ql-contact img {
+			max-width: 100%;
+		}
+
+		.ql-ct-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.ql-ct-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-ct-sec-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-size: clamp(25px, 3.2vw, 38px);
+			line-height: 1.15;
+			font-weight: 700;
+			color: var(--ql-navy);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.ql-ct-hero {
+			position: relative;
+			padding: 78px 0;
+			background: linear-gradient(155deg, var(--ql-navy) 0%, var(--ql-navy-deep) 100%);
+			color: #eef2f7;
+			isolation: isolate;
+		}
+
+		.ql-ct-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -1;
+			background:
+				radial-gradient(70% 90% at 100% 0%, rgba(194, 161, 95, 0.22), transparent 55%),
+				radial-gradient(55% 70% at 0% 100%, rgba(28, 61, 99, 0.5), transparent 60%),
+				repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 56px);
+		}
+
+		.ql-ct-hero::after {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			height: 3px;
+			background: linear-gradient(90deg, transparent, var(--ql-gold), transparent);
+		}
+
+		.ql-ct-hero-inner {
+			max-width: 780px;
+			text-align: center;
+		}
+
+		.ql-ct-hero-title {
+			margin: 0;
+			font-family: var(--ql-display);
+			font-weight: 700;
+			font-size: clamp(34px, 4.4vw, 54px);
+			line-height: 1.08;
+		}
+
+		.ql-ct-hero-lede {
+			margin: 16px auto 0;
+			font-size: 16.5px;
+			color: #c3cfdd;
+			max-width: 560px;
+		}
+
+		/* ----------------------------- cards ----------------------------- */
+		.ql-ct-cards {
+			padding: 76px 0 0;
+		}
+
+		.ql-ct-cards-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 20px;
+		}
+
+		.ql-ct-card {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+			background: #fff;
+			border: 1px solid var(--ql-line);
+			border-top: 3px solid var(--ql-gold);
+			border-radius: 18px;
+			padding: 26px;
+			text-decoration: none;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		a.ql-ct-card:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 24px 40px -26px rgba(15, 30, 51, 0.5);
+		}
+
+		.ql-ct-card-ico {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 48px;
+			height: 48px;
+			border-radius: 13px;
+			background:
+				radial-gradient(120% 120% at 30% 20%, rgba(194, 161, 95, 0.25), transparent 60%),
+				var(--ql-navy);
+			color: var(--ql-gold-soft);
+		}
+
+		.ql-ct-card-ico svg {
+			width: 24px;
+			height: 24px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.ql-ct-card-label {
+			margin-top: 10px;
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--ql-gold-deep);
+		}
+
+		.ql-ct-card-value {
+			font-family: var(--ql-display);
+			font-size: 19px;
+			font-weight: 700;
+			color: var(--ql-navy);
+			line-height: 1.3;
+		}
+
+		.ql-ct-card-hint {
+			font-size: 13.5px;
+			color: var(--ql-muted);
+		}
+
+		/* ------------------------------ form ------------------------------ */
+		.ql-ct-form {
+			padding: 76px 0 100px;
+		}
+
+		.ql-ct-form-grid {
+			display: grid;
+			grid-template-columns: 0.9fr 1.1fr;
+			gap: 54px;
+			align-items: start;
+		}
+
+		.ql-ct-form-text {
+			margin: 16px 0 0;
+			color: var(--ql-muted);
+			font-size: 16.5px;
+		}
+
+		.ql-ct-form-list {
+			list-style: none;
+			margin: 22px 0 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.ql-ct-form-list li {
+			display: flex;
+			align-items: flex-start;
+			gap: 11px;
+			font-weight: 600;
+			font-size: 15px;
+			color: var(--ql-navy);
+		}
+
+		.ql-ct-check {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			background: var(--ql-gold);
+			flex: 0 0 auto;
+			position: relative;
+			margin-top: 3px;
+		}
+
+		.ql-ct-check::after {
+			content: '';
+			width: 8px;
+			height: 4px;
+			border-left: 2px solid #fff;
+			border-bottom: 2px solid #fff;
+			transform: rotate(-45deg) translate(1px, -1px);
+		}
+
+		.ql-ct-form-note {
+			margin: 22px 0 0;
+			font-size: 13px;
+			color: #8a939e;
+		}
+
+		.ql-ct-form-card {
+			background: #fff;
+			border: 1px solid var(--ql-line);
+			border-top: 4px solid var(--ql-gold);
+			border-radius: 20px;
+			padding: 30px;
+			box-shadow: 0 30px 55px -30px rgba(15, 30, 51, 0.45);
+		}
+
+		.ql-ct-form-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 15px;
+		}
+
+		.ql-ct-field {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+		}
+
+		.ql-ct-field-wide {
+			margin-top: 15px;
+		}
+
+		.ql-ct-field-label {
+			font-size: 13.5px;
+			font-weight: 700;
+			color: var(--ql-navy);
+		}
+
+		.ql-ct-field-label em {
+			font-style: normal;
+			font-weight: 400;
+			color: #9a8a6e;
+			font-size: 12px;
+		}
+
+		.ql-ct-field input,
+		.ql-ct-field select,
+		.ql-ct-field textarea {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--ql-line);
+			border-radius: 10px;
+			background: #fff;
+			font-family: inherit;
+			font-size: 15px;
+			color: var(--ql-ink);
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.ql-ct-field textarea {
+			resize: vertical;
+		}
+
+		.ql-ct-field input:focus,
+		.ql-ct-field select:focus,
+		.ql-ct-field textarea:focus {
+			outline: none;
+			border-color: var(--ql-gold);
+			box-shadow: 0 0 0 3px rgba(194, 161, 95, 0.18);
+		}
+
+		.ql-ct-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+
+		.ql-ct-form-actions {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			margin-top: 20px;
+			flex-wrap: wrap;
+		}
+
+		.ql-ct-submit {
+			padding: 13px 26px;
+			background: linear-gradient(135deg, var(--ql-gold), var(--ql-gold-deep));
+			color: #fff;
+			border: 0;
+			border-radius: 999px;
+			font-family: inherit;
+			font-size: 15px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			cursor: pointer;
+			box-shadow: 0 14px 26px -14px rgba(156, 123, 59, 0.9);
+			transition: transform 0.2s ease;
+		}
+
+		.ql-ct-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.ql-ct-form-el.gw-busy .ql-ct-submit {
+			opacity: 0.65;
+			cursor: wait;
+		}
+
+		.ql-ct-form-status:empty {
+			display: none;
+		}
+
+		.ql-ct-form-status {
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.ql-ct-form-status.is-ok {
+			color: #2f7d4f;
+		}
+
+		.ql-ct-form-status.is-error {
+			color: #b3422e;
+		}
+
+		.ql-ct-form-consent {
+			margin: 14px 0 0;
+			font-size: 12.5px;
+			color: #9a8a6e;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.ql-ct-reveal {
+			opacity: 0;
+			transform: translateY(24px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.ql-ct-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.ql-contact.is-reduced-motion .ql-ct-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.ql-ct-form-grid {
+				grid-template-columns: 1fr;
+				gap: 40px;
+			}
+		}
+
+		@media (max-width: 760px) {
+			.ql-ct-cards-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.ql-ct-form-fields {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.ql-contact');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-ql-contact-ready') === '1') { return; }
+			pageRoot.setAttribute('data-ql-contact-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- contact form (public form contract) ---------------- */
+			var formApiEndpoint = 'https://qarqeenlawca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'qarqeen-contact-us-forms-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function phoneDigits(rawValue) {
+				var text = rawValue === null || rawValue === undefined ? '' : String(rawValue);
+				return text.replace(/[^\d]/g, '');
+			}
+
+			function formatPhoneDigits(rawValue) {
+				var digits = phoneDigits(rawValue);
+				if (digits.length === 11 && digits.charAt(0) === '1') { digits = digits.slice(1); }
+				digits = digits.slice(0, 10);
+				if (digits.length <= 3) { return digits; }
+				var areaCode = digits.slice(0, 3);
+				var restOfNumber = digits.slice(3);
+				if (restOfNumber.length <= 3) { return '(' + areaCode + ') ' + restOfNumber; }
+				return '(' + areaCode + ') ' + restOfNumber.slice(0, 3) + '-' + restOfNumber.slice(3);
+			}
+
+			/* Reformat while typing and keep the caret next to the same digit. */
+			function applyPhoneFormat(phoneInput) {
+				var start = phoneInput.selectionStart;
+				var digitsBeforeCaret = start === null ? 0 : phoneDigits(phoneInput.value.slice(0, start)).length;
+				var formatted = formatPhoneDigits(phoneInput.value);
+				if (formatted === phoneInput.value) { return; }
+
+				phoneInput.value = formatted;
+				if (start === null || document.activeElement !== phoneInput) { return; }
+
+				var position = 0;
+				var digitsSeen = 0;
+				while (position < formatted.length && digitsSeen < digitsBeforeCaret) {
+					if (/\d/.test(formatted.charAt(position))) { digitsSeen += 1; }
+					position += 1;
+				}
+				phoneInput.setSelectionRange(position, position);
+			}
+
+			var phoneField = pageRoot.querySelector('form[data-gw-form] input[name="phone"]');
+			if (phoneField) {
+				phoneField.addEventListener('input', function () { applyPhoneFormat(phoneField); });
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					var fieldType = field.type;
+					if (!field.name || field.disabled) { return; }
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+					if (fieldType === 'checkbox') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+						return;
+					}
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+					if (field.name === 'phone') {
+						values[field.name] = cleanFieldValue(formatPhoneDigits(field.value));
+						return;
+					}
+					if (field.name === 'email') {
+						values[field.name] = cleanFieldValue(String(field.value || '').replace(/\s+/g, '').toLowerCase());
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm(form) {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm(form) {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this message. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@qarqeenlaw.ca.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@qarqeenlaw.ca.';
+			}
+
+			function sendFormToApi(form, endpoint) {
+				var values = collectFormValues(form);
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm(form);
+				var submitButton = form.querySelector('[type="submit"]');
+
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (parseError) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(form, formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					setFormStatus(form, 'Thank you. Your message is with us and we will contact you as soon as possible.', 'ok');
+				}).catch(function () {
+					setFormStatus(form, formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (forms.length) {
+				var platform = window.gw;
+				var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+				if (usesApi) {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							var endpoint = endpointForForm(form);
+							if (!endpoint || form.classList.contains('gw-busy')) { return; }
+							sendFormToApi(form, endpoint);
+						});
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(pageRoot);
+				} else {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							setFormStatus(form, 'The form service is not connected in this preview.');
+						});
+					});
+				}
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.ql-ct-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

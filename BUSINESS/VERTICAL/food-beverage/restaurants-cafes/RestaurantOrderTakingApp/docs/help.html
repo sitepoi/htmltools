@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Restaurant Order Taking App - Help</title>
+<link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+</head>
+<body>
+<div id="content">
+<h1>Restaurant Order Taking App - Help</h1>
+<p class="meta">
+  User help for Restaurant Order Taking App. The single source of truth for how this
+  tool works is its SSOT document (<a href="ssot.html">SSOT</a>) -
+  this file explains the same behavior for end users, in plain words.
+  Generated from the tool code + SSOT + AI chat by
+  scripts/generate-docs.js. Updated: 2026-10-30.
+</p>
+
+<!-- GENERATED-START - generate-docs.js replaces the content between the two markers -->
+<h2 id="overview">1. Overview</h2>
+<p>Restaurant Order Taking App is the live board where your restaurant staff
+watch all of today's orders and move them forward - accept, start prep, mark
+ready, complete - with one tap per step.</p>
+<p>It is for the kitchen and the front desk of any restaurant that takes
+orders through the CMS: whoever needs to see new orders arrive and react to
+them fast. It works on a computer, a tablet or a phone.</p>
+
+<h2 id="before">2. Before you start</h2>
+<ul>
+  <li>An administrator must have mounted the tool on the order application
+  and granted it object access (Object CRUD + the restaurant-orders type in
+  the field settings). If the board shows a configuration banner, ask the
+  administrator to complete these two settings.</li>
+  <li>You can watch the board with viewer rights; changing order statuses
+  needs editor rights on the order application.</li>
+  <li>Open the tool from the order application - the board loads the day's
+  orders automatically and keeps itself refreshed.</li>
+</ul>
+
+<h2 id="howto">3. Step by step</h2>
+<ol>
+  <li><strong>Watch the board.</strong> Tabs split orders into All, New, In
+  progress, Ready and Finished, each with a live count. Every card shows the
+  channel (delivery, pickup, dine-in), the customer or table, the waiting
+  clock and the total.</li>
+  <li><strong>Accept a new order.</strong> Click Accept on a new card. Pick a
+  quick time (15-120 minutes) or type custom minutes, watch the button
+  recompute ("ACCEPT 2:55 PM"), then click it. In a hurry, click Accept now
+  for no estimate.</li>
+  <li><strong>Move the order along.</strong> Accepted -&gt; Start prep;
+  in preparation -&gt; Mark ready; ready -&gt; Complete. One tap each, right
+  on the card.</li>
+  <li><strong>Decline or cancel carefully.</strong> Decline (new orders) and
+  Cancel (accepted or later) need two taps: the first arms the button for a
+  few seconds, the second confirms. Use Keep to back out.</li>
+  <li><strong>Open the details as a popup.</strong> Click anywhere on a
+  card for the full order in a popup on top of the board - the list stays
+  visible behind it. You get the customer and address, the phone number to
+  call, timing with the live countdown, payment, items with modifiers and
+  instructions, totals and the internal note. Close with Back, the X,
+  clicking outside, or Esc. Open in CMS jumps to the full record.</li>
+  <li><strong>Find an order.</strong> Use the search box for order number,
+  customer name, phone, table or address, and the sort menu to order the
+  board by longest waiting, newest, or highest total.</li>
+</ol>
+
+<h2 id="faq">4. Common questions</h2>
+<table>
+  <tr><th>Question</th><th>Answer</th></tr>
+  <tr><td>Which orders appear on the board?</td><td>Every active order (new, accepted, in preparation, ready) no matter when it was placed, plus finished orders whose status changed today. Finished orders from previous days are not shown.</td></tr>
+  <tr><td>Where do completed orders go?</td><td>Straight into the Finished tab the moment you complete them - you never lose sight of an order you just finished. They stay there for the rest of the day.</td></tr>
+  <tr><td>Why does an order from yesterday still show?</td><td>Because it is still active - a stuck order still needs the kitchen. And an order placed yesterday but finished today stays visible in Finished for the day.</td></tr>
+  <tr><td>What do the card and tab colors mean?</td><td>Each status has its own soft color (amber for new, blue for accepted, orange for in preparation, green for ready and completed, red for declined, gray for cancelled). Time remaining overrides it: the last 5 minutes turn amber, late orders turn red, and a new order waiting too long turns red.</td></tr>
+  <tr><td>What does the red highlight on a new order mean?</td><td>The order has been waiting longer than the warning threshold (default 10 minutes) without being accepted. Accept or decline it soon.</td></tr>
+  <tr><td>What happens to the estimated time after accept?</td><td>It is shown on the card as "est. ready time" or "est. delivery time" with a live countdown ("in 12:30"). Past the target the card turns red and shows "LATE 3:20". It persists across refreshes when the order type has the estimatedReadyAt field.</td></tr>
+  <tr><td>Why do amounts show a dollar sign?</td><td>So they read as money. The default currency is USD; an administrator can set the currencyCode parameter (for example EUR or TRY) for the restaurant.</td></tr>
+  <tr><td>Can I undo a status change?</td><td>Not directly - the workflow only moves forward, with decline and cancel as separate steps. Use the two-step confirm for those.</td></tr>
+  <tr><td>Who can change statuses?</td><td>Editors and managers. Viewers can watch and search but see no write buttons.</td></tr>
+  <tr><td>How live is the board?</td><td>It refreshes itself every 20 seconds by default, refreshes when the tab becomes visible again, and the waiting clock ticks every second. Use the Refresh button anytime.</td></tr>
+</table>
+
+<h2 id="troubleshooting">5. Troubleshooting</h2>
+<table>
+  <tr><th>Problem</th><th>What to do</th></tr>
+  <tr><td>The board shows "Could not load orders"</td><td>Click Try again. If it keeps failing, ask an administrator to check the Object CRUD setting and the restaurant-orders entry in the field settings.</td></tr>
+  <tr><td>A configuration banner is shown above the board</td><td>Object access is not configured. Ask an administrator to enable Object CRUD and add the order type (scope shared).</td></tr>
+  <tr><td>The buttons are missing or read-only</td><td>Your role is viewer, or the form is in read-only mode. The read-only banner explains it.</td></tr>
+  <tr><td>The estimate disappears after a refresh</td><td>The order type probably does not have the estimatedReadyAt field yet. The status change itself is saved correctly; ask an administrator to add the field for full timing.</td></tr>
+  <tr><td>Two of us changed the same order</td><td>The last change wins and the next refresh shows the final state - there is no locking between two open boards.</td></tr>
+  <tr><td>Nothing new appears</td><td>Check that auto refresh is not turned off (autoRefreshSeconds = 0) and use the Refresh button manually.</td></tr>
+</table>
+<!-- GENERATED-END -->
+
+<h2 id="screenshots">6. What it looks like</h2>
+<p>Screenshots of Restaurant Order Taking App with sample data - see exactly what you get.</p>
+<div class="ssot-shots"><figure class="ssot-shot"><img src="screenshots/01-dashboard-desktop.png" alt="Restaurant Order Taking App - Orders board (desktop) - 1440x900 - 1440x900" loading="lazy" /><figcaption>Orders board (desktop) - 1440x900 - 1440x900</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/02-dashboard-mobile.png" alt="Restaurant Order Taking App - Orders board (mobile) - 390x844 - 390x844" loading="lazy" /><figcaption>Orders board (mobile) - 390x844 - 390x844</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/03-documents-desktop.png" alt="Restaurant Order Taking App - Order detail popup (desktop) - 1440x900 - 1440x900" loading="lazy" /><figcaption>Order detail popup (desktop) - 1440x900 - 1440x900</figcaption></figure></div>
+
+
+
+<div class="footer">
+  Restaurant Order Taking App - help document. Satellite of the SSOT system - not a
+  source of truth; when it disagrees with the SSOT, the SSOT wins.
+</div>
+</div>
+</body>
+</html>

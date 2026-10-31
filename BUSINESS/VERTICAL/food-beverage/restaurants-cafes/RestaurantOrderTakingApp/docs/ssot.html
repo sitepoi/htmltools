@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Restaurant Order Taking App - Technical Source of Truth</title>
+  <!--
+  SSOT for RestaurantOrderTakingApp - created by npm run docs:init from
+  _docs/templates/_ssot-template.html, content maintained by hand.
+  Decision ID prefix: D-ROTA.
+  -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <!-- ── Table of contents - a CLOSED drawer opened with the ☰ button ── -->
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">Restaurant Order Taking App</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v1.3</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <!-- ── Task list - ALWAYS visible on the right on wide screens ── -->
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>Restaurant Order Taking App</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for every decision about the active orders board
+    of the restaurant order application - how it loads the day's orders, how
+    order statuses advance, and how the kitchen keeps the board live. Every
+    decision made for this tool is logged in section 11 and this document is
+    updated in the same change as the code. When this document and the code
+    disagree, this document is the tiebreaker - it is updated to capture the
+    final decision, never silently left divergent.
+    Companion tool: <code>RestaurantOrderManager</code> - the per-record
+    order history/detail view. That tool owns the single-record detail and
+    the internal note editing; THIS tool owns the application-level board
+    and the status workflow. Both read and write the same
+    <code>restaurant-orders</code> records.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>1.3</td></tr>
+    <tr><th>Last updated</th><td>2026-10-30</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>the app part of this tool folder (html + css + js + test harness)</td></tr>
+    <tr><th>Primary code areas</th><td><code>BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantOrderTakingApp/app/RestaurantOrderTakingApp.js</code>, <code>.../RestaurantOrderTakingApp.html</code>, <code>.../RestaurantOrderTakingApp.css</code>, <code>.../test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>order creation (the checkout widget and its create-order operation are owned by the order application), changes to RestaurantOrderManager, the CMS order type definition itself, UI styling details</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
+  </table>
+
+  <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one tool and one set of invariants around
+  the active orders board - the application-level surface where restaurant
+  staff watch today's orders and advance their statuses - and it is the
+  <strong>single source of truth for every decision we make</strong> about
+  this tool, now and in the future. No decision is considered made until it
+  is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this tool, the decision is added to section 11 with
+    a date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the
+    code disagree, the discrepancy is resolved in this document first (with a
+    dated decision), then applied to the code - never the other way around,
+    and never silently left divergent.</li>
+    <li><strong>Check before changing.</strong> Before changing any behavior
+    covered here, read the relevant section and the register; after the
+    change, update this document in the same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function, and code snippet in any update uses understandable names. No
+    cryptic abbreviations. Short names are allowed only for loop indexes and
+    universally known abbreviations (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use - in
+    prose, tables, and headings. Literal identifiers stay as they are.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> An order that is still
+  active can NEVER disappear from the board, and no order status change is
+  ever written to the CMS without a clear, visible outcome for the user.
+  Everything below serves this one sentence.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <p>Every file involved in this tool: what it is for, and exactly which
+  parts of it belong to this tool (write "whole file" when everything
+  applies). Links open the file in VS Code. Keep this block in sync with the
+  <code>Primary code areas</code> row above.</p>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantOrderTakingApp/app/RestaurantOrderTakingApp.html"><code>app/RestaurantOrderTakingApp.html</code></a></td>
+      <td>Body markup of the tool (top bar, tabs, toolbar, board, detail, modal)</td>
+      <td>whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantOrderTakingApp/app/RestaurantOrderTakingApp.css"><code>app/RestaurantOrderTakingApp.css</code></a></td>
+      <td>All visual rules, theme tokens with fallbacks</td>
+      <td>whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantOrderTakingApp/app/RestaurantOrderTakingApp.js"><code>app/RestaurantOrderTakingApp.js</code></a></td>
+      <td>All tool logic - loading, board, status writes, detail, modal, permissions</td>
+      <td>whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantOrderTakingApp/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Standalone harness with mock tool SDK and sample order store</td>
+      <td>whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantOrderTakingApp/docs/ssot.html"><code>docs/ssot.html</code></a></td>
+      <td>This document</td>
+      <td>whole file</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <p>The starting picture of this tool: what is <strong>already
+  developed and in effect right now</strong>. Verified in code on
+  2026-10-25 (build 2026-10-25-1) and re-verified 2026-10-30.</p>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>Loads every order record via requestObjects query and renders the board</td><td><code>loadOrders / applyOrders / normalizeOrder</code></td><td>2026-10-25</td><td>D-ROTA-01 / smoke asserts</td></tr>
+    <tr><td>C-02</td><td>Tabs All / New / In progress / Ready / Finished with live count chips</td><td><code>TABS / tabOrders / tabCounts</code></td><td>2026-10-25</td><td>verified in code</td></tr>
+    <tr><td>C-03</td><td>Board window rule: active orders always visible; finished orders visible when placed today OR when their status changed today, and derived flags recompute immediately after every write so tabs update instantly</td><td><code>normalizeOrder / refreshDerivedOrderFields</code></td><td>2026-10-30</td><td>D-ROTA-02 / D-ROTA-14</td></tr>
+    <tr><td>C-04</td><td>Per-card waiting clock (mm:ss then Hh MMm) ticking every second; red warning on new orders waiting too long</td><td><code>updateElapsedSpans / cardHtml</code></td><td>2026-10-25</td><td>verified in code</td></tr>
+    <tr><td>C-05</td><td>Accept dialog with 15-120 min chips, custom minutes, live "ACCEPT (h:mm)" button and "Accept now"; accepted orders show a live countdown to the estimate ("in MM:SS") and "LATE MM:SS" in red past the target</td><td><code>openAcceptModal / updateEtaResult / countdownState</code></td><td>2026-10-30</td><td>D-ROTA-04 / D-ROTA-13 / headless QA</td></tr>
+    <tr><td>C-06</td><td>Status workflow buttons: Accept, Start prep, Mark ready, Complete + armed two-step Decline/Cancel</td><td><code>cardActionsHtml / armStatus</code></td><td>2026-10-25</td><td>D-ROTA-05</td></tr>
+    <tr><td>C-07</td><td>Detail view as a POPUP overlay on top of the board (board stays visible): customer, phone call, address, timing, countdown, payment, lines, totals, note, Open in CMS</td><td><code>renderDetail / openDetail</code></td><td>2026-10-30</td><td>D-ROTA-11 / headless QA</td></tr>
+    <tr><td>C-08</td><td>Auto refresh polling + refresh on tab visibility + new-order toast and card flash (the flash only marks orders that arrive AFTER the first load - the first load renders the true status colors immediately)</td><td><code>startPolling / applyOrders</code></td><td>2026-10-30</td><td>D-ROTA-03 / D-ROTA-16</td></tr>
+    <tr><td>C-09</td><td>Light own value: only tab, sort and search UI state is persisted</td><td><code>persistUiNow</code></td><td>2026-10-25</td><td>D-ROTA-06</td></tr>
+    <tr><td>C-10</td><td>Permission gating (editor+ writes, read-only lock, no-identity fallback) and configuration banner</td><td><code>computeCanWrite / reportMissingConfig</code></td><td>2026-10-25</td><td>smoke asserts</td></tr>
+    <tr><td>C-11</td><td>Search (number, name, phone, table, address) and three sort modes</td><td><code>matchesSearch / sortOrders</code></td><td>2026-10-25</td><td>smoke asserts</td></tr>
+    <tr><td>C-12</td><td>Tolerant optional write: acceptedAt + estimatedReadyAt fail separately without blocking the status change</td><td><code>writeCoreFields</code></td><td>2026-10-25</td><td>D-ROTA-04 / smoke asserts</td></tr>
+    <tr><td>C-13</td><td>Test harness with localStorage order store, sample orders, role and read-only simulation, inline JS mode</td><td><code>test-harness.html</code></td><td>2026-10-25</td><td>verified in code</td></tr>
+    <tr><td>C-14</td><td>Amounts always render as money: currency defaults to USD ($) with narrow symbols when currencyCode is not configured</td><td><code>fmtMoney / readConfig</code></td><td>2026-10-30</td><td>D-ROTA-12</td></tr>
+    <tr><td>C-15</td><td>Professional status color system: the lightest pastel tier as status backgrounds with the status's normal color as card borders, soft colored tabs, amber urgency and red lateness overrides based on time remaining</td><td><code>RestaurantOrderTakingApp.css</code></td><td>2026-10-30</td><td>D-ROTA-15 / D-ROTA-16</td></tr>
+  </table>
+  <p class="note">Capabilities listed here are in effect and must keep
+  working unless a decision in section 11 reverses them.</p>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Order record</td><td>One CMS object of the type configured by the <code>ordersObjectType</code> parameter (default <code>restaurant-orders</code>)</td></tr>
+    <tr><td>Active order</td><td>Order whose status is new, accepted, in-preparation or ready</td></tr>
+    <tr><td>Terminal (finished) order</td><td>Order whose status is completed, declined or cancelled</td></tr>
+    <tr><td>Board window</td><td>The visibility rule: active orders always show; terminal orders show only when placed today (D-ROTA-02)</td></tr>
+    <tr><td>Waiting clock</td><td>The mm:ss badge ticking up from the order placed time (from the status-changed time for ready orders)</td></tr>
+    <tr><td>Core write</td><td>The update that must succeed for a status change: <code>status</code> + <code>statusChangedAt</code></td></tr>
+    <tr><td>Optional write</td><td>The second accept update with <code>acceptedAt</code> + <code>estimatedReadyAt</code>; its failure never blocks the core write (D-ROTA-04)</td></tr>
+    <tr><td>ETA (estimated time)</td><td>The estimated delivery time (delivery channel) or estimated ready time (other channels) chosen in the accept dialog</td></tr>
+    <tr><td>Countdown</td><td>The live "in MM:SS" timer on a card ticking down to the ETA; past the target it becomes "LATE MM:SS" in red and the card gets a red tint</td></tr>
+    <tr><td>Urgent</td><td>The last minutes before the ETA (5 minutes): the countdown and the card turn amber</td></tr>
+    <tr><td>Armed action</td><td>The two-step confirm for destructive statuses (decline, cancel): first tap arms for 6 seconds, second tap confirms</td></tr>
+    <tr><td>No-identity mode</td><td>Fallback when the CMS host provides no user API: write gating falls back to the host read-only flag</td></tr>
+  </table>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <ul>
+    <li>2026-10-25, user request: the restaurant order application had
+    <code>RestaurantOrderManager</code>, which is "like a history item of an
+    order with all details" - a detail view of ONE record, opened from the
+    CMS object manager.</li>
+    <li>No surface existed where staff could see ALL of the day's orders at
+    once and act on them. Watching orders meant opening each order record in
+    the CMS object manager one by one.</li>
+    <li>User asked for a kitchen-style active orders manager with the same
+    look and feel as the Foodsoft Restaurant app (orders list with tabs,
+    accept with an estimated time, one-tap status advances), working on the
+    same CMS order objects with live data.</li>
+    <li>Result: staff cannot tell at a glance which orders are waiting, and
+    advancing an order takes a record-open round trip per order.</li>
+  </ul>
+  <h3>5.2 Current implementation at request time (verified in code)</h3>
+  <pre>
+// RestaurantOrderManager/app/RestaurantOrderManager.js - one record only
+tool.onReady(function (value, fields) {
+  boot(value, fields);  // reads THE opened record via tool.getFields()
+});
+// It has no list view at all - the CMS object manager lists records.
+  </pre>
+  <h3>5.3 Structural flaws</h3>
+  <ol>
+    <li><strong>No application-level surface.</strong> The only tool for
+    orders was placed at OBJECT level, so the application had no board to
+    watch the collection.</li>
+    <li><strong>No live behavior.</strong> A single-record detail view has no
+    refresh loop and no new-order awareness, so staff had no way to notice a
+    fresh order arriving.</li>
+    <li><strong>No fast status workflow.</strong> Changing a status requires
+    opening the record; there is no one-tap accept with an estimated time
+    anywhere.</li>
+  </ol>
+  <p class="risk"><strong>Root cause:</strong> the order application was
+  missing the TYPE 3 (application-level listing) tool of its tool set. The
+  existing object-level tool was doing its own job well, but nothing
+  presented the collection - which is exactly the listing tool's job.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>One board shows the day's orders: every active order (no matter how
+    old) plus today's terminal orders; yesterday's terminal orders do not
+    appear.</li>
+    <li>The status workflow is new -&gt; accepted -&gt; in-preparation -&gt;
+    ready -&gt; completed, with decline (from new) and cancel (from accepted,
+    in-preparation or ready); all transitions write <code>status</code> +
+    <code>statusChangedAt</code> through the CMS object relay.</li>
+    <li>Accepting offers an optional estimated time with quick chips and a
+    live computed "ACCEPT (h:mm)" button.</li>
+    <li>The board stays live without manual reloads: polling refresh, refresh
+    on tab visibility, and a 1-second clock.</li>
+    <li>All data flows through the CMS tool SDK only - no direct database,
+    REST or external network calls from the sandbox.</li>
+    <li>Writes are gated to editor+ roles and the read-only mode; viewers can
+    watch and search but not change anything.</li>
+    <li>The tool's own saved value stays light: UI state only, never cached
+    order lists (listing-tool rule).</li>
+    <li>No <code>confirm()</code> dialogs (forbidden in the sandbox) -
+    destructive statuses use an armed two-step button.</li>
+    <li>Failures stay user-friendly: a retry state for load errors, toasts
+    for write errors, a configuration banner with the required CMS settings
+    when object access is not configured.</li>
+    <li>Multi-tenant safe and generic: no tenant names, no hardcoded
+    restaurant identity anywhere.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr>
+      <td><strong>A. New application-level listing tool (TYPE 3)</strong></td>
+      <td>A separate tool, RestaurantOrderTakingApp, reads all
+      restaurant-orders through requestObjects query and writes status
+      updates through requestObjects update; RestaurantOrderManager stays
+      untouched as the history/detail view.</td>
+      <td>Yes - board, live refresh and fast actions in one tool</td>
+      <td>Low - new folder, no changes to existing tools</td>
+      <td class="status-adopted">ADOPTED (D-ROTA-01)</td>
+    </tr>
+    <tr>
+      <td><strong>B. Add a list view to RestaurantOrderManager</strong></td>
+      <td>Teach the object-level tool to also list all orders and pick one.</td>
+      <td>Partially - mixes object-level and application-level duties in one tool</td>
+      <td>High - rewrites a shipped tool and its placement contract</td>
+      <td class="status-rejected">REJECTED (D-ROTA-01: placement differs; the history tool must not change)</td>
+    </tr>
+    <tr>
+      <td><strong>C. Direct database reads from the tool</strong></td>
+      <td>Query the order collection directly from the sandbox.</td>
+      <td>Yes, but violates the sandbox contract</td>
+      <td>Low - but forbidden by platform rules</td>
+      <td class="status-rejected">REJECTED (sandbox forbids direct DB/REST access)</td>
+    </tr>
+    <tr>
+      <td><strong>D. Push-based live updates</strong></td>
+      <td>A subscription channel that pushes order changes into the iframe.</td>
+      <td>Yes - better than polling</td>
+      <td>High - platform SDK has no such channel today</td>
+      <td class="status-rejected">DEFERRED (I-01; polling adopted meanwhile, D-ROTA-03)</td>
+    </tr>
+  </table>
+  <p><strong>Decision: option A.</strong> A dedicated application-level
+  listing tool, polling the order type through the CMS relay. Options B, C
+  are rejected; D is deferred to the ideas backlog as a platform request.</p>
+  <h3>7.1 Answers to open questions</h3>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Which fields may the board write?</td><td>Only the management fields. <code>status</code> + <code>statusChangedAt</code> are required for every change; <code>acceptedAt</code> + <code>estimatedReadyAt</code> are optional and failure-tolerant (D-ROTA-04).</td></tr>
+    <tr><td>Which orders belong on the board?</td><td>Active orders always; terminal orders only when placed today (D-ROTA-02).</td></tr>
+    <tr><td>What does the tool save in its own value?</td><td>Only <code>{ version, ui: { tab, sort, search } }</code> (D-ROTA-06).</td></tr>
+    <tr><td>How do destructive actions confirm?</td><td>Armed two-step button, 6 seconds (D-ROTA-05).</td></tr>
+  </table>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Core invariant</h3>
+  <p class="note"><strong>Invariant ROTA-INV-1.</strong> Every status change
+  is written as one core update - <code>status</code> +
+  <code>statusChangedAt</code> - through
+  <code>tool.requestObjects('update')</code>, and nothing else may be
+  required for the status change to stand. A second, optional update may
+  carry <code>acceptedAt</code> + <code>estimatedReadyAt</code>; if that
+  second update fails, the status change still stands and the failure is
+  logged to the console, never surfaced as an error toast.</p>
+  <p class="note"><strong>Invariant ROTA-INV-2.</strong> The board can never
+  hide an active order: <code>onBoard = isActive OR isToday</code>, where
+  <code>isToday</code> compares the order placed date with the viewer's
+  local calendar day. A stuck order from yesterday stays visible.</p>
+  <h3>8.2 Loading pipeline</h3>
+  <pre>
+// RestaurantOrderTakingApp.js - loadOrders (simplified)
+function loadOrders(silent) {
+  if (_loading) return;                  // never two queries in flight
+  _loading = true;
+  tool.requestObjects('query', { mainObjectType: _cfg.ordersType },
+    function (err, result) {
+      _loading = false;
+      if (err) { setError(err); return; }
+      applyOrders((result && result.objects) || []);
+      _firstLoadDone = true;
+      renderAll();
+    });
+}
+  </pre>
+  <ul>
+    <li>One query loads every object of the type; all tab, search and sort
+    logic is client-side over the loaded day list (the SDK query has no
+    server-side filters, L-01).</li>
+    <li><code>normalizeOrder</code> reads fields tolerantly from
+    <code>productData.data_categoriesBased</code> (or the flat bag /
+    <code>objectData</code> / <code>data</code>), the same bag-scoring
+    reader the sibling tool uses.</li>
+    <li>New ids arriving with status new fire a host toast and a card flash
+    (<code>applyOrders</code> vs <code>_knownIds</code>).</li>
+  </ul>
+  <h3>8.3 Status machine</h3>
+  <table>
+    <tr><th>Current status</th><th>Primary action</th><th>Destructive action</th></tr>
+    <tr><td>new</td><td>Accept (opens the estimate dialog)</td><td>Decline (armed)</td></tr>
+    <tr><td>accepted</td><td>Start prep</td><td>Cancel (armed)</td></tr>
+    <tr><td>in-preparation</td><td>Mark ready</td><td>Cancel (armed)</td></tr>
+    <tr><td>ready</td><td>Complete</td><td>-</td></tr>
+    <tr><td>completed / declined / cancelled</td><td>-</td><td>-</td></tr>
+  </table>
+  <p>There is deliberately no free-form status select on the board
+  (D-ROTA-07): statuses move only through the workflow buttons, which keeps
+  the kitchen flow one tap per step and the transitions valid.</p>
+  <h3>8.4 Accept flow - core write + optional write</h3>
+  <pre>
+// RestaurantOrderTakingApp.js - acceptOrder (simplified)
+var chosenMinutes = _etaMinutes;
+closeModal();
+setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
+
+// setOrderStatus builds:
+//   corePatch  = { status: 'accepted', statusChangedAt: nowIso }
+//   extraPatch = { acceptedAt: nowIso,
+//                  estimatedReadyAt: now + chosenMinutes*60000 }  // only if > 0
+// writeCoreFields sends corePatch first; only when it succeeds does it
+// send extraPatch, and an extraPatch failure is console.warn only.
+  </pre>
+  <ul>
+    <li>The accept dialog labels the estimate "Estimated delivery time" for
+    delivery orders and "Estimated ready time" for pickup and dine-in.</li>
+    <li>The primary button always shows the computed clock time, e.g.
+    "ACCEPT (2:55 PM)", recomputed live as the minutes change.</li>
+  </ul>
+  <h3>8.5 Live refresh</h3>
+  <ul>
+    <li>Polling: <code>autoRefreshSeconds</code> (default 20, 0 disables).</li>
+    <li>Refresh on <code>visibilitychange</code> when the tab becomes
+    visible again.</li>
+    <li>A 1-second timer updates only the waiting-clock spans
+    (<code>.roa-elapsed[data-id][data-ts]</code>), never the whole board.</li>
+    <li>A manual Refresh button always available.</li>
+  </ul>
+  <h3>8.6 Permissions and read-only</h3>
+  <ul>
+    <li>Write roles: admin, owner, developer, user-manager, editor
+    (pre-merged roles array); <code>effectiveAccess</code> flags are the
+    fallback when roles are missing.</li>
+    <li>No-identity mode: when the host has no user API, write gating falls
+    back to the host read-only flag.</li>
+    <li>Read-only mode hides every write button and shows a banner; search,
+    tabs, sort and the detail view stay available.</li>
+    <li>Busy guard: one write per order at a time; buttons show "Saving..."
+    while in flight.</li>
+  </ul>
+  <h3>8.7 Own value contract</h3>
+  <pre>
+{ "version": "1", "ui": { "tab": "all", "sort": "waiting", "search": "" } }
+  </pre>
+  <ul>
+    <li>Persisted with a 300 ms debounce; own-save echoes are ignored via a
+    staged JSON comparison.</li>
+    <li>Order lists are never stored in the value - every load refetches.</li>
+  </ul>
+  <h3>8.8 Theme contract</h3>
+  <ul>
+    <li>All colors read CSS custom properties with fallbacks
+    (<code>--primary</code>, <code>--surface</code>, <code>--text</code>,
+    <code>--border</code>, <code>--radius</code>, <code>--font</code>), so a
+    hosting application theme re-skins the board.</li>
+    <li>Status colors are tool-owned and fixed (new amber, accepted blue,
+    preparation orange, ready green, declined red, cancelled gray).</li>
+    <li>Color system (D-ROTA-15): every status owns a SOFT pastel background
+    and its normal color as the card border; tabs carry the same soft
+    identity with a currentColor ring when active. Time remaining overrides
+    the status colors: long-waiting new orders and late orders go red-tinted,
+    orders inside the last 5 minutes go amber.</li>
+  </ul>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>Order query fails (permission, type missing, relay down)</td><td>Board shows the error state with a Try again button; console logs the reason and the exact allowedObjectTypes JSON to add; one host warning toast.</td></tr>
+    <tr><td>allowObjectCRUD is not yes at boot</td><td>Configuration banner appears above the board; reportMissingParams asks the admin for the setting.</td></tr>
+    <tr><td>Status update fails</td><td>Error toast; the local order is NOT changed (no optimistic write); the buttons re-enable.</td></tr>
+    <tr><td>Optional acceptedAt / estimatedReadyAt update fails</td><td>Core status change stands; console.warn only; the card simply shows no estimate.</td></tr>
+    <tr><td>Accept tapped on an order that is no longer new</td><td>Dialog closes, warning toast "no longer waiting", silent refresh.</td></tr>
+    <tr><td>Viewer or read-only user taps a write action</td><td>Warning toast; no write is attempted; write buttons are hidden anyway.</td></tr>
+    <tr><td>A refresh replaces the board while a dialog is open</td><td>The dialog stays open over the refreshed board; accepting still targets the loaded order id.</td></tr>
+    <tr><td>A new order appears during polling</td><td>Host toast with the order number and title; the card renders with the fresh flash.</td></tr>
+    <tr><td>Polling is disabled (autoRefreshSeconds 0)</td><td>Board refreshes only on manual Refresh, visibility change, or after a local status change.</td></tr>
+    <tr><td>Order has no status field</td><td>Normalized to new (the order app default), shown in the New tab.</td></tr>
+    <tr><td>An order is completed</td><td>It leaves its current tab and appears in Finished IMMEDIATELY (derived flags recompute on the local patch, before the next poll).</td></tr>
+    <tr><td>The board loads for the first time</td><td>Every card renders with its true status colors right away; the fresh flash never runs on the first load (D-ROTA-16).</td></tr>
+    <tr><td>An order placed yesterday is completed today</td><td>It stays on the board in Finished because its status changed today (D-ROTA-14).</td></tr>
+    <tr><td>Search matches nothing</td><td>Empty state "No orders match the current search." - other tabs stay untouched.</td></tr>
+    <tr><td>Two managers advance the same order</td><td>Last write wins (no optimistic locking in the SDK); the next refresh shows the final state.</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>The SDK query returns all objects of the type - no server-side filters or paging</td><td>Client-side filtering; the render caps at 200 cards with "N of M shown"</td><td>Accepted; platform ask in T-08</td></tr>
+    <tr><td>L-02</td><td>No push channel - live updates are polling</td><td>Up to autoRefreshSeconds delay for a remote change</td><td>Accepted (D-ROTA-03); idea I-01</td></tr>
+    <tr><td>L-03</td><td>Only the latest statusChangedAt is stored - no per-status history</td><td>The detail view cannot show a full status timeline</td><td>Accepted (sibling tool has the same contract)</td></tr>
+    <tr><td>L-04</td><td>estimatedReadyAt / acceptedAt only persist when those fields exist on the order type</td><td>Without them the estimate is lost on refresh</td><td>Accepted with CMS-side task T-05</td></tr>
+    <tr><td>L-05</td><td>No internal note editing on the board - the note is display-only</td><td>Notes are edited in RestaurantOrderManager</td><td>Deferred to T-06</td></tr>
+    <tr><td>L-06</td><td>No printing of kitchen tickets or day summary export</td><td>Paper kitchens still print from the CMS object manager</td><td>Deferred to idea I-03</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr>
+      <td>D-ROTA-01</td><td>2026-10-25</td>
+      <td>Build a separate application-level listing tool (TYPE 3) named
+      RestaurantOrderTakingApp for the active orders board; RestaurantOrderManager
+      keeps its job as the per-record history/detail view and is not modified.</td>
+      <td>Object-level and application-level placements have different
+      contracts; a dedicated tool keeps the history tool stable and the board
+      focused. New folder, zero risk to the shipped sibling.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-02</td><td>2026-10-25</td>
+      <td>Board window rule: active orders always visible regardless of age;
+      terminal orders visible only when placed today.</td>
+      <td>The core guarantee - a stuck order from yesterday must not disappear
+      from the kitchen - while yesterday's finished orders do not clutter the
+      board.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-03</td><td>2026-10-25</td>
+      <td>Live refresh = polling via requestObjects query (autoRefreshSeconds,
+      default 20) plus visibility-change refresh and a 1-second local clock.
+      No push subscription.</td>
+      <td>The SDK has no object-change subscription today; polling is cheap,
+      deterministic and works in the harness. Push is tracked as idea I-01.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-04</td><td>2026-10-25</td>
+      <td>Accept writes two updates: the core update (status +
+      statusChangedAt) must succeed; the optional update (acceptedAt +
+      estimatedReadyAt) may fail and its failure is console-only.</td>
+      <td>The order type may not define the optional fields; the status change
+      must never depend on them. Keeps the flow robust on every tenant.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-05</td><td>2026-10-25</td>
+      <td>Destructive statuses (decline, cancel) confirm with an armed
+      two-step button (6 seconds), not confirm().</td>
+      <td>confirm() is forbidden in the sandbox; the armed step prevents
+      accidental destructive taps without blocking the flow.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-06</td><td>2026-10-25</td>
+      <td>The tool's own value stores only { version, ui: { tab, sort, search } }.</td>
+      <td>Listing-tool rule: never cache order lists in the value; refetch on
+      load. Keeps the CMS field tiny and the data always live.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-07</td><td>2026-10-25</td>
+      <td>No free-form status select on the board - statuses move only through
+      the workflow buttons.</td>
+      <td>The user asked for a very easy to use UI; the buttons keep every
+      transition valid and one tap per step.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-08</td><td>2026-10-25</td>
+      <td>A missing or unknown status field normalizes to new.</td>
+      <td>Matches the order application's documented default value of the
+      status field (new), so legacy records land in the right tab.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-09</td><td>2026-10-30</td>
+      <td>The tool gets the standard docs/ folder (SSOT + satellites) created
+      by npm run docs:init; README.md is removed.</td>
+      <td>User rule: html tools use the docs folder system, not README/md
+      files. The SSOT is the single source of truth.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-10</td><td>2026-10-30</td>
+      <td>No channel legend on the board; the card left border is status-colored
+      and the channel is shown as an icon + label on each card.</td>
+      <td>A channel-color legend conflicts with the status-colored borders and
+      misleads the kitchen; the per-card channel label carries that information.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-11</td><td>2026-10-30</td>
+      <td>The order detail opens as a popup overlay on top of the board; the
+      board stays visible and is never hidden or replaced. Close with Back,
+      the X, a backdrop click or Esc.</td>
+      <td>User feedback: the main list is the most important surface and must
+      stay visible at all times while inspecting one order.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-12</td><td>2026-10-30</td>
+      <td>Amounts always render as money: when currencyCode is not configured
+      the tool falls back to USD with narrow currency symbols ("$6.42").</td>
+      <td>User feedback: a bare "6.42" looks like a random number, not money.
+      Admins can still override with their ISO code.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-13</td><td>2026-10-30</td>
+      <td>Orders with an estimated time carry a live countdown: "in MM:SS"
+      before the target and "LATE MM:SS" in red with a red card tint past
+      it. The accept dialog label is "Estimated ready time (optional)" /
+      "Estimated delivery time (optional)" - no doubled word.</td>
+      <td>User feedback: the estimate should tick down to zero and show
+      lateness by colors, and the dialog label said "time" twice.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-14</td><td>2026-10-30</td>
+      <td>Finished orders are visible when placed today OR when their status
+      changed today, and derived fields (terminal flag, board membership)
+      recompute immediately after every local write.</td>
+      <td>User feedback: after completing an order it was nowhere to be
+      found. Completing an order must never make it vanish, and tabs must be
+      correct instantly - not after the next poll.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-15</td><td>2026-10-30</td>
+      <td>Professional status color system: tabs and cards use each status's
+      soft pastel as background and its normal color as border; time
+      remaining overrides the colors (amber in the last 5 minutes, red when
+      late or long-waiting new).</td>
+      <td>User feedback: statuses and time remaining should be readable from
+      colors alone, soft and professional.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-16</td><td>2026-10-30</td>
+      <td>The fresh-order flash only marks orders that arrive AFTER the first
+      load - the first load renders the true status colors immediately.
+      Status backgrounds use the lightest pastel tier while the border keeps
+      the status's normal color.</td>
+      <td>User feedback: on first load every card flashed orange (the fresh
+      ring), so a completed order did not look green until the next refresh;
+      and the backgrounds should be a little softer.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li><strong>This document is the single source of truth for every decision
+    about this tool.</strong> Every decision is recorded in section 11 with
+    a date, and the affected section is updated in the same change as the
+    code. A decision that is not in the register did not happen.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
+    delete rows.</li>
+    <li>Review every new write path against ROTA-INV-1: the core update alone
+    must be enough for the status change, and optional fields must never
+    block it.</li>
+    <li>Review every new read path against ROTA-INV-2: no filter may hide an
+    active order.</li>
+    <li>Global naming rule: any update - code or documentation - MUST use
+    understandable, self-explanatory names. No cryptic abbreviations. Existing
+    misleading names are renamed when their code is touched.</li>
+    <li>Build stamp: bump TOOL_BUILD on every change and move the per-file
+    stamps in the changed files (html-tool-rules).</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Board markup (top bar, tabs, toolbar, board, detail, modal)</td><td><code>app/RestaurantOrderTakingApp.html</code> - DONE</td></tr>
+    <tr><td>2</td><td>Board styles with theme-token fallbacks</td><td><code>app/RestaurantOrderTakingApp.css</code> - DONE</td></tr>
+    <tr><td>3</td><td>Tool logic: loading, tabs, search, sort, status writes, accept dialog, detail, polling, permissions</td><td><code>app/RestaurantOrderTakingApp.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Test harness with mock object store and QA params</td><td><code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>5</td><td>Docs folder (SSOT + satellites) via npm run docs:init</td><td><code>docs/*</code> - DONE (D-ROTA-09)</td></tr>
+    <tr><td>6</td><td>Screenshots captured and wired into the docs</td><td><code>docs/screenshots/*</code> - DONE</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <p>Decision points we resolve together before or during implementation.
+  Every answer becomes a dated row in section 11.</p>
+  <ol>
+    <li><strong>Should the board edit the internal note inline?</strong>
+    Today the note is display-only on the board; editing lives in
+    RestaurantOrderManager. Options: keep display-only, or add a small edit
+    field in the detail view (T-06).</li>
+    <li><strong>Are the acceptedAt / estimatedReadyAt fields confirmed on
+    the CMS order type?</strong> Recommended additions so the kitchen keeps
+    full timing (T-05). Until then the estimate degrades gracefully (L-04).</li>
+    <li><strong>Ready-tab clock base.</strong> Ready cards currently count
+    from statusChangedAt ("ready for Xm"). Confirm that is the wanted
+    metric, or switch to placedAt.</li>
+    <li><strong>New-order sound.</strong> A toast is shown today; an audible
+    alert needs a platform capability (T-07).</li>
+    <li><strong>Catalog registration and first ship.</strong> The tool is not
+    yet registered in UNICON-TOOLS/tools-catalog nor shipped (group
+    ROA-SHIP).</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE push (the badge
+  says so) or is a related set that must not be broken across releases.
+  Click a task to expand its full details. Tick the checkbox when a task is
+  done - progress is remembered by the browser per document and shown in the
+  sidebar.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong> - a task starts only when:
+      <ul>
+        <li>Its requirement is written in section 6.</li>
+        <li>Options are evaluated and the decision is logged (section 11).</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong> - a group is done only when:
+      <ul>
+        <li>All its tasks are checked.</li>
+        <li>Its open risks are solved or accepted (section 18).</li>
+        <li>Tests you chose to track pass (if any).</li>
+        <li>The document version is bumped and PUSH READY shows.</li>
+      </ul>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the
+    core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong
+    benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap
+    cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> -
+    unclear benefit or a product decision is required; see section 14.</li>
+  </ul>
+
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <section class="task-group" data-release-group="ROA-SHIP" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: First ship</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="ROA-SHIP">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="ROA-SHIP"></div></div>
+    <p class="task-group-note">Why these belong together: the catalog entry,
+    the docs and the tool code must become visible in the store in ONE push -
+    publishing the catalog entry before the code (or the code without the
+    docs) leaves a broken first impression.</p>
+
+    <div class="task-item" data-task-id="T-01" data-group="ROA-SHIP" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Docs folder with SSOT and satellites</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the tool needs its single
+          source of truth and user-facing documents like every other tool.</p>
+          <p><strong>How we will solve it:</strong> npm run docs:init, then
+          hand-written SSOT + satellites (no AI gateway configured).</p>
+          <p><strong>Benefit:</strong> decisions, tasks, risks and help are
+          in the standard place.</p>
+          <p><strong>Files:</strong> <code>docs/*</code></p>
+          <p><strong>Status:</strong> done 2026-10-30 (D-ROTA-09).</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-02" data-group="ROA-SHIP" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Screenshots captured and wired into the docs</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the index viewer, help and
+          the marketing page show the board visually.</p>
+          <p><strong>How we will solve it:</strong> npm run screenshots with
+          the harness bare + page mapping, then docs:index-shots.</p>
+          <p><strong>Benefit:</strong> visual proof on every doc.</p>
+          <p><strong>Files:</strong> <code>docs/screenshots/*</code></p>
+          <p><strong>Status:</strong> done 2026-10-30.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-03" data-group="ROA-SHIP" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Register the tool in UNICON-TOOLS/tools-catalog</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the tool is invisible in the
+          ideas catalog, all-tools.html and the publish-state file.</p>
+          <p><strong>How we will solve it:</strong> add a TOOL_IDEA_MAP entry
+          (idea B-V-02-a, "Restaurants &amp; Cafes"), REPO_PUBLISH_STATE entry,
+          re-run the hierarchy sync so all-tools.html lists it, and rebuild
+          the catalog page.</p>
+          <p><strong>Benefit:</strong> the store and catalog list the board.</p>
+          <p><strong>Files:</strong> <code>UNICON-TOOLS/tools-catalog/*</code>,
+          <code>UNICON-TOOLS/all-tools.html</code></p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-04" data-group="ROA-SHIP" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">First SHIP</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the code, docs and catalog
+          entry are local only until the SHIP command runs.</p>
+          <p><strong>How we will solve it:</strong> the user says SHIP; the
+          release flow runs the risk gate, commits, bumps, and appends the
+          updates row + release-log row for this group.</p>
+          <p><strong>Benefit:</strong> the tool goes live in the repo pipeline.</p>
+          <p><strong>Files:</strong> whole repo release flow.</p>
+          <p><strong>Status:</strong> not started - the user has not said SHIP.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="ROA-POLISH" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Kitchen polish</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="ROA-POLISH">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="ROA-POLISH"></div></div>
+    <p class="task-group-note">Why these belong together: all four items need
+    a CMS-side or platform-side change and a user decision; they polish the
+    same flow and should ship as one coherent kitchen upgrade.</p>
+
+    <div class="task-item" data-task-id="T-05" data-group="ROA-POLISH" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Define acceptedAt + estimatedReadyAt on the CMS order type</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> without the two fields the
+          accept timing and the ETA do not persist (L-04).</p>
+          <p><strong>How we will solve it:</strong> add the two timestamp
+          fields to the restaurant-orders type definition in the order app.</p>
+          <p><strong>Benefit:</strong> the detail view and cards keep showing
+          the estimate after refresh.</p>
+          <p><strong>Files:</strong> CMS app definition (not this repo).</p>
+          <p><strong>Status:</strong> not started - open question Q2.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-06" data-group="ROA-POLISH" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Internal note editing in the board detail view</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the kitchen must switch to
+          RestaurantOrderManager to leave a note (L-05).</p>
+          <p><strong>How we will solve it:</strong> an editable note box in
+          the detail view writing internalNote via requestObjects update.</p>
+          <p><strong>Benefit:</strong> one surface for the whole kitchen flow.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantOrderTakingApp.js/html/css</code></p>
+          <p><strong>Status:</strong> not started - open question Q1.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-07" data-group="ROA-POLISH" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Audible new-order alert</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a busy kitchen may miss the
+          toast when a new order lands.</p>
+          <p><strong>How we will solve it:</strong> needs a platform sound or
+          notification capability (the sandbox has no audio); ask the platform
+          team, then a toggle param.</p>
+          <p><strong>Benefit:</strong> audible new-order awareness.</p>
+          <p><strong>Files:</strong> platform capability + tool param.</p>
+          <p><strong>Status:</strong> not started - open question Q4.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-08" data-group="ROA-POLISH" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Server-side query filters and paging in the SDK (platform ask)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the query returns every
+          object of the type; large order histories make the board payload
+          grow (L-01).</p>
+          <p><strong>How we will solve it:</strong> propose filter/page
+          parameters for requestObjects query to the platform team; adopt
+          when available.</p>
+          <p><strong>Benefit:</strong> smaller payloads and true load-more.</p>
+          <p><strong>Files:</strong> platform SDK + this tool.</p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. We discuss each idea and
+  write the outcome inside its details. An agreed idea moves to the task list
+  (section 15) with a priority; a rejected idea is marked Ignored with the
+  reason. Tick the checkbox when an idea is done - progress is remembered by
+  the browser per document.</p>
+
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Push subscription for object changes</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a platform SDK channel that pushes order
+        changes into the iframe, replacing polling.</p>
+        <p><strong>Why:</strong> instant board updates without a poll interval
+        (L-02, D-ROTA-03).</p>
+        <p><strong>Discussion / outcome:</strong> platform request; polling
+        adopted meanwhile.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Kitchen ticket printing</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> print one compact kitchen ticket per order
+        (print CSS + requestExportPdf).</p>
+        <p><strong>Why:</strong> paper kitchens want a slip per new order.</p>
+        <p><strong>Discussion / outcome:</strong> new.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Day summary export</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a printable or CSV summary of the day's
+        orders and totals (L-06).</p>
+        <p><strong>Why:</strong> end-of-day handover and reconciliation.</p>
+        <p><strong>Discussion / outcome:</strong> new.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Kanban columns instead of tabs</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> show the tabs as side-by-side status columns
+        on wide screens.</p>
+        <p><strong>Why:</strong> the whole kitchen state in one look.</p>
+        <p><strong>Discussion / outcome:</strong> new; tabs were chosen for
+        the first version for phone-friendliness.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Pin or favorite orders</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> let a manager pin specific orders to the
+        top of the board for the shift.</p>
+        <p><strong>Why:</strong> VIP or problem orders stay in sight.</p>
+        <p><strong>Discussion / outcome:</strong> new.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Bulk actions</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> select several ready orders and mark them
+        all completed with one batch update.</p>
+        <p><strong>Why:</strong> a rush hour needs fewer taps.</p>
+        <p><strong>Discussion / outcome:</strong> new; depends on how the SDK
+        batch action interacts with the per-order status workflow.</p>
+      </div>
+    </details>
+  </div>
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>Preparation: open <code>app/test-harness.html</code> with
+  <code>?sample=1</code> (seeds 11 orders). Keep the console open - the tool
+  logs <code>[TOOL:BOOT]</code> on start. For logic-level checks, the Node
+  smoke helper in Temp covers the same scenarios without a browser.</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>TS-01 - Board loads.</strong> Steps: load the harness with
+    ?sample=1. PASS if: 10 order cards render, tabs show All 10 / New 2 /
+    In progress 5 / Ready 1 / Finished 2, and the stuck yesterday
+    preparation order (Sophia Lee) appears while the yesterday finished
+    order does not.</li>
+    <li><strong>TS-02 - Accept with ETA.</strong> Steps: click Accept on a
+    new order, pick 30 min, click ACCEPT. PASS if: the card moves to
+    Accepted, the toast names the order, and the card shows the estimated
+    ready time.</li>
+    <li><strong>TS-03 - Accept now.</strong> Steps: click Accept on another
+    new order, click Accept now. PASS if: status becomes accepted with no
+    estimate shown.</li>
+    <li><strong>TS-04 - Status advance.</strong> Steps: Start prep, then
+    Mark ready, then Complete on one order. PASS if: the card follows the
+    flow and the Finished tab count grows by one.</li>
+    <li><strong>TS-05 - Armed decline.</strong> Steps: click Decline on a
+    new order, then Keep. PASS if: nothing changes. Click Decline, then
+    Confirm decline. PASS if: the order moves to Finished as declined.</li>
+    <li><strong>TS-06 - Read-only.</strong> Steps: load with ?ro=1.
+    PASS if: no write buttons render, the read-only banner shows, and
+    clicking cards still opens the detail view.</li>
+    <li><strong>TS-07 - Viewer role.</strong> Steps: load with ?role=viewer.
+    PASS if: cards show only Open buttons and statuses cannot change.</li>
+    <li><strong>TS-08 - Search and sort.</strong> Steps: type a name in the
+    search box; switch sort to Highest total first. PASS if: the list
+    narrows and re-orders without a reload.</li>
+    <li><strong>TS-09 - Detail view.</strong> Steps: click any card.
+    PASS if: the detail shows customer, timing, payment, lines, totals and
+    the note; Back returns to the board; Call and Open in CMS are wired.</li>
+    <li><strong>TS-10 - New order arrival.</strong> Steps: click Add
+    Incoming Order, then Refresh. PASS if: a toast announces the new order
+    and its card flashes fresh.</li>
+    <li><strong>TS-11 - Missing access.</strong> Steps: load with ?crud=no.
+    PASS if: the configuration banner and the error state with Try again
+    render instead of the board.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>TS-01..TS-04</td><td>PASS</td><td>Node smoke (40 asserts) + headless board/detail/modal shots 2026-10-25</td></tr>
+    <tr><td>TS-05..TS-11</td><td>PASS</td><td>covered by smoke asserts (armed flow, read-only, optional-write failure)</td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when every MUST scenario
+  (TS-01..TS-07) PASSES in the browser harness and the ROA-SHIP group tasks
+  (T-01..T-04) are done with no open risks.</p>
+  <p><strong>Progress log:</strong> 2026-10-25 - smoke suite 40/40 green,
+  headless QA of board, detail and accept dialog green. 2026-10-30 - docs
+  added; harness re-verified with the same suites. 2026-10-30 (build
+  2026-10-30-2) - smoke suite 53/53 green incl. immediate Finished-tab
+  placement, completed-today visibility and urgency states; headless QA of
+  the soft color board passed. 2026-10-30 (build 2026-10-30-3) - smoke
+  suite 55/55 green incl. no fresh flash on first load and true status
+  colors from the first render; softer pastel palette verified headlessly.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is NOT pushed yet lives here,
+  linked to its release group (section 15). <strong>Before every push</strong>
+  re-evaluate every OPEN risk of the groups being pushed: solve them one by
+  one (tick the checkbox), or mark the risk Accepted
+  (<code>data-risk-status="accepted"</code>) with a reason and the date, and
+  update the <code>Last re-evaluation</code> line inside the risk. A group is
+  push-ready when its tasks are done AND it has no OPEN risks - the task
+  panel shows a PUSH READY badge per group and the open-risk count.</p>
+
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-01" data-group="ROA-SHIP" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">Order type lacks acceptedAt / estimatedReadyAt fields</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> whole first ship</p>
+        <p><strong>What can go wrong:</strong> the ETA chosen at accept is
+        not stored, so after a refresh the card shows no estimate.</p>
+        <p><strong>Likelihood / impact:</strong> likely until T-05 is done /
+        low (the status flow itself is unaffected - D-ROTA-04).</p>
+        <p><strong>Mitigation:</strong> optional write is failure-tolerant;
+        CMS-side task T-05 adds the fields.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-30 - still open, accepted risk with T-05 tracked.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-02" data-group="ROA-SHIP" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">Field settings missing at mount time</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> whole first ship</p>
+        <p><strong>What can go wrong:</strong> the board stays empty with an
+        error if allowObjectCRUD / allowedObjectTypes are not set on the CMS
+        field.</p>
+        <p><strong>Likelihood / impact:</strong> certain on tenants that skip
+        the setup / medium (tool looks broken).</p>
+        <p><strong>Mitigation:</strong> configuration banner, reportMissingParams,
+        error state with retry, and the exact JSON printed to the console.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-30 - open; setup steps are in help.html.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-03" data-group="ROA-POLISH" data-risk-level="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">Polling payload grows with the order history</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-08</p>
+        <p><strong>What can go wrong:</strong> after many months the query
+        returns a large object list on every poll (L-01).</p>
+        <p><strong>Likelihood / impact:</strong> slow growth / low.</p>
+        <p><strong>Mitigation:</strong> render cap at 200 cards; polling
+        interval param; platform ask T-08 for server-side filters.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-30 - open, low.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-04" data-group="ROA-SHIP" data-risk-level="low" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-04</span>
+        <span class="risk-title">Two managers advance the same order</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> whole first ship</p>
+        <p><strong>What can go wrong:</strong> last write wins on a race
+        between two open boards.</p>
+        <p><strong>Likelihood / impact:</strong> rare in one restaurant / low
+        (the next refresh shows the final state).</p>
+        <p><strong>Mitigation:</strong> accepted - the SDK has no optimistic
+        locking; boards refresh within seconds.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-30 - accepted as-is for v1.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-05" data-group="ROA-SHIP" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-05</span>
+        <span class="risk-title">Tool not yet registered in the tools catalog</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-03 / T-04</p>
+        <p><strong>What can go wrong:</strong> the store, the ideas catalog
+        and all-tools.html do not list the tool after the first ship.</p>
+        <p><strong>Likelihood / impact:</strong> certain until T-03 runs /
+        medium for discoverability.</p>
+        <p><strong>Mitigation:</strong> T-03 in the same one-push group as the
+        first ship.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-30 - open; solved by T-03.</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to test locally now
+  (smoke and headless suites green). Safe to publish after T-03 and T-04
+  complete with R-05 closed, R-01/R-02 re-evaluated, and every MUST scenario
+  of section 17 passing in the browser harness.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. The <code>npm run rel</code> script appends
+  a row here automatically after every successful push - do not edit or remove
+  the marker comment below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    <tr><td>2026-10-25</td><td>build 2026-10-25-1</td><td>(local)</td><td>Initial build prepared - not shipped yet (no SHIP command run)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Restaurant Order Taking App - single source of truth for all decisions
+    about this tool. Version 1.3, 2026-10-30.
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync. Tasks stamped by <code>npm run rel</code> show the push version
+    they shipped in.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks. Critical risks block every push until solved; high
+    risks block unless accepted; medium risks warn; low risks are reported
+    only.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved
+    state. Tick the checkbox here or in section 18 - both stay in sync.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>

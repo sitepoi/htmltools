@@ -1,4 +1,4 @@
-/* build 2026-10-25-1 */
+/* build 2026-10-30-3 */
 
 /* =====================================================================
    RestaurantOrderTakingApp - application-level ACTIVE ORDERS BOARD
@@ -16,7 +16,7 @@
 
 /* Tool build stamp - MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    bump on EVERY code change so stale CMS uploads are detectable. */
-var TOOL_BUILD = '2026-10-25-1';
+var TOOL_BUILD = '2026-10-30-3';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp starting...');
 
 (function () {
@@ -89,6 +89,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   var ARM_SECONDS = 6000;
   var UI_SAVE_DEBOUNCE = 300;
   var SEARCH_DEBOUNCE = 250;
+  var URGENT_WINDOW_MINUTES = 5;
 
   /* --------------------------------------------------------------- state */
 
@@ -159,6 +160,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
         return new Intl.NumberFormat(undefined, {
           style: 'currency',
           currency: _cfg.currency,
+          currencyDisplay: 'narrowSymbol',
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         }).format(amount);
@@ -375,12 +377,26 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
     order.totalNum = num(order.totals.total);
     order.placeTs = tsOf(order.placedAt);
+    order.channelKey = String(order.channel || '').toLowerCase().trim();
+    refreshDerivedOrderFields(order);
+    return order;
+  }
+
+  /* Recomputes every field derived from the raw fields (status, dates).
+     Runs on load AND after every local write so tabs, counts and board
+     membership are correct IMMEDIATELY - an order that was just completed
+     must show up in the Finished tab without waiting for the next poll. */
+  function refreshDerivedOrderFields(order) {
+    order.status = statusKeyOf(order.status) || STATUS_NEW;
+    order.statusChangedTs = tsOf(order.statusChangedAt);
     order.isTerminal = TERMINAL_STATUSES.indexOf(order.status) !== -1;
     order.isActive = !order.isTerminal;
     order.isToday = order.placeTs ? isSameLocalDay(order.placeTs) : true;
-    order.onBoard = order.isActive || order.isToday;
-    order.channelKey = String(order.channel || '').toLowerCase().trim();
-    return order;
+    order.statusChangedToday = order.statusChangedTs ? isSameLocalDay(order.statusChangedTs) : order.isToday;
+    /* Board window (D-ROTA-02 + D-ROTA-14): active orders always show;
+       finished orders show when placed today OR when their status changed
+       today (completing an order must never make it vanish). */
+    order.onBoard = order.isActive || order.isToday || (order.isTerminal && order.statusChangedToday);
   }
 
   function findOrder(orderId) { return _orderById[orderId] || null; }
@@ -493,7 +509,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     var warn = parseInt(String(paramRaw('newOrderWarningMinutes', '10')), 10);
     _cfg.warnMinutes = (isFinite(warn) && warn >= 0) ? warn : 10;
     _cfg.timeZone = String(paramRaw('restaurantTimezone', '')).trim();
-    _cfg.currency = String(paramRaw('currencyCode', '')).trim().toUpperCase();
+    _cfg.currency = String(paramRaw('currencyCode', 'USD')).trim().toUpperCase();
   }
 
   function declareToolParams() {
@@ -686,13 +702,14 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     var nextById = {};
     var freshIds = {};
     var announce = _firstLoadDone && _cfg.newOrderNotifications;
+    var markFresh = _firstLoadDone; /* the FIRST load is the baseline - never flash it (D-ROTA-16) */
     for (var i = 0; i < rawList.length; i++) {
       var order = normalizeOrder(rawList[i]);
       if (!order.id) continue;
       next.push(order);
       nextById[order.id] = order;
       if (!_knownIds[order.id]) {
-        freshIds[order.id] = true;
+        if (markFresh) freshIds[order.id] = true;
         if (announce && order.status === STATUS_NEW) {
           notify('New order ' + (order.orderNumber || order.id) + ' - ' + orderTitleOf(order), 'info');
         }
@@ -740,6 +757,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     }
     if (patch.status) order.status = statusKeyOf(patch.status) || patch.status;
     if (patch.totals) order.totals = asObject(patch.totals) || {};
+    refreshDerivedOrderFields(order);
   }
 
   function writeCoreFields(orderId, corePatch, extraPatch, successMessage) {
@@ -828,7 +846,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   }
 
   function etaKindLabel(order) {
-    return order.channelKey === 'delivery' ? 'delivery' : 'ready time';
+    return order.channelKey === 'delivery' ? 'delivery time' : 'ready time';
   }
 
   /* ----------------------------------------------------- armed two-step */
@@ -891,7 +909,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     var html = '';
     for (var i = 0; i < TABS.length; i++) {
       var tab = TABS[i];
-      html += '<button type="button" class="roa-tab' + (tab.id === _ui.tab ? ' roa-tab-on' : '') + '" data-act="tab" data-tab="' + esc(tab.id) + '">' +
+      html += '<button type="button" class="roa-tab roa-tab-' + esc(tab.id) + (tab.id === _ui.tab ? ' roa-tab-on' : '') + '" data-act="tab" data-tab="' + esc(tab.id) + '">' +
         esc(tab.label) +
         '<span class="roa-tab-count">' + esc(String(counts[tab.id])) + '</span>' +
         '</button>';
@@ -940,6 +958,24 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     setText('roa-loaded', cap + ' of ' + list.length + ' shown');
   }
 
+  /* Countdown to the estimated ready/delivery time. Before the target it
+     shows "in MM:SS"; inside the last few minutes it turns amber (urgent);
+     after the target it shows "LATE MM:SS" in red. */
+  function countdownState(etaTs) {
+    var remainingMs = etaTs - Date.now();
+    if (remainingMs > 0) {
+      var urgent = remainingMs <= URGENT_WINDOW_MINUTES * 60000;
+      return { late: false, urgent: urgent, text: 'in ' + fmtElapsedClock(Math.ceil(remainingMs / 1000)) };
+    }
+    return { late: true, urgent: false, text: 'LATE ' + fmtElapsedClock(Math.ceil(-remainingMs / 1000)) };
+  }
+
+  function countdownHtml(etaTs) {
+    var state = countdownState(etaTs);
+    var extraClass = state.late ? ' roa-countdown-late' : (state.urgent ? ' roa-countdown-urgent' : '');
+    return '<span class="roa-countdown' + extraClass + '" data-ts="' + esc(String(etaTs)) + '">' + esc(state.text) + '</span>';
+  }
+
   function cardHtml(order) {
     var meta = statusMetaOf(order.status);
     var channel = channelMetaOf(order.channelKey);
@@ -952,8 +988,13 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       (order.status === STATUS_READY ? ' roa-elapsed-ready' : '') +
       (warn ? ' roa-elapsed-warn' : '');
 
+    var etaState = null;
+    if (!order.isTerminal && order[ETA_FIELD]) etaState = countdownState(tsOf(order[ETA_FIELD]));
+    var etaCardClass = etaState ? (etaState.late ? ' roa-card-late' : (etaState.urgent ? ' roa-card-urgent' : '')) : '';
+
     var html = '<article class="roa-card st-' + esc(meta.cls) +
       (warn ? ' roa-card-warn' : '') +
+      etaCardClass +
       (fresh ? ' roa-card-fresh' : '') + '" data-id="' + esc(order.id) + '">';
 
     html += '<div class="roa-card-top">';
@@ -976,7 +1017,10 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
     html += '<div class="roa-card-meta">';
     html += '<span class="roa-status st-' + esc(meta.cls) + '">' + esc(meta.label) + '</span>';
-    if (!order.isTerminal && order[ETA_FIELD]) html += '<span class="roa-est">est. ' + esc(etaKindLabel(order)) + ' ' + esc(fmtTime(order[ETA_FIELD])) + '</span>';
+    if (!order.isTerminal && order[ETA_FIELD]) {
+      html += '<span class="roa-est">est. ' + esc(etaKindLabel(order)) + ' ' + esc(fmtTime(order[ETA_FIELD])) + '</span>';
+      html += countdownHtml(tsOf(order[ETA_FIELD]));
+    }
     html += '</div>';
 
     var items = lineCountOf(order);
@@ -1045,6 +1089,22 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       if (!ts) continue;
       span.textContent = fmtElapsedClock(secondsSince(ts));
     }
+
+    var countdowns = document.querySelectorAll('.roa-countdown[data-ts]');
+    for (var c = 0; c < countdowns.length; c++) {
+      var countdownSpan = countdowns[c];
+      var etaTs = parseInt(countdownSpan.getAttribute('data-ts') || '0', 10);
+      if (!etaTs) continue;
+      var state = countdownState(etaTs);
+      countdownSpan.textContent = state.text;
+      countdownSpan.classList.toggle('roa-countdown-late', state.late);
+      countdownSpan.classList.toggle('roa-countdown-urgent', !!state.urgent);
+      var card = countdownSpan.closest ? countdownSpan.closest('.roa-card') : null;
+      if (card) {
+        card.classList.toggle('roa-card-late', state.late);
+        card.classList.toggle('roa-card-urgent', !!state.urgent);
+      }
+    }
   }
 
   function renderFoot() {
@@ -1108,8 +1168,6 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     clearArm(false);
     var detail = $id('roa-detail');
     if (detail) detail.hidden = true;
-    var board = $id('roa-board');
-    if (board) board.hidden = false;
     requestResize();
   }
 
@@ -1144,18 +1202,17 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
   function renderDetail() {
     var host = $id('roa-detail');
-    var board = $id('roa-board');
     if (!host) return;
     var order = findOrder(_detailId);
     if (!order) { closeDetail(); return; }
     host.hidden = false;
-    if (board) board.hidden = true;
 
     var meta = statusMetaOf(order.status);
     var channel = channelMetaOf(order.channelKey);
     var customer = order.customer || {};
 
-    var html = '<div class="roa-detail-head">';
+    var html = '<div class="roa-detail-shell">';
+    html += '<div class="roa-detail-head">';
     html += '<button type="button" class="roa-btn roa-btn-ghost roa-btn-small" data-act="detail-back">&#8592; Back to orders</button>';
     html += '<div class="roa-detail-title">';
     html += '<span class="roa-channel">' + esc(channel.icon + ' ' + channel.label) + '</span>';
@@ -1163,6 +1220,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     html += '<span class="roa-status st-' + esc(meta.cls) + '">' + esc(meta.label) + '</span>';
     html += '</div>';
     html += '<div class="roa-detail-actions" id="roa-detail-actions">' + detailActionsHtml(order) + '</div>';
+    html += '<button type="button" class="roa-modal-x" data-act="detail-back" aria-label="Close">&#10005;</button>';
     html += '</div>';
 
     html += '<div class="roa-detail-grid">';
@@ -1201,7 +1259,10 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     if (order.scheduledFor) html += rowHtml('Scheduled for', fmtDateTime(order.scheduledFor));
     if (order[ACCEPTED_AT_FIELD]) html += rowHtml('Accepted on', fmtDateTime(order[ACCEPTED_AT_FIELD]));
     if (order.statusChangedAt) html += rowHtml('Status changed', fmtDateTime(order.statusChangedAt));
-    if (order[ETA_FIELD]) html += rowHtml('Estimated ' + etaKindLabel(order), fmtDateTime(order[ETA_FIELD]));
+    if (order[ETA_FIELD]) {
+      html += rowHtml('Estimated ' + etaKindLabel(order), fmtDateTime(order[ETA_FIELD]));
+      html += '<div class="roa-row"><span class="roa-k">Countdown</span><span class="roa-v">' + countdownHtml(tsOf(order[ETA_FIELD])) + '</span></div>';
+    }
     html += '</section>';
 
     html += '<section class="roa-block"><h3 class="roa-block-title">Payment</h3>';
@@ -1240,6 +1301,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
     html += '</div>';
     html += '</div>';
+    html += '</div>'; /* /roa-detail-shell */
 
     host.innerHTML = html;
     updateElapsedSpans();
@@ -1379,7 +1441,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       '<span>' + esc(order.orderNumber || ('#' + order.id)) + ' - ' + esc(orderTitleOf(order)) + '</span>' +
       '<span class="roa-card-total">' + esc(fmtMoney(order.totalNum)) + '</span></div>';
 
-    html += '<span class="roa-eta-label">Estimated ' + esc(kind) + ' time (optional)</span>';
+    html += '<span class="roa-eta-label">Estimated ' + esc(kind) + ' (optional)</span>';
     html += '<div class="roa-eta-chips">';
     for (var i = 0; i < ETA_CHIPS.length; i++) {
       html += '<button type="button" class="roa-eta-chip' + (_etaMinutes === ETA_CHIPS[i] ? ' roa-eta-chip-on' : '') +
@@ -1518,6 +1580,8 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       var modalCard = (target && target.closest) ? target.closest('.roa-modal-card') : null;
       var modal = $id('roa-modal');
       if (modal && !modal.hidden && modalCard) return; /* click inside modal, not on a button */
+      var detailOverlay = $id('roa-detail');
+      if (detailOverlay && !detailOverlay.hidden && target === detailOverlay) { closeDetail(); return; }
     });
 
     root.addEventListener('change', function (event) {
@@ -1684,6 +1748,11 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       boardListFor: boardListFor,
       matchesSearch: matchesSearch,
       fmtElapsedClock: fmtElapsedClock,
+      etaKindLabel: etaKindLabel,
+      countdownState: countdownState,
+      findOrder: findOrder,
+      openDetail: openDetail,
+      closeDetail: closeDetail,
       cardActionsHtml: cardActionsHtml,
       setOrderStatus: setOrderStatus,
       acceptOrder: acceptOrder
@@ -1691,4 +1760,4 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   }
 })();
 
-/* RESTAURANTORDERTAKINGAPP-JS-END build 2026-10-25-1 - if this line is missing in the CMS Tool Builder JS field, the JS was truncated */
+/* RESTAURANTORDERTAKINGAPP-JS-END build 2026-10-30-3 - if this line is missing in the CMS Tool Builder JS field, the JS was truncated */
