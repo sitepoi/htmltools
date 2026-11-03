@@ -70,6 +70,16 @@
       return (currency || 'CAD') + ' ' + Number(amount).toFixed(2);
     }
   }
+  /* Plain "CAD 1,530.00" format used by the printed invoice and email so
+     amounts match the template exactly. */
+  function fmtPlainNumber(amount) {
+    var num = Number(amount);
+    if (!isFinite(num)) num = 0;
+    return num.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtMoneyPlain(amount, currency) {
+    return (currency || 'CAD') + ' ' + fmtPlainNumber(amount);
+  }
   function validCurrency(c) { return CURRENCIES.indexOf(c) !== -1 ? c : 'CAD'; }
   function validPaymentTerms(t) { return PAYMENT_TERMS.indexOf(t) !== -1 ? t : 'Net 15'; }
 
@@ -1391,48 +1401,50 @@
       .slice(0, 2)
       .map(function (word) { return word.charAt(0).toUpperCase(); })
       .join('');
-    return '<span class="monogram">' + escHtml(initials || 'Co') + '</span>';
+    return '<span class="brand-mark">' + escHtml(initials || 'Co') + '</span>';
   }
 
   function printWaterfallRowsHtml(inv) {
     var currency = inv.currency;
     var rows = inv.breakdown.length ? inv.breakdown : [];
-    var html = '<tr class="group"><td colspan="3">Software subscription - ' + escHtml(monthLabel(inv.month)) + '</td></tr>';
+    var html = '';
     var contributingRows = rows.filter(function (r) { return r.appliedFee > 0; });
     if (inv.revenue <= 0) {
-      html += '<tr class="data"><td>No subscription fee</td><td class="num">monthly ticket revenue ' + fmtMoney(0, currency) + '</td><td class="num">' + fmtMoney(0, currency) + '</td></tr>';
+      html += '<tr><td class="desc">Software subscription - ' + escHtml(monthLabel(inv.month)) + '<div class="sub">No subscription fee</div></td><td class="num">' + fmtMoneyPlain(0, currency) + '</td></tr>';
     } else if (!contributingRows.length) {
-      html += '<tr class="data"><td>No subscription fee this month</td><td class="num">minimum waived</td><td class="num">' + fmtMoney(0, currency) + '</td></tr>';
+      html += '<tr><td class="desc">Software subscription - ' + escHtml(monthLabel(inv.month)) + '<div class="sub">No subscription fee this month</div></td><td class="num">' + fmtMoneyPlain(0, currency) + '</td></tr>';
     } else {
       html += contributingRows.map(function (r) {
+        var title;
+        var sub;
         if (r.kind === 'minimum') {
-          return '<tr class="data"><td>Minimum monthly fee (first $20,000)</td><td class="num">flat fee</td><td class="num">' + fmtMoney(r.appliedFee, currency) + '</td></tr>';
+          title = 'Software subscription - ' + escHtml(monthLabel(inv.month));
+          sub = 'Minimum monthly fee (first CA $20,000)';
+        } else {
+          title = 'Software subscription - ' + escHtml(r.label);
+          sub = r.ratePct + '% of ' + fmtMoneyPlain(r.revenueInBracket, currency) + ' in this bracket' + (r.capped ? ', capped at ' + fmtMoneyPlain(r.cap, currency) : '');
         }
-        var capText = r.capped ? ', capped at ' + fmtMoney(r.cap, currency) : '';
-        return '<tr class="data"><td>Waterfall fee - ' + escHtml(r.label) + ' (' + r.ratePct + '%' + capText + ')</td>' +
-          '<td class="num">' + fmtMoney(r.revenueInBracket, currency) + ' in bracket</td>' +
-          '<td class="num">' + fmtMoney(r.appliedFee, currency) + '</td></tr>';
+        return '<tr><td class="desc">' + title + '<div class="sub">' + sub + '</div></td><td class="num">' + fmtMoneyPlain(r.appliedFee, currency) + '</td></tr>';
       }).join('');
       if (inv.revenue > NEGOTIATED_FROM) {
-        html += '<tr class="data"><td>Negotiated fee (above CA $3,000,000)</td><td class="num">agreed</td><td class="num">' + fmtMoney(inv.negotiatedFee === null ? 0 : inv.negotiatedFee, currency) + '</td></tr>';
+        html += '<tr><td class="desc">Negotiated fee (above CA $3,000,000)<div class="sub">agreed amount</div></td><td class="num">' + fmtMoneyPlain(inv.negotiatedFee === null ? 0 : inv.negotiatedFee, currency) + '</td></tr>';
       }
     }
-    html += '<tr class="sub-line"><td colspan="2" class="num">Subscription fee</td><td class="num">' + fmtMoney(inv.fee, currency) + '</td></tr>';
     return html;
   }
 
   function printStatusPillHtml(status) {
-    return '<span class="pill pill-' + status + '">' + status.toUpperCase() + '</span>';
+    return '<span class="status"><span class="status-dot"></span>' + status.toUpperCase() + '</span>';
   }
 
   function printExtrasRowsHtml(inv) {
     var currency = inv.currency;
     var html = '';
     if (inv.supportTypeName) {
-      html += '<tr><td>Support - ' + escHtml(inv.supportTypeName) + '</td><td class="num">monthly fee</td><td class="num">' + fmtMoney(inv.supportTypeFee, currency) + '</td></tr>';
+      html += '<tr><td class="desc">Support - ' + escHtml(inv.supportTypeName) + '<div class="sub">monthly fee</div></td><td class="num">' + fmtMoneyPlain(inv.supportTypeFee, currency) + '</td></tr>';
     }
     (inv.lineItems || []).forEach(function (line) {
-      html += '<tr><td>' + escHtml(line.description || 'Additional line') + '</td><td class="num">one-time</td><td class="num">' + fmtMoney(line.amount, currency) + '</td></tr>';
+      html += '<tr><td class="desc">' + escHtml(line.description || 'Additional line') + '<div class="sub">one-time</div></td><td class="num">' + fmtMoneyPlain(line.amount, currency) + '</td></tr>';
     });
     return html;
   }
@@ -1449,69 +1461,98 @@
     var logoHtml = company.logoUrl
       ? '<img class="logo" src="' + escHtml(company.logoUrl) + '" alt="' + escHtml(company.name) + '">'
       : companyMonogramHtml();
+    var contactLine = [company.address, company.email, company.phone]
+      .filter(function (part) { return part && String(part).trim(); })
+      .join(' &nbsp;·&nbsp; ');
+    var questionLine = [company.email ? 'Questions? ' + company.email : '', company.phone || '']
+      .filter(function (part) { return part && String(part).trim(); })
+      .join(' &nbsp;·&nbsp; ');
     return '<html><head><meta charset="utf-8"><title>Invoice ' + escHtml(inv.number || 'Draft') + '</title><style>' +
-      'body{font-family:Helvetica,Arial,sans-serif;color:#0f172a;margin:0;background:#eef2f7;font-size:12.5px}' +
-      '.page{max-width:720px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #dde4ee}' +
-      '.band{background:linear-gradient(120deg,#4f46e5,#4338ca);color:#ffffff;padding:26px 30px;display:flex;justify-content:space-between;align-items:center}' +
-      '.band .left{display:flex;align-items:center;gap:14px}' +
-      '.logo{max-height:56px;max-width:180px;object-fit:contain}' +
-      '.monogram{width:52px;height:52px;border-radius:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);display:inline-flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;letter-spacing:1px}' +
-      '.band .co{font-size:17px;font-weight:800}' +
-      '.band .co-sub{font-size:10.5px;opacity:.85;margin-top:3px}' +
-      '.band .right{text-align:right}' +
-      '.inv-title{font-size:27px;font-weight:800;letter-spacing:3px}' +
-      '.inv-no{font-size:12px;opacity:.9;margin-top:4px}' +
-      '.pill{display:inline-block;margin-top:8px;font-size:9px;font-weight:800;letter-spacing:1.4px;padding:4px 12px;border-radius:999px;text-transform:uppercase;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4)}' +
-      '.body{padding:30px 36px}' +
-      '.meta{display:flex;gap:20px;justify-content:space-between;flex-wrap:wrap;margin-bottom:22px}' +
-      '.meta-box{flex:1;min-width:170px}' +
-      '.meta-box h4{font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:#94a3b8;margin:0 0 6px;font-weight:800}' +
-      '.meta-box .v{font-size:12.5px;line-height:1.55}' +
+      'body{font-family:Inter,"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;color:#0f172a;margin:0;background:#eef1f6;font-size:12.5px;line-height:1.6}' +
+      '.page{max-width:720px;min-height:297mm;margin:0 auto;background:#ffffff;padding:54px 54px 40px;display:flex;flex-direction:column}' +
+      '.head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}' +
+      '.brand{display:flex;align-items:center;gap:13px}' +
+      '.brand-mark{width:40px;height:40px;border-radius:11px;background:#4f46e5;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;letter-spacing:.4px;flex:0 0 auto}' +
+      '.logo{max-height:40px;max-width:160px;object-fit:contain}' +
+      '.co{font-size:15px;font-weight:700;letter-spacing:-.1px}' +
+      '.co-sub{font-size:11.5px;color:#64748b;margin-top:2px}' +
+      '.head-right{text-align:right}' +
+      '.doc-title{font-size:40px;font-weight:600;letter-spacing:-1.2px;line-height:1.02}' +
+      '.doc-no{font-size:11.5px;color:#64748b;margin-top:7px;white-space:nowrap}' +
+      '.status{display:inline-flex;align-items:center;gap:7px;margin-top:9px;font-size:10.5px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#334155}' +
+      '.status-dot{width:7px;height:7px;border-radius:50%;background:#4f46e5}' +
+      '.rule{height:1px;background:#e2e8f0;position:relative;margin:28px 0 32px}' +
+      '.rule::before{content:"";position:absolute;top:-2px;left:0;width:68px;height:3px;background:#4f46e5}' +
+      '.label{font-size:9.5px;font-weight:700;letter-spacing:1.9px;text-transform:uppercase;color:#64748b}' +
+      '.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}' +
+      '.meta .v{margin-top:5px;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}' +
+      '.split{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:start;margin-top:36px}' +
+      '.bill-name{margin-top:7px;font-size:15px;font-weight:600}' +
+      '.bill-line{font-size:12.5px;color:#64748b;margin-top:2px}' +
+      '.due{text-align:right}' +
+      '.due-amount{margin-top:7px;font-size:30px;font-weight:700;letter-spacing:-.6px;font-variant-numeric:tabular-nums}' +
+      '.due-amount .currency{font-size:15px;font-weight:600;color:#64748b;margin-right:6px}' +
+      '.due-date{font-size:11.5px;color:#64748b;margin-top:3px}' +
+      '.sec{margin-top:28px}' +
+      '.sec-title{font-size:10px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;color:#0f172a;padding-bottom:8px;border-bottom:1px solid #e2e8f0}' +
       '.lines{width:100%;border-collapse:collapse}' +
-      '.lines th{text-align:left;padding:9px 14px;background:#f1f5f9;color:#64748b;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border:none}' +
-      '.lines td{padding:9px 14px;border-bottom:1px solid #eef2f7;vertical-align:top}' +
+      '.lines th{text-align:left;font-size:9.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:#64748b;padding:10px 0 6px}' +
+      '.lines th.num{text-align:right}' +
+      '.lines td{padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12.5px;vertical-align:baseline;line-height:1.45}' +
       '.lines tr:last-child td{border-bottom:none}' +
-      '.lines tr.data:nth-child(even) td{background:#fbfdfe}' +
-      '.lines td.num{text-align:right;white-space:nowrap}' +
-      '.lines tr.group td{background:#f8fafc;font-weight:800;color:#475569;font-size:10px;text-transform:uppercase;letter-spacing:.8px;padding-top:12px}' +
-      '.lines tr.data td{font-size:12.5px}' +
-      '.lines tr.sub-line td{font-weight:700;color:#0f172a}' +
-      '.totals{width:100%;border-collapse:collapse;margin-top:12px}' +
-      '.totals td{padding:5px 12px;border:none;font-size:12.5px;color:#475569}' +
-      '.totals td.num{text-align:right}' +
-      '.totals tr.total td{font-size:17px;font-weight:800;color:#4f46e5;border-top:2px solid #e2e8f0;padding-top:10px}' +
-      '.notes{margin-top:16px;background:#f8fafc;border-radius:10px;padding:12px 14px;font-size:11.5px;color:#475569;line-height:1.6}' +
-      '.footer{margin-top:22px;text-align:center;color:#94a3b8;font-size:10.5px;padding-bottom:26px}' +
-      '@media print{body{background:#ffffff}.page{border:none;border-radius:0;max-width:none}}' +
+      '.lines td.desc{color:#334155}' +
+      '.lines td.num{text-align:right;color:#334155;white-space:nowrap;font-variant-numeric:tabular-nums}' +
+      '.lines .sub{font-size:10.5px;color:#64748b;margin-top:1px}' +
+      '.totals{margin-top:28px;display:flex;justify-content:flex-end}' +
+      '.totals-inner{width:300px}' +
+      '.t-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;font-size:12.5px;color:#334155}' +
+      '.t-row .t-val{font-variant-numeric:tabular-nums}' +
+      '.t-row.t-total{margin-top:9px;padding-top:13px;border-top:1.5px solid #0f172a;font-size:15px;font-weight:700;color:#0f172a}' +
+      '.t-row.t-total .t-val{font-size:19px;letter-spacing:-.4px}' +
+      '.notes{margin-top:26px;max-width:540px;font-size:11.5px;color:#64748b}' +
+      '.foot{margin-top:auto;padding-top:36px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;gap:16px;font-size:10.5px;color:#64748b}' +
+      '.foot .accent{color:#4f46e5;font-weight:600}' +
+      '@media print{body{background:#ffffff}.page{min-height:auto}.lines tr{break-inside:avoid}}' +
       '</style></head><body><div class="page">' +
-      '<div class="band">' +
-        '<div class="left">' + logoHtml +
+      '<div class="head">' +
+        '<div class="brand">' + logoHtml +
           '<div><div class="co">' + escHtml(company.name || 'Your Company') + '</div>' +
-          '<div class="co-sub">' + escHtml(company.address) + '</div></div>' +
+          '<div class="co-sub">' + escHtml(contactLine) + '</div></div>' +
         '</div>' +
-        '<div class="right"><div class="inv-title">INVOICE</div>' +
-        '<div class="inv-no">' + escHtml(inv.number || 'Draft') + '</div>' +
+        '<div class="head-right"><div class="doc-title">Invoice</div>' +
+        (company.taxId ? '<div class="doc-no">Tax / GST ID ' + escHtml(company.taxId) + '</div>' : '') +
         printStatusPillHtml(inv.status) + '</div>' +
       '</div>' +
-      '<div class="body">' +
-        '<div class="meta">' +
-          '<div class="meta-box"><h4>Billed to</h4><div class="v">' + escHtml(customerName) + '<br>' + escHtml(customerAddress) + (customerEmail ? '<br>' + escHtml(customerEmail) : '') + '</div></div>' +
-          '<div class="meta-box"><h4>Invoice details</h4><div class="v">Issued ' + fmtDate(inv.issuedAt) + '<br>Due ' + fmtDate(inv.dueDate || '-') + '<br>Terms ' + escHtml(DB.settings.paymentTerms) + '</div></div>' +
-          '<div class="meta-box"><h4>Provider</h4><div class="v">' + escHtml(company.email || '') + (company.phone ? '<br>' + escHtml(company.phone) : '') + (company.taxId ? '<br>Tax / GST ID: ' + escHtml(company.taxId) : '') + '</div></div>' +
+      '<div class="rule"></div>' +
+      '<div class="meta">' +
+        '<div><div class="label">Issue date</div><div class="v">' + fmtDate(inv.issuedAt) + '</div></div>' +
+        '<div><div class="label">Due date</div><div class="v">' + fmtDate(inv.dueDate || '-') + '</div></div>' +
+        '<div><div class="label">Payment terms</div><div class="v">' + escHtml(DB.settings.paymentTerms) + '</div></div>' +
+      '</div>' +
+      '<div class="split">' +
+        '<div><div class="label">Billed to</div>' +
+        '<div class="bill-name">' + escHtml(customerName) + '</div>' +
+        (customerAddress ? '<div class="bill-line">' + escHtml(customerAddress) + '</div>' : '') +
+        (customerEmail ? '<div class="bill-line">' + escHtml(customerEmail) + '</div>' : '') +
         '</div>' +
-        '<table class="lines">' +
-        '<tr><th>Description</th><th class="num">Detail</th><th class="num">Amount</th></tr>' +
-        waterfallRows +
-        extrasRows +
-        '</table>' +
-        '<table class="totals">' +
-        '<tr><td class="num">Subtotal</td><td class="num">' + fmtMoney(subtotal, currency) + '</td></tr>' +
-        (inv.taxAmount > 0 ? '<tr><td class="num">Tax (' + inv.taxRate + '%)</td><td class="num">' + fmtMoney(inv.taxAmount, currency) + '</td></tr>' : '') +
-        '<tr class="total"><td class="num">Total due</td><td class="num">' + fmtMoney(inv.total, currency) + '</td></tr>' +
-        '</table>' +
-        (inv.notes ? '<div class="notes">' + escHtml(inv.notes) + '</div>' : '') +
-        '<div class="footer">Questions about this invoice? ' + escHtml(company.email || '') + (company.phone ? ' · ' + escHtml(company.phone) : '') + '</div>' +
-        '<div class="footer" style="margin-top:6px">Thank you for your business. · ' + escHtml(company.name || '') + '</div>' +
+        '<div class="due"><div class="label">Amount due</div>' +
+        '<div class="due-amount"><span class="currency">' + escHtml(currency) + '</span>' + fmtPlainNumber(inv.total) + '</div>' +
+        '<div class="due-date">Due ' + fmtDate(inv.dueDate || '-') + '</div></div>' +
+      '</div>' +
+      '<div class="sec"><div class="sec-title">Items</div>' +
+      '<table class="lines">' +
+      '<tr><th>Description</th><th class="num">Amount</th></tr>' +
+      waterfallRows +
+      extrasRows +
+      '</table></div>' +
+      '<div class="totals"><div class="totals-inner">' +
+      '<div class="t-row"><span>Subtotal</span><span class="t-val">' + fmtMoneyPlain(subtotal, currency) + '</span></div>' +
+      (inv.taxAmount > 0 ? '<div class="t-row"><span>Tax (' + inv.taxRate + '%)</span><span class="t-val">' + fmtMoneyPlain(inv.taxAmount, currency) + '</span></div>' : '') +
+      '<div class="t-row t-total"><span>Total due</span><span class="t-val">' + fmtMoneyPlain(inv.total, currency) + '</span></div>' +
+      '</div></div>' +
+      (inv.notes ? '<p class="notes">' + escHtml(inv.notes) + '</p>' : '') +
+      '<div class="foot"><span>' + escHtml(company.name || '') + ' &nbsp;·&nbsp; Invoice <span class="accent">' + escHtml(inv.number || 'Draft') + '</span></span>' +
+      (questionLine ? '<span>' + escHtml(questionLine) + '</span>' : '') +
       '</div>' +
       '</div></body></html>';
   }
@@ -1520,22 +1561,23 @@
     var currency = inv.currency;
     var company = DB.company;
     var customerName = inv.customerName || (findCustomerById(inv.customerId) || {}).name || 'Customer';
-    var waterfallRows = printWaterfallRowsHtml(inv).replace(/class="(group|data|sub-line)"/g, 'style="font-size:12px"');
-    var extrasRows = printExtrasRowsHtml(inv);
+    var emailRows = (printWaterfallRowsHtml(inv) + printExtrasRowsHtml(inv))
+      .replace(/class="desc"/g, 'style="padding:8px 10px;font-size:13px;color:#334155;border-bottom:1px solid #eef2f7"')
+      .replace(/class="num"/g, 'style="padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid #eef2f7"')
+      .replace(/class="sub"/g, 'style="font-size:11px;color:#64748b;margin-top:2px"');
     var subtotal = inv.subtotal !== undefined ? inv.subtotal : round2(inv.fee + inv.extraTotal);
     var logoCell = company.logoUrl
-      ? '<img src="' + escHtml(company.logoUrl) + '" alt="" style="max-height:44px;max-width:160px">'
-      : '<span style="font-size:18px;font-weight:800;color:#4f46e5">' + escHtml(company.name || '') + '</span>';
+      ? '<img src="' + escHtml(company.logoUrl) + '" alt="" style="max-height:40px;max-width:160px">'
+      : '<span style="font-size:15px;font-weight:700;color:#0f172a">' + escHtml(company.name || '') + '</span>';
     return '<p>Dear ' + escHtml(customerName) + ',</p>' +
       '<p>Please find invoice <strong>' + escHtml(inv.number || 'Draft') + '</strong> for ' + escHtml(monthLabel(inv.month)) + ' below.</p>' +
-      '<table border="0" cellpadding="10" cellspacing="0" style="border-collapse:collapse;font-size:13px;background:#ffffff">' +
-      '<tr><td style="border-bottom:1px solid #eef2f7">' + logoCell + '</td><td align="right" style="border-bottom:1px solid #eef2f7;color:#4f46e5;font-weight:800;font-size:16px">INVOICE</td></tr>' +
-      '<tr style="background:#f1f5f9"><td><strong>Description</strong></td><td align="right"><strong>Detail</strong></td><td align="right"><strong>Amount</strong></td></tr>' +
-      waterfallRows +
-      extrasRows +
-      '<tr><td align="right" colspan="2">Subtotal</td><td align="right">' + fmtMoney(subtotal, currency) + '</td></tr>' +
-      (inv.taxAmount > 0 ? '<tr><td align="right" colspan="2">Tax (' + inv.taxRate + '%)</td><td align="right">' + fmtMoney(inv.taxAmount, currency) + '</td></tr>' : '') +
-      '<tr style="border-top:2px solid #e2e8f0"><td align="right" colspan="2"><strong style="color:#4f46e5">Total due</strong></td><td align="right"><strong style="color:#4f46e5">' + fmtMoney(inv.total, currency) + '</strong></td></tr>' +
+      '<table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;background:#ffffff">' +
+      '<tr><td style="padding:10px 0;border-bottom:1px solid #e2e8f0">' + logoCell + '</td><td align="right" style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#0f172a;font-weight:600;font-size:18px">Invoice</td></tr>' +
+      '<tr><td style="padding:10px 0;font-size:9.5px;text-transform:uppercase;letter-spacing:1.6px;color:#64748b"><strong>Description</strong></td><td align="right" style="padding:10px 0;font-size:9.5px;text-transform:uppercase;letter-spacing:1.6px;color:#64748b"><strong>Amount</strong></td></tr>' +
+      emailRows +
+      '<tr><td align="right" style="padding:8px 10px">Subtotal</td><td align="right" style="padding:8px 10px">' + fmtMoneyPlain(subtotal, currency) + '</td></tr>' +
+      (inv.taxAmount > 0 ? '<tr><td align="right" style="padding:8px 10px">Tax (' + inv.taxRate + '%)</td><td align="right" style="padding:8px 10px">' + fmtMoneyPlain(inv.taxAmount, currency) + '</td></tr>' : '') +
+      '<tr style="border-top:2px solid #0f172a"><td align="right" style="padding:10px 10px 0"><strong>Total due</strong></td><td align="right" style="padding:10px 10px 0"><strong>' + fmtMoneyPlain(inv.total, currency) + '</strong></td></tr>' +
       '</table>' +
       (inv.dueDate ? '<p>Due date: ' + fmtDate(inv.dueDate) + '</p>' : '') +
       '<p>' + escHtml(DB.settings.paymentTerms) + '. Thank you for your business.</p>';

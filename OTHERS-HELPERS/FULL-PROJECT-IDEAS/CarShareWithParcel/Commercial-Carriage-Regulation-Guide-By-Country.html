@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cost-Sharing Regulation Guide - Carpool and Cargo Cost-Sharing by Jurisdiction</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --line:#e2e8f0;
+    --panel:#f8fafc;
+    --panel2:#f1f5f9;
+    --accent:#6d28d9;
+    --accent-soft:#ede9fe;
+    --easy:#15803d;
+    --easy-bg:#ecfdf5;
+    --moderate:#b45309;
+    --moderate-bg:#fffbeb;
+    --difficult:#b91c1c;
+    --difficult-bg:#fef2f2;
+    --nogo:#7f1d1d;
+    --nogo-bg:#fee2e2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.65;
+  }
+  .toolbar{
+    display:flex;gap:10px;justify-content:flex-end;align-items:center;
+    padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .toolbar button{
+    border:1px solid var(--accent);background:var(--bg);color:var(--accent);
+    padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .toolbar button:hover{background:var(--accent);color:#ffffff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1060px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{
+    border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;
+    padding:34px 38px;margin-bottom:26px;background:var(--bg);
+  }
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:29px;line-height:1.25;margin:8px 0 10px;color:var(--ink);}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:800px;}
+  .hero .meta{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{
+    font-size:21px;margin:44px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  h2 .num{
+    background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  }
+  h3{font-size:16.5px;margin:22px 0 8px;color:var(--ink);}
+  h4{font-size:14.5px;margin:14px 0 6px;}
+  p{margin:8px 0;}
+  ul,ol{margin:8px 0 12px 22px;}
+  li{margin:4px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid transparent;white-space:nowrap;}
+  .pill.easy{background:var(--easy-bg);color:var(--easy);border-color:#bbf7d0;}
+  .pill.moderate{background:var(--moderate-bg);color:var(--moderate);border-color:#fde68a;}
+  .pill.difficult{background:var(--difficult-bg);color:var(--difficult);border-color:#fecaca;}
+  .pill.nogo{background:var(--nogo-bg);color:var(--nogo);border-color:#fca5a5;}
+  .pill.verify{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+  .pill.info{background:var(--accent-soft);color:var(--accent);border-color:#ddd6fe;}
+  .callout{
+    border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;
+    margin:14px 0;
+  }
+  .callout.warn{border-color:#fbbf24;background:var(--moderate-bg);}
+  .callout.bad{border-color:#f87171;background:var(--difficult-bg);}
+  .callout.good{border-color:#34d399;background:var(--easy-bg);}
+  .callout h4{font-size:14px;margin:0 0 4px;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  @media (max-width:700px){.toc ol{columns:1;}}
+  .toc a{color:var(--ink);text-decoration:none;}
+  .toc a:hover{color:var(--accent);}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;}
+  .legend .item{font-size:12.5px;border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:var(--panel);display:flex;align-items:center;gap:8px;}
+  .card{
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:var(--panel);margin:10px 0;
+  }
+  .card h4{font-size:14.5px;color:var(--accent);margin-bottom:4px;}
+  .card p{font-size:13.5px;color:#334155;margin:2px 0;}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  @media print{
+    .toolbar{display:none;}
+    body{font-size:12px;}
+    .page{max-width:none;padding:0;}
+    h2{page-break-after:avoid;}
+    table,.card,.callout{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">REGULATION GUIDE - COST-SHARING MODELS ONLY</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Regulation Research Document</div>
+    <h1>Cost-Sharing Regulation Guide<br><span style="color:var(--muted);font-size:21px;">Where carpooling and cargo cost-sharing are legal, grey, or impossible</span></h1>
+    <p class="sub">A jurisdiction-by-jurisdiction review for exactly two models and nothing else: (1) passenger carpooling on strict cost-sharing, and (2) light cargo carried the same way - a sender contributes to trip costs instead of buying a seat. Passenger transport for profit is out of scope.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>Scope: cost-sharing only</span>
+      <span>Companion to the two business plans</span>
+      <span>Not legal advice</span>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="item"><span class="pill easy">EASY</span> both models workable</div>
+    <div class="item"><span class="pill moderate">MODERATE</span> permits / structure needed</div>
+    <div class="item"><span class="pill difficult">DIFFICULT</span> heavy compliance</div>
+    <div class="item"><span class="pill nogo">NO-GO</span> effectively illegal</div>
+    <div class="item"><span class="pill verify">VERIFY</span> changes often - confirm before launch</div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">The Two Models and the Core Legal Truth</a></li>
+      <li><a href="#s2">Executive Summary - World Map</a></li>
+      <li><a href="#s3">USA - Federal Framework</a></li>
+      <li><a href="#s4">USA - State by State</a></li>
+      <li><a href="#s5">Canada - Federal / Provincial Framework</a></li>
+      <li><a href="#s6">Canada - Province by Province</a></li>
+      <li><a href="#s7">Europe - Country Review</a></li>
+      <li><a href="#s8">Asia-Pacific - Country Review</a></li>
+      <li><a href="#s9">Americas, Middle East and Turkey</a></li>
+      <li><a href="#s10">Where Both Models Are Easiest (Top 12)</a></li>
+      <li><a href="#s11">Where It Is Impossible or Very Difficult</a></li>
+      <li><a href="#s12">Launch Compliance Checklist</a></li>
+      <li><a href="#s13">Sources and Disclaimer</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>The Two Models and the Core Legal Truth</h2>
+  <h3>Model A - Passenger carpool (strict cost-sharing)</h3>
+  <ul>
+    <li>Driver receives only a share of actual trip costs (fuel, tolls, wear). No profit, no pricing freedom beyond the cost-sharing formula.</li>
+    <li>This model has explicit legal recognition in almost every country reviewed here - it is treated as private, non-commercial travel and needs no transport licence.</li>
+    <li>The single rule that keeps it legal: the payment must never look like profit. Most jurisdictions cap or define what may be shared.</li>
+  </ul>
+  <h3>Model B - Cargo cost-sharing (a parcel contributes instead of a passenger)</h3>
+  <ul>
+    <li>The sender pays a contribution toward trip costs (sized like a seat contribution), the parcel rides in the trunk, and the platform takes a small service fee.</li>
+    <li>Pricing and messaging mirror the carpool model: "your parcel shares the trip cost", not "we sell courier shipping".</li>
+  </ul>
+  <div class="callout bad"><h4>The core legal truth - read this before anything else</h4>Passenger carpooling has a cost-sharing exemption almost everywhere. <strong>Cargo does not.</strong> In most jurisdictions any payment to carry another person's goods makes the trip "for hire" - the law does not care whether the fee only covers fuel. So "cost-sharing with cargo" is a business and pricing strategy, not a legal category. What actually decides cargo legality is different everywhere: (a) vehicle weight thresholds (UK: no licence under 3.5 t, Belgium: under 500 kg payload), (b) deregulated freight (Ontario, Alberta, BC), (c) broker/carrier authority (USA), and (d) enforcement culture. This guide is the map of those four factors.</div>
+
+  <h2 id="s2"><span class="num">2</span>Executive Summary - World Map</h2>
+  <p class="lead">In one line: Model A (carpool) is legal almost everywhere on earth. Model B (cargo) is workable in most of North America, the UK, the Netherlands, Belgium, Germany, Australia and India, but is a real legal problem in France, Spain, Quebec, Japan and South Korea - and in the USA it requires the broker-authority structure because there is no cargo cost-sharing exemption.</p>
+  <table>
+    <tr><th>Country / Region</th><th>Model A: passenger carpool (cost-sharing)</th><th>Model B: light cargo contribution</th><th>Overall verdict</th></tr>
+    <tr><td>USA (state-dependent)</td><td><span class="pill easy">EASY - all 50 states</span></td><td><span class="pill moderate">FMCSA / broker authority needed</span></td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td>Canada (province-dependent)</td><td><span class="pill easy">EASY - all 10 provinces</span></td><td><span class="pill easy">EASY in most (freight deregulated)</span></td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td>UK</td><td><span class="pill easy">EASY</span></td><td><span class="pill easy">EASY (no licence under 3.5 t)</span></td><td><span class="pill easy">EASY</span></td></tr>
+    <tr><td>France</td><td><span class="pill easy">EASY (covoiturage)</span></td><td><span class="pill difficult">Register + capacity exam</span></td><td><span class="pill difficult">DIFFICULT for cargo</span></td></tr>
+    <tr><td>Germany</td><td><span class="pill easy">EASY</span></td><td><span class="pill easy">EASY (no freight licence under 3.5 t)</span></td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td>Spain</td><td><span class="pill easy">EASY</span></td><td><span class="pill difficult">Transport authorisation (light vehicles too)</span></td><td><span class="pill difficult">DIFFICULT for cargo</span></td></tr>
+    <tr><td>Italy</td><td><span class="pill easy">EASY</span></td><td><span class="pill moderate">Register (Albo) per vehicle class</span></td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td>Netherlands</td><td><span class="pill easy">EASY</span></td><td><span class="pill easy">EASY (light vehicles)</span></td><td><span class="pill easy">EASY</span></td></tr>
+    <tr><td>Belgium</td><td><span class="pill easy">EASY</span></td><td><span class="pill easy">EASY (under 500 kg payload)</span></td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td>Nordics (DK/NO/SE/FI)</td><td><span class="pill easy">EASY</span></td><td><span class="pill moderate">Permit over 3.5 t only</span></td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td>Poland</td><td><span class="pill easy">EASY</span></td><td><span class="pill easy">EASY (light, domestic)</span></td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td>Australia</td><td><span class="pill easy">EASY (state-dependent)</span></td><td><span class="pill easy">EASY (ABN + insurance)</span></td><td><span class="pill easy">EASY</span></td></tr>
+    <tr><td>New Zealand</td><td><span class="pill easy">EASY</span></td><td><span class="pill moderate">Goods service licence</span></td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td>Japan</td><td><span class="pill nogo">RESTRICTED</span></td><td><span class="pill nogo">Commercial plates only</span></td><td><span class="pill nogo">NO-GO</span></td></tr>
+    <tr><td>South Korea</td><td><span class="pill difficult">RESTRICTED</span></td><td><span class="pill difficult">Restricted</span></td><td><span class="pill nogo">NO-GO</span></td></tr>
+    <tr><td>Singapore</td><td><span class="pill moderate">Capped (2 rides/day)</span></td><td><span class="pill moderate">Vehicle conversion needed</span></td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td>India</td><td><span class="pill easy">EASY</span></td><td><span class="pill easy">EASY (GST + insurance)</span></td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td>Brazil</td><td><span class="pill easy">EASY</span></td><td><span class="pill easy">EASY - MODERATE</span></td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td>Mexico</td><td><span class="pill easy">EASY</span></td><td><span class="pill moderate">Federal permit for hire</span></td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td>UAE</td><td><span class="pill nogo">RESTRICTED</span></td><td><span class="pill moderate">Business licence + permits</span></td><td><span class="pill difficult">DIFFICULT</span></td></tr>
+    <tr><td>Saudi Arabia</td><td><span class="pill nogo">RESTRICTED</span></td><td><span class="pill moderate">Licensed couriers</span></td><td><span class="pill difficult">DIFFICULT</span></td></tr>
+    <tr><td>Turkey</td><td><span class="pill moderate">GREY (carpool tolerated)</span></td><td><span class="pill moderate">K-type authorisations</span></td><td><span class="pill moderate">MODERATE - DIFFICULT</span></td></tr>
+  </table>
+
+  <h2 id="s3"><span class="num">3</span>USA - Federal Framework</h2>
+  <h3>Model A - passenger carpool</h3>
+  <ul>
+    <li>Legal in all 50 states and DC when compensation is only cost-sharing. Many state statutes codify a carpool or "ridesharing arrangement" exemption inside the TNC law (Virginia's is the clearest).</li>
+    <li>Interstate carpool trips are treated as private travel - no federal permit applies as long as no profit is made.</li>
+    <li>The trap: if the payment exceeds a genuine share of costs, the trip becomes a commercial TNC ride and state TNC permits, background checks and TNC insurance all kick in. Pricing must be a capped cost-sharing formula.</li>
+  </ul>
+  <h3>Model B - cargo contribution (no exemption exists)</h3>
+  <ul>
+    <li><strong>Interstate:</strong> carrying property for <strong>any</strong> compensation is for-hire transportation under FMCSA rules. There is no cost-sharing exemption for cargo. The compliant structure is the broker model: the platform holds FMCSA <strong>broker authority</strong> (MC number + USD 75,000 surety bond + BOC-3 process agent + UCR) and arranges transport through properly insured drivers. Roadie (UPS-owned) and similar platforms run this way.</li>
+    <li><strong>Intrastate (inside one state):</strong> rules vary - some states deregulated general freight, most require intrastate for-hire registration, and household-goods moves are regulated nearly everywhere. See the state table.</li>
+    <li><strong>Insurance reality:</strong> personal auto policies almost always exclude carrying goods for compensation. The platform must carry a cargo policy per trip (or blanket), plus commercial coverage on the driver side - never rely on personal policies.</li>
+  </ul>
+  <div class="callout good"><h4>Practical reading for the USA</h4>Model A is easy everywhere (cost-sharing only). Model B is doable but must run on the broker-authority structure - the "cost-sharing contribution" wording does not exempt it, it only keeps the pricing consumer-friendly. Start cargo in states with light freight regulation (FL, TX, AZ, GA).</div>
+
+  <h2 id="s4"><span class="num">4</span>USA - State by State</h2>
+  <p class="note">Ratings are for the two cost-sharing models only. Interstate cargo is governed by FMCSA in every state regardless.</p>
+  <table>
+    <tr><th>State</th><th>Model A: carpool cost-sharing</th><th>Model B: cargo note</th><th>Verdict</th></tr>
+    <tr><td><strong>California</strong></td><td>Allowed if cost-sharing only (CPUC TNC rules apply to for-profit rides)</td><td>Intrastate motor carrier permit (CA number) + strictest enforcement culture in the US</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Texas</strong></td><td>Allowed; state law (HB 100) preempts city rules</td><td>TxDMV intrastate for-hire registration; enforcement moderate</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>New York</strong></td><td>Allowed upstate; NYC is the strictest market in the US for compensated rides</td><td>NYSDOT intrastate authority for for-hire carriers</td><td><span class="pill difficult">DIFFICULT (NYC) / MODERATE (upstate)</span></td></tr>
+    <tr><td><strong>Florida</strong></td><td>Allowed; statewide law preempts cities</td><td>General freight largely deregulated; registration + insurance still apply - one of the lightest cargo states</td><td><span class="pill easy">EASY</span></td></tr>
+    <tr><td><strong>Washington</strong></td><td>Allowed</td><td>Intrastate for-hire permit (UTC)</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Oregon</strong></td><td>Allowed</td><td>ODOT intrastate authority for for-hire</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Colorado</strong></td><td>Allowed (first TNC statute, 2014)</td><td>Intrastate authority required for for-hire</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Illinois</strong></td><td>Allowed</td><td>Intrastate for-hire registration</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Georgia</strong></td><td>Allowed</td><td>Intrastate authority for for-hire carriers</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>North Carolina</strong></td><td>Allowed; locals preempted</td><td>For-hire intrastate authority</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>Virginia</strong></td><td>Explicit statutory carpool exemption - one of the clearest in the US</td><td>For-hire intrastate registration</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>Arizona</strong></td><td>Allowed</td><td>Relatively light freight regulation; registration applies</td><td><span class="pill easy">EASY</span></td></tr>
+    <tr><td><strong>Nevada</strong></td><td>Allowed</td><td>Intrastate for-hire authority (NTA)</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Massachusetts</strong></td><td>Allowed</td><td>For-hire intrastate authority; strong consumer enforcement</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Pennsylvania</strong></td><td>Allowed</td><td>PUC for-hire authority</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Ohio</strong></td><td>Allowed</td><td>PUCO for-hire registration</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Michigan</strong></td><td>Allowed</td><td>Intrastate for-hire registration</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>Tennessee</strong></td><td>Allowed</td><td>Intrastate authority for for-hire</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>New Jersey</strong></td><td>Allowed</td><td>For-hire registration; strict labor-law enforcement on gig work</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>Minnesota</strong></td><td>Allowed</td><td>For-hire intrastate registration</td><td><span class="pill moderate">MODERATE</span></td></tr>
+    <tr><td><strong>All other states</strong></td><td>Carpool cost-sharing broadly permitted everywhere</td><td>Assume intrastate for-hire registration + FMCSA for interstate</td><td><span class="pill moderate">MODERATE</span></td></tr>
+  </table>
+  <div class="callout"><h4>US conclusion</h4><strong>Easiest states for launch:</strong> Florida, Texas, Arizona, Georgia, North Carolina, Virginia. <strong>Hardest:</strong> NYC, California (enforcement + cargo permits), New Jersey. Model B everywhere first requires the FMCSA broker structure - it is a federal question before it is a state one.</div>
+
+  <h2 id="s5"><span class="num">5</span>Canada - Federal / Provincial Framework</h2>
+  <h3>Model A - passenger carpool</h3>
+  <ul>
+    <li>Legal in all 10 provinces when compensation is only a share of actual expenses. Quebec has the clearest statutory "covoiturage" exemption (the model Amigo Express runs on); BC's Passenger Transportation Board explicitly excludes non-commercial carpools; Ontario permits cost-sharing arrangements without a licence.</li>
+    <li>Profit triggers the TNC/taxi regime, so pricing must stay a capped cost-sharing formula. For-profit passenger transport is out of scope for this project.</li>
+    <li>Interprovincial cost-sharing carpool is treated as private travel - the safe design for cross-border corridors.</li>
+  </ul>
+  <h3>Model B - cargo contribution</h3>
+  <ul>
+    <li><strong>Intra-provincial:</strong> most provinces deregulated freight economics decades ago - Ontario, Alberta, BC, Saskatchewan and Manitoba require no operating authority for intra-provincial truck freight, only safety registration (National Safety Code / CVOR-style, applying to commercial vehicles) and commercial insurance. A private car carrying parcels needs correct courier insurance and business registration - personal policies will not cover it.</li>
+    <li><strong>Quebec is the exception:</strong> the Commission des transports du Quebec (CTQ) permits for-hire goods carriers and brokers - cargo sharing in Quebec needs CTQ structure, making it the hardest cargo province.</li>
+    <li><strong>Extra-provincial (a paid parcel crossing a provincial border):</strong> federally governed - extra-provincial undertakings need a safety fitness certificate and, for trucks, provincially issued extra-provincial authority. A private car carrying a paid parcel across a border sits in a grey zone; start intra-provincial and structure cross-border lanes through licensed carriers.</li>
+  </ul>
+  <div class="callout good"><h4>Practical reading for Canada</h4>Canada is one of the friendliest places on earth for both models: carpool cost-sharing is legal in all 10 provinces, and light cargo inside most provinces is deregulated. Friction points: Quebec's CTQ for cargo, and the extra-provincial layer for any paid cross-border parcel.</div>
+
+  <h2 id="s6"><span class="num">6</span>Canada - Province by Province</h2>
+  <table>
+    <tr><th>Province</th><th>Model A: carpool cost-sharing</th><th>Model B: light cargo note</th><th>Verdict</th></tr>
+    <tr><td><strong>Ontario</strong></td><td>Allowed - cost-sharing only, no licence</td><td>Intra-provincial freight deregulated; safety registration (CVOR for trucks) + courier insurance</td><td><span class="pill easy">EASY</span></td></tr>
+    <tr><td><strong>Quebec</strong></td><td>Covoiturage explicitly legal (expenses only) - Amigo Express model</td><td>CTQ authorization required for for-hire goods (carrier and broker permits) - strictest cargo regime in Canada</td><td><span class="pill difficult">DIFFICULT for cargo</span></td></tr>
+    <tr><td><strong>British Columbia</strong></td><td>Excluded from PTB regime when non-commercial</td><td>Intra-provincial freight deregulated; National Safety Code registration + insurance</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>Alberta</strong></td><td>Allowed - cost-sharing only</td><td>Freight deregulated; safety fitness + insurance</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>Saskatchewan</strong></td><td>Allowed</td><td>Freight deregulated; safety registration + insurance</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>Manitoba</strong></td><td>Allowed</td><td>Freight deregulated; safety registration + insurance</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>Nova Scotia</strong></td><td>Allowed</td><td>Safety registration + insurance; small market</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>New Brunswick</strong></td><td>Allowed</td><td>Safety registration + insurance</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>PEI / Newfoundland and Labrador</strong></td><td>Allowed</td><td>Safety registration + insurance</td><td><span class="pill easy">EASY - MODERATE</span></td></tr>
+    <tr><td><strong>Territories (YT/NT/NU)</strong></td><td>Cost-sharing tolerated in practice</td><td>Very small markets, general safety rules</td><td><span class="pill verify">VERIFY</span></td></tr>
+  </table>
+  <div class="callout"><h4>Canada conclusion</h4><strong>Easiest launch provinces:</strong> Ontario (biggest corridors + deregulated freight), BC, Alberta. <strong>Hardest:</strong> Quebec for cargo (CTQ permits). Every paid parcel crossing a provincial border adds the federal extra-provincial layer - start intra-provincial (Toronto-Ottawa, Montreal-Quebec, Vancouver-Kelowna).</div>
+
+  <h2 id="s7"><span class="num">7</span>Europe - Country Review</h2>
+  <div class="card"><h4>United Kingdom</h4>
+    <p><strong>Model A:</strong> legal when only expenses are shared. <strong>Model B:</strong> a goods vehicle operator licence ("O-licence") is required only above 3.5 t gross weight - a car or small van doing courier work needs no operator licence, just business registration and "hire and reward" insurance. One of the easiest countries for both models. Note: Uber's UK Supreme Court ruling makes drivers "workers" - design the driver relationship carefully.</p>
+    <p><span class="pill easy">EASY</span> <span class="pill verify">Employment-law note</span></p>
+  </div>
+  <div class="card"><h4>France</h4>
+    <p><strong>Model A:</strong> covoiturage is legal and state-promoted, but strictly cost-sharing - the 2015 Thevenoud law banned for-profit carpooling. <strong>Model B:</strong> strict - even light commercial vehicles under 3.5 t doing public goods transport must register in the national transport register and prove "light transport professional capacity" (certified manager). A private car carrying parcels for a contribution has no legal frame here.</p>
+    <p><span class="pill difficult">DIFFICULT for cargo</span> <span class="pill easy">Carpool EASY</span></p>
+  </div>
+  <div class="card"><h4>Germany</h4>
+    <p><strong>Model A:</strong> Mitfahrzentralen (cost-sharing platforms) legal; drivers may only share actual costs. <strong>Model B:</strong> freight licence (GüKG) needed above 3.5 t; under 3.5 t no freight licence, but the courier business must be registered (Gewerbe) with courier insurance. Light cargo cost-sharing is workable.</p>
+    <p><span class="pill easy">EASY - MODERATE</span></p>
+  </div>
+  <div class="card"><h4>Spain</h4>
+    <p><strong>Model A:</strong> legal cost-sharing (Blablacar.es). <strong>Model B:</strong> public goods transport requires a transport authorization (tarjeta), extended in recent reforms down to light vehicles (MDL category) - heavy compliance for a P2P parcel model.</p>
+    <p><span class="pill difficult">DIFFICULT for cargo</span></p>
+  </div>
+  <div class="card"><h4>Italy</h4>
+    <p><strong>Model A:</strong> legal cost-sharing. <strong>Model B:</strong> for-hire goods carriers register with the national road transport register (Albo autotrasportatori) depending on vehicle class; light courier work possible with registration and insurance.</p>
+    <p><span class="pill moderate">MODERATE</span></p>
+  </div>
+  <div class="card"><h4>Netherlands</h4>
+    <p><strong>Model A:</strong> legal cost-sharing. <strong>Model B:</strong> no special transport licence for light vehicles - business registration and professional insurance suffice. One of the easiest EU cargo jurisdictions.</p>
+    <p><span class="pill easy">EASY</span> <span class="pill verify">Drivers ruled employees in a 2021 court case</span></p>
+  </div>
+  <div class="card"><h4>Belgium</h4>
+    <p><strong>Model A:</strong> legal covoiturage. <strong>Model B:</strong> transport for third parties needs a licence above 500 kg payload; under 500 kg payload is exempt - small parcels in a private car are licence-free in practice.</p>
+    <p><span class="pill easy">EASY - MODERATE</span></p>
+  </div>
+  <div class="card"><h4>Nordics (Denmark, Norway, Sweden, Finland)</h4>
+    <p><strong>Model A:</strong> legal cost-sharing (Denmark is strict if profit appears - Uber left in 2017). <strong>Model B:</strong> goods permits (godskørselstilladelse / løyve / trafiktillstånd) required above 3.5 t; light vehicles generally exempt. Nimber (Norway) ran light crowdshipping until it shut down for business reasons in 2020, not legality.</p>
+    <p><span class="pill easy">EASY - MODERATE</span></p>
+  </div>
+  <div class="card"><h4>Poland</h4>
+    <p><strong>Model A:</strong> legal cost-sharing. <strong>Model B:</strong> domestic road transport licence required above 2.5-3.5 t; light vehicles below the threshold do domestic courier work licence-free. Accessible market for a light cargo MVP.</p>
+    <p><span class="pill easy">EASY - MODERATE</span></p>
+  </div>
+  <div class="callout warn"><h4>EU overlay</h4>Since the 2017 European Court of Justice ruling, platforms matching paid transport are treated as transport services in each member state - national law applies directly. Cost-sharing carpool platforms sit in a lighter frame, but cargo always lands in the national goods-transport regime.</div>
+
+  <h2 id="s8"><span class="num">8</span>Asia-Pacific - Country Review</h2>
+  <div class="card"><h4>Japan</h4>
+    <p><strong>Model A:</strong> carrying people for payment requires commercial vehicle registration (green plates) and a Class 2 driver licence; private-car ridesharing is illegal outside limited taxi-supervised pilots. <strong>Model B:</strong> commercial goods transport also requires business-use registration - private "white plate" cars may not carry for hire.</p>
+    <p><span class="pill nogo">NO-GO for both models</span></p>
+  </div>
+  <div class="card"><h4>South Korea</h4>
+    <p><strong>Model A:</strong> paid transport in private cars is illegal; carpool apps tolerated only for commuting-style use. <strong>Model B:</strong> private cars carrying goods for pay restricted to licensed transport businesses.</p>
+    <p><span class="pill nogo">NO-GO</span></p>
+  </div>
+  <div class="card"><h4>Singapore</h4>
+    <p><strong>Model A:</strong> non-commercial carpooling (GrabHitch model) allowed but capped at 2 trips per day per driver. <strong>Model B:</strong> private cars must be converted to goods vehicles for courier use - possible but regulated.</p>
+    <p><span class="pill moderate">MODERATE</span></p>
+  </div>
+  <div class="card"><h4>India</h4>
+    <p><strong>Model A:</strong> carpool apps (BlaBlaCar India, QuickRide) run on cost-sharing and are accepted. <strong>Model B:</strong> light courier is easy - GST registration, insurance and local permits; no heavy licensing for small vehicles.</p>
+    <p><span class="pill easy">EASY - MODERATE</span></p>
+  </div>
+  <div class="card"><h4>Australia</h4>
+    <p><strong>Model A:</strong> casual carpooling cost-sharing permitted in every state (ride-hail is separately accredited; drivers must register for GST regardless of income). <strong>Model B:</strong> light couriers need an ABN, insurance and vehicle standards - no heavy licensing.</p>
+    <p><span class="pill easy">EASY</span></p>
+  </div>
+  <div class="card"><h4>New Zealand</h4>
+    <p><strong>Model A:</strong> carpool cost-sharing exempt from small passenger service licensing. <strong>Model B:</strong> a goods service licence is required to carry goods for hire - a real but obtainable step.</p>
+    <p><span class="pill moderate">MODERATE</span></p>
+  </div>
+
+  <h2 id="s9"><span class="num">9</span>Americas, Middle East and Turkey</h2>
+  <div class="card"><h4>Brazil</h4>
+    <p><strong>Model A:</strong> BlaBlaCar Brazil runs intercity carpooling on cost-sharing, broadly accepted. <strong>Model B:</strong> freight is ANTT-regulated for carriers, but light courier businesses operate with standard registration and insurance.</p>
+    <p><span class="pill easy">EASY - MODERATE</span></p>
+  </div>
+  <div class="card"><h4>Mexico</h4>
+    <p><strong>Model A:</strong> carpooling cost-sharing generally tolerated; ride-hail is state-regulated and some states ban it. <strong>Model B:</strong> for-hire freight requires a federal permit (SCT); small parcels in private cars is a grey zone with low enforcement.</p>
+    <p><span class="pill moderate">MODERATE</span> <span class="pill verify">State-by-state variance</span></p>
+  </div>
+  <div class="card"><h4>United Arab Emirates (Dubai / Abu Dhabi)</h4>
+    <p><strong>Model A:</strong> private carpooling for payment is not permitted - only RTA-licensed e-hail operators. <strong>Model B:</strong> courier work requires a trade licence and RTA/municipal permits. Everything is licensed, nothing is casual.</p>
+    <p><span class="pill difficult">DIFFICULT</span></p>
+  </div>
+  <div class="card"><h4>Saudi Arabia</h4>
+    <p><strong>Model A:</strong> private carpooling for money not permitted; ride-hail only via licensed operators. <strong>Model B:</strong> licensed courier businesses only.</p>
+    <p><span class="pill difficult">DIFFICULT</span></p>
+  </div>
+  <div class="card"><h4>Turkey</h4>
+    <p><strong>Model A:</strong> intercity carpooling (BlaBlaCar Türkiye is widely used) sits in a tolerated grey zone with periodic legal pressure; commercial passenger transport requires a D2 authorization. <strong>Model B:</strong> commercial goods carriage requires K-type authorizations (K1/K3); a private car carrying parcels for strangers for a contribution is a grey zone. Cheap intercity bus cargo is the incumbent substitute.</p>
+    <p><span class="pill moderate">MODERATE - DIFFICULT</span> <span class="pill verify">Court rulings shift the carpool status - re-verify before launch</span></p>
+  </div>
+
+  <h2 id="s10"><span class="num">10</span>Where Both Models Are Easiest (Top 12)</h2>
+  <p class="lead">Ranked for launching carpool cost-sharing first, cargo contributions second. The score weighs: carpool legality, light-cargo licensing burden, insurance availability and enforcement culture.</p>
+  <table>
+    <tr><th>Rank</th><th>Jurisdiction</th><th>Why it wins</th><th>Watch out for</th></tr>
+    <tr><td>1</td><td><strong>UK</strong></td><td>No goods licence under 3.5 t; carpool cost-sharing legal; courier insurance widely available</td><td>Driver "worker" status law</td></tr>
+    <tr><td>2</td><td><strong>Ontario, Canada</strong></td><td>Deregulated intra-provincial freight; carpool legal; huge Toronto corridors</td><td>Cross-province parcels trigger federal layer</td></tr>
+    <tr><td>3</td><td><strong>Netherlands</strong></td><td>No light-vehicle transport licence; clear carpool rules</td><td>Drivers may count as employees (2021 ruling)</td></tr>
+    <tr><td>4</td><td><strong>Australia</strong></td><td>Both models settled and light</td><td>GST registration for drivers</td></tr>
+    <tr><td>5</td><td><strong>Florida / Texas / Arizona (USA)</strong></td><td>Light freight regulation, clear carpool exemptions, big intercity lanes</td><td>FMCSA broker authority needed for cargo</td></tr>
+    <tr><td>6</td><td><strong>Germany</strong></td><td>No freight licence under 3.5 t; strong cost-sharing tradition</td><td>Gewerbe registration; strict if profit creeps in</td></tr>
+    <tr><td>7</td><td><strong>Belgium</strong></td><td>No licence under 500 kg payload - the clearest light-parcel exemption</td><td>Small market</td></tr>
+    <tr><td>8</td><td><strong>Alberta / BC (Canada)</strong></td><td>Deregulated freight, carpool legal, strong city pairs</td><td>Insurance products for TNC-style coverage</td></tr>
+    <tr><td>9</td><td><strong>Poland</strong></td><td>Light domestic courier licence-free; large intercity market</td><td>Licence needed above 2.5 t</td></tr>
+    <tr><td>10</td><td><strong>India</strong></td><td>Huge demand, light courier easy, carpool apps accepted</td><td>State-level licences; price controls</td></tr>
+    <tr><td>11</td><td><strong>Nordics</strong></td><td>Light cargo exempt; mature cost-sharing culture</td><td>Denmark strict if profit appears; small markets</td></tr>
+    <tr><td>12</td><td><strong>Brazil</strong></td><td>Carpool established; light courier straightforward</td><td>Freight registration; city-level friction</td></tr>
+  </table>
+
+  <h2 id="s11"><span class="num">11</span>Where It Is Impossible or Very Difficult</h2>
+  <table>
+    <tr><th>Jurisdiction</th><th>What is blocked</th><th>Severity</th></tr>
+    <tr><td><strong>Japan</strong></td><td>Private cars cannot carry passengers or goods for pay (white plate rule). Only taxi-supervised pilots exist.</td><td><span class="pill nogo">NO-GO</span></td></tr>
+    <tr><td><strong>South Korea</strong></td><td>Paid private-car transport illegal; carpool limited to commuting; cargo restricted to licensed businesses.</td><td><span class="pill nogo">NO-GO</span></td></tr>
+    <tr><td><strong>Denmark</strong></td><td>For-profit passenger rides effectively banned (Uber left in 2017); cargo needs permits above 3.5 t.</td><td><span class="pill difficult">DIFFICULT for passengers</span></td></tr>
+    <tr><td><strong>Hungary, Bulgaria</strong></td><td>Ride-share apps squeezed out by taxi-protective laws; cost-sharing carpool still tolerated in practice.</td><td><span class="pill nogo">NO-GO for profit</span></td></tr>
+    <tr><td><strong>France</strong></td><td>Cargo: registration + professional capacity required even for light vehicles - no P2P cargo frame.</td><td><span class="pill difficult">DIFFICULT for cargo</span></td></tr>
+    <tr><td><strong>Spain</strong></td><td>Cargo: transport authorizations extended to light vehicles (MDL category).</td><td><span class="pill difficult">DIFFICULT for cargo</span></td></tr>
+    <tr><td><strong>Quebec, Canada</strong></td><td>CTQ permits required for for-hire goods carriage - strictest cargo regime in North America.</td><td><span class="pill difficult">DIFFICULT for cargo</span></td></tr>
+    <tr><td><strong>New York City</strong></td><td>TLC licensing for any compensated passenger transport; strict enforcement.</td><td><span class="pill difficult">DIFFICULT</span></td></tr>
+    <tr><td><strong>UAE</strong></td><td>Only RTA-licensed operators; private carpooling for pay not permitted.</td><td><span class="pill difficult">DIFFICULT</span></td></tr>
+    <tr><td><strong>Saudi Arabia</strong></td><td>Licensed operators only; private paid carpool not permitted.</td><td><span class="pill difficult">DIFFICULT</span></td></tr>
+    <tr><td><strong>Turkey</strong></td><td>Carpool is a tolerated grey zone; cargo needs K-type authorizations.</td><td><span class="pill moderate">GREY - re-verify</span></td></tr>
+  </table>
+
+  <h2 id="s12"><span class="num">12</span>Launch Compliance Checklist</h2>
+  <ol>
+    <li><strong>Price as cost-sharing, not fares:</strong> passenger contributions capped to a documented cost formula (km-based fuel + tolls share); cargo contributions sized as a seat-equivalent share. Publish the formula - it is the best evidence of non-commercial intent in every carpool jurisdiction.</li>
+    <li><strong>Cargo legal structure per market:</strong> FMCSA broker authority (USD 75,000 bond) in the USA; CTQ permits in Quebec; respect vehicle weight thresholds in the EU/UK (3.5 t, 500 kg Belgium, 2.5 t Poland) so drivers stay under the licence line; use licensed carriers for cross-border lanes in Canada.</li>
+    <li><strong>Insurance stack:</strong> platform cargo policy per trip (or blanket policy), verified parcel add-on, courier / hire-and-reward coverage on the driver side. Personal auto policies are invalid for this activity - never rely on them.</li>
+    <li><strong>Driver onboarding:</strong> ID and background checks, licence validation, vehicle inspection, written confirmation that the driver only shares costs (passengers) and acts under the platform's authority (cargo).</li>
+    <li><strong>Payment design:</strong> escrow, no cash payouts before delivery, cost-sharing caps enforced in the app so a driver cannot turn a shared trip into a commercial one.</li>
+    <li><strong>Taxes:</strong> platform collects/remits where required (GST/HST for Canadian rideshare drivers, GST for Australian drivers, VAT treatment in the EU).</li>
+    <li><strong>Employment-law review:</strong> UK, Netherlands and New Zealand treat drivers as workers/employees - design the driver relationship with local counsel.</li>
+    <li><strong>Monitor legal drift:</strong> Turkey's carpool status, Korea's carpool rules, and US state rules change frequently - re-verify quarterly.</li>
+  </ol>
+
+  <h2 id="s13"><span class="num">13</span>Sources and Disclaimer</h2>
+  <ul>
+    <li>Primary research: FMCSA operating authority and insurance framework; "Legality of ridesharing companies by jurisdiction" (Wikipedia, reviewed for this document); EU Court of Justice Elite Taxi ruling (2017); France Thevenoud Law (2015); Quebec CTQ goods transport regime; BC Passenger Transportation Board carpool exemption; Ontario TNC rules and deregulated freight; Texas HB 100; California CPUC TNC rules; Japan Road Transportation Act; Singapore LTA carpool caps; Uber UK Supreme Court worker ruling; New Zealand Land Transport Act.</li>
+    <li>Where a cell carries a <span class="pill verify">VERIFY</span> tag, the rule changes often or is jurisdiction-specific in detail - confirm with local counsel before relying on it.</li>
+    <li><strong>This document is business research, not legal advice.</strong> Transport licensing, insurance validity and employment law must be confirmed with qualified lawyers in each launch jurisdiction.</li>
+    <li>Companion documents in this folder: <em>CargoOnly-Marketplace-BusinessPlan.html</em> and <em>CarShareWithParcel-BusinessPlan.html</em>.</li>
+  </ul>
+
+  <footer>Regulation Guide - Cost-Sharing Carpool and Cargo by Jurisdiction - prepared November 2026 - research document, not legal advice.</footer>
+</div>
+</body>
+</html>

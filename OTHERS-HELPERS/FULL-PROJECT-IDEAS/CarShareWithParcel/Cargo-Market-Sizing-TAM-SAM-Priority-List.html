@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargo Market Size Reports - Free Markets Only - TAM / SAM / SOM</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --line:#e2e8f0;
+    --panel:#f8fafc;
+    --panel2:#f1f5f9;
+    --accent:#c2410c;
+    --accent-soft:#ffedd5;
+    --easy:#15803d;
+    --easy-bg:#ecfdf5;
+    --moderate:#b45309;
+    --moderate-bg:#fffbeb;
+    --hard:#b91c1c;
+    --hard-bg:#fef2f2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.65;
+  }
+  .toolbar{
+    display:flex;gap:10px;justify-content:flex-end;align-items:center;
+    padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .toolbar button{
+    border:1px solid var(--accent);background:var(--bg);color:var(--accent);
+    padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .toolbar button:hover{background:var(--accent);color:#ffffff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1060px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{
+    border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;
+    padding:34px 38px;margin-bottom:26px;background:var(--bg);
+  }
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:29px;line-height:1.25;margin:8px 0 10px;color:var(--ink);}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:800px;}
+  .hero .meta{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{
+    font-size:21px;margin:44px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  h2 .num{
+    background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  }
+  h3{font-size:16.5px;margin:22px 0 8px;color:var(--ink);}
+  h4{font-size:14.5px;margin:14px 0 6px;}
+  p{margin:8px 0;}
+  ul,ol{margin:8px 0 12px 22px;}
+  li{margin:4px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid transparent;white-space:nowrap;}
+  .pill.free{background:var(--easy-bg);color:var(--easy);border-color:#bbf7d0;}
+  .pill.w1{background:var(--easy-bg);color:var(--easy);border-color:#bbf7d0;}
+  .pill.w2{background:var(--moderate-bg);color:var(--moderate);border-color:#fde68a;}
+  .pill.info{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+  .callout{
+    border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;
+    margin:14px 0;
+  }
+  .callout.warn{border-color:#fbbf24;background:var(--moderate-bg);}
+  .callout.good{border-color:#34d399;background:var(--easy-bg);}
+  .callout h4{font-size:14px;margin:0 0 4px;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  @media (max-width:700px){.toc ol{columns:1;}}
+  .toc a{color:var(--ink);text-decoration:none;}
+  .toc a:hover{color:var(--accent);}
+  .card{
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:var(--panel);margin:10px 0;
+  }
+  .card h4{font-size:14.5px;color:var(--accent);margin-bottom:4px;}
+  .card p{font-size:13.5px;color:#334155;margin:2px 0;}
+  .card ul{margin:6px 0 0 18px;font-size:13.5px;}
+  .rank{font-size:12px;font-weight:800;color:#fff;background:var(--accent);border-radius:999px;padding:2px 9px;margin-right:6px;}
+  .formula{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13.5px;margin:12px 0;overflow-x:auto;
+  }
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  @media print{
+    .toolbar{display:none;}
+    body{font-size:12px;}
+    .page{max-width:none;padding:0;}
+    h2{page-break-after:avoid;}
+    table,.card,.callout,.formula{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">CARGO MARKET SIZE REPORTS - FREE MARKETS ONLY</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Market Size Reports - Cargo Lane</div>
+    <h1>Cargo Market Size Reports<br><span style="color:var(--muted);font-size:21px;">Free markets only - TAM, SAM and SOM</span></h1>
+    <p class="sub">Only the markets where the cargo lane can run without regulatory blockage are reported here. A free market means cargo regulation difficulty 1 or 2 on the companion guide scale: no transport licence required for light vehicles, only registration and insurance. Markets that need operating authority, federal permits or full carrier registration are excluded.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>12 free markets reported</span>
+      <span>All figures illustrative and adjustable</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">The Free-Market Filter</a></li>
+      <li><a href="#s2">Market Size Report - Master Scoreboard (top report)</a></li>
+      <li><a href="#s3">Market Reports - One Page Each</a></li>
+      <li><a href="#s4">Launch Waves - Free Markets Only</a></li>
+      <li><a href="#s5">US and Canada Focus - Florida and Ontario Registration</a></li>
+      <li><a href="#s6">TAM, SAM, SOM - Definitions</a></li>
+      <li><a href="#s7">Methodology and Assumptions</a></li>
+      <li><a href="#s8">Excluded Markets (blocked or restricted)</a></li>
+      <li><a href="#s9">How to Adjust the Model</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>The Free-Market Filter</h2>
+  <p class="lead">The rule that decides what appears in this document: <strong>cargo regulation difficulty 1 or 2 on the companion guide scale - meaning light vehicles carry for hire with no transport licence, only business registration and proper insurance.</strong> Anything that requires an operating authority, a federal permit, a carrier registration with a professional exam, or sits in a legal grey zone is filtered out.</p>
+  <ul>
+    <li><span class="pill free">FREE - difficulty 1</span> No licence at all for light vehicles: UK, Netherlands, Belgium.</li>
+    <li><span class="pill free">FREE - difficulty 2</span> Registration + insurance only, no transport licence: Germany, Australia, Florida, Ontario, British Columbia, Alberta, Poland, India, Nordics.</li>
+    <li><span class="pill info">FILTERED OUT - difficulty 3 to 5</span> Broker authority, federal permits, carrier registration, capacity exams or grey zones required: Texas, California, Turkey, France, Spain, Brazil, Mexico, Quebec, New Zealand - plus the NO-GO countries (Japan, South Korea, UAE, Saudi Arabia). Listed with reasons in section 8.</li>
+  </ul>
+
+  <h2 id="s2"><span class="num">2</span>Market Size Report - Master Scoreboard</h2>
+  <p class="note"><strong>All TAM, SAM and SOM figures are PER YEAR (annual), not per month.</strong> They measure the annual value of cost-sharing contributions (the platform earns its 15-20% service fee on these amounts). Ranking score = SAM x (6 - cargo difficulty). All free markets ranked:</p>
+  <table>
+    <tr><th>Rank</th><th>Market</th><th class="num">TAM (M EUR / year)</th><th class="num">SAM (M EUR / year)</th><th class="num">SOM Year 1 (k EUR)</th><th class="num">SOM Year 3 (k EUR)</th><th>Cargo reg. difficulty</th><th class="num">Ranking score</th><th>Wave</th></tr>
+    <tr><td><span class="rank">1</span></td><td><strong>United Kingdom</strong></td><td class="num">245</td><td class="num">7.4</td><td class="num">22</td><td class="num">147</td><td><span class="pill free">1 - no licence</span></td><td class="num"><strong>36.8</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">2</span></td><td><strong>Germany</strong></td><td class="num">378</td><td class="num">9.1</td><td class="num">27</td><td class="num">181</td><td><span class="pill free">2 - registration only</span></td><td class="num"><strong>36.3</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">3</span></td><td><strong>Australia</strong></td><td class="num">128</td><td class="num">3.8</td><td class="num">12</td><td class="num">77</td><td><span class="pill free">2 - ABN + insurance</span></td><td class="num"><strong>15.4</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">4</span></td><td><strong>Netherlands</strong></td><td class="num">54</td><td class="num">2.6</td><td class="num">8</td><td class="num">52</td><td><span class="pill free">1 - no licence</span></td><td class="num"><strong>13.0</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">5</span></td><td><strong>Florida</strong></td><td class="num">90</td><td class="num">3.2</td><td class="num">10</td><td class="num">65</td><td><span class="pill free">2 - registration only</span></td><td class="num"><strong>13.0</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">6</span></td><td><strong>Ontario</strong></td><td class="num">67</td><td class="num">2.8</td><td class="num">8</td><td class="num">56</td><td><span class="pill free">2 - deregulated freight</span></td><td class="num"><strong>11.2</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">7</span></td><td><strong>Belgium</strong></td><td class="num">36</td><td class="num">1.5</td><td class="num">5</td><td class="num">30</td><td><span class="pill free">1 - exempt under 500 kg</span></td><td class="num"><strong>7.6</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">8</span></td><td><strong>Poland</strong></td><td class="num">87</td><td class="num">1.7</td><td class="num">5</td><td class="num">35</td><td><span class="pill free">2 - licence-free under 2.5 t</span></td><td class="num"><strong>7.0</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">9</span></td><td><strong>India</strong></td><td class="num">180</td><td class="num">1.4</td><td class="num">4</td><td class="num">29</td><td><span class="pill free">2 - GST + insurance</span></td><td class="num"><strong>5.8</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">10</span></td><td><strong>Nordics</strong></td><td class="num">79</td><td class="num">1.4</td><td class="num">4</td><td class="num">28</td><td><span class="pill free">2 - permits above 3.5 t only</span></td><td class="num"><strong>5.7</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">11</span></td><td><strong>British Columbia</strong></td><td class="num">24</td><td class="num">0.9</td><td class="num">3</td><td class="num">17</td><td><span class="pill free">2 - deregulated freight</span></td><td class="num"><strong>3.4</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">12</span></td><td><strong>Alberta</strong></td><td class="num">19</td><td class="num">0.8</td><td class="num">2</td><td class="num">16</td><td><span class="pill free">2 - deregulated freight</span></td><td class="num"><strong>3.2</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+  </table>
+  <div class="callout warn"><h4>Reading the numbers correctly</h4>SOM Year 3 for the UK (147 k EUR of contributions per year) is about 26 k EUR of platform revenue at an 18% service fee - a realistic, honest corridor win. The point of this model is ranking and sequencing, not fundraising hype. Growth comes from replicating corridors, which is why SAM, not TAM, drives the ranking.</div>
+
+  <h2 id="s3"><span class="num">3</span>Market Reports - One Page Each</h2>
+  <div class="card"><h4><span class="rank">1</span>United Kingdom - SAM 7.4 M EUR</h4>
+    <p>68 M x 4 parcels x 15% fit x 6.5 EUR = 245 M TAM; x 25% corridors x 12% niche = 7.4 M SAM. No goods licence under 3.5 t, courier insurance widely available, London-Manchester lanes are dense. The cleanest big cargo market in Europe - launch London-Birmingham and London-Manchester.</p>
+    <ul><li>Watch: driver worker-status law; hire-and-reward insurance required per driver.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">2</span>Germany - SAM 9.1 M EUR</h4>
+    <p>84 M x 5 parcels x 15% fit x 6 EUR = 378 M TAM - Europe's largest parcel market. Light vehicles need no freight licence, only Gewerbe registration and courier insurance. Berlin-Hamburg and Frankfurt-Munich lanes carry heavy business travel.</p>
+    <ul><li>Watch: strict cost-sharing rules if the contribution looks like profit; registration per courier business.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">3</span>Australia - SAM 3.8 M EUR</h4>
+    <p>27 M x 3.5 parcels x 15% fit x 9 EUR (long 660-920 km lanes justify higher contributions) = 128 M TAM. ABN + insurance, no heavy licensing. Sydney-Melbourne is the single best long lane in the ranking.</p>
+    <ul><li>Watch: drivers must register for GST regardless of income (ATO rule).</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">4</span>Netherlands - SAM 2.6 M EUR</h4>
+    <p>18 M x 4 parcels x 15% fit x 5 EUR = 54 M TAM, with a 40% corridor share because the Randstad is the corridor. No transport licence for light vehicles. Small but frictionless - a perfect testing ground for the EU playbook.</p>
+    <ul><li>Watch: drivers ruled employees in a 2021 court case - design the driver relationship.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">5</span>Florida - SAM 3.2 M EUR</h4>
+    <p>23 M x 4 parcels x 15% fit x 6.5 EUR = 90 M TAM; Miami-Orlando-Tampa lanes with light freight regulation and statewide preemption. The easiest US cargo state by compliance burden.</p>
+    <ul><li>Watch: tourism seasonality - build the resident business base.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">6</span>Ontario - SAM 2.8 M EUR</h4>
+    <p>16 M x 4 parcels x 15% fit x 7 EUR = 67 M TAM with a 35% corridor share - Toronto's lanes are the densest in Canada. Intra-provincial freight is deregulated: safety registration and courier insurance only.</p>
+    <ul><li>Watch: stay intra-provincial at launch - cross-province parcels trigger the federal layer.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">7</span>Belgium - SAM 1.5 M EUR</h4>
+    <p>12 M x 4 parcels x 15% fit x 5 EUR = 36 M TAM; 35% corridor share around Brussels-Antwerp-Liege. Exempt under 500 kg payload - small parcels in a private car are licence-free. Small but zero friction.</p>
+    <ul><li>Watch: cross-border lanes to NL/FR change the rules - stay domestic first.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">8</span>Poland - SAM 1.7 M EUR</h4>
+    <p>37 M x 3.5 parcels x 15% fit x 4.5 EUR = 87 M TAM; Warsaw-Krakow and Warsaw-Gdansk lanes. Licence-free under 2.5 t for domestic courier work. Large intercity market with rising e-commerce.</p>
+    <ul><li>Watch: licence needed above 2.5 t - enforce the vehicle limit in onboarding.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">9</span>India - SAM 1.4 M EUR</h4>
+    <p>250 M urban corridor population x 1.2 parcels x 20% fit x 3 EUR = 180 M TAM; small EUR tickets shrink the SAM, but the volume is enormous - a volume play, not a value play. GST + insurance, no heavy licensing for light couriers.</p>
+    <ul><li>Watch: state-level licences vary - pick one state first; scale by state, not nationally.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">10</span>Nordics - SAM 1.4 M EUR</h4>
+    <p>27 M x 3 parcels x 15% fit x 6.5 EUR = 79 M TAM across Denmark, Norway, Sweden, Finland. Light vehicles exempt from goods permits; mature cost-sharing culture. Fragmented - treat as one market only for reporting.</p>
+    <ul><li>Watch: Denmark is strict on the passenger side - cargo lane only.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">11</span>British Columbia - SAM 0.9 M EUR</h4>
+    <p>5.6 M x 4 parcels x 15% fit x 7 EUR = 24 M TAM; x 30% corridors x 12% niche = 0.9 M SAM. Intra-provincial freight is deregulated: National Safety Code registration for commercial vehicles, courier insurance for private cars. Vancouver-Kelowna and Vancouver-Kamloops are the lanes.</p>
+    <ul><li>Watch: Vancouver-Calgary crosses into Alberta - the extra-provincial layer applies; skip Vancouver Island lanes at launch (ferry cost eats the contribution).</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">12</span>Alberta - SAM 0.8 M EUR</h4>
+    <p>4.9 M x 4 parcels x 15% fit x 6.5 EUR = 19 M TAM; x 35% corridors x 12% niche = 0.8 M SAM. Freight deregulated: safety fitness certificate for commercial carriers, courier insurance for cars. Calgary-Edmonton (~300 km) is one of the cleanest single lanes in Canada.</p>
+    <ul><li>Watch: Edmonton-Fort McMurray adds length and is a commuter lane with real demand - candidate second lane.</li></ul>
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>Launch Waves - Free Markets Only</h2>
+  <div class="card"><h4>Wave 1 - Months 0-12: <span class="pill w1">UK, Germany, Netherlands, Florida, Ontario</span></h4>
+    <p>High SAM combined with the lightest cargo rules. Sequence the corridors: London-Manchester (UK), Berlin-Hamburg (Germany), Miami-Orlando (Florida), Toronto-Ottawa (Ontario), Randstad ring (Netherlands).</p>
+  </div>
+  <div class="card"><h4>Wave 2 - Months 12-24: <span class="pill w2">Australia, Belgium, Poland, India, Nordics, British Columbia, Alberta</span></h4>
+    <p>Australia's long lanes justify higher contributions; Belgium is frictionless but small; Poland and India add volume; the Nordics round out Europe; BC and Alberta are the smaller Canadian free markets with clean single lanes.</p>
+  </div>
+  <div class="callout good"><h4>Net conclusion</h4>The free-market universe is smaller than it looks - twelve markets where the cargo lane runs without a licence gate. The two biggest prizes are the UK and Germany. In North America the free entries are Ontario, British Columbia and Alberta (Canada) plus Florida (USA); every other US state and Canadian province requires an authority or permit and is filtered out of this report.</div>
+
+  <h2 id="s5"><span class="num">5</span>US and Canada Focus - Florida and Ontario Registration</h2>
+  <p class="lead">With the free-market filter, Florida and Ontario are the only unblocked entries in the US and Canada. Both are easy, and both are realistic for a Canadian company - here is exactly what registration means in each.</p>
+  <h3>Florida - registration for a Canadian company</h3>
+  <ol>
+    <li><strong>US entity:</strong> the easiest path is a US subsidiary (Delaware or Florida LLC) with an IRS EIN (free, issued in days). Alternative: qualify the Canadian corporation directly in Florida through the Florida Division of Corporations - filing fee about 35 USD, plus an annual report (~150 USD/year) and a Florida registered agent (~100-300 USD/year).</li>
+    <li><strong>Federal broker authority - the real step:</strong> USDOT number + MC property-broker authority (~300 USD filing) + BOC-3 process agent + UCR registration + 75,000 USD surety bond, held through the US subsidiary. This is a federal requirement for the cargo platform, not a Florida requirement.</li>
+    <li><strong>Florida itself adds almost nothing for general freight:</strong> intrastate trucking is deregulated - no state operating authority. Drivers using commercial vehicles need USDOT numbers and liability insurance; private cars doing courier work need commercial courier insurance. Avoid household-goods moves at launch (separately regulated by FDACS).</li>
+    <li><strong>Local basics:</strong> county business tax receipt (small fee), sales tax registration where required, US bank account and payment processing.</li>
+  </ol>
+  <p><span class="pill free">VERDICT: EASY</span> Florida is one of the cheapest and fastest states for a foreign company: ~35 USD qualification, no intrastate freight licence, and the only heavy item is the same federal FMCSA broker stack you would need in any US state. Budget a few weeks, mostly for the bond and the bank account.</p>
+  <h3>Ontario - registration for a Canadian company</h3>
+  <ol>
+    <li><strong>No foreign qualification needed:</strong> an Ontario (or federal Canadian) corporation, a CRA business number, and HST registration (courier services are taxable - collect 13% HST).</li>
+    <li><strong>Freight is deregulated intra-provincially:</strong> no operating authority for goods. Vehicles over 4,500 kg need CVOR registration; private cars doing courier work need courier / hire-and-reward insurance - personal policies do not cover it.</li>
+    <li><strong>City-level business licensing</strong> may apply (Toronto and others) - check the municipality before opening a corridor.</li>
+    <li><strong>Stay intra-provincial at launch:</strong> Toronto-Ottawa and Toronto-London lanes. A paid parcel crossing a provincial border triggers the federal extra-provincial layer.</li>
+  </ol>
+  <p><span class="pill free">VERDICT: EASIEST OF THE TWO</span> For a Canadian company, Ontario needs no cross-border entity, no authority and no bond - just business registration, HST and proper courier insurance.</p>
+  <h3>British Columbia - registration for a Canadian company</h3>
+  <ol>
+    <li><strong>No foreign qualification:</strong> register the BC business online through BC Registries (small fee) - a Canadian company just registers, it does not qualify as foreign.</li>
+    <li><strong>Freight is deregulated intra-provincially:</strong> no operating authority. Commercial vehicles need National Safety Code registration; private cars doing courier work need courier / hire-and-reward insurance.</li>
+    <li><strong>Municipal business licences</strong> may apply (Vancouver, Kelowna).</li>
+    <li><strong>Stay intra-provincial:</strong> Vancouver-Kelowna and Vancouver-Kamloops lanes. Vancouver-Calgary crosses into Alberta and triggers the federal extra-provincial layer at launch.</li>
+  </ol>
+  <p><span class="pill free">VERDICT: EASY</span> Same free structure as Ontario, with a smaller market (~5.6 M people).</p>
+  <h3>Alberta - registration for a Canadian company</h3>
+  <ol>
+    <li><strong>No foreign qualification:</strong> register the Alberta business online (small fee).</li>
+    <li><strong>Freight is deregulated intra-provincially:</strong> no operating authority. Commercial carriers need a Safety Fitness Certificate (Alberta Transportation); private cars doing courier work need courier insurance.</li>
+    <li><strong>Municipal licensing</strong> may apply (Calgary, Edmonton).</li>
+    <li><strong>Best lane:</strong> Calgary-Edmonton (~300 km), one of the cleanest single lanes in Canada.</li>
+  </ol>
+  <p><span class="pill free">VERDICT: EASY</span> ~4.9 M people - the smallest of the three Canadian free markets, but the Calgary-Edmonton lane is simple and predictable.</p>
+  <div class="callout good"><h4>Bottom line for the US and Canada question</h4>Under the free-market filter, the unblocked North American entries are Ontario, British Columbia and Alberta (Canada) plus Florida (USA). Ontario is the biggest of the three Canadian markets and the first launch; BC and Alberta are valid second-wave Canadian expansions; Florida stays the single free US entry via the federal broker stack. All of them can be run from one Canadian company.</div>
+  <h3>Canada - is the whole country a free market?</h3>
+  <p><strong>No - Canada is free province by province, not as one country.</strong> Two walls stop a national cargo rideshare network:</p>
+  <ol>
+    <li><strong>Quebec is blocked:</strong> CTQ carrier and broker permits are required for for-hire goods - the strictest cargo regime in North America. Skip Quebec cargo at launch.</li>
+    <li><strong>Cross-provincial parcels are not free:</strong> carrying a paid parcel across a provincial border is an extra-provincial undertaking under the federal Motor Vehicle Transport Act - it needs a safety fitness certificate and, for trucks, provincially issued extra-provincial authority. A private car doing it sits in a grey zone, so every launch lane must stay inside one province.</li>
+  </ol>
+  <p><strong>What is free:</strong> intra-provincial cargo in 9 of 10 provinces - Ontario, British Columbia, Alberta, Saskatchewan, Manitoba, Nova Scotia, New Brunswick, PEI and Newfoundland (registration + insurance only; the Territories need verification).</p>
+  <p><strong>Passenger contrast:</strong> the carpool lane is freer than cargo - cost-sharing carpool is legal in all 10 provinces, and interprovincial cost-sharing carpool is treated as private travel, not commercial. Only the cargo lane hits the two walls above.</p>
+  <div class="callout warn"><h4>Play for a BC company going Canada-first</h4>Launch BC intra-provincial (Vancouver-Kelowna, Vancouver-Kamloops), then open Alberta (Calgary-Edmonton) and Ontario (Toronto-Ottawa) as separate intra-provincial operations. Leave Vancouver-Calgary, Toronto-Montreal and anything touching Quebec for after a licensed-carrier structure exists - they are the only non-free parts of the Canadian map.</div>
+  <h3>Is it zero-procedure for a BC incorporation? The honest checklist</h3>
+  <p><strong>No - "free" means no operating authority, not zero procedures.</strong> Deregulation removes the licence gate; it does not remove insurance, tax, contract and consumer-law duties. For a BC company running intra-provincial personal-vehicle cargo over a marketplace, the mandatory pre-launch procedure is:</p>
+  <ol>
+    <li><strong>Insurance - the big one:</strong> ICBC personal-use policies are void for delivery work. Every driver vehicle must be moved to a business-use rate class with courier / hire-and-reward coverage (ICBC plus optional private excess). Skipping this is the fastest way to lose a claim and expose the driver personally.</li>
+    <li><strong>Taxes:</strong> GST (5%) applies to courier services - register and remit; confirm PST treatment with an accountant.</li>
+    <li><strong>Municipal licences:</strong> Vancouver, Kelowna and other cities license delivery/courier businesses (the inter-municipal business licence scheme helps across municipalities).</li>
+    <li><strong>National Safety Code:</strong> heavier commercial vehicle classes need NSC registration - confirm the exact threshold for the vehicle classes onboarded.</li>
+    <li><strong>Contracts and law:</strong> independent-contractor terms, BC PIPA privacy compliance, BPCPA consumer protection, escrow and refund rules from the operations manual.</li>
+    <li><strong>Passenger lane:</strong> cost-sharing carpool is legal in BC, but only while contributions stay cost-sharing and capped - if a payment starts to look like a fare, the Passenger Transportation Board regime applies.</li>
+  </ol>
+  <p><span class="pill free">VERDICT: SAFE WITH A CHECKLIST, NOT "ZERO PROCEDURE"</span> The position is genuinely favorable - no authority, no board approval and no permit for intra-provincial goods - but insurance is a hard requirement, not a detail. Treat the six items above as the mandatory pre-launch procedure.</p>
+  <h3>Canada - all-provinces to-do list</h3>
+  <table>
+    <tr><th>Province</th><th>Cargo status</th><th>Register</th><th>Driver base insurance</th><th>Sales tax</th><th>Municipal licences</th><th>Launch order</th></tr>
+    <tr><td><strong>British Columbia</strong></td><td><span class="pill free">FREE</span></td><td>BC business registration</td><td>ICBC business/delivery rate class (base policy must declare delivery use - platform cover does not replace it)</td><td>GST 5% (+ confirm PST)</td><td>Vancouver, Kelowna, Victoria</td><td><strong>1</strong></td></tr>
+    <tr><td><strong>Alberta</strong></td><td><span class="pill free">FREE</span></td><td>Alberta business registration; Safety Fitness Certificate for commercial carriers</td><td>Private market courier cover or approved TNC-style endorsement over personal policy</td><td>GST 5% (no PST)</td><td>Calgary, Edmonton</td><td><strong>2</strong></td></tr>
+    <tr><td><strong>Ontario</strong></td><td><span class="pill free">FREE</span></td><td>Ontario business registration; CVOR only for vehicles over 4,500 kg</td><td>Private market courier / hire-and-reward cover</td><td>HST 13%</td><td>Toronto, Ottawa and others</td><td><strong>3</strong></td></tr>
+    <tr><td><strong>Saskatchewan</strong></td><td><span class="pill free">FREE</span></td><td>Business registration; NSC for commercial vehicles</td><td>SGI business use + courier cover</td><td>GST 5% + PST 6%</td><td>Saskatoon, Regina</td><td>4</td></tr>
+    <tr><td><strong>Manitoba</strong></td><td><span class="pill free">FREE</span></td><td>Business registration; NSC for commercial vehicles</td><td>MPI business use + courier cover</td><td>GST 5% + RST 7%</td><td>Winnipeg</td><td>4</td></tr>
+    <tr><td><strong>Nova Scotia</strong></td><td><span class="pill free">FREE</span></td><td>Business registration + safety registration</td><td>Courier cover</td><td>HST 15%</td><td>Halifax</td><td>5</td></tr>
+    <tr><td><strong>New Brunswick</strong></td><td><span class="pill free">FREE</span></td><td>Business registration + safety registration</td><td>Courier cover</td><td>HST 15%</td><td>Moncton, Saint John, Fredericton</td><td>5</td></tr>
+    <tr><td><strong>Prince Edward Island</strong></td><td><span class="pill free">FREE</span></td><td>Business registration + safety registration</td><td>Courier cover</td><td>HST 15%</td><td>Charlottetown</td><td>5</td></tr>
+    <tr><td><strong>Newfoundland and Labrador</strong></td><td><span class="pill free">FREE</span></td><td>Business registration + safety registration</td><td>Courier cover</td><td>HST 15%</td><td>St. John's</td><td>5</td></tr>
+    <tr><td><strong>Quebec</strong></td><td><span class="pill info">BLOCKED - cargo</span></td><td>CTQ carrier + broker permits required for goods</td><td>-</td><td>GST 5% + QST 9.975%</td><td>Montreal, Quebec City</td><td>Carpool only</td></tr>
+    <tr><td><strong>Yukon / NWT / Nunavut</strong></td><td><span class="pill info">VERIFY</span></td><td>Small markets; confirm local rules</td><td>-</td><td>GST only (Yukon also 5% GST; no territorial sales tax for NWT/NU)</td><td>Whitehorse, Yellowknife</td><td>Last</td></tr>
+    <tr><td><strong>Any interprovincial lane</strong></td><td><span class="pill info">NOT FREE</span></td><td>Federal extra-provincial layer - safety fitness certificate + provincially issued extra-provincial authority for trucks</td><td>-</td><td>Per province</td><td>-</td><td>After licensed-carrier structure</td></tr>
+  </table>
+  <h3>Who buys the insurance? The central policy design</h3>
+  <p class="lead">Yes - a central platform policy is exactly the right answer for occasional carriers, and it is how every gig platform solves this. Drivers should never buy commercial insurance for a trip they make a few times a year.</p>
+  <ol>
+    <li><strong>Platform master policy (blanket, one policy for all carriers):</strong> cargo liability per trip plus non-owned auto liability while a trip is active. One policy covers every driver on the platform, bought and held by the company, with the cost recovered inside the platform service fee. Roadie, DoorDash and every TNC run this model.</li>
+    <li><strong>Driver base policy stays personal, but must allow the platform use:</strong> in BC, ICBC is the monopoly base insurer - the personal policy must be switched to the business/delivery rate class, or a claim can be denied; the platform master policy tops up but does not replace that base. Alberta has an approved rideshare-style insurance endorsement that wraps a personal policy. Ontario and the Atlantic provinces use private-market endorsements. This is a per-driver onboarding step, not a policy purchase.</li>
+    <li><strong>Sender-side per-parcel insurance add-on (2-4% of declared value):</strong> stays a product sold at listing time - it covers the sender's loss/damage, and it is separate from the platform master policy (which protects the platform and the driver).</li>
+    <li><strong>Claims flow:</strong> loss or damage on a trip = sender compensated from the add-on policy; driver fault reviewed separately with warnings/limits, never billing the occasional carrier personally - this keeps carriers willing to report honestly.</li>
+    <li><strong>Partner:</strong> work with one insurer across provinces (the carriers that built TNC products in Canada are the natural starting point). Expect the master policy premium to be priced per active trip mile.</li>
+  </ol>
+  <p><span class="pill free">BOTTOM LINE</span> The platform owns the insurance stack (master cargo + liability + add-on); the occasional carrier only has to switch the base policy to business use once during onboarding. Nothing to buy per trip.</p>
+  <h3>The "already traveling anyway, under 60 kg, cost-sharing only" argument - what it changes</h3>
+  <p class="lead">This is exactly the right product design, and it is legally decisive for the passenger lane - but for the cargo lane the law does not care. Here is precisely what the argument changes and what it does not.</p>
+  <table>
+    <tr><th>Where the argument matters</th><th>What it changes</th></tr>
+    <tr><td><strong>Passenger carpool (BC and all provinces)</strong></td><td>Decisive. Non-commercial carpool = the driver makes the trip anyway + shares only actual costs + no profit. That is the exact legal test that keeps the passenger lane outside the PTB/TNC regimes. Keep contributions capped to a published cost formula.</td></tr>
+    <tr><td><strong>Cargo - the legal classification</strong></td><td>Nothing. Carrying someone else's goods for any payment is for-hire in cargo law - whether the trip would have happened anyway, and whether the contribution covers the travel cost. There is no "cargo cost-sharing" exemption anywhere (in US federal rules the argument fails entirely - FMCSA has no such concept).</td></tr>
+    <tr><td><strong>Cargo - the practical outcome in Canada's free provinces</strong></td><td>Little practical difference. Because intra-provincial freight is deregulated in BC, Alberta, Ontario and the rest, a for-hire classification still requires no operating authority. The obligations stay exactly the six-item checklist: business-use insurance class, GST, municipal licences, contracts. The cost-sharing wording changes nothing in that checklist.</td></tr>
+    <tr><td><strong>Driver income tax (Canada)</strong></td><td>Helpful. A contribution at or below actual trip costs means no net business income to tax - keep simple records (fuel, tolls) to prove it.</td></tr>
+    <tr><td><strong>ICBC base insurance (BC)</strong></td><td>Nothing. ICBC asks what the vehicle is used for, not whether the driver profits. A car carrying a parcel for a contribution is a delivery use - the business/delivery rate class is still required, or claims can be denied.</td></tr>
+    <tr><td><strong>Under 60 kg hard cap</strong></td><td>Strongly helpful. It keeps every vehicle far below the commercial-vehicle thresholds (3.5 t, 500 kg payload in Belgium, 2.5 t in Poland), reinforces the trunk-sharing story, avoids CVOR/NSC commercial-vehicle registration in Canada and keeps the EU light-vehicle exemptions intact. Bake the 60 kg cap into the app as a hard limit.</td></tr>
+  </table>
+  <div class="callout good"><h4>The honest one-liner</h4>Call the product cost-sharing - it is true for passengers and true in practice for pricing - but run the cargo compliance as light for-hire courier in every province: business-use insurance, GST, licences, contracts. The six-item checklist does not shrink because the wording changes; it shrinks only because the province deregulated freight - and BC's has.</div>
+
+  <h2 id="s6"><span class="num">6</span>TAM, SAM, SOM - Definitions</h2>
+  <ul>
+    <li><strong>TAM - Total Addressable Market:</strong> the full annual value of intercity small-parcel transport in the country or region that could <em>theoretically</em> move by trunk sharing - every parcel that is small enough, allowed, and paid. A ceiling, not a target.</li>
+    <li><strong>SAM - Serviceable Addressable Market:</strong> the slice of TAM this platform can actually serve at launch: parcels inside the chosen anchor corridors, in the urgent / fragile / door-to-door segments that would pay for same-day cost-sharing.</li>
+    <li><strong>SOM - Serviceable Obtainable Market:</strong> what a corridor-first launch realistically captures - Year 1 (0.3% of SAM, winning a first corridor) and Year 3 (2% of SAM, several corridors live). These are the planning targets.</li>
+  </ul>
+
+  <h2 id="s7"><span class="num">7</span>Methodology and Assumptions</h2>
+  <div class="formula">TAM  = population x intercity small parcels per person per year x share that fits trunk sharing x average contribution
+SAM  = TAM x corridor share (share of the market inside the anchor corridors) x niche share (urgent / fragile / door-to-door segments)
+SOM  = SAM x capture rate (Year 1: 0.3% - one corridor; Year 3: 2% - several corridors)
+Ranking score = SAM (in million EUR) x (6 - cargo regulation difficulty)</div>
+  <p>Every assumption is visible below. Change any number and the scoreboard recalculates by hand - nothing is hidden.</p>
+  <table>
+    <tr><th>Market</th><th class="num">Population used (approx, millions)</th><th class="num">Intercity small parcels per person per year</th><th class="num">Share that fits trunk sharing</th><th class="num">Average contribution (EUR)</th><th class="num">Corridor share</th><th class="num">Niche share</th></tr>
+    <tr><td>United Kingdom</td><td class="num">68</td><td class="num">4.0</td><td class="num">15%</td><td class="num">6.5</td><td class="num">25%</td><td class="num">12%</td></tr>
+    <tr><td>Germany</td><td class="num">84</td><td class="num">5.0</td><td class="num">15%</td><td class="num">6.0</td><td class="num">20%</td><td class="num">12%</td></tr>
+    <tr><td>Australia</td><td class="num">27</td><td class="num">3.5</td><td class="num">15%</td><td class="num">9.0</td><td class="num">25%</td><td class="num">12%</td></tr>
+    <tr><td>Netherlands</td><td class="num">18</td><td class="num">4.0</td><td class="num">15%</td><td class="num">5.0</td><td class="num">40%</td><td class="num">12%</td></tr>
+    <tr><td>Florida</td><td class="num">23</td><td class="num">4.0</td><td class="num">15%</td><td class="num">6.5</td><td class="num">30%</td><td class="num">12%</td></tr>
+    <tr><td>Ontario</td><td class="num">16</td><td class="num">4.0</td><td class="num">15%</td><td class="num">7.0</td><td class="num">35%</td><td class="num">12%</td></tr>
+    <tr><td>British Columbia</td><td class="num">5.6</td><td class="num">4.0</td><td class="num">15%</td><td class="num">7.0</td><td class="num">30%</td><td class="num">12%</td></tr>
+    <tr><td>Alberta</td><td class="num">4.9</td><td class="num">4.0</td><td class="num">15%</td><td class="num">6.5</td><td class="num">35%</td><td class="num">12%</td></tr>
+    <tr><td>Belgium</td><td class="num">12</td><td class="num">4.0</td><td class="num">15%</td><td class="num">5.0</td><td class="num">35%</td><td class="num">12%</td></tr>
+    <tr><td>Poland</td><td class="num">37</td><td class="num">3.5</td><td class="num">15%</td><td class="num">4.5</td><td class="num">20%</td><td class="num">10%</td></tr>
+    <tr><td>India</td><td class="num">250 (urban corridor population)</td><td class="num">1.2</td><td class="num">20%</td><td class="num">3.0</td><td class="num">10%</td><td class="num">8%</td></tr>
+    <tr><td>Nordics</td><td class="num">27</td><td class="num">3.0</td><td class="num">15%</td><td class="num">6.5</td><td class="num">15%</td><td class="num">12%</td></tr>
+  </table>
+  <p class="note">Basis for the assumptions: national statistics on parcel volumes and e-commerce intensity (developed markets 3-6 intercity small parcels per person per year), trunk-share fit limited to parcels under ~15 kg that a traveler would accept, contribution set at roughly half of express courier prices on the anchor lanes, corridor share from the share of the population living in the anchor corridors, and niche share limited to segments that genuinely need same-day (urgent documents, fragile items, marketplace sellers, door-to-door). All figures are planning estimates.</p>
+
+  <h2 id="s8"><span class="num">8</span>Excluded Markets (blocked or restricted)</h2>
+  <table>
+    <tr><th>Market</th><th>Cargo difficulty</th><th>Why it is excluded from this report</th></tr>
+    <tr><td>Texas</td><td>3</td><td>FMCSA broker authority + TxDMV intrastate registration required - an operating-authority gate</td></tr>
+    <tr><td>California</td><td>4</td><td>Intrastate carrier permit (CA number) + strictest US enforcement</td></tr>
+    <tr><td>Turkey</td><td>3</td><td>K-type authorizations + legal grey zone for private-car parcels</td></tr>
+    <tr><td>France</td><td>5</td><td>Register in the national transport register + professional capacity exam even for light vehicles</td></tr>
+    <tr><td>Spain</td><td>5</td><td>Transport authorization extended down to light vehicles (MDL category)</td></tr>
+    <tr><td>Brazil</td><td>3</td><td>Freight registration under ANTT - an authority step</td></tr>
+    <tr><td>Mexico</td><td>3</td><td>Federal for-hire permit (SCT) required</td></tr>
+    <tr><td>Quebec</td><td>5</td><td>CTQ carrier and broker permits - strictest cargo regime in North America</td></tr>
+    <tr><td>New Zealand</td><td>3</td><td>Goods service licence required</td></tr>
+    <tr><td>Japan, South Korea, UAE, Saudi Arabia</td><td>NO-GO</td><td>Private cars cannot carry goods for pay at all (per the regulation guide)</td></tr>
+  </table>
+  <p class="note">These markets return to the list only if the regulation changes or the platform decides to build the required authority stack. Re-check the regulation guide before re-adding any of them.</p>
+
+  <h2 id="s9"><span class="num">9</span>How to Adjust the Model</h2>
+  <ul>
+    <li><strong>Change the assumptions:</strong> every cell in section 7 is editable. Real parcel-per-capita data for a target country should replace the estimates before a pitch.</li>
+    <li><strong>Add a market:</strong> apply the formula - population x parcels x fit share x contribution = TAM; TAM x corridor share x niche share = SAM; SAM x 0.3% and 2% = SOM Year 1 and Year 3. It qualifies as free only if cargo difficulty is 1 or 2.</li>
+    <li><strong>Re-score difficulty:</strong> re-check the regulation guide first - cargo difficulty changes whenever a country changes its light-vehicle thresholds.</li>
+    <li><strong>Re-rank:</strong> sort by SAM x (6 - difficulty). That is the whole model.</li>
+  </ul>
+  <p class="note">All population, parcel and price figures are approximate planning estimates, not audited market data. Platform revenue equals the service fee (15-20%) on the contribution volumes shown. Companion documents: Commercial-Carriage-Regulation-Guide-By-Country.html, Jurisdiction-Priority-And-Opportunity-Ranking.html, the two business plans and the operations manual.</p>
+
+  <footer>Cargo Market Size Reports - Free Markets Only - prepared November 2026 - illustrative planning document, not financial advice.</footer>
+</div>
+</body>
+</html>

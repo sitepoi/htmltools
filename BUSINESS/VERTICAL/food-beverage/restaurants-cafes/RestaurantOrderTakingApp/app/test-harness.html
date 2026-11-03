@@ -85,6 +85,12 @@
 
   var delay = 30;
 
+  /* Every harness order belongs to this restaurant so the scoped board can
+     show it (D-ROTA-42). The board record below carries the SAME slug, which
+     is how a tenant-wide tool definition finds its restaurant (D-ROTA-49).
+     ?pageUrl= simulates opening the board on any other CMS page. */
+  var HARNESS_RESTAURANT_SLUG = 'demo';
+
   /* Query-param startup: seed sample, role, read-only */
   if (query.sample === '1' && !loadStore().length) {
     saveStore(buildSampleOrders());
@@ -119,14 +125,16 @@
     watchField: function () {},
     onFieldsChange: function () {},
     param: function (name, fallback) {
+      /* No per-restaurant parameter exists: slug, timezone and currency all
+         come from the restaurant object (D-ROTA-49). */
       var overrides = {
         allowObjectCRUD: query.crud === 'no' ? 'no' : 'yes',
-        ordersObjectType: 'restaurant-orders',
+        ordersObjectType: 'restaurant-orders-easyorder',
+        restaurantSettingsType: 'restaurants-easyorder',
+        toolAppType: 'restaurant-order-taking-app-easyorder',
         autoRefreshSeconds: query.fast === '1' ? '3' : (query.nopoll === '1' ? '0' : '20'),
         newOrderNotifications: 'yes',
-        newOrderWarningMinutes: query.warn || '10',
-        restaurantTimezone: query.tz || '',
-        currencyCode: query.currency || ''
+        newOrderWarningMinutes: query.warn || '10'
       };
       if (overrides[name] !== undefined && overrides[name] !== '') return overrides[name];
       return fallback;
@@ -136,7 +144,12 @@
     getUser: function () { return currentUser(); },
     onUserChange: function (cb) { listeners.user.push(cb); },
     getPermittedUsers: function () { return []; },
-    getParentPageUrl: function () { return 'https://demo.uniconhub.com/admin/objects/restaurant-orders/'; },
+    getParentPageUrl: function () {
+      /* Default: the board is opened on its own board record page, whose slug
+         equals the restaurant slug - the recommended setup (D-ROTA-49).
+         ?pageUrl=<url> simulates any other CMS page. */
+      return query.pageUrl || 'https://demo.uniconhub.com/admin/objects/restaurant-order-taking-app-easyorder/board-demo';
+    },
     reportValid: function () {},
     notify: function (message, severity) {
       severity = severity || 'info';
@@ -286,12 +299,13 @@
       id: 'order-' + orderNumber,
       name: 'Order ' + orderNumber,
       slug: 'order-' + orderNumber,
-      cmsObjectType: 'restaurant-orders',
-      typeId: 'restaurant-orders',
+      cmsObjectType: 'restaurant-orders-easyorder',
+      typeId: 'restaurant-orders-easyorder',
       created: placedAtIso,
       updated: placedAtIso,
       productData: {
         data_categoriesBased: {
+          restaurantId: (extra && extra.restaurantId !== undefined) ? extra.restaurantId : HARNESS_RESTAURANT_SLUG,
           orderNumber: orderNumber,
           placedAt: placedAtIso,
           channel: channel,
@@ -412,6 +426,78 @@
       { subtotal: 8.2, deliveryFee: 2.0, tax: 0.71, total: 10.91 },
       'in-preparation', yesterdayIso(), { statusChangedAt: yesterdayIso() }));
 
+    /* Restaurant settings object (another CMS type) so the closing-time
+       notice can be reviewed. The closing time sits 90 minutes ahead, so the
+       "two hours left" warning is always visible in the harness. */
+    var closingMoment = new Date(Date.now() + 90 * 60000);
+    var closingClock = ('0' + closingMoment.getHours()).slice(-2) + ':' + ('0' + closingMoment.getMinutes()).slice(-2);
+    /* Same nesting the real `restaurants-easyorder` object uses (SSOT 4.1):
+       everything under restaurantDetails, hours under service_settings with
+       day/is_closed/ranges. */
+    var openingHours = [];
+    for (var dayIndex = 0; dayIndex < 7; dayIndex++) {
+      openingHours.push({ day: dayIndex, is_closed: false, ranges: [{ open: '11:00', close: closingClock }] });
+    }
+    list.push({
+      id: 'settings-easyorder',
+      name: 'Restaurant settings',
+      slug: HARNESS_RESTAURANT_SLUG,
+      cmsObjectType: 'restaurants-easyorder',
+      typeId: 'restaurants-easyorder',
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      productData: {
+        data_categoriesBased: {
+          restaurantDetails: {
+            general_info: {
+              restaurant_name: 'Sample restaurant',
+              brand_name: 'Sample restaurant',
+              timezone: 'America/Toronto'
+            },
+            taxation_currency: { currency: 'CAD' },
+            service_settings: { opening_hours: openingHours }
+          }
+        }
+      }
+    });
+
+    /* The board record this tool runs in, one per restaurant. Its slug is
+       deliberately equal to the restaurant object's slug - that equality is
+       the whole link between the tenant-wide definition and one restaurant
+       (D-ROTA-49), so no extra field and no tool parameter are needed. */
+    list.push({
+      id: 'board-demo',
+      name: 'Board - Sample restaurant',
+      slug: HARNESS_RESTAURANT_SLUG,
+      cmsObjectType: 'restaurant-order-taking-app-easyorder',
+      typeId: 'restaurant-order-taking-app-easyorder',
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      productData: { data_categoriesBased: {} }
+    });
+
+    /* A second restaurant so the board must really resolve ITS restaurant
+       (the "only restaurant of the tenant" fallback must not mask a wrong
+       page address in QA). */
+    list.push({
+      id: 'settings-other',
+      name: 'Other restaurant',
+      slug: 'other-restaurant',
+      cmsObjectType: 'restaurants-easyorder',
+      typeId: 'restaurants-easyorder',
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      productData: {
+        data_categoriesBased: {
+          restaurantDetails: {
+            general_info: { restaurant_name: 'Other restaurant', brand_name: 'Other restaurant', timezone: 'America/Toronto' },
+            taxation_currency: { currency: 'CAD' },
+            service_settings: { opening_hours: openingHours }
+          }
+        }
+      }
+    });
+
     return list;
   }
 
@@ -483,7 +569,7 @@
 
 <script>
 /* ── Tool HTML loader (fetch with embedded fallback for file://) ── */
-var EMBEDDED_HTML = "\u003c!-- build 2026-10-31-3 -->\r\n\u003cdiv class=\"roa\" id=\"roa-root\">\r\n  \u003cdiv class=\"roa-shell\">\r\n\r\n    \u003cheader class=\"roa-top\">\r\n      \u003cdiv class=\"roa-top-main\">\r\n        \u003ch1 class=\"roa-title\">Orders\u003c/h1>\r\n        \u003cp class=\"roa-top-sub\" id=\"roa-top-sub\">Active orders board\u003c/p>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-top-actions\">\r\n        \u003cspan class=\"roa-live\" id=\"roa-live\">\u003cspan class=\"roa-live-dot\">\u003c/span>Live\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-btn roa-btn-ghost roa-btn-small\" id=\"roa-refresh\">Refresh\u003c/button>\r\n        \u003cdiv class=\"roa-menu\" id=\"roa-menu\">\r\n          \u003cbutton type=\"button\" class=\"roa-btn roa-btn-ghost roa-btn-small\" id=\"roa-menu-btn\" data-act=\"menu\" aria-haspopup=\"true\" aria-expanded=\"false\">&#8942;\u003c/button>\r\n          \u003cdiv class=\"roa-menu-panel\" id=\"roa-menu-panel\" hidden>\r\n            \u003cbutton type=\"button\" class=\"roa-menu-item\" id=\"roa-menu-import\" data-act=\"import-file\">Import sample JSON...\u003c/button>\r\n            \u003cbutton type=\"button\" class=\"roa-menu-item\" id=\"roa-menu-clear\" data-act=\"clear-today\">Remove all items from today\u003c/button>\r\n            \u003cbutton type=\"button\" class=\"roa-menu-item roa-menu-item-danger\" id=\"roa-menu-clear-confirm\" data-act=\"clear-today-confirm\" hidden>Confirm remove today's orders\u003c/button>\r\n            \u003cp class=\"roa-menu-hint\">Temporary QA tools - they create and delete CMS order objects.\u003c/p>\r\n          \u003c/div>\r\n        \u003c/div>\r\n        \u003cinput type=\"file\" id=\"roa-import-file\" accept=\".json,application/json\" hidden>\r\n      \u003c/div>\r\n    \u003c/header>\r\n\r\n    \u003cdiv class=\"roa-banner roa-banner-readonly\" id=\"roa-readonly\" hidden>\u003c/div>\r\n    \u003cdiv class=\"roa-banner roa-banner-config\" id=\"roa-config\" hidden>\u003c/div>\r\n\r\n    \u003cnav class=\"roa-tabs\" id=\"roa-tabs\">\u003c/nav>\r\n\r\n    \u003cdiv class=\"roa-toolbar\">\r\n      \u003cinput type=\"text\" class=\"roa-search\" id=\"roa-search\" placeholder=\"Search order number, customer, phone, table, address\">\r\n      \u003clabel class=\"roa-sortlabel\" for=\"roa-sort\">Sort\u003c/label>\r\n      \u003cselect class=\"roa-select\" id=\"roa-sort\">\r\n        \u003coption value=\"waiting\">Longest waiting first\u003c/option>\r\n        \u003coption value=\"newest\">Newest first\u003c/option>\r\n        \u003coption value=\"total\">Highest total first\u003c/option>\r\n      \u003c/select>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"roa-state\" id=\"roa-state\" hidden>\u003c/div>\r\n\r\n    \u003cmain class=\"roa-board\" id=\"roa-board\">\u003c/main>\r\n\r\n    \u003cfooter class=\"roa-foot\">\r\n      \u003cspan class=\"roa-loaded\" id=\"roa-loaded\">\u003c/span>\r\n      \u003cspan class=\"roa-refreshed\" id=\"roa-refreshed\">\u003c/span>\r\n      \u003cspan class=\"roa-build\" id=\"roa-build\">tool build\u003c/span>\r\n    \u003c/footer>\r\n\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"roa-modal\" id=\"roa-modal\" hidden>\r\n    \u003cdiv class=\"roa-modal-card\" role=\"dialog\" aria-modal=\"true\">\r\n      \u003cdiv class=\"roa-modal-head\">\r\n        \u003cspan class=\"roa-modal-title\" id=\"roa-modal-title\">\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-modal-x\" data-act=\"modal-close\" aria-label=\"Close\">&#10005;\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-modal-body\" id=\"roa-modal-body\">\u003c/div>\r\n      \u003cdiv class=\"roa-modal-foot\" id=\"roa-modal-foot\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"roa-detail-overlay\" id=\"roa-detail\" hidden>\u003c/div>\r\n\u003c/div>\r\n";
+var EMBEDDED_HTML = "\u003c!-- build 2026-10-31-6 -->\r\n\u003cdiv class=\"roa\" id=\"roa-root\">\r\n  \u003cdiv class=\"roa-shell\">\r\n\r\n    \u003cdiv class=\"roa-topbar\">\r\n      \u003cnav class=\"roa-tabs\" id=\"roa-tabs\">\u003c/nav>\r\n      \u003cdiv class=\"roa-top-actions\">\r\n        \u003cspan class=\"roa-live\" id=\"roa-live\">\u003cspan class=\"roa-live-dot\">\u003c/span>Live\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-btn roa-btn-ghost roa-btn-small\" id=\"roa-refresh\">Refresh\u003c/button>\r\n        \u003cdiv class=\"roa-menu\" id=\"roa-menu\">\r\n          \u003cbutton type=\"button\" class=\"roa-btn roa-btn-ghost roa-btn-small\" id=\"roa-menu-btn\" data-act=\"menu\" aria-haspopup=\"true\" aria-expanded=\"false\">&#8942;\u003c/button>\r\n          \u003cdiv class=\"roa-menu-panel\" id=\"roa-menu-panel\" hidden>\r\n            \u003cbutton type=\"button\" class=\"roa-menu-item\" id=\"roa-menu-import\" data-act=\"import-file\">Import sample JSON...\u003c/button>\r\n            \u003cbutton type=\"button\" class=\"roa-menu-item\" id=\"roa-menu-clear\" data-act=\"clear-today\">Remove all items from today\u003c/button>\r\n            \u003cbutton type=\"button\" class=\"roa-menu-item roa-menu-item-danger\" id=\"roa-menu-clear-confirm\" data-act=\"clear-today-confirm\" hidden>Confirm remove today's orders\u003c/button>\r\n            \u003cp class=\"roa-menu-hint\">Temporary QA tools - they create and delete CMS order objects.\u003c/p>\r\n          \u003c/div>\r\n        \u003c/div>\r\n        \u003cinput type=\"file\" id=\"roa-import-file\" accept=\".json,application/json\" hidden>\r\n      \u003c/div>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"roa-banner roa-banner-readonly\" id=\"roa-readonly\" hidden>\u003c/div>\r\n    \u003cdiv class=\"roa-banner roa-banner-config\" id=\"roa-config\" hidden>\u003c/div>\r\n\r\n    \u003cdiv class=\"roa-toolbar\">\r\n      \u003cinput type=\"text\" class=\"roa-search\" id=\"roa-search\" placeholder=\"Search order number, customer, phone, table, address\">\r\n      \u003clabel class=\"roa-sortlabel\" for=\"roa-sort\">Sort\u003c/label>\r\n      \u003cselect class=\"roa-select\" id=\"roa-sort\">\r\n        \u003coption value=\"waiting\">Longest waiting first\u003c/option>\r\n        \u003coption value=\"newest\">Newest first\u003c/option>\r\n        \u003coption value=\"total\">Highest total first\u003c/option>\r\n      \u003c/select>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"roa-state\" id=\"roa-state\" hidden>\u003c/div>\r\n\r\n    \u003cmain class=\"roa-board\" id=\"roa-board\">\u003c/main>\r\n\r\n    \u003cfooter class=\"roa-foot\">\r\n      \u003cspan class=\"roa-loaded\" id=\"roa-loaded\">\u003c/span>\r\n      \u003cspan class=\"roa-refreshed\" id=\"roa-refreshed\">\u003c/span>\r\n      \u003cspan class=\"roa-build\" id=\"roa-build\">tool build\u003c/span>\r\n    \u003c/footer>\r\n\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"roa-modal\" id=\"roa-modal\" hidden>\r\n    \u003cdiv class=\"roa-modal-card\" role=\"dialog\" aria-modal=\"true\">\r\n      \u003cdiv class=\"roa-modal-head\">\r\n        \u003cspan class=\"roa-modal-title\" id=\"roa-modal-title\">\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"roa-modal-x\" data-act=\"modal-close\" aria-label=\"Close\">&#10005;\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"roa-modal-body\" id=\"roa-modal-body\">\u003c/div>\r\n      \u003cdiv class=\"roa-modal-foot\" id=\"roa-modal-foot\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"roa-detail-overlay\" id=\"roa-detail\" hidden>\u003c/div>\r\n\u003c/div>\r\n";
 
 (function () {
   var status = document.getElementById('th-status');
@@ -537,7 +623,8 @@ var EMBEDDED_HTML = "\u003c!-- build 2026-10-31-3 -->\r\n\u003cdiv class=\"roa\"
        ?accept=1        -> open the accept dialog of the first new order
        ?menu=1          -> open the three-dots action menu
        ?import=demo     -> import the demo sample JSON
-       ?import=load     -> import the 100-item load sample JSON */
+       ?import=load     -> import the 100-item load sample JSON
+       ?print=1         -> show the thermal ticket of the accepted sample order */
     var clickSelector = '';
     if (query.page === 'documents' || query.detail === '1') clickSelector = '.roa-card[data-id]';
     else if (query.accept === '1') clickSelector = '[data-act="accept"]';
@@ -549,6 +636,27 @@ var EMBEDDED_HTML = "\u003c!-- build 2026-10-31-3 -->\r\n\u003cdiv class=\"roa\"
         var target = document.querySelector(clickSelector);
         if (target) target.click();
       }, 1500);
+    }
+    if (query.print === '1') {
+      setTimeout(function () {
+        var api = window.__roaTest;
+        if (!api || typeof api.printSheetHtml !== 'function') return;
+        var order = api.findOrder('order-EFOC-7710') || api.findOrder('order-EFOC-7702');
+        if (!order) return;
+        var host = document.createElement('div');
+        host.id = 'roa-print-preview';
+        host.className = 'roa-print';
+        host.style.display = 'block';
+        host.style.position = 'fixed';
+        host.style.left = '0';
+        host.style.top = '0';
+        host.style.zIndex = '9999';
+        host.style.background = '#ffffff';
+        host.style.padding = '14px';
+        host.style.boxShadow = '0 0 0 1px #cccccc';
+        host.innerHTML = api.printSheetHtml(order);
+        document.body.appendChild(host);
+      }, 2000);
     }
   }
 

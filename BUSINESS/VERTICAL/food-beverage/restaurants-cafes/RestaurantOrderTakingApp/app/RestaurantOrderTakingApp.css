@@ -1,4 +1,4 @@
-/* build 2026-10-31-4 */
+/* build 2026-10-31-15 */
 
 /* =====================================================================
    RestaurantOrderTakingApp - active orders board for the kitchen /
@@ -72,37 +72,28 @@
   background: var(--roa-bg);
 }
 
-/* ------------------------------------------------------------------ top */
+/* ------------------------------------------------------------- topbar */
 
-.roa-top {
+/* Compact header (D-ROTA-25): no page title, no counter subtitle - the
+   tabs and the LIVE / Refresh / menu actions share one row so the board
+   gets the space. */
+.roa-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
+  margin: 0 2px 10px;
   flex-wrap: wrap;
-  padding: 2px 2px 12px;
 }
 
-.roa-top-main { min-width: 0; }
-
-.roa-title {
+.roa-topbar .roa-tabs {
+  flex: 1 1 460px;
   margin: 0;
-  font-size: 23px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  color: var(--roa-ink-strong);
-}
-
-.roa-top-sub {
-  margin: 2px 0 0;
-  font-size: 12.5px;
-  color: var(--roa-muted);
 }
 
 .roa-top-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -172,12 +163,12 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 14px;
+  padding: 9px 17px;
   border: 1px solid transparent;
   border-radius: 9px;
   background: var(--roa-paper-soft);
   font: inherit;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--roa-muted);
   cursor: pointer;
@@ -199,10 +190,10 @@
 }
 
 .roa-tab-count {
-  min-width: 20px;
+  min-width: 22px;
   padding: 0 6px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   text-align: center;
   color: inherit;
@@ -381,6 +372,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  height: 100%;
   gap: 9px;
   padding: 14px 15px 13px;
   background: var(--roa-paper);
@@ -456,14 +448,71 @@
   word-break: break-word;
 }
 
-.roa-card-sub {
+/* Fixed info rows (D-ROTA-31): a soft panel with one hairline row per
+   data type, so the same data always sits in the same place. */
+.roa-card-fields {
+  display: flex;
+  flex-direction: column;
+  padding: 1px 10px;
+  background: var(--roa-paper);
+  border: 1px solid var(--roa-line);
+  border-radius: 10px;
+}
+
+.roa-field {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 27px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--roa-line);
+}
+
+.roa-field:last-child { border-bottom: none; }
+
+.roa-field-k {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--roa-muted);
+}
+
+.roa-field-v {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--roa-ink);
+}
+
+.roa-field-at {
+  font-family: var(--roa-mono);
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--roa-muted);
-  flex-wrap: wrap;
+}
+
+.roa-field-where {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roa-field-note {
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.roa-field-empty {
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--roa-muted);
 }
 
 .roa-order-no {
@@ -476,13 +525,6 @@
   border: 1px solid var(--roa-line);
   color: var(--roa-ink);
   white-space: nowrap;
-}
-
-.roa-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 .roa-status {
@@ -543,40 +585,52 @@
   background: var(--roa-st-declined-bg);
 }
 
-.roa-card-foot {
+/* Group 3 - money: total on its own line, pushed to the card bottom */
+.roa-card-money {
   display: flex;
-  align-items: flex-end;
+  align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 2px;
+  margin-top: auto;
+  padding-top: 9px;
+  border-top: 1px dashed var(--roa-line);
 }
 
-.roa-card-actions {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-  flex: 1 1 auto;
+.roa-money-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--roa-muted);
+}
+
+.roa-money-items {
+  margin-left: 4px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.85;
 }
 
 .roa-card-total {
   font-family: var(--roa-mono);
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--roa-ink-strong);
   white-space: nowrap;
 }
 
+/* Group 4 - action: next-step button + quiet link on ONE line, always the
+   very bottom of the card (D-ROTA-27). */
+.roa-card-actionbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
 .roa-card-note {
-  margin: 0;
-  font-size: 12px;
-  color: var(--roa-muted);
-  border-top: 1px dashed var(--roa-line);
-  padding-top: 7px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
+  display: none;
 }
 
 /* ---------------------------------------------------------------- buttons */
@@ -605,6 +659,59 @@
   border-color: var(--roa-line);
 }
 .roa-btn-small { font-size: 12px; padding: 6px 11px; }
+
+/* Quiet destructive actions (Decline / Cancel) - deliberately link-like so
+   the primary next-step button dominates the card (D-ROTA-24). */
+.roa-btn-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--roa-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(107, 114, 128, 0.45);
+}
+
+.roa-btn-quiet:hover {
+  color: var(--roa-danger);
+  filter: none;
+  text-decoration-color: currentColor;
+}
+
+/* The next step is what staff do 95% of the time - it takes the free width
+   of the action line; Decline/Cancel stays a small quiet link beside it
+   (D-ROTA-24 / D-ROTA-26 / D-ROTA-27). */
+.roa-card-actionbar .roa-btn-primary,
+.roa-card-actionbar .roa-btn-danger {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 800;
+  border-radius: 10px;
+}
+
+.roa-card-actionbar .roa-btn-primary {
+  box-shadow: 0 1px 2px rgba(22, 163, 74, 0.25);
+}
+
+.roa-card-actionbar .roa-btn-quiet {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 11.5px;
+}
+
+.roa-card-actionbar .roa-btn-ghost {
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.roa-card-actionbar .roa-btn:only-child {
+  flex: 1 1 auto;
+}
 
 /* ----------------------------------------------------------------- detail */
 
@@ -664,19 +771,18 @@
   white-space: nowrap;
 }
 
-.roa-detail-record {
-  font-family: var(--roa-mono);
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--roa-muted);
-  white-space: nowrap;
-}
-
 .roa-detail-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* Print sits between the workflow actions and the three-dots menu. */
+.roa-btn-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .roa-detail-grid {
@@ -692,15 +798,221 @@
 
 .roa-detail-main { min-width: 0; padding: 15px 16px; }
 
+/* Order timeline (D-ROTA-29 / D-ROTA-32) - the full workflow as one rail
+   under the detail content: a dot per step, the minutes between the steps
+   written on the line in a readable size, and a live "and counting" gap
+   for the step in flight. The band is the footer of the popup. */
+
+.roa-tl-band {
+  padding: 12px 16px 12px;
+  border-top: 2px dashed var(--roa-line);
+  background: var(--roa-paper);
+}
+
+.roa-tl-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.roa-tl-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--roa-muted);
+}
+
+.roa-tl-stats {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.roa-tl-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.roa-tl-stat-k {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--roa-muted);
+}
+
+.roa-tl-stat-v {
+  font-family: var(--roa-mono);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--roa-ink-strong);
+  white-space: nowrap;
+}
+
+.roa-tl-stat-v.is-urgent { color: #b45309; }
+.roa-tl-stat-v.is-late { color: var(--roa-danger); }
+.roa-tl-stat-v.is-empty {
+  font-family: var(--font, "Segoe UI", system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--roa-muted);
+}
+
+.roa-tl { overflow-x: auto; }
+
+.roa-tl-rail {
+  display: flex;
+  align-items: flex-start;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 420px;
+}
+
+.roa-tl-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 70px;
+  text-align: center;
+}
+
+.roa-tl-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid var(--roa-line);
+  background: var(--roa-paper);
+  flex: 0 0 auto;
+}
+
+.roa-tl-done .roa-tl-dot { background: var(--roa-st-ready); border-color: var(--roa-st-ready); }
+
+.roa-tl-active .roa-tl-dot {
+  background: var(--roa-paper);
+  border-color: var(--roa-st-prep);
+  box-shadow: 0 0 0 3px var(--roa-st-prep-bg);
+}
+
+/* Steps still ahead: hollow dashed dots so the whole route is visible. */
+.roa-tl-pending .roa-tl-dot { border-style: dashed; border-color: var(--roa-muted); }
+
+.roa-tl-closed .roa-tl-dot { background: var(--roa-muted); border-color: var(--roa-muted); }
+.roa-tl-tone-done .roa-tl-dot { background: var(--roa-st-done); border-color: var(--roa-st-done); }
+.roa-tl-tone-declined .roa-tl-dot { background: var(--roa-st-declined); border-color: var(--roa-st-declined); }
+.roa-tl-tone-cancelled .roa-tl-dot { background: var(--roa-st-cancelled); border-color: var(--roa-st-cancelled); }
+
+.roa-tl-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--roa-muted);
+  white-space: nowrap;
+}
+
+.roa-tl-done .roa-tl-label,
+.roa-tl-active .roa-tl-label,
+.roa-tl-closed .roa-tl-label { color: var(--roa-ink-strong); }
+
+.roa-tl-pending .roa-tl-label { color: var(--roa-muted); opacity: 0.85; }
+
+.roa-tl-tone-declined .roa-tl-label { color: var(--roa-st-declined); }
+
+.roa-tl-time {
+  font-family: var(--roa-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--roa-ink-strong);
+  white-space: nowrap;
+}
+
+.roa-tl-time-empty { color: var(--roa-muted); font-weight: 600; font-size: 10.5px; }
+.roa-tl-time-est { color: var(--roa-accent); font-weight: 800; }
+
+.roa-tl-gap {
+  position: relative;
+  flex: 1 1 24px;
+  align-self: flex-start;
+  height: 13px;
+  min-width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roa-tl-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 0;
+  border-top: 2px solid var(--roa-line);
+}
+
+.roa-tl-gap-done .roa-tl-line { border-top-color: var(--roa-st-ready); }
+.roa-tl-gap-live .roa-tl-line { border-top-style: dashed; border-top-color: var(--roa-accent); }
+.roa-tl-gap-pending .roa-tl-line { border-top-style: dashed; }
+.roa-tl-gap-closed .roa-tl-line { border-top-color: var(--roa-muted); }
+.roa-tl-gap-unknown .roa-tl-line { border-top-style: dotted; }
+.roa-tl-gap-late .roa-tl-line { border-top-style: solid; border-top-color: var(--roa-st-declined); }
+
+/* The minutes between two steps are the point of the rail - bigger than
+   the labels and the clocks. */
+.roa-tl-gap-text {
+  position: relative;
+  z-index: 1;
+  padding: 0 7px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: var(--roa-ink-strong);
+  background: var(--roa-paper);
+}
+
+.roa-tl-gap-live .roa-tl-gap-text { color: var(--roa-accent); }
+.roa-tl-gap-late .roa-tl-gap-text { color: var(--roa-st-declined); }
+
 .roa-block + .roa-block { margin-top: 18px; }
 
 .roa-block-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 8px;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--roa-muted);
+}
+
+.roa-block-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--roa-ink-strong);
+  background: var(--roa-paper);
+  border: 1px solid var(--roa-line);
 }
 
 .roa-row {
@@ -710,6 +1022,72 @@
   align-items: baseline;
   padding: 3px 0;
   font-size: 13px;
+}
+
+/* Collapsible side blocks (D-ROTA-30) - the raw timestamps and the extra
+   payment rows stay closed until somebody opens them. */
+
+.roa-fold > summary.roa-block-title {
+  cursor: pointer;
+  list-style: none;
+  margin: 0;
+  user-select: none;
+}
+
+.roa-fold > summary.roa-block-title::-webkit-details-marker { display: none; }
+.roa-fold > summary.roa-block-title::marker { content: ''; }
+.roa-fold > summary.roa-block-title:hover { color: var(--roa-ink-strong); }
+
+.roa-fold-caret {
+  margin-left: auto;
+  font-size: 10px;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.roa-fold[open] .roa-fold-caret { transform: rotate(180deg); }
+
+.roa-fold-value {
+  margin-left: auto;
+  max-width: 62%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--roa-ink-strong);
+}
+
+.roa-fold-value + .roa-fold-caret { margin-left: 6px; }
+
+.roa-fold-body { margin-top: 8px; }
+
+/* Small "?" next to a block title - the explanation lives in the tooltip
+   instead of a permanent line of text (D-ROTA-34). */
+.roa-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--roa-line);
+  background: var(--roa-paper-soft);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--roa-muted);
+  cursor: help;
+}
+
+.roa-help:hover { color: var(--roa-ink-strong); border-color: var(--roa-muted); }
+
+.roa-fold-empty {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--roa-muted);
 }
 
 .roa-row-block { align-items: flex-start; }
@@ -742,29 +1120,56 @@
   border-radius: 8px;
 }
 
-/* lines (same ticket language as the order history tool) */
+/* lines - the prep ticket the kitchen reads (D-ROTA-28) */
 
-.roa-lines { border-top: 1px dashed var(--roa-line); }
+.roa-lines {
+  background: var(--roa-paper-soft);
+  border: 1px solid var(--roa-line);
+  border-radius: 10px;
+  padding: 2px 12px;
+}
 
 .roa-line {
   display: flex;
   justify-content: space-between;
   gap: 14px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px dashed var(--roa-line);
 }
+
+.roa-line:last-child { border-bottom: none; }
 
 .roa-line-main { min-width: 0; flex: 1 1 auto; }
 
 .roa-line-title {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 9px;
   flex-wrap: wrap;
 }
 
-.roa-qty { font-family: var(--roa-mono); font-weight: 800; color: var(--roa-accent); font-size: 14px; }
-.roa-item { font-weight: 700; color: var(--roa-ink-strong); }
+/* Quantity badge - the first thing the kitchen reads. */
+.roa-qty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: var(--roa-paper);
+  border: 1px solid var(--roa-ink-strong);
+  font-family: var(--roa-mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--roa-ink-strong);
+}
+
+.roa-item {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--roa-ink-strong);
+}
 
 .roa-size {
   font-size: 11px;
@@ -775,27 +1180,62 @@
   border: 1px solid var(--roa-line);
   border-radius: 999px;
   padding: 1px 8px;
+  background: var(--roa-paper);
 }
 
 .roa-line-internal { font-size: 11.5px; color: var(--roa-muted); font-style: italic; margin-top: 2px; }
 
-.roa-mods { list-style: none; margin: 5px 0 0; padding: 0; }
+.roa-mods { list-style: none; margin: 7px 0 0; padding: 0; }
 
-.roa-mods li { font-size: 12.5px; color: var(--roa-ink); padding: 1px 0; }
+.roa-mods li {
+  position: relative;
+  padding: 2px 0 2px 14px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--roa-ink);
+}
 
+.roa-mods li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--roa-ink-strong);
+}
+
+.roa-mod-name { font-weight: 700; color: var(--roa-ink-strong); }
 .roa-mod-qty { font-family: var(--roa-mono); font-weight: 700; color: var(--roa-muted); }
-.roa-mod-price { font-family: var(--roa-mono); font-weight: 700; color: var(--roa-accent); }
-.roa-mod-group { color: var(--roa-muted); font-size: 11.5px; }
+.roa-mod-price { font-family: var(--roa-mono); font-weight: 600; color: var(--roa-muted); font-size: 12px; }
+.roa-mod-group { color: var(--roa-muted); font-size: 12px; }
 
+/* Cooking instructions must not be missed - full-width amber callout. */
 .roa-instr {
-  margin-top: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #7c2d12;
-  background: var(--roa-st-new-bg);
-  border-radius: 6px;
-  padding: 4px 8px;
-  display: inline-block;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+}
+
+.roa-instr-label {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-top: 2px;
+  color: #b45309;
 }
 
 .roa-line-price {
@@ -808,9 +1248,9 @@
   min-width: 86px;
 }
 
-.roa-unit { font-size: 12px; color: var(--roa-muted); }
-.roa-unit-note { font-size: 11.5px; color: var(--roa-accent); }
-.roa-line-total { font-size: 15px; font-weight: 800; color: var(--roa-ink-strong); }
+.roa-unit { font-size: 11.5px; color: var(--roa-muted); }
+.roa-unit-note { font-size: 11px; color: var(--roa-muted); }
+.roa-line-total { font-size: 14.5px; font-weight: 800; color: var(--roa-ink-strong); }
 
 /* totals */
 
@@ -854,6 +1294,13 @@
 }
 
 .roa-total-grand span:last-child { font-family: var(--roa-mono); }
+
+/* Totals inside the collapsed block: no heading, no grand-total row, the
+   summary already shows the amount. */
+.roa-totals-flat { padding: 10px 12px; }
+
+/* Rare detail actions live in this menu. */
+.roa-detail-menu .roa-menu-panel { min-width: 190px; }
 
 /* note (display-only on this board) */
 
@@ -1043,11 +1490,211 @@
   .roa { padding: 8px; }
   .roa-detail-grid { grid-template-columns: 1fr; }
   .roa-detail-side { border-right: none; border-bottom: 2px dashed var(--roa-line); }
-  .roa-title { font-size: 20px; }
+  .roa-topbar .roa-tabs { flex-basis: 100%; }
+  .roa-top-actions { width: 100%; justify-content: flex-start; }
+  .roa-toolbar .roa-search { flex: 1 1 100%; }
+  .roa-toolbar .roa-sortlabel { display: none; }
+  .roa-toolbar .roa-select { flex: 1 1 auto; width: 100%; }
+  .roa-board { grid-template-columns: 1fr; }
+  .roa-card-actionbar .roa-btn-primary,
+  .roa-card-actionbar .roa-btn-danger { font-size: 14px; padding: 12px 16px; }
+
+  /* Timeline turns vertical on a phone: dot on the left, label and time
+     to the right, the gap written next to a vertical line. */
+  .roa-tl { overflow-x: visible; }
+  .roa-tl-rail { flex-direction: column; align-items: stretch; min-width: 0; }
+  .roa-tl-node {
+    flex-direction: row;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    text-align: left;
+  }
+  .roa-tl-time { margin-left: auto; }
+  .roa-tl-gap {
+    flex: 0 0 30px;
+    height: 30px;
+    min-width: 0;
+    justify-content: flex-start;
+    margin-left: 7px;
+  }
+  .roa-tl-line {
+    left: 0;
+    right: auto;
+    top: -10px;
+    bottom: -4px;
+    width: 0;
+    height: auto;
+    border-top: none;
+    border-left: 2px solid var(--roa-line);
+  }
+  .roa-tl-gap-done .roa-tl-line { border-left-color: var(--roa-st-ready); }
+  .roa-tl-gap-live .roa-tl-line { border-left-style: dashed; border-left-color: var(--roa-accent); }
+  .roa-tl-gap-pending .roa-tl-line { border-left-style: dashed; }
+  .roa-tl-gap-closed .roa-tl-line { border-left-color: var(--roa-muted); }
+  .roa-tl-gap-unknown .roa-tl-line { border-left-style: dotted; }
+  .roa-tl-gap-late .roa-tl-line { border-left-style: solid; border-left-color: var(--roa-st-declined); }
+  .roa-tl-gap-text { margin-left: 20px; padding: 0; background: transparent; font-size: 12px; line-height: 1.2; }
+  .roa-tl-stats { gap: 16px; }
+  .roa-tl-stat-v { font-size: 17px; }
+}
+
+/* ------------------------------------------------------- thermal ticket */
+/* Black text only, 80 mm roll (D-ROTA-36). The sheet exists in the DOM but
+   is hidden on screen; the print media query shows the ticket and hides the
+   app, so Ctrl+P from the print button prints the ticket alone. */
+
+.roa-print { display: none; }
+
+.roa-print-sheet {
+  width: 72mm;
+  color: #000000;
+  background: #ffffff;
+  font-family: var(--roa-mono);
+  font-size: 11pt;
+  line-height: 1.35;
+}
+
+.roa-print-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4mm;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+}
+
+.roa-print-brand { font-size: 11pt; }
+.roa-print-num { font-size: 20pt; letter-spacing: 0; }
+
+.roa-print-rule {
+  border-top: 1px dashed #000000;
+  margin: 3mm 0;
+}
+
+.roa-print-meta > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6mm;
+}
+
+.roa-print-meta span:first-child { text-transform: uppercase; }
+.roa-print-meta span:last-child { text-align: right; font-weight: 700; }
+
+.roa-print-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+}
+
+.roa-print-item-line {
+  display: flex;
+  align-items: baseline;
+  gap: 2mm;
+}
+
+.roa-print-qty { font-size: 13pt; font-weight: 800; }
+.roa-print-name { flex: 1 1 auto; font-size: 13pt; font-weight: 800; }
+.roa-print-size { font-size: 10pt; text-transform: uppercase; }
+
+.roa-print-mod { padding-left: 6mm; font-size: 11pt; }
+
+.roa-print-note {
+  margin-top: 1mm;
+  padding-left: 6mm;
+  font-size: 11pt;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.roa-print-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12pt;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.roa-print-foot {
+  font-size: 9pt;
+  text-align: center;
 }
 
 @media print {
+  @page { size: 80mm auto; margin: 4mm; }
+  html, body { background: #ffffff !important; }
   .roa { padding: 0; background: #ffffff; }
-  .roa-top-actions, .roa-toolbar, .roa-modal { display: none !important; }
-  .roa-card { box-shadow: none; }
+  .roa-shell, .roa-modal, .roa-detail-overlay { display: none !important; }
+  .roa-print { display: block !important; }
+}
+
+/* ------------------------------------------- accept dialog summary */
+/* Customer, address, items and note shown before an order is accepted
+   (D-ROTA-39). */
+
+.roa-modal-summary {
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: var(--roa-paper-soft);
+  border: 1px solid var(--roa-line);
+  border-radius: 10px;
+}
+
+.roa-modal-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.roa-modal-row-block { align-items: flex-start; }
+
+.roa-modal-k {
+  flex: 0 0 auto;
+  padding-top: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--roa-muted);
+}
+
+.roa-modal-v {
+  min-width: 0;
+  text-align: right;
+  font-weight: 700;
+  color: var(--roa-ink-strong);
+  word-break: break-word;
+}
+
+.roa-modal-addr { line-height: 1.45; }
+
+.roa-modal-note {
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Closing-time warning inside the accept dialog (D-ROTA-41) - only shown
+   inside the last two hours of the day. */
+.roa-closing {
+  margin: 0 0 12px;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+}
+
+.roa-closing-urgent {
+  color: var(--roa-danger);
+  background: var(--roa-st-declined-bg);
+  border-color: #fca5a5;
+  border-left-color: var(--roa-danger);
 }

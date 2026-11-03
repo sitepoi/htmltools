@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargo Only - Intercity Cargo Sharing Marketplace - Business Plan</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --line:#e2e8f0;
+    --panel:#f8fafc;
+    --panel2:#f1f5f9;
+    --accent:#0f766e;
+    --accent-soft:#ccfbf1;
+    --good:#15803d;
+    --good-bg:#ecfdf5;
+    --bad:#b91c1c;
+    --bad-bg:#fef2f2;
+    --warn-bg:#fffbeb;
+    --warn-border:#fcd34d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.65;
+  }
+  .toolbar{
+    display:flex;gap:10px;justify-content:flex-end;align-items:center;
+    padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .toolbar button{
+    border:1px solid var(--accent);background:var(--bg);color:var(--accent);
+    padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .toolbar button:hover{background:var(--accent);color:#ffffff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1000px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{
+    border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;
+    padding:34px 38px;margin-bottom:30px;background:var(--bg);
+  }
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:30px;line-height:1.25;margin:8px 0 10px;color:var(--ink);}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:760px;}
+  .hero .meta{margin-top:16px;display:flex;gap:14px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{
+    font-size:21px;margin:44px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  h2 .num{
+    background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  }
+  h3{font-size:16.5px;margin:22px 0 8px;color:var(--ink);}
+  p{margin:8px 0;}
+  ul,ol{margin:8px 0 12px 22px;}
+  li{margin:4px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  .grid{display:grid;gap:14px;}
+  .g2{grid-template-columns:1fr 1fr;}
+  .g3{grid-template-columns:repeat(3,1fr);}
+  @media (max-width:820px){.g2,.g3{grid-template-columns:1fr;}}
+  .card{
+    border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--panel);
+  }
+  .card h4{font-size:13.5px;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px;}
+  .card p{font-size:14px;color:#334155;margin:0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent;}
+  .pill.good{background:var(--good-bg);color:var(--good);border-color:#bbf7d0;}
+  .pill.bad{background:var(--bad-bg);color:var(--bad);border-color:#fecaca;}
+  .pill.warn{background:var(--warn-bg);color:#92400e;border-color:var(--warn-border);}
+  .pill.blue{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+  .pros,.cons{border-radius:10px;padding:16px 20px;margin:12px 0;}
+  .pros{background:var(--good-bg);border:1px solid #bbf7d0;}
+  .cons{background:var(--bad-bg);border:1px solid #fecaca;}
+  .pros h3,.cons h3{margin-top:0;}
+  .pros h3{color:var(--good);}
+  .cons h3{color:var(--bad);}
+  .pros li::marker,.cons li::marker{font-weight:700;}
+  .score{display:flex;align-items:center;gap:12px;margin:7px 0;}
+  .score .score-label{width:190px;flex:none;font-size:13.5px;font-weight:600;}
+  .score .score-track{flex:1;height:10px;background:var(--panel2);border-radius:999px;overflow:hidden;border:1px solid var(--line);}
+  .score .score-fill{height:100%;background:var(--accent);border-radius:999px;}
+  .score .score-value{width:52px;flex:none;font-size:13px;font-weight:700;color:var(--accent);text-align:right;}
+  .callout{
+    border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;
+    margin:14px 0;
+  }
+  .callout.warn{border-color:var(--warn-border);background:var(--warn-bg);}
+  .callout.bad{border-color:#f87171;background:var(--bad-bg);}
+  .callout h4{font-size:14px;margin-bottom:4px;}
+  .swot{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:820px){.swot{grid-template-columns:1fr;}}
+  .swot .box{border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:var(--panel);}
+  .swot .box h4{font-size:13px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+  .swot .box ul{margin-left:18px;font-size:13.5px;}
+  .swot .s{color:var(--good);}
+  .swot .w{color:var(--bad);}
+  .swot .o{color:#1d4ed8;}
+  .swot .t{color:#b45309;}
+  .phase{border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0;background:var(--panel);}
+  .phase h4{font-size:15px;margin-bottom:4px;}
+  .phase .when{font-size:12.5px;color:var(--accent);font-weight:700;}
+  .verdict{
+    border:1px solid var(--line);border-radius:12px;padding:22px 26px;margin-top:14px;
+    background:var(--panel);border-left:6px solid var(--accent);
+  }
+  .verdict h3{margin-top:0;color:var(--accent);}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  @media (max-width:700px){.toc ol{columns:1;}}
+  .toc a{color:var(--ink);text-decoration:none;}
+  .toc a:hover{color:var(--accent);}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0;}
+  @media (max-width:820px){.kpi{grid-template-columns:repeat(2,1fr);}}
+  .kpi .item{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--panel);text-align:center;}
+  .kpi .item .v{font-size:20px;font-weight:800;color:var(--accent);}
+  .kpi .item .l{font-size:12px;color:var(--muted);margin-top:2px;}
+  @media print{
+    .toolbar{display:none;}
+    body{font-size:12px;}
+    .page{max-width:none;padding:0;}
+    h2{page-break-after:avoid;}
+    .card,.phase,.callout,.verdict,.pros,.cons,table{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">BUSINESS PLAN - CARGO ONLY EDITION</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Business Plan - Working Name: TripCargo</div>
+    <h1>Intercity Cargo Sharing Marketplace<br><span style="color:var(--muted);font-size:22px;">(Cargo Only - no passengers)</span></h1>
+    <p class="sub">A marketplace that connects people who are already driving to another city with senders who need a parcel delivered on the same route, same day. The sender contributes to the driver's trip costs - the parcel shares the trip exactly like a carpool seat would - and the platform charges a small service fee. Strictly cost-sharing, no commercial freight, no passenger transport.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>Asset-light marketplace</span>
+      <span>Cost-sharing model only</span>
+      <span>Illustrative figures</span>
+    </div>
+  </div>
+
+  <div class="grid g3" style="margin-bottom:10px;">
+    <div class="card"><h4>Concept</h4><p>P2P crowdshipping: spare trunk space in intercity car trips is matched with parcels that need same-day, low-cost delivery.</p></div>
+    <div class="card"><h4>Revenue model</h4><p>15-20% platform service fee on each cost-sharing contribution + booking fee, insurance markup, seller subscriptions, enterprise API.</p></div>
+    <div class="card"><h4>Verdict</h4><p>Conditional GO: real pain point, but only as a corridor-first MVP with a strong trust and insurance layer.</p></div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">Executive Summary</a></li>
+      <li><a href="#s2">Problem and Market Need</a></li>
+      <li><a href="#s3">Solution and How It Works</a></li>
+      <li><a href="#s4">Target Market</a></li>
+      <li><a href="#s5">Revenue Model</a></li>
+      <li><a href="#s6">Competitor Review</a></li>
+      <li><a href="#s7">Positive Opinions - Market Fit</a></li>
+      <li><a href="#s8">Negative Opinions - Market Fit Risks</a></li>
+      <li><a href="#s9">SWOT</a></li>
+      <li><a href="#s10">MVP Roadmap</a></li>
+      <li><a href="#s11">Financial Snapshot (illustrative)</a></li>
+      <li><a href="#s12">Final Verdict</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>Executive Summary</h2>
+  <p class="lead">Millions of cars travel between cities every day with empty trunks, while people and small businesses pay high express courier prices or wait days for a standard parcel. TripCargo monetizes that unused space: a traveler posts a trip, a sender posts a parcel, the platform matches them and guarantees payment, tracking and insurance.</p>
+  <ul>
+    <li><strong>Problem:</strong> same-day intercity delivery is expensive or unavailable; standard couriers take 1-3+ days; small businesses and individuals have no affordable door-to-door same-day option.</li>
+    <li><strong>Solution:</strong> two-sided marketplace for intercity trunk sharing. No fleet, no depots, no drivers on payroll.</li>
+    <li><strong>Monetization:</strong> commission (15-20%), booking fee, insurance add-on markup, seller subscription, enterprise API.</li>
+    <li><strong>Differentiation:</strong> only mainstream player focused on same-day intercity small cargo via cars already on the road; passenger ridesharing apps do not carry parcels at scale.</li>
+    <li><strong>Key risks:</strong> cold-start liquidity, parcel trust/safety, insurance and commercial-transport regulation, thin unit margins.</li>
+    <li><strong>Verdict:</strong> Conditional GO - launch corridor by corridor with strict parcel rules and an insurance partner; national scale only after proof.</li>
+  </ul>
+
+  <h2 id="s2"><span class="num">2</span>Problem and Market Need</h2>
+  <h3>Pain on the sender side</h3>
+  <ul>
+    <li>E-commerce sellers shipping between cities need fast delivery but express couriers are 3-5x the standard price.</li>
+    <li>Urgent items: documents, contracts, spare parts, medicine from family, keys, event materials, samples.</li>
+    <li>Fragile or odd-size items that standard courier processes reject or overcharge for.</li>
+    <li>Second-hand sales between cities (online marketplace deals) have no cheap, fast way to hand over goods.</li>
+    <li>Students and young people moving small boxes between cities (dorm moves, personal items).</li>
+  </ul>
+  <h3>Pain on the driver side</h3>
+  <ul>
+    <li>Fuel is the single biggest cost of an intercity trip; a solo driver carries an empty trunk that could earn money.</li>
+    <li>Frequent travelers: university students going home, weekly commuters, sales representatives, people visiting family.</li>
+    <li>Today the only way to monetize a trip is taking passengers, which requires comfort and social interaction - cargo does not.</li>
+  </ul>
+  <div class="callout"><h4>Market gap in one sentence</h4>There is no mainstream, same-day, door-to-door intercity parcel service at a price between "cheap but slow standard courier" and "expensive express courier". Cars already on the road are the only supply source that can fill this gap at near-zero incremental cost.</div>
+
+  <h2 id="s3"><span class="num">3</span>Solution and How It Works</h2>
+  <ol>
+    <li><strong>Sender posts a parcel:</strong> pickup city, drop-off city, size/weight band, desired delivery date, declared value.</li>
+    <li><strong>Driver posts a trip:</strong> route, date, departure window, available trunk space (bags only / small box / large box).</li>
+    <li><strong>Matching:</strong> the platform suggests drivers on the route; sender selects, or auto-match by corridor and deadline.</li>
+    <li><strong>Verification and payment:</strong> phone and ID verification, secure in-app chat, sender pays into escrow.</li>
+    <li><strong>Handover:</strong> pickup confirmation with photo, live GPS tracking shared with the sender during the trip.</li>
+    <li><strong>Delivery and payout:</strong> receiver confirms with a code or photo; driver is paid, both sides rate each other.</li>
+  </ol>
+  <ul>
+    <li><strong>Trust layer:</strong> ID verification, reviews, escrow, parcel insurance add-on (optional, 2-4% of declared value), support-mediated disputes.</li>
+    <li><strong>Parcel classes (hard cap 60 kg):</strong> document (under 1 kg), small (under 5 kg), medium (under 15 kg), large (under 30 kg), extra large (30-60 kg, carrier confirms lifting). Nothing over 60 kg, ever.</li>
+    <li><strong>Pricing as cost-sharing:</strong> a contribution by distance band + size band, modeled as a seat-equivalent share of trip costs (fuel + tolls share), capped by a published formula so it never looks like a freight tariff. Sender sees a fixed contribution before booking, roughly 1/2 to 1/3 of express courier prices.</li>
+  </ul>
+
+  <h2 id="s4"><span class="num">4</span>Target Market</h2>
+  <div class="grid g2">
+    <div class="card"><h4>Supply - drivers</h4>
+      <ul>
+        <li>University students driving home weekly or on holidays.</li>
+        <li>Weekly commuters and sales staff between major city pairs.</li>
+        <li>People visiting family with mostly empty cars.</li>
+        <li>Small van owners doing regular intercity runs.</li>
+      </ul>
+    </div>
+    <div class="card"><h4>Demand - senders</h4>
+      <ul>
+        <li>Online marketplace sellers (second-hand, handmade, parts).</li>
+        <li>Small businesses and workshops sending parts/documents.</li>
+        <li>Students and young people moving small items.</li>
+        <li>Individuals sending urgent documents or gifts.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout"><h4>Corridor-first strategy</h4>Launch on 2-3 dense city pairs (150-600 km apart) with high daily car volume - for example a capital-to-major-city corridor. Winning one corridor proves the model; corridors are then replicated city pair by city pair.</div>
+
+  <h2 id="s5"><span class="num">5</span>Revenue Model</h2>
+  <ul>
+    <li><strong>Platform service fee:</strong> 15-20% on each successful cost-sharing contribution (main revenue). The contribution itself is a capped share of trip costs, not a shipping price.</li>
+    <li><strong>Booking fee:</strong> small fixed fee per order to cover payments and support.</li>
+    <li><strong>Insurance markup:</strong> platform earns a margin on the optional parcel insurance add-on.</li>
+    <li><strong>Power-sender subscription:</strong> monthly flat fee for frequent senders in exchange for a lower service fee and priority matching.</li>
+    <li><strong>Enterprise API:</strong> integration for e-commerce sellers to auto-book parcel contributions from their order flow.</li>
+  </ul>
+  <h3>Unit economics example (illustrative)</h3>
+  <table>
+    <tr><th>Item</th><th>Amount</th></tr>
+    <tr><td>Average cost-sharing contribution paid by sender</td><td>7.00 EUR</td></tr>
+    <tr><td>Platform service fee (18%)</td><td>+1.26 EUR</td></tr>
+    <tr><td>Payment processing cost</td><td>-0.15 EUR</td></tr>
+    <tr><td>Allocated support and refunds</td><td>-0.25 EUR</td></tr>
+    <tr><td><strong>Contribution per order</strong></td><td><strong>0.86 EUR</strong></td></tr>
+  </table>
+  <p class="note">Thin per-order margins mean the product must be nearly self-serve (automated matching, in-app chat, low-touch support) and volume must come from repeat senders, not one-off marketing spend.</p>
+
+  <h2 id="s6"><span class="num">6</span>Competitor Review</h2>
+  <table>
+    <tr><th>Competitor</th><th>Region</th><th>Model</th><th>Takeaway for us</th></tr>
+    <tr><td>Roadie (UPS-owned)</td><td>USA</td><td>Crowdsourced delivery for big-box retail; drivers make dedicated trips</td><td>Validates crowdshipping economics, but built for retail giants, not small P2P parcels</td></tr>
+    <tr><td>PiggyBee</td><td>Belgium / cross-border</td><td>Travelers carry items between countries</td><td>Niche, low liquidity; shows P2P trust is the hardest problem</td></tr>
+    <tr><td>Grabr</td><td>International</td><td>Travelers buy and deliver items from abroad</td><td>Adjacent model (shopping), not same-day domestic cargo</td></tr>
+    <tr><td>uShip</td><td>USA / global</td><td>Auction marketplace for freight and oversize items</td><td>B2B freight focus; small parcels are out of scope</td></tr>
+    <tr><td>Citizenshipper</td><td>USA</td><td>Specialized P2P shipping (pets, vehicles, furniture)</td><td>Shows vertical specialization works; general cargo is harder to position</td></tr>
+    <tr><td>Lalamove / Gojek / Grab</td><td>Asia</td><td>On-demand vans and bikes, city-level</td><td>City-only, drivers do dedicated trips; not intercity trunk sharing</td></tr>
+    <tr><td>Nimber</td><td>Norway (closed 2020)</td><td>Pure P2P intercity crowdshipping</td><td>Warning sign: liquidity and thin economics killed a pure player</td></tr>
+    <tr><td>Standard couriers (PTT, Yurtiçi, Aras, MNG; DHL, UPS, FedEx)</td><td>Global</td><td>Network logistics, hubs and depots</td><td>Cheap standard option but 1-3+ days; express is expensive - that price gap is our wedge</td></tr>
+    <tr><td>Intercity bus cargo (e.g., Turkish bus companies)</td><td>Turkey and similar markets</td><td>Buses carry parcels terminal-to-terminal, same-day, very cheap</td><td>Strongest substitute locally: no door-to-door, limited hours, but unbeatable price</td></tr>
+    <tr><td>Tıkla Gelsin</td><td>Turkey</td><td>P2P same-city delivery marketplace</td><td>Validates P2P delivery demand in TR, but it is city-only</td></tr>
+  </table>
+  <div class="callout"><h4>White space</h4>No dominant player owns "same-day intercity small cargo by cars already traveling" outside the USA. The niche exists, but the failures above prove it must be won corridor by corridor with strict trust controls, not with a broad launch.</div>
+
+  <h2 id="s7"><span class="num">7</span>Positive Opinions - Why It Fits the Market</h2>
+  <div class="pros">
+    <h3>For the idea</h3>
+    <ul>
+      <li><strong>Real daily pain:</strong> senders consistently overpay for express or wait for standard; willingness to pay 2-3x standard courier price for same-day exists.</li>
+      <li><strong>Near-zero marginal cost supply:</strong> drivers earn from a trip they would make anyway; no fleet, no fuel subsidy, no idle assets.</li>
+      <li><strong>Asset-light scalability:</strong> platform costs are software only; new corridors cost almost nothing to switch on.</li>
+      <li><strong>Recurring demand:</strong> marketplace sellers and small businesses ship repeatedly, which is a retention engine that passenger ridesharing lacks.</li>
+      <li><strong>Environmental story:</strong> uses existing trips, cuts empty-vehicle kilometers; strong ESG angle for partnerships (universities, municipalities, corporate CSR).</li>
+      <li><strong>Less crowded field:</strong> far fewer funded competitors than passenger ridesharing; a corridor winner can defend a region.</li>
+      <li><strong>Natural upsell path:</strong> the same driver base and corridors can later add passenger seats (the Plan B model).</li>
+    </ul>
+  </div>
+
+  <h2 id="s8"><span class="num">8</span>Negative Opinions - Why It May Not Fit</h2>
+  <div class="cons">
+    <h3>Against the idea</h3>
+    <ul>
+      <li><strong>Cold-start chicken-and-egg:</strong> drivers will not list trips without parcels, senders will not post without drivers; both sides must be seeded simultaneously per corridor.</li>
+      <li><strong>Trust gap:</strong> theft, damage, fake pickups and delays are common in P2P delivery; dispute resolution and support costs can consume the thin 0.8-1 EUR margin.</li>
+      <li><strong>Insurance and legality:</strong> personal car insurance typically excludes carrying goods for compensation. Unlike passenger carpooling, cargo has no cost-sharing exemption in most jurisdictions - any payment can make the trip for-hire, so the platform must hold the right structure per market (FMCSA broker authority in the USA, vehicle weight thresholds in the EU/UK, CTQ permits in Quebec). See the companion regulation guide.</li>
+      <li><strong>Cheap substitutes:</strong> standard couriers and bus cargo are very cheap; only urgent, fragile or door-to-door niches truly justify the premium.</li>
+      <li><strong>Weak driver retention:</strong> most drivers travel occasionally; supply collapses between holidays, and driver loyalty is hard to buy cheaply.</li>
+      <li><strong>Demand-supply timing mismatch:</strong> a sender needs delivery today at a specific hour; a driver leaves when they leave - matching windows are narrow.</li>
+      <li><strong>Failed precedents:</strong> Nimber (2020) and Deliv (2019) show pure crowdshipping struggles without a strong niche or a retail anchor client.</li>
+      <li><strong>High acquisition cost:</strong> low order values (5-10 EUR) leave almost no budget for paid marketing; growth must come from partnerships and referrals.</li>
+    </ul>
+  </div>
+
+  <h2 id="s9"><span class="num">9</span>SWOT</h2>
+  <div class="swot">
+    <div class="box"><h4 class="s">Strengths</h4><ul>
+      <li>No assets, low fixed cost</li>
+      <li>Driver earnings from existing trips</li>
+      <li>Same-day speed no courier matches at the price</li>
+      <li>Simple, self-serve product</li>
+    </ul></div>
+    <div class="box"><h4 class="w">Weaknesses</h4><ul>
+      <li>No brand trust yet</li>
+      <li>Thin per-order margin</li>
+      <li>Supply spikes only around holidays</li>
+      <li>Support-heavy disputes</li>
+    </ul></div>
+    <div class="box"><h4 class="o">Opportunities</h4><ul>
+      <li>E-commerce returns between cities</li>
+      <li>University and corporate partnerships</li>
+      <li>Enterprise API for sellers</li>
+      <li>Later add passenger seats (Plan B)</li>
+    </ul></div>
+    <div class="box"><h4 class="t">Threats</h4><ul>
+      <li>Couriers drop prices on popular lanes</li>
+      <li>BlaBlaCar or a super-app copies the feature</li>
+      <li>Regulation of commercial carriage</li>
+      <li>Insurance partners refuse to cover</li>
+    </ul></div>
+  </div>
+
+  <h2 id="s10"><span class="num">10</span>MVP Roadmap</h2>
+  <div class="phase"><h4>Phase 0 - Months 1-2: Corridor proof</h4><span class="when">GOAL: 50 verified drivers, 100 deliveries/month on 1 corridor</span>
+    <ul><li>Pick 1-2 dense corridors; define 4 parcel bands and fixed price table.</li><li>Launch a web app (mobile-first) with manual "concierge" matching - no algorithms yet.</li><li>Recruit drivers at universities and corporate campuses with fuel-cost pitch.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 1 - Months 3-6: Trust layer</h4><span class="when">GOAL: repeat senders above 30%, dispute rate under 3%</span>
+    <ul><li>ID and phone verification, escrow payments, photo-confirmed handovers.</li><li>Insurance partnership for the optional parcel add-on.</li><li>Ratings and reviews both ways; automated matching for popular routes.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 2 - Months 6-12: Monetization depth</h4><span class="when">GOAL: unit contribution above 0.8 EUR, 2-3 corridors live</span>
+    <ul><li>Power-sender subscription and enterprise API pilots with 5-10 sellers.</li><li>Referral program for drivers; holiday campaign readiness.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 3 - Year 2: Expansion and option value</h4><span class="when">GOAL: 8-10 corridors, 8,000+ deliveries/month</span>
+    <ul><li>Replicate corridor playbook; add van owners for medium cargo.</li><li>Evaluate adding passenger seats - the Plan B bridge.</li></ul>
+  </div>
+
+  <h2 id="s11"><span class="num">11</span>Financial Snapshot (illustrative)</h2>
+  <p class="note">Scenario assumptions: average fee 6-7 EUR, commission 18%, support and payments under 0.45 EUR/order. Figures are planning estimates, not projections of guaranteed results.</p>
+  <div class="kpi">
+    <div class="item"><div class="v">Year 1</div><div class="l">~1,000 deliveries/month</div></div>
+    <div class="item"><div class="v">~11k EUR</div><div class="l">annual platform revenue</div></div>
+    <div class="item"><div class="v">Year 2</div><div class="l">~8,000 deliveries/month</div></div>
+    <div class="item"><div class="v">~86k EUR</div><div class="l">annual platform revenue</div></div>
+  </div>
+  <div class="kpi">
+    <div class="item"><div class="v">Year 3</div><div class="l">~25,000 deliveries/month</div></div>
+    <div class="item"><div class="v">~270k EUR</div><div class="l">annual platform revenue</div></div>
+    <div class="item"><div class="v">~30%</div><div class="l">repeat-sender share target</div></div>
+    <div class="item"><div class="v">0.86 EUR</div><div class="l">contribution per order</div></div>
+  </div>
+  <div class="callout warn"><h4>Funding reality check</h4>The model needs roughly 6-12 months of runway to win the first corridor before contribution margin turns meaningful. Seed-level funding or founder self-funding is the realistic path; the asset-light structure keeps the burn low.</div>
+
+  <h2 id="s12"><span class="num">12</span>Final Verdict</h2>
+  <div class="verdict">
+    <h3>Conditional GO - with corridor discipline</h3>
+    <p class="lead">Market fit exists for a narrow but real niche: same-day intercity small cargo, door-to-door, at half the express price. The idea dies only if it tries to be national from day one or ignores trust.</p>
+    <ul>
+      <li><strong>Do:</strong> one corridor, strict parcel classes, escrow, insurance add-on, university/corporate partnerships.</li>
+      <li><strong>Do not:</strong> launch many cities at once, allow cash payouts before delivery, or undercut couriers so much that margins vanish.</li>
+      <li><strong>Scorecard:</strong> market need 4/5, competition intensity 3/5, unit economics 3/5, regulatory risk medium, cold-start difficulty high.</li>
+    </ul>
+    <p style="margin-top:10px;"><strong>Next step after proof:</strong> reuse the same driver base and corridors to add passenger seats on the same cost-sharing principle - see the companion document <em>CarShareWithParcel-BusinessPlan.html</em> (Ride + Cargo edition) and the <em>Commercial-Carriage-Regulation-Guide-By-Country.html</em> for where each model is legal.</p>
+  </div>
+
+  <footer>Business Plan - Intercity Cargo Sharing Marketplace (Cargo Only) - prepared November 2026 - illustrative document, not financial advice.</footer>
+</div>
+</body>
+</html>

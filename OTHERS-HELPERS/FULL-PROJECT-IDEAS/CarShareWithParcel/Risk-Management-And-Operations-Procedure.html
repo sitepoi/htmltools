@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk Management and Operations Procedure - Protecting Senders and Carriers</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --line:#e2e8f0;
+    --panel:#f8fafc;
+    --panel2:#f1f5f9;
+    --accent:#0e7490;
+    --accent-soft:#cffafe;
+    --easy:#15803d;
+    --easy-bg:#ecfdf5;
+    --moderate:#b45309;
+    --moderate-bg:#fffbeb;
+    --danger:#b91c1c;
+    --danger-bg:#fef2f2;
+    --nogo:#7f1d1d;
+    --nogo-bg:#fee2e2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.65;
+  }
+  .toolbar{
+    display:flex;gap:10px;justify-content:flex-end;align-items:center;
+    padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .toolbar button{
+    border:1px solid var(--accent);background:var(--bg);color:var(--accent);
+    padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .toolbar button:hover{background:var(--accent);color:#ffffff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1060px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{
+    border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;
+    padding:34px 38px;margin-bottom:26px;background:var(--bg);
+  }
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:29px;line-height:1.25;margin:8px 0 10px;color:var(--ink);}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:800px;}
+  .hero .meta{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{
+    font-size:21px;margin:44px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  h2 .num{
+    background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  }
+  h3{font-size:16.5px;margin:22px 0 8px;color:var(--ink);}
+  h4{font-size:14.5px;margin:14px 0 6px;}
+  p{margin:8px 0;}
+  ul,ol{margin:8px 0 12px 22px;}
+  li{margin:4px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid transparent;white-space:nowrap;}
+  .pill.low{background:var(--easy-bg);color:var(--easy);border-color:#bbf7d0;}
+  .pill.med{background:var(--moderate-bg);color:var(--moderate);border-color:#fde68a;}
+  .pill.high{background:var(--danger-bg);color:var(--danger);border-color:#fecaca;}
+  .pill.info{background:var(--accent-soft);color:var(--accent);border-color:#a5f3fc;}
+  .callout{
+    border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;
+    margin:14px 0;
+  }
+  .callout.warn{border-color:#fbbf24;background:var(--moderate-bg);}
+  .callout.bad{border-color:#f87171;background:var(--danger-bg);}
+  .callout.good{border-color:#34d399;background:var(--easy-bg);}
+  .callout h4{font-size:14px;margin:0 0 4px;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  @media (max-width:700px){.toc ol{columns:1;}}
+  .toc a{color:var(--ink);text-decoration:none;}
+  .toc a:hover{color:var(--accent);}
+  .sop{border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;background:var(--bg);}
+  .sop h3{margin:0 0 8px;color:var(--accent);display:flex;align-items:center;gap:10px;}
+  .sop h3 .tag{
+    background:var(--accent);color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;
+    padding:3px 10px;border-radius:999px;text-transform:uppercase;
+  }
+  .sop ol{margin-left:20px;}
+  .sop li{margin:6px 0;}
+  .sop .who{font-size:12.5px;color:var(--muted);margin-bottom:8px;}
+  .sop .who b{color:var(--accent);}
+  .check{font-weight:700;color:var(--accent);}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  @media print{
+    .toolbar{display:none;}
+    body{font-size:12px;}
+    .page{max-width:none;padding:0;}
+    h2{page-break-after:avoid;}
+    table,.callout,.sop{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">RISK MANAGEMENT AND OPERATIONS PROCEDURE</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Operations Manual</div>
+    <h1>Risk Management and Operations Procedure<br><span style="color:var(--muted);font-size:21px;">Protecting both the sender and the carrier on every shared trip</span></h1>
+    <p class="sub">A complete working procedure for the cost-sharing marketplace: which risks exist, how each one is controlled, step-by-step operations for both parties, and the escalation path when something goes wrong - illegal cargo, dangerous cargo, theft, damage or fraud.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>Applies to: cargo-only and ride + cargo plans</span>
+      <span>Companion to the regulation guide</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">Purpose and Design Principles</a></li>
+      <li><a href="#s2">Risk Register - the Complete Map</a></li>
+      <li><a href="#s3">Protection Architecture - 6 Layers</a></li>
+      <li><a href="#s4">Prohibited and Restricted Items</a></li>
+      <li><a href="#s5">Dangerous Goods Quick Guide</a></li>
+      <li><a href="#s6">SOP-1 Sender - List a Parcel</a></li>
+      <li><a href="#s7">SOP-2 Carrier - Review and Accept</a></li>
+      <li><a href="#s8">SOP-3 Pickup Handover</a></li>
+      <li><a href="#s9">SOP-4 In Transit</a></li>
+      <li><a href="#s10">SOP-5 Delivery and Payout</a></li>
+      <li><a href="#s11">SOP-6 Incident and Dispute Handling</a></li>
+      <li><a href="#s12">SOP-7 Illegal or Dangerous Cargo Found</a></li>
+      <li><a href="#s13">SOP-8 Fraud and Security Incidents</a></li>
+      <li><a href="#s14">SOP-9 Emergency and Personal Safety</a></li>
+      <li><a href="#s15">Escrow and Payment Protection</a></li>
+      <li><a href="#s16">Insurance Design and Claims</a></li>
+      <li><a href="#s17">Roles and Responsibilities</a></li>
+      <li><a href="#s18">Escalation Matrix</a></li>
+      <li><a href="#s19">Evidence Standards</a></li>
+      <li><a href="#s20">First 90 Days Safety Checklist</a></li>
+      <li><a href="#s21">Safety KPIs to Track</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>Purpose and Design Principles</h2>
+  <p class="lead">This manual protects three interests at once: the sender's parcel, the carrier's freedom from legal and financial risk, and the platform's survival. Every rule below is built on five principles.</p>
+  <ol>
+    <li><strong>The carrier must never be surprised by what is in the box.</strong> Listing questions, declaration rules and the right to inspect-and-refuse exist so a carrier never unknowingly transports something illegal or dangerous.</li>
+    <li><strong>Money never moves without evidence.</strong> Escrow holds the contribution until the delivery code plus photo plus GPS confirmation exist. No evidence, no payout - this single rule stops most theft and fraud.</li>
+    <li><strong>Small parcels only, low declared value.</strong> Size bands and value caps keep the criminal interest low: nobody smuggles a meaningful quantity of anything in a 15 kg box with verified identity on both ends.</li>
+    <li><strong>Refuse first, resolve later.</strong> Both parties have a no-penalty refusal right at pickup. A refused trip is always cheaper than a bad trip.</li>
+    <li><strong>Paper trail on everything.</strong> Chat, photos, codes and GPS are recorded automatically. Every dispute is decided by the record, not by he-said-she-said.</li>
+  </ol>
+
+  <h2 id="s2"><span class="num">2</span>Risk Register - the Complete Map</h2>
+  <table>
+    <tr><th>Risk</th><th>Who is exposed</th><th>Severity</th><th>Main controls</th></tr>
+    <tr><td>Illegal cargo in the parcel (drugs, weapons, stolen property)</td><td>Carrier (legal liability), platform</td><td><span class="pill high">HIGH</span></td><td>Verified sender identity, prohibited-items terms, size/value caps, declaration, carrier right to inspect-and-refuse, report flow to platform and police</td></tr>
+    <tr><td>Dangerous cargo (flammable, batteries, aerosols, chemicals)</td><td>Both parties</td><td><span class="pill high">HIGH</span></td><td>Banned and restricted list at listing, battery policy, declaration, inspection right, refusal flow</td></tr>
+    <tr><td>Parcel stolen from the car (break-in or grab)</td><td>Sender (loss), carrier (liability)</td><td><span class="pill med">MEDIUM</span></td><td>Parcel goes directly trunk-to-trunk, never visible on seats, never left in a parked car for long, tracking, insurance add-on</td></tr>
+    <tr><td>Carrier steals the parcel</td><td>Sender</td><td><span class="pill med">MEDIUM</span></td><td>Verified carrier identity, escrow until delivery code, ratings, insurance, account ban and police report on first offense</td></tr>
+    <tr><td>Sender fraud (false non-delivery claim, fake pickup)</td><td>Carrier, insurance</td><td><span class="pill med">MEDIUM</span></td><td>Delivery code + photo + GPS, dispute window, pattern detection on repeat claimants</td></tr>
+    <tr><td>Fake carrier or fake sender (impersonation)</td><td>Both parties</td><td><span class="pill med">MEDIUM</span></td><td>In-app QR code match at handover, all communication in-app only, one-time codes</td></tr>
+    <tr><td>Damage (crush, water, heat)</td><td>Sender</td><td><span class="pill med">MEDIUM</span></td><td>Packaging standards, photo before and after, insurance add-on</td></tr>
+    <tr><td>Misdelivery to the wrong person</td><td>Both parties</td><td><span class="pill low">LOW</span></td><td>Unique delivery code known only to the receiver, GPS handover point</td></tr>
+    <tr><td>Robbery or confrontation at handover</td><td>Both parties</td><td><span class="pill med">MEDIUM</span></td><td>Public, daylight, camera-covered handover points; no home addresses by default; emergency button; live trip sharing</td></tr>
+    <tr><td>Privacy exposure (addresses, phone numbers)</td><td>Both parties</td><td><span class="pill low">LOW</span></td><td>Masked contacts, in-app chat only, data retention limits</td></tr>
+    <tr><td>Payment dispute or chargeback</td><td>Platform, carrier</td><td><span class="pill med">MEDIUM</span></td><td>Escrow, code-based release, complete evidence pack per trip</td></tr>
+    <tr><td>Regulatory exposure (carrying goods for compensation)</td><td>Platform, carrier</td><td><span class="pill high">HIGH</span></td><td>Per-jurisdiction structure from the regulation guide: broker authority in the USA, weight thresholds in the EU/UK, CTQ permits in Quebec, cost-sharing contribution caps everywhere</td></tr>
+    <tr><td>Cross-border or customs-restricted items</td><td>Both parties</td><td><span class="pill med">MEDIUM</span></td><td>Domestic lanes only at launch; customs-restricted goods on the prohibited list; no cross-border lanes until licensed carriers are used</td></tr>
+    <tr><td>Insurance fraud (inflated declared value)</td><td>Platform, insurance</td><td><span class="pill low">LOW</span></td><td>Value caps, receipt requirement above a threshold, photo of contents at listing (optional but encouraged)</td></tr>
+  </table>
+
+  <h2 id="s3"><span class="num">3</span>Protection Architecture - 6 Layers</h2>
+  <div class="sop">
+    <h3>Layer 1 - Identity and Onboarding <span class="tag">Before anything</span></h3>
+    <ul>
+      <li>Sender and carrier both verify: phone number, government ID, live selfie match, email.</li>
+      <li>Carrier additionally: driving licence check, vehicle model and plate, minimum age, rating floor for high-value parcels.</li>
+      <li>One verified identity = one account. Duplicate accounts or ID reuse are blocked.</li>
+      <li>New accounts have lower value and size limits that rise with completed trips and rating.</li>
+    </ul>
+  </div>
+  <div class="sop">
+    <h3>Layer 2 - Listing Controls <span class="tag">Before the parcel exists</span></h3>
+    <ul>
+      <li>Mandatory declaration: what category the parcel is, weight and size band, declared value (capped).</li>
+      <li>Prohibited and restricted lists shown and acknowledged at listing time - not buried in terms.</li>
+      <li>Battery and liquids questions force the dangerous-goods path or block the listing.</li>
+      <li>No cash, no jewelry, no identity documents, no live animals, no perishables above short local limits.</li>
+    </ul>
+  </div>
+  <div class="sop">
+    <h3>Layer 3 - Matching and Payment <span class="tag">Before the trip starts</span></h3>
+    <ul>
+      <li>Payment in escrow when the carrier accepts; contribution is cost-sharing capped, plus optional insurance add-on.</li>
+      <li>Route, time window and handover points agreed in-app; no off-platform deals (off-platform = no protection, and accounts are warned).</li>
+      <li>Optional insurance decision happens at listing, never after an incident.</li>
+    </ul>
+  </div>
+  <div class="sop">
+    <h3>Layer 4 - Pickup Handover <span class="tag">The critical 60 seconds</span></h3>
+    <ul>
+      <li>Both parties scan a one-time QR code shown in the app - this confirms the right people are present.</li>
+      <li>Carrier performs the inspect-and-refuse check (weight, shape, sound, odor) and may refuse with no penalty.</li>
+      <li>Photo of the sealed parcel taken in-app before loading; parcel goes directly into the trunk.</li>
+    </ul>
+  </div>
+  <div class="sop">
+    <h3>Layer 5 - In Transit <span class="tag">While moving</span></h3>
+    <ul>
+      <li>GPS tracking shared with the sender; expected delivery window updated automatically.</li>
+      <li>Parcel stays sealed; opening a parcel without a support case is a violation.</li>
+      <li>Stops are fine, but the parcel is never left visible in a parked car for more than a short stop.</li>
+    </ul>
+  </div>
+  <div class="sop">
+    <h3>Layer 6 - Delivery and Payout <span class="tag">The closing evidence</span></h3>
+    <ul>
+      <li>Receiver shows the one-time delivery code from the app; without it there is no handover.</li>
+      <li>Delivery photo (parcel at destination) + GPS confirmation + receiver tap completes the trip.</li>
+      <li>Escrow releases to the carrier, both parties rate each other, dispute window opens (48 h).</li>
+    </ul>
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>Prohibited and Restricted Items</h2>
+  <table>
+    <tr><th>Category</th><th>Status</th><th>Examples</th></tr>
+    <tr><td>Illegal goods</td><td><span class="pill high">ALWAYS PROHIBITED</span></td><td>Drugs and controlled substances, weapons and firearms (including parts and replicas), ammunition, stolen property, counterfeit goods, endangered species products, items whose possession is illegal</td></tr>
+    <tr><td>Dangerous goods - banned</td><td><span class="pill high">ALWAYS PROHIBITED</span></td><td>Explosives and fireworks, flammable liquids (fuel, solvents), flammable gases, corrosives, poisons and toxic substances, radioactive materials, loose or spare lithium batteries, damaged batteries</td></tr>
+    <tr><td>Dangerous goods - restricted</td><td><span class="pill med">DECLARE + LIMITS</span></td><td>Small sealed consumer electronics (phones, laptops), power banks under 100 Wh in original packaging, small aerosols (deodorant), small sealed liquid bottles under 100 ml</td></tr>
+    <tr><td>High-value / sensitive</td><td><span class="pill med">PROHIBITED ABOVE CAP</span></td><td>Cash, gold and jewelry, watches over the value cap, identity documents and passports, bank cards, keys to premises</td></tr>
+    <tr><td>Perishable and living</td><td><span class="pill med">RESTRICTED</span></td><td>Live animals and plants (prohibited), food only within same-day lanes, medicine only in sealed original packaging with the receiver's name</td></tr>
+    <tr><td>Cross-border sensitive</td><td><span class="pill med">DOMESTIC LANES ONLY</span></td><td>Anything subject to customs: alcohol, tobacco, agricultural products - banned at launch because all lanes are domestic</td></tr>
+  </table>
+  <div class="callout warn"><h4>The declaration is a contract</h4>At listing, the sender declares the category, weight band and value. A false declaration voids insurance, voids the platform's protection, and is grounds for an instant account ban plus a report to authorities where the law requires it.</div>
+
+  <h2 id="s5"><span class="num">5</span>Dangerous Goods Quick Guide</h2>
+  <ul>
+    <li><strong>Always allowed, no declaration needed:</strong> books, clothing, documents, household goods, sealed food in unopened original packaging (same-day only).</li>
+    <li><strong>Allowed with declaration and limits:</strong> one sealed consumer electronic device per parcel (phone, tablet, laptop, camera) with the battery inside the device; one power bank up to 100 Wh in original packaging; small aerosols up to 150 ml; sealed liquids up to 100 ml per bottle, max 2 bottles.</li>
+    <li><strong>Never allowed:</strong> anything leaking, warm or swollen batteries, loose batteries without packaging, any liquid over the limits, fuel, paint, gas canisters, sprays under pressure larger than 150 ml, unknown powders or unlabeled substances.</li>
+    <li><strong>Carrier check at pickup:</strong> if the parcel is warm, ticking, leaking, smells of fuel or chemicals, or makes a loose-battery rattle, refuse it and tap "report item" - no penalty, and the platform investigates the sender.</li>
+  </ul>
+
+  <h2 id="s6"><span class="num">6</span>SOP-1 Sender - List a Parcel</h2>
+  <div class="sop">
+    <h3>SOP-1 <span class="tag">Sender</span></h3>
+    <p class="who">Who runs it: <b>sender</b> - supervised by the platform automatically.</p>
+    <ol>
+      <li><span class="check">Declare:</span> pick the category from the list, answer the dangerous-goods questions truthfully, enter weight band, size band and declared value (capped).</li>
+      <li><span class="check">Set the route:</span> pickup point (prefer a public meeting point over a home address), destination point, delivery window.</li>
+      <li><span class="check">Choose protection:</span> accept the default value cap or add the insurance option (2-4% of declared value).</li>
+      <li><span class="check">Pack correctly:</span> rigid box, inner padding, tape all seams, no external labels that advertise the contents.</li>
+      <li><span class="check">Pay into escrow:</span> the contribution plus service fee and insurance are held - nothing is released to anyone until delivery evidence exists.</li>
+      <li><span class="check">Stay in-app:</span> all chat, photos and codes happen in the app. Off-platform contact voids the protection.</li>
+    </ol>
+  </div>
+
+  <h2 id="s7"><span class="num">7</span>SOP-2 Carrier - Review and Accept</h2>
+  <div class="sop">
+    <h3>SOP-2 <span class="tag">Carrier</span></h3>
+    <p class="who">Who runs it: <b>carrier</b> - before accepting any trip.</p>
+    <ol>
+      <li><span class="check">Check the listing:</span> category, weight band, value, route and window fit your actual trip - never accept a parcel you cannot deliver in the window.</li>
+      <li><span class="check">Check the sender:</span> verified badge, rating, trip history. New accounts with high-value items are a warning signal.</li>
+      <li><span class="check">Accept only if genuine:</span> your trip must be real. Declining is always fine and never penalized.</li>
+      <li><span class="check">Re-read the prohibited list:</span> if the declaration says "documents" but the parcel feels like bottles, you will refuse at pickup - the declaration is what you agreed to.</li>
+      <li><span class="check">Keep it in-app:</span> the pickup code, chat and address stay inside the app. If anyone asks to move off-platform, report and decline.</li>
+    </ol>
+  </div>
+
+  <h2 id="s8"><span class="num">8</span>SOP-3 Pickup Handover</h2>
+  <div class="sop">
+    <h3>SOP-3 <span class="tag">Both parties</span></h3>
+    <p class="who">Who runs it: <b>sender and carrier together</b> - this is the highest-risk moment of the whole trip.</p>
+    <ol>
+      <li><span class="check">Meet at the agreed public point</span> - daylight where possible, camera-covered area preferred.</li>
+      <li><span class="check">Scan the one-time QR codes:</span> sender shows theirs, carrier shows theirs, both confirm in-app. Mismatch = no handover, report to platform.</li>
+      <li><span class="check">Carrier inspects without opening:</span> weight, shape, sound, odor. Any mismatch with the declaration, any leak, rattle, heat or chemical smell = refuse via "report item" with no penalty.</li>
+      <li><span class="check">Photo of the sealed parcel</span> taken in-app by the carrier, timestamped and GPS-tagged.</li>
+      <li><span class="check">Trunk-to-trunk only:</span> parcel goes into the trunk (or a closed cargo area), never onto a seat, never visible.</li>
+      <li><span class="check">Both tap "parcel in car"</span> - tracking starts for the sender, escrow confirms, the trip is live.</li>
+    </ol>
+  </div>
+
+  <h2 id="s9"><span class="num">9</span>SOP-4 In Transit</h2>
+  <div class="sop">
+    <h3>SOP-4 <span class="tag">Carrier</span></h3>
+    <p class="who">Who runs it: <b>carrier</b> - with automatic platform monitoring.</p>
+    <ol>
+      <li><span class="check">Drive the agreed route</span> - the trip is the one you listed; no detours that change the delivery window without notifying the sender.</li>
+      <li><span class="check">Parcel stays sealed and in the trunk.</span> Opening a parcel without a support case is a violation and voids your protection.</li>
+      <li><span class="check">Short stops only:</span> if you leave the car, the parcel must not be visible; never leave it in a parked car for extended periods.</li>
+      <li><span class="check">If anything goes wrong</span> (accident, breakdown, police stop, theft) - tap "report incident" immediately, message the sender, and follow SOP-6.</li>
+      <li><span class="check">Update the ETA</span> if delayed more than 30 minutes; silence is what creates disputes.</li>
+    </ol>
+  </div>
+
+  <h2 id="s10"><span class="num">10</span>SOP-5 Delivery and Payout</h2>
+  <div class="sop">
+    <h3>SOP-5 <span class="tag">Both parties</span></h3>
+    <p class="who">Who runs it: <b>carrier and receiver together</b> - the trip closes only with evidence.</p>
+    <ol>
+      <li><span class="check">Meet at the agreed destination point.</span></li>
+      <li><span class="check">Receiver shows the one-time delivery code</span> from the app - no code, no handover, no exceptions.</li>
+      <li><span class="check">Carrier takes the delivery photo</span> (parcel at the destination, in-app, GPS-tagged) and the receiver taps "received".</li>
+      <li><span class="check">Escrow releases automatically</span> to the carrier after the receiver's tap (or after the 48 h auto-release if the receiver is unresponsive).</li>
+      <li><span class="check">Both parties rate each other.</span> The 48-hour dispute window opens now - evidence is already saved.</li>
+    </ol>
+  </div>
+
+  <h2 id="s11"><span class="num">11</span>SOP-6 Incident and Dispute Handling</h2>
+  <div class="sop">
+    <h3>SOP-6 <span class="tag">Platform support</span></h3>
+    <p class="who">Who runs it: <b>platform</b> - with fixed time boxes so nobody waits in the dark.</p>
+    <ol>
+      <li><span class="check">Triage (under 2 h):</span> every report gets a case number and an acknowledgment. Escrow stays frozen on that trip.</li>
+      <li><span class="check">Evidence pull (under 24 h):</span> support collects the automatic record - chat, QR scans, pickup and delivery photos, GPS, delivery code state.</li>
+      <li><span class="check">Decision (under 5 days):</span> support rules on the record. Damage or loss with insurance = claim paid to sender, carrier fault reviewed separately. Dispute without evidence = auto-release in favor of the completed delivery code.</li>
+      <li><span class="check">Appeal (under 10 days):</span> either party may appeal once with new evidence; the decision after appeal is final.</li>
+      <li><span class="check">Pattern review:</span> any party involved in 3 disputes in 90 days is reviewed, and may lose limits or the account.</li>
+    </ol>
+  </div>
+
+  <h2 id="s12"><span class="num">12</span>SOP-7 Illegal or Dangerous Cargo Found</h2>
+  <div class="sop">
+    <h3>SOP-7 <span class="tag">Both parties + platform</span></h3>
+    <p class="who">Who runs it: <b>whoever discovers it</b> - with a strict sequence so the innocent party is never at risk.</p>
+    <ol>
+      <li><span class="check">Do not open it further.</span> If you suspect illegal or dangerous contents at pickup - refuse before it enters your car and tap "report item".</li>
+      <li><span class="check">If discovered later:</span> pull over safely, do not handle the item, tap the emergency "report dangerous cargo" button in the app.</li>
+      <li><span class="check">Platform freezes both accounts temporarily</span> and contacts the carrier with instructions within 15 minutes (target).</li>
+      <li><span class="check">Never dispose of it yourself.</span> The platform coordinates safe handover to authorities. Dumping a suspicious item can turn a witness into a suspect.</li>
+      <li><span class="check">Contact authorities through the platform flow:</span> the carrier makes the call to police with platform guidance; the report is logged in the case record for the carrier's protection.</li>
+      <li><span class="check">Innocent-party protection:</span> the reporting party keeps their account, rating and earnings for the trip; the sender side is investigated, banned and reported where the law requires.</li>
+    </ol>
+    <div class="callout bad"><h4>Golden rule</h4>A carrier who honestly reports suspicious cargo is protected. A carrier who quietly drops it off and hopes for the best is not. Refuse or report - never ignore.</div>
+  </div>
+
+  <h2 id="s13"><span class="num">13</span>SOP-8 Fraud and Security Incidents</h2>
+  <div class="sop">
+    <h3>SOP-8 <span class="tag">Platform security team</span></h3>
+    <ol>
+      <li><span class="check">Impersonation attempt:</span> QR mismatch at handover = trip cancelled, escrow returned, both real users notified, flagged account reviewed.</li>
+      <li><span class="check">Off-platform solicitation:</span> first offense = warning and protection loss on that trip; repeat = account ban. Off-platform deals are where fraud lives.</li>
+      <li><span class="check">Stolen parcel reported by carrier:</span> police report required, insurance claim opened, sender compensated under the insurance terms, carrier's account paused until the report is verified.</li>
+      <li><span class="check">False non-delivery claim by sender:</span> delivery code + photo + GPS decides; confirmed false claims = claim dismissed, sender warned or banned.</li>
+      <li><span class="check">Suspicious repeated behavior:</span> same phone number, new accounts from one device, identical parcel patterns - automatic flagging and manual review.</li>
+    </ol>
+  </div>
+
+  <h2 id="s14"><span class="num">14</span>SOP-9 Emergency and Personal Safety</h2>
+  <div class="sop">
+    <h3>SOP-9 <span class="tag">Anyone, anytime</span></h3>
+    <ol>
+      <li><span class="check">Emergency button in the app:</span> one tap shares live location with a trusted contact and logs the event to the platform.</li>
+      <li><span class="check">Meeting rules:</span> public places, daylight, cameras. If the meeting point feels unsafe, leave and report - no penalty ever for walking away from a bad handover.</li>
+      <li><span class="check">Road emergency:</span> accident or breakdown - report in-app, the sender sees the status, the trip pauses safely, no penalties for delays caused by emergencies.</li>
+      <li><span class="check">Threat during a trip:</span> dial local emergency services first, then tap the app emergency button. Platform support takes over the case afterward.</li>
+      <li><span class="check">Never carry unplanned cargo:</span> if someone asks to add items not listed in the app at pickup - refuse. Undocumented cargo is the number one way illegal items get in.</li>
+    </ol>
+  </div>
+
+  <h2 id="s15"><span class="num">15</span>Escrow and Payment Protection</h2>
+  <ul>
+    <li><strong>Sender protection:</strong> money stays in escrow until the delivery code + photo + GPS confirm delivery. No delivery = full refund, and the insurance decision was made at listing.</li>
+    <li><strong>Carrier protection:</strong> payout is automatic once the evidence exists - a receiver who disappears cannot trap the money; auto-release after 48 h with evidence, or after the dispute resolution.</li>
+    <li><strong>Refusal protection:</strong> refusing a parcel at pickup (SOP-3) releases the escrow back to the sender within minutes, and the carrier's rating is untouched.</li>
+    <li><strong>Cancellation rules:</strong> sender cancels before pickup = full refund. Carrier cancels after accepting = sender refunded, carrier gets a cancellation mark; repeated cancellation marks reduce matching priority.</li>
+    <li><strong>Chargebacks:</strong> paid via app wallet or card with the evidence pack attached to every chargeback response - the record wins most disputes.</li>
+  </ul>
+
+  <h2 id="s16"><span class="num">16</span>Insurance Design and Claims</h2>
+  <h3>What the optional add-on covers</h3>
+  <ul>
+    <li><strong>Covered:</strong> loss of the parcel while in the carrier's custody (theft from the car with police report, or disappearance), and damage from an accident or handling.</li>
+    <li><strong>Value cap:</strong> default coverage up to the standard cap (example: 250 EUR); declared-value upgrade available at listing with a receipt.</li>
+    <li><strong>Not covered:</strong> prohibited items, cash, jewelry, identity documents, perishables outside rules, parcels that were refused-then-accepted off-app, and any trip where the declaration was false.</li>
+    <li><strong>Cost:</strong> 2-4% of declared value, paid by the sender at listing - never sold after an incident (that is how fraud happens).</li>
+  </ul>
+  <h3>Claim flow</h3>
+  <ol>
+    <li>Incident reported in-app within 24 h (theft: attach the police report within 72 h).</li>
+    <li>Evidence pack assembled automatically (photos, GPS, chat, codes).</li>
+    <li>Claim decision within 5 working days; payout to the sender's wallet or bank on approval.</li>
+    <li>Carrier liability reviewed separately - negligence is addressed by warnings, limits or bans, not by billing the carrier personally (keeps carriers honest and willing to report).</li>
+  </ol>
+
+  <h2 id="s17"><span class="num">17</span>Roles and Responsibilities</h2>
+  <table>
+    <tr><th>Duty</th><th>Sender</th><th>Carrier</th><th>Platform</th></tr>
+    <tr><td>True declaration of contents, weight and value</td><td><strong>Yes - contract</strong></td><td>Verifies plausibility at pickup</td><td>Enforces, bans false declarers</td></tr>
+    <tr><td>Identity and account in good standing</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Verification and monitoring</td></tr>
+    <tr><td>Proper packaging</td><td><strong>Yes</strong></td><td>May refuse poor packaging</td><td>Packaging guide in-app</td></tr>
+    <tr><td>Safe handover at public points</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Codes, QR, evidence capture</td></tr>
+    <tr><td>Care and security of the parcel in transit</td><td>-</td><td><strong>Yes</strong></td><td>Tracking, rules, incident flow</td></tr>
+    <tr><td>Delivery only against the code</td><td>-</td><td><strong>Yes</strong></td><td>Code generation and verification</td></tr>
+    <tr><td>Escrow, payout and refunds</td><td>-</td><td>-</td><td><strong>Yes - automatic</strong></td></tr>
+    <tr><td>Insurance and claims</td><td>Buys at listing</td><td>Reports incidents truthfully</td><td><strong>Yes - decisions</strong></td></tr>
+    <tr><td>Reporting illegal or dangerous cargo</td><td>Must never list it</td><td><strong>Must report if discovered</strong></td><td>Coordinates authorities</td></tr>
+    <tr><td>Legal structure per jurisdiction</td><td>-</td><td>-</td><td><strong>Yes</strong> (per the regulation guide)</td></tr>
+  </table>
+
+  <h2 id="s18"><span class="num">18</span>Escalation Matrix</h2>
+  <table>
+    <tr><th>Tier</th><th>What it handles</th><th>Team</th><th>Time target</th></tr>
+    <tr><td>Tier 1</td><td>Cancellations, refunds, ETA issues, minor damage, packaging complaints</td><td>In-app support</td><td>First response under 2 h, closed under 24 h</td></tr>
+    <tr><td>Tier 2</td><td>Lost or stolen parcels, insurance claims, fraud accusations, rating appeals</td><td>Claims and disputes team</td><td>Decision under 5 working days</td></tr>
+    <tr><td>Tier 3</td><td>Illegal or dangerous cargo, police involvement, repeated fraud, account bans, legal threats</td><td>Trust and safety + legal + law enforcement contact</td><td>Immediate (15 min contact target for dangerous cargo)</td></tr>
+  </table>
+
+  <h2 id="s19"><span class="num">19</span>Evidence Standards</h2>
+  <p>Every dispute is decided by the record. The platform captures automatically, with timestamps and GPS:</p>
+  <ul>
+    <li>QR scans at pickup and delivery code at handover</li>
+    <li>Photos of the sealed parcel at pickup and delivery</li>
+    <li>Full in-app chat between the parties</li>
+    <li>Route and GPS track during the trip</li>
+    <li>Escrow, refund and payout events</li>
+    <li>Report buttons with the reporting party's identity and time</li>
+  </ul>
+  <p class="note">Parties may add their own evidence (extra photos, police report, receipts). Evidence is kept for the claims window plus the legal retention period, then deleted under the data policy.</p>
+
+  <h2 id="s20"><span class="num">20</span>First 90 Days Safety Checklist</h2>
+  <ol>
+    <li><span class="check">Prohibited list + dangerous goods guide live in the app</span> at listing, with forced acknowledgment.</li>
+    <li><span class="check">ID verification and selfie match working</span> for both roles before the first live trip.</li>
+    <li><span class="check">Escrow flow tested end-to-end</span> including refusal, cancellation, auto-release and dispute freeze.</li>
+    <li><span class="check">QR pickup + delivery codes tested</span> on real devices with mismatch cases.</li>
+    <li><span class="check">Insurance add-on activated</span> with the value cap and exclusions displayed.</li>
+    <li><span class="check">Emergency and report buttons wired</span> to a real on-call person, not a mailbox.</li>
+    <li><span class="check">Public handover point guidance shown</span> at every listing and acceptance.</li>
+    <li><span class="check">Support SLAs staffed</span> - Tier 1 under 2 h, dangerous cargo line under 15 min.</li>
+    <li><span class="check">Jurisdiction structure in place</span> per the regulation guide before opening each corridor.</li>
+    <li><span class="check">Weekly safety review meeting</span> - every report, dispute and refusal reviewed; rules updated if a pattern appears.</li>
+  </ol>
+
+  <h2 id="s21"><span class="num">21</span>Safety KPIs to Track</h2>
+  <table>
+    <tr><th>Metric</th><th>Healthy target</th><th>Action when missed</th></tr>
+    <tr><td>Successful delivery rate</td><td>Above 95%</td><td>Review corridor, handover points and carrier onboarding</td></tr>
+    <tr><td>Dispute rate</td><td>Under 3% of trips</td><td>Review SOP-3 evidence quality and rating thresholds</td></tr>
+    <tr><td>Insurance claim rate</td><td>Under 1% of insured trips</td><td>Review packaging guide and carrier vetting</td></tr>
+    <tr><td>Fraud reports (confirmed)</td><td>Under 0.5% of users</td><td>Strengthen verification, reduce new-account limits</td></tr>
+    <tr><td>Refusal-with-report rate</td><td>Tracked, no hard cap</td><td>Refusals are healthy - high refusal rates on one sender trigger review</td></tr>
+    <tr><td>Average rating</td><td>Above 4.5</td><td>Coaching for parties under 4.0, removal under 3.5</td></tr>
+    <tr><td>Dangerous cargo reports</td><td>Zero tolerated</td><td>Immediate Tier 3 review of the sender and the listing flow</td></tr>
+  </table>
+
+  <footer>Risk Management and Operations Procedure - prepared November 2026 - operating manual, not legal advice. Companion documents: CargoOnly-Marketplace-BusinessPlan.html, CarShareWithParcel-BusinessPlan.html, Commercial-Carriage-Regulation-Guide-By-Country.html.</footer>
+</div>
+</body>
+</html>

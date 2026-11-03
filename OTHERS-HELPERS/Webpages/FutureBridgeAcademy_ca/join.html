@@ -14,8 +14,12 @@
   - NO PREFERRED TIME is asked. This is a registration list, not a booking: the
     team checks capacity and emails families later when the next public lesson
     has a place, so the page must not suggest the family picks a slot or time.
-  - Platform form contract: <form data-fba-form>, hidden honeypot named
-    "website", [data-fba-form-status] live region, gw.forms.bind() guarded
+  - Platform form contract, own namespace: <form data-fba-form>, hidden honeypot
+    named "website", [data-fba-form-status] live region. The data-fba-* names
+    matter: the CMS shell binds form[data-gw-form] itself and posts to the
+    RETIRED /api/forms/submit, which answers 400 and flashes "Something went
+    wrong" over this page's own confirmation. This page also takes the submit
+    event in the CAPTURE phase with stopImmediatePropagation().
 
   CMS CONFIG NEEDED (checklist for the CMS author, see SSOT section 13):
   - bind this form to a form-type-definition so sign ups are stored and the

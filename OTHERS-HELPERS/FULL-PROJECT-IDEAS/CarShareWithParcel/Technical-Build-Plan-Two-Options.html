@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Technical Build Plan - Two Architecture Options Compared</title>
+<style>
+  :root{
+    --bg:#ffffff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--panel:#f8fafc;--panel2:#f1f5f9;
+    --accent:#4338ca;--accent-soft:#e0e7ff;--good:#15803d;--good-bg:#ecfdf5;--bad:#b91c1c;--bad-bg:#fef2f2;--warn-bg:#fffbeb;--warn-border:#fcd34d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;}
+  .toolbar{display:flex;gap:10px;justify-content:flex-end;align-items:center;padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .toolbar button{border:1px solid var(--accent);background:var(--bg);color:var(--accent);padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
+  .toolbar button:hover{background:var(--accent);color:#fff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1080px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;padding:34px 38px;margin-bottom:26px;}
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:29px;line-height:1.25;margin:8px 0 10px;}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:820px;}
+  .hero .meta{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{font-size:21px;margin:42px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);display:flex;align-items:center;gap:10px;}
+  h2 .num{background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+  h3{font-size:16.5px;margin:22px 0 8px;}
+  p{margin:8px 0;} ul,ol{margin:8px 0 12px 22px;} li{margin:4px 0;}
+  strong{color:var(--ink);} .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);} td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid transparent;white-space:nowrap;}
+  .pill.a{background:var(--good-bg);color:var(--good);border-color:#bbf7d0;}
+  .pill.b{background:var(--warn-bg);color:#92400e;border-color:var(--warn-border);}
+  .pill.rec{background:var(--accent-soft);color:var(--accent);border-color:#c7d2fe;}
+  .callout{border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0;}
+  .callout.warn{border-color:var(--warn-border);background:var(--warn-bg);}
+  .callout.good{border-color:#34d399;background:var(--good-bg);}
+  .callout h4{font-size:14px;margin:0 0 4px;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  .toc a{color:var(--ink);text-decoration:none;} .toc a:hover{color:var(--accent);}
+  .opt{border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:14px 0;background:var(--bg);}
+  .opt h3{margin:0 0 6px;display:flex;align-items:center;gap:10px;}
+  .opt .tag{font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:999px;color:#fff;text-transform:uppercase;}
+  .pros,.cons{border-radius:8px;padding:10px 14px;margin:8px 0;font-size:13.5px;}
+  .pros{background:var(--good-bg);border:1px solid #bbf7d0;}
+  .cons{background:var(--bad-bg);border:1px solid #fecaca;}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  @media print{.toolbar{display:none;} body{font-size:11.5px;} .page{max-width:none;padding:0;} h2{page-break-after:avoid;} table,.opt,.callout{page-break-inside:avoid;} .toc ol{columns:1;}}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">TECHNICAL BUILD PLAN - TWO OPTIONS COMPARED</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Technical Build Plan and Architecture Decision</div>
+    <h1>Separate Next.js Marketplace App<br><span style="color:var(--muted);font-size:21px;">Two build options, detailed task list, comparison and decision</span></h1>
+    <p class="sub">The marketplace is a completely separate Next.js application - not part of the HTML tool framework. Two architecture options are compared on MVP speed, cost, maintenance and scale, with a clear decision for short-term and long-term maintainability.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>Scope: BC pilot, 3 corridors</span>
+      <span>Next.js App Router</span>
+      <span>Decision included</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">What We Are Building</a></li>
+      <li><a href="#s2">Option A - Next.js Full-Stack Monolith</a></li>
+      <li><a href="#s3">Option B - Next.js + Separate Backend Service</a></li>
+      <li><a href="#s4">Detailed Task List (Option A plan, B differences marked)</a></li>
+      <li><a href="#s5">Comparison Matrix</a></li>
+      <li><a href="#s6">Decision - Short Term and Long Term</a></li>
+      <li><a href="#s7">Data Model and Core Flows</a></li>
+      <li><a href="#s8">Non-Functional Requirements</a></li>
+      <li><a href="#s9">Delivery Plan and Milestones</a></li>
+      <li><a href="#s10">Migration Path from A to B (if ever needed)</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>What We Are Building</h2>
+  <ul>
+    <li><strong>Separate app, separate repo folder:</strong> a standalone Next.js 15 project <code>marketplace-next/</code> with its own package.json, deploy pipeline and database. It never imports or depends on the UniconHub HTML tool framework.</li>
+    <li><strong>Scope for the pilot:</strong> three BC corridors, one role per user (sender or carrier), cost-sharing quotes, trip listings, parcel listings, matching, escrow payment, QR handover, delivery proof, ratings, dispute cases, admin console, insurance add-on.</li>
+    <li><strong>Out of scope at launch:</strong> passenger seats, multi-currency, interprovincial lanes, native mobile apps (responsive web first), public API for e-commerce (phase 2).</li>
+    <li><strong>Regional constraint baked in:</strong> corridor allow-list enforced in code - Victoria requires ferry-terminal handover; everything stays inside BC.</li>
+  </ul>
+
+  <h2 id="s2"><span class="num">2</span>Option A - Next.js Full-Stack Monolith</h2>
+  <div class="opt">
+    <h3><span class="tag" style="background:#15803d;">OPTION A</span> One Next.js app + managed services <span class="pill a">RECOMMENDED</span></h3>
+    <p><strong>Stack:</strong> Next.js 15 App Router (React 19, TypeScript) on Vercel; Supabase for Postgres, Auth, Storage and row-level security; Stripe Connect for escrow-style destination charges; Resend for email; Vercel Cron for scheduled jobs; Sentry + PostHog for errors and analytics; Tailwind for UI.</p>
+    <p><strong>Shape:</strong> one deployable. UI, server actions and route handlers live side by side. Code is organised as internal domain modules (<code>identity</code>, <code>corridors</code>, <code>parcels</code>, <code>trips</code>, <code>matching</code>, <code>payments</code>, <code>evidence</code>, <code>insurance</code>, <code>disputes</code>, <code>admin</code>) with repository interfaces between them and the database.</p>
+    <table>
+      <tr><th>Workload</th><th>How it runs</th></tr>
+      <tr><td>Public pages (corridors, pricing, legal)</td><td>Server components, ISR/static</td></tr>
+      <tr><td>Authenticated flows (post parcel, accept trip)</td><td>Server actions + route handlers</td></tr>
+      <tr><td>Matching</td><td>Postgres query + scheduled cron sweep (every 5 min)</td></tr>
+      <tr><td>Payments and payouts</td><td>Stripe Connect webhooks handled in one route</td></tr>
+      <tr><td>Notifications</td><td>Resend + in-app table, cron digest</td></tr>
+      <tr><td>Admin console</td><td>Route group <code>/admin</code> with role gate</td></tr>
+    </table>
+    <div class="pros"><strong>Strengths:</strong> fastest to MVP (6-8 weeks solo); one deployment; one logging/error surface; one set of types end to end; cheapest at pilot scale (~$45-90/month all-in); lowest cognitive load; easiest for one or two maintainers; Supabase gives auth, storage, RLS and backups without building them.</div>
+    <div class="cons"><strong>Weaknesses:</strong> serverless limits (long jobs, cron granularity); Vercel + Supabase coupling; heavy background work (bulk payouts, PDFs, matching at scale) needs queues later; single repo means a bad deploy touches everything.</div>
+  </div>
+
+  <h2 id="s3"><span class="num">3</span>Option B - Next.js + Separate Backend Service</h2>
+  <div class="opt">
+    <h3><span class="tag" style="background:#b45309;">OPTION B</span> Next.js frontend + NestJS API + workers</h3>
+    <p><strong>Stack:</strong> Next.js 15 frontend on Vercel (or Cloudflare); NestJS REST API on Railway or Fly.io; Postgres on Neon; Redis + BullMQ workers for matching, notifications, payouts and PDF generation; S3-compatible storage; Clerk or Auth0 for identity; Stripe Connect; separate admin app or route group calling the API; OpenAPI contract shared as a package.</p>
+    <p><strong>Shape:</strong> three deployables (web, api, worker) plus infrastructure. The frontend holds no business logic beyond display; every mutation crosses the API boundary.</p>
+    <div class="pros"><strong>Strengths:</strong> independent scaling of API and web; real background workers (retries, scheduled payouts, long jobs); clean service boundaries for a larger team; API reusable by a future mobile app; no Vercel serverless ceiling; can run workers where it is cheap.</div>
+    <div class="cons"><strong>Weaknesses:</strong> 2-3x MVP time (12-16 weeks solo); three deploy pipelines and environments to keep in sync; duplicated types unless a shared contract package is maintained; Redis and worker ops; higher cost at pilot scale (~$120-250/month); every feature needs frontend + API + tests; more places for auth and validation bugs.</div>
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>Detailed Task List</h2>
+  <p class="note">Estimates are working days for one experienced full-stack developer. "B extra" marks tasks that exist only in Option B (or replace the Option A version). Every task has a testable deliverable.</p>
+  <table>
+    <tr><th>Phase</th><th>#</th><th>Task</th><th>Deliverable / done when</th><th class="num">Days</th></tr>
+    <tr><td rowspan="5"><strong>0. Foundations</strong></td><td>A1</td><td>Create separate Next.js app <code>marketplace-next/</code></td><td>App runs locally, deploys to preview URL, CI on push</td><td class="num">1</td></tr>
+    <tr><td>A2</td><td>Environment config and secrets</td><td>Local/staging/prod envs, typed env validation, no secrets in repo</td><td class="num">0.5</td></tr>
+    <tr><td>A3</td><td>UI shell and design tokens</td><td>Layout, navigation, corridor branding, mobile-first breakpoints</td><td class="num">1.5</td></tr>
+    <tr><td>A4</td><td>Database project and migration workflow</td><td>Postgres provisioned, migration files, seed script, backup policy</td><td class="num">1</td></tr>
+    <tr><td>B-extra</td><td>NestJS API skeleton + OpenAPI</td><td>API project, health check, contract published, generated client</td><td class="num">2</td></tr>
+    <tr><td rowspan="5"><strong>1. Identity</strong></td><td>A5</td><td>Auth (email + magic link, phone verification)</td><td>Sign up, sign in, session, sign out working</td><td class="num">1.5</td></tr>
+    <tr><td>A6</td><td>Role model: sender, carrier, admin</td><td>Role gate on every route and server action</td><td class="num">1</td></tr>
+    <tr><td>A7</td><td>Verification flow</td><td>ID upload, selfie match placeholder, licence and plate capture, status machine</td><td class="num">2</td></tr>
+    <tr><td>A8</td><td>Profile and trust score</td><td>Ratings aggregate, completed trips, verification badges</td><td class="num">1</td></tr>
+    <tr><td>B-extra</td><td>Clerk/Auth0 integration + API token exchange</td><td>Frontend token verified by API middleware</td><td class="num">1.5</td></tr>
+    <tr><td rowspan="5"><strong>2. Corridors &amp; catalog</strong></td><td>A9</td><td>Corridor model and allow-list</td><td>Kelowna, Kamloops, Victoria with distances, ferry flag, handover hubs</td><td class="num">1</td></tr>
+    <tr><td>A10</td><td>Pricing engine (cost-sharing formula)</td><td>Size bands, 60 kg cap, corridor multipliers, unit tests</td><td class="num">1.5</td></tr>
+    <tr><td>A11</td><td>Public corridor pages and quote widget</td><td>SEO pages per corridor, live quote, mobile layout</td><td class="num">2</td></tr>
+    <tr><td>A12</td><td>Prohibited items and dangerous goods content</td><td>Declaration component with forced acknowledgment</td><td class="num">1</td></tr>
+    <tr><td>B-extra</td><td>API endpoints for corridor + quote</td><td>Validated REST endpoints with contract tests</td><td class="num">1</td></tr>
+    <tr><td rowspan="6"><strong>3. Listings &amp; matching</strong></td><td>A13</td><td>Parcel listing flow</td><td>Declaration, sizes, declared value, insurance option, escrow intent</td><td class="num">2</td></tr>
+    <tr><td>A14</td><td>Trip listing flow (carrier)</td><td>Route, date window, trunk space by band, capacity check</td><td class="num">2</td></tr>
+    <tr><td>A15</td><td>Matching query and suggestions</td><td>Corridor + time window + capacity match, ranked, paginated</td><td class="num">2</td></tr>
+    <tr><td>A16</td><td>Accept, reserve, cancel rules</td><td>State machine with race-condition guard on capacity</td><td class="num">1.5</td></tr>
+    <tr><td>A17</td><td>Matching cron</td><td>Every 5 min sweep, notify both sides</td><td class="num">1</td></tr>
+    <tr><td>B-extra</td><td>BullMQ matching worker + retries</td><td>Job queue, retry policy, dead-letter view</td><td class="num">2.5</td></tr>
+    <tr><td rowspan="5"><strong>4. Payments</strong></td><td>A18</td><td>Stripe Connect accounts and onboarding</td><td>Carrier payout account, status webhooks, blocked if incomplete</td><td class="num">2</td></tr>
+    <tr><td>A19</td><td>Escrow-style payment intent</td><td>Charge at acceptance, hold, capture on delivery evidence</td><td class="num">2</td></tr>
+    <tr><td>A20</td><td>Payout, cancellation and refund rules</td><td>Auto-release, refusal refund, dispute freeze, ledger table</td><td class="num">2</td></tr>
+    <tr><td>A21</td><td>Webhook idempotency and reconciliation</td><td>Replay-safe handlers, daily reconciliation report</td><td class="num">1.5</td></tr>
+    <tr><td>B-extra</td><td>Payment worker and ledger service</td><td>Async capture/refund jobs, ledger API, replay tool</td><td class="num">3</td></tr>
+    <tr><td rowspan="5"><strong>5. Evidence &amp; handover</strong></td><td>A22</td><td>QR pickup and delivery codes</td><td>One-time codes, expiry, mismatch lockout</td><td class="num">1.5</td></tr>
+    <tr><td>A23</td><td>Photo evidence capture</td><td>Timestamped, GPS-tagged, storage policy, retry on upload</td><td class="num">2</td></tr>
+    <tr><td>A24</td><td>Trip tracking</td><td>Live status for both sides, ETA updates, delay reason</td><td class="num">2</td></tr>
+    <tr><td>A25</td><td>Dispute case flow</td><td>Tier 1-3 states, evidence bundle, freeze, appeal window</td><td class="num">2</td></tr>
+    <tr><td>B-extra</td><td>Evidence service (S3 + signed URLs + virus scan)</td><td>Presigned uploads, scan hook, retention job</td><td class="num">2</td></tr>
+    <tr><td rowspan="4"><strong>6. Insurance &amp; safety</strong></td><td>A26</td><td>Sender insurance add-on</td><td>Price by declared value, policy record, exclusions shown</td><td class="num">1.5</td></tr>
+    <tr><td>A27</td><td>Claim intake and status</td><td>Claim form, evidence attach, decision states</td><td class="num">1.5</td></tr>
+    <tr><td>A28</td><td>Prohibited-item report flow</td><td>Refuse-without-penalty, report item, account freeze</td><td class="num">1.5</td></tr>
+    <tr><td>A29</td><td>Emergency and incident buttons</td><td>Incident log, on-call notification, audit trail</td><td class="num">1</td></tr>
+    <tr><td rowspan="6"><strong>7. Admin &amp; trust</strong></td><td>A30</td><td>Admin console shell</td><td>Role-gated dashboard, search, audit log</td><td class="num">1.5</td></tr>
+    <tr><td>A31</td><td>Verification review queue</td><td>Approve/reject with reason, bulk actions</td><td class="num">1.5</td></tr>
+    <tr><td>A32</td><td>Dispute and claims queue</td><td>SLA timers, evidence viewer, decision templates</td><td class="num">2</td></tr>
+    <tr><td>A33</td><td>User and corridor controls</td><td>Suspend, limits, corridor pause switch</td><td class="num">1</td></tr>
+    <tr><td>A34</td><td>Ops metrics dashboard</td><td>Parcels/day, dispute rate, repeat rate, contribution margin</td><td class="num">1.5</td></tr>
+    <tr><td>B-extra</td><td>Separate admin auth and API scopes</td><td>Admin role in API, audit middleware, rate limits</td><td class="num">2</td></tr>
+    <tr><td rowspan="5"><strong>8. Compliance &amp; legal</strong></td><td>A35</td><td>Terms, privacy (PIPEDA/PIPA BC), prohibited list</td><td>Versioned legal pages, acceptance tracking</td><td class="num">1.5</td></tr>
+    <tr><td>A36</td><td>Taxes and receipts</td><td>GST capture, receipt fields, monthly export</td><td class="num">1</td></tr>
+    <tr><td>A37</td><td>Data retention and deletion</td><td>Policy enforced by job, export/delete request flow</td><td class="num">1</td></tr>
+    <tr><td>A38</td><td>Policy engine for corridor rules</td><td>Ferry handover, 60 kg cap, size bands enforced server-side</td><td class="num">1</td></tr>
+    <tr><td>B-extra</td><td>API rate limiting and WAF rules</td><td>Per-IP and per-user limits, blocked patterns</td><td class="num">1</td></tr>
+    <tr><td rowspan="5"><strong>9. Launch hardening</strong></td><td>A39</td><td>End-to-end tests on the happy path and 8 failure paths</td><td>Playwright suite green in CI</td><td class="num">2.5</td></tr>
+    <tr><td>A40</td><td>Load and abuse tests</td><td>Capacity race test, double-accept test, webhook replay test</td><td class="num">1.5</td></tr>
+    <tr><td>A41</td><td>Monitoring, alerts and runbook</td><td>Sentry releases, uptime alerts, on-call runbook</td><td class="num">1</td></tr>
+    <tr><td>A42</td><td>Pilot seed and onboarding scripts</td><td>Import drivers, generate handover hubs, support playbook</td><td class="num">1</td></tr>
+    <tr><td>A43</td><td>Go-live checklist and rollback</td><td>Feature flags, staged corridor open, rollback tested</td><td class="num">1</td></tr>
+    <tr><td colspan="4"><strong>Option A total (sum of A tasks)</strong></td><td class="num"><strong>~62 days</strong></td></tr>
+    <tr><td colspan="4"><strong>Option B extras (B-extra sum, replaces ~8 A tasks with async/API versions)</strong></td><td class="num"><strong>~+34 days</strong></td></tr>
+  </table>
+
+  <h2 id="s5"><span class="num">5</span>Comparison Matrix</h2>
+  <table>
+    <tr><th>Dimension</th><th>Option A - monolith</th><th>Option B - split services</th><th>Winner</th></tr>
+    <tr><td>Time to pilot launch</td><td>6-8 weeks</td><td>12-16 weeks</td><td><span class="pill a">A</span></td></tr>
+    <tr><td>Monthly infra cost at pilot (per corridor set)</td><td>~$45-90 (Vercel + Supabase + Resend)</td><td>~$120-250 (web + API + worker + Redis + Postgres)</td><td><span class="pill a">A</span></td></tr>
+    <tr><td>Deployments to manage</td><td>1</td><td>3 + infra</td><td><span class="pill a">A</span></td></tr>
+    <tr><td>Maintenance for 1-2 developers</td><td>Lowest - one codebase, one dependency graph</td><td>High - three services, contract drift, two auth paths</td><td><span class="pill a">A</span></td></tr>
+    <tr><td>Upgrade risk (framework / runtime)</td><td>All at once, but one place</td><td>Independent, but three upgrade tracks</td><td><span class="pill a">A</span></td></tr>
+    <tr><td>Testing surface</td><td>Unit + E2E in one repo</td><td>Unit + contract + E2E across services</td><td><span class="pill a">A</span></td></tr>
+    <tr><td>Independent scaling</td><td>Serverless scales the whole app</td><td>API and workers scale separately</td><td><span class="pill b">B</span></td></tr>
+    <tr><td>Long-running jobs (payout batches, PDFs, imports)</td><td>Cron + chunked handlers; needs workarounds</td><td>Native queue workers with retries</td><td><span class="pill b">B</span></td></tr>
+    <tr><td>Future mobile app / public API</td><td>Route handlers can serve it; add later</td><td>API exists from day one</td><td><span class="pill b">B</span></td></tr>
+    <tr><td>Team growth (5+ developers)</td><td>Merge friction rises</td><td>Clear ownership boundaries</td><td><span class="pill b">B</span></td></tr>
+    <tr><td>Vendor lock-in</td><td>Vercel + Supabase coupling</td><td>Portable, but more moving parts to operate</td><td>Draw</td></tr>
+    <tr><td>Compliance features (audit, retention, RLS)</td><td>RLS + audit tables in one schema</td><td>Must build equivalents per service</td><td><span class="pill a">A</span></td></tr>
+    <tr><td>Cost at 10,000 parcels/month</td><td>~$150-300</td><td>~$400-900</td><td><span class="pill a">A</span></td></tr>
+    <tr><td>Cost at 100,000 parcels/month</td><td>Vercel/Supabase bills rise steeply; may need extraction</td><td>Predictable, scales horizontally</td><td><span class="pill b">B</span></td></tr>
+  </table>
+
+  <h2 id="s6"><span class="num">6</span>Decision - Short Term and Long Term</h2>
+  <div class="callout good"><h4>DECISION: build Option A now, structured as a modular monolith</h4>
+    <p><strong>Short term (0-12 months):</strong> Option A wins decisively. It gets the pilot live in 6-8 weeks, costs under $100/month, and keeps one person able to maintain every part. Every extra service in Option B is a place the pilot can break while it still has almost no users.</p>
+    <p><strong>Long term (12+ months):</strong> Option A remains the better maintainability choice for a team of 1-3. Option B only wins when there is workload separation that genuinely matters - bulk payouts, heavy matching, a mobile app team, or 5+ developers. Those are scale problems, not launch problems.</p>
+    <p><strong>How to keep the door open:</strong> write the domain layer as modules with repository interfaces and an append-only event table (<code>domain_events</code>). Business rules never live in React components. That makes an extraction to Option B a mechanical move rather than a rewrite.</p>
+  </div>
+  <table>
+    <tr><th>Trigger</th><th>Action</th></tr>
+    <tr><td>More than ~5,000 parcels/month or sustained cron timeouts</td><td>Extract matching and payout jobs into a worker service (start of Option B)</td></tr>
+    <tr><td>A mobile app or public e-commerce API becomes a committed roadmap item</td><td>Extract the API layer; keep the web as a client</td></tr>
+    <tr><td>Team reaches 5+ developers with separate frontend/backend ownership</td><td>Full Option B split with an OpenAPI contract</td></tr>
+    <tr><td>Regulatory requirement for data residency or isolated processing</td><td>Move the affected module to its own service</td></tr>
+  </table>
+
+  <h2 id="s7"><span class="num">7</span>Data Model and Core Flows</h2>
+  <h3>Core tables</h3>
+  <ul>
+    <li><strong>users, verifications</strong> - identity, role, status, trust score.</li>
+    <li><strong>corridors, handover_hubs</strong> - distance band, ferry flag, allowed size bands.</li>
+    <li><strong>parcels</strong> - sender, corridor, size band, declared value, insurance, prohibited declarations, state.</li>
+    <li><strong>trips</strong> - carrier, corridor, window, capacity by band, state.</li>
+    <li><strong>matches</strong> - parcel + trip + reserved capacity + state.</li>
+    <li><strong>payments, payouts, ledger_entries</strong> - escrow intent, capture, refund, payout, reconciliation.</li>
+    <li><strong>evidence</strong> - pickup/delivery photos, QR scan events, GPS points, timestamps.</li>
+    <li><strong>disputes, claims, incidents</strong> - case state, evidence bundle, decisions.</li>
+    <li><strong>domain_events</strong> - append-only log for audit and future extraction.</li>
+  </ul>
+  <h3>Parcel state machine</h3>
+  <p><code>draft -> listed -> matched -> paid_escrow -> picked_up -> in_transit -> delivered -> released</code>, with terminal branches <code>cancelled</code>, <code>refused</code>, <code>disputed</code>, <code>refunded</code>. Every transition is server-side only and writes a domain event.</p>
+  <h3>Trip state machine</h3>
+  <p><code>draft -> listed -> accepted -> active -> completed</code>, branches <code>cancelled</code>, <code>incident</code>.</p>
+  <h3>Money flow</h3>
+  <ol>
+    <li>Sender pays contribution + service fee + optional insurance into escrow at match acceptance.</li>
+    <li>Funds are held (Stripe destination charge with delayed capture or separate ledger).</li>
+    <li>Delivery code + photo + GPS release funds to the carrier; the service fee stays with the platform.</li>
+    <li>Refusal or cancellation before pickup refunds fully; dispute freezes release until resolution.</li>
+  </ol>
+
+  <h2 id="s8"><span class="num">8</span>Non-Functional Requirements</h2>
+  <table>
+    <tr><th>Area</th><th>Requirement</th></tr>
+    <tr><td>Performance</td><td>Quote in under 300 ms; listing pages under 1.5 s on 4G; images optimized</td></tr>
+    <tr><td>Availability</td><td>99.5% during pilot; status page; queue-friendly retries</td></tr>
+    <tr><td>Security</td><td>Server-side authorization on every mutation; RLS defence in depth; signed upload URLs; rate limits; audit log</td></tr>
+    <tr><td>Privacy</td><td>PIPEDA and BC PIPA compliance; data minimization; retention job; export/delete requests</td></tr>
+    <tr><td>Payments</td><td>Idempotent webhooks; daily reconciliation; no card data stored</td></tr>
+    <tr><td>Observability</td><td>Sentry errors, structured logs, domain event trail, key funnel dashboards</td></tr>
+    <tr><td>Accessibility</td><td>WCAG 2.2 AA on public and core flows; keyboard handover flows</td></tr>
+    <tr><td>Testing</td><td>Unit tests for pricing and state machines; Playwright for 9 journeys; webhook replay tests</td></tr>
+  </table>
+
+  <h2 id="s9"><span class="num">9</span>Delivery Plan and Milestones</h2>
+  <table>
+    <tr><th>Milestone</th><th>Week</th><th>Contains</th></tr>
+    <tr><td>M1 - Foundations</td><td>2</td><td>App deployed, auth, roles, database, CI</td></tr>
+    <tr><td>M2 - Corridors and quotes</td><td>4</td><td>Three corridor pages, pricing engine with tests, prohibited declarations</td></tr>
+    <tr><td>M3 - Listings and matching</td><td>6</td><td>Parcel and trip flows, matching, capacity race fix, notifications</td></tr>
+    <tr><td>M4 - Money</td><td>8</td><td>Stripe Connect, escrow, payout, refunds, idempotency, reconciliation</td></tr>
+    <tr><td>M5 - Trust and evidence</td><td>10</td><td>QR codes, photos, tracking, disputes, insurance add-on, claims</td></tr>
+    <tr><td>M6 - Admin and compliance</td><td>12</td><td>Admin queues, legal pages, taxes, retention, metrics</td></tr>
+    <tr><td>M7 - Hardening and pilot</td><td>13-14</td><td>E2E, load, abuse tests, runbook, staged corridor open</td></tr>
+  </table>
+
+  <h2 id="s10"><span class="num">10</span>Migration Path from A to B (if ever needed)</h2>
+  <ol>
+    <li>Keep repositories behind interfaces from day one; no SQL in React components.</li>
+    <li>Emit every state change to <code>domain_events</code>; a future service consumes the log instead of rewriting history.</li>
+    <li>Move one module at a time (matching first, then payouts), keeping the Next.js route as a thin proxy during the transition.</li>
+    <li>Publish an OpenAPI contract as soon as a second client exists.</li>
+    <li>Only then split auth and admin. Big-bang rewrites of a working pilot are the failure mode this plan exists to prevent.</li>
+  </ol>
+
+  <footer>Technical Build Plan - Vancouver Corridor Cargo Marketplace - prepared November 2026 - architecture decision document. Companion: Vancouver-Corridors-BusinessPlan.html, regulation guide, operations manual.</footer>
+</div>
+</body>
+</html>

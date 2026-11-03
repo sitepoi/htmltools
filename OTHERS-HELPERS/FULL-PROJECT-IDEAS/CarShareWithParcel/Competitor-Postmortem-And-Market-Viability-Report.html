@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Competitor Postmortem and Market Viability Report - Crowdshipping Attempts</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --line:#e2e8f0;
+    --panel:#f8fafc;
+    --panel2:#f1f5f9;
+    --accent:#e11d48;
+    --accent-soft:#ffe4e6;
+    --alive:#15803d;
+    --alive-bg:#ecfdf5;
+    --dead:#b91c1c;
+    --dead-bg:#fef2f2;
+    --warn-bg:#fffbeb;
+    --warn-border:#fcd34d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.65;
+  }
+  .toolbar{
+    display:flex;gap:10px;justify-content:flex-end;align-items:center;
+    padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .toolbar button{
+    border:1px solid var(--accent);background:var(--bg);color:var(--accent);
+    padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .toolbar button:hover{background:var(--accent);color:#ffffff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1060px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{
+    border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;
+    padding:34px 38px;margin-bottom:26px;background:var(--bg);
+  }
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:29px;line-height:1.25;margin:8px 0 10px;color:var(--ink);}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:820px;}
+  .hero .meta{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{
+    font-size:21px;margin:44px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  h2 .num{
+    background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  }
+  h3{font-size:16.5px;margin:22px 0 8px;color:var(--ink);}
+  h4{font-size:14.5px;margin:14px 0 6px;}
+  p{margin:8px 0;}
+  ul,ol{margin:8px 0 12px 22px;}
+  li{margin:4px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid transparent;white-space:nowrap;}
+  .pill.alive{background:var(--alive-bg);color:var(--alive);border-color:#bbf7d0;}
+  .pill.dead{background:var(--dead-bg);color:var(--dead);border-color:#fecaca;}
+  .pill.verify{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+  .pill.info{background:var(--accent-soft);color:var(--accent);border-color:#fecdd3;}
+  .callout{
+    border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;
+    margin:14px 0;
+  }
+  .callout.warn{border-color:#fbbf24;background:var(--warn-bg);}
+  .callout.bad{border-color:#f87171;background:var(--dead-bg);}
+  .callout.good{border-color:#34d399;background:var(--alive-bg);}
+  .callout h4{font-size:14px;margin:0 0 4px;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  @media (max-width:700px){.toc ol{columns:1;}}
+  .toc a{color:var(--ink);text-decoration:none;}
+  .toc a:hover{color:var(--accent);}
+  .card{
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:var(--panel);margin:10px 0;
+  }
+  .card h4{font-size:14.5px;color:var(--accent);margin-bottom:4px;}
+  .card p{font-size:13.5px;color:#334155;margin:2px 0;}
+  .card ul{margin:6px 0 0 18px;font-size:13.5px;}
+  .goodline{border-left:4px solid #34d399;background:var(--alive-bg);border-radius:0 8px 8px 0;padding:10px 14px;margin:8px 0;font-size:13.5px;}
+  .badline{border-left:4px solid #f87171;background:var(--dead-bg);border-radius:0 8px 8px 0;padding:10px 14px;margin:8px 0;font-size:13.5px;}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  @media print{
+    .toolbar{display:none;}
+    body{font-size:12px;}
+    .page{max-width:none;padding:0;}
+    h2{page-break-after:avoid;}
+    table,.card,.callout{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">COMPETITOR POSTMORTEM AND MARKET VIABILITY REPORT</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Market Viability Research</div>
+    <h1>Competitor Postmortem and Market Viability Report<br><span style="color:var(--muted);font-size:21px;">Every serious attempt at P2P cargo delivery - what happened, what worked, what killed them</span></h1>
+    <p class="sub">A complete review of the companies that tried crowdshipping before us: who died, who survived, who got acquired, and the exact reasons for each outcome - translated into what our cost-sharing intercity model must do differently.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>Based on public sources</span>
+      <span>Statuses verified where possible</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">The Graveyard and the Survivors - Master Table</a></li>
+      <li><a href="#s2">Postmortems - The Dead and the Diminished</a></li>
+      <li><a href="#s3">Postmortems - The Survivors</a></li>
+      <li><a href="#s4">The Passenger-Side Context</a></li>
+      <li><a href="#s5">Seven Failure Patterns - What Killed Them</a></li>
+      <li><a href="#s6">The Founder's Own Words - Do His Difficulties Apply to Us?</a></li>
+      <li><a href="#s7">Six Success Factors - Why the Survivors Lived</a></li>
+      <li><a href="#s8">Competitive Map Today - Who Owns What</a></li>
+      <li><a href="#s9">The Gap Our Model Targets</a></li>
+      <li><a href="#s10">Market Viability Verdict</a></li>
+      <li><a href="#s11">Sources and Disclaimer</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>The Graveyard and the Survivors - Master Table</h2>
+  <table>
+    <tr><th>Company</th><th>Founded / Region</th><th>Model</th><th>Outcome</th><th>Lesson in one line</th></tr>
+    <tr><td>Stuff2Send</td><td>2009 / UK</td><td>Match travelers with parcels</td><td><span class="pill dead">FADED</span></td><td>First-mover without escrow, pricing or verification - a classifieds site, not a product</td></tr>
+    <tr><td>Zipments</td><td>2011 / USA</td><td>Local P2P delivery</td><td><span class="pill dead">CLOSED</span></td><td>City courier economics without a courier network</td></tr>
+    <tr><td>mmMule</td><td>2012 / UK</td><td>Travelers carry items for payment</td><td><span class="pill dead">FADED</span></td><td>No liquidity, no repeat demand</td></tr>
+    <tr><td>PiggyBee</td><td>2012 / Belgium</td><td>Travelers carry parcels internationally, negotiated per trip</td><td><span class="pill dead">CLOSED - founder farewell</span></td><td>Package inertia + no recurrence: parcels need a human at every step and nobody needs cross-border items 20 times a year</td></tr>
+    <tr><td>Deliv</td><td>2012 / USA</td><td>Same-day crowdshipping for malls and retailers</td><td><span class="pill dead">SHUT 2019 - tech sold to Target 2020</span></td><td>Retail last-mile economics lost to Amazon and Walmart scale</td></tr>
+    <tr><td>Friendshippr</td><td>2013 / UK</td><td>Crowdship via the Facebook social graph</td><td><span class="pill dead">CLOSED</span></td><td>Friends are not a logistics network</td></tr>
+    <tr><td>Nimber</td><td>2013 / Norway</td><td>Pure P2P intercity crowdshipping - the closest model to ours</td><td><span class="pill dead">SHUT 2020</span></td><td>Liquidity and thin economics in a small market killed the pure player</td></tr>
+    <tr><td>Shyp</td><td>2013 / USA</td><td>On-demand pickup-pack-ship, US$62M raised</td><td><span class="pill dead">DISSOLVED 2018</span></td><td>Unit economics never worked; W-2 couriers made it fatal</td></tr>
+    <tr><td>Roadie</td><td>2014 / USA</td><td>Gig "on-the-way" delivery for retailers and airlines</td><td><span class="pill alive">ACQUIRED BY UPS 2021 - OPERATING</span></td><td>Enterprise anchor volume + nationwide network = the only big win</td></tr>
+    <tr><td>Zoom2u</td><td>2014 / Australia</td><td>Marketplace matching senders with couriers</td><td><span class="pill alive">OPERATING (ASX listed 2021)</span></td><td>Survives on courier jobs, not on sharing</td></tr>
+    <tr><td>Trunkrs</td><td>2015 / Netherlands</td><td>Same-day crowdshipping for e-commerce</td><td><span class="pill verify">OPERATING - VERIFY</span></td><td>E-commerce integration keeps volume coming</td></tr>
+    <tr><td>Tiptapp</td><td>2016 / Sweden</td><td>P2P move-goods app, fixed prices</td><td><span class="pill alive">OPERATING (SE + UK)</span></td><td>Dead-simple fixed pricing survives where auctions failed</td></tr>
+    <tr><td>Grabr</td><td>2016 / USA</td><td>Travelers buy and deliver items cross-border</td><td><span class="pill verify">ALIVE BUT NICHE</span></td><td>Customs grey zone and travel-dependent supply cap it</td></tr>
+    <tr><td>Tıkla Gelsin</td><td>~2015 / Turkey</td><td>P2P same-city delivery</td><td><span class="pill alive">OPERATING</span></td><td>Proves P2P delivery demand exists in Turkey - city-only</td></tr>
+    <tr><td>uShip</td><td>2003 / USA</td><td>Reverse auction for freight, vehicles, boats</td><td><span class="pill alive">OPERATING</span></td><td>Deep niche + auction pricing + TV marketing</td></tr>
+    <tr><td>CitizenShipper</td><td>2008 / USA</td><td>Auction marketplace for pets, vehicles, furniture</td><td><span class="pill alive">OPERATING</span></td><td>Vertical specialization + escrow from day one</td></tr>
+  </table>
+  <p class="note">Statuses are as of November 2026 and based on public sources. Items marked VERIFY should be re-checked before being quoted in a pitch.</p>
+
+  <h2 id="s2"><span class="num">2</span>Postmortems - The Dead and the Diminished</h2>
+  <div class="card"><h4>Deliv (USA, 2012-2020) - the best-funded casualty</h4>
+    <p>Same-day crowdshipping for mall operators and retailers. Raised US$12.35M from the four largest US mall operators plus General Catalyst, Redpoint and strategic money from UPS, Google, Enterprise and GM. Expanded to 33 markets and 1,400 cities by 2017. Shut down its service in 2019; Target bought the technology assets in May 2020 and folded the team into Target.</p>
+    <div class="goodline"><strong>Good points:</strong> enterprise partnership model (malls, retailers), strong brand of backers, real same-day demand, nationwide expansion playbook.</div>
+    <div class="badline"><strong>Failure points:</strong> last-mile unit economics against Amazon Prime Now and Walmart's own networks; gig supply and support costs per order; no consumer brand of its own - it died as a middleman between retailers and shoppers.</div>
+  </div>
+  <div class="card"><h4>Shyp (USA, 2013-2018) - US$62M and still died</h4>
+    <p>On-demand pickup, packaging and shipping app. Raised US$62.1M led by Kleiner Perkins. In 2015 it converted couriers from independent contractors to W-2 employees. Closed New York, LA and Chicago in 2017; dissolved entirely in March 2018.</p>
+    <div class="goodline"><strong>Good points:</strong> genuinely loved convenience product, shipping price optimization, premium experience.</div>
+    <div class="badline"><strong>Failure points:</strong> the pickup courier cost more than the revenue per shipment; W-2 employees multiplied that cost; one-off usage with no repeats; burned through all funding without reaching contribution margin.</div>
+  </div>
+  <div class="card"><h4>Nimber (Norway, 2013-2020) - the closest model to ours, and it died</h4>
+    <p>Pure peer-to-peer intercity crowdshipping: people going between Norwegian cities carried parcels for others. Wound down in March 2020. This is the most important case in this whole report because it is the exact model we are proposing.</p>
+    <div class="goodline"><strong>Good points:</strong> genuine "already traveling" supply, low-cost operation, real users in a cost-sharing-friendly culture.</div>
+    <div class="badline"><strong>Failure points:</strong> a small country (Norway) never reached corridor liquidity; tiny per-parcel contributions could not fund support and trust operations; it ran out of time before density arrived - and the 2020 pandemic finished it. The model was not disproven; it was starved.</div>
+  </div>
+  <div class="card"><h4>PiggyBee (Belgium, 2012 - closed) - the founder's own postmortem</h4>
+    <p>Travelers carried parcels for others, mostly internationally, with pricing negotiated per trip. After 12+ years and roughly 30,000 users, the founder closed the platform: "the income still does not cover the expenses". His farewell message is the most valuable primary source in this entire report - he names exactly what killed it.</p>
+    <div class="goodline"><strong>Good points:</strong> 30,000 users over 12 years proves the concept attracts people; low burn; an honest founder who published the lessons instead of hiding them.</div>
+    <div class="badline"><strong>Failure points (his words):</strong> (1) package inertia - "a package does not move on its own"; the first mile (parcel to the traveler) and last mile (traveler to the receiver) needed a human at every step, and the reward never covered the hassle; (2) no recurrence - "nobody wants Cuban cigars 20 times a year", so retention stayed fatally low; (3) airline reluctance to carry third-party parcels; (4) the resources required never paid back. His best user (a flight attendant) solved it by having parcels sent to his hotel and shipping back via relay points - a pattern he says is part of the future solution.</div>
+  </div>
+  <div class="card"><h4>The early 2010s wave - Stuff2Send, Zipments, mmMule, Friendshippr</h4>
+    <p>The first crowdshipping generation: match travelers or neighbors with parcels (Stuff2Send 2009, Zipments 2011, mmMule 2012, Friendshippr 2013). All faded or closed without ever reaching meaningful volume.</p>
+    <div class="goodline"><strong>Good points:</strong> proved the concept was obvious to many founders at once; the US Postal Service itself studied the category in 2014.</div>
+    <div class="badline"><strong>Failure points:</strong> none had the trust stack (verification, escrow, insurance, tracking) that makes strangers comfortable; social-graph trust (Friendshippr) does not create volume; no pricing engine; no insurance partner.</div>
+  </div>
+  <div class="card"><h4>Grabr (USA, 2016-) - travel-dependent, customs-grey</h4>
+    <p>Travelers buy items abroad and deliver them in person to buyers at home. Alive but small; its supply of travelers collapsed during the 2020 travel shutdown. <span class="pill verify">VERIFY current status</span>.</p>
+    <div class="goodline"><strong>Good points:</strong> a clear, urgent use case (imports without international shipping), buyer-traveler incentive alignment.</div>
+    <div class="badline"><strong>Failure points:</strong> sits in a customs grey zone (travelers importing goods for resale value), supply exists only when people fly, and each transaction needs personal negotiation.</div>
+  </div>
+
+  <h2 id="s3"><span class="num">3</span>Postmortems - The Survivors</h2>
+  <div class="card"><h4>Roadie (USA, 2014-) - the one big win, acquired by UPS 2021</h4>
+    <p>Gig delivery matching drivers with deliveries "on their way". US$10M Series A (2015), US$15M B (2016), US$37M C (2019, Home Depot participated). Anchors: Delta Air Lines luggage (2015), Home Depot (2017), Walmart grocery and general merchandise (2019-2020), Tractor Supply (2020). UPS acquired it in September 2021; at that point it reported 200,000+ drivers across 20,000+ ZIP codes.</p>
+    <div class="goodline"><strong>Good points:</strong> enterprise anchors created driver density everywhere at once (national, not city-by-city); neutral meetup points (the Waffle House partnership); API-first B2B revenue; celebrity marketing (Ludacris, Jimmy Kimmel) for driver supply.</div>
+    <div class="badline"><strong>Weak points (from our angle):</strong> in practice Roadie drivers take dedicated gigs - the "on-the-way" framing is marketing; its business became retail last-mile logistics for UPS, and small consumer-to-consumer intercity parcels are not its core. It does not compete with our corridor model.</div>
+  </div>
+  <div class="card"><h4>uShip (USA, 2003-) - the niche auction house</h4>
+    <p>Reverse-auction marketplace for vehicles, boats, LTL freight and household moves. Benchmark Capital funding in 2005, the "Shipping Wars" TV series 2012-2015, eBay Motors integration. Still operating after 20+ years.</p>
+    <div class="goodline"><strong>Good points:</strong> deep niche (odd-size items couriers refuse), auction pricing discovers real prices, massive free TV marketing.</div>
+    <div class="badline"><strong>Weak points:</strong> low-frequency, high-ticket items; participants are semi-professional carriers with authority - not occasional travelers; nothing for daily small parcels.</div>
+  </div>
+  <div class="card"><h4>CitizenShipper (USA, 2008-) - the vertical specialist</h4>
+    <p>Auction marketplace specialized in pets, vehicles and furniture transport, with escrow via Escrow.com integrated from 2013. Still operating.</p>
+    <div class="goodline"><strong>Good points:</strong> specialization (pet transport is emotional and unserved), escrow from day one built trust, long-tail categories big couriers ignore.</div>
+    <div class="badline"><strong>Weak points:</strong> auctions favor experienced shippers; low frequency and high acquisition cost per order; not a daily parcel flow.</div>
+  </div>
+  <div class="card"><h4>Zoom2u (Australia, 2014-) - the courier marketplace</h4>
+    <p>Australian marketplace matching senders with car and van couriers, with a B2B API; listed on the ASX in 2021. Still operating. <span class="pill verify">VERIFY current status</span>.</p>
+    <div class="goodline"><strong>Good points:</strong> real courier demand (Australia Post gaps), recurring business users, white-label API.</div>
+    <div class="badline"><strong>Weak points:</strong> drivers do dedicated jobs - it is an on-demand courier network, not trunk sharing; economics are courier economics.</div>
+  </div>
+  <div class="card"><h4>Tiptapp (Sweden, 2016-) - fixed-price simplicity</h4>
+    <p>P2P app for moving and collecting things at fixed prices, active in Sweden and the UK.</p>
+    <div class="goodline"><strong>Good points:</strong> dead-simple fixed pricing (no negotiation, no auction), reuse and waste angle, low operational complexity.</div>
+    <div class="badline"><strong>Weak points:</strong> small tickets, mostly urban; does not target the intercity lane.</div>
+  </div>
+  <div class="card"><h4>Trunkrs (Netherlands, 2015-) and Tıkla Gelsin (Turkey, ~2015-)</h4>
+    <p>Trunkrs runs same-day crowdshipping for e-commerce in the Netherlands; Tıkla Gelsin runs P2P same-city delivery in Turkey. Both still operating. <span class="pill verify">VERIFY Trunkrs current model</span>.</p>
+    <div class="goodline"><strong>Good points:</strong> e-commerce integration (Trunkrs) and local demand validation (Tıkla Gelsin) prove the P2P delivery category has real, paying demand.</div>
+    <div class="badline"><strong>Weak points:</strong> both are city-level or retailer-anchored; neither runs the intercity already-traveling trunk model.</div>
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>The Passenger-Side Context</h2>
+  <ul>
+    <li><strong>BlaBlaCar</strong> (France, 2006): the proof that cost-sharing intercity travel works at scale - 100M+ members across Europe, India, Brazil, Turkey. Crucially, it never built a mainstream cargo lane - which is our window, and also the warning that it could.</li>
+    <li><strong>Waze Carpool</strong> (USA, 2018-2022): Google's commuter carpool product shut down in 2022 - even a tech giant could not make US carpooling work without a payments/monetization engine. Lesson: the corridor and the pricing model matter more than the brand.</li>
+    <li><strong>Poparide</strong> (Canada, 2015-): regional intercity carpool in BC/Alberta/Ontario/Quebec corridors - still operating, proving Canadian intercity demand, passengers only.</li>
+    <li><strong>Amigo Express</strong> (Quebec): the Quebec covoiturage network under the province's explicit cost-sharing exemption - the legal blueprint we follow for the passenger lane.</li>
+  </ul>
+
+  <h2 id="s5"><span class="num">5</span>Seven Failure Patterns - What Killed Them</h2>
+  <table>
+    <tr><th>Failure pattern</th><th>Who died of it</th><th>Our counter-measure</th></tr>
+    <tr><td>1. No liquidity - supply and demand never met in the same corridor at the same time</td><td>Nimber, PiggyBee, mmMule, Friendshippr</td><td>Corridor-first launch, one dense lane at a time, driver supply recruited from real commuter communities before demand opens</td></tr>
+    <tr><td>2. No trust stack - no escrow, no verification, no insurance</td><td>Early 2010s wave (Stuff2Send, Zipments, Friendshippr)</td><td>Mandatory from day one per our operations manual: ID verification, escrow, delivery codes, insurance add-on</td></tr>
+    <tr><td>3. Pricing friction - negotiation and auctions scare ordinary users</td><td>PiggyBee, early Grabr</td><td>Fixed cost-sharing formula by distance and size band - zero negotiation, published in the app</td></tr>
+    <tr><td>4. Unit economics beaten by subsidized giants</td><td>Deliv, Shyp</td><td>No couriers, no packaging, no W-2 employees - the platform only moves money and matches trips; contribution margin per order is the only metric that matters</td></tr>
+    <tr><td>5. Dedicated trips pretending to be sharing</td><td>Roadie (its weakness), Zoom2u, courier apps</td><td>We only onboard drivers whose trip already exists - the "already traveling" rule is enforced, not marketed</td></tr>
+    <tr><td>6. One-off demand, no repeats</td><td>uShip, CitizenShipper, PiggyBee</td><td>Target repeat senders: marketplace sellers, small businesses, students - the retention engine our plan is built on</td></tr>
+    <tr><td>7. Employee/ops costs</td><td>Shyp (W-2 couriers), Deliv (support)</td><td>Self-serve product, automated evidence, low-touch support - from the operations manual</td></tr>
+  </table>
+
+  <h2 id="s6"><span class="num">6</span>The Founder's Own Words - Do His Difficulties Apply to Us?</h2>
+  <p class="lead">PiggyBee's founder closed with a public postmortem. His diagnosis is the best map we have of what will go wrong - so each point is checked against our model below.</p>
+  <div class="callout"><h4>His two core observations</h4>"The biggest problem with the model is... the inertia of the package" - a package does not move on its own; someone must handle every step. And "the lack of recurrence... the Achilles heel" - everyone needs a place to stay, a way to move, food; nobody needs the last Yankees t-shirt 20 times a year.</div>
+  <table>
+    <tr><th>His difficulty</th><th>Applies to us?</th><th>Our answer</th></tr>
+    <tr><td>Package inertia - first mile and last mile at both ends</td><td><strong>Yes, but structurally much smaller</strong></td><td>PiggyBee's parcels had to reach a hotel and leave an airport - detours with no shared route. Our driver's trip starts in the sender's city and ends in the receiver's city: both miles collapse into the route itself. What remains is handover choreography - on-route handover points, QR codes and a hard detour budget from the operations manual.</td></tr>
+    <tr><td>The reward never covered the hassle</td><td><strong>Yes - the permanent design constraint</strong></td><td>Fixed cost-sharing pricing, pre-agreed windows and zero negotiation remove the hassle PiggyBee had; the contribution only has to cover a 10-15 minute handover on the driver's way, not airport logistics.</td></tr>
+    <tr><td>No recurrence - one-off exotic items</td><td><strong>Yes - the deepest shared risk</strong></td><td>His demand was rare international one-offs. Ours is built on repeat senders - marketplace sellers, small businesses, students, urgent documents - with retention targets above 30%. If C2C one-offs dominate, we catch his disease; the corridor plan exists to avoid it.</td></tr>
+    <tr><td>Relay points are the carriers' secret (his Olivier example, Hytchers' petrol stations)</td><td><strong>A design hint, not a difficulty</strong></td><td>We can borrow it: partner locations (campuses, universities, shops) become on-route relay points. Hytchers' fate - overtaken by traditional carriers and unions - is also a warning to prepare for incumbent pushback.</td></tr>
+    <tr><td>One-click ease of use (Vinted-style label printing)</td><td><strong>Yes - an adoption requirement</strong></td><td>SOP-1 already requires one-tap listing; we add one-click parcel label and QR printing at listing and at delivery - exactly the pattern he names.</td></tr>
+    <tr><td>International, airports, airlines, customs</td><td><strong>No - avoided by design</strong></td><td>Domestic lanes only, cars only, no airports, no customs, no airline partners. PiggyBee fought the hardest version of this problem; we deliberately fight the easiest.</td></tr>
+    <tr><td>Cocolis lesson: territory focus + a clear niche ("what problem are you solving")</td><td><strong>Confirms our strategy</strong></td><td>His closing advice is literally our plan: one territory (a province), a known pattern (carpool cost-sharing), a clear niche (same-day urgent and fragile light cargo under 60 kg).</td></tr>
+  </table>
+  <div class="callout good"><h4>The verdict on his question</h4>He writes that he knows of no service that fully succeeded at P2P parcel delivery. That is consistent with this report - nobody has. But his own postmortem points at the viable variant: domestic, territory-focused, relay-point thinking, one-click ease. That variant is exactly what the corridor plan in this folder is. We inherit his two hard problems - package inertia and recurrence - reduced in size, not eliminated.</div>
+
+  <h2 id="s7"><span class="num">7</span>Six Success Factors - Why the Survivors Lived</h2>
+  <ol>
+    <li><strong>Enterprise anchor volume:</strong> Roadie's retailer and airline contracts created driver density everywhere - our equivalent is university and business-corridor partnerships in the launch province.</li>
+    <li><strong>Deep vertical niche:</strong> uShip (freight), CitizenShipper (pets) - our niche is "same-day intercity small cargo by cars already on the road", a lane nobody owns.</li>
+    <li><strong>Trust from day one:</strong> CitizenShipper wired escrow in from the start - non-negotiable for us too.</li>
+    <li><strong>Fixed, simple pricing:</strong> Tiptapp's fixed prices beat auctions for ordinary users - our cost-sharing formula is this lesson applied to intercity lanes.</li>
+    <li><strong>Small, cash-light, one-country focus:</strong> Zoom2u, Tiptapp and Tıkla Gelsin survived without billions because they stayed lean and regional - our Wave 1 plan (one corridor in one province) is deliberately the same shape.</li>
+    <li><strong>Being acquired as infrastructure:</strong> Roadie (UPS) and Deliv's tech (Target) - the realistic premium exit is becoming the intercity trunk network of a big courier; worth designing the platform so a UPS/DPD-style buyer could plug it in.</li>
+  </ol>
+
+  <h2 id="s8"><span class="num">8</span>Competitive Map Today - Who Owns What</h2>
+  <table>
+    <tr><th>Region</th><th>Who is there</th><th>What they own</th><th>What is empty</th></tr>
+    <tr><td>USA</td><td>UPS Roadie, DoorDash, Uber Eats, uShip, CitizenShipper</td><td>Retail same-day, urban food, niche freight and pets</td><td><strong>Intercity P2P small parcels by cars already traveling - empty</strong></td></tr>
+    <tr><td>Canada</td><td>Poparide (passengers only), couriers</td><td>Intercity carpool in some corridors</td><td><strong>Cargo crowdshipping - completely empty</strong></td></tr>
+    <tr><td>Europe</td><td>BlaBlaCar (passengers), Trunkrs (NL), Tiptapp (SE/UK), Cocolis (FR, bulky items)</td><td>Passenger cost-sharing, city/e-commerce delivery</td><td>Intercity trunk cargo at scale - empty</td></tr>
+    <tr><td>Australia</td><td>Zoom2u, Australia Post, Sendle</td><td>Courier jobs, standard post</td><td>Trunk sharing on the long 660-920 km lanes - empty</td></tr>
+    <tr><td>Asia</td><td>Lalamove, Grab, Gojek (urban vans/bikes)</td><td>City-level on-demand</td><td>Intercity sharing - empty</td></tr>
+    <tr><td>Turkey</td><td>Tıkla Gelsin (city), bus cargo, BlaBlaCar Türkiye</td><td>City P2P, terminal cargo, carpool</td><td>Door-to-door intercity sharing - empty but bus cargo is the substitute</td></tr>
+  </table>
+  <div class="callout"><h4>The honest competitive truth</h4>Every region has couriers, delivery apps and carpool platforms - but no one anywhere runs the combination we propose: intercity, already-traveling cars, cost-sharing contributions, fixed pricing, small parcels. Nimber was the only pure attempt, in a market (Norway) too small to feed it. The lane is empty; the question is whether corridor liquidity can be built before the incumbent copycats arrive.</div>
+
+  <h2 id="s9"><span class="num">9</span>The Gap Our Model Targets</h2>
+  <ul>
+    <li><strong>Not courier economics:</strong> we never pay drivers for dedicated trips - that is what killed Shyp and constrained Roadie. The driver's trip exists first; the parcel joins it.</li>
+    <li><strong>Not negotiation:</strong> fixed cost-sharing contributions remove the friction that starved PiggyBee.</li>
+    <li><strong>Not a small market:</strong> Nimber died in Norway (~5M people); our launch corridors in Ontario, BC and Alberta are bigger, and the playbook replicates province by province.</li>
+    <li><strong>Not trust-lite:</strong> escrow, verification, codes and insurance from day one - the exact stack the early 2010s wave never built.</li>
+    <li><strong>Not retail last-mile:</strong> Deliv died fighting Amazon for same-day mall delivery; we avoid that war entirely and serve a segment couriers price out.</li>
+  </ul>
+
+  <h2 id="s10"><span class="num">10</span>Market Viability Verdict</h2>
+  <div class="verdict callout good"><h4>Viable as a lean, corridor-first regional business - not as a venture-scale bet</h4>
+    <p class="lead">The evidence supports a narrow conclusion: the category has real, paying demand (Roadie, Tiptapp, Tıkla Gelsin, CitizenShipper prove it), but every pure P2P intercity attempt failed on liquidity and unit economics, and the only scale win (Roadie) survived by becoming a corporate courier network. Our model is designed around exactly those two failure modes - corridor liquidity first, zero courier costs - so it is viable as a focused regional operation with these conditions:</p>
+    <ul>
+      <li><strong>Launch corridor by corridor,</strong> never nationally (Nimber's mistake was a small market; Deliv's was too many markets).</li>
+      <li><strong>Fixed cost-sharing pricing and full trust stack from day one</strong> (PiggyBee's and the early wave's mistakes).</li>
+      <li><strong>No dedicated-trip payouts ever</strong> (Shyp's mistake).</li>
+      <li><strong>Repeat senders before marketing spend</strong> (the one metric every survivor shares).</li>
+      <li><strong>Expect a regional outcome:</strong> sustainable cash flow or an acquisition as trunk-network infrastructure - not a venture-scale exit.</li>
+    </ul>
+  </div>
+
+  <h2 id="s11"><span class="num">11</span>Sources and Disclaimer</h2>
+  <ul>
+    <li>Primary sources: company histories and funding records for Deliv, Shyp, Roadie, uShip, CitizenShipper (public coverage and company pages); the crowdshipping category history including Stuff2Send, Zipments, mmMule, PiggyBee, Friendshippr, Grabr, Parcl and Shippn; the PiggyBee founder's public farewell message (the primary source for section 6); Waze Carpool shutdown (2022); BlaBlaCar, Poparide, Cocolis and Hytchers public profiles. Where a status is uncertain, it carries a VERIFY tag.</li>
+    <li>This is business research, not investment or legal advice. Company statuses change; re-verify before quoting.</li>
+    <li>Companion documents in this folder: the two business plans, the regulation guide, the risk and operations manual, and the market sizing and priority reports.</li>
+  </ul>
+
+  <footer>Competitor Postmortem and Market Viability Report - prepared November 2026 - research document based on public sources.</footer>
+</div>
+</body>
+</html>

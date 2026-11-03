@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jurisdiction Priority and Opportunity Ranking - Where to Launch First</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --line:#e2e8f0;
+    --panel:#f8fafc;
+    --panel2:#f1f5f9;
+    --accent:#4f46e5;
+    --accent-soft:#e0e7ff;
+    --easy:#15803d;
+    --easy-bg:#ecfdf5;
+    --moderate:#b45309;
+    --moderate-bg:#fffbeb;
+    --hard:#b91c1c;
+    --hard-bg:#fef2f2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.65;
+  }
+  .toolbar{
+    display:flex;gap:10px;justify-content:flex-end;align-items:center;
+    padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .toolbar button{
+    border:1px solid var(--accent);background:var(--bg);color:var(--accent);
+    padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .toolbar button:hover{background:var(--accent);color:#ffffff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1060px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{
+    border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;
+    padding:34px 38px;margin-bottom:26px;background:var(--bg);
+  }
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:29px;line-height:1.25;margin:8px 0 10px;color:var(--ink);}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:800px;}
+  .hero .meta{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{
+    font-size:21px;margin:44px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  h2 .num{
+    background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  }
+  h3{font-size:16.5px;margin:22px 0 8px;color:var(--ink);}
+  h4{font-size:14.5px;margin:14px 0 6px;}
+  p{margin:8px 0;}
+  ul,ol{margin:8px 0 12px 22px;}
+  li{margin:4px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid transparent;white-space:nowrap;}
+  .pill.w1{background:var(--easy-bg);color:var(--easy);border-color:#bbf7d0;}
+  .pill.w2{background:var(--moderate-bg);color:var(--moderate);border-color:#fde68a;}
+  .pill.w3{background:var(--accent-soft);color:var(--accent);border-color:#c7d2fe;}
+  .pill.no{background:var(--hard-bg);color:var(--hard);border-color:#fecaca;}
+  .pill.info{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+  .callout{
+    border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;
+    margin:14px 0;
+  }
+  .callout.warn{border-color:#fbbf24;background:var(--moderate-bg);}
+  .callout.good{border-color:#34d399;background:var(--easy-bg);}
+  .callout h4{font-size:14px;margin:0 0 4px;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  @media (max-width:700px){.toc ol{columns:1;}}
+  .toc a{color:var(--ink);text-decoration:none;}
+  .toc a:hover{color:var(--accent);}
+  .card{
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:var(--panel);margin:10px 0;
+  }
+  .card h4{font-size:14.5px;color:var(--accent);margin-bottom:4px;}
+  .card p{font-size:13.5px;color:#334155;margin:2px 0;}
+  .card ul{margin:6px 0 0 18px;font-size:13.5px;}
+  .rank{font-size:12px;font-weight:800;color:#fff;background:var(--accent);border-radius:999px;padding:2px 9px;margin-right:6px;}
+  .wave{border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:12px 0;background:var(--bg);}
+  .wave h3{margin:0 0 6px;display:flex;align-items:center;gap:10px;}
+  .wave h3 .tag{font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:999px;color:#fff;text-transform:uppercase;}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  @media print{
+    .toolbar{display:none;}
+    body{font-size:12px;}
+    .page{max-width:none;padding:0;}
+    h2{page-break-after:avoid;}
+    table,.card,.wave,.callout{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">JURISDICTION PRIORITY AND OPPORTUNITY RANKING</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Launch Planning Document</div>
+    <h1>Jurisdiction Priority and Opportunity Ranking<br><span style="color:var(--muted);font-size:21px;">Where to launch the cost-sharing marketplace first - and why</span></h1>
+    <p class="sub">Every jurisdiction scored on two axes: market opportunity (population, corridor density, parcel demand, competition gap) and regulation difficulty (from the companion regulation guide). The result is a ranked priority list split into launch waves.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>Illustrative figures</span>
+      <span>Companion to the regulation guide</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">How the Ranking Works</a></li>
+      <li><a href="#s2">The Master Scoreboard</a></li>
+      <li><a href="#s3">Launch Waves - the Sequence</a></li>
+      <li><a href="#s4">Deep Dives - Top 8 Priority Jurisdictions</a></li>
+      <li><a href="#s5">Jurisdictions to Skip (and why)</a></li>
+      <li><a href="#s6">Final Verdict and Launch Order</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>How the Ranking Works</h2>
+  <p>Every jurisdiction gets four numbers, then one priority score:</p>
+  <ul>
+    <li><strong>Opportunity (1-5):</strong> population served by the anchor corridors, intercity trip density, e-commerce and parcel demand, and the price gap between slow couriers and express - the wider the gap, the more the cost-sharing contribution is worth.</li>
+    <li><strong>Regulation difficulty - Model A, carpool (1-5, higher = harder):</strong> from the regulation guide. Carpool cost-sharing is easy almost everywhere, so this is mostly 1-2.</li>
+    <li><strong>Regulation difficulty - Model B, cargo (1-5, higher = harder):</strong> the real differentiator. Cargo has no cost-sharing exemption, so this column decides where the cargo lane can launch early and where it must wait.</li>
+    <li><strong>Competition gap:</strong> whether an incumbent already owns intercity cost-sharing there (BlaBlaCar dominates Europe and India and Turkey; North America has no dominant player - Waze Carpool shut down in 2022, Canada has only the regional Poparide).</li>
+  </ul>
+  <div class="callout"><h4>Priority score formula</h4><strong>Priority = (Opportunity x 0.50) + ((6 - carpool difficulty) x 0.25) + ((6 - cargo difficulty) x 0.25)</strong>. Opportunity is weighted double because regulation can be engineered around, but an empty market cannot. Scores are planning judgments, not measurements.</div>
+
+  <h2 id="s2"><span class="num">2</span>The Master Scoreboard</h2>
+  <p class="note">Populations are approximate, rounded. Distances are approximate road distances on the anchor corridors. Regulation scores come from the companion guide.</p>
+  <table>
+    <tr><th>Rank</th><th>Jurisdiction</th><th>Anchor corridors (approx km)</th><th>Opportunity</th><th>Reg. difficulty - carpool</th><th>Reg. difficulty - cargo</th><th>Incumbent on the lanes</th><th>Priority score</th><th>Wave</th></tr>
+    <tr><td><span class="rank">1</span></td><td><strong>United Kingdom</strong></td><td>London-Birmingham (~190), London-Manchester (~330), Leeds-Manchester (~70)</td><td>5</td><td>1</td><td>1</td><td>BlaBlaCar present, cargo lane open</td><td><strong>5.0</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">2</span></td><td><strong>Ontario, Canada</strong></td><td>Toronto-Ottawa (~450), Toronto-London (~200), Toronto-Windsor (~380)</td><td>5</td><td>1</td><td>2</td><td>Poparide only - no cargo player</td><td><strong>4.75</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">3</span></td><td><strong>Texas, USA</strong></td><td>Dallas-Houston (~385), Dallas-Austin (~315), Austin-San Antonio (~130)</td><td>5</td><td>1</td><td>3</td><td>None dominant (no national carpool app)</td><td><strong>4.5</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">3</span></td><td><strong>Germany</strong></td><td>Berlin-Hamburg (~290), Frankfurt-Munich (~400), Cologne-Berlin (~575)</td><td>5</td><td>2</td><td>2</td><td>BlaBlaCar strong - wedge on cargo</td><td><strong>4.5</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">3</span></td><td><strong>India</strong></td><td>Bangalore-Hyderabad (~570), Delhi-Chandigarh (~245), Mumbai-Pune (~150)</td><td>5</td><td>2</td><td>2</td><td>BlaBlaCar India + QuickRide</td><td><strong>4.5</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">6</span></td><td><strong>Florida, USA</strong></td><td>Miami-Orlando (~375), Orlando-Tampa (~135), Tampa-Jacksonville (~320)</td><td>4</td><td>1</td><td>2</td><td>None dominant</td><td><strong>4.25</strong></td><td><span class="pill w1">WAVE 1</span></td></tr>
+    <tr><td><span class="rank">6</span></td><td><strong>Australia</strong></td><td>Sydney-Melbourne (~880), Sydney-Brisbane (~920), Melbourne-Canberra (~660)</td><td>4</td><td>1</td><td>2</td><td>None dominant</td><td><strong>4.25</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">8</span></td><td><strong>California, USA</strong></td><td>LA-San Francisco (~610), LA-San Diego (~190), SF-Sacramento (~140)</td><td>5</td><td>2</td><td>4</td><td>None dominant</td><td><strong>4.0</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">8</span></td><td><strong>Netherlands</strong></td><td>Amsterdam-Rotterdam (~75), Amsterdam-Groningen (~180), Randstad ring</td><td>3</td><td>1</td><td>1</td><td>BlaBlaCar present</td><td><strong>4.0</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">8</span></td><td><strong>France</strong></td><td>Paris-Lyon (~465), Paris-Lille (~225), Lyon-Marseille (~315)</td><td>5</td><td>1</td><td>5</td><td>BlaBlaCar home market</td><td><strong>4.0</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">8</span></td><td><strong>Poland</strong></td><td>Warsaw-Krakow (~295), Warsaw-Gdansk (~340), Warsaw-Wroclaw (~350)</td><td>4</td><td>2</td><td>2</td><td>BlaBlaCar present</td><td><strong>4.0</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">8</span></td><td><strong>Turkey</strong></td><td>Istanbul-Ankara (~450), Istanbul-Izmir (~480), Ankara-Konya (~260)</td><td>5</td><td>3</td><td>3</td><td>BlaBlaCar Türkiye + cheap bus cargo</td><td><strong>4.0</strong></td><td><span class="pill w2">WAVE 2</span></td></tr>
+    <tr><td><span class="rank">8</span></td><td><strong>Belgium</strong></td><td>Brussels-Antwerp (~45), Brussels-Liege (~95), cross-border NL/FR lanes</td><td>3</td><td>1</td><td>1</td><td>BlaBlaCar + carpool culture</td><td><strong>4.0</strong></td><td><span class="pill w3">WAVE 3</span></td></tr>
+    <tr><td><span class="rank">14</span></td><td><strong>Brazil</strong></td><td>Sao Paulo-Rio (~430), Sao Paulo-Campinas (~100), Belo Horizonte-Sao Paulo (~590)</td><td>4</td><td>2</td><td>3</td><td>BlaBlaCar Brasil strong</td><td><strong>3.75</strong></td><td><span class="pill w3">WAVE 3</span></td></tr>
+    <tr><td><span class="rank">14</span></td><td><strong>Mexico</strong></td><td>Mexico City-Guadalajara (~550), Mexico City-Queretaro (~220), CDMX-Monterrey (~910)</td><td>4</td><td>2</td><td>3</td><td>BlaBlaCar Mexico</td><td><strong>3.75</strong></td><td><span class="pill w3">WAVE 3</span></td></tr>
+    <tr><td><span class="rank">16</span></td><td><strong>Spain</strong></td><td>Madrid-Barcelona (~620), Madrid-Valencia (~355), Madrid-Seville (~530)</td><td>4</td><td>1</td><td>5</td><td>BlaBlaCar Spain strong</td><td><strong>3.5</strong></td><td><span class="pill w3">WAVE 3</span></td></tr>
+    <tr><td><span class="rank">16</span></td><td><strong>Quebec, Canada</strong></td><td>Montreal-Quebec City (~250), Montreal-Ottawa (~200), Montreal-Sherbrooke (~150)</td><td>4</td><td>1</td><td>5</td><td>Amigo Express owns carpool</td><td><strong>3.5</strong></td><td><span class="pill w3">WAVE 3</span></td></tr>
+    <tr><td><span class="rank">16</span></td><td><strong>Nordics</strong></td><td>Stockholm-Gothenburg (~470), Oslo-Gothenburg (~295), Copenhagen-Aarhus (~185)</td><td>3</td><td>2</td><td>2</td><td>GoMore, BlaBlaCar</td><td><strong>3.5</strong></td><td><span class="pill w3">WAVE 3</span></td></tr>
+    <tr><td><span class="rank">19</span></td><td><strong>New Zealand</strong></td><td>Auckland-Hamilton (~125), Auckland-Wellington (~640)</td><td>2</td><td>1</td><td>3</td><td>None dominant</td><td><strong>3.0</strong></td><td><span class="pill w3">WAVE 3</span></td></tr>
+    <tr><td>-</td><td><strong>Japan, South Korea, UAE, Saudi, Denmark (passenger), Hungary, Bulgaria</strong></td><td>-</td><td>-</td><td>-</td><td>-</td><td>Blocked or no-go per the regulation guide</td><td><span class="pill no">EXCLUDED</span></td><td>-</td></tr>
+  </table>
+
+  <h2 id="s3"><span class="num">3</span>Launch Waves - the Sequence</h2>
+  <div class="wave">
+    <h3>Wave 1 - Months 0-12: prove both models where everything is easy <span class="tag" style="background:var(--easy);">LAUNCH FIRST</span></h3>
+    <p><strong>UK, Ontario, Texas, Germany, Florida.</strong> All have big corridors, easy cargo rules (or workable broker structure) and no cargo incumbent. Texas and Florida additionally have no dominant carpool player at all - the cleanest wedge on earth. Start one corridor in one country, run the full risk procedure from the operations manual, then replicate within the same country before moving on.</p>
+    <ul>
+      <li>Goal: 1 live country with 2-3 corridors, then replicate the playbook.</li>
+      <li>Expected result: proof that seats + trunk sharing works with real retention before facing BlaBlaCar directly.</li>
+    </ul>
+  </div>
+  <div class="wave">
+    <h3>Wave 2 - Months 12-24: big markets with one hurdle <span class="tag" style="background:var(--moderate);">EXPAND</span></h3>
+    <p><strong>India, Australia, California, Netherlands, France, Poland, Turkey.</strong> India and Turkey have enormous corridors but low ticket sizes and grey legal zones - enter with local structure ready. France and California are giant but cargo is hard - launch the carpool lane first, cargo only after permits. Australia's lanes are very long (880 km), which suits trunk sharing against expensive couriers.</p>
+  </div>
+  <div class="wave">
+    <h3>Wave 3 - Months 24+: smaller or harder markets <span class="tag" style="background:var(--accent);">SCALE LATER</span></h3>
+    <p><strong>Belgium, Brazil, Mexico, Spain, Quebec, Nordics, New Zealand.</strong> Valuable but smaller or with a hard cargo wall (Spain's light-vehicle authorizations, Quebec's CTQ permits). Enter carpool-first or wait until the cargo structure is built.</p>
+  </div>
+  <div class="callout warn"><h4>Wave rule</h4>Never open a new jurisdiction before the previous one has repeat senders above 30%, disputes under 3%, and the full evidence pipeline from the operations manual running. Corridors are won one by one - the scoreboard is the shopping list, not a simultaneous launch plan.</div>
+
+  <h2 id="s4"><span class="num">4</span>Deep Dives - Top 8 Priority Jurisdictions</h2>
+
+  <div class="card"><h4><span class="rank">1</span>United Kingdom</h4>
+    <p><strong>Opportunity:</strong> ~68 million people in a dense corridor network; one of Europe's highest e-commerce intensities; standard couriers are cheap but slow, express is expensive - a wide gap for the cost-sharing contribution. <strong>Regulation:</strong> carpool legal on cost-sharing; no goods licence under 3.5 t - the cleanest cargo jurisdiction in Europe. <strong>Competition:</strong> BlaBlaCar exists for seats, nobody leads seats + trunk.</p>
+    <ul><li>Launch lane: London-Manchester and London-Birmingham corridors.</li><li>Watch: driver "worker" status law (UK Supreme Court) - design the driver relationship first.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">2</span>Ontario, Canada</h4>
+    <p><strong>Opportunity:</strong> ~16 million people, Toronto at the center of 200-500 km lanes full of students, commuters and small businesses. <strong>Regulation:</strong> carpool legal; intra-provincial freight deregulated - cargo needs safety registration and courier insurance only. <strong>Competition:</strong> only Poparide regionally, and no cargo player - an open field.</p>
+    <ul><li>Launch lane: Toronto-Ottawa first, then Toronto-London and Toronto-Windsor.</li><li>Watch: stay intra-provincial at launch - cross-province parcels trigger the federal extra-provincial layer.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">3</span>Texas, USA</h4>
+    <p><strong>Opportunity:</strong> ~31 million people in the Dallas-Houston-Austin-San Antonio triangle (130-400 km legs); huge intercity car traffic and same-day business demand. <strong>Regulation:</strong> carpool legal with state preemption (HB 100); cargo needs the FMCSA broker structure plus TxDMV intrastate registration - the standard US setup, but enforcement is moderate. <strong>Competition:</strong> no national intercity carpool app exists in the US since Waze Carpool shut down (2022) - the largest open market in the world.</p>
+    <ul><li>Launch lane: Dallas-Houston first.</li><li>Watch: hold FMCSA broker authority before the first cargo trip.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">3</span>Germany</h4>
+    <p><strong>Opportunity:</strong> ~84 million people; Europe's largest parcel market; 290-575 km lanes with heavy business travel. <strong>Regulation:</strong> carpool on strict cost-sharing; no freight licence under 3.5 t but the courier business must be registered (Gewerbe). <strong>Competition:</strong> BlaBlaCar is strong on seats - the wedge is the trunk, which BlaBlaCar does not monetize at scale.</p>
+    <ul><li>Launch lane: Berlin-Hamburg and Frankfurt-Munich.</li><li>Watch: strict rules if profit creeps into the contribution - keep the published cost formula.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">3</span>India</h4>
+    <p><strong>Opportunity:</strong> 1.4 billion people; massive intercity flows and a deep courier-price gap; cost-sharing culture already established by carpool apps. <strong>Regulation:</strong> carpool accepted; light courier easy (GST + insurance + local permits) though aggregator licences vary by state. <strong>Competition:</strong> BlaBlaCar India and QuickRide on seats - cargo is open.</p>
+    <ul><li>Launch lane: Bangalore-Hyderabad and Mumbai-Pune.</li><li>Watch: low ticket sizes mean volume is everything; state-level licensing differs - pick one state first.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">6</span>Florida, USA</h4>
+    <p><strong>Opportunity:</strong> ~23 million residents plus heavy tourism; Miami-Orlando-Tampa-Jacksonville lanes with strong same-day demand. <strong>Regulation:</strong> carpool legal, statewide preemption; general freight lightly regulated - one of the easiest US cargo states. <strong>Competition:</strong> none on intercity trunk sharing.</p>
+    <ul><li>Launch lane: Miami-Orlando.</li><li>Watch: tourism demand is seasonal - build the resident business-user base for the off-season.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">6</span>Australia</h4>
+    <p><strong>Opportunity:</strong> ~27 million people but enormous 660-920 km lanes where air freight is expensive and road couriers are slow - long distance is exactly where trunk sharing shines. <strong>Regulation:</strong> carpool cost-sharing permitted everywhere; light couriers need an ABN, insurance and vehicle standards only. <strong>Competition:</strong> no dominant intercity carpool player.</p>
+    <ul><li>Launch lane: Sydney-Melbourne.</li><li>Watch: drivers must register for GST regardless of income (ATO rule) - bake it into onboarding.</li></ul>
+  </div>
+  <div class="card"><h4><span class="rank">8</span>California, USA</h4>
+    <p><strong>Opportunity:</strong> ~39 million people; LA-SF (610 km) is one of the busiest intercity lanes in the world; massive e-commerce and same-day expectations. <strong>Regulation:</strong> carpool fine on cost-sharing; cargo is the hardest US state - intrastate motor carrier permit (CA number) and the strictest enforcement culture. <strong>Competition:</strong> no incumbent on intercity trunk sharing.</p>
+    <ul><li>Launch lane: LA-San Francisco after the Wave 1 states prove the model.</li><li>Watch: enter cargo here only after the broker + state permit stack is tested elsewhere.</li></ul>
+  </div>
+
+  <h2 id="s5"><span class="num">5</span>Jurisdictions to Skip (and why)</h2>
+  <table>
+    <tr><th>Jurisdiction</th><th>Why it is excluded for now</th><th>What would change that</th></tr>
+    <tr><td>Japan</td><td>Private cars cannot carry people or goods for pay (white plate rule)</td><td>A law change creating a personal cost-sharing category - unlikely</td></tr>
+    <tr><td>South Korea</td><td>Paid private-car transport illegal; cargo restricted to licensed businesses</td><td>Regulatory reform (watched, not expected)</td></tr>
+    <tr><td>UAE / Saudi Arabia</td><td>Only licensed operators; private carpool for pay not permitted</td><td>Official sandbox or partnership with a licensed operator</td></tr>
+    <tr><td>Denmark (passenger lane)</td><td>Strict passenger transport law; Uber left in 2017; cargo above 3.5 t needs permits</td><td>Cargo-only niche entry possible, but market is small</td></tr>
+    <tr><td>Hungary, Bulgaria</td><td>Ride-share squeezed out by taxi-protective laws</td><td>EU-driven reform pressure - monitor</td></tr>
+    <tr><td>Quebec (cargo lane)</td><td>CTQ carrier and broker permits required - strictest cargo regime in North America</td><td>Enter carpool-first; cargo only after CTQ structure is built</td></tr>
+  </table>
+
+  <h2 id="s6"><span class="num">6</span>Final Verdict and Launch Order</h2>
+  <div class="callout good"><h4>The recommended launch order in one line</h4><strong>1. Ontario (Toronto-Ottawa) -> 2. UK (London-Manchester) -> 3. Texas (Dallas-Houston) -> 4. Germany (Berlin-Hamburg) -> 5. Florida (Miami-Orlando)</strong>, then Wave 2 India, Australia, California, Netherlands, France, Poland, Turkey.</div>
+  <p class="lead">The logic: Ontario and the UK combine the easiest regulation with strong corridors and no cargo incumbent - the fastest path to a working, safe, repeatable model. Texas and Florida are the US wedge where no national carpool app exists at all. Germany tests the playbook against BlaBlaCar on its home continent with the trunk as the differentiator. Every later wave reuses the same corridor playbook from the operations manual.</p>
+  <p class="note">All population and distance figures are approximate and illustrative; regulation scores are from the companion regulation guide, which must be re-verified with local counsel before each launch.</p>
+
+  <footer>Jurisdiction Priority and Opportunity Ranking - prepared November 2026 - planning document with illustrative figures. Companion documents: CargoOnly-Marketplace-BusinessPlan.html, CarShareWithParcel-BusinessPlan.html, Commercial-Carriage-Regulation-Guide-By-Country.html, Risk-Management-And-Operations-Procedure.html.</footer>
+</div>
+</body>
+</html>

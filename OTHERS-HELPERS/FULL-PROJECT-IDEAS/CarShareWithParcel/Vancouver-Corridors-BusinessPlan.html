@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vancouver Corridor Business Plan - Kelowna, Kamloops, Victoria</title>
+<style>
+  :root{
+    --bg:#ffffff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--panel:#f8fafc;--panel2:#f1f5f9;
+    --accent:#0f766e;--accent-soft:#ccfbf1;--good:#15803d;--good-bg:#ecfdf5;--bad:#b91c1c;--bad-bg:#fef2f2;--warn-bg:#fffbeb;--warn-border:#fcd34d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;}
+  .toolbar{display:flex;gap:10px;justify-content:flex-end;align-items:center;padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .toolbar button{border:1px solid var(--accent);background:var(--bg);color:var(--accent);padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
+  .toolbar button:hover{background:var(--accent);color:#fff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1000px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;padding:34px 38px;margin-bottom:26px;}
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:29px;line-height:1.25;margin:8px 0 10px;}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:780px;}
+  .hero .meta{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{font-size:21px;margin:42px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);display:flex;align-items:center;gap:10px;}
+  h2 .num{background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+  h3{font-size:16.5px;margin:22px 0 8px;}
+  p{margin:8px 0;} ul,ol{margin:8px 0 12px 22px;} li{margin:4px 0;}
+  strong{color:var(--ink);} .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);} td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;border:1px solid transparent;white-space:nowrap;}
+  .pill.good{background:var(--good-bg);color:var(--good);border-color:#bbf7d0;}
+  .pill.warn{background:var(--warn-bg);color:#92400e;border-color:var(--warn-border);}
+  .pill.bad{background:var(--bad-bg);color:var(--bad);border-color:#fecaca;}
+  .callout{border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0;}
+  .callout.warn{border-color:var(--warn-border);background:var(--warn-bg);}
+  .callout.good{border-color:#34d399;background:var(--good-bg);}
+  .callout h4{font-size:14px;margin:0 0 4px;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  .toc a{color:var(--ink);text-decoration:none;} .toc a:hover{color:var(--accent);}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0;}
+  @media (max-width:820px){.kpi{grid-template-columns:repeat(2,1fr);} .toc ol{columns:1;}}
+  .kpi .item{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--panel);text-align:center;}
+  .kpi .item .v{font-size:19px;font-weight:800;color:var(--accent);}
+  .kpi .item .l{font-size:12px;color:var(--muted);margin-top:2px;}
+  .card{border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:var(--panel);margin:10px 0;}
+  .card h4{font-size:14.5px;color:var(--accent);margin-bottom:4px;}
+  .phase{border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0;background:var(--panel);}
+  .phase h4{font-size:15px;margin-bottom:4px;} .phase .when{font-size:12.5px;color:var(--accent);font-weight:700;}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  @media print{.toolbar{display:none;} body{font-size:12px;} .page{max-width:none;padding:0;} h2{page-break-after:avoid;} table,.kpi,.phase,.callout{page-break-inside:avoid;}}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">SMALL BUSINESS PLAN - VANCOUVER CORRIDORS</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Small Business Plan - BC Pilot</div>
+    <h1>Vancouver Corridor Cargo Sharing<br><span style="color:var(--muted);font-size:21px;">Kelowna, Kamloops and Victoria</span></h1>
+    <p class="sub">A cost-sharing cargo marketplace on three BC corridors, run by a BC company, intra-provincial only. Drivers already traveling sell spare trunk space; senders contribute to trip costs instead of paying courier prices. No fleet, no employees, no operating authority required.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>CAD figures</span>
+      <span>Intra-provincial - BC free market</span>
+      <span>Illustrative estimates</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">The Three Corridors</a></li>
+      <li><a href="#s2">Market Size per Corridor</a></li>
+      <li><a href="#s3">Target Customers</a></li>
+      <li><a href="#s4">Pricing - Cost-Sharing Contribution</a></li>
+      <li><a href="#s5">Unit Economics</a></li>
+      <li><a href="#s6">Launch Sequence and 90 Days</a></li>
+      <li><a href="#s7">Competition and Position</a></li>
+      <li><a href="#s8">Risks and Controls</a></li>
+      <li><a href="#s9">Go / No-Go Metrics</a></li>
+      <li><a href="#s10">Verdict</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>The Three Corridors</h2>
+  <table>
+    <tr><th>Corridor</th><th>Route</th><th class="num">Road distance</th><th>Key feature</th><th>Pilot role</th></tr>
+    <tr><td><strong>Vancouver - Kelowna</strong></td><td>Hwy 1 / Coquihalla / Hwy 97C</td><td class="num">~390 km</td><td>Largest destination market; no ferry; steady student, family and business traffic</td><td><span class="pill good">LAUNCH FIRST</span></td></tr>
+    <tr><td><strong>Vancouver - Kamloops</strong></td><td>Hwy 1 / Coquihalla</td><td class="num">~355 km</td><td>Same highway spine as Kelowna - one driver pool serves both</td><td><span class="pill good">LAUNCH SECOND</span></td></tr>
+    <tr><td><strong>Vancouver - Victoria</strong></td><td>Hwy 17 + BC Ferries (Tsawwassen - Swartz Bay)</td><td class="num">~100 km + 1 h 35 ferry</td><td>Highest travel volume, but ferry schedule and terminal handover add friction</td><td><span class="pill warn">LAUNCH THIRD</span></td></tr>
+  </table>
+  <div class="callout"><h4>Why this order</h4>Kelowna and Kamloops share the Coquihalla corridor, so one driver recruitment effort feeds two lanes and the second lane launches nearly free. Victoria is bigger but ferry-dependent: handovers must happen at terminals or on the Peninsula, which adds a first/last-mile problem - launch it once the playbook is proven.</div>
+
+  <h2 id="s2"><span class="num">2</span>Market Size per Corridor</h2>
+  <p class="note">Illustrative estimates. TAM = corridor-relevant population x intercity small parcels per person per year x share that fits trunk sharing x average contribution. SAM = TAM x 35% (urgent, fragile, marketplace and student segments the service can actually win). SOM = captured share of SAM. Figures are annual contribution value; the platform earns 18% of it.</p>
+  <table>
+    <tr><th>Corridor</th><th class="num">Corridor population (M)</th><th class="num">Parcels / person / year</th><th class="num">Avg contribution</th><th class="num">TAM</th><th class="num">SAM</th><th class="num">SOM Year 1</th><th class="num">SOM Year 3</th></tr>
+    <tr><td>Vancouver - Kelowna</td><td class="num">1.0</td><td class="num">0.8</td><td class="num">$28</td><td class="num">$3.4M</td><td class="num">$1.2M</td><td class="num">$24k</td><td class="num">$175k</td></tr>
+    <tr><td>Vancouver - Kamloops</td><td class="num">0.9</td><td class="num">0.8</td><td class="num">$26</td><td class="num">$2.8M</td><td class="num">$0.98M</td><td class="num">$20k</td><td class="num">$147k</td></tr>
+    <tr><td>Vancouver - Victoria</td><td class="num">1.2</td><td class="num">0.6</td><td class="num">$25</td><td class="num">$2.7M</td><td class="num">$0.95M</td><td class="num">$19k</td><td class="num">$142k</td></tr>
+    <tr><td><strong>Combined</strong></td><td class="num">-</td><td class="num">-</td><td class="num">-</td><td class="num"><strong>$8.9M</strong></td><td class="num"><strong>$3.1M</strong></td><td class="num"><strong>$63k</strong></td><td class="num"><strong>$464k</strong></td></tr>
+  </table>
+  <div class="kpi">
+    <div class="item"><div class="v">Y3 $464k</div><div class="l">contribution volume</div></div>
+    <div class="item"><div class="v">~$84k</div><div class="l">Y3 platform revenue at 18%</div></div>
+    <div class="item"><div class="v">~20 / day</div><div class="l">pilot break-even volume</div></div>
+    <div class="item"><div class="v">60 kg</div><div class="l">hard parcel cap</div></div>
+  </div>
+  <div class="callout warn"><h4>Read this honestly</h4>Three corridors will not fund a company on their own - Year 3 platform revenue is roughly one part-time salary. The pilot exists to prove retention, trust and repeatability; the business case is the corridor playbook applied to Ontario, Alberta and the rest of BC.</div>
+
+  <h2 id="s3"><span class="num">3</span>Target Customers</h2>
+  <div class="card"><h4>Vancouver - Kelowna</h4><p>Okanagan second-home owners, UBC/UBCO students, wineries and food producers, e-commerce sellers, trades sending parts, families sending boxes both ways. Longest lane, highest contribution per parcel.</p></div>
+  <div class="card"><h4>Vancouver - Kamloops</h4><p>Thompson Rivers University students, healthcare and public-sector staff, mining and forestry suppliers, online sellers in the Interior. Served by the same Coquihalla drivers as Kelowna.</p></div>
+  <div class="card"><h4>Vancouver - Victoria</h4><p>Government and professional services documents, university students, Island residents buying from Vancouver sellers, film and tech production materials. Ferry is the constraint - target senders whose parcels fit one-day handover windows.</p></div>
+
+  <h2 id="s4"><span class="num">4</span>Pricing - Cost-Sharing Contribution</h2>
+  <p>Published formula, no negotiation: contribution = distance band base + size band adder, capped so the parcel never pays more than a fair share of actual trip costs. Hard cap 60 kg.</p>
+  <table>
+    <tr><th>Size band</th><th class="num">Vancouver - Kelowna</th><th class="num">Vancouver - Kamloops</th><th class="num">Vancouver - Victoria</th></tr>
+    <tr><td>Document (under 1 kg)</td><td class="num">$15</td><td class="num">$14</td><td class="num">$12</td></tr>
+    <tr><td>Small (under 5 kg)</td><td class="num">$22</td><td class="num">$20</td><td class="num">$18</td></tr>
+    <tr><td>Medium (under 15 kg)</td><td class="num">$35</td><td class="num">$32</td><td class="num">$28</td></tr>
+    <tr><td>Large (under 30 kg)</td><td class="num">$55</td><td class="num">$50</td><td class="num">$45</td></tr>
+    <tr><td>Extra large (30-60 kg)</td><td class="num">$85</td><td class="num">$78</td><td class="num">$70</td></tr>
+  </table>
+  <p class="note">Comparable express courier pricing on these lanes is typically $40-120 for small parcels; the contribution sits at roughly half to two thirds. Victoria is priced lower because the ferry crossing is a fixed driver cost the parcel does not add to.</p>
+
+  <h2 id="s5"><span class="num">5</span>Unit Economics</h2>
+  <table>
+    <tr><th>Item</th><th class="num">Amount</th></tr>
+    <tr><td>Average contribution per parcel</td><td class="num">$30.00</td></tr>
+    <tr><td>Platform service fee (18%)</td><td class="num">+$5.40</td></tr>
+    <tr><td>Payment processing</td><td class="num">-$0.45</td></tr>
+    <tr><td>Support and refund allocation</td><td class="num">-$1.10</td></tr>
+    <tr><td>Insurance administration</td><td class="num">-$0.30</td></tr>
+    <tr><td><strong>Contribution per parcel</strong></td><td class="num"><strong>$3.55</strong></td></tr>
+  </table>
+  <table>
+    <tr><th>Pilot month (illustrative)</th><th class="num">Month 3</th><th class="num">Month 6</th><th class="num">Month 12</th></tr>
+    <tr><td>Parcels per day (combined)</td><td class="num">4</td><td class="num">12</td><td class="num">25</td></tr>
+    <tr><td>Parcels per month</td><td class="num">120</td><td class="num">360</td><td class="num">750</td></tr>
+    <tr><td>Platform revenue</td><td class="num">$648</td><td class="num">$1,944</td><td class="num">$4,050</td></tr>
+    <tr><td>Fixed costs (insurance, tools, part-time support)</td><td class="num">$2,200</td><td class="num">$2,400</td><td class="num">$2,800</td></tr>
+    <tr><td><strong>Net before founder time</strong></td><td class="num">-$1,552</td><td class="num">-$456</td><td class="num">+$1,250</td></tr>
+  </table>
+  <p class="note">Break-even is roughly 20 parcels per day across the three corridors. Founder time is not costed; the pilot is designed to be self-funding at the contribution level by month 12-15.</p>
+
+  <h2 id="s6"><span class="num">6</span>Launch Sequence and 90 Days</h2>
+  <div class="phase"><h4>Phase 0 - Weeks 1-4: BC compliance and corridor setup</h4><span class="when">GOAL: legally clean, insurer signed</span>
+    <ul><li>Business registration, GST, ICBC business-use onboarding step, municipal licences for Vancouver and Kelowna.</li><li>Platform master policy (cargo + non-owned auto) with one insurer; sender add-on product.</li><li>Build the Kelowna corridor page, pricing table and driver onboarding flow.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 1 - Weeks 5-8: Kelowna pilot</h4><span class="when">GOAL: 40 verified drivers, 8 parcels per day</span>
+    <ul><li>Recruit UBCO students, Okanagan commuters and second-home owners at campuses and Kelowna community groups.</li><li>Weekly proof: escrow delivery, QR handover, dispute-free trips.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 2 - Weeks 9-12: Kamloops on the same spine</h4><span class="when">GOAL: same driver pool adds the second lane</span>
+    <ul><li>Open Kamloops with the same pricing formula and handover points.</li><li>Target TRU students and Interior suppliers.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 3 - Months 4-6: Victoria</h4><span class="when">GOAL: ferry-terminal handover solved</span>
+    <ul><li>Handover points at Tsawwassen and Swartz Bay, plus downtown Vancouver and Victoria pickup hubs.</li><li>Launch only if Kelowna and Kamloops hold a dispute rate under 3%.</li></ul>
+  </div>
+
+  <h2 id="s7"><span class="num">7</span>Competition and Position</h2>
+  <table>
+    <tr><th>Alternative</th><th>Weakness we exploit</th></tr>
+    <tr><td>Canada Post and standard couriers</td><td>1-3+ days on these lanes; no same-day door-to-door</td></tr>
+    <tr><td>Express couriers (FedEx, UPS, Purolator)</td><td>Expensive for small parcels; the contribution undercuts them by roughly half</td></tr>
+    <tr><td>Bus and ferry cargo</td><td>Terminal-to-terminal only, rigid schedules, queues</td></tr>
+    <tr><td>Poparide and ride-share apps</td><td>Passengers only - no cargo lane, no escrow, no parcel insurance</td></tr>
+  </table>
+  <p class="lead">Positioning: "Your parcel rides with someone already going. Same day, door to door, half of express."</p>
+
+  <h2 id="s8"><span class="num">8</span>Risks and Controls</h2>
+  <table>
+    <tr><th>Risk</th><th>Control</th></tr>
+    <tr><td>Cold start - too few drivers or parcels on a lane</td><td>One lane at a time; recruit 40 drivers before opening demand; Kelowna and Kamloops share a driver pool</td></tr>
+    <tr><td>Package handling (first/last mile)</td><td>Handover points on the driver's route, QR codes, small detour budget, 60 kg cap</td></tr>
+    <tr><td>No repeat senders</td><td>Target marketplace sellers, students and businesses; track repeat rate weekly</td></tr>
+    <tr><td>Insurance and ICBC validity</td><td>Platform master policy + business-use rate class switch at onboarding; no trip without verified coverage</td></tr>
+    <tr><td>Illegal or dangerous cargo</td><td>Prohibited items list, declaration, inspect-and-refuse right, report flow (operations manual)</td></tr>
+    <tr><td>Ferry disruption on Victoria lane</td><td>Delay policy, automatic ETA updates, no penalty for ferry delays; launch Victoria last</td></tr>
+    <tr><td>Interprovincial expansion temptation</td><td>Stay intra-provincial; cross-province cargo is not a free market</td></tr>
+  </table>
+
+  <h2 id="s9"><span class="num">9</span>Go / No-Go Metrics</h2>
+  <table>
+    <tr><th>Metric (after 90 days on Kelowna + Kamloops)</th><th>Go threshold</th></tr>
+    <tr><td>Verified drivers</td><td>80+ across the two lanes</td></tr>
+    <tr><td>Delivered parcels</td><td>300+ total</td></tr>
+    <tr><td>Repeat senders</td><td>25%+ of senders ship twice or more</td></tr>
+    <tr><td>Dispute rate</td><td>Under 3% of trips</td></tr>
+    <tr><td>Contribution per parcel</td><td>$3.50 or higher</td></tr>
+    <tr><td>Customer acquisition cost</td><td>Under $15 per sender</td></tr>
+    <tr><td>Rating</td><td>4.5+ average both directions</td></tr>
+  </table>
+  <div class="callout bad"><h4>No-go trigger</h4>If after 90 days there are fewer than 150 delivered parcels or repeat senders are under 15%, stop and rework the model rather than adding corridors. The pilot exists to kill bad assumptions cheaply.</div>
+
+  <h2 id="s10"><span class="num">10</span>Verdict</h2>
+  <div class="callout good"><h4>Proceed - as a lean three-corridor BC pilot</h4>
+    <p>The three corridors are legally free intra-provincially, need no operating authority, and fit a BC company's first market. Combined Year 3 contribution volume is about $464k, which is a real pilot but not a company - the objective is proving repeat demand and the handover playbook before replicating in Alberta and Ontario. Launch Kelowna first, Kamloops on the same Coquihalla driver pool second, Victoria third.</p>
+  </div>
+
+  <footer>Vancouver Corridor Cargo Sharing - Small Business Plan - prepared November 2026 - illustrative estimates, not financial advice. Companion: regulation guide, operations manual, technical build plan.</footer>
+</div>
+</body>
+</html>

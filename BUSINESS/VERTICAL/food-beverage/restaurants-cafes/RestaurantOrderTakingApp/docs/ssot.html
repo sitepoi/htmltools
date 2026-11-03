@@ -25,7 +25,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v1.7</span>
+      <span>v3.4</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -70,7 +70,7 @@
     order history/detail view. That tool owns the single-record detail and
     the internal note editing; THIS tool owns the application-level board
     and the status workflow. Both read and write the same
-    <code>restaurant-orders</code> records.
+    <code>restaurant-orders-easyorder</code> records.
   </p>
   <table>
     <tr><th>Document version</th><td>1.4</td></tr>
@@ -188,7 +188,7 @@
     <tr><td>C-11</td><td>Search (number, name, phone, table, address) and three sort modes</td><td><code>matchesSearch / sortOrders</code></td><td>2026-10-25</td><td>smoke asserts</td></tr>
     <tr><td>C-12</td><td>Tolerant optional write: acceptedAt + estimatedReadyAt fail separately without blocking the status change</td><td><code>writeCoreFields</code></td><td>2026-10-25</td><td>D-ROTA-04 / smoke asserts</td></tr>
     <tr><td>C-13</td><td>Test harness with localStorage order store, sample orders, role and read-only simulation, inline JS mode</td><td><code>test-harness.html</code></td><td>2026-10-25</td><td>verified in code</td></tr>
-    <tr><td>C-14</td><td>Amounts always render as money: currency defaults to USD ($) with narrow symbols when currencyCode is not configured</td><td><code>fmtMoney / readConfig</code></td><td>2026-10-30</td><td>D-ROTA-12</td></tr>
+    <tr><td>C-14</td><td>Amounts always render as money: the currency comes from the restaurant object (`taxation_currency.currency`) with narrow symbols; a restaurant without a currency falls back to a plain amount (no invented currency, no tool parameter)</td><td><code>fmtMoney / readConfig</code></td><td>2026-11-01</td><td>D-ROTA-12 / D-ROTA-49</td></tr>
     <tr><td>C-15</td><td>Professional status color system with clear semantics: new = blue, accepted = teal, in preparation = orange, ready = green, completed = purple, cancelled = gray, declined and late = red; amber = urgent, deep blue = long-waiting new (never red)</td><td><code>RestaurantOrderTakingApp.css</code></td><td>2026-10-31</td><td>D-ROTA-15 / D-ROTA-17 / D-ROTA-20</td></tr>
     <tr><td>C-16</td><td>Detail popup status selector with all 7 statuses (forward AND back moves) + daily sequence chips #1..#N shown on cards, detail and toasts (the raw record number stays as a small "record X" note)</td><td><code>statusSelectHtml / assignDayNumbers / orderLabelOf</code></td><td>2026-10-31</td><td>D-ROTA-18 / D-ROTA-19</td></tr>
     <tr><td>C-17</td><td>TEMPORARY QA menu (three dots): import a sample JSON file as real CMS orders and remove all of today's orders in one armed action; two sample files ship with the tool (demo with every option, 100-item load test)</td><td><code>importOrdersFromText / executeClearToday / app/samples/*</code></td><td>2026-10-31</td><td>D-ROTA-21 - to be removed before production</td></tr>
@@ -199,7 +199,7 @@
   <h2 id="sec-glossary">4. Glossary</h2>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Order record</td><td>One CMS object of the type configured by the <code>ordersObjectType</code> parameter (default <code>restaurant-orders</code>)</td></tr>
+    <tr><td>Order record</td><td>One CMS object of the order objects type inside the <code>restaurant-orders-easyorder</code> application, configured by the <code>ordersObjectType</code> parameter (default <code>restaurant-orders-easyorder</code>)</td></tr>
     <tr><td>Active order</td><td>Order whose status is new, accepted, in-preparation or ready</td></tr>
     <tr><td>Terminal (finished) order</td><td>Order whose status is completed, declined or cancelled</td></tr>
     <tr><td>Board window</td><td>The visibility rule: active orders always show; terminal orders show only when placed today (D-ROTA-02)</td></tr>
@@ -212,6 +212,183 @@
     <tr><td>Armed action</td><td>The two-step confirm for destructive statuses (decline, cancel): first tap arms for 6 seconds, second tap confirms</td></tr>
     <tr><td>No-identity mode</td><td>Fallback when the CMS host provides no user API: write gating falls back to the host read-only flag</td></tr>
   </table>
+
+  <h3>4.1 Applications and their object relationships</h3>
+  <p>The restaurant tool set spans three CMS applications. They are related
+  through the restaurant <strong>slug</strong> - never through position, name
+  or the order of the records.</p>
+  <table>
+    <tr><th>Application</th><th>What one record is</th><th>Object type used by the tools</th><th>Cardinality</th></tr>
+    <tr>
+      <td><code>restaurants-easyorder</code> - restaurant config</td>
+      <td>one restaurant: profile, services, opening hours and closing time,
+      menu, delivery zones, currency and timezone</td>
+      <td><code>restaurants-easyorder</code> (parameter
+      <code>restaurantSettingsType</code>)</td>
+      <td>1 object = 1 restaurant</td>
+    </tr>
+    <tr>
+      <td><code>restaurant-orders-easyorder</code> - orders</td>
+      <td>one order of one restaurant. Every order carries
+      <code>restaurantId</code> = the restaurant slug - this is the join key
+      to the restaurant object</td>
+      <td><code>restaurant-orders-easyorder</code> (parameter
+      <code>ordersObjectType</code>, CONFIRMED by the tenant owner - the
+      object type id equals the application id)</td>
+      <td>1 object = 1 order; N orders per restaurant</td>
+    </tr>
+    <tr>
+      <td><code>restaurant-order-taking-app-easyorder</code> - order
+      management for the kitchen</td>
+      <td>one board for one restaurant</td>
+      <td>- the tool owns no order objects; it reads and updates the order
+      application's objects</td>
+      <td>1 record = 1 restaurant (the tool DEFINITION itself is tenant wide)</td>
+    </tr>
+  </table>
+  <h4>How the board learns which restaurant it serves</h4>
+  <p class="note"><strong>The tool definition is tenant wide.</strong> On the
+  multi-restaurant tenant (<code>easyorder</code>) one definition serves every
+  restaurant, so a tool parameter cannot name the restaurant per restaurant,
+  and no per-restaurant value is kept in the parameters at all - not the slug,
+  not the timezone, not the currency (D-ROTA-46, D-ROTA-49). One value on the
+  definition would silently apply to every restaurant's board. The board
+  therefore resolves it at runtime, strongest signal first:</p>
+  <ol>
+    <li><strong>the board record</strong> the tool runs in - one
+    <code>restaurant-order-taking-app-easyorder</code> record per restaurant.
+    When the CMS page is that record
+    (<code>/admin/objects/restaurant-order-taking-app-easyorder/&lt;id&gt;</code>)
+    the tool reads the record by id and takes its own <code>slug</code> (and
+    <code>restaurantSlug</code> / <code>restaurantId</code> when present).
+    <strong>Give that record the same slug as the restaurant object</strong> -
+    that single equality is the whole link. Reading the record needs that type
+    in <code>settings.allowedObjectTypes</code>.</li>
+    <li><strong>the CMS page address</strong> -
+    <code>/admin/objects/restaurants-easyorder/&lt;id&gt;</code> is the
+    restaurant itself; a per-restaurant page such as
+    <code>/admin/restaurants/downtown</code> contributes its last path
+    segment as a weak candidate. When the page IS the board record its id is
+    a record id and is skipped here.</li>
+    <li><strong>the only restaurant of the tenant</strong>, when there is
+    exactly one - never a guess among several.</li>
+  </ol>
+  <p>When none of these resolves, the board shows a banner naming the cause
+  and stays closed; it never falls back to "the first restaurant".</p>
+  <h4>Where to put the restaurant slug on the board record</h4>
+  <p>The board record is the only place, because it is per restaurant while
+  the tool definition is not. There is no tool parameter for it (D-ROTA-49).
+  Either of these works, and both are read the same way:</p>
+  <table>
+    <tr><th>Where on the record</th><th>Value</th><th>Notes</th></tr>
+    <tr>
+      <td><strong>the record's own <code>slug</code></strong></td>
+      <td><code>pizza-lachine</code> - identical to the restaurant object's
+      <code>slug</code></td>
+      <td>Preferred, because it is already part of the CMS object: name the
+      board record <code>pizza-lachine</code> and nothing else is needed</td>
+    </tr>
+    <tr>
+      <td>a text field <code>restaurantSlug</code></td>
+      <td><code>pizza-lachine</code></td>
+      <td>Useful when the record slug is taken by something else. Also
+      recognized: <code>restaurant_slug</code>, <code>restaurantId</code>,
+      <code>restaurantKey</code>, <code>restaurant</code> (object or id),
+      <code>siteId</code> - top level or inside the data payload</td>
+    </tr>
+  </table>
+  <p class="note">The record id is never used as a restaurant identifier.</p>
+  <p class="note">This read only happens when the CMS page IS the record
+  (<code>/admin/objects/restaurant-order-taking-app-easyorder/&lt;id&gt;</code>)
+  and needs <code>restaurant-order-taking-app-easyorder</code> in
+  <code>settings.allowedObjectTypes</code> (read). The tool logs the page
+  address, every candidate and its source on each lookup; the console line
+  <code>restaurant lookup - page: ... | candidates: ...</code> tells exactly
+  which signal was missing.</p>
+  <table>
+    <tr><th>Relation</th><th>Type</th><th>Join key</th><th>Enforced by</th></tr>
+    <tr>
+      <td>restaurant object -&gt; board record</td>
+      <td>one to one</td>
+      <td>the board record's restaurant reference = the restaurant slug (its
+      object id is accepted as well)</td>
+      <td>the tool: the board stays closed when nothing resolves, and a match
+      that hits two restaurants is refused (D-ROTA-43, D-ROTA-46)</td>
+    </tr>
+    <tr>
+      <td>restaurant object -&gt; its orders</td>
+      <td>one to many</td>
+      <td><code>order.restaurantId</code> = the restaurant slug</td>
+      <td>the tool: only orders whose restaurant key matches the resolved
+      scope are shown (D-ROTA-42, D-ROTA-45)</td>
+    </tr>
+    <tr>
+      <td>board -&gt; order records</td>
+      <td>one to the active-day slice</td>
+      <td>same restaurant slug + the board window</td>
+      <td>the tool: active orders always, terminal orders only when placed or
+      changed today (D-ROTA-02, D-ROTA-14)</td>
+    </tr>
+  </table>
+  <h4>Order contract - the field that carries the relation</h4>
+  <pre>
+// restaurant-orders-easyorder object, data_categoriesBased payload
+{
+  "restaurantId": "downtown",   // REQUIRED - restaurant slug, lowercase, trimmed
+  "orderNumber": "EFOC-8101",
+  "placedAt": "2026-11-01T18:42:00.000Z",
+  "status": "new",
+  ...
+}
+  </pre>
+  <p class="note">The slug is the identifier a restaurant admin can choose and
+  correct freely; the object id never changes. Every order therefore stores
+  the slug in <code>restaurantId</code>. The tool compares
+  case-insensitively and also accepts the settings object id or the
+  restaurant's own <code>restaurantId</code> / <code>siteId</code> field, so a
+  writer that already uses an id keeps working - but the slug is the
+  documented contract and the value every writer should store.</p>
+
+  <h4>Restaurant config object - the parts this tool reads</h4>
+  <p>The restaurant object keeps the slug at the OBJECT level
+  (<code>object.slug</code>, e.g. <code>pizza-lachine</code>) - not inside
+  <code>productData</code>. Everything else the board needs sits under
+  <code>productData.data_categoriesBased.restaurantDetails</code>:</p>
+  <pre>
+{
+  "id": "2026-10-30-LP34LYAFHT-easyorder",
+  "slug": "pizza-lachine",                 // &lt;- the join key, object level
+  "cmsObjectType": "restaurants-easyorder",
+  "productData": { "data_categoriesBased": { "restaurantDetails": {
+      "general_info": {
+        "restaurant_name": "Pizza St Nicholas",
+        "brand_name": "Pizza St Nicholas",
+        "timezone": "America/New_York"
+      },
+      "taxation_currency": { "currency": "CAD", "tax_rate": 14.975 },
+      "service_settings": {
+        "service_toggles": { "pickup_enabled": true, "delivery_enabled": true },
+        "opening_hours": [
+          { "day": 0, "is_closed": false,
+            "ranges": [ { "open": "16:00", "close": "22:00" } ] },
+          // ... day 1 to 6, is_closed true means the shop is shut that day
+        ]
+      },
+      "delivery_zones": { "zones": [ { "id": "...", "name": "Zone 1" } ] },
+      "menu": { "categories": [], "items": [], "modifier_groups": [] }
+  } } }
+}
+  </pre>
+  <p class="note"><strong>Consumed today:</strong> <code>slug</code> (join
+  key), <code>service_settings.opening_hours[].ranges[].close</code> with
+  <code>is_closed</code> for the closing notice (the LAST range of the day
+  wins, a closed day has no closing time), <code>taxation_currency.currency</code>
+  for money formatting, <code>general_info.timezone</code> for times
+  (D-ROTA-47). <strong>Known but not used yet:</strong> brand name/logo (board
+  header, I-19), <code>service_toggles</code> (hide pickup/delivery tabs),
+  <code>delivery_zones</code> and <code>taxation_currency.tax_categories</code>
+  (order totals checks), <code>menu</code> (order lookup by item id), the
+  legal block (printed receipt footer).</p>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
   <h3>5.1 Verified evidence</h3>
@@ -281,6 +458,13 @@ tool.onReady(function (value, fields) {
     when object access is not configured.</li>
     <li>Multi-tenant safe and generic: no tenant names, no hardcoded
     restaurant identity anywhere.</li>
+    <li>Multi-restaurant safe: the board resolves its restaurant at runtime
+    from the page context (the board record first, whose slug equals the
+    restaurant slug, then the page address), falls back to the only restaurant
+    when the tenant has exactly one, and shows only that restaurant's orders -
+    never another restaurant's data (section 4.1, D-ROTA-46, D-ROTA-49).
+    No tool parameter carries a restaurant slug, timezone or currency: the tool
+    definition is tenant wide, so such a value would apply to every board.</li>
   </ol>
 
   <h2 id="sec-options">7. Option evaluation and decision</h2>
@@ -289,7 +473,7 @@ tool.onReady(function (value, fields) {
     <tr>
       <td><strong>A. New application-level listing tool (TYPE 3)</strong></td>
       <td>A separate tool, RestaurantOrderTakingApp, reads all
-      restaurant-orders through requestObjects query and writes status
+      restaurant-orders-easyorder through requestObjects query and writes status
       updates through requestObjects update; RestaurantOrderManager stays
       untouched as the history/detail view.</td>
       <td>Yes - board, live refresh and fast actions in one tool</td>
@@ -328,6 +512,7 @@ tool.onReady(function (value, fields) {
     <tr><td>Which orders belong on the board?</td><td>Active orders always; terminal orders only when placed today (D-ROTA-02).</td></tr>
     <tr><td>What does the tool save in its own value?</td><td>Only <code>{ version, ui: { tab, sort, search } }</code> (D-ROTA-06).</td></tr>
     <tr><td>How do destructive actions confirm?</td><td>Armed two-step button, 6 seconds (D-ROTA-05).</td></tr>
+    <tr><td>Which restaurant does a board show?</td><td>Exactly the restaurant resolved at runtime from the CMS page (the board record whose slug equals the restaurant slug, then the page address), with the only restaurant of the tenant as a fallback when there is just one. There is no tool parameter for the restaurant, no default restaurant and no fallback to the first settings object (D-ROTA-43, D-ROTA-46, D-ROTA-49).</td></tr>
   </table>
 
   <h2 id="sec-design">8. Solution design</h2>
@@ -576,10 +761,12 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
     </tr>
     <tr>
       <td>D-ROTA-12</td><td>2026-10-30</td>
-      <td>Amounts always render as money: when currencyCode is not configured
-      the tool falls back to USD with narrow currency symbols ("$6.42").</td>
-      <td>User feedback: a bare "6.42" looks like a random number, not money.
-      Admins can still override with their ISO code.</td>
+      <td>Amounts always render as money: with a currency the tool formats the
+      amount with narrow currency symbols ("$6.42"), otherwise it prints a
+      plain amount.<br><em>Revised by D-ROTA-49:</em> the currency is read from
+      the restaurant object only - the <code>currencyCode</code> parameter is
+      gone, and no USD default is invented for a restaurant that has none.</td>
+      <td>User feedback: a bare "6.42" looks like a random number, not money.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
     <tr>
@@ -711,6 +898,409 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
       title and status, and trims duplicated or long labels.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-ROTA-24</td><td>2026-10-31</td>
+      <td>Primary-action hierarchy: the next step (Accept, Start prep, Mark
+      ready, Complete) is the big green button and takes the available card
+      width; Decline and Cancel are quiet link-style text actions (no box,
+      grey, underlined, red only on hover). In the armed two-step the
+      Confirm button stays prominent and "Keep" stays ghost.</td>
+      <td>User feedback: ~95% of taps are the forward step; the forward
+      button must be the easiest target and the destructive one must not
+      compete with it.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-25</td><td>2026-10-31</td>
+      <td>Compact top area: the page title and the "N orders - N waiting -
+      N ready" subtitle are removed; the tabs and the LIVE / Refresh /
+      three-dots actions share one row (actions right-aligned), search and
+      sort stay on the next row. Tab text is bigger (14.5px, 9x17 padding,
+      22px count chip). On phones the tabs take the first row (scrollable)
+      and the actions a second row; search and sort go full width.</td>
+      <td>User feedback: the top ate too much vertical space, the title is
+      obvious and the counter line was small and unreadable - the board
+      itself should get the room.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-26</td><td>2026-10-31</td>
+      <td>Card regrouped into four clear blocks so the card is understood in
+      one look: (1) identity - channel + elapsed timer, title, #number +
+      placed time + place; (2) state - status pill with the ETA and the
+      countdown pill; (3) money - a dashed divider, then TOTAL + item count
+      on the left and the big amount on the right; (4) action - a
+      full-width primary button with the quiet Decline/Cancel link centered
+      underneath. Buttons never share a line with the price anymore.</td>
+      <td>User feedback: buttons and price on one line looked weird and the
+      card carried too many competing details; a clear grouping reads much
+      faster on a busy board.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-27</td><td>2026-10-31</td>
+      <td>Every card has the same bottom block: the TOTAL line and the action
+      row are pinned to the very bottom of the card (`margin-top: auto`),
+      cards stretch to equal height in their grid row, and the green
+      next-step button and the quiet Decline/Cancel link sit on ONE line
+      (button takes the free width, link a fixed small width beside it).
+      Notes moved ABOVE the money block so the action row is always last.</td>
+      <td>User feedback: the button and link position changed with the
+      amount of data (ETA, note) which looked unprofessional - the bottom
+      block must always be in the same place.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-28</td><td>2026-10-31</td>
+      <td>The detail popup leads with an "Items to prepare" prep-ticket
+      panel: a bordered soft panel, a unit-count badge in the heading,
+      quantity badges (1x, 2x) in a bordered box, 16px bold item names,
+      size chips, bulleted modifiers with the group in muted brackets, and
+      instructions as a full-width amber NOTE callout. Line prices are
+      demoted (small unit price, 14.5px line total).</td>
+      <td>User feedback: the items to prepare must be visible at a glance
+      in the popup - the kitchen reads items, modifiers and notes first;
+      money is secondary there.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-29</td><td>2026-10-31</td>
+      <td>The detail popup gets an always-visible TIMELINE band under the
+      header: one dot per milestone (Placed, Accepted, Preparation or
+      Ready, then the estimate or the closing status) on a horizontal
+      rail, with the minutes spent between two milestones written on the
+      connecting line ("8 min") and a live gap for the step in flight
+      ("24 min and counting", "in 15 min", "12 min late"). Only
+      timestamps the order really stores are drawn - a milestone without
+      a stored time is skipped instead of shown as "no time". The band
+      turns vertical on phones.</td>
+      <td>User feedback: the TIMING block listed five raw timestamps that
+      could not be read at a glance; a step rail shows the pace of the
+      order in one line.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-30</td><td>2026-10-31</td>
+      <td>Secondary detail blocks collapse by default: "Exact timestamps"
+      (the full date-time rows) and "Payment" (method in the summary,
+      provider and card inside) are native `details` elements, closed on
+      open. The timeline replaces the old always-open TIMING list.</td>
+      <td>User feedback: hide what is not needed at first sight and show
+      it on demand.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-31</td><td>2026-10-31</td>
+      <td>Every card renders the same four fixed info rows in a soft
+      bordered panel - ORDER (# + placed time), WHERE (table / street /
+      counter), STATUS (pill), ETA (time + countdown, or the italic "not
+      set", or the closing time under a CLOSED label) - and NOTE as the
+      last row only when the order has a note. Rows never reorder, so the
+      same data always sits in the same place; TOTAL and the action line
+      stay pinned at the bottom.</td>
+      <td>User feedback: the card content flowed with the data so the
+      same information moved between cards; static slots are easier to
+      scan on a busy board.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-32</td><td>2026-10-31</td>
+      <td>The timeline rail always shows the whole workflow: Placed,
+      Accepted, Preparation, Ready, Completed. Passed steps are filled
+      dots, the current step is a ringed dot, steps ahead are hollow
+      dashed dots. Only stored timestamps are printed (a passed step
+      without one shows a dash). The estimate rides on the Ready dot
+      ("est 02:18 p.m.") while that step is still ahead. Declined and
+      cancelled orders swap the tail for the closing status.</td>
+      <td>User feedback: only the active and the next step were visible -
+      the whole route must be readable.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-33</td><td>2026-10-31</td>
+      <td>The timeline band moved from the top of the popup to the bottom
+      footer, and its header carries the two headline numbers: "Since
+      placed" (live mm:ss / h mm) and "To ready" or "To delivery" (live
+      countdown, amber inside the last minutes, red when late, italic
+      "not set" when there is no estimate). The minutes between steps on
+      the rail are set 13px bold - bigger than the step labels - so the
+      pace of the order is the first thing read.</td>
+      <td>User feedback: the timeline belongs at the bottom and must
+      focus on time spent since the order was placed.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-34</td><td>2026-10-31</td>
+      <td>The detail header keeps only the next-step button and the quiet
+      decline/cancel link; rare actions moved into a three-dots menu
+      ("Open in admin", renamed from "Open in CMS"). The permanent
+      "Pick any status - forward or back" helper line was replaced by a
+      small "?" next to the STATUS title whose tooltip carries the text.
+      The read-only hint stays visible because it explains a blocked
+      control.</td>
+      <td>User feedback: a simple screen, no permanent explanatory text,
+      rarely used actions folded away.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-35</td><td>2026-10-31</td>
+      <td>Customer and Totals collapse into native folds whose summary
+      shows the one value that matters (customer name, grand total); the
+      body holds the phone, table, address, custom fields and the money
+      breakdown. Exact timestamps and Payment stay folded as before.</td>
+      <td>User feedback: long blocks push the items down; the one-line
+      summary keeps the popup short and still shows the key value.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-36</td><td>2026-10-31</td>
+      <td>Thermal print ticket: a Print button in the detail header (and
+      "Print ticket" in the three-dots menu) appears only while the order
+      is <strong>accepted</strong>. The ticket is black text only on 80 mm
+      paper (`@page size: 80mm auto`), monospace: header with the daily
+      number, record/status/type/date/times, the items with quantity, size,
+      modifiers and uppercase kitchen instructions, item count + total,
+      customer, phone, address, payment method and the print time. No
+      colors, no logo, no per-line prices. It is built into a hidden
+      `#roa-print` container created on demand and `window.print()` runs
+      with a print media query that hides the board, so only the ticket is
+      printed.</td>
+      <td>User request: the kitchen needs a paper ticket while the order is
+      being prepared, printed on a thermal printer.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-37</td><td>2026-10-31</td>
+      <td>Detail header cleanup: the daily number (#5) is the only order
+      identifier shown there - the raw record number is not repeated next
+      to it (it stays on the print ticket and in the admin record); the
+      "Back to orders" button is removed because the popup closes with the
+      X, a backdrop click or Esc.</td>
+      <td>User feedback: two numbers for the same order were confusing and
+      the back button duplicated the close control.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-38</td><td>2026-10-31</td>
+      <td>Direct printing. A web page cannot skip the browser print dialog
+      on its own, so the tool supports two routes selected by the
+      `printMode` parameter: (1) <strong>dialog</strong> (default) prints
+      the 80 mm sheet with `window.print()` - when the browser runs with
+      `--kiosk-printing` (Edge/Chrome) and the thermal printer is the
+      system default, the same Print button prints with no dialog at all;
+      (2) <strong>rawbt</strong> builds a raw ESC/POS ticket
+      (`buildEscPosTicket`: reset, centered double-size header, bold item
+      lines, modifiers, uppercase notes, 42/32 columns, feed and cut) and
+      opens `rawbt:base64,<ticket>` through `tool.openUrl`; the RawBT app
+      on the Android tablet sends it straight to the printer configured
+      inside the app - no dialog, no preview, one tap. The tool still makes
+      no network calls (the sandbox forbids fetch), so every direct route
+      is handed to an app that owns the printer.</td>
+      <td>User request: print with no browser page on a tablet, thermal
+      paper only, as few steps as possible.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-39</td><td>2026-10-31</td>
+      <td>The accept dialog shows a compact order summary before the order
+      is accepted: customer name and phone, the full DELIVERY ADDRESS
+      (all address lines, or "Address not provided", plus the delivery
+      zone), or SERVE AT / Table for dine-in, or PICKUP / at the counter,
+      the item count and the internal note. The header uses the daily
+      number (#5) with the total at the right; prices stay out of the
+      summary.</td>
+      <td>User request: the delivery address must be visible while
+      accepting an order.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-40</td><td>2026-10-31</td>
+      <td>The street address is no longer repeated on the board cards: the
+      info panel keeps ORDER, STATUS, ETA and NOTE, and a TABLE row only
+      for dine-in orders. The delivery address lives in the accept dialog
+      and in the detail popup, and it is shown there for DELIVERY orders
+      only - pickup and dine-in never show an address even if the record
+      carries one.</td>
+      <td>User feedback: the address belongs to the accept decision, not
+      to the kitchen board.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-41</td><td>2026-10-31</td>
+      <td>Closing-time warning: the tool loads the restaurant settings
+      object (new param `restaurantSettingsType`, default
+      `restaurants-easyorder`) with one extra query at boot and on Refresh.
+      The closing time is read tolerantly (direct `closingTime` /
+      `closeTime`, a weekly schedule object or array with day names or
+      indexes, a single range, or a "09:00-22:00" string). When the shop
+      closes within 120 minutes the accept dialog shows an amber banner
+      "Restaurant closes at 6:42 p.m. - 1h 30m left to prepare this
+      order." (red inside the last 30 minutes). Outside that window, or
+      when no closing time can be read, nothing is shown - the tool never
+      invents a closing time.</td>
+      <td>User request: see how long is left before closing while deciding
+      to accept or decline.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-42</td><td>2026-10-31</td>
+      <td>Restaurant scope: one tool instance belongs to ONE restaurant via
+      the new `restaurantId` parameter (settings object id, slug, or its
+      `restaurantId` / `restaurantKey` field). The settings object is
+      resolved with `requestObjects('get')` by id first and then by a
+      tolerant query match (`id`, `slug`, `restaurantId`, `restaurantKey`,
+      `restaurant.id`, `siteId`). Each order now exposes a
+      `restaurantKey` (read from `restaurantId`, `restaurant`,
+      `restaurantKey`, `siteId`) and the board keeps only the orders that
+      carry the same key; orders WITHOUT the field stay visible so a
+      legacy or mixed dataset never empties the board. With no
+      `restaurantId` the old single-restaurant behaviour is kept (first
+      settings object, no filtering).</td>
+      <td>User request: the tenant has many restaurants - the instance must
+      know which one it works for.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-43</td><td>2026-11-01</td>
+      <td>Restaurant scope, second iteration (tightens D-ROTA-42). The
+      parameter is now <code>restaurantSlug</code> and holds the slug of the
+      <code>restaurants-easyorder</code> object (its object id is accepted
+      too, for objects that have no slug yet). Resolution order: a direct
+      <code>requestObjects('get', { objectId })</code> first, then - only if
+      that returns nothing - one listing of the settings type matched by
+      slug, accepted ONLY when exactly one object carries it. There is no
+      default restaurant and no "first object" fallback: an unassigned
+      instance, a missing slug, a duplicate slug and a read error each show
+      a red banner and a board empty state that names the cause, and the
+      board stays closed. Order visibility is fail-CLOSED: an order of
+      another restaurant never appears, and an order that carries no
+      restaurant identifier is hidden (counted and warned) unless the
+      system admin turns on the `allowUnassignedOrders` escape hatch. The
+      parameter exists for the SYSTEM ADMIN only - restaurant users change
+      orders, never the tool instance - so one restaurant can never point a
+      board at another one. <em>Revised by D-ROTA-46:</em> the parameter is
+      now OPTIONAL - a tenant-wide tool definition cannot hold a
+      per-restaurant value, so the board resolves its restaurant from the page
+      context first and uses the parameter only as a fallback.</td>
+      <td>User directive: get-by-id is the proper way, there is no default
+      restaurant, and the tenant must not be able to switch a board to
+      another restaurant's data.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-44</td><td>2026-11-01</td>
+      <td>Application model: the tool set spans three CMS applications -
+      <code>restaurants-easyorder</code> (one object per restaurant),
+      <code>restaurant-orders-easyorder</code> (every order of every
+      restaurant, one object per order) and
+      <code>restaurant-order-taking-app-easyorder</code> (this board, one
+      record per restaurant, tenant-wide tool definition). The
+      relations are 1:1 between a restaurant object and board record
+      and 1:N between a restaurant and its orders; both joins use the
+      restaurant slug. Documented in section 4.1.</td>
+      <td>User request: define how the three applications relate before the
+      multi-restaurant work continues.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-45</td><td>2026-11-01</td>
+      <td>Order contract: every order record stores the restaurant
+      <strong>slug</strong> in <code>restaurantId</code> (lowercase, trimmed).
+      That is the join key between the order application and the restaurant
+      object, and the value the board compares against. The tool still accepts
+      the settings object id, the order's <code>restaurantKey</code>,
+      <code>restaurant</code> reference and <code>siteId</code> as tolerant
+      aliases, but the slug is the documented contract and what every order
+      writer must store.</td>
+      <td>User decision: "Lets use slug" for the order side.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-46</td><td>2026-11-01</td>
+      <td>Runtime restaurant resolution: the tool definition is tenant wide on
+      <code>easyorder</code> (a multi-restaurant tenant), so a parameter cannot
+      name the restaurant per restaurant. The board now resolves it from the
+      page it is opened on - the
+      <code>restaurant-order-taking-app-easyorder</code> record (read by id,
+      one record per restaurant), then the
+      <code>/admin/objects/&lt;type&gt;/&lt;id&gt;</code> route, then the last
+      path segment of a per-restaurant page, then the optional
+      <code>restaurantSlug</code> parameter, then the ONLY restaurant of the
+      tenant. Strong signals are distinguished from weak ones so an unrelated
+      page reports "cannot tell which restaurant", not a wrong restaurant.
+      Anything ambiguous closes the board. New parameter
+      <code>toolAppType</code> (default
+      <code>restaurant-order-taking-app-easyorder</code>) names the board
+      record type; that type must be in
+      <code>settings.allowedObjectTypes</code> to be read.
+      <em>Revised by D-ROTA-49:</em> the <code>restaurantSlug</code> parameter
+      was removed entirely.</td>
+      <td>User: "the tool definition is CMS tenant wide ... we cannot set the
+      tool's parameter for the CMS for one restaurant only".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-47</td><td>2026-11-01</td>
+      <td>Read the real restaurant config shape: everything except the join
+      key lives under
+      <code>productData.data_categoriesBased.restaurantDetails</code>, and the
+      object-level <code>slug</code> is the join key. The closing notice now
+      understands <code>service_settings.opening_hours[].ranges[]</code> and
+      <code>is_closed</code> (last range of the day wins, a closed day has no
+      closing time) - the previous reader could not parse that shape at all.
+      Currency comes from <code>taxation_currency.currency</code> and the
+      timezone from <code>general_info.timezone</code>. (D-ROTA-49 removed the
+      parameters entirely, so the object is the only source.) The rest of the config (brand, service toggles,
+      zones, menu, legal block) is documented in section 4.1 for later use.</td>
+      <td>User supplied a real restaurant object so the tool reads the
+      production shapes, not invented ones.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-48</td><td>2026-11-01</td>
+      <td>Object type ids confirmed against the live tenant: the order objects
+      live in <code>restaurant-orders-easyorder</code> (the application id IS
+      the cmsObjectType id - there is no <code>restaurant-orders</code> type),
+      the restaurant config in <code>restaurants-easyorder</code> and the board
+      records in <code>restaurant-order-taking-app-easyorder</code>. The
+      <code>ordersObjectType</code> default is therefore
+      <code>restaurant-orders-easyorder</code>. Consequence for the CMS field
+      settings: <code>settings.allowedObjectTypes</code> must list
+      <code>restaurant-orders-easyorder</code> (read + update) and
+      <code>restaurants-easyorder</code> (read); add
+      <code>restaurant-order-taking-app-easyorder</code> (read) to let the
+      board read its own record for the restaurant reference.</td>
+      <td>User: "there is no restaurant-orders named app ... it should be
+      restaurant-orders-easyorder which is full id of cmsObjectType".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-49</td><td>2026-11-01</td>
+      <td>No per-restaurant data in the tenant-wide tool parameters, and the
+      board record's slug equals the restaurant object's slug. The parameters
+      <code>restaurantSlug</code>, <code>restaurantTimezone</code> and
+      <code>currencyCode</code> are removed: on a definition that serves every
+      restaurant, a filled value would become the default for every instance
+      that does not set its own - a silent cross-restaurant leak. The
+      restaurant is now linked by ONE equality the CMS already stores: name the
+      <code>restaurant-order-taking-app-easyorder</code> record exactly like the
+      restaurant (<code>restaurants-easyorder</code> object slug), e.g.
+      <code>pizza-lachine</code>. <code>restaurantReferenceOf()</code> already
+      reads the record's own <code>slug</code>, so no extra field is needed; a
+      <code>restaurantSlug</code> field on the record is still accepted for
+      tenants whose record slug is used for something else. Timezone and
+      currency come only from the restaurant object
+      (<code>general_info.timezone</code>, <code>taxation_currency.currency</code>),
+      never from a parameter. When the page is the board record, its id is a
+      record id and is no longer proposed as a restaurant candidate. Sample
+      imports stamp the resolved slug, falling back to the restaurant object id,
+      so QA rows stay visible on the scoped board.</td>
+      <td>User: "setting timezone, restaurant slug in the tool config would
+      make a default data for non-set instances which is not expected" and
+      "can we use the board instance object's slug data and set it same with
+      the restaurant object's slug".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -767,6 +1357,12 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
     need?</strong> Kitchen (prep-focused), cashier (money-focused) or both -
     this decides the per-status card content matrix and the cardLayout
     param (group ROA-CARDS, tasks T-09..T-13).</li>
+    <li><strong>Do we need per-item preparation status?</strong> Industry
+    practice keeps the ORDER status as the source of truth for pickup and
+    delivery (the order leaves as one unit); item-level "ready" is mainly
+    a dine-in course pattern, and station splitting (kitchen vs bar
+    tickets) is the more common granularity. Decide in idea I-10 before
+    any data-model change.</li>
   </ol>
 
   <h2 id="sec-tasklist">15. Development task list</h2>
@@ -965,7 +1561,7 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
           <p><strong>Problem it solves:</strong> without the two fields the
           accept timing and the ETA do not persist (L-04).</p>
           <p><strong>How we will solve it:</strong> add the two timestamp
-          fields to the restaurant-orders type definition in the order app.</p>
+          fields to the restaurant-orders-easyorder type definition in the order app.</p>
           <p><strong>Benefit:</strong> the detail view and cards keep showing
           the estimate after refresh.</p>
           <p><strong>Files:</strong> CMS app definition (not this repo).</p>
@@ -1372,6 +1968,247 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
     </details>
   </div>
 
+  <div class="idea-item" data-idea-id="I-10" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-10</span>
+        <span class="idea-title">Per-item preparation status (one item ready, another cooking)</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-10 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> give each order line its own preparation
+        state (waiting / cooking / ready) so a card can say "3 of 5 items
+        ready" and the order turns ready automatically when every item is
+        ready.</p>
+        <p><strong>Industry practice:</strong> (1) for pickup and delivery
+        the ORDER status stays the source of truth - the order leaves as
+        one unit, so most KDS/POS systems track one ticket status per order;
+        (2) item-level readiness appears mainly in dine-in course service
+        (fire/hold/served) where dishes reach the table at different times;
+        (3) the more common granularity in busy kitchens is STATION
+        splitting - kitchen and bar tickets (or grill / fry / cold), each
+        with its own progress - rather than a status on every item;
+        (4) item statuses add data-model work (a status field on each line),
+        aggregation rules (order ready = all items ready), extra taps and
+        sync risk.</p>
+        <p><strong>Recommendation:</strong> keep the order status as the
+        single source of truth for now; if item tracking is needed, do it
+        first as a display-only per-line checklist in the detail popup
+        (no CMS field), and add a real per-item status only if a pilot
+        restaurant with dine-in courses asks for it.</p>
+        <p><strong>Discussion / outcome:</strong> new - open question Q7;
+        decide before any data-model change.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-11" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-11</span>
+        <span class="idea-title">Station routing - kitchen and bar tickets</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-11 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> split an order into station tickets (grill,
+        fry, cold, bar) and show a ready marker per station, then let the
+        order become ready when every station is done.</p>
+        <p><strong>Industry practice:</strong> busy kitchens route items to
+        stations; the ticket printer or screen per station is the common
+        solution, and the order status stays the single source of truth.</p>
+        <p><strong>Why:</strong> the board stays one list, but each station
+        can work in parallel and the expo sees which part is missing.</p>
+        <p><strong>Discussion / outcome:</strong> new - needs a station
+        field on menu items first.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-12" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-12</span>
+        <span class="idea-title">Per-status age alerts instead of one warning</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-12 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> give each status its own patience limit -
+        a new order waiting 2 minutes is loud, an order in preparation is
+        fine for 12 minutes - and colour the card by the limit of its
+        current status.</p>
+        <p><strong>Industry practice:</strong> KDS products set target
+        times per station and per stage, not a single global warning, so
+        normal prep time is never shown as a problem.</p>
+        <p><strong>Why:</strong> fewer false alarms and one honest signal:
+        this step is taking too long.</p>
+        <p><strong>Discussion / outcome:</strong> new - replaces the single
+        newOrderWarningMinutes parameter with per-status thresholds.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-13" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-13</span>
+        <span class="idea-title">Print a kitchen ticket or a delivery slip</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-13 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a Print action in the three-dots menu that
+        renders the order as a 58 mm or 80 mm thermal ticket (items big,
+        modifiers, notes, no prices) or a delivery slip with the address.</p>
+        <p><strong>Industry practice:</strong> printing stays the fallback
+        when a screen is busy or the kitchen has one printer for expo.</p>
+        <p><strong>Why:</strong> low risk, high value for small kitchens; the
+        popup already holds everything needed.</p>
+        <p><strong>Discussion / outcome:</strong> new.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-14" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-14</span>
+        <span class="idea-title">Keyboard-first order handling</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-14 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> shortcuts that work on the focused card or
+        in the popup: A accept, S start preparation, R mark ready, C
+        complete, X cancel (armed), Esc close, arrow keys to move between
+        cards.</p>
+        <p><strong>Industry practice:</strong> POS and KDS terminals are
+        keyboard or keypad driven during service; mice are slow.</p>
+        <p><strong>Why:</strong> an order taker can clear a rush without
+        hunting for buttons.</p>
+        <p><strong>Discussion / outcome:</strong> new - needs a visible
+        shortcut hint or help sheet.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-15" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-15</span>
+        <span class="idea-title">Sound and vibration for a new order</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-15 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> play a short chime (with a mute toggle in
+        the three-dots menu) when a new order arrives, and vibrate on
+        devices that support it.</p>
+        <p><strong>Industry practice:</strong> every KDS has an audible new
+        ticket alert; it is the only way staff notice an order while
+        plating.</p>
+        <p><strong>Why:</strong> the toast alone is easy to miss on a screen
+        that is not being watched.</p>
+        <p><strong>Discussion / outcome:</strong> new - needs a platform
+        audio capability and a first user gesture before playing.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-16" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-16</span>
+        <span class="idea-title">Shift summary strip</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-16 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a small, collapsible strip with the day's
+        numbers - orders handled, average accept time, average prep time,
+        late count - computed from the orders already on the board.</p>
+        <p><strong>Industry practice:</strong> end-of-shift reports are
+        standard; live averages help a manager spot a slow station early.</p>
+        <p><strong>Why:</strong> the board already has all the data; the
+        summary answers "how are we doing today" in one line.</p>
+        <p><strong>Discussion / outcome:</strong> new - keep it collapsed by
+        default so the board stays the main screen.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-17" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-17</span>
+        <span class="idea-title">Reuse the timeline in RestaurantOrderManager</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-17 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> extract the rail markup and CSS into a
+        small shared block so the per-record manager tool shows the same
+        timeline instead of its own time rows.</p>
+        <p><strong>Industry practice:</strong> one visual language for time
+        across the back office and the board reduces training.</p>
+        <p><strong>Why:</strong> the same order then looks identical in both
+        tools and there is only one place to fix timeline logic.</p>
+        <p><strong>Discussion / outcome:</strong> new - the sibling tool has
+        its own build stamp, so this is a separate release.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-18" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-18</span>
+        <span class="idea-title">Platform-level printer integration</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-18 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> ask the platform for a first-class print
+        channel instead of the URL handoff: a `tool.print(rawData)` SDK
+        method, or a tenant-level setting that maps a printer (vendor
+        API, network IP, Bluetooth MAC) and exposes a single
+        `tool.printTicket(order)` call.</p>
+        <p><strong>Industry practice:</strong> POS web apps use a local
+        print service (QZ Tray, PrintNode) or the printer vendor's own
+        web API (Epson ePOS-Print, Star WebPRNT). All of them need a
+        service or app on the device - the browser alone cannot own a
+        printer.</p>
+        <p><strong>Why:</strong> one documented call would replace the
+        RawBT URL today and cover Windows, Android and iOS with the same
+        code.</p>
+        <p><strong>Discussion / outcome:</strong> new - platform scope;
+        the tool keeps `printMode` as the switch until then.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-19" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-19</span>
+        <span class="idea-title">Restaurant identity in the board header</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-19 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> show the resolved restaurant name (and logo)
+        from <code>restaurantDetails.general_info</code> next to the tabs, so
+        staff can see at a glance which restaurant this board serves - the
+        tool definition is tenant wide, so the page alone may not make it
+        obvious.</p>
+        <p><strong>Discussion / outcome:</strong> new - small change, but it
+        needs a place in the compact topbar that does not push the tabs.</p>
+      </div>
+    </details>
+  </div>
+
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
   <p>Preparation: open <code>app/test-harness.html</code> with
   <code>?sample=1</code> (seeds 11 orders). Keep the console open - the tool
@@ -1448,7 +2285,96 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
   (no orange fresh rings, D-ROTA-22); the fresh ring is blue and clears in
   6 seconds; countdown is a bigger pill and the card labels were trimmed
   (D-ROTA-23); smoke suite 96/96 green; headless QA of the polished cards
-  passed.</p>
+  passed. 2026-10-31 (build 2026-10-31-5) - primary-action hierarchy
+  (D-ROTA-24): next-step button enlarged, Decline/Cancel became quiet
+  link-style actions; smoke suite 98/98 green (day-number and removal-plan
+  asserts made independent of the wall-clock time); headless QA passed.
+  2026-10-31 (build 2026-10-31-6) - compact top area (D-ROTA-25): title and
+  counter subtitle removed, tabs + LIVE/Refresh/menu on one row, bigger
+  tabs, mobile stacking fixed; smoke suite 98/98 green; desktop and true
+  390px iframe QA passed. 2026-10-31 (build 2026-10-31-7) - grouped card
+  layout (D-ROTA-26): identity / state / money / action blocks, full-width
+  primary button with the quiet link below, price on its own line; smoke
+  suite 98/98 green; headless QA passed. 2026-10-31 (build 2026-10-31-8) -
+  bottom-pinned money + single-line action row on every card, equal card
+  heights (D-ROTA-27); smoke suite 98/98 green; headless QA passed.
+  2026-10-31 (build 2026-10-31-9) - "Items to prepare" prep-ticket panel in
+  the popup (D-ROTA-28): quantity badges, large item names, bulleted
+  modifiers, amber NOTE callouts, demoted prices; idea I-10 + Q7 added for
+  per-item preparation status; smoke suite 98/98 green; headless QA passed.
+  2026-10-31 (build 2026-10-31-10) - TIMELINE band in the popup (D-ROTA-29)
+  with the minutes between milestones written on the line and a live
+  "and counting" gap; "Exact timestamps" and "Payment" now collapse
+  (D-ROTA-30); only stored timestamps are drawn; smoke suite 111/111 green
+  (10 timeline asserts added); headless QA passed.
+  2026-10-31 (build 2026-10-31-11) - cards rebuilt on fixed info rows
+  (D-ROTA-31); full-workflow timeline moved to the popup footer with the
+  two headline numbers (D-ROTA-32 / D-ROTA-33); Customer and Totals collapse
+  to a one-line summary (D-ROTA-35); rare actions moved to a three-dots
+  menu with "Open in admin" and the status helper text became a "?"
+  tooltip (D-ROTA-34); ideas I-11..I-17 added; smoke suite green (timeline, fold and menu asserts added);
+  headless QA passed.
+  2026-10-31 (build 2026-10-31-12) - thermal print ticket for accepted
+  orders (D-ROTA-36) and detail header cleanup: no back button, the raw
+  record number no longer repeated (D-ROTA-37); smoke suite green (print
+  asserts added); ticket preview and headless QA passed.
+  2026-10-31 (build 2026-10-31-13) - direct printing: printMode dialog or
+  rawbt, raw ESC/POS ticket builder and the RawBT URL handoff (D-ROTA-38);
+  idea I-18 added for a platform print channel; smoke suite green (ESC/POS
+  asserts added); checks passed.
+  2026-10-31 (build 2026-10-31-14) - the accept dialog shows the customer,
+  the full delivery address (or table / counter), the item count and the
+  note before accepting (D-ROTA-39); smoke suite green (summary asserts
+  added); headless QA of the dialog passed.
+  2026-10-31 (build 2026-10-31-15) - address removed from the board cards,
+  delivery-only address in the accept dialog (D-ROTA-40) and the closing
+  time check from the restaurant settings object with a two-hour warning
+  (D-ROTA-41); smoke suite green (11 closing/address asserts added);
+  headless QA of the dialog passed.
+  2026-10-31 (build 2026-10-31-16) - restaurant scope: `restaurantId`
+  parameter, settings resolution by id/slug/field and order filtering by the
+  same key (D-ROTA-42); smoke suite green (8 scope asserts added); checks
+  passed.
+  2026-11-01 (build 2026-11-01-1) - strict restaurant scope (D-ROTA-43):
+  `restaurantId` parameter becomes `restaurantSlug`, get-first resolution, no default
+  restaurant, fail-closed order filter, config banner and empty state for
+  every failure mode; harness serves `?restaurant=<slug>` / `?restaurant=none`;
+  smoke suite green (13 scope asserts); checks passed.
+  2026-11-01 (build 2026-11-01-2) - application model documented in section
+  4.1 (restaurants-easyorder, restaurant-orders-easyorder,
+  restaurant-order-taking-app-easyorder) with the 1:1 and 1:N slug joins
+  (D-ROTA-44) and the order contract `restaurantId` = restaurant slug
+  (D-ROTA-45); parameter hints now name the applications; no behavior change;
+  smoke suite green; checks passed.
+  2026-11-01 (build 2026-11-01-3) - the tool definition is tenant wide, so the
+  restaurant is now resolved at RUNTIME from the page (board record, object
+  route, page slug), then the optional parameter, then the only restaurant
+  (D-ROTA-46); the real restaurant config shape is read, including
+  `opening_hours[].ranges[]` + `is_closed`, `taxation_currency.currency` and
+  `general_info.timezone` (D-ROTA-47, section 4.1); the order app is named
+  `restaurant-orders-easyorder`; harness serves `?pageUrl=` and a second
+  restaurant; smoke suite green (194 asserts, 15 new); headless QA: no-context
+  board closed with banner, accept dialog closing notice from real hours.
+  2026-11-01 (build 2026-11-01-4) - order object type corrected to
+  `restaurant-orders-easyorder` (there is no `restaurant-orders` type on the
+  tenant), which is also the application id; parameter default, hints,
+  harness, smoke fixtures and docs updated (D-ROTA-48); smoke suite green;
+  checks passed.
+  2026-11-01 (build 2026-11-01-5) - the no-context banner and the console now
+  name the CMS page address and the candidate list, and section 4.1 documents
+  WHERE to put the slug on the board record (`restaurantSlug` field, the
+  record's own slug, or the accepted reference keys); parameter hints point at
+  the board record first; no behavior change; smoke + checks green.
+  2026-11-01 (build 2026-11-01-6) - the per-restaurant parameters
+  `restaurantSlug`, `restaurantTimezone` and `currencyCode` are gone from the
+  tenant-wide definition (D-ROTA-49); the restaurant is linked by giving the
+  board record the same slug as the restaurant object, which the tool already
+  reads; currency and timezone come only from the restaurant object; a
+  board-record page id is no longer taken as a restaurant candidate; the
+  no-context banner says "give the board record the same slug as the restaurant";
+  harness and smoke now run the board-record flow (page =
+  `/admin/objects/restaurant-order-taking-app-easyorder/board-demo`, record
+  slug `demo`); smoke + checks green.</p>
 
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -1594,7 +2520,7 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
 
   <div class="footer">
     Restaurant Order Taking App - single source of truth for all decisions
-    about this tool. Version 1.4, 2026-10-31.
+    about this tool. Version 3.5, 2026-11-01.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

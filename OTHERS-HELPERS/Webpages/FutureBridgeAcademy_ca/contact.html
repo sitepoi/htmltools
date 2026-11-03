@@ -3,9 +3,12 @@
   CONTACT - fragment for the academy website (contact.html)
   - Everything lives inside ONE parent <div class="fba-page fba-contact">
   - No html / head / body tags, no header or footer (the CMS provides them)
-  - The form follows the platform contract: <form data-fba-form>, a hidden
-    honeypot field named "website", a [data-fba-form-status] live region, and
-    gw.forms.bind() called once from this page script when the platform is there
+  - The form uses its own namespace: <form data-fba-form>, a hidden honeypot
+    field named "website" and a [data-fba-form-status] live region. The
+    data-fba-* names matter: the CMS shell binds form[data-gw-form] itself and
+    posts to the RETIRED /api/forms/submit, which answers 400 and flashes
+    "Something went wrong" over this page's own confirmation. This page also
+    takes the submit event in the CAPTURE phase with stopImmediatePropagation().
   - Facts come from the SSOT section 3.1: one programme inbox, and no phone
     number is mentioned anywhere on the page
 

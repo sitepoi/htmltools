@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ride + Cargo - Intercity Car Sharing Marketplace (Passengers and Parcels) - Business Plan</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --line:#e2e8f0;
+    --panel:#f8fafc;
+    --panel2:#f1f5f9;
+    --accent:#1d4ed8;
+    --accent-soft:#dbeafe;
+    --good:#15803d;
+    --good-bg:#ecfdf5;
+    --bad:#b91c1c;
+    --bad-bg:#fef2f2;
+    --warn-bg:#fffbeb;
+    --warn-border:#fcd34d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.65;
+  }
+  .toolbar{
+    display:flex;gap:10px;justify-content:flex-end;align-items:center;
+    padding:10px 28px;background:var(--panel2);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .toolbar button{
+    border:1px solid var(--accent);background:var(--bg);color:var(--accent);
+    padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .toolbar button:hover{background:var(--accent);color:#ffffff;}
+  .toolbar .tag{font-size:12px;color:var(--muted);margin-right:auto;font-weight:600;letter-spacing:.4px;}
+  .page{max-width:1000px;margin:0 auto;padding:30px 28px 60px;}
+  .hero{
+    border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;
+    padding:34px 38px;margin-bottom:30px;background:var(--bg);
+  }
+  .hero .kicker{color:var(--accent);font-weight:700;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;}
+  .hero h1{font-size:30px;line-height:1.25;margin:8px 0 10px;color:var(--ink);}
+  .hero .sub{color:var(--muted);font-size:15.5px;max-width:760px;}
+  .hero .meta{margin-top:16px;display:flex;gap:14px;flex-wrap:wrap;}
+  .hero .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:999px;background:var(--panel);}
+  h2{
+    font-size:21px;margin:44px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  h2 .num{
+    background:var(--accent);color:#fff;width:30px;height:30px;border-radius:8px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  }
+  h3{font-size:16.5px;margin:22px 0 8px;color:var(--ink);}
+  p{margin:8px 0;}
+  ul,ol{margin:8px 0 12px 22px;}
+  li{margin:4px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px;color:#334155;}
+  .note{font-size:13px;color:var(--muted);font-style:italic;}
+  .grid{display:grid;gap:14px;}
+  .g2{grid-template-columns:1fr 1fr;}
+  .g3{grid-template-columns:repeat(3,1fr);}
+  @media (max-width:820px){.g2,.g3{grid-template-columns:1fr;}}
+  .card{
+    border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--panel);
+  }
+  .card h4{font-size:13.5px;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px;}
+  .card p{font-size:14px;color:#334155;margin:0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;}
+  th{background:var(--panel2);font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;}
+  tr:nth-child(even) td{background:var(--panel);}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent;}
+  .pill.good{background:var(--good-bg);color:var(--good);border-color:#bbf7d0;}
+  .pill.bad{background:var(--bad-bg);color:var(--bad);border-color:#fecaca;}
+  .pill.warn{background:var(--warn-bg);color:#92400e;border-color:var(--warn-border);}
+  .pill.blue{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+  .pros,.cons{border-radius:10px;padding:16px 20px;margin:12px 0;}
+  .pros{background:var(--good-bg);border:1px solid #bbf7d0;}
+  .cons{background:var(--bad-bg);border:1px solid #fecaca;}
+  .pros h3,.cons h3{margin-top:0;}
+  .pros h3{color:var(--good);}
+  .cons h3{color:var(--bad);}
+  .pros li::marker,.cons li::marker{font-weight:700;}
+  .score{display:flex;align-items:center;gap:12px;margin:7px 0;}
+  .score .score-label{width:190px;flex:none;font-size:13.5px;font-weight:600;}
+  .score .score-track{flex:1;height:10px;background:var(--panel2);border-radius:999px;overflow:hidden;border:1px solid var(--line);}
+  .score .score-fill{height:100%;background:var(--accent);border-radius:999px;}
+  .score .score-value{width:52px;flex:none;font-size:13px;font-weight:700;color:var(--accent);text-align:right;}
+  .callout{
+    border-left:4px solid var(--accent);background:var(--panel);padding:14px 18px;border-radius:0 8px 8px 0;
+    margin:14px 0;
+  }
+  .callout.warn{border-color:var(--warn-border);background:var(--warn-bg);}
+  .callout.bad{border-color:#f87171;background:var(--bad-bg);}
+  .callout h4{font-size:14px;margin-bottom:4px;}
+  .swot{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:820px){.swot{grid-template-columns:1fr;}}
+  .swot .box{border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:var(--panel);}
+  .swot .box h4{font-size:13px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+  .swot .box ul{margin-left:18px;font-size:13.5px;}
+  .swot .s{color:var(--good);}
+  .swot .w{color:var(--bad);}
+  .swot .o{color:#1d4ed8;}
+  .swot .t{color:#b45309;}
+  .phase{border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0;background:var(--panel);}
+  .phase h4{font-size:15px;margin-bottom:4px;}
+  .phase .when{font-size:12.5px;color:var(--accent);font-weight:700;}
+  .verdict{
+    border:1px solid var(--line);border-radius:12px;padding:22px 26px;margin-top:14px;
+    background:var(--panel);border-left:6px solid var(--accent);
+  }
+  .verdict h3{margin-top:0;color:var(--accent);}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center;}
+  .toc{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 22px;margin:18px 0;}
+  .toc ol{columns:2;margin:8px 0 0 22px;font-size:14px;}
+  @media (max-width:700px){.toc ol{columns:1;}}
+  .toc a{color:var(--ink);text-decoration:none;}
+  .toc a:hover{color:var(--accent);}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0;}
+  @media (max-width:820px){.kpi{grid-template-columns:repeat(2,1fr);}}
+  .kpi .item{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--panel);text-align:center;}
+  .kpi .item .v{font-size:20px;font-weight:800;color:var(--accent);}
+  .kpi .item .l{font-size:12px;color:var(--muted);margin-top:2px;}
+  @media print{
+    .toolbar{display:none;}
+    body{font-size:12px;}
+    .page{max-width:none;padding:0;}
+    h2{page-break-after:avoid;}
+    .card,.phase,.callout,.verdict,.pros,.cons,table{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="tag">BUSINESS PLAN - RIDE + CARGO EDITION</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Business Plan - Working Name: TripShare</div>
+    <h1>Intercity Car Sharing Marketplace<br><span style="color:var(--muted);font-size:22px;">(Passengers + Cargo in the same car)</span></h1>
+    <p class="sub">One marketplace where a driver going to another city shares both spare seats and spare trunk space on the same trip - strictly on cost-sharing. Passengers contribute to trip costs; a parcel can contribute the same way instead of a passenger. No commercial passenger transport, no freight pricing.</p>
+    <div class="meta">
+      <span>Prepared: November 2026</span>
+      <span>Asset-light marketplace</span>
+      <span>Cost-sharing model only</span>
+      <span>Illustrative figures</span>
+    </div>
+  </div>
+
+  <div class="grid g3" style="margin-bottom:10px;">
+    <div class="card"><h4>Concept</h4><p>BlaBlaCar-style intercity ridesharing plus a parcel lane: seats and trunk space listed and sold on the same trip page.</p></div>
+    <div class="card"><h4>Revenue model</h4><p>15-20% commission on seats and parcels, booking fee, insurance markup, driver subscription, corporate accounts.</p></div>
+    <div class="card"><h4>Verdict</h4><p>GO with a wedge: proven demand, but entry must differentiate from BlaBlaCar via cargo + underserved regions.</p></div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#s1">Executive Summary</a></li>
+      <li><a href="#s2">Problem and Market Need</a></li>
+      <li><a href="#s3">Solution and How It Works</a></li>
+      <li><a href="#s4">Target Market</a></li>
+      <li><a href="#s5">Revenue Model</a></li>
+      <li><a href="#s6">Competitor Review</a></li>
+      <li><a href="#s7">Positive Opinions - Market Fit</a></li>
+      <li><a href="#s8">Negative Opinions - Market Fit Risks</a></li>
+      <li><a href="#s9">SWOT</a></li>
+      <li><a href="#s10">MVP Roadmap</a></li>
+      <li><a href="#s11">Financial Snapshot (illustrative)</a></li>
+      <li><a href="#s12">Final Verdict</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>Executive Summary</h2>
+  <p class="lead">BlaBlaCar proved that drivers will sell spare seats and passengers will ride with strangers to save money. What no mainstream platform has done at scale is let the same driver also sell the empty trunk. TripShare is one trip listing with two products: seats for passengers and space for parcels.</p>
+  <ul>
+    <li><strong>Problem:</strong> intercity buses are slow and inflexible, trains are sparse in many regions, solo driving is expensive - and there is still no mainstream same-day parcel lane on ridesharing platforms.</li>
+    <li><strong>Solution:</strong> one marketplace, one trip, two revenue streams: seat sharing (cost sharing model) + trunk sharing (parcel delivery).</li>
+    <li><strong>Monetization:</strong> commission on seats (15-20%), commission on parcels (15-20%), booking fee, insurance markup, driver subscriptions, corporate accounts.</li>
+    <li><strong>Differentiation:</strong> the "seats + trunk" bundle increases driver income per trip, which is the strongest lever against incumbents.</li>
+    <li><strong>Key risks:</strong> direct competition with BlaBlaCar's network effects, dual safety/liability burden (passengers + cargo), insurance and regulatory complexity.</li>
+    <li><strong>Verdict:</strong> GO with a regional wedge - launch in underserved regions and lead with the cargo feature the incumbent lacks; prepare a response plan if the incumbent copies it.</li>
+  </ul>
+
+  <h2 id="s2"><span class="num">2</span>Problem and Market Need</h2>
+  <h3>Passenger side</h3>
+  <ul>
+    <li>Intercity travel between 100-500 km is dominated by private cars; buses are slow and uncomfortable, trains are missing or sparse, flights are overkill.</li>
+    <li>Solo drivers pay full fuel cost; ridesharing lets them recover most of it.</li>
+    <li>Passengers without cars want a cheaper, faster, door-to-door alternative to the bus.</li>
+  </ul>
+  <h3>Cargo side</h3>
+  <ul>
+    <li>Same-day intercity parcels still have no mainstream option; couriers are either slow or expensive.</li>
+    <li>A ridesharing driver's trunk is already going to the destination - adding a parcel costs almost nothing.</li>
+  </ul>
+  <div class="callout"><h4>Market gap in one sentence</h4>Passenger ridesharing is proven and parcel delivery is underserved - but no major platform monetizes both on the same trip. The gap is the bundle: a driver earning from seats and trunk at once is a driver no competitor can outpay on a single lane.</div>
+
+  <h2 id="s3"><span class="num">3</span>Solution and How It Works</h2>
+  <ol>
+    <li><strong>Driver lists a trip:</strong> route, date, departure window, available seats, available trunk space (by parcel band).</li>
+    <li><strong>Passengers book seats:</strong> fixed platform-calculated price per seat based on distance; in-app payment before the ride.</li>
+    <li><strong>Senders book parcels:</strong> price per size band; pickup point, drop-off point, photo confirmation, live tracking.</li>
+    <li><strong>Verification and safety:</strong> ID and phone verification, ratings, in-app chat, emergency button, optional "women-only" mode, escrow payment.</li>
+    <li><strong>The trip:</strong> driver picks up passengers and parcels at agreed points; the platform tracks the ride for both.</li>
+    <li><strong>Completion:</strong> passenger arrives (auto-complete with rating prompt); parcel delivered with receiver code; driver paid for both, ratings on both.</li>
+  </ol>
+  <ul>
+    <li><strong>Seat pricing:</strong> cost-sharing formula per kilometer, capped so a driver cannot run a commercial taxi service (regulatory safety).</li>
+    <li><strong>Parcel pricing:</strong> cost-sharing contribution by distance band + size band - the trunk space shares trip costs exactly like a seat does, capped by the same published formula; roughly half the express courier price for the sender.</li>
+    <li><strong>Out of scope:</strong> passenger transport for profit (taxis/TNCs) and commercial freight. The platform only facilitates cost-sharing contributions.</li>
+    <li><strong>Trust layer:</strong> profile verification, mutual reviews, escrow for parcels, optional parcel insurance, support-mediated disputes.</li>
+  </ul>
+
+  <h2 id="s4"><span class="num">4</span>Target Market</h2>
+  <div class="grid g3">
+    <div class="card"><h4>Drivers</h4>
+      <ul>
+        <li>Students driving home regularly</li>
+        <li>Weekly commuters and sales staff</li>
+        <li>Families visiting relatives</li>
+        <li>Van owners on regular intercity runs</li>
+      </ul>
+    </div>
+    <div class="card"><h4>Passengers</h4>
+      <ul>
+        <li>Students traveling between cities</li>
+        <li>Workers and daily commuters</li>
+        <li>Travelers without cars</li>
+        <li>Price-sensitive bus users</li>
+      </ul>
+    </div>
+    <div class="card"><h4>Cargo senders</h4>
+      <ul>
+        <li>Marketplace sellers</li>
+        <li>Small businesses and workshops</li>
+        <li>Students moving small items</li>
+        <li>Individuals with urgent parcels</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout"><h4>Wedge strategy</h4>Enter where BlaBlaCar is weak (regional routes, medium cities, cross-border regional lanes) and where cargo demand is strong. Win drivers with the bundle pitch: "the same trip now pays for itself twice".</div>
+
+  <h2 id="s5"><span class="num">5</span>Revenue Model</h2>
+  <ul>
+    <li><strong>Seat service fee:</strong> 15-20% of each seat cost-sharing contribution + small booking fee.</li>
+    <li><strong>Parcel service fee:</strong> 15-20% of each parcel cost-sharing contribution + optional insurance markup (2-4% of declared value).</li>
+    <li><strong>Driver subscription:</strong> monthly tier with lower commission, priority listing, and a "verified driver" badge.</li>
+    <li><strong>Corporate accounts:</strong> companies booking seats or parcel lanes for employees and parts - recurring contracts.</li>
+    <li><strong>Enterprise parcel API:</strong> e-commerce sellers auto-booking delivery on driver trips.</li>
+  </ul>
+  <h3>Unit economics example (illustrative, one 400 km trip)</h3>
+  <table>
+    <tr><th>Item</th><th>Amount</th></tr>
+    <tr><td>2 seats x 14 EUR + 2 parcels x 6 EUR paid by users</td><td>40 EUR</td></tr>
+    <tr><td>Platform commission (~18%) + booking fee</td><td>+7.6 EUR</td></tr>
+    <tr><td>Payment processing</td><td>-0.5 EUR</td></tr>
+    <tr><td>Allocated support, refunds, fraud</td><td>-0.9 EUR</td></tr>
+    <tr><td><strong>Platform revenue per trip</strong></td><td><strong>6.2 EUR</strong></td></tr>
+  </table>
+  <p class="note">A trip with both seats and parcels earns roughly 60-70% more platform revenue than seats alone - the bundle is the entire financial thesis.</p>
+
+  <h2 id="s6"><span class="num">6</span>Competitor Review</h2>
+  <table>
+    <tr><th>Competitor</th><th>Region</th><th>Model</th><th>Takeaway for us</th></tr>
+    <tr><td>BlaBlaCar</td><td>Europe, Latin America, India, Turkey</td><td>Intercity ridesharing leader: 100M+ members, ~20 countries, commission on seats</td><td>Proves demand and sets the trust bar; weakness: no mainstream parcel lane and thin presence on secondary routes</td></tr>
+    <tr><td>BlaBlaCar Daily / commuter modes</td><td>France, others</td><td>Short-distance carpooling</td><td>Different segment (city commuting); not intercity seat + cargo</td></tr>
+    <tr><td>Poparide</td><td>Canada</td><td>Intercity ridesharing, strong regional trust</td><td>Shows a regional player can survive next to a global one with focus</td></tr>
+    <tr><td>GoMore</td><td>Nordics</td><td>Ridesharing + car leasing/rental hybrid</td><td>Adjacent monetization ideas, no parcel focus</td></tr>
+    <tr><td>Turo / Getaround</td><td>USA / Europe</td><td>Peer-to-peer car rental</td><td>Owner rents the car; different model, not a trip-sharing competitor</td></tr>
+    <tr><td>FlixBus / intercity buses / TCDD trains</td><td>Global</td><td>Cheap mass transport</td><td>Price floor for seats; cannot match door-to-door convenience</td></tr>
+    <tr><td>Uber / intercity taxis</td><td>Global</td><td>On-demand premium rides</td><td>Different price band; ridesharing cost-sharing is not their model</td></tr>
+    <tr><td>Couriers (PTT, Yurtiçi, Aras, MNG; DHL, UPS, FedEx)</td><td>Global</td><td>Hub logistics</td><td>Slow standard / expensive express; the trunk lane undercuts both on select corridors</td></tr>
+    <tr><td>Intercity bus cargo</td><td>Turkey and similar markets</td><td>Terminal-to-terminal bus parcel</td><td>Very cheap, but no door-to-door and rigid schedules</td></tr>
+    <tr><td>Tıkla Gelsin</td><td>Turkey</td><td>P2P same-city delivery</td><td>Validates P2P demand in TR; city-only, no seats</td></tr>
+  </table>
+  <div class="callout"><h4>White space</h4>The "seats + trunk" bundle is unclaimed at scale. BlaBlaCar is the incumbent to beat on seats and can copy the parcel feature - so the moat must be corridor density, driver earnings, and local brand, not a feature alone.</div>
+
+  <h2 id="s7"><span class="num">7</span>Positive Opinions - Why It Fits the Market</h2>
+  <div class="pros">
+    <h3>For the idea</h3>
+    <ul>
+      <li><strong>Demand is already proven:</strong> BlaBlaCar's scale shows passengers will rideshare; no demand education is needed.</li>
+      <li><strong>Bundle economics for drivers:</strong> seats plus parcels can cover fuel and more - the strongest driver acquisition pitch in the market.</li>
+      <li><strong>Cross-selling lowers acquisition cost:</strong> a passenger is a future sender, a sender is a future passenger; one funnel feeds both products.</li>
+      <li><strong>Higher ticket size than cargo-only:</strong> seat prices are bigger than parcel fees, so per-trip revenue and marketing headroom are better.</li>
+      <li><strong>Known regulatory path:</strong> cost-sharing ridesharing is legally accepted in the EU and Turkey through existing precedent.</li>
+      <li><strong>Seasonal spikes are monetizable:</strong> holiday travel peaks create predictable high-demand windows for both seats and parcels.</li>
+      <li><strong>Differentiation window:</strong> leading with the cargo lane lets the platform enter corridors where the incumbent does not bother to compete hard.</li>
+    </ul>
+  </div>
+
+  <h2 id="s8"><span class="num">8</span>Negative Opinions - Why It May Not Fit</h2>
+  <div class="cons">
+    <h3>Against the idea</h3>
+    <ul>
+      <li><strong>The incumbent problem:</strong> BlaBlaCar has network effects, brand trust and 100M+ members; passengers will not switch for a slightly better price, and the incumbent can copy the cargo feature quickly.</li>
+      <li><strong>Double operational burden:</strong> passenger safety and cargo liability must both be handled from day one - verification, emergency support, insurance, disputes on two product lines.</li>
+      <li><strong>Trust takes years:</strong> BlaBlaCar spent a decade building verification and review culture; a new platform must spend heavily to reach an acceptable trust level.</li>
+      <li><strong>Margin squeeze:</strong> undercutting the incumbent to win drivers shrinks commission; matching its price removes the reason to switch.</li>
+      <li><strong>Regulatory grey zone for cargo:</strong> seat cost-sharing is accepted almost everywhere, but cargo has no cost-sharing exemption in most jurisdictions - any payment can make the trip for-hire. The platform needs the right structure per market (FMCSA broker authority in the USA, vehicle weight thresholds in the EU/UK, CTQ permits in Quebec, K-type authorizations in Turkey). See the companion regulation guide.</li>
+      <li><strong>Insurance gaps:</strong> personal car policies often exclude paying passengers or goods carriage; insurer partnerships are mandatory and take time.</li>
+      <li><strong>Seasonal liquidity:</strong> most drivers appear around holidays; between peaks, corridors can go quiet and both products suffer together.</li>
+      <li><strong>Two-sided trust failure modes:</strong> a bad passenger experience also hurts the cargo brand and vice versa - reputational risk is shared.</li>
+    </ul>
+  </div>
+
+  <h2 id="s9"><span class="num">9</span>SWOT</h2>
+  <div class="swot">
+    <div class="box"><h4 class="s">Strengths</h4><ul>
+      <li>Proven demand for seats</li>
+      <li>Two revenue streams per trip</li>
+      <li>Strong driver earnings pitch</li>
+      <li>Asset-light, corridor-scalable</li>
+    </ul></div>
+    <div class="box"><h4 class="w">Weaknesses</h4><ul>
+      <li>No brand or trust yet</li>
+      <li>Complex support (2 product lines)</li>
+      <li>Seasonal driver supply</li>
+      <li>Thin margins if priced under incumbent</li>
+    </ul></div>
+    <div class="box"><h4 class="o">Opportunities</h4><ul>
+      <li>Underserved regional corridors</li>
+      <li>Corporate seat + parcel contracts</li>
+      <li>E-commerce parcel API</li>
+      <li>Women-only and student communities</li>
+    </ul></div>
+    <div class="box"><h4 class="t">Threats</h4><ul>
+      <li>BlaBlaCar launches parcel lane</li>
+      <li>Bus companies cut prices</li>
+      <li>Stricter rideshare regulation</li>
+      <li>Insurer withdrawal from cargo cover</li>
+    </ul></div>
+  </div>
+
+  <h2 id="s10"><span class="num">10</span>MVP Roadmap</h2>
+  <div class="phase"><h4>Phase 0 - Months 1-3: Corridor MVP</h4><span class="when">GOAL: 2-3 corridors, 200 verified drivers, seats + pilot parcels</span>
+    <ul><li>Launch on underserved medium-city corridors; seats as the core product, parcel as an opt-in pilot.</li><li>University and campus partnerships for driver and passenger supply.</li><li>Manual matching where needed; fixed seat price formula per km.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 1 - Months 3-6: Trust layer</h4><span class="when">GOAL: dispute rate under 3%, repeat users above 30%</span>
+    <ul><li>ID/phone verification, escrow for parcels, photo-confirmed handover, emergency button, women-only mode.</li><li>Insurance partnership covering passengers and parcels.</li><li>Ratings and reviews on both product lines.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 2 - Months 6-12: Monetization depth</h4><span class="when">GOAL: 6+ corridors, driver subscription live</span>
+    <ul><li>Driver subscription tier with lower commission and priority listing.</li><li>Corporate accounts: employee travel + parts delivery pilots with 3-5 companies.</li><li>Holiday campaign playbook for peak windows.</li></ul>
+  </div>
+  <div class="phase"><h4>Phase 3 - Year 2: Expansion</h4><span class="when">GOAL: 12+ corridors, 12,000+ trips/month</span>
+    <ul><li>Replicate corridor playbook; parcel enterprise API for e-commerce sellers.</li><li>Defensive plan ready in case the incumbent copies the cargo lane.</li></ul>
+  </div>
+
+  <h2 id="s11"><span class="num">11</span>Financial Snapshot (illustrative)</h2>
+  <p class="note">Scenario assumptions: average platform revenue ~6 EUR per completed trip (seats + parcels), 18% effective commission, support under 1.5 EUR/trip. Figures are planning estimates, not projections of guaranteed results.</p>
+  <div class="kpi">
+    <div class="item"><div class="v">Year 1</div><div class="l">~3,000 trips/month</div></div>
+    <div class="item"><div class="v">~216k EUR</div><div class="l">annual platform revenue</div></div>
+    <div class="item"><div class="v">Year 2</div><div class="l">~12,000 trips/month</div></div>
+    <div class="item"><div class="v">~864k EUR</div><div class="l">annual platform revenue</div></div>
+  </div>
+  <div class="kpi">
+    <div class="item"><div class="v">Year 3</div><div class="l">~30,000 trips/month</div></div>
+    <div class="item"><div class="v">~2.2M EUR</div><div class="l">annual platform revenue</div></div>
+    <div class="item"><div class="v">~35%</div><div class="l">trips with at least one parcel</div></div>
+    <div class="item"><div class="v">6.2 EUR</div><div class="l">revenue per completed trip</div></div>
+  </div>
+  <div class="callout warn"><h4>Funding reality check</h4>This model competes with an incumbent, so it needs 12-18 months of runway and a corridor-by-corridor go-to-market. The bundle pitch lowers driver acquisition cost, but passenger trust building still requires sustained marketing.</div>
+
+  <h2 id="s12"><span class="num">12</span>Final Verdict</h2>
+  <div class="verdict">
+    <h3>GO - with a differentiation wedge</h3>
+    <p class="lead">This is the stronger of the two ideas: the passenger market is validated at global scale and the cargo lane is the unclaimed second revenue stream. The fatal risk is a head-on fight with BlaBlaCar - so the entry must be asymmetric.</p>
+    <ul>
+      <li><strong>Do:</strong> enter underserved corridors, lead with the "seats + trunk" driver pitch, build trust features fast, lock corporate contracts.</li>
+      <li><strong>Do not:</strong> launch where the incumbent is dominant, compete purely on price, or run passengers and parcels with separate apps.</li>
+      <li><strong>Scorecard:</strong> market need 5/5, competition intensity 5/5 (incumbent), unit economics 4/5, regulatory risk medium, execution difficulty high.</li>
+      <li><strong>Bridge option:</strong> start cargo-only (see the companion document <em>CargoOnly-Marketplace-BusinessPlan.html</em>), build driver density, then add seats - arriving at this model with a base already in place.</li>
+      <li><strong>Jurisdiction map:</strong> the companion <em>Commercial-Carriage-Regulation-Guide-By-Country.html</em> ranks countries, US states and Canadian provinces for exactly these two cost-sharing models.</li>
+    </ul>
+  </div>
+
+  <footer>Business Plan - Intercity Car Sharing Marketplace (Passengers + Cargo) - prepared November 2026 - illustrative document, not financial advice.</footer>
+</div>
+</body>
+</html>

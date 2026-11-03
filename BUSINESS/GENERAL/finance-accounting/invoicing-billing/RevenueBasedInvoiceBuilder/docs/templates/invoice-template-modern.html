@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Modern Invoice Template - Revenue Based Invoice Builder</title>
+<!--
+  ============================================================================
+  MODERN INVOICE TEMPLATE
+  Revenue Based Invoice Builder - docs/templates/invoice-template-modern.html
+  ============================================================================
+
+  WHAT THIS FILE IS
+  A standalone, print-ready A4 invoice template in a clean editorial style:
+  white space, hairline rules, tabular figures and only small indigo accents.
+  The same design renders on screen and prints with minimal ink. All values
+  below are SAMPLE data; the tool generates real invoices from live records
+  via buildInvoicePrintHtml() in app/RevenueBasedInvoiceBuilder.js.
+
+  FIELD MAPPING (template -> tool data)
+  - Brand mark / company name / tagline  -> DB.company.name + logoUrl or monogram
+  - Invoice title / number / status      -> invoice.number / invoice.status
+  - Meta strip (issue / due / period)    -> invoice.issueDate / dueDate / billing period
+  - Billed To                           -> customer.name / email / address
+  - Amount due                          -> computeInvoiceTotals().total
+  - Items table (description / qty / unit price / amount)
+                                         -> invoice.lineItems[] + support fee rows
+  - Totals                              -> subtotal / tax / total
+
+  GENERIC BY DESIGN
+  One flat Items table, no revenue-specific wording. When a revenue-based
+  agreement applies, add its bracket rows as line items (or a labeled group
+  of rows) - the table structure stays the same.
+
+  PRINTING
+  - A4 portrait, minimal ink: only the small brand mark, the slim accent rule
+    and the status dot carry color. The floating print button and the page
+    shadow are removed automatically in print.
+  - To use as a blank: replace the sample values, keep the class structure.
+  ============================================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #0f172a;
+    --ink-soft: #334155;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --line-soft: #f1f5f9;
+    --paper: #ffffff;
+    --accent: #4f46e5;
+    --accent-dark: #4338ca;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: #eef1f6;
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 32px 16px 72px;
+  }
+
+  /* floating print button - screen only */
+  .print-fab {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 10;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fff;
+    padding: 11px 20px;
+    font: 600 12.5px "Inter", "Segoe UI", sans-serif;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.28);
+  }
+  .print-fab:hover { background: var(--accent); }
+
+  /* ---- A4 page ---- */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: var(--paper);
+    border-radius: 4px;
+    box-shadow: 0 10px 34px rgba(15, 23, 42, 0.10);
+    padding: 54px 58px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- header ---- */
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .brand { display: flex; align-items: center; gap: 13px; }
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.4px;
+    flex: 0 0 auto;
+  }
+  .brand-name { font-size: 15px; font-weight: 700; letter-spacing: -0.1px; }
+  .brand-tag { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .head-right { text-align: right; }
+  .doc-title {
+    font-size: 40px;
+    font-weight: 600;
+    letter-spacing: -1.2px;
+    line-height: 1.02;
+  }
+  .doc-no { margin-top: 7px; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 9px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+  /* slim editorial rule with a short accent segment */
+  .rule {
+    height: 1px;
+    background: var(--line);
+    position: relative;
+    margin: 28px 0 32px;
+  }
+  .rule::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: 0;
+    width: 68px;
+    height: 3px;
+    background: var(--accent);
+  }
+
+  /* ---- shared small-caps label ---- */
+  .label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 1.9px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---- meta strip ---- */
+  .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .meta-value {
+    margin-top: 5px;
+    font-size: 12.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- bill to / amount due ---- */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: start;
+    margin-top: 36px;
+  }
+  .bill-name { margin-top: 7px; font-size: 15px; font-weight: 600; }
+  .bill-line { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .due { text-align: right; }
+  .due-amount {
+    margin-top: 7px;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .due-amount .currency { font-size: 15px; font-weight: 600; color: var(--muted); margin-right: 6px; }
+  .due-date { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+  /* ---- sections and tables ---- */
+  .sec { margin-top: 28px; }
+  .sec-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--ink);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .table { width: 100%; border-collapse: collapse; }
+  .table thead th {
+    text-align: left;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 0 6px;
+  }
+  .table thead th.num { text-align: right; }
+  .table td {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 12.5px;
+    line-height: 1.45;
+    vertical-align: baseline;
+  }
+  .table tbody tr:last-child td { border-bottom: 0; }
+  .table .desc { color: var(--ink-soft); }
+  .table .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-soft); white-space: nowrap; }
+
+  /* ---- totals ---- */
+  .totals { margin-top: 28px; display: flex; justify-content: flex-end; }
+  .totals-inner { width: 300px; }
+  .t-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .t-row .t-val { font-variant-numeric: tabular-nums; }
+  .t-row.t-total {
+    margin-top: 9px;
+    padding-top: 13px;
+    border-top: 1.5px solid var(--ink);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .t-row.t-total .t-val { font-size: 19px; letter-spacing: -0.4px; }
+
+  /* ---- notes + footer ---- */
+  .notes { margin-top: 26px; max-width: 540px; font-size: 11.5px; color: var(--muted); }
+  .notes b { color: var(--ink-soft); font-weight: 600; }
+  .foot {
+    margin-top: auto;
+    padding-top: 36px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .foot .accent { color: var(--accent); font-weight: 600; }
+
+  /* ---- print ---- */
+  @page { size: A4 portrait; margin: 0; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .print-fab { display: none !important; }
+    .page { border-radius: 0; box-shadow: none; }
+    .table tbody tr, .meta, .split, .notes { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+  <button class="print-fab" type="button" onclick="window.print()">Print / Save PDF</button>
+
+  <div class="page">
+
+    <header class="head">
+      <div class="brand">
+        <div class="brand-mark">AI</div>
+        <div>
+          <div class="brand-name">Acme Software Inc.</div>
+          <div class="brand-tag">2100 Marine Drive, Vancouver, BC &nbsp;·&nbsp; billing@acme.io &nbsp;·&nbsp; +1 604 555 0130</div>
+        </div>
+      </div>
+      <div class="head-right">
+        <div class="doc-title">Invoice</div>
+        <div class="doc-no">Tax ID 12345 6789 RT0001</div>
+        <span class="status"><span class="dot"></span>Sent</span>
+      </div>
+    </header>
+
+    <div class="rule"></div>
+
+    <div class="meta">
+      <div><div class="label">Issue date</div><div class="meta-value">1 Nov 2026</div></div>
+      <div><div class="label">Due date</div><div class="meta-value">15 Nov 2026</div></div>
+      <div><div class="label">Billing period</div><div class="meta-value">October 2026</div></div>
+    </div>
+
+    <div class="split">
+      <div class="bill">
+        <div class="label">Billed to</div>
+        <div class="bill-name">Harbour Ferry Lines Ltd.</div>
+        <div class="bill-line">harbour.ops@harbourferry.example</div>
+        <div class="bill-line">400 Waterfront Road, Victoria, BC</div>
+      </div>
+      <div class="due">
+        <div class="label">Amount due</div>
+        <div class="due-amount"><span class="currency">CAD</span>3,197.90</div>
+        <div class="due-date">Due 15 November 2026</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">Items</div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="num">Qty</th>
+            <th class="num">Unit price</th>
+            <th class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="desc">Software subscription - October 2026</td>
+            <td class="num">1</td>
+            <td class="num">CAD 1,530.00</td>
+            <td class="num">CAD 1,530.00</td>
+          </tr>
+          <tr>
+            <td class="desc">Support plan - Priority (monthly)</td>
+            <td class="num">1</td>
+            <td class="num">CAD 500.00</td>
+            <td class="num">CAD 500.00</td>
+          </tr>
+          <tr>
+            <td class="desc">Point-of-sale integration setup (one-time)</td>
+            <td class="num">1</td>
+            <td class="num">CAD 800.00</td>
+            <td class="num">CAD 800.00</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="totals">
+      <div class="totals-inner">
+        <div class="t-row"><span>Subtotal</span><span class="t-val">CAD 2,830.00</span></div>
+        <div class="t-row"><span>Tax (13%)</span><span class="t-val">CAD 367.90</span></div>
+        <div class="t-row t-total"><span>Total due</span><span class="t-val">CAD 3,197.90</span></div>
+      </div>
+    </div>
+
+    <p class="notes"><b>Payment details.</b> Wire to Acme Software Inc., account 0042-11887 at Coastline Credit Union -
+      include the invoice number in the reference. Late payments accrue 1.5% per month. Thank you for your business.</p>
+
+    <footer class="foot">
+      <span>Acme Software Inc. &nbsp;·&nbsp; Invoice <span class="accent">ACM-2026-0142</span></span>
+      <span>Questions? billing@acme.io &nbsp;·&nbsp; Page 1 of 1</span>
+    </footer>
+
+  </div>
+</body>
+</html>
