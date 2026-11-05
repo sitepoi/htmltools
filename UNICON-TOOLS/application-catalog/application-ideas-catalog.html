@@ -82,6 +82,7 @@
   .chip.tool{background:#e4f4e8;color:#1d7a36;border-color:#9fd8ad;}
   .chip.obj{background:#f6f0e4;color:#7a5a12;border-color:#e2d3a8;}
   .chip.single{background:#fbeaea;color:#b02a2a;border-color:#eab4b4;}
+  .chip.config{background:#efeaf6;color:#5b3d9e;border-color:#cfc2e8;}
   td.idea-metrics-cell{white-space:nowrap;color:var(--muted);}
   td.idea-metrics-cell b{color:var(--ink);}
   .lic-badge{border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:600;background:var(--accent-soft);color:var(--accent);border:1px solid var(--line);white-space:nowrap;}
@@ -160,7 +161,7 @@
     <div id="groupsContainer"></div>
     <footer class="page-foot">
       <details><summary>About this page (reference notes)</summary>
-        <p>Pick a group, category or subcategory on the left to browse its applications; click an item to see its details on the right. An <b>application (cmsObjectType)</b> is the container: html-tools live inside <b>field groups</b> inside <b>objects</b> of the application. Each application records the business objects it defines (the <i>Objects</i> chips) and the html-tools it bundles (the <i>Bundled html-tools</i> chips) - the tools themselves are filed separately in the html-tool library taxonomy.</p>
+        <p>Pick a group, category or subcategory on the left to browse its applications; click an item to see its details on the right. An <b>application (cmsObjectType)</b> is the container: html-tools live inside <b>field groups</b> inside <b>objects</b> of the application. Each application records the business objects it defines (the <i>Objects</i> chips) and the html-tools it bundles (the <i>Bundled html-tools</i> chips) - the tools themselves are filed separately in the html-tool library taxonomy. Vertical applications ship the same generic tool with a <b>definition pack</b> - the <i>Tool configuration</i> chips show which JSON starter pack (categories and task definitions) the Recurring Task Manager loads for that vertical.</p>
         <p>This page mirrors the html-tool folder taxonomy 1:1 so an application and the html-tools it bundles live in the same conceptual space. The single source of truth is <b>application-ideas-catalog.json</b> - the page loads it live over http and falls back to the generated <b>application-catalog-data.js</b> copy on file://. After editing the JSON run <code>node build-catalog-data.cjs</code> (or <code>npm run catalog:apps</code>) to refresh the copy. Data source: <b id="catalogSource">-</b>.</p>
         <p><b>Global search:</b> typing in the search box searches every application in the catalog, across all folders - each result shows the application's folder path, so you can locate an existing application in the applicationStore and file it under the correct folder. Clear the search to browse all applications, or click a group / category / subcategory to drill down. Manual work state (status, priority, notes) is saved in this browser (localStorage key uniconhub_application_ideas_work_v1).</p>
       </details>
@@ -404,6 +405,10 @@ window.__bootApplicationCatalog = function () {
     if (a.singleObject) chips += '<span class="chip single">single object / tenant</span>';
     (a.objects || []).slice(0, 4).forEach(function (o) { chips += '<span class="chip obj">' + esc(o) + '</span>'; });
     (a.tools || []).slice(0, 4).forEach(function (t) { chips += '<span class="chip tool">' + esc(t) + '</span>'; });
+    if (a.toolConfig) Object.keys(a.toolConfig).forEach(function (t) {
+      var cfg = a.toolConfig[t] || {};
+      if (cfg.definitionPack) chips += '<span class="chip config">&#9881; ' + esc(t) + ' &larr; ' + esc(cfg.definitionPack) + '</span>';
+    });
     var pathLine = showPath ? '<div class="idea-path">' + esc(a.folder || a.code) + '</div>' : '';
     return '<tr data-id="' + a.id + '" title="Click to open details">' +
       '<td>' + badge + '</td>' +
@@ -524,6 +529,13 @@ window.__bootApplicationCatalog = function () {
       (a.singleObject ? '<span class="chip single">single object per tenant</span>' : '') + '</div>';
     html += '<h3>Bundled html-tools</h3><div class="idea-chips">' +
       (a.tools || []).map(function (t) { return '<span class="chip tool">' + esc(t) + '</span>'; }).join('') + '</div>';
+    if (a.toolConfig) {
+      html += '<h3>Tool configuration (definition packs)</h3><div class="idea-chips">' +
+        Object.keys(a.toolConfig).map(function (t) {
+          var cfg = a.toolConfig[t] || {};
+          return '<span class="chip config">&#9881; ' + esc(t) + ' &larr; ' + esc(cfg.definitionPack || '') + '</span>';
+        }).join('') + '</div>';
+    }
     html += '<h3>Work state</h3><div class="details-work">' +
       '<span class="st-badge ' + st.cls + '">' + st.label + '</span>' +
       '<select id="detailsStatus" data-id="' + id + '">' + STATUSES.map(function (s) { return '<option value="' + s.id + '"' + (w.status === s.id ? ' selected' : '') + '>' + s.label + '</option>'; }).join('') + '</select>' +
