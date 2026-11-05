@@ -74,8 +74,8 @@
     updated to capture the final decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.5</td></tr>
-    <tr><th>Last updated</th><td>2026-09-30</td></tr>
+    <tr><th>Document version</th><td>0.7</td></tr>
+    <tr><th>Last updated</th><td>2026-11-04</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (RevenueBasedInvoiceBuilder).</td></tr>
     <tr><th>Primary code areas</th><td><code>app/RevenueBasedInvoiceBuilder.css</code>, <code>app/RevenueBasedInvoiceBuilder.html</code>, <code>app/RevenueBasedInvoiceBuilder.js</code>, <code>app/test-harness.html</code></td></tr>
@@ -233,7 +233,7 @@
     </tr>
     <tr>
       <td>C-09</td>
-      <td>Role gating: editors manage invoices, admins also edit pricing and delete data; read-only lock for viewers</td>
+      <td>Role gating: editors manage invoices, admins also edit pricing; read-only lock for viewers</td>
       <td><code>canWrite</code>, <code>canAdmin</code>, <code>applyPermissions</code></td>
       <td>2026-09-30</td>
       <td>D-RBIB-09 / verified in code on 2026-09-30</td>
@@ -307,6 +307,34 @@
       <td><code>uploadCompanyLogo</code>, <code>renderLogo</code></td>
       <td>2026-09-30</td>
       <td>D-RBIB-24 / verified in code on 2026-09-30</td>
+    </tr>
+    <tr>
+      <td>C-20</td>
+      <td>Editorial invoice document: minimal-ink A4 layout with one Items table, right-aligned totals and no filled header band; invoice rows show only contributing lines and stay generic (no month-specific wording)</td>
+      <td><code>buildInvoicePrintHtml</code>, <code>buildEmailHtml</code></td>
+      <td>2026-11-04</td>
+      <td>D-RBIB-27 / verified in headless browser and PDF on 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-21</td>
+      <td>Company identity linked to a CompanyProfile object: pick a profile once in Settings, the tool reads legal name, tax numbers, email, phone and address from that object and caches them for invoice output. Manual company fields remain a fallback when object access is not configured.</td>
+      <td><code>loadCompanyProfiles</code>, <code>syncLinkedCompanyProfile</code>, <code>companyFromProfileObject</code></td>
+      <td>2026-11-04</td>
+      <td>D-RBIB-28 / verified with mock objects and in headless browser on 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-22</td>
+      <td>Settings save automatically: every company, default and support-type control writes straight into the tool value, which the CMS host saves like any other html-tool field. There is no Save Settings button and no per-change toast.</td>
+      <td><code>autoSaveSettings</code>, <code>readInvoiceDefaultsFromForm</code>, <code>renderSettingsSupportTypes</code></td>
+      <td>2026-11-04</td>
+      <td>D-RBIB-29 / verified with a scripted settings run on 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-23</td>
+      <td>No wholesale reset: the tool has no danger zone, no delete-all-invoices action and no empty-database reset. Removal is per record only (invoice, customer, pricing reset to agreement).</td>
+      <td><code>app/RevenueBasedInvoiceBuilder.html</code>, <code>app/RevenueBasedInvoiceBuilder.js</code></td>
+      <td>2026-11-04</td>
+      <td>D-RBIB-30 / verified in code and in the headless screenshot on 2026-11-04</td>
     </tr>
   </table>
 
@@ -654,6 +682,53 @@ total      = round2(subtotal + taxAmount)
       <td>D-RBIB-26</td><td>2026-09-30</td>
       <td>The color theme is indigo - between blue and purple: primary #4f46e5, dark #4338ca, soft background #eef2ff. Applied to the UI variables, the printable document (header band, totals, email accents) and the harness.</td>
       <td>User preference; status colors keep their semantics (paid stays green, sent blue).</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RBIB-27</td><td>2026-11-04</td>
+      <td>The printable invoice and email body use the editorial A4 layout from <code>docs/templates/invoice-template-modern.html</code>: white page, indigo monogram/logo, a 40px "Invoice" title, a hairline accent rule, a three-column meta row (issue, due, payment terms), a billed-to/amount-due split, ONE Items table (contributing waterfall rows + support + custom lines), right-aligned totals, a notes block and a footer with the invoice number. No filled header band, no cards and no zebra striping. Invoice wording is generic - no month-specific titles and no hard-coded business names.</td>
+      <td>The document must print cleanly with minimal ink and be reusable by any company; the template is the visual reference. Line rows stay tight (8px vertical padding) so a normal month fits on one page.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RBIB-28</td><td>2026-11-04</td>
+      <td>Company identity is not maintained in this tool. The Settings tab lists CompanyProfile objects (mainObjectType <code>company-profile-uniconbaseapps</code> by default, override with the <code>companyProfileType</code> param), the user links one profile, and the tool reads the legal name, tax numbers, email, phone and address from it. The mapped values are cached in <code>DB.company</code> so print/PDF/email work offline and keep working if the profile is later unreadable. A <code>Sync now</code> button refreshes the cache; manual fields stay editable only while no profile is linked.</td>
+      <td>One company identity across tools; invoices, profiles and future documents must not drift. The link requires <code>allowObjectCRUD: yes</code> in the field settings; when object access is unavailable the tool falls back to manual company details instead of breaking.       <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+    <tr>
+      <td>D-RBIB-29</td><td>2026-11-04</td>
+      <td>Settings save automatically. Every company field, default and support type writes into <code>DB</code> as it changes (<code>persist()</code> while typing, <code>persistNow()</code> when a control settles) and the CMS host saves the field value like any other html-tool. The Save Settings button, its action row and the per-save success toast are removed. Change events also normalise what is on screen: prefix falls back to INV, sequence to 1, and the tax rate is clamped to 0-100.</td>
+      <td>A second save button duplicates the CMS Save and makes the user think the tool owns persistence. Typing is saved after the 350 ms debounce, so a value is not lost on a tab switch. Risk: a rapid edit followed by an immediate tab switch can save the newest draft only after the debounce; the value is still written because the debounce is not cancelled by rendering.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RBIB-30</td><td>2026-11-04</td>
+      <td>The danger zone is removed: no Delete All Data button, no two-step arm timer and no empty-database reset. The tool keeps only per-record removal (delete an invoice, delete a customer, reset pricing to the agreement defaults).</td>
+      <td>No user asked for a wholesale reset, and the button risked destroying the whole record from one screen. Removing the affected records one by one is the supported path.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RBIB-29</td><td>2026-11-04</td>
+      <td>Settings save automatically. Every company field, default and support type writes into <code>DB</code> as it changes (<code>persist()</code> while typing, <code>persistNow()</code> when a control settles) and the CMS host saves the field value like any other html-tool. The Save Settings button, its action row and the per-save success toast are removed. Change events also normalise what is on screen (prefix falls back to INV, sequence to 1, tax rate clamped to 0-100).</td>
+      <td>A second save button duplicates the CMS Save and invites the user to think the tool owns persistence. Risk: a typing pause is saved after the 350 ms debounce, so a value is never lost on a tab switch; change events re-render only the Settings tab and the stats ribbon, never the whole app.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RBIB-30</td><td>2026-11-04</td>
+      <td>The danger zone is removed: no Delete All Data button, no two-step arm timer and no empty-database reset. The tool keeps only per-record removal (delete an invoice, delete a customer, reset pricing to the agreement defaults).</td>
+      <td>No user asked for a wholesale reset and the button risked destroying the whole record from one screen. Removing the affected records one by one is the supported path.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+      <td>D-RBIB-29</td><td>2026-11-04</td>
+      <td>Settings save automatically. Every company field, default and support type writes into <code>DB</code> as it changes (<code>persist()</code> while typing, <code>persistNow()</code> when a control settles) and the CMS host saves the field value like any other html-tool. The Save Settings button, its action row and the per-save success toast are removed. Change events also normalise what is on screen: prefix falls back to INV, sequence to 1, and the tax rate is clamped to 0-100.</td>
+      <td>A second save button duplicates the CMS Save and makes the user think the tool owns persistence. Typing is saved after the 350 ms debounce, so a value is not lost on a tab switch. Risk: a rapid edit followed by an immediate tab switch can save the newest draft only after the debounce; the value is still written because the debounce is not cancelled by rendering.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RBIB-30</td><td>2026-11-04</td>
+      <td>The danger zone is removed: no Delete All Data button, no two-step arm timer and no empty-database reset. The tool keeps only per-record removal (delete an invoice, delete a customer, reset pricing to the agreement defaults).</td>
+      <td>No user asked for a wholesale reset, and the button risked destroying the whole record from one screen. Removing the affected records one by one is the supported path.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>

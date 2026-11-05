@@ -40,7 +40,9 @@
   var _armDeleteCustomerId = null;
   var _armDeleteCustomerTimer = null;
   var _formLines = [];
-  var _supportTypesDraft = null;
+  var _companyProfiles = [];
+  var _profilesLoading = false;
+  var _profileAccessError = '';
 
   function el(id) { return document.getElementById(id); }
 
@@ -343,7 +345,10 @@
         phone: strOf(src.company && src.company.phone),
         address: strOf(src.company && src.company.address),
         logoUrl: strOf(src.company && src.company.logoUrl),
-        logoName: strOf(src.company && src.company.logoName)
+        logoName: strOf(src.company && src.company.logoName),
+        profileId: strOf(src.company && src.company.profileId),
+        profileLabel: strOf(src.company && src.company.profileLabel),
+        profileSyncedAt: strOf(src.company && src.company.profileSyncedAt)
       },
       customers: customers,
       settings: {
@@ -420,15 +425,6 @@
     }
     return null;
   }
-  /* The settings tab edits a draft; Save Settings commits it. */
-  function supportTypesDraft() {
-    if (!_supportTypesDraft) {
-      _supportTypesDraft = DB.settings.supportTypes.map(function (s) {
-        return { id: s.id, name: s.name, fee: s.fee };
-      });
-    }
-    return _supportTypesDraft;
-  }
   function renderSupportSelect(select, selectedId) {
     if (!select) return;
     select.innerHTML = DB.settings.supportTypes.map(function (s) {
@@ -449,6 +445,180 @@
     if (nameEl) nameEl.textContent = DB.company.logoName || '';
     var removeButton = el('rbi-btn-remove-logo');
     if (removeButton) removeButton.style.display = DB.company.logoUrl ? '' : 'none';
+  }
+
+  /* ── Company profile link ──
+     Company details are read from a CompanyProfile object
+     (company-profile-uniconbaseapps by default) and cached in DB.company so
+     print/PDF/email always work. Manual entry stays available as a fallback
+     when object access is not configured. */
+  var COMPANY_PROFILE_TYPE_DEFAULT = 'company-profile-uniconbaseapps';
+
+  function hasObjectApi() { return typeof tool.requestObjects === 'function'; }
+  function companyProfileType() {
+    return strOf(tool.param('companyProfileType', '')) || COMPANY_PROFILE_TYPE_DEFAULT;
+  }
+  function joinAddressParts(parts) {
+    return (parts || []).map(function (part) { return strOf(part).trim(); })
+      .filter(function (part) { return part; }).join(', ');
+  }
+  function companyFromProfileObject(object) {
+    var source = (object && object.productData && object.productData.data_categoriesBased) || {};
+    var basic = source.basicInfo || {};
+    var headquarters = source.headquarters || {};
+    var billing = source.billingAddress || {};
+    var weblinks = source.weblinks || {};
+    var taxes = Array.isArray(source.salesTaxDefinitions) ? source.salesTaxDefinitions : [];
+    var taxParts = taxes.filter(function (tax) { return tax && strOf(tax.taxNumber).trim(); }).map(function (tax) {
+      var taxName = strOf(tax.name).trim();
+      var taxNumber = strOf(tax.taxNumber).trim();
+      return taxName ? taxName + ' ' + taxNumber : taxNumber;
+    });
+    var headquartersAddress = joinAddressParts([headquarters.address, headquarters.city, headquarters.state, headquarters.postal, headquarters.country]);
+    var billingAddressLine = joinAddressParts([billing.address, billing.city, billing.state, billing.postal, billing.country]);
+    return {
+      name: strOf(basic.legalName).trim() || strOf(basic.tradeName).trim() || strOf(object && object.name).trim(),
+      taxId: taxParts.join(' · '),
+      email: strOf(headquarters.email).trim() || strOf(billing.email).trim() || strOf(weblinks.email).trim(),
+      phone: strOf(headquarters.phone).trim(),
+      address: headquartersAddress || billingAddressLine,
+      /* Forward compatible: the optional invoicing.logoUrl key is read when present. */
+      logoUrl: strOf(source.invoicing && source.invoicing.logoUrl).trim(),
+      logoName: strOf(source.invoicing && source.invoicing.logoName).trim()
+    };
+  }
+  function applyCompanyProfileObject(object) {
+    var mapped = companyFromProfileObject(object);
+    DB.company.name = mapped.name;
+    DB.company.taxId = mapped.taxId;
+    DB.company.email = mapped.email;
+    DB.company.phone = mapped.phone;
+    DB.company.address = mapped.address;
+    DB.company.profileId = strOf(object && object.id);
+    DB.company.profileLabel = strOf(object && object.name) || mapped.name;
+    DB.company.profileSyncedAt = new Date().toISOString();
+    if (mapped.logoUrl) {
+      DB.company.logoUrl = mapped.logoUrl;
+      DB.company.logoName = mapped.logoName || 'Profile logo';
+    }
+  }
+  function setProfileStatus(message) {
+    var statusEl = el('rbi-profile-status');
+    if (statusEl) statusEl.textContent = message;
+  }
+  function renderSettingsProfilePicker() {
+    var select = el('rbi-st-profile');
+    if (!select) return;
+    var linkedId = DB.company.profileId;
+    var options = ['<option value="">Select a company profile…</option>'];
+    _companyProfiles.forEach(function (profile) {
+      options.push('<option value="' + escHtml(profile.id) + '">' + escHtml(profile.name || profile.id) + '</option>');
+    });
+    var linkedListed = _companyProfiles.some(function (profile) { return profile.id === linkedId; });
+    if (linkedId && !linkedListed) {
+      options.push('<option value="' + escHtml(linkedId) + '">' + escHtml(DB.company.profileLabel || linkedId) + '</option>');
+    }
+    select.innerHTML = options.join('');
+    if (linkedId) select.value = linkedId;
+    var writable = canWrite();
+    var linkButton = el('rbi-btn-link-profile');
+    var syncButton = el('rbi-btn-sync-profile');
+    var unlinkButton = el('rbi-btn-unlink-profile');
+    if (linkButton) linkButton.disabled = !writable || select.value === linkedId;
+    if (syncButton) syncButton.disabled = !writable || !linkedId;
+    if (unlinkButton) unlinkButton.disabled = !writable || !linkedId;
+    ['rbi-st-name', 'rbi-st-taxid', 'rbi-st-email', 'rbi-st-phone', 'rbi-st-address'].forEach(function (inputId) {
+      var input = el(inputId);
+      if (input) input.disabled = !writable || !!linkedId;
+    });
+    if (_profileAccessError) {
+      setProfileStatus('Company profiles cannot be loaded here (' + _profileAccessError + '). Enable allowObjectCRUD in the field settings - manual company details below are used on invoices.');
+    } else if (_profilesLoading) {
+      setProfileStatus('Loading company profiles…');
+    } else if (!_companyProfiles.length) {
+      setProfileStatus('No company profiles found. Create one with the CompanyProfile tool, then reload this record.');
+    } else if (linkedId && DB.company.profileSyncedAt) {
+      setProfileStatus('Linked to ' + (DB.company.profileLabel || linkedId) + ' - synced ' + fmtDate(DB.company.profileSyncedAt.slice(0, 10)) + '. Company details come from the profile.');
+    } else if (linkedId) {
+      setProfileStatus('Linked to ' + (DB.company.profileLabel || linkedId) + ' - not synced yet. Click "Sync now".');
+    } else {
+      setProfileStatus('Not linked - manual company details below are used on invoices.');
+    }
+  }
+  function loadCompanyProfiles(callback) {
+    if (!hasObjectApi()) {
+      _profileAccessError = 'object access is not available';
+      _profilesLoading = false;
+      renderSettingsProfilePicker();
+      if (callback) callback();
+      return;
+    }
+    _profilesLoading = true;
+    _profileAccessError = '';
+    renderSettingsProfilePicker();
+    tool.requestObjects('query', { mainObjectType: companyProfileType() }, function (err, result) {
+      _profilesLoading = false;
+      if (err) {
+        _profileAccessError = strOf(err);
+        renderSettingsProfilePicker();
+        if (callback) callback();
+        return;
+      }
+      var objects = (result && Array.isArray(result.objects)) ? result.objects : [];
+      _companyProfiles = objects.map(function (object) {
+        var data = (object && object.productData && object.productData.data_categoriesBased) || {};
+        var legalName = data.basicInfo && data.basicInfo.legalName;
+        return { id: strOf(object && object.id), name: strOf(object && object.name) || strOf(legalName) };
+      }).filter(function (profile) { return !!profile.id; });
+      renderSettingsProfilePicker();
+      if (callback) callback();
+    });
+  }
+  function syncLinkedCompanyProfile(silent) {
+    var profileId = DB.company.profileId;
+    if (!profileId) return;
+    if (!hasObjectApi()) {
+      _profileAccessError = 'object access is not available';
+      renderSettingsProfilePicker();
+      return;
+    }
+    tool.requestObjects('get', { mainObjectType: companyProfileType(), objectId: profileId }, function (err, result) {
+      if (err || !result || !result.object) {
+        if (!silent) tool.notify('Could not load the linked company profile: ' + (err || 'not found'), 'error');
+        return;
+      }
+      applyCompanyProfileObject(result.object);
+      persistNow();
+      renderSettings();
+      if (!silent) tool.notify('Company details synced from ' + (DB.company.profileLabel || profileId) + '.', 'success');
+    });
+  }
+  function linkSelectedCompanyProfile() {
+    if (!canWrite()) return;
+    var select = el('rbi-st-profile');
+    var profileId = select ? select.value : '';
+    if (!profileId) { tool.notify('Select a company profile first.', 'warning'); return; }
+    var profile = _companyProfiles.filter(function (item) { return item.id === profileId; })[0];
+    DB.company.profileId = profileId;
+    DB.company.profileLabel = profile ? profile.name : '';
+    persistNow();
+    syncLinkedCompanyProfile(false);
+  }
+  function unlinkCompanyProfile() {
+    if (!canWrite()) return;
+    DB.company.profileId = '';
+    DB.company.profileLabel = '';
+    DB.company.profileSyncedAt = '';
+    persistNow();
+    renderSettings();
+    tool.notify('Company profile unlinked - the current details stay as manual values.', 'info');
+  }
+  function applyProfileParam() {
+    var seededProfileId = strOf(tool.param('companyProfileId', ''));
+    if (!seededProfileId || DB.company.profileId) return;
+    DB.company.profileId = seededProfileId;
+    DB.company.profileLabel = '';
+    persistNow();
   }
 
   /* ── Identity and permissions ── */
@@ -552,6 +722,7 @@
     var customerPriceInputs = document.querySelectorAll('.rbi-cux-input');
     for (var k = 0; k < customerPriceInputs.length; k++) customerPriceInputs[k].disabled = !writable;
     renderModalActions();
+    renderSettingsProfilePicker();
   }
 
   /* ── Rendering ── */
@@ -723,6 +894,7 @@
     el('rbi-st-phone').value = DB.company.phone;
     el('rbi-st-address').value = DB.company.address;
     renderLogo();
+    renderSettingsProfilePicker();
     renderSettingsDefaultCustomer();
     renderSettingsSupportTypes();
     renderSettingsDefaultSupport();
@@ -748,8 +920,8 @@
   }
 
   function renderSettingsSupportTypes() {
-    var draft = supportTypesDraft();
-    el('rbi-support-types').innerHTML = draft.map(function (supportType, index) {
+    var supportTypes = DB.settings.supportTypes;
+    el('rbi-support-types').innerHTML = supportTypes.map(function (supportType, index) {
       return '<div class="rbi-sup-row">' +
         '<input type="text" class="rbi-input rbi-sup-name" id="rbi-sup-name-' + index + '" placeholder="Support type name" value="' + escHtml(supportType.name) + '">' +
         '<input type="number" min="0" step="0.01" class="rbi-input rbi-sup-fee" id="rbi-sup-fee-' + index + '" placeholder="Monthly fee" value="' + supportType.fee + '">' +
@@ -757,14 +929,33 @@
       '</div>';
     }).join('');
     var writable = canWrite();
-    for (var i = 0; i < draft.length; i++) {
+    for (var i = 0; i < supportTypes.length; i++) {
       (function (index) {
         var nameInput = el('rbi-sup-name-' + index);
         var feeInput = el('rbi-sup-fee-' + index);
         nameInput.disabled = !writable;
         feeInput.disabled = !writable;
-        nameInput.addEventListener('input', function () { draft[index].name = this.value; });
-        feeInput.addEventListener('input', function () { draft[index].fee = round2(numOf(this.value)); });
+        nameInput.addEventListener('input', function () {
+          DB.settings.supportTypes[index].name = this.value;
+          persist();
+        });
+        nameInput.addEventListener('change', function () {
+          var cleanName = strOf(this.value).trim() || 'Support';
+          DB.settings.supportTypes[index].name = cleanName;
+          this.value = cleanName;
+          persistNow();
+          renderSettingsDefaultSupport();
+        });
+        feeInput.addEventListener('input', function () {
+          DB.settings.supportTypes[index].fee = round2(numOf(this.value));
+          persist();
+        });
+        feeInput.addEventListener('change', function () {
+          var cleanFee = clampNum(round2(numOf(this.value)), 0, 1000000);
+          DB.settings.supportTypes[index].fee = cleanFee;
+          this.value = cleanFee;
+          persistNow();
+        });
       })(i);
     }
     el('rbi-btn-add-support-type').style.display = writable ? '' : 'none';
@@ -772,31 +963,34 @@
 
   function renderSettingsDefaultSupport() {
     var select = el('rbi-st-defaultsupport');
-    var draft = supportTypesDraft();
-    select.innerHTML = draft.map(function (s) {
-      return '<option value="' + escHtml(s.id) + '">' + escHtml(s.name) + '</option>';
+    var supportTypes = DB.settings.supportTypes;
+    select.innerHTML = supportTypes.map(function (supportType) {
+      return '<option value="' + escHtml(supportType.id) + '">' + escHtml(supportType.name) + '</option>';
     }).join('');
     var chosenId = DB.settings.defaultSupportTypeId;
-    if (chosenId && draft.some(function (s) { return s.id === chosenId; })) select.value = chosenId;
-    else if (draft.length) select.value = draft[0].id;
+    if (chosenId && supportTypes.some(function (supportType) { return supportType.id === chosenId; })) select.value = chosenId;
+    else if (supportTypes.length) select.value = supportTypes[0].id;
   }
 
   function addSupportType() {
-    var draft = supportTypesDraft();
-    draft.push({ id: uid('sup'), name: 'New support type', fee: 0 });
+    if (!canWrite()) return;
+    DB.settings.supportTypes.push({ id: uid('sup'), name: 'New support type', fee: 0 });
+    persistNow();
     renderSettingsSupportTypes();
     renderSettingsDefaultSupport();
   }
 
   function removeSupportType(index) {
-    var draft = supportTypesDraft();
-    if (draft.length <= 1) {
+    if (!canWrite()) return;
+    var supportTypes = DB.settings.supportTypes;
+    if (supportTypes.length <= 1) {
       tool.notify('Keep at least one support type.', 'warning');
       return;
     }
-    var removed = draft[index];
-    draft.splice(index, 1);
-    if (DB.settings.defaultSupportTypeId === removed.id) DB.settings.defaultSupportTypeId = draft[0].id;
+    var removed = supportTypes[index];
+    supportTypes.splice(index, 1);
+    if (DB.settings.defaultSupportTypeId === removed.id) DB.settings.defaultSupportTypeId = supportTypes[0].id;
+    persistNow();
     renderSettingsSupportTypes();
     renderSettingsDefaultSupport();
   }
@@ -1617,31 +1811,45 @@
   }
 
   /* ── Settings ── */
-  function saveSettings() {
+  /* ── Settings ──
+     Every control writes straight into the tool value, which the host saves
+     like any other html-tool field: there is no separate Save button. */
+  function readCompanyDetailsFromForm() {
+    /* Company details come from the linked profile; the inputs are read-only
+       while linked and manual entry is only a fallback when no link exists. */
+    if (DB.company.profileId) return;
     DB.company.name = strOf(el('rbi-st-name').value);
     DB.company.taxId = strOf(el('rbi-st-taxid').value);
     DB.company.email = strOf(el('rbi-st-email').value);
     DB.company.phone = strOf(el('rbi-st-phone').value);
     DB.company.address = strOf(el('rbi-st-address').value);
+  }
+
+  function readInvoiceDefaultsFromForm() {
     var defaultCustomerId = el('rbi-st-defaultcustomer').value;
     DB.settings.defaultCustomerId = findCustomerById(defaultCustomerId) ? defaultCustomerId : '';
-    if (_supportTypesDraft) {
-      DB.settings.supportTypes = _supportTypesDraft
-        .map(function (s) { return { id: s.id, name: strOf(s.name).trim() || 'Support', fee: round2(numOf(s.fee)) }; })
-        .filter(function (s) { return s.name; });
-      if (!DB.settings.supportTypes.length) DB.settings.supportTypes = normalizeSupportTypes(null);
-    }
     var defaultSupportId = el('rbi-st-defaultsupport').value;
-    DB.settings.defaultSupportTypeId = findSupportTypeById(defaultSupportId) ? defaultSupportId : DB.settings.supportTypes[0].id;
+    if (findSupportTypeById(defaultSupportId)) DB.settings.defaultSupportTypeId = defaultSupportId;
     DB.settings.currency = validCurrency(el('rbi-st-currency').value);
     DB.settings.taxRate = clampNum(numOf(el('rbi-st-taxrate').value), 0, 100);
     DB.settings.prefix = strOf(el('rbi-st-prefix').value).trim() || 'INV';
     DB.settings.nextSeq = Math.max(1, Math.floor(numOf(el('rbi-st-nextseq').value)) || 1);
     DB.settings.paymentTerms = validPaymentTerms(el('rbi-st-terms').value);
-    _supportTypesDraft = null;
-    persistNow();
-    renderAll();
-    tool.notify('Settings saved.', 'success');
+  }
+
+  function autoSaveSettings(immediate) {
+    if (!canWrite()) return;
+    readCompanyDetailsFromForm();
+    readInvoiceDefaultsFromForm();
+    if (immediate) persistNow();
+    else persist();
+  }
+
+  /* Change events also normalise what is on screen (prefix, sequence, rate). */
+  function autoSaveSettingsAndRefresh() {
+    autoSaveSettings(true);
+    renderSettings();
+    renderStats();
   }
 
   function savePricing() {
@@ -1676,24 +1884,6 @@
     tool.notify('Pricing reset to the agreement defaults.', 'success');
   }
 
-  function resetAllData() {
-    if (!canAdmin()) return;
-    var button = el('rbi-btn-reset-data');
-    if (button.getAttribute('data-armed') !== '1') {
-      button.setAttribute('data-armed', '1');
-      button.textContent = '⚠️ Click again to confirm - this deletes everything';
-      setTimeout(function () {
-        button.setAttribute('data-armed', '0');
-        button.textContent = '🗑 Delete All Data';
-      }, 4000);
-      return;
-    }
-    DB = emptyDatabase();
-    _lastStagedJson = '';
-    persistNow();
-    renderAll();
-    tool.notify('All data deleted - the tool is fresh.', 'info');
-  }
 
   /* ── Params seeding (one-time) ── */
   function seedFromParams() {
@@ -1754,8 +1944,15 @@
       if (!canWrite()) return;
       openCustomerModal(null);
     });
-    el('rbi-btn-save-settings').addEventListener('click', saveSettings);
-    el('rbi-btn-reset-data').addEventListener('click', resetAllData);
+    /* Settings autosave: text fields persist while typing, and every control
+       normalises its value when it loses focus or the selection changes. */
+    ['rbi-st-name', 'rbi-st-taxid', 'rbi-st-email', 'rbi-st-phone', 'rbi-st-address', 'rbi-st-taxrate', 'rbi-st-prefix', 'rbi-st-nextseq'].forEach(function (id) {
+      el(id).addEventListener('input', function () { autoSaveSettings(false); });
+      el(id).addEventListener('change', autoSaveSettingsAndRefresh);
+    });
+    ['rbi-st-defaultcustomer', 'rbi-st-defaultsupport', 'rbi-st-currency', 'rbi-st-terms'].forEach(function (id) {
+      el(id).addEventListener('change', autoSaveSettingsAndRefresh);
+    });
     el('rbi-btn-save-pricing').addEventListener('click', savePricing);
     el('rbi-btn-reset-pricing').addEventListener('click', resetPricingToAgreement);
 
@@ -1794,6 +1991,13 @@
     el('rbi-btn-upload-logo').addEventListener('click', uploadCompanyLogo);
     el('rbi-btn-remove-logo').addEventListener('click', removeCompanyLogo);
     el('rbi-btn-add-support-type').addEventListener('click', addSupportType);
+    el('rbi-btn-link-profile').addEventListener('click', linkSelectedCompanyProfile);
+    el('rbi-btn-sync-profile').addEventListener('click', function () { syncLinkedCompanyProfile(false); });
+    el('rbi-btn-unlink-profile').addEventListener('click', unlinkCompanyProfile);
+    el('rbi-st-profile').addEventListener('change', function () {
+      var linkButton = el('rbi-btn-link-profile');
+      if (linkButton) linkButton.disabled = !canWrite() || !this.value || this.value === DB.company.profileId;
+    });
 
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
@@ -1839,10 +2043,15 @@
     var sample = emptyDatabase();
     sample.company = {
       name: 'Acme Software Inc.',
-      taxId: '123456789 RT0001',
+      taxId: 'HST 123456789 RT0001',
       email: 'billing@acmesoftware.ca',
       phone: '+1 (416) 555-0142',
-      address: '100 King St W, Toronto, ON M5X 1A9'
+      address: '100 King St W, Toronto, ON, M5X 1A9, Canada',
+      logoUrl: '',
+      logoName: '',
+      profileId: 'cp_acme',
+      profileLabel: 'Acme Software Inc.',
+      profileSyncedAt: new Date().toISOString()
     };
     var harbourBrackets = copyBrackets(AGREEMENT_BRACKETS);
     harbourBrackets[0].fee = 400;          /* minimum */
@@ -2027,7 +2236,10 @@
       { name: 'defaultCurrency', label: 'Default Currency', type: 'select', default: 'CAD', hint: 'Currency for new invoices (CAD, USD, EUR, GBP, TRY).', severity: 'optional' },
       { name: 'defaultTaxRate', label: 'Default Tax Rate %', type: 'number', default: '0', hint: 'Tax rate pre-filled on new invoices (e.g. 13 for HST).', severity: 'optional' },
       { name: 'invoicePrefix', label: 'Invoice Prefix', type: 'text', default: 'INV', hint: 'Prefix for invoice numbers, e.g. INV.', severity: 'optional' },
-      { name: 'paymentTerms', label: 'Payment Terms', type: 'select', default: 'Net 15', hint: 'Shown on invoices: Due on receipt, Net 7, Net 15, Net 30.', severity: 'optional' }
+      { name: 'paymentTerms', label: 'Payment Terms', type: 'select', default: 'Net 15', hint: 'Shown on invoices: Due on receipt, Net 7, Net 15, Net 30.', severity: 'optional' },
+      { name: 'companyProfileId', label: 'Company Profile ID', type: 'text', default: '', hint: 'Optional: link this record to a CompanyProfile object by ID on first load.', severity: 'optional' },
+      { name: 'companyProfileType', label: 'Company Profile Object Type', type: 'text', default: 'company-profile-uniconbaseapps', hint: 'CMS object type that stores company profiles.', severity: 'optional' },
+      { name: 'allowObjectCRUD', label: 'Allow Object Access', type: 'toggle', default: 'yes', hint: 'Must be yes in the field settings so the tool can read the linked CompanyProfile object.', severity: 'goodToHave' }
     ]);
 
     tool.onValueChange(function (newValue) {
@@ -2046,6 +2258,11 @@
     tool.onUserChange(function (user) {
       if (user) { _user = user; _noIdentity = false; }
       applyPermissions();
+    });
+
+    applyProfileParam();
+    loadCompanyProfiles(function () {
+      if (DB.company.profileId) syncLinkedCompanyProfile(true);
     });
 
     renderAll();

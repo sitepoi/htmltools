@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Delivery Hub SSOT - Lean Queue Edition</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --ok: #1d7a36;
+    --ok-soft: #eaf6ed;
+    --warn: #a86400;
+    --warn-soft: #fdf4e3;
+    --stop: #a11a1a;
+    --stop-soft: #fbeceb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 920px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 48px 54px 54px;
+  }
+
+  .doc-header {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+  .org-name {
+    font-size: 11px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .doc-title { font-size: 28px; font-weight: 700; }
+  .doc-subtitle { font-size: 14.5px; color: var(--accent); font-weight: 600; margin-top: 6px; }
+  .doc-meta { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+
+  .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .status-chip {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    color: var(--muted);
+  }
+  .status-chip.on { background: var(--accent-soft); color: var(--accent); border-color: #b6cde4; }
+
+  section { margin-bottom: 24px; }
+  h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 10px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3 { font-size: 13px; margin: 14px 0 6px; }
+  h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: 10px 0 5px; }
+  p { font-size: 13.4px; margin-bottom: 8px; }
+  ul, ol { margin: 0 0 8px 21px; }
+  li { font-size: 13.4px; margin-bottom: 5px; }
+  a { color: var(--accent); }
+
+  .answer {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 13px 16px;
+    background: #f8fbfd;
+    margin-bottom: 12px;
+  }
+  .answer h3 { margin: 0 0 5px; color: var(--accent); font-size: 14.5px; }
+  .answer p { font-size: 13.4px; margin-bottom: 6px; }
+  .answer p:last-child { margin-bottom: 0; }
+
+  .callout {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .callout-warn {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-warn p:last-child { margin-bottom: 0; }
+
+  .callout-stop {
+    background: var(--stop-soft);
+    border-left: 4px solid var(--stop);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-stop p:last-child { margin-bottom: 0; }
+
+  .callout-ok {
+    background: var(--ok-soft);
+    border-left: 4px solid var(--ok);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-ok p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 12.4px; }
+  th, td { padding: 6px 8px; border: 1px solid var(--line); vertical-align: top; text-align: left; }
+  th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 10.8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  td.num { text-align: center; white-space: nowrap; }
+  td.tick { text-align: center; width: 32px; }
+  td.tick input { width: 15px; height: 15px; cursor: pointer; }
+  tr.total td { background: #f8fafc; font-weight: 600; }
+  tr.is-done td { background: #fafdfb; }
+  tr.is-done td:nth-child(2) { text-decoration: line-through; color: var(--muted); }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .b-low { background: var(--ok-soft); color: var(--ok); border: 1px solid #bfe0c8; }
+  .b-med { background: var(--warn-soft); color: var(--warn); border: 1px solid #ecd6a6; }
+  .b-high { background: var(--stop-soft); color: var(--stop); border: 1px solid #efc2bf; }
+  .b-neutral { background: #eef2f6; color: #475569; border: 1px solid #d8dee6; }
+  .b-new { background: #eef4fb; color: #1e4e79; border: 1px solid #b6cde4; }
+
+  code, .key {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 11.6px;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+  .key { color: var(--accent); white-space: nowrap; }
+
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin: 10px 0 14px;
+  }
+  .flow-step {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fbfcfd;
+    padding: 9px 10px;
+    font-size: 11.8px;
+  }
+  .flow-step b { display: block; color: var(--accent); font-size: 12.2px; margin-bottom: 3px; }
+
+  .prompt-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 8px;
+  }
+  .copy-btn {
+    font: inherit;
+    font-size: 11.8px;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+  }
+  .copy-btn:hover { background: #0b4a70; }
+  .copy-note { font-size: 11.4px; color: var(--muted); }
+  .prompt-block {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 11.2px;
+    line-height: 1.55;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin: 0 0 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #1e293b;
+    max-height: 660px;
+    overflow: auto;
+  }
+
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 8px 0 14px;
+  }
+  .progress-bar {
+    flex: 1;
+    min-width: 200px;
+    height: 10px;
+    background: #e6ecf2;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .progress-bar div { height: 100%; width: 0; background: var(--accent); transition: width 0.15s ease; }
+  .progress-label { font-size: 11.8px; color: var(--muted); }
+  .reset-btn {
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+
+  .group-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 16px 0 4px;
+  }
+  .group-name { font-size: 13px; font-weight: 700; }
+  .group-count { font-size: 11.5px; color: var(--muted); margin-left: auto; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 12px; }
+  .card { border: 1px solid var(--line); border-radius: 4px; padding: 11px 13px; background: #fbfcfd; }
+  .card h4 { margin: 0 0 5px; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+  .card ul { margin: 0 0 0 17px; }
+
+  .ph {
+    color: var(--muted);
+    font-style: italic;
+    border-bottom: 1px dashed #b6c2cf;
+    padding: 0 2px;
+  }
+
+  .foot {
+    margin-top: 20px;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+    font-size: 11.8px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 820px) {
+    .page { padding: 24px 18px 30px; margin: 10px; }
+    .doc-title { font-size: 22px; }
+    .flow { grid-template-columns: 1fr 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    table { font-size: 11.8px; }
+    th, td { padding: 5px 6px; }
+  }
+
+  @page { margin: 14mm 12mm; }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; border: none; box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    .reset-btn { display: none; }
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, h4, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .answer, .callout, .callout-warn, .callout-stop, .callout-ok, .card, .flow-step {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .prompt-tools { display: none; }
+    .prompt-block {
+      max-height: none;
+      overflow: visible;
+      white-space: pre-wrap;
+      font-size: 9.6px;
+    }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">UniconHub</div>
+    <div class="doc-title">Product Delivery Hub</div>
+    <div class="doc-subtitle">Single source of truth - lean queue edition</div>
+    <div class="doc-meta">
+      Document: <span class="ph">DELIVERY-HUB-SSOT-2026-01</span> |
+      Version: <span class="ph">2.4</span> |
+      Prepared: 2026-11-04 |
+      Owner: <span class="ph">[name]</span>
+    </div>
+    <div class="status-row">
+      <span class="status-chip on">Design v2</span>
+      <span class="status-chip">Approved</span>
+      <span class="status-chip">In build</span>
+      <span class="status-chip">Live</span>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section>
+    <h2>1. What changed in version 2</h2>
+    <div class="answer">
+      <h3>One record type. One queue. Three actions.</h3>
+      <p>
+        Version 1 defined eight object types, test suites, runs, releases and cycles. That was
+        over-engineered for the problem. Version 2 keeps <strong>one object type</strong> and one
+        flow: <strong>add a finding, turn it into a task, apply it, mark it done</strong>.
+      </p>
+      <p>
+        Everything else is a field, a filter or a page you already have. No suites, no runs, no
+        release entity, no cycles, no registry objects.
+      </p>
+    </div>
+    <table>
+      <tr><th style="width:34%">Version 1</th><th>Version 2</th></tr>
+      <tr><td>8 object types</td><td><span class="badge b-low">1 object type</span></td></tr>
+      <tr><td>Work items, tasks, suites, runs, releases, cycles, products, instances</td><td>One record called a work item, with a kind and an optional parent</td></tr>
+      <tr><td>Suites and runs to record testing</td><td>A static checklist page. Every failed point becomes a finding</td></tr>
+      <tr><td>Release entity with a gate</td><td>A saved filter: open blockers</td></tr>
+      <tr><td>Instance registry with config hashes</td><td>Two optional fields: application and reported build</td></tr>
+      <tr><td>Product registry object type</td><td>Product dropdown fed by the existing tool catalog</td></tr>
+      <tr><td>49 build days</td><td><span class="badge b-low">12 to 15 build days</span></td></tr>
+    </table>
+
+    <div class="callout-ok">
+      <p><strong>The test of a good simplification:</strong> a new tester can understand the whole
+      system in two minutes, and you can answer "what is open" with one filter.</p>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h2>2. The design rule</h2>
+    <p>
+      This is a queue, not a platform. Every feature must pass one of these three tests, or it does
+      not get built:
+    </p>
+    <ol>
+      <li>It helps someone add a finding faster.</li>
+      <li>It helps someone decide what to work on next.</li>
+      <li>It helps someone prove the work is done.</li>
+    </ol>
+    <div class="callout-warn">
+      <p><strong>Anything else is a later decision.</strong> Capacity planning, test coverage maths,
+      release sign-off workflows and instance configuration tracking are all real needs, but they are
+      not needed to stop the current mess. They are listed in section 11 with the trigger that would
+      justify each one.</p>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2>3. The model</h2>
+    <table>
+      <tr><th style="width:34%">Thing</th><th>Decision</th></tr>
+      <tr><td>Object type</td><td><code>product-work-items-uniconbaseapps</code>. Read it as product work items. One record is one piece of work on a product. The <code>uniconbaseapps</code> suffix is the CMS database suffix carried by every object type.</td></tr>
+      <tr><td>Records</td><td>One per finding, request or task. Findings and tasks are the same record with a different <code>kind</code>.</td></tr>
+      <tr><td>Deployment path</td><td>One flow only: the source folder is pasted into the Application Store Tool Library, and every app and tenant reads that copy. No intermediate copies, no snapshot, nothing else to chase.</td></tr>
+      <tr><td>Parent link</td><td>A task points to the finding that created it with <code>parentId</code>. One level only.</td></tr>
+      <tr><td>Product list</td><td>Read from the existing tool catalog export. No product records.</td></tr>
+      <tr><td>Application list</td><td>Read from the existing application catalog export. No application records.</td></tr>
+      <tr><td>Per-item tool</td><td><code>Work Item Prompt Builder</code> mounted on each record. It reads the record and writes the build prompt. No extra object, no lookup, no list screen.</td></tr>
+      <tr><td>Testing</td><td>A checklist page plus findings. No run records.</td></tr>
+      <tr><td>Releases</td><td>A filter on blockers. Publishing stays where it is today.</td></tr>
+      <tr><td>History</td><td>A timeline field on the record, append only.</td></tr>
+    </table>
+
+    <div class="flow">
+      <div class="flow-step"><b>1. Finding</b>Anyone adds what is wrong, where, and a proof</div>
+      <div class="flow-step"><b>2. Accepted</b>Lead confirms severity and owner</div>
+      <div class="flow-step"><b>3. Task</b>Finding is turned into a task to apply</div>
+      <div class="flow-step"><b>4. Working</b>The owner applies the change</div>
+      <div class="flow-step"><b>5. Done</b>Another person checks it and closes</div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2>4. The fields, all of them</h2>
+    <table>
+      <tr>
+        <th style="width:22%">Field</th>
+        <th style="width:14%">Type</th>
+        <th style="width:10%">Required</th>
+        <th>Rule</th>
+      </tr>
+      <tr><td><span class="key">key</span></td><td>text</td><td>auto</td><td><code>WORK-0001</code>, one global sequence. Never reused.</td></tr>
+      <tr><td><span class="key">kind</span></td><td>select</td><td>yes</td><td>finding, request, task.</td></tr>
+      <tr><td><span class="key">title</span></td><td>text</td><td>yes</td><td>One line. What is wrong or what is wanted.</td></tr>
+      <tr><td><span class="key">detail</span></td><td>text</td><td>yes</td><td>Steps, expected, actual for findings. Context for requests.</td></tr>
+      <tr><td><span class="key">product</span></td><td>select</td><td>yes</td><td>From the catalog list. One product.</td></tr>
+      <tr><td><span class="key">application</span></td><td>select</td><td>no</td><td>From the application catalog. Use it when the problem is specific to one app.</td></tr>
+      <tr><td><span class="key">reportedBuild</span></td><td>text</td><td>yes for findings</td><td>The <code>TOOL_BUILD</code> badge read where the finding was seen, format YYYY-MM-DD-rN. Copied from the screen, never from the source.</td></tr>
+      <tr><td><span class="key">severity</span></td><td>select</td><td>no</td><td>blocker, high, medium, low. Proposed by the reporter, confirmed at triage.</td></tr>
+      <tr><td><span class="key">status</span></td><td>select</td><td>yes</td><td>new, accepted, working, done, rejected.</td></tr>
+      <tr><td><span class="key">owner</span></td><td>person</td><td>when accepted</td><td>One person. The queue is filtered by this field.</td></tr>
+      <tr><td><span class="key">reporter</span></td><td>person</td><td>auto</td><td>The person who added it.</td></tr>
+      <tr><td><span class="key">proof</span></td><td>url or text</td><td>no</td><td>One screenshot or one copied message. Not both.</td></tr>
+      <tr><td><span class="key">parentId</span></td><td>record id</td><td>no</td><td>Set on a task, pointing to its finding.</td></tr>
+      <tr><td><span class="key">toolLibraryBuild</span></td><td>text</td><td>when done</td><td>The <code>TOOL_BUILD</code> badge in the Application Store Tool Library copy after the fix. Must be newer than <code>reportedBuild</code>.</td></tr>
+      <tr><td><span class="key">checkedBy</span></td><td>person</td><td>when done</td><td>Must be a different person from the owner.</td></tr>
+      <tr><td><span class="key">timeline</span></td><td>list</td><td>auto</td><td>Who changed what and when. Append only.</td></tr>
+      <tr><td><span class="key">createdAt</span>, <span class="key">updatedAt</span></td><td>date</td><td>auto</td><td>For age and sorting.</td></tr>
+    </table>
+    <p>
+      Sixteen fields. No field is added unless it passes the rule in section 2 and is written into
+      this table first.
+    </p>
+    <div class="callout">
+      <p><strong>What the two build fields mean.</strong> There is one deployment path: the source
+      folder is pasted into the Application Store Tool Library, and every app and tenant reads that
+      copy. A fix therefore exists only when the Tool Library holds it. <code>reportedBuild</code> is
+      the badge read where the problem was seen. <code>toolLibraryBuild</code> is the badge in the
+      Tool Library after the fix. Closing needs the second to be newer than the first.</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h2>5. Statuses and the three actions</h2>
+    <table>
+      <tr><th style="width:16%">Status</th><th style="width:34%">Meaning</th><th>Who moves it there</th></tr>
+      <tr><td><span class="badge b-new">new</span></td><td>Added, not looked at</td><td>Reporter</td></tr>
+      <tr><td><span class="badge b-neutral">accepted</span></td><td>Real, prioritised, has an owner</td><td>Lead or manager at triage</td></tr>
+      <tr><td><span class="badge b-med">working</span></td><td>Someone is applying the change</td><td>Owner</td></tr>
+      <tr><td><span class="badge b-low">done</span></td><td>Lives in the Tool Library at a newer build, and the close is recorded by a named checker or marked as a self-check</td><td>Owner sets the Tool Library build, a checker confirms or the owner closes with the self-check mark</td></tr>
+      <tr><td><span class="badge b-high">rejected</span></td><td>Not a defect, duplicate, out of scope, or not now</td><td>Lead or manager, with a reason</td></tr>
+    </table>
+
+    <h3>5.1 The three actions in the app</h3>
+    <table>
+      <tr><td style="width:26%"><strong>Add finding</strong></td><td>Four required inputs: title, detail, product and reported build. Proof optional. Under 30 seconds.</td></tr>
+      <tr><td><strong>Turn into task</strong></td><td>One click on a finding. Creates a task with the same product and a parent link. The lead sets the owner and severity.</td></tr>
+      <tr><td><strong>Apply and close</strong></td><td>The owner moves the task to working, fixes the source, pastes the files into the Application Store Tool Library, sets <code>toolLibraryBuild</code>, then closes. A second person may set <code>checkedBy</code>; if the owner closes alone, the record is marked self-checked.</td></tr>
+    </table>
+
+    <div class="callout-stop">
+      <p><strong>Two hard rules only:</strong> a finding cannot be done until the Application Store
+      Tool Library shows a build newer than the reported one, and every close records who checked
+      it. Everything else is optional.</p>
+    </div>
+
+    <div class="callout">
+      <p><strong>Self-check is allowed, and labelled.</strong> One person may report, create the task,
+      fix it and close it. When <code>checkedBy</code> equals <code>owner</code>, the queue marks the
+      row as self-checked and the weekly export counts those rows separately. Nothing is blocked; a
+      self-check simply never counts as an independent verification.</p>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h2>6. Screens</h2>
+    <table>
+      <tr><th style="width:18%">Screen</th><th style="width:34%">What it is</th><th>Why it exists</th></tr>
+      <tr><td><strong>Queue</strong></td><td>One list of all items, with filters and a detail pane</td><td>The only place you need for daily work</td></tr>
+      <tr><td><strong>Board</strong></td><td>The same records grouped by status, five columns</td><td>Optional view; useful in a weekly review</td></tr>
+      <tr><td><strong>Checklist</strong></td><td>A static page with the smoke checks and the 12 attacks, one button per check to add a finding</td><td>Replaces suites and runs without losing repeatability</td></tr>
+      <tr><td><strong>Record tool</strong></td><td>Inside every work item: a read-only summary, then Generate prompt, Copy and Download</td><td>Not a fourth Hub screen; it is the object-level tool in section 18</td></tr>
+    </table>
+    <p>
+      Counters at the top of the queue: new, working, blockers, older than 14 days. Four numbers, no
+      dashboard.
+    </p>
+    <div class="callout">
+      <p><strong>No separate My Work screen.</strong> It is a saved filter: <code>owner = me</code>.</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h2>7. Roles</h2>
+    <table>
+      <tr><th style="width:20%">Role</th><th>Can do</th><th>Cannot do</th></tr>
+      <tr><td><strong>Reporter</strong></td><td>Add findings and requests, edit own while new</td><td>Set severity, assign, close</td></tr>
+      <tr><td><strong>Worker</strong></td><td>Take a task, move to working, apply, paste into the Tool Library, set the Tool Library build</td><td>Close own work without the self-check mark, reject items</td></tr>
+      <tr><td><strong>Lead</strong></td><td>Triage, severity, owner, convert to task, reject with reason, close own work with the self-check mark</td><td>Count a self-check as an independent verification</td></tr>
+      <tr><td><strong>Admin</strong></td><td>Everything, plus product lists and archive</td><td>Delete records</td></tr>
+    </table>
+    <p>
+      Four roles. If someone needs two roles, give them the higher one. No custom roles in version 2.
+    </p>
+  </section>
+
+  <!-- 8 -->
+  <section>
+    <h2>8. The boundary with the tool SSOT</h2>
+    <table>
+      <tr>
+        <th style="width:34%">Question</th>
+        <th style="width:30%">Tool SSOT</th>
+        <th>Hub item</th>
+      </tr>
+      <tr><td>What is the tool supposed to do?</td><td>Owns</td><td>Link in the detail text</td></tr>
+      <tr><td>Why was it built this way?</td><td>Owns the decision register</td><td>Never stored</td></tr>
+      <tr><td>How is it implemented?</td><td>Owns technical tasks</td><td>Never stored</td></tr>
+      <tr><td>Who fixes it and when?</td><td>No</td><td>Owns owner, status, reported build, Tool Library build</td></tr>
+      <tr><td>What did the tester see?</td><td>No</td><td>Owns detail and proof</td></tr>
+      <tr><td>Is it done?</td><td>Per-tool risk gate</td><td>Owns the checkedBy confirmation</td></tr>
+    </table>
+    <p>
+      The Hub item says <strong>what and who</strong>. The tool SSOT says <strong>how and why</strong>.
+      When an item is done, the owner updates the tool SSOT in the same change if behaviour changed.
+      No copying in either direction.
+    </p>
+  </section>
+
+  <!-- 9 -->
+  <section>
+    <h2>9. Testing without suites and runs</h2>
+    <p>
+      A run record exists to count pass and fail. You do not need to count. You need to know what is
+      broken. So the checklist becomes a page, and every failed point becomes a finding.
+    </p>
+    <table>
+      <tr><th style="width:26%">Step</th><th>What happens</th></tr>
+      <tr><td>1. Open the checklist</td><td>Smoke checks first, then the 12 attacks. One line each, plain language.</td></tr>
+      <tr><td>2. Run each check</td><td>Pass: move on. Fail: press the small button next to the check.</td></tr>
+      <tr><td>3. The button prefills a finding</td><td>Title is the check name, product and reported build are filled, detail is the expected result. The tester adds what actually happened and a screenshot.</td></tr>
+      <tr><td>4. Finish</td><td>No run record, no summary document. The findings are the evidence.</td></tr>
+    </table>
+    <div class="callout-ok">
+      <p><strong>What you lose:</strong> pass-rate charts and coverage percentages.
+      <strong>What you keep:</strong> every defect, its reported build, its proof and its owner.</p>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section>
+    <h2>10. Releases without a release entity</h2>
+    <p>
+      Publishing already exists. The Hub does not need to model it. A release conversation becomes a
+      filter:
+    </p>
+    <table>
+      <tr><td style="width:34%"><strong>Before publishing a product</strong></td><td>Open items with severity blocker for that product must be zero.</td></tr>
+      <tr><td><strong>Filter</strong></td><td><code>product = X</code> and <code>status is not done or rejected</code> and <code>severity = blocker</code></td></tr>
+      <tr><td><strong>If the filter is empty</strong></td><td>Publish. The manager still decides; the filter only removes the argument.</td></tr>
+      <tr><td><strong>After publishing</strong></td><td>Nothing to update in the Hub. The item is already done and checked.</td></tr>
+    </table>
+    <div class="callout-warn">
+      <p><strong>One exception:</strong> if a product is published while it has open blockers, the
+      manager records why in the item's detail. That is the only release documentation required.</p>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section>
+    <h2>11. What we dropped, and when to bring it back</h2>
+    <table>
+      <tr>
+        <th style="width:22%">Dropped</th>
+        <th style="width:26%">What replaces it now</th>
+        <th>Bring it back only when</th>
+      </tr>
+      <tr><td>Suites</td><td>One checklist page</td><td>Two products need genuinely different checklists and the page becomes confusing</td></tr>
+      <tr><td>Runs</td><td>Findings with a reported build and a proof</td><td>You need pass-rate or coverage numbers for a real decision</td></tr>
+      <tr><td>Releases</td><td>A blocker filter per product</td><td>One release bundles several products and needs a signed checklist</td></tr>
+      <tr><td>Cycles</td><td>Owner plus a weekly review</td><td>More than three workers and priorities collide every week</td></tr>
+      <tr><td>Instances</td><td>Optional application field</td><td>The same product fails differently in several apps often enough to track separately</td></tr>
+      <tr><td>Product registry</td><td>Catalog dropdown</td><td>The catalog stops being the list of products</td></tr>
+      <tr><td>Config hashes</td><td>A note in the detail text</td><td>Configuration drift causes repeated defects</td></tr>
+      <tr><td>Automation and digests</td><td>A manual morning filter</td><td>More than three people and the queue is missed daily</td></tr>
+    </table>
+    <div class="callout">
+      <p><strong>The rule:</strong> each of these comes back as a field or a filter first. A new object
+      type requires a written decision in section 15.</p>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section>
+    <h2>12. Build plan</h2>
+    <table>
+      <tr><th style="width:12%">Stage</th><th style="width:34%">Scope</th><th style="width:12%">Effort</th><th>Usable when</th></tr>
+      <tr><td class="num">L0</td><td>Object type, fields, roles, product lists</td><td>2.5 days</td><td>Day 3</td></tr>
+      <tr><td class="num">L1</td><td>Queue list, add finding, detail, edit, export</td><td>5.5 days</td><td>Week 1</td></tr>
+      <tr><td class="num">L2</td><td>Turn into task, board, done and check rules</td><td>3 days</td><td>Week 2</td></tr>
+      <tr><td class="num">L3</td><td>Checklist page, prefilled findings, duplicate search</td><td>2 days</td><td>Week 2</td></tr>
+      <tr><td class="num">L4</td><td>Counters, weekly export, saved filters, archive</td><td>2 days</td><td>Week 3</td></tr>
+      <tr class="total"><td></td><td><strong>Total</strong></td><td>15 days</td><td>Three weeks, usable from week 1</td></tr>
+    </table>
+    <div class="callout-ok">
+      <p><strong>If you only build L0 and L1, you already have the solution to the mess:</strong> one
+      queue, one form, one detail view. Everything after that is comfort.</p>
+    </div>
+  </section>
+
+  <!-- 13 -->
+  <section>
+    <h2>13. Task list</h2>
+    <p>Tick a task when its acceptance is demonstrated. Progress is stored in this browser.</p>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div id="progressFill"></div></div>
+      <span class="progress-label" id="progressLabel">0 of 0 done</span>
+      <button type="button" class="reset-btn" id="resetBtn">Clear ticks</button>
+    </div>
+
+    <div class="group-head">
+      <span class="group-name">L0 - Foundations</span>
+      <span class="group-count" id="cnt-L0">0 / 4</span>
+    </div>
+    <table data-group="L0">
+      <tr><th style="width:9%">ID</th><th style="width:45%">Task</th><th style="width:30%">Acceptance</th><th class="num" style="width:9%">Est</th><th class="num" style="width:7%">Done</th></tr>
+      <tr><td class="key">L0-01</td><td>Freeze the 16 fields and 5 statuses in this document</td><td>No open field questions</td><td class="num">2 h</td><td class="tick"><input type="checkbox" class="task-box" data-task="L0-01"></td></tr>
+      <tr><td class="key">L0-02</td><td>Create <code>product-work-items-uniconbaseapps</code> with the fields</td><td>A record can be created and queried by product and status</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L0-02"></td></tr>
+      <tr><td class="key">L0-03</td><td>Set the four roles and permissions</td><td>Each role matches section 7 exactly</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L0-03"></td></tr>
+      <tr><td class="key">L0-04</td><td>Load product and application lists from the existing catalogs</td><td>Dropdowns show real names; no hand typing</td><td class="num">1 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L0-04"></td></tr>
+    </table>
+
+    <div class="group-head">
+      <span class="group-name">L1 - Queue core</span>
+      <span class="group-count" id="cnt-L1">0 / 7</span>
+    </div>
+    <table data-group="L1">
+      <tr><th style="width:9%">ID</th><th style="width:45%">Task</th><th style="width:30%">Acceptance</th><th class="num" style="width:9%">Est</th><th class="num" style="width:7%">Done</th></tr>
+      <tr><td class="key">L1-01</td><td>Queue list with filters and sort</td><td>Filter by status, kind, product, owner, severity, age</td><td class="num">1.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L1-01"></td></tr>
+      <tr><td class="key">L1-02</td><td>Add finding form</td><td>Four required inputs; saved in under 30 seconds</td><td class="num">1 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L1-02"></td></tr>
+      <tr><td class="key">L1-03</td><td>Detail pane with timeline</td><td>Every change shows who and when</td><td class="num">1 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L1-03"></td></tr>
+      <tr><td class="key">L1-04</td><td>Edit and status actions</td><td>Only the transitions in section 5 are offered</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L1-04"></td></tr>
+      <tr><td class="key">L1-05</td><td>Owner assignment</td><td>One person, shown in the queue row</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L1-05"></td></tr>
+      <tr><td class="key">L1-06</td><td>Proof field: one link or one image</td><td>Opens in a new tab; no file bytes in the record</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L1-06"></td></tr>
+      <tr><td class="key">L1-07</td><td>CSV export with the active filter</td><td>Export matches the screen</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L1-07"></td></tr>
+    </table>
+
+    <div class="group-head">
+      <span class="group-name">L2 - From finding to done</span>
+      <span class="group-count" id="cnt-L2">0 / 5</span>
+    </div>
+    <table data-group="L2">
+      <tr><th style="width:9%">ID</th><th style="width:45%">Task</th><th style="width:30%">Acceptance</th><th class="num" style="width:9%">Est</th><th class="num" style="width:7%">Done</th></tr>
+      <tr><td class="key">L2-01</td><td>Turn a finding into a task</td><td>One click creates a task with parentId and the same product</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L2-01"></td></tr>
+      <tr><td class="key">L2-02</td><td>Board grouped by status</td><td>Five columns, drag or buttons, same records</td><td class="num">1 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L2-02"></td></tr>
+      <tr><td class="key">L2-03</td><td>Saved filter for my work</td><td>owner = me, one click</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L2-03"></td></tr>
+      <tr><td class="key">L2-04</td><td>Done needs a newer Tool Library build and a recorded checker</td><td>Close is blocked while toolLibraryBuild is empty or not newer; a self-check sets a visible mark</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L2-04"></td></tr>
+      <tr><td class="key">L2-05</td><td>Close the parent finding when its task is done</td><td>Finding shows the task and the Tool Library build, then closes</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L2-05"></td></tr>
+    </table>
+
+    <div class="group-head">
+      <span class="group-name">L3 - Testing without runs</span>
+      <span class="group-count" id="cnt-L3">0 / 4</span>
+    </div>
+    <table data-group="L3">
+      <tr><th style="width:9%">ID</th><th style="width:45%">Task</th><th style="width:30%">Acceptance</th><th class="num" style="width:9%">Est</th><th class="num" style="width:7%">Done</th></tr>
+      <tr><td class="key">L3-01</td><td>Checklist page: smoke plus the 12 attacks</td><td>One line per check, readable on a phone</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L3-01"></td></tr>
+      <tr><td class="key">L3-02</td><td>Button per check that opens a prefilled finding</td><td>Product, reported build and expected are filled; the tester adds actual and proof</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L3-02"></td></tr>
+      <tr><td class="key">L3-03</td><td>Duplicate search before saving</td><td>Top five similar items shown with status</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L3-03"></td></tr>
+      <tr><td class="key">L3-04</td><td>Short guidance: what makes a good finding</td><td>Five lines shown above the form</td><td class="num">0.25 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L3-04"></td></tr>
+    </table>
+
+    <div class="group-head">
+      <span class="group-name">L4 - Counters and housekeeping</span>
+      <span class="group-count" id="cnt-L4">0 / 4</span>
+    </div>
+    <table data-group="L4">
+      <tr><th style="width:9%">ID</th><th style="width:45%">Task</th><th style="width:30%">Acceptance</th><th class="num" style="width:9%">Est</th><th class="num" style="width:7%">Done</th></tr>
+      <tr><td class="key">L4-01</td><td>Counters: new, working, blockers, older than 14 days</td><td>Four numbers at the top of the queue</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L4-01"></td></tr>
+      <tr><td class="key">L4-02</td><td>Weekly export for the review</td><td>Opened, working, done and rejected this week</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L4-02"></td></tr>
+      <tr><td class="key">L4-03</td><td>Saved filters per person</td><td>My work, blockers, my product</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L4-03"></td></tr>
+      <tr><td class="key">L4-04</td><td>Archive closed items older than six months</td><td>Counts preserved, detail archived</td><td class="num">0.5 d</td><td class="tick"><input type="checkbox" class="task-box" data-task="L4-04"></td></tr>
+    </table>
+  </section>
+
+  <!-- 14 -->
+  <section>
+    <h2>14. How it scales without new objects</h2>
+    <table>
+      <tr><th style="width:20%">People</th><th style="width:34%">What changes</th><th>What does not change</th></tr>
+      <tr><td>1 to 3</td><td>Everyone filters by owner. Lead triages daily for ten minutes.</td><td>One queue, one type, five statuses</td></tr>
+      <tr><td>4 to 6</td><td>Add a product field filter per person and a weekly board review.</td><td>One object type</td></tr>
+      <tr><td>7 to 12</td><td>Add saved filters per lane and a daily digest. Still one type.</td><td>One object type</td></tr>
+      <tr><td>More than 12</td><td>Only now consider run records or a separate service.</td><td>The queue and the five statuses</td></tr>
+    </table>
+    <p>
+      If two people edit the same item, the later save wins. Add a revision check only if that
+      actually happens twice in a week.
+    </p>
+  </section>
+
+  <!-- 15 -->
+  <section>
+    <h2>15. Decisions and open questions</h2>
+    <table>
+      <tr><th style="width:5%">#</th><th style="width:30%">Decision</th><th style="width:26%">Options</th><th>Recommendation</th></tr>
+      <tr><td class="num">1</td><td>Single object type instead of eight</td><td>Yes or no</td><td>Yes. Everything else is a field or a filter.</td></tr>
+      <tr><td class="num">2</td><td>Who triages</td><td>Owner, lead, rotating</td><td>One named lead, ten minutes a day</td></tr>
+      <tr><td class="num">3</td><td>Where the app lives</td><td>Application Store app, separate app</td><td>Application Store, next to the tool library</td></tr>
+      <tr><td class="num">4</td><td>Does anyone need pass-rate numbers</td><td>Yes or no</td><td>No for now. Findings are enough.</td></tr>
+      <tr><td class="num">5</td><td>Pilot products</td><td>All, or five</td><td>Five products for two weeks, then everything</td></tr>
+      <tr><td class="num">6</td><td>Archive period</td><td>6 or 12 months</td><td>Six months</td></tr>
+    </table>
+  </section>
+
+  <!-- 16 -->
+  <section>
+    <h2>16. Decision register</h2>
+    <p>Append only. Never delete a row.</p>
+    <table>
+      <tr><th style="width:11%">ID</th><th style="width:11%">Date</th><th style="width:38%">Decision</th><th>Rationale</th></tr>
+      <tr><td class="key">D-HUB-09</td><td>2026-11-04</td><td>One object type for findings, requests and tasks</td><td>Eight types were over-engineering. A queue needs one record and a parent link.</td></tr>
+      <tr><td class="key">D-HUB-10</td><td>2026-11-04</td><td>No suites and no runs; a checklist page plus findings</td><td>Pass-rate charts were not a decision input. Defects are.</td></tr>
+      <tr><td class="key">D-HUB-11</td><td>2026-11-04</td><td>No release entity; a blocker filter per product</td><td>Publishing already exists. The Hub only removes the argument.</td></tr>
+      <tr><td class="key">D-HUB-12</td><td>2026-11-04</td><td>Products and applications come from the existing catalogs</td><td>No registry to maintain and no duplicate truth.</td></tr>
+      <tr><td class="key">D-HUB-13</td><td>2026-11-04</td><td>Five statuses, four roles, three screens</td><td>A budget against scope creep.</td></tr>
+      <tr><td class="key">D-HUB-14</td><td>2026-11-04</td><td>Complexity returns only through section 11 triggers</td><td>Each added concept must be justified by a real pain, not a possibility.</td></tr>
+      <tr><td class="key">D-HUB-15</td><td>2026-11-04</td><td>Object type renamed to <code>product-work-items-uniconbaseapps</code></td><td>The old name used an internal abbreviation that said nothing about what a record holds. The new name states the thing, the unit and the CMS suffix.</td></tr>
+      <tr><td class="key">D-HUB-16</td><td>2026-11-04</td><td>Done is proven by the Application Store Tool Library copy, not by the source folder</td><td>There is one deployment path: source to Tool Library. An app or tenant reads that copy, so a fix that was not pasted there does not exist for any user.</td></tr>
+      <tr><td class="key">D-HUB-17</td><td>2026-11-04</td><td>Self-check is allowed and labelled instead of forbidden</td><td>One person must be able to report, fix and close. The mark keeps a self-close from being counted as an independent verification, without blocking the work.</td></tr>
+      <tr><td class="key">D-HUB-18</td><td>2026-11-04</td><td>A prompt tool mounted on the record instead of a separate prompt app</td><td>The record already holds everything the prompt needs. A separate app adds a lookup, a list and a third copy of the data that can go stale. One record in, one prompt out.</td></tr>
+    </table>
+  </section>
+
+  <!-- 17 -->
+  <section>
+    <h2>17. Change log</h2>
+    <table>
+      <tr><th style="width:10%">Version</th><th style="width:14%">Date</th><th>Change</th></tr>
+      <tr><td>1.0</td><td>2026-11-04</td><td>First complete SSOT: eight object types, suites, runs, releases, cycles, 49 build days.</td></tr>
+      <tr><td>2.0</td><td>2026-11-04</td><td>Lean queue edition. One object type, 16 fields, five statuses, three screens, 24 build tasks, 15 days. Suites, runs, releases, cycles, registries and config hashes removed or replaced by fields and filters, with written triggers for bringing them back.</td></tr>
+      <tr><td>2.1</td><td>2026-11-04</td><td>Object type renamed from <code>pdh-items-uniconbaseapps</code> to <code>product-work-items-uniconbaseapps</code>. Record keys now read <code>WORK-0001</code>. Decision IDs use the <code>D-HUB</code> prefix and the document ID is <code>DELIVERY-HUB-SSOT-2026-01</code>. No field or flow changed.</td></tr>
+      <tr><td>2.2</td><td>2026-11-04</td><td>Build rule corrected to the real deployment path: source folder to Application Store Tool Library, with no snapshot and no intermediate copies. <code>build</code> became <code>reportedBuild</code>, <code>doneInBuild</code> became <code>toolLibraryBuild</code>. A self-check is now allowed and marked instead of forbidden.</td></tr>
+      <tr><td>2.3</td><td>2026-11-04</td><td>Added the per-item tool (Work Item Prompt Builder) in section 18 and the copy-ready build prompt in section 19. The prompt creates a complete html tool folder, app files and the seven documents, to the repository standards.</td></tr>
+      <tr><td>2.4</td><td>2026-11-04</td><td>Added section 20, the prompt that builds the Work Item Prompt Builder tool itself, with the exact folder, the eight behaviours, the harness samples and the verification list.</td></tr>
+    </table>
+
+    <div class="foot">
+      <p>
+        Related: the per-tool <code>docs/ssot.html</code> remains the technical source of truth. The
+        earlier design documents in <code>../Junior-Html-Tools-Assistant/</code> explain the reasoning
+        behind the dropped concepts; this document supersedes them for what to build.
+      </p>
+    </div>
+  </section>
+
+  <!-- 18 -->
+  <section>
+    <h2>18. The per-item tool: Work Item Prompt Builder</h2>
+    <div class="answer">
+      <h3>One record in, one build prompt out.</h3>
+      <p>
+        Every work item carries a small tool that turns its own record into a prompt an AI developer
+        can execute. It is the only part of this system that touches the code folder, and it never
+        keeps a second copy of the record.
+      </p>
+    </div>
+
+    <table>
+      <tr><th style="width:26%">Property</th><th>Decision</th></tr>
+      <tr><td>Tool type</td><td>TYPE 1 object-level html tool, built to <code>html-tool-rules.txt</code></td></tr>
+      <tr><td>Mounted on</td><td>The data part of every record in <code>product-work-items-uniconbaseapps</code></td></tr>
+      <tr><td>Reads</td><td>The record through <code>tool.getFields()</code>. No <code>requestObjects</code>, no lookup, no list screen.</td></tr>
+      <tr><td>Produces</td><td>One plain-text build prompt, ready to paste into Copilot chat in this repository</td></tr>
+      <tr><td>Writes</td><td>Only its own state with <code>tool.setValue</code>. It never writes the work item.</td></tr>
+      <tr><td>Closing the loop</td><td>After the fix is pasted into the Application Store Tool Library, the owner records <code>toolLibraryBuild</code> on the item. The tool does not do that for them.</td></tr>
+    </table>
+
+    <div class="callout">
+      <p><strong>Why a tool on the record instead of another app.</strong> The record already holds the
+      title, the detail, the product, the build and the proof. A separate app would need a list, a
+      lookup and a copy of the same data, and the copy would go stale. The tool has no screen of its
+      own beyond the record it sits in.</p>
+    </div>
+
+    <h3>18.1 What the developer fills in</h3>
+    <table>
+      <tr><th style="width:26%">Input</th><th style="width:20%">Source</th><th>Rule</th></tr>
+      <tr><td><span class="key">mode</span></td><td>Developer</td><td><code>new-tool</code> or <code>change-existing</code>. The default comes from the param.</td></tr>
+      <tr><td><span class="key">toolName</span></td><td>Developer</td><td>PascalCase folder name, for example <code>WorkItemPromptBuilder</code>.</td></tr>
+      <tr><td><span class="key">taxonomyPath</span></td><td>Developer</td><td>Where the tool folder belongs, for example <code>BUSINESS/GENERAL/it-development/testing-qa</code>.</td></tr>
+      <tr><td><span class="key">classPrefix</span></td><td>Developer</td><td>Two or three lower-case letters plus a hyphen, unique in the repository.</td></tr>
+      <tr><td><span class="key">toolPath</span></td><td>Developer, change mode only</td><td>The existing tool folder to change.</td></tr>
+      <tr><td><span class="key">extraInstruction</span></td><td>Developer, optional</td><td>Anything the work item does not say. Empty is allowed.</td></tr>
+    </table>
+
+    <h3>18.2 What it reads from the record</h3>
+    <table>
+      <tr><th style="width:30%">Field</th><th>Behaviour when empty</th></tr>
+      <tr><td><code>key</code>, <code>kind</code>, <code>title</code>, <code>detail</code></td><td>Required by the Hub, so always present. The tool shows a warning if one is blank.</td></tr>
+      <tr><td><code>product</code>, <code>application</code></td><td>Writes "not set". Never writes <code>undefined</code>.</td></tr>
+      <tr><td><code>severity</code>, <code>reportedBuild</code>, <code>proof</code></td><td>Writes "not recorded" and keeps the prompt valid.</td></tr>
+      <tr><td><code>owner</code>, <code>status</code></td><td>Shown in the summary. Not part of the prompt.</td></tr>
+    </table>
+
+    <h3>18.3 Parameters, all optional</h3>
+    <table>
+      <tr><th style="width:26%">Param</th><th>Use</th></tr>
+      <tr><td><span class="key">buildPromptTemplate</span></td><td>Replaces the built-in prompt in section 19 without a new build. One admin field, no code change.</td></tr>
+      <tr><td><span class="key">defaultMode</span></td><td><code>new-tool</code> or <code>change-existing</code>. Default <code>change-existing</code>.</td></tr>
+      <tr><td><span class="key">defaultTaxonomyPath</span></td><td>Pre-fills the path field for this tenant.</td></tr>
+      <tr><td><span class="key">allowAi</span></td><td>Reserved. When yes, the tool may call <code>requestAI</code> to tighten the prompt. Off by default.</td></tr>
+    </table>
+
+    <h3>18.4 Saved value</h3>
+    <p>
+      <code>{version, mode, toolName, taxonomyPath, classPrefix, toolPath, extraInstruction, promptText, generatedAt}</code>.
+      A few kilobytes. The record data is never duplicated into the value, only the prompt produced from it.
+    </p>
+
+    <h3>18.5 Acceptance</h3>
+    <table>
+      <tr><th style="width:9%">ID</th><th style="width:44%">Task</th><th>Acceptance</th></tr>
+      <tr><td class="key">WIP-01</td><td>Read-only summary of the work item</td><td>Key, kind, title, product, build, detail and proof are visible without editing anything</td></tr>
+      <tr><td class="key">WIP-02</td><td>Generate the prompt from the template</td><td>No <code>{{PLACEHOLDER}}</code> survives, except where a value is genuinely unknown and the line says so</td></tr>
+      <tr><td class="key">WIP-03</td><td>Copy the prompt</td><td>One click, plain text, whole prompt</td></tr>
+      <tr><td class="key">WIP-04</td><td>Download the prompt</td><td>File named <code>&lt;key&gt;-build-prompt.md</code></td></tr>
+      <tr><td class="key">WIP-05</td><td>Empty record fields</td><td>The prompt says "not set" or "not recorded", never <code>undefined</code> or an empty line</td></tr>
+      <tr><td class="key">WIP-06</td><td>Read-only mode</td><td>Generate, copy and download still work; nothing is editable</td></tr>
+      <tr><td class="key">WIP-07</td><td>Template override</td><td>The param changes the output without a rebuild</td></tr>
+      <tr><td class="key">WIP-08</td><td>No side effects</td><td>No <code>requestObjects</code> call and no write to the record</td></tr>
+    </table>
+    <p>
+      The tool has its own folder, its own harness and its own <code>docs/ssot.html</code>, where its
+      build tasks live. It is not part of the 15 days in section 12.
+    </p>
+  </section>
+
+  <!-- 19 -->
+  <section>
+    <h2>19. The build prompt, copy ready</h2>
+    <p>
+      This is the exact text the tool produces. Paste it into Copilot chat in this repository with
+      every placeholder replaced. It is the contract between a work item and the code: if a rule
+      changes, change it here first, then update the tool's embedded default.
+    </p>
+
+    <h3>19.1 How to use it</h3>
+    <table>
+      <tr><td style="width:26%"><strong>1. Fill the placeholders</strong></td><td>The tool does this from the record. By hand, replace every <code>{{NAME}}</code> and delete the line if the value is unknown.</td></tr>
+      <tr><td><strong>2. Paste into a new chat</strong></td><td>One work item per chat. Do not mix two work items, the report becomes ambiguous.</td></tr>
+      <tr><td><strong>3. Let it read the rules</strong></td><td>The prompt orders the four rule files first. Do not skip that step to save time.</td></tr>
+      <tr><td><strong>4. Check the report</strong></td><td>The last line must give a build stamp and the exact place to look. Anything else is not finished.</td></tr>
+    </table>
+
+    <h3>19.2 Placeholders</h3>
+    <table>
+      <tr><th style="width:24%">Placeholder</th><th>Filled from</th></tr>
+      <tr><td><code>{{WORK_ITEM_KEY}}</code></td><td><code>key</code>, for example <code>WORK-0007</code></td></tr>
+      <tr><td><code>{{WORK_ITEM_KIND}}</code></td><td><code>kind</code>: finding, request or task</td></tr>
+      <tr><td><code>{{WORK_ITEM_TITLE}}</code></td><td><code>title</code></td></tr>
+      <tr><td><code>{{DETAIL}}</code></td><td><code>detail</code>, line breaks kept</td></tr>
+      <tr><td><code>{{PRODUCT}}</code>, <code>{{APPLICATION}}</code></td><td><code>product</code>, <code>application</code>, or "not set"</td></tr>
+      <tr><td><code>{{SEVERITY}}</code>, <code>{{REPORTED_BUILD}}</code>, <code>{{PROOF}}</code></td><td>Record fields, or "not recorded"</td></tr>
+      <tr><td><code>{{MODE}}</code></td><td><code>new-tool</code> or <code>change-existing</code></td></tr>
+      <tr><td><code>{{TAXONOMY_PATH}}</code>, <code>{{TOOL_NAME}}</code>, <code>{{CLASS_PREFIX}}</code></td><td>Typed by the developer in the tool</td></tr>
+      <tr><td><code>{{TOOL_PATH}}</code></td><td>Change mode only, the existing folder</td></tr>
+      <tr><td><code>{{EXTRA_INSTRUCTION}}</code></td><td>Optional free text, or "none"</td></tr>
+    </table>
+
+    <div class="prompt-tools">
+      <button type="button" class="copy-btn" data-copy-target="buildPrompt" data-copy-note="copyPromptNote">Copy the prompt</button>
+      <span class="copy-note" id="copyPromptNote">Plain text, about four pages.</span>
+    </div>
+
+<pre class="prompt-block" id="buildPrompt">You are working in the UniconHub HTMLBasedTools repository on Windows, using git bash.
+
+WORK ITEM
+  Key: {{WORK_ITEM_KEY}}
+  Kind: {{WORK_ITEM_KIND}}
+  Title: {{WORK_ITEM_TITLE}}
+  Product: {{PRODUCT}}
+  Application: {{APPLICATION}}
+  Severity: {{SEVERITY}}
+  Reported tool build: {{REPORTED_BUILD}}
+  Proof: {{PROOF}}
+
+  Detail:
+  {{DETAIL}}
+
+MODE: {{MODE}}
+  new-tool         create the tool folder described below
+  change-existing  change only the existing tool at {{TOOL_PATH}} and keep every behaviour
+                   the work item does not mention
+
+READ FIRST, IN THIS ORDER
+  1. html-tool-rules.txt
+  2. publish-rules.txt, the docs and release sections only
+  3. _docs/templates/README.md and the files in _docs/templates/
+  4. docs/ssot.html of the closest existing tool, for structure only. Never copy its code.
+
+BEFORE YOU WRITE ANYTHING
+  Search the repository for a tool that already does part of this. Reuse beats a new folder.
+  If the work item is a finding, reproduce it first and write down the steps that show it.
+
+IF THE MODE IS new-tool
+  Create {{TAXONOMY_PATH}}/{{TOOL_NAME}}/
+    app/{{TOOL_NAME}}.html    body markup only, no html, head, style or script tags
+    app/{{TOOL_NAME}}.css     rules only, no style tag
+    app/{{TOOL_NAME}}.js      JavaScript only, no script tag, entry point tool.onReady
+    app/test-harness.html     full page with the mock tool SDK, sample data and ?bare=1
+    docs/index.html docs/ssot.html docs/webpage.html docs/help.html
+    docs/presentation.html docs/updates.html docs/social.html
+  Use npm run docs:init after the folder exists so the seven documents come from the official
+  templates. Then fill them by hand. Never invent a different document set.
+  Class prefix: {{CLASS_PREFIX}}-
+
+IF THE MODE IS change-existing
+  Change only the files the work item needs. Bump TOOL_BUILD. Move only the per-file stamps of
+  files whose content actually changed.
+
+RULES THAT ARE NOT NEGOTIABLE
+  - Three source files in app/ plus the harness. No fourth source file.
+  - TOOL_BUILD = 'YYYY-MM-DD-rN' in the JS only. Visible badge in the tool header. First console
+    line on load: console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
+  - First line of each file is its per-file stamp:
+      &lt;!-- html build YYYY-MM-DD-rN --&gt;   /* css build YYYY-MM-DD-rN */   /* js build YYYY-MM-DD-rN */
+  - tool.onReady is the only entry point. No DOMContentLoaded, no window.onload.
+  - No localStorage, no sessionStorage, no fetch, no alert, no confirm, no prompt, no raw postMessage.
+  - All state through tool.getValue and tool.setValue. Every request call needs its allow param and
+    a graceful error path when the host denies it.
+  - declareParams for every param you read. reportMissingParams in onReady for required ones.
+    Handle isReadOnly() inside onReady, because the form can open read-only.
+  - Never write a raw &lt;/script&gt; or an unclosed &lt;!-- inside the JS.
+  - Keep the saved value well under the 1 MB record budget. Store upload URLs, never file bytes.
+  - No company or tenant names in code, UI copy or documents.
+  - Do not commit, do not push, do not run npm run rel. The developer decides when to ship.
+
+UI
+  - {{CLASS_PREFIX}}- prefix on every class and id.
+  - Light surfaces, one accent colour, body text 12 to 14 px, one clear primary action per view.
+  - Docs use no emoji and no em dashes. The tool UI may keep the icon style of nearby tools.
+  - Works at 390 px and at 1280 px with no horizontal scroll.
+  - Keyboard reachable, 44 px touch targets, visible focus ring, labels tied to inputs.
+
+DOCS
+  - docs/ssot.html is the technical source of truth and must be filled from this work item:
+    scope, decisions, tasks, open questions and risks. No template placeholder text may remain.
+  - Never create a separate plan or task markdown file. Tasks and decisions live in the SSOT.
+  - White background in the SSOT, hyphens instead of em dashes, no emoji.
+  - docs/help.html must let a first-time user finish the main task without asking anyone.
+
+VERIFY BEFORE YOU REPORT
+  - node --check on every JS file you touched.
+  - Every el('id') reference in the JS resolves to an id in the HTML.
+  - The harness renders with sample data and also with ?bare=1.
+  - Headless Edge screenshots at 390 px and at 1280 px, read them, no overflow.
+  - Docs contain no em dash and no emoji.
+
+EXTRA INSTRUCTION FROM THE DEVELOPER
+  {{EXTRA_INSTRUCTION}}
+
+REPORT BACK, IN THIS ORDER
+  1. Mode, and the exact folder you worked in.
+  2. Files created or changed.
+  3. The build stamp you wrote.
+  4. The checks you ran and their result.
+  5. Exactly where the change can be seen: page, button, URL.
+  6. Anything you could not do, and why.
+  7. The line the work item records after upload: toolLibraryBuild = YYYY-MM-DD-rN.
+</pre>
+
+    <div class="callout-warn">
+      <p><strong>The report is part of the prompt, not a courtesy.</strong> A chat that ends with
+      "done" and no build stamp cannot be checked, and the work item cannot be closed. Treat items
+      5 and 7 as the acceptance of the whole run.</p>
+    </div>
+  </section>
+
+  <!-- 20 -->
+  <section>
+    <h2>20. The tool build prompt - build Work Item Prompt Builder</h2>
+    <p>
+      The prompt in section 19 is what the tool produces. This prompt is what builds the tool. Paste
+      it into a new Copilot chat in this repository, once, and it creates the folder, the three app
+      files, the harness and the seven documents. It does not build the Hub app; the work item type
+      already exists.
+    </p>
+
+    <table>
+      <tr><th style="width:28%">What the prompt creates</th><th>Where</th></tr>
+      <tr><td>Tool folder</td><td><code>BUSINESS/GENERAL/it-development/dev-prompt-builders/WorkItemPromptBuilder</code></td></tr>
+      <tr><td>App files</td><td><code>app/WorkItemPromptBuilder.html</code>, <code>.css</code>, <code>.js</code></td></tr>
+      <tr><td>Harness</td><td><code>app/test-harness.html</code> with two sample records</td></tr>
+      <tr><td>Documents</td><td><code>docs/</code>, seven files from <code>npm run docs:init</code></td></tr>
+      <tr><td>Builds</td><td>Nothing else. No CMS work, no catalog work, no Hub change.</td></tr>
+    </table>
+
+    <div class="prompt-tools">
+      <button type="button" class="copy-btn" data-copy-target="toolBuildPrompt" data-copy-note="toolBuildPromptNote">Copy the tool build prompt</button>
+      <span class="copy-note" id="toolBuildPromptNote">One chat, one tool.</span>
+    </div>
+
+<pre class="prompt-block" id="toolBuildPrompt">Build ONE new html tool in this repository: Work Item Prompt Builder.
+
+REPOSITORY
+  D:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools, Windows, git bash.
+
+WHAT IT IS
+  A TYPE 1 object-level html tool mounted on the data part of a record in
+  product-work-items-uniconbaseapps. One record in, one build prompt out.
+  It reads the work item, lets the developer fill six inputs, and renders a
+  copy-ready development prompt for an AI.
+
+READ BEFORE WRITING CODE
+  1. html-tool-rules.txt, the whole file.
+  2. publish-rules.txt, the docs and release sections only.
+  3. _docs/templates/README.md and the template files in _docs/templates/.
+  4. OTHERS-HELPERS/Documents/Product-Delivery-Hub/Product-Delivery-Hub-SSOT.html
+     sections 3, 4, 18 and 19. Section 18 is the behaviour contract.
+     Section 19 is the exact prompt text the tool must produce.
+  5. One existing tool that reads its host record, for style only. Never copy its code.
+
+CREATE
+  BUSINESS/GENERAL/it-development/dev-prompt-builders/WorkItemPromptBuilder/app/WorkItemPromptBuilder.html
+  BUSINESS/GENERAL/it-development/dev-prompt-builders/WorkItemPromptBuilder/app/WorkItemPromptBuilder.css
+  BUSINESS/GENERAL/it-development/dev-prompt-builders/WorkItemPromptBuilder/app/WorkItemPromptBuilder.js
+  BUSINESS/GENERAL/it-development/dev-prompt-builders/WorkItemPromptBuilder/app/test-harness.html
+  BUSINESS/GENERAL/it-development/dev-prompt-builders/WorkItemPromptBuilder/docs/  (seven files)
+  Class prefix: wip-
+  Run npm run docs:init after the folder exists so the documents come from the
+  official templates, then fill docs/ssot.html from section 18 of the Hub SSOT.
+
+BEHAVIOUR
+  1. Record read
+     Read tool.getFields() first, then the onReady fields argument, then
+     productData.data_categoriesBased, then objectData.data_categoriesBased.
+     Read: key, kind, title, detail, product, application, severity,
+     reportedBuild, proof, owner, status. Never throw when a field is missing.
+  2. Summary
+     A read-only card: key and kind chip, title, product and application,
+     severity, reportedBuild, owner, status, detail, proof as a link when it is
+     a URL. Show an inline warning line when key, title or detail is blank.
+  3. Inputs, persisted in the tool value
+     mode (new-tool or change-existing), toolName, taxonomyPath, classPrefix,
+     toolPath (change mode only), extraInstruction (optional).
+     Prefill from params on first load, then remember the last values.
+  4. Generate
+     Replace every {{PLACEHOLDER}} in the template. A missing value becomes
+     "not set" or "not recorded". A generated prompt must never contain an
+     unresolved double-brace placeholder, "undefined" or "null".
+     Show the character count and the build of the tool that produced it.
+  5. Copy and download
+     Copy puts the whole prompt on the clipboard, with a select-all fallback
+     when the clipboard API is blocked. Download saves
+     &lt;key&gt;-build-prompt.md.
+  6. Read-only mode
+     Generate, Copy and Download stay active. The six inputs become disabled.
+  7. Params, all optional, all declared
+     buildPromptTemplate (admin override of the prompt text), defaultMode,
+     defaultTaxonomyPath, allowAi (reserved, off by default).
+     Call reportMissingParams only when a parameter is genuinely required and blank.
+  8. No side effects
+     No requestObjects call. No write to the host record. Only tool.setValue for
+     the tool's own state.
+
+TEMPLATE
+  Embed the section 19 prompt verbatim as the built-in default.
+  Use a normal string built from an array of lines joined with "\n", never a
+  template literal, so backticks and dollar-brace inside the prompt can never
+  break the build.
+  Escape any sequence that would close the script tag.
+  When buildPromptTemplate is set, use it and show "custom template" in the UI,
+  with a button that resets to the built-in default.
+
+UI
+  Desktop: two columns, item summary on the left, prompt on the right.
+  One column below 900 px.
+  One accent colour, light surfaces, body text 12 to 14 px.
+  Buttons: Generate prompt, Copy, Download .md, Reset inputs.
+  Header badge "tool build YYYY-MM-DD-rN".
+  Docs use no emoji and no em dashes. The tool UI may keep the icon style of
+  nearby tools.
+
+HARNESS
+  Full page with the mock tool SDK.
+  Sample A: WORK-0007, kind finding, product "Personal Tax Preparation",
+  application "Finance Workspace", reportedBuild 2026-11-03-1, a three-line
+  detail and a proof URL.
+  Sample B: the same record with severity, reportedBuild and proof empty, so the
+  "not recorded" path is testable.
+  Role switcher, read-only toggle, ?bare=1, and ?mode=new-tool.
+
+VERIFY
+  node --check on the JS. Every el('id') resolves to an id in the HTML.
+  The harness renders both samples with no console error.
+  Screenshots at 390 px and at 1280 px, read them, no horizontal scroll.
+  The generated prompt for sample A has zero double-brace placeholders left and
+  contains all seven report lines.
+
+REPORT BACK
+  Files created, the build stamp you wrote, the checks you ran and their result,
+  where to open the tool, and anything you could not do. Do not commit, do not
+  push, do not run npm run rel.
+</pre>
+
+    <div class="callout-ok">
+      <p><strong>After this prompt runs, the loop is closed.</strong> A work item opens, the tool
+      produces the section 19 prompt, a chat builds or fixes the tool, the result is pasted into the
+      Application Store Tool Library, and the item records <code>toolLibraryBuild</code>.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  var KEY = 'delivery_hub_ssot_tasks';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.task-box'));
+  var saved = {};
+
+  try {
+    var raw = window.localStorage.getItem(KEY);
+    if (raw) { saved = JSON.parse(raw) || {}; }
+  } catch (e) { saved = {}; }
+
+  function refresh() {
+    var done = 0;
+    var groupDone = {};
+    var groupTotal = {};
+
+    for (var i = 0; i < boxes.length; i++) {
+      var box = boxes[i];
+      var id = box.getAttribute('data-task') || '';
+      var group = id.split('-')[0];
+      if (!groupTotal[group]) { groupTotal[group] = 0; groupDone[group] = 0; }
+      groupTotal[group]++;
+      if (box.checked) { done++; groupDone[group]++; }
+      var row = box.parentNode.parentNode;
+      if (row && row.classList) { row.classList.toggle('is-done', box.checked); }
+    }
+
+    Object.keys(groupTotal).forEach(function (g) {
+      var el = document.getElementById('cnt-' + g);
+      if (el) { el.textContent = groupDone[g] + ' / ' + groupTotal[g]; }
+    });
+
+    var pct = boxes.length ? Math.round((done * 100) / boxes.length) : 0;
+    var fill = document.getElementById('progressFill');
+    var label = document.getElementById('progressLabel');
+    if (fill) { fill.style.width = pct + '%'; }
+    if (label) { label.textContent = done + ' of ' + boxes.length + ' done (' + pct + '%)'; }
+  }
+
+  function persist() {
+    try { window.localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+  }
+
+  boxes.forEach(function (box) {
+    var id = box.getAttribute('data-task');
+    if (id && typeof saved[id] === 'boolean') { box.checked = saved[id]; }
+    box.addEventListener('change', function () {
+      if (id) { saved[id] = box.checked; }
+      persist();
+      refresh();
+    });
+  });
+
+  var reset = document.getElementById('resetBtn');
+  if (reset) {
+    reset.addEventListener('click', function () {
+      saved = {};
+      persist();
+      for (var i = 0; i < boxes.length; i++) { boxes[i].checked = false; }
+      refresh();
+    });
+  }
+
+  refresh();
+})();
+</script>
+
+<script>
+(function () {
+  function fallbackCopy(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', 'readonly');
+    area.style.position = 'fixed';
+    area.style.left = '-9999px';
+    document.body.appendChild(area);
+    area.select();
+    var copied = false;
+    try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
+    document.body.removeChild(area);
+    return copied;
+  }
+
+  var buttons = document.querySelectorAll('[data-copy-target]');
+
+  Array.prototype.forEach.call(buttons, function (button) {
+    button.addEventListener('click', function () {
+      var block = document.getElementById(button.getAttribute('data-copy-target'));
+      var note = document.getElementById(button.getAttribute('data-copy-note') || '');
+      if (!block) { return; }
+
+      function showNote(text) {
+        if (note) { note.textContent = text; }
+      }
+
+      var text = block.textContent || '';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          showNote('Copied. Paste it into a new Copilot chat.');
+        }, function () {
+          showNote(fallbackCopy(text) ? 'Copied.' : 'Select the text and copy it by hand.');
+        });
+      } else {
+        showNote(fallbackCopy(text) ? 'Copied.' : 'Select the text and copy it by hand.');
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

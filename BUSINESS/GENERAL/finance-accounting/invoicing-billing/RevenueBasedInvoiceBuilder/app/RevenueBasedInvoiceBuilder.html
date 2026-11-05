@@ -87,12 +87,23 @@
   </section>
 
   <section class="rbi-pane" id="pane-settings">
+    <p class="rbi-note">Changes save automatically to this CMS record - there is no separate save button.</p>
     <div class="rbi-card">
       <div class="rbi-card-head">
         <span class="rbi-card-title">🏢 Provider - your company</span>
-        <span class="rbi-card-sub">appears on the invoice header</span>
+        <span class="rbi-card-sub">linked to a CompanyProfile object and used on every invoice</span>
       </div>
       <div class="rbi-form-grid">
+        <div class="rbi-fld rbi-fld-full">
+          <label class="rbi-label" for="rbi-st-profile">Company profile</label>
+          <div class="rbi-profile-row">
+            <select id="rbi-st-profile" class="rbi-input rbi-select"></select>
+            <button type="button" class="rbi-btn rbi-btn-primary rbi-btn-sm" id="rbi-btn-link-profile">Link profile</button>
+            <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-btn-sync-profile">Sync now</button>
+            <button type="button" class="rbi-btn rbi-btn-danger rbi-btn-sm" id="rbi-btn-unlink-profile">Unlink</button>
+          </div>
+          <p class="rbi-note" id="rbi-profile-status">Loading company profiles…</p>
+        </div>
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-name">Company name</label><input type="text" id="rbi-st-name" class="rbi-input" placeholder="Acme Software Inc."></div>
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-taxid">Tax / GST ID</label><input type="text" id="rbi-st-taxid" class="rbi-input" placeholder="123456789 RT0001"></div>
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-email">Email</label><input type="text" id="rbi-st-email" class="rbi-input" placeholder="billing@company.com"></div>
@@ -129,18 +140,6 @@
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-nextseq">Next invoice number</label><input type="number" min="1" step="1" id="rbi-st-nextseq" class="rbi-input"></div>
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-terms">Payment terms</label><select id="rbi-st-terms" class="rbi-input rbi-select"></select></div>
       </div>
-    </div>
-
-    <div class="rbi-card rbi-danger-card rbi-admin">
-      <div class="rbi-card-head"><span class="rbi-card-title">🗑 Danger zone</span></div>
-      <p class="rbi-note">Delete all invoices and reset this tool to a fresh state. This cannot be undone.</p>
-      <div class="rbi-card-foot">
-        <button type="button" class="rbi-btn rbi-btn-danger" id="rbi-btn-reset-data">🗑 Delete All Data</button>
-      </div>
-    </div>
-
-    <div class="rbi-settings-actions">
-      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-btn-save-settings">💾 Save Settings</button>
     </div>
   </section>
 

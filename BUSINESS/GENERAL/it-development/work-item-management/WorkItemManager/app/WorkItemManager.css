@@ -1,0 +1,769 @@
+/* css build 2026-11-04-4 */
+/* Work Item Manager - object-level html tool for one software product work item.
+   Same tokens, font stack and type scale as _docs/assets/ssot.css.
+   Four tabs, one screen. */
+
+.wim-app {
+  --primary: #4f46e5;
+  --ink: #0f172a;
+  --text: #1f2937;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --soft: #f8fafc;
+  --card: #ffffff;
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+  --ok: #16a34a;
+  --risk: #dc2626;
+  --warn: #d97706;
+
+  box-sizing: border-box;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  background: var(--soft);
+  color: var(--text);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.wim-app *,
+.wim-app *::before,
+.wim-app *::after {
+  box-sizing: border-box;
+}
+
+.wim-app [hidden] {
+  display: none !important;
+}
+
+.wim-app :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Header ── */
+.wim-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.wim-header-main {
+  min-width: 0;
+}
+
+.wim-title {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.wim-build-badge {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wim-banner {
+  margin: 8px 0 0;
+  padding: 9px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 14px;
+}
+
+/* ── Chips ── */
+.wim-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.wim-chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.wim-chip-key {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: #3730a3;
+  font-variant-numeric: tabular-nums;
+}
+
+.wim-chip-status {
+  text-transform: lowercase;
+}
+
+.wim-chip-accent {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: #3730a3;
+}
+
+/* ── Tabs ── */
+.wim-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 14px 0 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.wim-tab {
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wim-tab:hover {
+  color: var(--ink);
+}
+
+.wim-tab.is-active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.wim-tab-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 2px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: #3730a3;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.wim-tab.is-active .wim-tab-count {
+  background: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+/* ── Panels ── */
+.wim-panel {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.wim-section-title {
+  margin: 20px 0 10px;
+  padding-bottom: 7px;
+  border-bottom: 2px solid var(--accent-soft);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.wim-section-title:first-child {
+  margin-top: 0;
+}
+
+/* ── Form ── */
+.wim-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-top: 10px;
+}
+
+.wim-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-top: 10px;
+}
+
+.wim-field {
+  margin-top: 10px;
+  min-width: 0;
+}
+
+.wim-grid-2 > .wim-field,
+.wim-grid-3 > .wim-field {
+  margin-top: 0;
+}
+
+.wim-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.wim-optional {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.wim-input,
+.wim-select,
+.wim-textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15.5px;
+  line-height: 1.5;
+}
+
+.wim-textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.wim-input::placeholder,
+.wim-textarea::placeholder {
+  color: #94a3b8;
+}
+
+.wim-input:disabled,
+.wim-select:disabled,
+.wim-textarea:disabled {
+  background: var(--soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.wim-input[readonly] {
+  background: var(--soft);
+}
+
+.wim-hint {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.wim-new-item-hint {
+  margin: 0 0 6px;
+  padding: 8px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* ── Facts ── */
+.wim-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--soft);
+}
+
+.wim-fact {
+  min-width: 0;
+}
+
+.wim-fact dt {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.wim-fact dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+/* ── Buttons ── */
+.wim-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.wim-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wim-button:hover {
+  border-color: var(--accent);
+  color: #3730a3;
+}
+
+.wim-button:disabled {
+  border-color: var(--line);
+  background: var(--soft);
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.wim-button-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.wim-button-primary:hover {
+  border-color: #4338ca;
+  background: #4338ca;
+  color: #ffffff;
+}
+
+.wim-button-small {
+  min-height: 30px;
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.wim-dirty {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.wim-status {
+  min-height: 18px;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #3730a3;
+  overflow-wrap: anywhere;
+}
+
+/* ── Progress ── */
+.wim-rail {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wim-step {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
+
+.wim-step::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--line);
+}
+
+.wim-step:first-child::before {
+  left: 50%;
+}
+
+.wim-step:last-child::before {
+  right: 50%;
+}
+
+.wim-step.is-done::before,
+.wim-step.is-current::before {
+  background: var(--accent);
+}
+
+.wim-step-dot {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0 auto 5px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+}
+
+.wim-step.is-done .wim-step-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.wim-step.is-current .wim-step-dot {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.wim-step-name {
+  display: block;
+  font-size: 13.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.wim-step.is-current .wim-step-name {
+  color: #3730a3;
+  font-weight: 700;
+}
+
+.wim-next-step {
+  margin: 16px 0 0;
+  padding: 10px 13px;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: #3730a3;
+  font-size: 14.5px;
+}
+
+.wim-checks {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wim-check {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 14.5px;
+  min-width: 0;
+}
+
+.wim-check-mark {
+  flex: 0 0 auto;
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.wim-check.is-pass .wim-check-mark {
+  color: var(--ok);
+}
+
+.wim-check.is-fail .wim-check-mark {
+  color: var(--risk);
+}
+
+.wim-check.is-optional .wim-check-mark {
+  color: var(--muted);
+}
+
+.wim-check-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ── Notes ── */
+.wim-notes {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.wim-note {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--soft);
+}
+
+.wim-note-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.wim-note-text {
+  margin: 4px 0 0;
+  font-size: 14.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.wim-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.wim-note-form {
+  margin-top: 14px;
+}
+
+.wim-note-count {
+  align-self: center;
+  margin: 0;
+}
+
+/* ── Prompt ── */
+.wim-template-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.wim-template-row .wim-hint {
+  flex: 1 1 200px;
+  margin: 0;
+  color: #3730a3;
+}
+
+.wim-prompt {
+  max-width: 100%;
+  max-height: 420px;
+  margin: 12px 0 0;
+  padding: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--text);
+  font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ── Screenshots ── */
+.wim-field-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.wim-field-head .wim-label {
+  margin-bottom: 0;
+}
+
+.wim-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.wim-images:empty {
+  display: none;
+}
+
+.wim-image {
+  position: relative;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.wim-image-preview {
+  display: block;
+  width: 100%;
+  height: 104px;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.wim-image-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
+  padding: 6px 9px 8px;
+  font-size: 12.5px;
+}
+
+.wim-image-name {
+  flex: 1 1 70px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wim-image-meta {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.wim-image-open {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.wim-image-open:hover {
+  text-decoration: underline;
+}
+
+.wim-image-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--risk);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wim-image-actions {
+  margin-top: 10px;
+}
+
+.wim-image-status {
+  flex: 1 1 180px;
+  margin: 0;
+}
+
+.wim-image-status.is-error {
+  color: var(--risk);
+}
+
+.wim-image-cleanup {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.wim-image-cleanup summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.wim-image-paths {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+}
+
+/* ── Narrow screens ── */
+@media (max-width: 720px) {
+  .wim-app {
+    padding: 12px;
+    font-size: 15.5px;
+  }
+
+  .wim-input,
+  .wim-select,
+  .wim-textarea {
+    font-size: 16px;
+  }
+
+  .wim-images {
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  }
+
+  .wim-grid-2,
+  .wim-grid-3,
+  .wim-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wim-panel {
+    padding: 13px;
+  }
+
+  .wim-button {
+    min-height: 42px;
+    flex: 1 1 auto;
+  }
+
+  .wim-button-small {
+    flex: 0 0 auto;
+    min-height: 32px;
+  }
+
+  .wim-tab {
+    padding: 8px 14px;
+  }
+
+  .wim-prompt {
+    max-height: 340px;
+  }
+}

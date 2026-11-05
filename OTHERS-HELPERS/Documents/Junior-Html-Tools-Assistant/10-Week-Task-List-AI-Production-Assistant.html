@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10-Week Task List - AI Production Assistant</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --ok: #1d7a36;
+    --ok-soft: #eaf6ed;
+    --warn: #a86400;
+    --warn-soft: #fdf4e3;
+    --stop: #a11a1a;
+    --stop-soft: #fbeceb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 940px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 48px 54px 54px;
+  }
+
+  .doc-header {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+  .org-name {
+    font-size: 11px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .doc-title { font-size: 27px; font-weight: 700; }
+  .doc-subtitle { font-size: 14.5px; color: var(--accent); font-weight: 600; margin-top: 6px; }
+  .doc-meta { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+
+  section { margin-bottom: 24px; }
+  h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 10px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3 { font-size: 13px; margin: 14px 0 6px; }
+  p { font-size: 13.4px; margin-bottom: 8px; }
+  ul, ol { margin: 0 0 8px 21px; }
+  li { font-size: 13.4px; margin-bottom: 5px; }
+  a { color: var(--accent); }
+
+  .callout {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .callout-warn {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-warn p:last-child { margin-bottom: 0; }
+
+  .callout-stop {
+    background: var(--stop-soft);
+    border-left: 4px solid var(--stop);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-stop p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 12.4px; }
+  th, td { padding: 6px 8px; border: 1px solid var(--line); vertical-align: top; text-align: left; }
+  th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 10.8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  td.num { text-align: center; white-space: nowrap; }
+  td.tick { text-align: center; width: 34px; }
+  td.tick input { width: 15px; height: 15px; cursor: pointer; }
+  tr.is-done td { background: #fafdfb; }
+  tr.is-done td:nth-child(2) { text-decoration: line-through; color: var(--muted); }
+  .task-id {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 11px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .day-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 14px 0 4px;
+  }
+  .day-name { font-size: 13px; font-weight: 700; }
+  .day-hours { font-size: 11.5px; color: var(--muted); }
+
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 8px 0 16px;
+  }
+  .progress-bar {
+    flex: 1;
+    min-width: 200px;
+    height: 10px;
+    background: #e6ecf2;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .progress-bar div { height: 100%; width: 0; background: var(--accent); transition: width 0.15s ease; }
+  .progress-label { font-size: 11.8px; color: var(--muted); }
+  .reset-btn {
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+
+  .week-note {
+    font-size: 12.6px;
+    color: #2b3a4d;
+    border-left: 3px solid var(--line);
+    padding-left: 10px;
+    margin-bottom: 8px;
+  }
+
+  .ph {
+    color: var(--muted);
+    font-style: italic;
+    border-bottom: 1px dashed #b6c2cf;
+    padding: 0 2px;
+  }
+
+  .foot {
+    margin-top: 20px;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+    font-size: 11.8px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 820px) {
+    .page { padding: 24px 18px 30px; margin: 10px; }
+    .doc-title { font-size: 21px; }
+    table { font-size: 11.8px; }
+    th, td { padding: 5px 6px; }
+  }
+
+  @page { margin: 14mm 12mm; }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; border: none; box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    .reset-btn { display: none; }
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .callout, .callout-warn, .callout-stop { break-inside: avoid; page-break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">UniconHub</div>
+    <div class="doc-title">10-Week Task List</div>
+    <div class="doc-subtitle">AI Production Assistant - one task at a time</div>
+    <div class="doc-meta">
+      30 hours per week <span>|</span> Reports to <span class="ph">[name]</span> <span>|</span> Start <span class="ph">[date]</span>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section>
+    <h2>1. How to use this list</h2>
+    <div class="callout">
+      <p>
+        <strong>Main target, one sentence:</strong> produce finished, verified work with AI - content
+        packs first, application testing second, small applications third - and prove every result
+        with evidence.
+      </p>
+      <p>
+        Working split: about 40 percent content, 35 percent testing, 25 percent building.
+      </p>
+    </div>
+    <div class="callout">
+      <p>
+        Work from top to bottom. Do not start a task until the one above it is accepted or marked
+        no-action. Every task has one expected output and one piece of evidence. If you cannot show
+        the evidence, the task is not done.
+      </p>
+    </div>
+    <ul>
+      <li><strong>One artifact at a time.</strong> Never run two builds or two content packs in the same day.</li>
+      <li><strong>Two streams maximum per week.</strong> The list already enforces this.</li>
+      <li><strong>30-minute rule.</strong> Blocked for 30 minutes means report it and move to the next task on the list.</li>
+      <li><strong>Everything is written.</strong> Decisions, defects and answers live in the log, not in chat.</li>
+      <li><strong>Tick the box</strong> only when your manager accepted the task or you recorded its evidence.</li>
+    </ul>
+
+    <div class="callout-stop">
+      <p>
+        <strong>Never:</strong> git commands, database access, publishing, editing existing tools or
+        shared rules, testing on live data, inventing a fact or a number. Report instead.
+      </p>
+    </div>
+
+    <h3>Before week 1, your manager must provide</h3>
+    <table>
+      <tr>
+        <th style="width:34%">Item</th>
+        <th>Why it is needed on day one</th>
+      </tr>
+      <tr><td>Workspace copy and template</td><td>Without it day 1 becomes waiting</td></tr>
+      <tr><td>Test environment and the tool list</td><td>The testing stream needs a safe place and three named tools</td></tr>
+      <tr><td>Content subject and official source</td><td>The content stream needs a real source, not a topic</td></tr>
+      <tr><td>Expert reviewer name</td><td>Facts must have an owner before writing starts</td></tr>
+      <tr><td>Access to the AI assistant</td><td>The whole method depends on it</td></tr>
+    </table>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h2>2. Progress</h2>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div id="progressFill"></div></div>
+      <span class="progress-label" id="progressLabel">0 of 0 done</span>
+      <button type="button" class="reset-btn" id="resetBtn">Clear ticks</button>
+    </div>
+    <p style="font-size:11.8px;color:#5a6675">
+      Ticks are stored in this browser only. Print the page each Friday for the weekly review.
+    </p>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2>3. Week 1, day by day</h2>
+    <p class="week-note">
+      Goal: learn the system, produce one tiny tool, one short content piece and one real test
+      report. Week 1 is supervised. Expect corrections.
+    </p>
+
+    <div class="day-head">
+      <span class="day-name">Day 1 - Rules, access, map</span>
+      <span class="day-hours">about 5.5 hours</span>
+    </div>
+    <table>
+      <tr>
+        <th style="width:10%">ID</th>
+        <th style="width:38%">Task</th>
+        <th style="width:36%">Evidence</th>
+        <th class="num" style="width:8%">Hours</th>
+        <th class="num" style="width:6%">Done</th>
+      </tr>
+      <tr>
+        <td class="task-id">W1-01</td>
+        <td>Read the short and the detailed job description. Ask about anything unclear.</td>
+        <td>Signed copy, with your questions written on it</td>
+        <td class="num">0.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-01"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-02</td>
+        <td>Read the rules. Write the six prohibitions in your own words.</td>
+        <td>Six lines in your log</td>
+        <td class="num">0.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-02"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-03</td>
+        <td>Open the workspace and the local test page. Run one read-only check.</td>
+        <td>Screenshot of the test page plus the check output</td>
+        <td class="num">1.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-03"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-04</td>
+        <td>Folder map: for three assigned tools, list the app files and the document files.</td>
+        <td>Table: 3 tools x file names</td>
+        <td class="num">1.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-04"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-05</td>
+        <td>Read the three method notes: how to write a plan, how to show evidence, how to report a defect.</td>
+        <td>Three summaries of five lines each</td>
+        <td class="num">1.0</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-05"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-06</td>
+        <td>Daily lines: done, blocked, next.</td>
+        <td>Three lines in the log</td>
+        <td class="num">0.25</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-06"></td>
+      </tr>
+    </table>
+
+    <div class="day-head">
+      <span class="day-name">Day 2 - First real test report</span>
+      <span class="day-hours">about 6 hours</span>
+    </div>
+    <table>
+      <tr>
+        <th style="width:10%">ID</th>
+        <th style="width:38%">Task</th>
+        <th style="width:36%">Evidence</th>
+        <th class="num" style="width:8%">Hours</th>
+        <th class="num" style="width:6%">Done</th>
+      </tr>
+      <tr>
+        <td class="task-id">W1-07</td>
+        <td>Read the help document of one assigned tool. List its eight main features.</td>
+        <td>A list of 8 features with the matching screen or button</td>
+        <td class="num">1.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-07"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-08</td>
+        <td>Run the 12-action attack list on that tool.</td>
+        <td>Your filled attack sheet with pass or fail on each action</td>
+        <td class="num">2.0</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-08"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-09</td>
+        <td>Write three findings in the standard format. If nothing is wrong, write three checked records instead.</td>
+        <td>Three entries: steps, expected, actual, proof, severity</td>
+        <td class="num">1.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-09"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-10</td>
+        <td>Format review with your manager. Correct what is wrong.</td>
+        <td>Corrected entries, review notes</td>
+        <td class="num">0.75</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-10"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-11</td>
+        <td>Daily lines.</td>
+        <td>Three lines</td>
+        <td class="num">0.25</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-11"></td>
+      </tr>
+    </table>
+
+    <div class="day-head">
+      <span class="day-name">Day 3 - First tiny application</span>
+      <span class="day-hours">about 7 hours</span>
+    </div>
+    <table>
+      <tr>
+        <th style="width:10%">ID</th>
+        <th style="width:38%">Task</th>
+        <th style="width:36%">Evidence</th>
+        <th class="num" style="width:8%">Hours</th>
+        <th class="num" style="width:6%">Done</th>
+      </tr>
+      <tr>
+        <td class="task-id">W1-12</td>
+        <td>Write a one-page plan for a practice tool: purpose, user, inputs, output, empty case, five acceptance lines.</td>
+        <td>One page, maximum 400 words</td>
+        <td class="num">1.0</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-12"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-13</td>
+        <td>Get the plan approved before writing any code.</td>
+        <td>Written approval with the date</td>
+        <td class="num">0.25</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-13"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-14</td>
+        <td>Build the practice tool with AI inside the template. Small steps, not one giant prompt.</td>
+        <td>Tool files and the local test page</td>
+        <td class="num">3.0</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-14"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-15</td>
+        <td>Run the automated checks and fix what fails.</td>
+        <td>Check results, before and after</td>
+        <td class="num">1.0</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-15"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-16</td>
+        <td>Run the acceptance lines and the attack list on your own tool.</td>
+        <td>Acceptance table marked pass or fail</td>
+        <td class="num">0.75</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-16"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-17</td>
+        <td>Write the five-bullet explanation of how the tool works.</td>
+        <td>Five plain sentences that match the code</td>
+        <td class="num">0.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-17"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-18</td>
+        <td>Daily lines.</td>
+        <td>Three lines</td>
+        <td class="num">0.25</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-18"></td>
+      </tr>
+    </table>
+
+    <div class="day-head">
+      <span class="day-name">Day 4 - Review and second test pass</span>
+      <span class="day-hours">about 5.5 hours</span>
+    </div>
+    <table>
+      <tr>
+        <th style="width:10%">ID</th>
+        <th style="width:38%">Task</th>
+        <th style="width:36%">Evidence</th>
+        <th class="num" style="width:8%">Hours</th>
+        <th class="num" style="width:6%">Done</th>
+      </tr>
+      <tr>
+        <td class="task-id">W1-19</td>
+        <td>Manager review of your tool files. Fix what is found.</td>
+        <td>Review notes and the corrected files</td>
+        <td class="num">1.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-19"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-20</td>
+        <td>Capture screenshots and write the handover note.</td>
+        <td>Screenshots and five-line handover note</td>
+        <td class="num">0.75</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-20"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-21</td>
+        <td>Second test pass, on a different assigned tool, using the same attack list.</td>
+        <td>Filled attack sheet</td>
+        <td class="num">2.0</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-21"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-22</td>
+        <td>Update the findings register: remove duplicates, set severity, attach proof.</td>
+        <td>Register with 3 or more clean entries</td>
+        <td class="num">1.0</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-22"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-23</td>
+        <td>Daily lines.</td>
+        <td>Three lines</td>
+        <td class="num">0.25</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-23"></td>
+      </tr>
+    </table>
+
+    <div class="day-head">
+      <span class="day-name">Day 5 - First content piece and review</span>
+      <span class="day-hours">about 6 hours</span>
+    </div>
+    <table>
+      <tr>
+        <th style="width:10%">ID</th>
+        <th style="width:38%">Task</th>
+        <th style="width:36%">Evidence</th>
+        <th class="num" style="width:8%">Hours</th>
+        <th class="num" style="width:6%">Done</th>
+      </tr>
+      <tr>
+        <td class="task-id">W1-24</td>
+        <td>Take a three-page official source. Build a six-item structure with a source line for each item.</td>
+        <td>Structure table with page references</td>
+        <td class="num">1.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-24"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-25</td>
+        <td>Write three of the six items in full: objective, key points, explanation, example, practice, common mistake.</td>
+        <td>Three finished pieces with source lines</td>
+        <td class="num">2.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-25"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-26</td>
+        <td>Walk through your three items as a learner. Record five confusion points.</td>
+        <td>Walk-through note with five points</td>
+        <td class="num">1.0</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-26"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-27</td>
+        <td>Assemble the week pack: one tool, two test reports, one content piece, one evidence sheet.</td>
+        <td>One folder with a four-line contents list</td>
+        <td class="num">0.5</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-27"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-28</td>
+        <td>Weekly review with your manager. Accept or rework each item.</td>
+        <td>Review notes and decisions</td>
+        <td class="num">0.75</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-28"></td>
+      </tr>
+      <tr>
+        <td class="task-id">W1-29</td>
+        <td>Write next week's plan: three lines per stream, with counts.</td>
+        <td>Half a page</td>
+        <td class="num">0.25</td>
+        <td class="tick"><input type="checkbox" class="task-box" data-task="W1-29"></td>
+      </tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>Unallocated buffer.</strong> About four hours per week are deliberately unassigned.
+      Use them for rework from the review. If there is no rework, move them to testing.</p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2>4. Weeks 2 to 10</h2>
+    <p class="week-note">
+      Same pattern every week: content on Monday to Wednesday, testing on Thursday, build on two
+      days, review on Friday. Counts are targets, not quotas to fake.
+    </p>
+
+    <h3>Week 2 - Repeat the pattern with less help</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W2-01</td><td>Content A: brief, source list and structure for the real subject.</td><td>One page plus a structure table with page references</td><td class="num">8</td><td class="tick"><input type="checkbox" class="task-box" data-task="W2-01"></td></tr>
+      <tr><td class="task-id">W2-02</td><td>Content A: write items 1 to 5 in full.</td><td>Five finished pieces, each with a source line</td><td class="num">8</td><td class="tick"><input type="checkbox" class="task-box" data-task="W2-02"></td></tr>
+      <tr><td class="task-id">W2-03</td><td>Testing: three tools from the list, using the 12 actions.</td><td>Three attack sheets plus register entries</td><td class="num">6</td><td class="tick"><input type="checkbox" class="task-box" data-task="W2-03"></td></tr>
+      <tr><td class="task-id">W2-04</td><td>Build: plan for tool 2, then the first build pass.</td><td>Approved plan and a first working draft</td><td class="num">6</td><td class="tick"><input type="checkbox" class="task-box" data-task="W2-04"></td></tr>
+      <tr><td class="task-id">W2-05</td><td>Weekly pack and review.</td><td>Pack, summary, next plan</td><td class="num">1.5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W2-05"></td></tr>
+    </table>
+
+    <h3>Week 3 - Tool 2 finished, content half done</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W3-01</td><td>Content A: write items 6 to 12.</td><td>Seven finished pieces with source lines</td><td class="num">10</td><td class="tick"><input type="checkbox" class="task-box" data-task="W3-01"></td></tr>
+      <tr><td class="task-id">W3-02</td><td>Content A: build the coverage list, version 1, including gaps.</td><td>Table: source topic, item, covered or missing, why</td><td class="num">2</td><td class="tick"><input type="checkbox" class="task-box" data-task="W3-02"></td></tr>
+      <tr><td class="task-id">W3-03</td><td>Testing: four tools.</td><td>Four attack sheets plus register entries</td><td class="num">7</td><td class="tick"><input type="checkbox" class="task-box" data-task="W3-03"></td></tr>
+      <tr><td class="task-id">W3-04</td><td>Build: finish tool 2, run all checks, write the handover note.</td><td>Accepted tool, checks, screenshots, five bullets</td><td class="num">9</td><td class="tick"><input type="checkbox" class="task-box" data-task="W3-04"></td></tr>
+      <tr><td class="task-id">W3-05</td><td>Weekly pack and review.</td><td>Pack, summary, next plan</td><td class="num">1.5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W3-05"></td></tr>
+    </table>
+
+    <h3>Week 4 - Content A drafted, tool 3 planned</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W4-01</td><td>Content A: write items 13 to 18.</td><td>Six finished pieces with source lines</td><td class="num">9</td><td class="tick"><input type="checkbox" class="task-box" data-task="W4-01"></td></tr>
+      <tr><td class="task-id">W4-02</td><td>Content A: learner walk-through and gap list.</td><td>Walk-through note plus a ranked gap list</td><td class="num">3</td><td class="tick"><input type="checkbox" class="task-box" data-task="W4-02"></td></tr>
+      <tr><td class="task-id">W4-03</td><td>Testing: four tools, then consolidate the register.</td><td>Four attack sheets, deduplicated register</td><td class="num">7</td><td class="tick"><input type="checkbox" class="task-box" data-task="W4-03"></td></tr>
+      <tr><td class="task-id">W4-04</td><td>Build: plan for tool 3, approved before code.</td><td>One-page plan with five acceptance lines</td><td class="num">2.5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W4-04"></td></tr>
+      <tr><td class="task-id">W4-05</td><td>Weekly pack and review.</td><td>Pack, summary, next plan</td><td class="num">1.5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W4-05"></td></tr>
+    </table>
+
+    <h3>Week 5 - Content A complete</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W5-01</td><td>Content A: finish the remaining items and close every gap from the gap list.</td><td>Complete content pack</td><td class="num">10</td><td class="tick"><input type="checkbox" class="task-box" data-task="W5-01"></td></tr>
+      <tr><td class="task-id">W5-02</td><td>Content A: review pack for the expert, plus open questions.</td><td>Review pack, maximum two pages</td><td class="num">2</td><td class="tick"><input type="checkbox" class="task-box" data-task="W5-02"></td></tr>
+      <tr><td class="task-id">W5-03</td><td>Testing: five tools.</td><td>Five attack sheets plus register entries</td><td class="num">8</td><td class="tick"><input type="checkbox" class="task-box" data-task="W5-03"></td></tr>
+      <tr><td class="task-id">W5-04</td><td>Build: tool 3 build and checks.</td><td>Working tool plus check results</td><td class="num">9</td><td class="tick"><input type="checkbox" class="task-box" data-task="W5-04"></td></tr>
+      <tr><td class="task-id">W5-05</td><td>Weekly pack and review.</td><td>Pack, summary, next plan</td><td class="num">1.5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W5-05"></td></tr>
+    </table>
+
+    <h3>Week 6 - Mid-point review and content B start</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W6-01</td><td>Content A: apply corrections from the review and mark it as draft for expert review.</td><td>Corrected pack and a change list</td><td class="num">5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W6-01"></td></tr>
+      <tr><td class="task-id">W6-02</td><td>Content B: brief, source list and structure.</td><td>One page plus structure table</td><td class="num">6</td><td class="tick"><input type="checkbox" class="task-box" data-task="W6-02"></td></tr>
+      <tr><td class="task-id">W6-03</td><td>Testing: five tools.</td><td>Five attack sheets plus register entries</td><td class="num">8</td><td class="tick"><input type="checkbox" class="task-box" data-task="W6-03"></td></tr>
+      <tr><td class="task-id">W6-04</td><td>Build: finish tool 3 and add its byproducts.</td><td>Accepted tool, screenshots, short help text</td><td class="num">4</td><td class="tick"><input type="checkbox" class="task-box" data-task="W6-04"></td></tr>
+      <tr><td class="task-id">W6-05</td><td>Mid-point self-assessment and review.</td><td>One page: what went well, what to change</td><td class="num">2</td><td class="tick"><input type="checkbox" class="task-box" data-task="W6-05"></td></tr>
+    </table>
+
+    <h3>Week 7 - Content B and tool 4</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W7-01</td><td>Content B: write items 1 to 8.</td><td>Eight finished pieces with source lines</td><td class="num">10</td><td class="tick"><input type="checkbox" class="task-box" data-task="W7-01"></td></tr>
+      <tr><td class="task-id">W7-02</td><td>Testing: five tools.</td><td>Five attack sheets plus register entries</td><td class="num">8</td><td class="tick"><input type="checkbox" class="task-box" data-task="W7-02"></td></tr>
+      <tr><td class="task-id">W7-03</td><td>Build: plan for tool 4, then the first build pass.</td><td>Approved plan and a working draft</td><td class="num">6</td><td class="tick"><input type="checkbox" class="task-box" data-task="W7-03"></td></tr>
+      <tr><td class="task-id">W7-04</td><td>Weekly pack and review.</td><td>Pack, summary, next plan</td><td class="num">1.5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W7-04"></td></tr>
+    </table>
+
+    <h3>Week 8 - Content B and a consistency pass</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W8-01</td><td>Content B: write items 9 to 16.</td><td>Eight finished pieces with source lines</td><td class="num">10</td><td class="tick"><input type="checkbox" class="task-box" data-task="W8-01"></td></tr>
+      <tr><td class="task-id">W8-02</td><td>Testing: five tools, then the cross-tool consistency report.</td><td>Consistency report: labels, dates, empty states, buttons</td><td class="num">9</td><td class="tick"><input type="checkbox" class="task-box" data-task="W8-02"></td></tr>
+      <tr><td class="task-id">W8-03</td><td>Build: finish tool 4, all checks, handover note.</td><td>Accepted tool and evidence</td><td class="num">6</td><td class="tick"><input type="checkbox" class="task-box" data-task="W8-03"></td></tr>
+      <tr><td class="task-id">W8-04</td><td>Weekly pack and review.</td><td>Pack, summary, next plan</td><td class="num">1.5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W8-04"></td></tr>
+    </table>
+
+    <h3>Week 9 - Content B complete, sweep complete</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W9-01</td><td>Content B: finish the remaining items and reach 100 percent coverage.</td><td>Complete content pack and coverage list</td><td class="num">8</td><td class="tick"><input type="checkbox" class="task-box" data-task="W9-01"></td></tr>
+      <tr><td class="task-id">W9-02</td><td>Content B: learner walk-through and review pack.</td><td>Walk-through note and review pack</td><td class="num">5</td><td class="tick"><input type="checkbox" class="task-box" data-task="W9-02"></td></tr>
+      <tr><td class="task-id">W9-03</td><td>Testing: re-test every fixed item from the register, plus the last tools on the list.</td><td>Regression results and completed register</td><td class="num">8</td><td class="tick"><input type="checkbox" class="task-box" data-task="W9-03"></td></tr>
+      <tr><td class="task-id">W9-04</td><td>Handover notes for content A and B.</td><td>Two short handover notes</td><td class="num">3</td><td class="tick"><input type="checkbox" class="task-box" data-task="W9-04"></td></tr>
+    </table>
+
+    <h3>Week 10 - Handover and final review</h3>
+    <table>
+      <tr><th style="width:10%">ID</th><th style="width:42%">Task</th><th style="width:34%">Output and evidence</th><th class="num" style="width:8%">Hours</th><th class="num" style="width:6%">Done</th></tr>
+      <tr><td class="task-id">W10-01</td><td>Content C: outline and the first item only.</td><td>Approved outline plus one finished item</td><td class="num">6</td><td class="tick"><input type="checkbox" class="task-box" data-task="W10-01"></td></tr>
+      <tr><td class="task-id">W10-02</td><td>Close the findings register: status, severity, owner, re-test result.</td><td>Final register, no open items without an owner</td><td class="num">4</td><td class="tick"><input type="checkbox" class="task-box" data-task="W10-02"></td></tr>
+      <tr><td class="task-id">W10-03</td><td>Handover pack: plans, prompt log, acceptance records, open questions.</td><td>One folder that works without you</td><td class="num">8</td><td class="tick"><input type="checkbox" class="task-box" data-task="W10-03"></td></tr>
+      <tr><td class="task-id">W10-04</td><td>Refresh the byproducts for every tool you touched.</td><td>Screenshots, sample data, help text, one catalog line each</td><td class="num">3</td><td class="tick"><input type="checkbox" class="task-box" data-task="W10-04"></td></tr>
+      <tr><td class="task-id">W10-05</td><td>Final self-assessment and review.</td><td>One page plus the manager decision</td><td class="num">2</td><td class="tick"><input type="checkbox" class="task-box" data-task="W10-05"></td></tr>
+    </table>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h2>5. Weekly gates</h2>
+    <p>Do not move to the next week until the gate is true. If it is not, the week repeats at reduced scope.</p>
+    <table>
+      <tr><th style="width:8%">Week</th><th>Gate</th></tr>
+      <tr><td class="num">1</td><td>Rules repeated back correctly, one tool accepted, two test reports accepted, three content items accepted</td></tr>
+      <tr><td class="num">2</td><td>Plan approved first time, five content items pass the sample audit, three test reports accepted</td></tr>
+      <tr><td class="num">3</td><td>Tool 2 accepted after review, coverage list exists and admits gaps honestly</td></tr>
+      <tr><td class="num">4</td><td>Walk-through recorded, no fatal defect open, tool 3 plan approved</td></tr>
+      <tr><td class="num">5</td><td>Content A complete and signed as draft, tool 3 built and checked</td></tr>
+      <tr><td class="num">6</td><td>Decision recorded, content B structure approved, tool 3 accepted</td></tr>
+      <tr><td class="num">7</td><td>Sample audit passes, five test reports accepted, tool 4 draft works</td></tr>
+      <tr><td class="num">8</td><td>Consistency report delivered, tool 4 accepted</td></tr>
+      <tr><td class="num">9</td><td>Content B signed as draft, every tool on the list tested at least once</td></tr>
+      <tr><td class="num">10</td><td>Handover pack usable without you, final review written</td></tr>
+    </table>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h2>6. Definition of done</h2>
+    <h3>Test report</h3>
+    <ul>
+      <li>ID, artifact, test action, numbered steps, expected and actual result.</li>
+      <li>One screenshot or copied message as proof.</li>
+      <li>Severity set, duplicates merged, reproducible in under a minute.</li>
+    </ul>
+    <h3>Small application</h3>
+    <ul>
+      <li>Template files, local test page, all automated checks pass.</li>
+      <li>Acceptance lines and 12 attacks run, results recorded.</li>
+      <li>Screenshots, five-bullet explanation, short handover note.</li>
+    </ul>
+    <h3>Content pack</h3>
+    <ul>
+      <li>Brief, source list with dates, structure with page references.</li>
+      <li>Every item complete, each factual statement traceable to a source page.</li>
+      <li>Coverage list at 100 percent, or written exclusions with reasons.</li>
+      <li>Learner walk-through recorded, confusion points fixed, review pack written.</li>
+    </ul>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h2>7. If something is blocked</h2>
+    <table>
+      <tr><td style="width:26%"><strong>1. Retry once</strong></td><td>Run the same step again exactly as written. Copy the error message word for word.</td></tr>
+      <tr><td><strong>2. Report in writing</strong></td><td>Task ID, what you did, what happened, the message, what you already tried.</td></tr>
+      <tr><td><strong>3. Move on</strong></td><td>Take the next task on the list. Do not invent a workaround, install anything, or touch another folder.</td></tr>
+    </table>
+    <div class="callout">
+      <p>
+        A blocked task that is reported in 30 minutes costs one hour. A blocked task that is hidden
+        costs a week. Reporting is the job.
+      </p>
+    </div>
+
+    <div class="foot">
+      <p>
+        Counts are targets, not quotas to fake. If a week produces fewer accepted artifacts, the gate
+        is not met, whatever the tick boxes say. Companion documents: the one-page job description,
+        the detailed job description, and the decision summary, all in this folder.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  var KEY = 'uniconhub_tasklist_v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.task-box'));
+  var saved = {};
+
+  try {
+    var raw = window.localStorage.getItem(KEY);
+    if (raw) { saved = JSON.parse(raw) || {}; }
+  } catch (e) {
+    saved = {};
+  }
+
+  function refresh() {
+    var done = 0;
+    for (var i = 0; i < boxes.length; i++) {
+      var box = boxes[i];
+      var row = box.parentNode.parentNode;
+      if (box.checked) { done++; }
+      if (row && row.classList) { row.classList.toggle('is-done', box.checked); }
+    }
+    var pct = boxes.length ? Math.round((done * 100) / boxes.length) : 0;
+    var fill = document.getElementById('progressFill');
+    var label = document.getElementById('progressLabel');
+    if (fill) { fill.style.width = pct + '%'; }
+    if (label) { label.textContent = done + ' of ' + boxes.length + ' done (' + pct + '%)'; }
+  }
+
+  function persist() {
+    try { window.localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+  }
+
+  boxes.forEach(function (box) {
+    var id = box.getAttribute('data-task');
+    if (id && typeof saved[id] === 'boolean') { box.checked = saved[id]; }
+    box.addEventListener('change', function () {
+      if (id) { saved[id] = box.checked; }
+      persist();
+      refresh();
+    });
+  });
+
+  var reset = document.getElementById('resetBtn');
+  if (reset) {
+    reset.addEventListener('click', function () {
+      saved = {};
+      persist();
+      for (var i = 0; i < boxes.length; i++) { boxes[i].checked = false; }
+      refresh();
+    });
+  }
+
+  refresh();
+})();
+</script>
+
+</body>
+</html>

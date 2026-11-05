@@ -1,0 +1,242 @@
+<!-- html build 2026-11-04-4 -->
+<div class="wim-app" id="wim-app">
+
+  <header class="wim-header">
+    <div class="wim-header-main">
+      <h1 class="wim-title">Work Item Manager</h1>
+      <div class="wim-chip-row">
+        <span class="wim-chip wim-chip-key" id="wim-item-key">no key</span>
+        <span class="wim-chip" id="wim-item-kind">no kind</span>
+        <span class="wim-chip wim-chip-status" id="wim-item-status">no status</span>
+        <span class="wim-chip" id="wim-item-severity">no severity</span>
+      </div>
+    </div>
+    <span class="wim-build-badge" id="wim-build-badge" title="Tool code build">tool build</span>
+  </header>
+
+  <p class="wim-banner" id="wim-readonly-banner" role="status" hidden></p>
+
+  <nav class="wim-tabs" role="tablist" aria-label="Work item sections">
+    <button class="wim-tab is-active" id="wim-tab-item" type="button" role="tab" aria-selected="true" aria-controls="wim-panel-item" data-tab="item">Item</button>
+    <button class="wim-tab" id="wim-tab-progress" type="button" role="tab" aria-selected="false" aria-controls="wim-panel-progress" data-tab="progress">Progress</button>
+    <button class="wim-tab" id="wim-tab-notes" type="button" role="tab" aria-selected="false" aria-controls="wim-panel-notes" data-tab="notes">Notes <span class="wim-tab-count" id="wim-notes-tab-count">0</span></button>
+    <button class="wim-tab" id="wim-tab-prompt" type="button" role="tab" aria-selected="false" aria-controls="wim-panel-prompt" data-tab="prompt">Prompt</button>
+  </nav>
+
+  <section class="wim-panel" id="wim-panel-item" role="tabpanel" aria-labelledby="wim-tab-item">
+
+    <p class="wim-hint wim-new-item-hint" id="wim-item-warning" hidden></p>
+
+    <form class="wim-form" id="wim-item-form" action="#" method="get" novalidate>
+      <div class="wim-grid-2">
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-key">Key</label>
+          <input class="wim-input" id="wim-field-key" name="key" type="text" autocomplete="off" spellcheck="false" placeholder="WORK-0008">
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-kind">Kind</label>
+          <select class="wim-select" id="wim-field-kind" name="kind">
+            <option value="finding">finding</option>
+            <option value="request">request</option>
+            <option value="task">task</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="wim-field">
+        <label class="wim-label" for="wim-field-title">Title</label>
+        <input class="wim-input" id="wim-field-title" name="title" type="text" autocomplete="off">
+      </div>
+
+      <div class="wim-grid-3">
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-status">Status</label>
+          <select class="wim-select" id="wim-field-status" name="status">
+            <option value="new">new</option>
+            <option value="accepted">accepted</option>
+            <option value="working">working</option>
+            <option value="done">done</option>
+            <option value="rejected">rejected</option>
+          </select>
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-severity">Severity</label>
+          <select class="wim-select" id="wim-field-severity" name="severity">
+            <option value="">not set</option>
+            <option value="blocker">blocker</option>
+            <option value="high">high</option>
+            <option value="medium">medium</option>
+            <option value="low">low</option>
+          </select>
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-owner">Owner</label>
+          <input class="wim-input" id="wim-field-owner" name="owner" type="text" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="wim-grid-2">
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-product">Product</label>
+          <select class="wim-select" id="wim-field-product" name="product">
+            <option value="">loading products...</option>
+          </select>
+          <input class="wim-input" id="wim-field-product-text" name="productText" type="text" autocomplete="off" hidden>
+          <p class="wim-hint" id="wim-product-hint" hidden></p>
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-application">Application</label>
+          <select class="wim-select" id="wim-field-application" name="application">
+            <option value="">loading applications...</option>
+          </select>
+          <input class="wim-input" id="wim-field-application-text" name="applicationText" type="text" autocomplete="off" hidden>
+          <p class="wim-hint" id="wim-application-hint" hidden></p>
+        </div>
+      </div>
+
+      <div class="wim-grid-3">
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-reported-build">Reported build</label>
+          <input class="wim-input" id="wim-field-reported-build" name="reportedBuild" type="text" autocomplete="off" placeholder="2026-11-03-1">
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-library-build">Tool library build</label>
+          <input class="wim-input" id="wim-field-library-build" name="toolLibraryBuild" type="text" autocomplete="off" placeholder="2026-11-04-1">
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-checked-by">Checked by</label>
+          <input class="wim-input" id="wim-field-checked-by" name="checkedBy" type="text" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="wim-field">
+        <div class="wim-field-head">
+          <span class="wim-label" id="wim-images-label">Screenshots</span>
+          <span class="wim-chip" id="wim-image-count">0 images</span>
+        </div>
+        <div class="wim-images" id="wim-image-list" role="group" aria-labelledby="wim-images-label"></div>
+        <p class="wim-hint" id="wim-image-empty">No images yet. One screenshot makes a finding reproducible.</p>
+        <div class="wim-actions wim-image-actions">
+          <button class="wim-button wim-button-small" id="wim-image-add" type="button">Add image</button>
+          <span class="wim-hint wim-image-status" id="wim-image-status" role="status" aria-live="polite"></span>
+        </div>
+        <details class="wim-image-cleanup" id="wim-image-cleanup" hidden>
+          <summary>Storage paths for cleanup</summary>
+          <ul class="wim-image-paths" id="wim-image-paths"></ul>
+        </details>
+      </div>
+
+      <div class="wim-field">
+        <label class="wim-label" for="wim-field-detail">Detail</label>
+        <textarea class="wim-textarea" id="wim-field-detail" name="detail" rows="4"></textarea>
+      </div>
+
+      <div class="wim-actions">
+        <button class="wim-button wim-button-primary" id="wim-save-item" type="button">Save item</button>
+        <button class="wim-button" id="wim-discard-item" type="button">Discard changes</button>
+        <span class="wim-dirty" id="wim-dirty-indicator" hidden>unsaved changes</span>
+      </div>
+      <p class="wim-status" id="wim-item-status-line" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section class="wim-panel" id="wim-panel-progress" role="tabpanel" aria-labelledby="wim-tab-progress" hidden>
+    <ol class="wim-rail" id="wim-lifecycle-rail">
+      <li class="wim-step" data-step="new">
+        <span class="wim-step-dot" aria-hidden="true"></span>
+        <span class="wim-step-name">New</span>
+      </li>
+      <li class="wim-step" data-step="accepted">
+        <span class="wim-step-dot" aria-hidden="true"></span>
+        <span class="wim-step-name">Accepted</span>
+      </li>
+      <li class="wim-step" data-step="working">
+        <span class="wim-step-dot" aria-hidden="true"></span>
+        <span class="wim-step-name">Working</span>
+      </li>
+      <li class="wim-step" data-step="done">
+        <span class="wim-step-dot" aria-hidden="true"></span>
+        <span class="wim-step-name">Done</span>
+      </li>
+    </ol>
+
+    <p class="wim-next-step" id="wim-next-step">Set the status on the Item tab.</p>
+
+    <h2 class="wim-section-title">Before it can close</h2>
+    <ul class="wim-checks" id="wim-close-checks"></ul>
+  </section>
+
+  <section class="wim-panel" id="wim-panel-notes" role="tabpanel" aria-labelledby="wim-tab-notes" hidden>
+    <ol class="wim-notes" id="wim-note-list"></ol>
+    <p class="wim-empty" id="wim-note-empty">No notes yet.</p>
+
+    <div class="wim-note-form">
+      <label class="wim-label" for="wim-note-input">New note</label>
+      <textarea class="wim-textarea" id="wim-note-input" rows="2" placeholder="What did you check, decide or learn?"></textarea>
+      <div class="wim-actions">
+        <button class="wim-button wim-button-primary" id="wim-note-add" type="button">Add note</button>
+        <span class="wim-hint wim-note-count" id="wim-note-count">0 notes</span>
+      </div>
+    </div>
+    <p class="wim-status" id="wim-note-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="wim-panel" id="wim-panel-prompt" role="tabpanel" aria-labelledby="wim-tab-prompt" hidden>
+    <p class="wim-hint">Built from the Item tab. Edit the item there; this tab only generates and copies the text.</p>
+
+    <h2 class="wim-section-title">From the item</h2>
+    <dl class="wim-facts" id="wim-prompt-source">
+      <div class="wim-fact">
+        <dt>Key</dt>
+        <dd id="wim-source-key">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Kind</dt>
+        <dd id="wim-source-kind">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Title</dt>
+        <dd id="wim-source-title">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Product</dt>
+        <dd id="wim-source-product">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Application</dt>
+        <dd id="wim-source-application">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Severity</dt>
+        <dd id="wim-source-severity">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Reported build</dt>
+        <dd id="wim-source-reported-build">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Screenshots</dt>
+        <dd id="wim-source-images">none</dd>
+      </div>
+    </dl>
+
+    <div class="wim-actions">
+      <button class="wim-button wim-button-primary" id="wim-generate" type="button">Generate prompt</button>
+      <button class="wim-button" id="wim-copy" type="button">Copy</button>
+      <button class="wim-button" id="wim-download" type="button">Download .md</button>
+      <span class="wim-chip wim-chip-accent" id="wim-template-chip" hidden>custom template</span>
+      <span class="wim-chip" id="wim-prompt-char-count">0 characters</span>
+      <span class="wim-chip" id="wim-prompt-build">build -</span>
+    </div>
+
+    <div class="wim-template-row" id="wim-template-row" hidden>
+      <p class="wim-hint" id="wim-template-hint">The admin template is in use.</p>
+      <button class="wim-button wim-button-small" id="wim-use-builtin" type="button">Use built-in template</button>
+    </div>
+
+    <pre class="wim-prompt" id="wim-prompt-output" tabindex="0" aria-label="Generated build prompt">Press Generate prompt to build the text for this item.</pre>
+
+    <p class="wim-status" id="wim-prompt-status" role="status" aria-live="polite"></p>
+  </section>
+
+</div>

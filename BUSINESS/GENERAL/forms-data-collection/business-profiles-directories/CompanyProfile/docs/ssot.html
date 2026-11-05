@@ -128,24 +128,24 @@
   <div id="view-document" class="view">
   <h1>Company Profile</h1>
   <p class="meta">
-    SINGLE SOURCE OF TRUTH for every decision about [short description of what
-    this tool owns - e.g. report rendering, AI chat memory, file upload
-    storage]. Every decision made for this tool is logged in section 11 and
-    this document is updated in the same change as the code. When this
-    document or the code disagree, this document is the tiebreaker - it is
-    updated to capture the final decision, never silently left divergent.
-    [Optional: Companion document: <code>other-document.html</code> - explain
-    the relationship and which sections are superseded here.]
+    SINGLE SOURCE OF TRUTH for every decision about the Company Profile tool -
+    a 17-section company record that feeds tenders, contracts, invoices and
+    directories. It owns the profile scope model (industry + coverage areas),
+    the section visibility rules, the completion model and the saved value
+    shape. Every decision made for this tool is logged in section 11 and this
+    document is updated in the same change as the code. When this document or
+    the code disagree, this document is the tiebreaker - it is updated to
+    capture the final decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.1</td></tr>
-    <tr><th>Last updated</th><td>2026-09-21</td></tr>
+    <tr><th>Document version</th><td>0.3</td></tr>
+    <tr><th>Last updated</th><td>2026-11-04</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (CompanyProfile).</td></tr>
     <tr><th>Primary code areas</th><td><code>app/CompanyProfile.css</code>, <code>app/CompanyProfile.html</code>, <code>app/CompanyProfile.js</code>, <code>app/test-harness.html</code></td></tr>
-    <tr><th>Explicitly out of scope</th><td>[what this document does NOT decide - UI styling, other features, etc.]</td></tr>
+    <tr><th>Explicitly out of scope</th><td>The CMS field configuration around the tool (permissions, allowed object types), the content of the documents listed in the profile, and the exact wording of generated tender packs (not built yet).</td></tr>
     <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
   </table>
 
@@ -171,7 +171,7 @@
 
   <h2 id="sec-purpose">1. Purpose and governance</h2>
   <p>This document defines one tool and one set of invariants around
-  [what the tool does] - and it is the <strong>single source of truth for
+  collecting and maintaining one company profile - and it is the <strong>single source of truth for
   every decision we make</strong> about this tool, now and in the future.
   No decision is considered made until it is written here. Rules of use:</p>
   <ul>
@@ -234,10 +234,80 @@
          ships, move its finished task here from section 15. -->
     <tr>
       <td>C-01</td>
-      <td>[What already works - a user-visible or system behavior]</td>
-      <td><code>[file-or-function that implements it]</code></td>
-      <td>[vX.Y.Z or YYYY-MM-DD]</td>
-      <td>D-CP-NN / release-log row / verified in code on YYYY-MM-DD]</td>
+      <td>Profile setup in Basic Information drives which sections appear in the sidebar. Nothing is hidden until an industry or coverage area is chosen.</td>
+      <td><code>app/CompanyProfile.js</code> - SECTIONS, sectionMatchesProfile, isSectionVisible</td>
+      <td>2026-11-04</td>
+      <td>D-CP-01 / verified in code 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-02</td>
+      <td>Industry presets suggest a coverage set (construction gets tenders, fleet, workforce, compliance, projects, financials, sales tax). A manual selection is preserved; a "use the suggested set" action is offered instead of overwriting it.</td>
+      <td><code>app/CompanyProfile.js</code> - INDUSTRIES, PROFILE_FOCUS_AREAS, applyIndustryPreset, renderProfileSetup</td>
+      <td>2026-11-04</td>
+      <td>D-CP-02 / verified in code 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-03</td>
+      <td>Existing records created before the profile block adopt their industry preset once, so no section disappears from an existing sidebar.</td>
+      <td><code>app/CompanyProfile.js</code> - ensureProfileDefaults, loadDB</td>
+      <td>2026-11-04</td>
+      <td>D-CP-01 / verified in code 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-04</td>
+      <td>Per-section completion ("Complete" or "n of m") plus an overall completion ring that only counts the sections currently in scope.</td>
+      <td><code>app/CompanyProfile.js</code> - sectionProgress, updateCompletion</td>
+      <td>2026-11-04</td>
+      <td>D-CP-01 / verified in code 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-05</td>
+      <td>Modern shell: grouped sidebar navigation, inline SVG line icons (no emoji), previous/next section pager, light and dark themes, responsive horizontal navigation below 820px.</td>
+      <td><code>app/CompanyProfile.html</code>, <code>app/CompanyProfile.css</code>, <code>app/CompanyProfile.js</code> - buildNav, renderPager, updateThemeToggleIcon</td>
+      <td>2026-11-04</td>
+      <td>D-CP-03 / verified in code 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-06</td>
+      <td>The profile scope is saved with the record (profile.focus, profile.presetFocus, profile.showAllSections), so the tailored sidebar survives reloads.</td>
+      <td><code>app/CompanyProfile.js</code> - emptyDB, readBasicInfo, saveDB</td>
+      <td>2026-11-04</td>
+      <td>D-CP-01 / verified in code 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-07</td>
+      <td>Schema version 2: every record carries schemaVersion and normalizeDB guarantees the flexible structures (profile.customFields, profile.customSections, templateId) exist. New optional keys can be added without touching saved records.</td>
+      <td><code>app/CompanyProfile.js</code> - CURRENT_SCHEMA_VERSION, normalizeDB, normalizeCustomFields, loadDB</td>
+      <td>2026-11-04</td>
+      <td>D-CP-04 / verified in code 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-08</td>
+      <td>Starting templates for common scenarios (General company, Public tenders, Software / IT vendor, Nonprofit &amp; grants, Healthcare provider). A template sets industry, coverage and the active template marker in one click; adding a scenario is one array entry.</td>
+      <td><code>app/CompanyProfile.js</code> - PROFILE_TEMPLATES, renderTemplateChips, applyTemplate</td>
+      <td>2026-11-04</td>
+      <td>D-CP-04 / verified in the harness 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-09</td>
+      <td>Brand &amp; Positioning statements are readable cards. Only one card is edited at a time (Edit, word count, Save / Cancel); the other statements stay readable.</td>
+      <td><code>app/CompanyProfile.js</code> - STATEMENTS, renderMission, openStatementEditor, saveStatementEditor; <code>app/CompanyProfile.css</code> - cp-stmt-*</td>
+      <td>2026-11-04</td>
+      <td>D-CP-05 / verified in the harness 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-10</td>
+      <td>Additional details: any built-in section can receive extra fields (label, type, value) through the + button in its header. Values are stored in profile.customFields[sectionId].</td>
+      <td><code>app/CompanyProfile.js</code> - renderCustomFieldBlocks, customFieldRowHtml, addCustomField, updateCustomFieldProp</td>
+      <td>2026-11-04</td>
+      <td>D-CP-04 / verified in the harness 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-11</td>
+      <td>User-defined custom sections: create a titled section with its own field list, edit it later, or delete it. Custom sections appear in their own sidebar group and count towards completion.</td>
+      <td><code>app/CompanyProfile.js</code> - ensureCustomSectionElements, renderCustomSections, openCustomSectionModal, deleteCustomSection</td>
+      <td>2026-11-04</td>
+      <td>D-CP-04 / verified in the harness 2026-11-04</td>
     </tr>
   </table>
   <p class="note">When adopting this template for an existing tool, fill
@@ -369,6 +439,36 @@
       <td class="status-adopted">Adopted</td>
     </tr>
     -->
+    <tr>
+      <td>D-CP-01</td><td>2026-11-04</td>
+      <td>Sections are shown or hidden by the profile setup in Basic Information (industry + coverage areas). Hiding is a navigation decision only: no data is deleted, hidden sections keep their saved values, and "Show all sections" restores every section.</td>
+      <td>One tool must serve a construction company bidding on tenders and an IT company with no tender work. A single fixed 17-section form made both profiles noisy. The trade-off is that the sidebar can hide data the user forgot about; the hidden-sections note and the Show all toggle mitigate it.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-02</td><td>2026-11-04</td>
+      <td>Choosing an industry applies that industry's suggested coverage set only while the current selection is still the previous suggestion. Manual selections are never overwritten; the setup offers "Use the suggested set" instead.</td>
+      <td>Prevents losing a hand-picked scope when the industry changes (common when a company is reclassified), while keeping the one-click preset benefit for new records.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-03</td><td>2026-11-04</td>
+      <td>The shell is modernised: grouped navigation, inline SVG line icons instead of emoji, section pager, completion ring, light/dark themes, responsive horizontal navigation below 820px.</td>
+      <td>A profile used for tenders and contracts must look professional. Inline icons avoid an external icon library in the tool sandbox, and token-based theming keeps every component readable in both modes.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-04</td><td>2026-11-04</td>
+      <td>The saved value becomes schema version 2 with three extension points: profile.customFields (extra fields attached to any built-in section), profile.customSections (user-defined sections with their own field list) and industry-based starting templates. normalizeDB guarantees the structures and never removes unknown keys; adding a new field type or template is a data change, not a migration.</td>
+      <td>New profile requirements must not force a rewrite of the tool or a migration of existing records. Custom fields and sections cover tenant-specific data; templates cover new scenarios (tenders, grants, vendor onboarding). The trade-off is that custom data has no typed validation beyond the chosen field type, which is acceptable because the tool is a data collector, not a validator.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-05</td><td>2026-11-04</td>
+      <td>Long statements are edited one card at a time: the Brand &amp; Positioning section renders five read-only statement cards; Edit opens that card's textarea with a word count and Save / Cancel, and opening another card saves the current one first.</td>
+      <td>Five stacked textareas looked like a draft form and made the section hard to scan. Cards keep the written profile readable while editing stays deliberate. The trade-off is that typing is not auto-saved until Save, which is why Cancel and Save are explicit.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -398,7 +498,17 @@
   <p>Decision points we resolve together before or during implementation.
   Every answer becomes a dated row in section 11.</p>
   <ol>
-    <li><strong>[Question].</strong> [Context and options under discussion.]</li>
+    <li><strong>Tender-specific data as its own section?</strong> Bonding and
+    surety capacity, insurance limits, prequalification registrations and
+    vendor numbers currently have no dedicated home - they would sit in
+    Documents or Reference Projects. Should they become a "Tender &amp;
+    Procurement" section, shown only for the tender focus?</li>
+    <li><strong>Per-tenant presets?</strong> The industry presets are built in.
+    Should a CMS application be able to supply its own preset (for example a
+    tenant that always works with grants) through a tool parameter?</li>
+    <li><strong>Profile PDF export?</strong> Should a completed profile be
+    exportable as a tender-ready PDF (cover, company identity, certificates,
+    references, capacity), and is that a tool or a listing-tool feature?</li>
   </ol>
 
   <h2 id="sec-tasklist">15. Development task list</h2>
@@ -497,6 +607,189 @@
   </section>
   END OF TEMPLATE SAMPLE -->
 
+  <section class="task-group" data-release-group="PROFILE-MODERN" data-group-status="in-progress">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Profile scope and modernization</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="PROFILE-MODERN">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="PROFILE-MODERN"></div></div>
+    <p class="task-group-note">Why these belong together: the profile scope decides the sidebar, and the
+    sidebar is rendered by the modern shell. Splitting them would ship a navigation that hides or shows
+    the wrong sections.</p>
+
+    <div class="task-item" data-task-id="T-01" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Profile setup controls the sidebar</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a construction tender profile and an IT profile needed different sections from one 17-section form.</p>
+          <p><strong>How we will solve it:</strong> industry select + coverage chips in Basic Information; SECTIONS entries carry a "needs" list; hidden sections keep their data.</p>
+          <p><strong>Benefit:</strong> the sidebar only shows what the profile is used for, while every saved value stays intact.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.html</code>, <code>app/CompanyProfile.js</code>, <code>app/CompanyProfile.css</code></p>
+          <p><strong>Status:</strong> done - verified 2026-11-04</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-02" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Industry presets that never overwrite manual choices</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a new profile needs a sensible starting scope without losing a hand-picked one.</p>
+          <p><strong>How we will solve it:</strong> applyIndustryPreset applies a preset only while the current focus equals the previous suggestion; otherwise the setup offers "Use the suggested set".</p>
+          <p><strong>Benefit:</strong> one click gives a fitting profile; manual work is never lost.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - INDUSTRIES, PROFILE_FOCUS_AREAS, applyIndustryPreset</p>
+          <p><strong>Status:</strong> done - verified 2026-11-04</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-03" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Modern shell - grouped nav, icons, pager, themes</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the old emoji-heavy shell did not look professional for tender and contract use.</p>
+          <p><strong>How we will solve it:</strong> token-based light/dark themes, grouped sidebar, inline SVG line icons, section state chips, completion ring, previous/next pager, responsive horizontal nav.</p>
+          <p><strong>Benefit:</strong> a modern, professional surface with the same data model.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.css</code>, <code>app/CompanyProfile.html</code>, <code>app/CompanyProfile.js</code></p>
+          <p><strong>Status:</strong> done - verified 2026-11-04</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-04" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">Existing records adopt their preset once</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> records saved before the profile block exists would otherwise show an empty focus set.</p>
+          <p><strong>How we will solve it:</strong> ensureProfileDefaults runs once per record (profile.initialized) and adopts the industry preset when no focus was ever chosen.</p>
+          <p><strong>Benefit:</strong> no section disappears for existing profiles.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - ensureProfileDefaults</p>
+          <p><strong>Status:</strong> done - verified 2026-11-04</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-05" data-group="PROFILE-MODERN" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Dedicated Tender &amp; Procurement section</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> bonding capacity, insurance limits, prequalification registrations and vendor numbers have no home (open question 1 in section 14).</p>
+          <p><strong>How we will solve it:</strong> a new section shown only for the tenders focus, with fields for bonding and surety capacity, insurance limits, prequalification list and vendor numbers.</p>
+          <p><strong>Benefit:</strong> tender submissions can be prepared from the profile without hunting through documents.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.html</code>, <code>app/CompanyProfile.js</code> - new section + SECTIONS entry</p>
+          <p><strong>Status:</strong> waiting for the answer to open question 1</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-06" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Starting templates for new scenarios</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a new scenario (tender, grant, vendor onboarding) required clicking industry and coverage chips one by one.</p>
+          <p><strong>How we will solve it:</strong> PROFILE_TEMPLATES entries set industry, focus, presetFocus and templateId in one click. Adding a scenario is one array entry.</p>
+          <p><strong>Benefit:</strong> a fitting profile in one click; new scenarios never require structural changes.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - PROFILE_TEMPLATES, applyTemplate, renderTemplateChips</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-04</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-07" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Statement cards with one-at-a-time editing</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> five stacked textareas in Brand &amp; Positioning did not look professional and made the section hard to scan.</p>
+          <p><strong>How we will solve it:</strong> statement cards render the saved text read-only; Edit opens one textarea with a word count and Save / Cancel. Opening another card saves the current edit first.</p>
+          <p><strong>Benefit:</strong> the profile reads like a document and editing is deliberate.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - STATEMENTS, renderMission, openStatementEditor, saveStatementEditor; <code>app/CompanyProfile.css</code> - cp-stmt-*</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-04</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-08" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Additional custom fields on any section</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a tenant needs one extra detail (a tender ID, a licence reference) that has no field in the built-in model.</p>
+          <p><strong>How we will solve it:</strong> the + button in a section header adds a row to profile.customFields[sectionId] with a label, a type (text, long text, number, date, link, email) and a value.</p>
+          <p><strong>Benefit:</strong> unlimited extension without changing the built-in sections or the schema.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - renderCustomFieldBlocks, addCustomField, removeCustomField, updateCustomFieldProp</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-04 (Tender ID = ABC-123 persisted)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-09" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">User-defined custom sections</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> some profiles need a whole area the built-in model does not have (safety statistics, sustainability, certifications by region).</p>
+          <p><strong>How we will solve it:</strong> New custom section in the sidebar footer creates a titled section with its own field list; the pencil edits the title, the field grid adds and removes fields; deletion needs a second click.</p>
+          <p><strong>Benefit:</strong> the tool can carry any new profile requirement without a code change.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - ensureCustomSectionElements, renderCustomSections, openCustomSectionModal, deleteCustomSection</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-04 (Safety statistics created with fields)</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Future ideas live here until they are decided. We discuss each idea and
   write the outcome inside its details. An agreed idea moves to the task list
@@ -529,6 +822,54 @@
     </details>
   </div>
   END OF TEMPLATE SAMPLE -->
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Tender readiness score</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> a score card for the tender focus that checks the evidence a submission usually needs: legal identity, tax number, insurance, safety certificate, three references, bonding capacity, financial statements.</p>
+        <p><strong>Why:</strong> the completion ring counts sections, but a tender reviewer looks for specific evidence. A readiness score would tell the user what to collect next.</p>
+        <p><strong>Discussion / outcome:</strong> new - depends on the Tender &amp; Procurement section (T-05).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Per-tenant industry presets</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> let a CMS application pass its own coverage preset through a tool parameter instead of relying on the built-in industry list.</p>
+        <p><strong>Why:</strong> a tenant that only works with grants, or only with municipal tenders, would start from an exact scope instead of an approximation.</p>
+        <p><strong>Discussion / outcome:</strong> open question 2 in section 14.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Tender-ready profile PDF</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> export the profile as a formatted PDF: identity page, certificates with expiry status, reference projects, references and capacity.</p>
+        <p><strong>Why:</strong> tender packages ask for a company profile document, and re-typing the same data into Word is where most of the time goes.</p>
+        <p><strong>Discussion / outcome:</strong> open question 3 in section 14 - tool feature or listing-tool feature.</p>
+      </div>
+    </details>
+  </div>
 
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
   <p>[Preparation: what accounts, tenants, browsers, and test data the pass

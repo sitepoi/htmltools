@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool QA Tracker - Architecture and Decision</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --ok: #1d7a36;
+    --ok-soft: #eaf6ed;
+    --warn: #a86400;
+    --warn-soft: #fdf4e3;
+    --stop: #a11a1a;
+    --stop-soft: #fbeceb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 940px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 48px 54px 54px;
+  }
+
+  .doc-header {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+  .org-name {
+    font-size: 11px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .doc-title { font-size: 27px; font-weight: 700; }
+  .doc-subtitle { font-size: 14.5px; color: var(--accent); font-weight: 600; margin-top: 6px; }
+  .doc-meta { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+
+  section { margin-bottom: 24px; }
+  h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 10px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3 { font-size: 13px; margin: 14px 0 6px; }
+  p { font-size: 13.4px; margin-bottom: 8px; }
+  ul, ol { margin: 0 0 8px 21px; }
+  li { font-size: 13.4px; margin-bottom: 5px; }
+  a { color: var(--accent); }
+
+  .answer {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 13px 16px;
+    background: #f8fbfd;
+    margin-bottom: 12px;
+  }
+  .answer h3 { margin: 0 0 5px; color: var(--accent); font-size: 14.5px; }
+  .answer p { font-size: 13.4px; margin-bottom: 6px; }
+  .answer p:last-child { margin-bottom: 0; }
+
+  .callout {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .callout-warn {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-warn p:last-child { margin-bottom: 0; }
+
+  .callout-stop {
+    background: var(--stop-soft);
+    border-left: 4px solid var(--stop);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-stop p:last-child { margin-bottom: 0; }
+
+  .callout-ok {
+    background: var(--ok-soft);
+    border-left: 4px solid var(--ok);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-ok p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 12.4px; }
+  th, td { padding: 6px 8px; border: 1px solid var(--line); vertical-align: top; text-align: left; }
+  th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 10.8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  td.num { text-align: center; white-space: nowrap; }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .b-low { background: var(--ok-soft); color: var(--ok); border: 1px solid #bfe0c8; }
+  .b-med { background: var(--warn-soft); color: var(--warn); border: 1px solid #ecd6a6; }
+  .b-high { background: var(--stop-soft); color: var(--stop); border: 1px solid #efc2bf; }
+  .b-neutral { background: #eef2f6; color: #475569; border: 1px solid #d8dee6; }
+
+  .key {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 11.5px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  code {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 11.8px;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+
+  .flow {
+    display: grid;
+    grid-template-columns: 1fr 44px 1fr 44px 1fr;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0 14px;
+  }
+  .flow-box {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: #fbfcfd;
+    font-size: 12.4px;
+    min-height: 92px;
+  }
+  .flow-box strong { display: block; color: var(--accent); font-size: 12.8px; margin-bottom: 3px; }
+  .flow-arrow { text-align: center; color: var(--muted); font-size: 18px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 12px; }
+  .card { border: 1px solid var(--line); border-radius: 4px; padding: 11px 13px; background: #fbfcfd; }
+  .card h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: 0 0 5px; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+  .card ul { margin: 0 0 0 17px; }
+
+  .ph {
+    color: var(--muted);
+    font-style: italic;
+    border-bottom: 1px dashed #b6c2cf;
+    padding: 0 2px;
+  }
+
+  .demo {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fbfcfd;
+    padding: 10px 13px;
+    font-size: 12.3px;
+    margin-bottom: 10px;
+  }
+  .demo b { color: var(--accent); }
+
+  .foot {
+    margin-top: 20px;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+    font-size: 11.8px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 820px) {
+    .page { padding: 24px 18px 30px; margin: 10px; }
+    .doc-title { font-size: 21px; }
+    .flow { grid-template-columns: 1fr; }
+    .flow-arrow { transform: rotate(90deg); }
+    .grid-2 { grid-template-columns: 1fr; }
+    table { font-size: 11.8px; }
+    th, td { padding: 5px 6px; }
+  }
+
+  @page { margin: 14mm 12mm; }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; border: none; box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .answer, .callout, .callout-warn, .callout-stop, .callout-ok, .flow-box, .card, .demo {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">UniconHub</div>
+    <div class="doc-title">Tool QA Tracker</div>
+    <div class="doc-subtitle">How to manage test results, bugs and feature requests for every tool</div>
+    <div class="doc-meta">
+      Document: <span class="ph">QA-2026-01</span> |
+      Prepared: 2026-11-04 |
+      Version: <span class="ph">1.0</span>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section>
+    <h2>1. The recommendation</h2>
+    <div class="answer">
+      <h3>Mixed, exactly as you described, with one hard boundary</h3>
+      <p>
+        Build <strong>one central tracker application</strong> that owns the registry of every tool,
+        the test checklists, the test runs and the issues. Then add a <strong>thin reporter</strong>
+        inside the tool host or the test harness that only creates a record and attaches its own
+        context. Never build a second tracker inside each tool, and never store issues in the tool's
+        saved value.
+      </p>
+      <p>
+        The hard boundary: the central tracker is for <strong>internal QA only</strong>. No tenant
+        data, no customer records, no screenshots from a live tenant. Customer-facing reporting, if
+        you ever need it, is a separate channel that keeps data inside the tenant.
+      </p>
+    </div>
+
+    <div class="callout-ok">
+      <p>
+        <strong>Why this fits your situation:</strong> you already have the tool registry in
+        <code>catalog-data.js</code>, the publish state per tool, the 8-subject completeness model,
+        the TYPE 3 listing-tool pattern for collections and the TYPE 1 object-viewer pattern for a
+        single record. Nothing new has to be invented; the work is assembling four existing pieces
+        and adding one small reporter.
+      </p>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h2>2. Why the three simpler options are not enough</h2>
+    <table>
+      <tr>
+        <th style="width:22%">Option</th>
+        <th style="width:38%">What happens in practice</th>
+        <th>Verdict</th>
+      </tr>
+      <tr>
+        <td><strong>Embedded only</strong><br>(a panel inside every tool)</td>
+        <td>Each tool gets its own mini tracker. Fifty tools means fifty places to look. No cross-tool queue, no weekly report, no triage view. Every tool change risks breaking reporting.</td>
+        <td><span class="badge b-high">Reject</span> as the whole solution</td>
+      </tr>
+      <tr>
+        <td><strong>Separate only</strong><br>(one app, no reporter)</td>
+        <td>The junior leaves the tool, finds the app, finds the tool in a list, retypes the build number and the context. Most reports lose the details that make them fixable.</td>
+        <td><span class="badge b-med">Workable</span> but slow</td>
+      </tr>
+      <tr>
+        <td><strong>Documents</strong><br>(spreadsheet per tool, docs per run)</td>
+        <td>Exactly the mess you are trying to end: duplicated rows, stale files, no counts, nobody knows which version was tested.</td>
+        <td><span class="badge b-high">Reject</span></td>
+      </tr>
+      <tr>
+        <td><strong>Issues in the tool's saved value</strong></td>
+        <td>The 1MB field limit, issues travel with a copy of the tool, no querying across tools, and a corrupted value takes the issues with it.</td>
+        <td><span class="badge b-high">Reject</span></td>
+      </tr>
+      <tr>
+        <td><strong>Mixed model</strong></td>
+        <td>One source of truth for the queue, plus a two-click report from inside the tool with its own context attached.</td>
+        <td><span class="badge b-low">Choose</span></td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2>3. Architecture: four components</h2>
+    <div class="flow">
+      <div class="flow-box">
+        <strong>1. Registry</strong>
+        One record per tool. Slug, code, folder, build, docs, screenshots, publish state. Seeded from the repo and refreshed, never typed by hand.
+      </div>
+      <div class="flow-arrow">+</div>
+      <div class="flow-box">
+        <strong>2. Tracker (central app)</strong>
+        The only queue. Issues, checklists, runs, triage, filters, roll-ups, exports. Built as a TYPE 3 listing tool.
+      </div>
+      <div class="flow-arrow">+</div>
+      <div class="flow-box">
+        <strong>3. Thin reporter</strong>
+        A button and a small form. It sends tool slug, build, role, browser, viewport and the description. It does not list or manage anything.
+      </div>
+    </div>
+    <p>
+      The fourth component is the registry feed: the repo scan writes <code>tool-registry.json</code>,
+      the tracker imports it, and the tracker exports <code>tool-quality-state.json</code> that the
+      catalog build reads. One direction each way, no two-way sync.
+    </p>
+
+    <table>
+      <tr>
+        <th style="width:24%">Component</th>
+        <th style="width:22%">Lives where</th>
+        <th>Owns</th>
+      </tr>
+      <tr><td>Registry</td><td>CMS object type <code>tool-registry-uniconbaseapps</code></td><td>Tool identity, code, folder, current build, publish snapshot</td></tr>
+      <tr><td>Issue log</td><td>CMS object type <code>tool-dev-issues-uniconbaseapps</code></td><td>Bugs, feature requests, tasks, questions, evidence, timeline</td></tr>
+      <tr><td>Checklists</td><td>CMS object type <code>tool-test-checklists-uniconbaseapps</code></td><td>Versioned test scripts, shared across tools</td></tr>
+      <tr><td>Test runs</td><td>CMS object type <code>tool-test-runs-uniconbaseapps</code></td><td>One record per session against one build, with per-check results</td></tr>
+      <tr><td>Tracker UI</td><td>Application-level TYPE 3 listing tool</td><td>Views, triage, filters, exports</td></tr>
+      <tr><td>Reporter</td><td>Test harness first, tool template second, CMS host shell optional</td><td>Context capture and record creation only</td></tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>Do not merge issues and runs.</strong> A test run is "I tested build X against
+      checklist Y, 18 passed, 2 failed". An issue is "this specific thing is wrong, here is how to
+      reproduce it". One run can create three issues; one issue can be found by three runs. Mixing
+      them makes both unusable.</p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2>4. The data model</h2>
+
+    <h3>4.1 Registry, one per tool</h3>
+    <table>
+      <tr><th style="width:26%">Field</th><th style="width:18%">Type</th><th>Note</th></tr>
+      <tr><td><span class="key">slug</span></td><td>text, unique</td><td>Folder name, for example <code>PersonalTaxPreparation</code>. The join key everywhere.</td></tr>
+      <tr><td><span class="key">code</span></td><td>text, 3 to 5 letters</td><td>Used in issue keys, for example <code>PTP-14</code>.</td></tr>
+      <tr><td><span class="key">name</span></td><td>text</td><td>Display name.</td></tr>
+      <tr><td><span class="key">folder</span>, <span class="key">path</span>, <span class="key">category</span></td><td>text</td><td>Identity from the repo.</td></tr>
+      <tr><td><span class="key">currentBuild</span></td><td>text</td><td>Last build seen in the repo, format YYYY-MM-DD-rN.</td></tr>
+      <tr><td><span class="key">harness</span>, <span class="key">docsCount</span>, <span class="key">screenshots</span></td><td>number / bool</td><td>Readiness facts, imported.</td></tr>
+      <tr><td><span class="key">publish</span></td><td>object</td><td>Snapshot of version, date and the 8 subjects. Read-only here.</td></tr>
+      <tr><td><span class="key">lastRun</span></td><td>object</td><td>Date, build, verdict, pass rate. Written by the tracker when a run closes.</td></tr>
+      <tr><td><span class="key">openIssues</span></td><td>object</td><td>Counts by severity. Derived, refreshed on issue change.</td></tr>
+      <tr><td><span class="key">flags</span></td><td>array</td><td><code>untestedSinceBuild</code>, <code>publishedUntested</code>, <code>noChecklist</code>.</td></tr>
+      <tr><td><span class="key">active</span></td><td>bool</td><td>Parked tools stay in the registry but leave the queue.</td></tr>
+    </table>
+
+    <h3>4.2 Checklist, shared and versioned</h3>
+    <table>
+      <tr><th style="width:26%">Field</th><th style="width:18%">Type</th><th>Note</th></tr>
+      <tr><td><span class="key">id</span>, <span class="key">name</span>, <span class="key">version</span></td><td>text</td><td>Example: <code>standard-attacks</code>, version 3.</td></tr>
+      <tr><td><span class="key">appliesTo</span></td><td>object</td><td><code>{ type: "all" | "category" | "slug", value: "..." }</code>. Avoid one checklist per tool.</td></tr>
+      <tr><td><span class="key">checks</span></td><td>array</td><td><code>{ id, title, method, expected, severityIfFail }</code>. The 12 attacks plus tool-specific acceptance lines.</td></tr>
+      <tr><td><span class="key">status</span></td><td>enum</td><td>active, retired. Runs keep a copy of the version they used.</td></tr>
+    </table>
+
+    <h3>4.3 Test run, one per session</h3>
+    <table>
+      <tr><th style="width:26%">Field</th><th style="width:18%">Type</th><th>Note</th></tr>
+      <tr><td><span class="key">toolSlug</span>, <span class="key">build</span></td><td>text</td><td>Never optional. A run without a build is not a result.</td></tr>
+      <tr><td><span class="key">checklistId</span>, <span class="key">checklistVersion</span></td><td>text</td><td>So an old run stays explainable after the checklist changes.</td></tr>
+      <tr><td><span class="key">tester</span>, <span class="key">startedAt</span>, <span class="key">finishedAt</span></td><td>text / date</td><td>Who and how long.</td></tr>
+      <tr><td><span class="key">environment</span></td><td>object</td><td>Browser, viewport, role, data state (empty, typical, extreme).</td></tr>
+      <tr><td><span class="key">results</span></td><td>array</td><td><code>{ checkId, status: pass | fail | skipped, note, issueId }</code>.</td></tr>
+      <tr><td><span class="key">verdict</span></td><td>enum</td><td>pass, pass with issues, blocked.</td></tr>
+    </table>
+
+    <h3>4.4 Issue, one per problem or request</h3>
+    <table>
+      <tr><th style="width:26%">Field</th><th style="width:18%">Type</th><th>Note</th></tr>
+      <tr><td><span class="key">key</span></td><td>text, unique</td><td><code>PTP-14</code>, per-tool counter. The only ID a person says out loud.</td></tr>
+      <tr><td><span class="key">kind</span></td><td>enum</td><td>bug, feature, task, question, improvement.</td></tr>
+      <tr><td><span class="key">title</span>, <span class="key">description</span></td><td>text</td><td>One line, then the detail.</td></tr>
+      <tr><td><span class="key">steps</span>, <span class="key">expected</span>, <span class="key">actual</span></td><td>text</td><td>Required for bugs. Optional for features.</td></tr>
+      <tr><td><span class="key">severity</span></td><td>enum</td><td>blocker, critical, major, minor, trivial. Proposed by the reporter, confirmed by the owner.</td></tr>
+      <tr><td><span class="key">status</span></td><td>enum</td><td>new, triaged, accepted, in progress, fixed, verified, closed, deferred, rejected, duplicate.</td></tr>
+      <tr><td><span class="key">foundInBuild</span>, <span class="key">fixedInBuild</span>, <span class="key">verifiedInBuild</span></td><td>text</td><td>The three versions that matter. Verified requires a second run.</td></tr>
+      <tr><td><span class="key">reporter</span>, <span class="key">assignee</span></td><td>object</td><td>User id and name.</td></tr>
+      <tr><td><span class="key">evidence</span></td><td>array</td><td><code>{ type: screenshot | text | log | url, value }</code>.</td></tr>
+      <tr><td><span class="key">links</span></td><td>object</td><td>Test run id, duplicate of, related to.</td></tr>
+      <tr><td><span class="key">timeline</span></td><td>array</td><td><code>{ at, by, action, note }</code>. Append only, so history is never lost.</td></tr>
+      <tr><td><span class="key">source</span></td><td>enum</td><td>reporter, tracker, import.</td></tr>
+    </table>
+
+    <div class="demo">
+      <b>Example issue</b><br>
+      Key: <b>PTP-14</b>. Kind: bug. Title: "Currency total disappears after reload".<br>
+      Found in build: 2026-10-28-r3. Severity: major. Status: triaged.<br>
+      Steps: 1 open the tool, 2 add two invoices in EUR, 3 reload.<br>
+      Expected: totals remain. Actual: the EUR total shows 0.00.<br>
+      Evidence: screenshot 01 and the console message.<br>
+      Linked run: RUN-2026-11-04-02, check "reload preserves state", result fail.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h2>5. The thin reporter</h2>
+    <p>
+      One button. One small form. It captures context automatically and creates one record. It never
+      lists, filters, triages or stores anything else.
+    </p>
+
+    <h3>5.1 What it captures automatically</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>Captured</h4>
+        <ul>
+          <li>Tool slug and tool build</li>
+          <li>Current user id, name and role</li>
+          <li>Browser, viewport width, language</li>
+          <li>The screen or step the user was on</li>
+          <li>Last console error, if captured</li>
+          <li>Timestamp</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Never captured</h4>
+        <ul>
+          <li>Saved field values or record content</li>
+          <li>Customer or tenant names</li>
+          <li>Object names, addresses or personal data</li>
+          <li>Files attached in a production tenant</li>
+          <li>Anything the user did not type on purpose</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>5.2 Where the button lives, in order of preference</h3>
+    <table>
+      <tr>
+        <th style="width:8%">#</th>
+        <th style="width:26%">Place</th>
+        <th style="width:30%">Effort</th>
+        <th>Verdict</th>
+      </tr>
+      <tr>
+        <td class="num">1</td>
+        <td><strong>Test harness shell</strong></td>
+        <td>One template change, then regenerate harnesses</td>
+        <td><span class="badge b-low">Start here</span> the junior tests in the harness anyway, and no production code changes</td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td><strong>Tool template</strong></td>
+        <td>A shared snippet in every new tool, about 120 lines</td>
+        <td><span class="badge b-med">Next</span> gives real users and testers the same button</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td><strong>CMS host shell around the iframe</strong></td>
+        <td>Platform change plus a boot message contract from each tool</td>
+        <td><span class="badge b-neutral">Best long term</span> one implementation, all tools, no retrofit</td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td><strong>Inside the tool's own UI</strong></td>
+        <td>Per tool, plus every tool change risks reporting</td>
+        <td><span class="badge b-high">Avoid</span> duplicates the shell and multiplies maintenance</td>
+      </tr>
+    </table>
+
+    <h3>5.3 The boot contract that makes option 3 possible</h3>
+    <p>
+      Every tool already shows <code>TOOL_BUILD</code> and logs <code>[TOOL:BOOT] build ...</code>.
+      Add one line so the host can read it:
+    </p>
+    <div class="demo">
+      <b>Message from tool to host, on ready</b><br>
+      <code>{ source: "uniconhub-tool", type: "boot", slug: "PersonalTaxPreparation", build: "2026-10-28-r3" }</code><br>
+      No tenant data, no saved values, no user details. The host then knows which tool and build it is
+      showing, and can open the reporter with both fields already filled.
+    </div>
+    <p>
+      This is the cheapest possible integration: one message, no API, no schema, works for all 50
+      tools the moment they are rebuilt.
+    </p>
+
+    <h3>5.4 Degradation rules</h3>
+    <ul>
+      <li>If object create is not allowed, the button hides. It never shows a broken form.</li>
+      <li>If the network or the create call fails, the text of the report is copied to the clipboard and shown in a box, so nothing is lost.</li>
+      <li>If the role is viewer, the button hides.</li>
+      <li>If the tool is running in a production tenant, the button is hidden by configuration. Reporting is a test-tenant feature.</li>
+    </ul>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h2>6. The central tracker</h2>
+    <p>
+      Build it as a TYPE 3 application-level listing tool. It reads and writes objects through
+      <code>requestObjects</code>, keeps only UI state in its own saved value, and uses the existing
+      patterns from the catalog page: filters, sortable columns, a right-side detail pane, load more.
+    </p>
+
+    <h3>6.1 Six views, no more</h3>
+    <table>
+      <tr><th style="width:22%">View</th><th style="width:34%">What it answers</th><th>Built from</th></tr>
+      <tr><td><strong>My queue</strong></td><td>What do I test or fix next?</td><td>Issues assigned to me plus tools flagged <code>untestedSinceBuild</code></td></tr>
+      <tr><td><strong>Triage inbox</strong></td><td>What is new and needs a decision?</td><td>Issues with status new, oldest first, grouped by tool</td></tr>
+      <tr><td><strong>Tools matrix</strong></td><td>Which tool is healthy, stale or blocked?</td><td>One row per registry record, with counts and flags</td></tr>
+      <tr><td><strong>Tool detail</strong></td><td>What is the history of this one tool?</td><td>Issues plus runs, newest first, with the current build at the top</td></tr>
+      <tr><td><strong>Runs</strong></td><td>What was tested, on which build, by whom?</td><td>Run records, filterable by tool and date</td></tr>
+      <tr><td><strong>Weekly report</strong></td><td>What changed this week?</td><td>Counts by tool and severity, plus the export</td></tr>
+    </table>
+
+    <h3>6.2 The three flags that do the real work</h3>
+    <table>
+      <tr>
+        <th style="width:30%">Flag</th>
+        <th style="width:30%">Rule</th>
+        <th>Why it matters</th>
+      </tr>
+      <tr><td><code>untestedSinceBuild</code></td><td>The registry's current build is newer than the last run's build</td><td>This is the entire junior queue, generated automatically. Nobody decides what to test by memory.</td></tr>
+      <tr><td><code>publishedUntested</code></td><td>Publish state has a version, but no passing run exists for that build</td><td>Catches the worst case: something is live and nobody tested the build that shipped.</td></tr>
+      <tr><td><code>openBlockers</code></td><td>Any issue with severity blocker or critical, status not closed or rejected</td><td>Stops a release conversation in one line.</td></tr>
+    </table>
+
+    <h3>6.3 Status flow and who may do what</h3>
+    <table>
+      <tr><th style="width:20%">Action</th><th style="width:24%">Who</th><th>Rule</th></tr>
+      <tr><td>Create issue or run</td><td>Reporter, editor, manager</td><td>Always allowed. Severity is a proposal, not a decision.</td></tr>
+      <tr><td>Set severity and priority</td><td>Owner or manager</td><td>Only here. Prevents a junior labelling everything critical.</td></tr>
+      <tr><td>Assign</td><td>Owner or manager</td><td>Usually to the person who fixes it, not the tester.</td></tr>
+      <tr><td>Mark fixed</td><td>Developer or owner</td><td>Requires <code>fixedInBuild</code>.</td></tr>
+      <tr><td>Mark verified and closed</td><td>Tester, on a second run</td><td>Never the person who fixed it. That is the whole point of verification.</td></tr>
+      <tr><td>Delete</td><td>Nobody</td><td>Use rejected or duplicate. History is append only.</td></tr>
+    </table>
+
+    <div class="callout">
+      <p><strong>One queue, one register.</strong> After phase 1 there is no spreadsheet, no document
+      per run and no chat message that contains a bug. If a finding is not in the tracker, it does not
+      exist. That single rule is what keeps the junior's work from turning into a pile of files.</p>
+    </div>
+
+    <h3>6.4 HtmlToolLibraryItem: the right per-tool surface, not the tracker</h3>
+    <p>
+      You already have the perfect place to <strong>see and report</strong> the issues of one tool:
+      the HtmlToolLibraryItem editor that holds details, HTML, CSS, JS, preview, documents,
+      screenshots and versions. It should get a QA tab. It should not become the tracker.
+    </p>
+    <table>
+      <tr>
+        <th style="width:34%">Belongs in HtmlToolLibraryItem</th>
+        <th>Belongs in the central tracker</th>
+      </tr>
+      <tr>
+        <td>A Report button in the header, always one click away</td>
+        <td>The queue of what to test next</td>
+      </tr>
+      <tr>
+        <td>This tool's open issues, newest first, with severity and status</td>
+        <td>Triage across all tools, oldest first</td>
+      </tr>
+      <tr>
+        <td>This tool's test runs and the last tested build</td>
+        <td>The tools matrix and the three flags</td>
+      </tr>
+      <tr>
+        <td>Verify fixed on the build that is open in the editor</td>
+        <td>Weekly counts, exports and reports</td>
+      </tr>
+      <tr>
+        <td>Current build shown next to the code version</td>
+        <td>Severity rules, assignment and release decisions</td>
+      </tr>
+    </table>
+
+    <p><strong>Why the tab is cheap.</strong> The tool already writes child objects for documents and
+    for code versions. QA records are one more child type, queried by the tool record id. Nothing in
+    the tool's own saved value changes, so the 1MB budget and the existing code path stay untouched.</p>
+
+    <table>
+      <tr><th style="width:26%">Detail</th><th>Decision</th></tr>
+      <tr><td>Object type</td><td><code>tool-qa-issues-uniconbaseapps</code>, scope shared, plus <code>tool-qa-runs-uniconbaseapps</code></td></tr>
+      <tr><td>Link key</td><td><code>toolId</code> (the tool record id) plus <code>toolSlug</code> and <code>toolName</code> for readability</td></tr>
+      <tr><td>Build number</td><td>Parsed from the JS <code>TOOL_BUILD</code> constant when the editor saves, cached as a read-only <code>currentBuild</code> on the record; every issue and run carries it</td></tr>
+      <tr><td>Permissions</td><td>Creating an issue is allowed even when the tool record is read-only, because the issue is a different object. Triage, severity and assignment stay with the owner or manager.</td></tr>
+      <tr><td>Isolation</td><td>The QA tab loads on first open, is behind a param, and never blocks the code tabs. If the object API is unavailable, the tab shows a message and the rest of the editor works exactly as before.</td></tr>
+      <tr><td>Cost</td><td>About 2 to 4 days for the tab and the report form, 3 to 5 days for the board</td></tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>Why it cannot be the only place.</strong> HtmlToolLibraryItem is an object-level
+      tool, so it shows one tool at a time. It cannot answer "what do I test today", "which tools were
+      published without a run" or "what is new across all tools". Those are the questions the junior
+      and the manager ask every morning, and they need one application-level view.</p>
+    </div>
+
+    <div class="callout-ok">
+      <p><strong>No extra object per application.</strong> You create one new object type and one
+      application-level board in the Application Store. Records appear only when someone reports
+      something. Applications that use a tool do not get their own copies; QA belongs to the tool
+      record, not to the place where the tool is mounted.</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h2>7. How the junior uses it, day to day</h2>
+    <table>
+      <tr><th style="width:14%">When</th><th style="width:44%">What she does</th><th>What the tracker shows afterwards</th></tr>
+      <tr><td>Monday</td><td>Opens <strong>Tools matrix</strong>, filters <code>untestedSinceBuild</code>, takes the top three</td><td>Three tools with a build and no run against it</td></tr>
+      <tr><td>During testing</td><td>Runs the checklist in the harness, records one run per tool</td><td>A run with pass and fail counts, linked to the build</td></tr>
+      <tr><td>On each failure</td><td>Clicks Report, describes steps, expected and actual, attaches one screenshot</td><td>An issue with her name, the build, the run and the evidence</td></tr>
+      <tr><td>Tuesday and Thursday</td><td>Owner triages: confirms severity, assigns, accepts or rejects</td><td>Status moves from new to triaged or rejected, with a note</td></tr>
+      <tr><td>Friday</td><td>Re-tests fixed items on the new build, marks verified, closes</td><td>Issue verified, last run updated, flag cleared or still open</td></tr>
+      <tr><td>Friday afternoon</td><td>Exports the weekly report</td><td>Counts, pass rate, open items by tool, no document writing</td></tr>
+    </table>
+    <div class="callout-ok">
+      <p><strong>What this replaces:</strong> one spreadsheet per tool, one document per test session,
+      chat messages that contain half a report, and the weekly scramble to find which build was
+      actually tested.</p>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section>
+    <h2>8. How it connects to what already exists</h2>
+    <table>
+      <tr>
+        <th style="width:28%">Existing asset</th>
+        <th style="width:32%">Becomes</th>
+        <th>Direction</th>
+      </tr>
+      <tr><td><code>catalog-data.js</code> GENERATED region<br>(tool list, files, docs, screenshots, modified date)</td><td>The registry seed: slug, code, folder, path, category, counts</td><td>Repo to tracker, one way, on demand</td></tr>
+      <tr><td><code>tool-publish-state.json</code><br>(8 subjects, version, date)</td><td>A read-only snapshot on each registry record</td><td>Repo to tracker, one way</td></tr>
+      <tr><td>Tool build badge and boot log</td><td>The build number carried by every run and issue</td><td>Tool to host to tracker</td></tr>
+      <tr><td>TYPE 3 listing-tool pattern</td><td>The tracker UI itself</td><td>Reuse</td></tr>
+      <tr><td>TYPE 1 object viewer pattern</td><td>Read-only issue view for people who should not edit</td><td>Reuse</td></tr>
+      <tr><td>Tracker quality counts</td><td>A QA column beside the publish score in the catalog page</td><td>Tracker to repo, exported JSON, read at catalog build time</td></tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>Never duplicate the truth.</strong> Tool identity and publish state belong to the
+      catalog. QA findings belong to the tracker. Each side keeps a read-only snapshot of the other
+      and refreshes it on demand. The moment both sides can edit the same field, you have two truths
+      and the old mess returns.</p>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section>
+    <h2>9. Guardrails you should not skip</h2>
+    <table>
+      <tr><th style="width:26%">Risk</th><th style="width:12%">Impact</th><th>Control</th></tr>
+      <tr>
+        <td>Tenant data leaks into the central tracker through screenshots or copied text</td>
+        <td><span class="badge b-high">High</span></td>
+        <td>Reporter disabled in production tenants. Attachments allowed only in the test tenant. Automatic context never includes saved values or record names. A visible line in the form: "no customer data".</td>
+      </tr>
+      <tr>
+        <td>The tracker becomes a second full-time system to maintain</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Four object types, six views, one reporter. Anything more is a later decision, not phase 1.</td>
+      </tr>
+      <tr>
+        <td>Duplicate issues for the same defect</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Search by tool and title before creating. Triage merges into a duplicate link, never deletes.</td>
+      </tr>
+      <tr>
+        <td>Runs without a build number</td>
+        <td><span class="badge b-high">High</span></td>
+        <td>Build is a required field, prefilled by the boot contract or the registry.</td>
+      </tr>
+      <tr>
+        <td>Issue counts grow forever</td>
+        <td><span class="badge b-low">Low</span></td>
+        <td>Archive closed issues older than 12 months. 50 tools with 30 issues each is still a small dataset.</td>
+      </tr>
+      <tr>
+        <td>Tools break when the object API is not allowed</td>
+        <td><span class="badge b-high">High</span></td>
+        <td>The reporter is additive and hidden when unavailable. Existing tool behaviour never depends on it.</td>
+      </tr>
+      <tr>
+        <td>The junior reports opinions as defects</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Required steps, expected, actual and evidence. Triage rejects anything without a reproduction.</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 10 -->
+  <section>
+    <h2>10. Build plan</h2>
+    <table>
+      <tr>
+        <th style="width:8%">Phase</th>
+        <th style="width:30%">What</th>
+        <th style="width:12%">Effort</th>
+        <th>Definition of done</th>
+      </tr>
+      <tr>
+        <td class="num">0</td>
+        <td>Freeze the schema, create the four object types, roles and permissions, seed 10 tools</td>
+        <td>1 day</td>
+        <td>An issue can be created by hand and queried by tool</td>
+      </tr>
+      <tr>
+        <td class="num">1</td>
+        <td>Tracker v1: triage inbox, tools matrix, issue create and edit, filters, CSV export</td>
+        <td>3 to 5 days</td>
+        <td>The junior can work all day in it without a spreadsheet</td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td>Checklists and runs, verification flow, the three flags</td>
+        <td>3 to 4 days</td>
+        <td>A run against a build exists for every tested tool</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td>Reporter in the harness, then in the tool template, pilot on 5 tools</td>
+        <td>2 to 3 days</td>
+        <td>A report takes under 60 seconds and carries the build automatically</td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td>Registry import script, quality export, QA column in the catalog page</td>
+        <td>1 to 2 days</td>
+        <td>Tool identity and QA state agree, with no manual typing</td>
+      </tr>
+      <tr class="total"><td></td><td><strong>Total</strong></td><td>10 to 15 days</td><td>One developer, two to three weeks</td></tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>The junior starts before the tracker exists.</strong> Do not improvise folders. Use
+      one file, one tab, with exactly the issue fields from section 4.4 for the first two weeks. The
+      phase 1 import reads that file and closes it. Temporary means temporary: one file, deleted after
+      import.</p>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section>
+    <h2>11. Application or tool: choose the unit of testing</h2>
+    <div class="answer">
+      <h3>Neither alone. Test the instance.</h3>
+      <p>
+        A tool is reusable and configurable. An application bundles tools and may use the same tool
+        several times in different objects. What a user actually experiences is one
+        <strong>tool instance</strong>: one tool, inside one application, at one placement, with one
+        configuration. That is the unit to test, report on and assign.
+      </p>
+    </div>
+
+    <h3>11.1 Three levels, three questions</h3>
+    <table>
+      <tr>
+        <th style="width:14%">Level</th>
+        <th style="width:22%">Identity</th>
+        <th style="width:26%">Owns</th>
+        <th style="width:20%">Question it answers</th>
+        <th>Run</th>
+      </tr>
+      <tr>
+        <td><strong>Tool</strong><br>(library item)</td>
+        <td><code>toolId</code></td>
+        <td>Code, build, defaults, docs, test harness</td>
+        <td>Does the tool work at all?</td>
+        <td>Harness or reference instance, about 20 minutes</td>
+      </tr>
+      <tr>
+        <td><strong>Instance</strong><br>(tool mounted in an application)</td>
+        <td><code>appId + toolId + placement</code></td>
+        <td>Configuration, field settings, object types, permissions at that placement</td>
+        <td>Does this configuration work with this application's data?</td>
+        <td>Instance acceptance, 15 to 25 minutes</td>
+      </tr>
+      <tr>
+        <td><strong>Application</strong></td>
+        <td><code>appId</code></td>
+        <td>Data model, workflows across tools, roles, folders</td>
+        <td>Can a user complete the application's main job?</td>
+        <td>Application smoke, 10 to 20 minutes</td>
+      </tr>
+    </table>
+
+    <div class="grid-2">
+      <div class="card">
+        <h4>Why not tool only</h4>
+        <p>A tool can pass its harness and fail in a vertical, because the configuration, the object
+        types or the field settings differ. That failure is invisible at tool level.</p>
+      </div>
+      <div class="card">
+        <h4>Why not application only</h4>
+        <p>The same tool appears in many applications. Testing by application retests it twenty
+        times, produces duplicate tickets, and leaves you unable to say whether the fault is the tool
+        or the configuration.</p>
+      </div>
+    </div>
+
+    <h3>11.2 The identity rule</h3>
+    <p>
+      <code>instanceId = appId + toolId + placement</code>, where placement is the object type and
+      the field the tool is mounted on. Placement belongs in the key because one application may
+      bundle the same tool several times, at different levels, with different configurations.
+    </p>
+    <p>
+      Store a <code>configHash</code> as well: a hash of the tool parameters and field settings only.
+      Never the values, never secrets, never customer data. When the hash changes, the instance counts
+      as untested again.
+    </p>
+
+    <h3>11.3 The scope field that makes triage fast</h3>
+    <table>
+      <tr><th style="width:16%">Scope</th><th style="width:38%">How you know</th><th>What it means</th></tr>
+      <tr><td><strong>tool</strong></td><td>Fails in the harness or in the reference instance</td><td>Fix once, verify everywhere. Highest priority.</td></tr>
+      <tr><td><strong>instance</strong></td><td>Fails only in this application, or only with this configuration</td><td>Fix the configuration or the placement, not the code.</td></tr>
+      <tr><td><strong>data</strong></td><td>Fails only on one record or one data shape</td><td>Data problem. No code change.</td></tr>
+      <tr><td><strong>application</strong></td><td>Several tools fail together, or roles and flows break</td><td>Application-level integration, not a tool defect.</td></tr>
+    </table>
+
+    <h3>11.4 Triage in four questions</h3>
+    <ol>
+      <li>Does it fail in the harness with the default settings? Then it is a <strong>tool</strong> issue.</li>
+      <li>Does it also fail in a second application using the same tool? Then it is probably a <strong>tool</strong> issue.</li>
+      <li>Does it fail only here, with this configuration? Then it is an <strong>instance</strong> issue.</li>
+      <li>Does it fail only on this record? Then it is a <strong>data</strong> issue.</li>
+    </ol>
+
+    <h3>11.5 Checklists that scale</h3>
+    <p>Do not write a checklist per application. Build each run from three layers:</p>
+    <table>
+      <tr><td style="width:24%"><strong>Base</strong></td><td>The tool checklist, shared by every instance: the 12 attacks plus the tool acceptance lines. About 20 minutes.</td></tr>
+      <tr><td><strong>Vertical addendum</strong></td><td>Checks for a category or application type, for example restaurant-specific fields. About 10 minutes.</td></tr>
+      <tr><td><strong>Configuration checks</strong></td><td>Five to ten checks generated from the instance parameters. About 10 minutes.</td></tr>
+    </table>
+
+    <h3>11.6 Flags at the right level</h3>
+    <table>
+      <tr><td style="width:30%"><code>untestedSinceBuild</code></td><td>Tool level: the build changed.</td></tr>
+      <tr><td><code>untestedSinceConfig</code></td><td>Instance level: the configuration hash changed.</td></tr>
+      <tr><td><code>appSmokeStale</code></td><td>Application level: a tool was added, removed or moved, or the field model changed.</td></tr>
+      <tr><td><code>publishedUntested</code></td><td>Instance level: the application is live with a configuration that has no passing run.</td></tr>
+    </table>
+
+    <div class="callout-warn">
+      <p><strong>Do not retest everything.</strong> Test changed tool builds, changed configurations,
+      changed application structures, plus one rotating sample per week. The flags produce that list;
+      nobody decides it from memory.</p>
+    </div>
+
+    <h3>11.7 Where each report comes from</h3>
+    <table>
+      <tr><td style="width:32%">HtmlToolLibraryItem</td><td>Tool-level report: build, code context and harness result. Scope defaults to <code>tool</code>.</td></tr>
+      <tr><td>Reporter inside a running instance</td><td>Instance-level report: carries appId, placement, configHash and build. Scope defaults to <code>instance</code>.</td></tr>
+      <tr><td>Central board</td><td>Everything: tools matrix, instances matrix and applications matrix.</td></tr>
+    </table>
+
+    <h3>11.8 Easy mode: the minimum you actually run</h3>
+    <p>
+      The model stays detailed; the daily work must not be. Hide it behind these defaults and nobody
+      has to think about application, tool, placement or scope while testing.
+    </p>
+    <table>
+      <tr><th style="width:24%">Default</th><th>Rule</th></tr>
+      <tr><td><strong>Three data states</strong></td><td>Empty, typical, extreme. Never invent more.</td></tr>
+      <tr><td><strong>Three checklists</strong></td><td>Smoke, 5 minutes. The 12 attacks, 15 minutes. The tool acceptance list from its own SSOT, 5 minutes. Nothing else.</td></tr>
+      <tr><td><strong>Two pass depths</strong></td><td>A quick pass of 20 to 25 minutes on every change. A deep pass of 45 minutes once per quarter, per tool.</td></tr>
+      <tr><td><strong>One queue</strong></td><td>Changed builds, changed configurations, changed application structures, plus five rotating tools per week.</td></tr>
+      <tr><td><strong>One form</strong></td><td>What happened, what you expected, what you did, screenshot. Tool, build, application, placement and scope are prefilled.</td></tr>
+      <tr><td><strong>Three actions for the tester</strong></td><td>New, waiting, done. The other statuses are the manager's job.</td></tr>
+    </table>
+
+    <h3>11.9 The weekly arithmetic</h3>
+    <table>
+      <tr><th style="width:30%">Item</th><th class="num" style="width:16%">Quantity</th><th>Effect</th></tr>
+      <tr><td>Testing time per week at 30 hours</td><td class="num">10 h</td><td>Enough for 10 to 13 quick passes plus re-tests and reporting</td></tr>
+      <tr><td>Changed tools and configurations</td><td class="num">5 to 8</td><td>Always first, because they carry the risk</td></tr>
+      <tr><td>Rotating sample</td><td class="num">5</td><td>Guarantees the whole library cycles</td></tr>
+      <tr><td>Re-tests and reporting</td><td class="num">2.5 h</td><td>Keeps the plan honest</td></tr>
+      <tr class="total"><td>Result</td><td class="num">10 to 13 passes</td><td>Full library coverage about every 5 weeks without a full-time tester</td></tr>
+    </table>
+
+    <h3>11.10 The only four numbers in the weekly review</h3>
+    <table>
+      <tr><td style="width:34%"><strong>Open blockers</strong></td><td>Anything that stops a release. Target zero before publishing.</td></tr>
+      <tr><td><strong>Tools untested since build</strong></td><td>The real backlog. Should trend down every week.</td></tr>
+      <tr><td><strong>Instances untested since config</strong></td><td>Configurations that changed but were not re-checked.</td></tr>
+      <tr><td><strong>Issues older than 14 days</strong></td><td>Anything aging without a decision. Close it, fix it or park it.</td></tr>
+    </table>
+
+    <h3>11.11 Six rules that keep it small</h3>
+    <ol>
+      <li>Do not test every configuration permutation. One representative configuration per vertical.</li>
+      <li>Do not test features that are not in the acceptance list. The list is the contract.</li>
+      <li>Do not reopen a closed issue. Create a new one and link it.</li>
+      <li>Do not report taste as a bug. It is an improvement, low priority, batched once a week.</li>
+      <li>Do not retest an unchanged tool because it feels risky. The flag decides.</li>
+      <li>Do not write a document per run. The run is the document.</li>
+    </ol>
+
+    <div class="callout-ok">
+      <p><strong>The one sentence to remember:</strong> you do not manage the model, you manage three
+      lists - what to test, what is waiting for triage, and what is waiting for verification. The
+      registry, the flags, the counts and the weekly report are calculated, never maintained by
+      hand.</p>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section>
+    <h2>12. Decisions needed from you</h2>
+    <table>
+      <tr><th style="width:5%">#</th><th style="width:32%">Decision</th><th style="width:26%">Options</th><th>Recommendation</th></tr>
+      <tr><td class="num">1</td><td>Where does the tracker live?</td><td>TYPE 3 app in the CMS, or a standalone web app</td><td>TYPE 3 in the CMS: native users, roles, attachments, no second auth</td></tr>
+      <tr><td class="num">2</td><td>Where does the reporter go first?</td><td>Tool UI, test harness, or CMS host shell</td><td>Harness now, host shell later</td></tr>
+      <tr><td class="num">3</td><td>Who triages?</td><td>You, a manager, or a developer</td><td>You or one manager. Severity is never the reporter's decision.</td></tr>
+      <tr><td class="num">4</td><td>Attachments</td><td>Any tenant, test tenant only, none</td><td>Test tenant only, small images, no customer data</td></tr>
+      <tr><td class="num">5</td><td>Do customers report bugs?</td><td>Not now, or a separate tenant-local channel</td><td>Not now. Keep the central tracker internal.</td></tr>
+      <tr><td class="num">6</td><td>How many tools in phase 1?</td><td>All, or a pilot of 10</td><td>Pilot of 10, then import the rest</td></tr>
+      <tr><td class="num">7</td><td>Issue key format</td><td><code>PTP-14</code> or global <code>QA-142</code></td><td>Per-tool key. It is what people say in conversation.</td></tr>
+      <tr><td class="num">8</td><td>Unit of testing</td><td>Tool only, application only, or instance</td><td>Instance: <code>appId + toolId + placement</code>, with scope <code>tool | instance | data | application</code></td></tr>
+    </table>
+
+    <div class="foot">
+      <p>
+        Companion documents in this folder: the one-page job description, the 10-week task list and the
+        decision summary. The registry and publish state live in the tools catalog; this document adds
+        only the QA layer and does not change either of them.
+      </p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

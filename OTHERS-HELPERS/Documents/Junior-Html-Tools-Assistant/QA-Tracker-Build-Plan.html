@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Tracker - Build Plan and Scaling Model</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --ok: #1d7a36;
+    --ok-soft: #eaf6ed;
+    --warn: #a86400;
+    --warn-soft: #fdf4e3;
+    --stop: #a11a1a;
+    --stop-soft: #fbeceb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 940px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 48px 54px 54px;
+  }
+
+  .doc-header {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+  .org-name {
+    font-size: 11px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .doc-title { font-size: 27px; font-weight: 700; }
+  .doc-subtitle { font-size: 14.5px; color: var(--accent); font-weight: 600; margin-top: 6px; }
+  .doc-meta { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+
+  section { margin-bottom: 24px; }
+  h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 10px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3 { font-size: 13px; margin: 14px 0 6px; }
+  p { font-size: 13.4px; margin-bottom: 8px; }
+  ul, ol { margin: 0 0 8px 21px; }
+  li { font-size: 13.4px; margin-bottom: 5px; }
+  a { color: var(--accent); }
+
+  .answer {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 13px 16px;
+    background: #f8fbfd;
+    margin-bottom: 12px;
+  }
+  .answer h3 { margin: 0 0 5px; color: var(--accent); font-size: 14.5px; }
+  .answer p { font-size: 13.4px; margin-bottom: 6px; }
+  .answer p:last-child { margin-bottom: 0; }
+
+  .callout {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .callout-warn {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-warn p:last-child { margin-bottom: 0; }
+
+  .callout-stop {
+    background: var(--stop-soft);
+    border-left: 4px solid var(--stop);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-stop p:last-child { margin-bottom: 0; }
+
+  .callout-ok {
+    background: var(--ok-soft);
+    border-left: 4px solid var(--ok);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .callout-ok p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 12.4px; }
+  th, td { padding: 6px 8px; border: 1px solid var(--line); vertical-align: top; text-align: left; }
+  th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 10.8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  td.num { text-align: center; white-space: nowrap; }
+  tr.total td { background: #f8fafc; font-weight: 600; }
+  tr.win td { background: #f2f9f4; }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .b-low { background: var(--ok-soft); color: var(--ok); border: 1px solid #bfe0c8; }
+  .b-med { background: var(--warn-soft); color: var(--warn); border: 1px solid #ecd6a6; }
+  .b-high { background: var(--stop-soft); color: var(--stop); border: 1px solid #efc2bf; }
+  .b-neutral { background: #eef2f6; color: #475569; border: 1px solid #d8dee6; }
+
+  code {
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 11.8px;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 12px; }
+  .card { border: 1px solid var(--line); border-radius: 4px; padding: 11px 13px; background: #fbfcfd; }
+  .card h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: 0 0 5px; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+  .card ul { margin: 0 0 0 17px; }
+
+  .ph {
+    color: var(--muted);
+    font-style: italic;
+    border-bottom: 1px dashed #b6c2cf;
+    padding: 0 2px;
+  }
+
+  .foot {
+    margin-top: 20px;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+    font-size: 11.8px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 820px) {
+    .page { padding: 24px 18px 30px; margin: 10px; }
+    .doc-title { font-size: 21px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    table { font-size: 11.8px; }
+    th, td { padding: 5px 6px; }
+  }
+
+  @page { margin: 14mm 12mm; }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; border: none; box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .answer, .callout, .callout-warn, .callout-stop, .callout-ok, .card {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">UniconHub</div>
+    <div class="doc-title">QA Tracker: Build Plan and Scaling Model</div>
+    <div class="doc-subtitle">What to build, in what order, and how it holds up with more testers and developers</div>
+    <div class="doc-meta">
+      Document: <span class="ph">QA-2026-02</span> |
+      Prepared: 2026-11-04 |
+      Version: <span class="ph">1.0</span>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section>
+    <h2>1. What to build, in one view</h2>
+    <div class="answer">
+      <h3>One system, five parts, six weeks for one developer</h3>
+      <p>
+        A central <strong>issue tracker</strong>, a <strong>test run recorder</strong>, a
+        <strong>checklist library</strong>, a <strong>tool and instance registry</strong>, and a
+        <strong>thin reporter</strong> that pre-fills context. Everything reads and writes the same
+        four object types.
+      </p>
+      <p>
+        Build order matters more than completeness. The first usable version is issues only. Runs,
+        checklists and the instance matrix come after the habit exists.
+      </p>
+    </div>
+    <table>
+      <tr>
+        <th style="width:22%">Part</th>
+        <th style="width:34%">What it is</th>
+        <th style="width:12%">Build in</th>
+        <th>Why it comes there</th>
+      </tr>
+      <tr>
+        <td><strong>1. Issue tracker</strong></td>
+        <td>List, filters, detail, create, assignment, comments, evidence, CSV export</td>
+        <td>Phase 1</td>
+        <td>It removes the mess on day one, before any advanced concept exists</td>
+      </tr>
+      <tr>
+        <td><strong>2. Test runs</strong></td>
+        <td>One record per session against one build, with per-check results</td>
+        <td>Phase 2</td>
+        <td>Turns testing from prose into data and unlocks the flags</td>
+      </tr>
+      <tr>
+        <td><strong>3. Checklists</strong></td>
+        <td>Versioned scripts: smoke, 12 attacks, tool acceptance, vertical addenda</td>
+        <td>Phase 2</td>
+        <td>Makes runs comparable between people and weeks</td>
+      </tr>
+      <tr>
+        <td><strong>4. Registry</strong></td>
+        <td>Tools and instances, current build, config hash, last run, flags</td>
+        <td>Phase 3</td>
+        <td>Generates the queue automatically instead of by memory</td>
+      </tr>
+      <tr>
+        <td><strong>5. Reporter</strong></td>
+        <td>One button, prefilled tool, build, application, placement, config hash</td>
+        <td>Phase 4</td>
+        <td>Makes reporting a 60-second action instead of a form-filling task</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h2>2. Epics and acceptance</h2>
+    <table>
+      <tr>
+        <th style="width:7%">#</th>
+        <th style="width:24%">Epic</th>
+        <th style="width:31%">Scope</th>
+        <th style="width:11%">Effort</th>
+        <th>Acceptance</th>
+      </tr>
+      <tr>
+        <td class="num">E0</td>
+        <td><strong>Schema and roles</strong></td>
+        <td>Four object types, field definitions, role map, seed 10 tools and 10 instances</td>
+        <td>1 to 2 days</td>
+        <td>An issue can be created by hand, queried by tool and by application</td>
+      </tr>
+      <tr>
+        <td class="num">E1</td>
+        <td><strong>Issue list and detail</strong></td>
+        <td>Table with filters and sort, detail pane, timeline, evidence list</td>
+        <td>2 to 3 days</td>
+        <td>A tester can work a whole day without leaving the app</td>
+      </tr>
+      <tr>
+        <td class="num">E2</td>
+        <td><strong>Create and edit</strong></td>
+        <td>Kind tabs (bug, feature, task, question), required fields, validation, attachments</td>
+        <td>1 to 2 days</td>
+        <td>Report takes under 60 seconds with no missing context</td>
+      </tr>
+      <tr>
+        <td class="num">E3</td>
+        <td><strong>Triage and assignment</strong></td>
+        <td>Severity and priority controls, assignee, status workflow, bulk actions</td>
+        <td>1 to 2 days</td>
+        <td>Ten new issues triaged in under five minutes</td>
+      </tr>
+      <tr>
+        <td class="num">E4</td>
+        <td><strong>Checklists</strong></td>
+        <td>Checklist editor, versioning, scope (all, category, tool), retire</td>
+        <td>1 to 2 days</td>
+        <td>A checklist change never alters an old run's meaning</td>
+      </tr>
+      <tr>
+        <td class="num">E5</td>
+        <td><strong>Runs</strong></td>
+        <td>Run recorder, pass or fail per check, issue creation from a failed check, verdict</td>
+        <td>2 to 3 days</td>
+        <td>One run produces a complete result set and linked issues</td>
+      </tr>
+      <tr>
+        <td class="num">E6</td>
+        <td><strong>Registry and flags</strong></td>
+        <td>Tool import, instance list, build and config change detection, the four flags</td>
+        <td>2 to 3 days</td>
+        <td>The queue is generated, not chosen</td>
+      </tr>
+      <tr>
+        <td class="num">E7</td>
+        <td><strong>Reporter</strong></td>
+        <td>Harness first, then tool template, boot message with slug and build</td>
+        <td>2 to 3 days</td>
+        <td>Button hidden when CRUD is unavailable; report survives a failed save</td>
+      </tr>
+      <tr>
+        <td class="num">E8</td>
+        <td><strong>Reporting and exports</strong></td>
+        <td>Weekly counts, four numbers, CSV, quality JSON for the catalog</td>
+        <td>1 to 2 days</td>
+        <td>Weekly review needs no document writing</td>
+      </tr>
+      <tr class="total">
+        <td></td>
+        <td><strong>Total</strong></td>
+        <td>One experienced developer</td>
+        <td>13 to 22 days</td>
+        <td>About four weeks of build spread over six calendar weeks</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2>3. Six-week delivery plan</h2>
+    <table>
+      <tr>
+        <th style="width:9%">Week</th>
+        <th style="width:36%">Delivers</th>
+        <th style="width:26%">Use it for</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td class="num">1</td>
+        <td>E0, E1, E2</td>
+        <td>The junior starts recording real findings in the tracker instead of a file</td>
+        <td><span class="badge b-low">Usable</span></td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td>E3, E8 partial</td>
+        <td>You triage in ten minutes a day; the first weekly export exists</td>
+        <td><span class="badge b-low">Usable</span></td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td>E4, E5</td>
+        <td>Test runs replace free-text reports; issues link to checks</td>
+        <td><span class="badge b-low">Usable</span></td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td>E6</td>
+        <td>The queue is generated from builds and config changes</td>
+        <td><span class="badge b-med">Cutover</span></td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td>E7</td>
+        <td>Reporting from the harness and the tool; context fills itself</td>
+        <td><span class="badge b-med">Rollout</span></td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td>Hardening, import of the temporary file, cleanup</td>
+        <td>One system, no parallel file</td>
+        <td><span class="badge b-low">Done</span></td>
+      </tr>
+    </table>
+    <div class="callout-warn">
+      <p><strong>Do not wait for week 6 to start.</strong> Week 1 is already usable. The temporary
+      single file from the task list is imported in week 2 and deleted in week 6 at the latest. One
+      file, then nothing.</p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2>4. Scaling to more testers</h2>
+
+    <h3>4.1 Roles and permissions</h3>
+    <table>
+      <tr>
+        <th style="width:16%">Role</th>
+        <th class="num" style="width:9%">Create</th>
+        <th class="num" style="width:9%">Edit own</th>
+        <th class="num" style="width:12%">Triage</th>
+        <th class="num" style="width:10%">Verify</th>
+        <th>Notes</th>
+      </tr>
+      <tr><td>Tester</td><td class="num">yes</td><td class="num">yes</td><td class="num">no</td><td class="num">yes</td><td>Can never set severity or priority</td></tr>
+      <tr><td>Senior tester</td><td class="num">yes</td><td class="num">yes</td><td class="num">no</td><td class="num">yes</td><td>Also owns checklists and test data packs</td></tr>
+      <tr><td>Developer</td><td class="num">yes</td><td class="num">yes</td><td class="num">no</td><td class="num">no</td><td>Marks fixed with a build number</td></tr>
+      <tr><td>QA lead</td><td class="num">yes</td><td class="num">yes</td><td class="num">yes</td><td class="num">yes</td><td>Assigns, merges duplicates, owns the queue</td></tr>
+      <tr><td>Manager</td><td class="num">yes</td><td class="num">yes</td><td class="num">yes</td><td class="num">yes</td><td>Severity, priority, release gate</td></tr>
+    </table>
+
+    <h3>4.2 Lanes, not a free-for-all</h3>
+    <p>
+      With one tester, the queue is just "what changed". With three, unclaimed work collides. Split
+      the work into lanes, and give each person a lane.
+    </p>
+    <table>
+      <tr><th style="width:22%">Lane type</th><th style="width:34%">Example</th><th>Rule</th></tr>
+      <tr><td>By tool family</td><td>Finance tools, Education tools, Operations tools</td><td>One tester owns each family. They become the expert.</td></tr>
+      <tr><td>By application</td><td>Restaurant app, Clinic app</td><td>Used for application smoke and instance acceptance</td></tr>
+      <tr><td>By change type</td><td>New builds, new configurations, reported bugs</td><td>Handled first by whoever owns the tool family</td></tr>
+      <tr><td>Unassigned</td><td>Anything not yet in a lane</td><td>Only the QA lead may assign from here</td></tr>
+    </table>
+
+    <h3>4.3 Capacity model</h3>
+    <p>
+      One quick pass is about 25 minutes. At 10 productive testing hours per week, that is roughly
+      10 to 13 passes including re-tests and reporting. Use this table to decide when to add a person.
+    </p>
+    <table>
+      <tr>
+        <th style="width:22%">Library size</th>
+        <th style="width:14%">Cycle target</th>
+        <th style="width:16%">Passes per week</th>
+        <th style="width:18%">Testers at 10 h/week</th>
+        <th>Alternative</th>
+      </tr>
+      <tr class="win"><td>50 tools</td><td>5 weeks</td><td class="num">10</td><td class="num">1</td><td>One tester also does content work</td></tr>
+      <tr><td>150 tools</td><td>5 weeks</td><td class="num">30</td><td class="num">3</td><td>Or 1 full-time tester, or a 10-week cycle</td></tr>
+      <tr><td>300 tools</td><td>6 weeks</td><td class="num">50</td><td class="num">5</td><td>Automation of the smoke tier becomes mandatory</td></tr>
+      <tr><td>500 tools</td><td>8 weeks</td><td class="num">63</td><td class="num">6</td><td>Human testing only on changed tools and new features</td></tr>
+    </table>
+    <p>
+      The formula: weekly passes = tools divided by cycle weeks. Testers = weekly passes divided by
+      about 12. Everything else is arithmetic, not judgement.
+    </p>
+
+    <h3>4.4 What actually breaks first</h3>
+    <table>
+      <tr><th style="width:26%">Symptom</th><th style="width:34%">Cause</th><th>Fix</th></tr>
+      <tr><td>Two testers report the same bug</td><td>No lanes and no duplicate search</td><td>Lanes plus a "similar issues" list before create, plus merge</td></tr>
+      <tr><td>Nobody knows who tests what</td><td>Queue built from memory</td><td>The flags generate it; the lane decides the owner</td></tr>
+      <tr><td>Same tool retested by two people</td><td>No "in progress" claim on a run</td><td>Claim a run for 2 hours; others see it and move on</td></tr>
+      <tr><td>Triage becomes a full-time job</td><td>Every finding has to be read in full</td><td>Required fields and severity proposal; triage is confirm or reject, not investigation</td></tr>
+      <tr><td>Test data differs per tester</td><td>Everyone invents their own records</td><td>One shared data pack per vertical, three states, reset instructions</td></tr>
+    </table>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h2>5. Scaling to more developers</h2>
+    <table>
+      <tr><th style="width:26%">Rule</th><th>Detail</th></tr>
+      <tr><td><strong>Tool ownership</strong></td><td>Every registry record has one owner. Unowned tools go to a named person, never to "the team".</td></tr>
+      <tr><td><strong>WIP limit</strong></td><td>Three open issues in progress per developer. A fourth means something is waiting, not working.</td></tr>
+      <tr><td><strong>Definition of ready</strong></td><td>Build number, changelog line, deployed to the test tenant, checklist updated. Without all four, a run is not scheduled.</td></tr>
+      <tr><td><strong>Definition of done</strong></td><td>Fixed in a build, verified by a tester on that build, no open blocker in the same area.</td></tr>
+      <tr><td><strong>No self-verification</strong></td><td>The person who fixed it cannot mark it verified. That rule scales by itself.</td></tr>
+      <tr><td><strong>Assignment, not grabbing</strong></td><td>The QA lead assigns from triage. Developers do not pick their favourite bug.</td></tr>
+      <tr><td><strong>One question in the ticket</strong></td><td>If a developer needs clarification, it goes in the issue. The answer stays with the issue.</td></tr>
+    </table>
+    <div class="callout">
+      <p><strong>Why WIP limits matter more than velocity reports:</strong> with three developers and
+      no limit, everyone starts five things, nothing is verified, and the release gate is permanently
+      red. Three in progress each finishes work instead of accumulating it.</p>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h2>6. Technical rules that make it scale</h2>
+    <table>
+      <tr><th style="width:24%">Rule</th><th style="width:32%">Why</th><th>How</th></tr>
+      <tr><td><strong>IDs only, no text joins</strong></td><td>Renaming a tool must not orphan its issues</td><td><code>toolId</code>, <code>appId</code>, <code>instanceId</code>, <code>runId</code></td></tr>
+      <tr><td><strong>Optimistic concurrency</strong></td><td>Two people editing one issue overwrite each other silently</td><td>A <code>rev</code> number on every record; reject a stale write and reload</td></tr>
+      <tr><td><strong>Server-side filters</strong></td><td>Loading all issues stops working at a few hundred</td><td>Query by status, assignee, tool, lane, age; never fetch everything</td></tr>
+      <tr><td><strong>Pagination everywhere</strong></td><td>Large lists freeze the browser</td><td>Cap 50 per page, "load more", show N of M</td></tr>
+      <tr><td><strong>Counts as query results</strong></td><td>Cached counters drift</td><td>Compute counts on the filtered set, or recompute the cache on write</td></tr>
+      <tr><td><strong>Append-only timeline</strong></td><td>History is the audit trail</td><td>Never edit or delete a timeline entry</td></tr>
+      <tr><td><strong>Attachments are URLs</strong></td><td>Base64 in objects kills performance</td><td>Upload to storage, keep the URL, max two per issue</td></tr>
+      <tr><td><strong>One adapter boundary</strong></td><td>You may outgrow CMS objects</td><td>The UI calls a repository interface. Today the CMS implements it; later a SQL service can, without touching the UI.</td></tr>
+    </table>
+
+    <h3>6.1 When to move off CMS objects</h3>
+    <table>
+      <tr><th style="width:30%">Signal</th><th>Move to a dedicated service</th></tr>
+      <tr><td>Open issues</td><td>Above roughly 2,000, or a filtered list takes over one second</td></tr>
+      <tr><td>Concurrent users</td><td>Above roughly 20, or write conflicts appear daily</td></tr>
+      <tr><td>Reporting needs</td><td>Cross-record aggregation that the platform cannot index</td></tr>
+      <tr><td>Automation</td><td>CI must create runs and close issues without a logged-in browser</td></tr>
+    </table>
+    <p>
+      None of these is likely in the first year. The adapter boundary exists so the move is a
+      two-week project, not a rewrite.
+    </p>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h2>7. The real scaling lever: automate the first tier</h2>
+    <p>
+      Human testing should never cover level 1. A script can open every tool, check that it loads,
+      watch the console, capture a screenshot and record a run. That is the tier that grows with the
+      library and costs nothing per tool.
+    </p>
+    <table>
+      <tr>
+        <th style="width:12%">Tier</th>
+        <th style="width:30%">Covered by</th>
+        <th style="width:26%">Runs</th>
+        <th>Frequency</th>
+      </tr>
+      <tr><td><strong>1. Load</strong></td><td>Script: opens, renders, no console error, screenshot</td><td>All tools</td><td>Every build, automatically</td></tr>
+      <tr><td><strong>2. Quick pass</strong></td><td>Human: 12 attacks plus acceptance list</td><td>Changed tools and rotating sample</td><td>Weekly</td></tr>
+      <tr><td><strong>3. Deep pass</strong></td><td>Human: full checklist, data extremes, roles</td><td>One quarter of the library</td><td>Quarterly</td></tr>
+      <tr><td><strong>4. Exploratory</strong></td><td>Human: new features, confusing flows</td><td>Whatever changed or was reported</td><td>Continuous</td></tr>
+    </table>
+    <div class="callout-ok">
+      <p><strong>The scaling rule:</strong> when the library doubles, first automate more of tier 1,
+      then add a tester. Automation is linear in tools; people are linear in judgement.</p>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section>
+    <h2>8. Notifications and reporting at scale</h2>
+    <table>
+      <tr><th style="width:26%">Event</th><th style="width:24%">Delivery</th><th>Rule</th></tr>
+      <tr><td>Blocker or critical created</td><td>Immediate to tool owner and manager</td><td>Only these two severities interrupt anyone</td></tr>
+      <tr><td>Everything else new</td><td>Daily digest, 08:00</td><td>One message per person: assigned, new in lane, aging items</td></tr>
+      <tr><td>Issue aged over 14 days</td><td>Daily digest</td><td>Close, fix or park; no silent aging</td></tr>
+      <tr><td>Build released without a run</td><td>Weekly to manager</td><td><code>publishedUntested</code> list</td></tr>
+      <tr><td>Weekly summary</td><td>Friday, one page</td><td>Four numbers only</td></tr>
+    </table>
+    <div class="callout-warn">
+      <p><strong>No per-event email.</strong> Ten testers creating twenty issues a day produces two
+      hundred messages and everyone stops reading. Digest by default, interrupt only for blockers.</p>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section>
+    <h2>9. What does not change as you grow</h2>
+    <ul>
+      <li>One register. No spreadsheet, no document per run, no bug in chat.</li>
+      <li>One record per issue and one record per run.</li>
+      <li>Build number on every run and every issue.</li>
+      <li>The reporter never lists or manages anything; it only creates.</li>
+      <li>Severity is proposed by the reporter and confirmed by the manager.</li>
+      <li>The person who fixed it never verifies it.</li>
+      <li>The four numbers in the weekly review.</li>
+    </ul>
+    <p>
+      If a change makes the model need a meeting to explain, it is not a scaling improvement. The
+      system should get simpler to use with every addition, not more detailed to operate.
+    </p>
+  </section>
+
+  <!-- 10 -->
+  <section>
+    <h2>10. Risks and controls</h2>
+    <table>
+      <tr><th style="width:28%">Risk</th><th style="width:11%">Impact</th><th style="width:12%">Likelihood</th><th>Control</th></tr>
+      <tr>
+        <td>Building all six weeks before anyone uses it</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td>Week 1 is usable; the junior starts there. No big-bang release.</td>
+      </tr>
+      <tr>
+        <td>Two people overwrite one issue</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td><code>rev</code> field and stale-write rejection from day one</td>
+      </tr>
+      <tr>
+        <td>The tracker becomes the product instead of the tools</td>
+        <td><span class="badge b-high">High</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Six views, four object types, no custom workflows. Every new field needs a reason in writing.</td>
+      </tr>
+      <tr>
+        <td>Lanes create silos and nobody can cover for each other</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td>Every lane has a named backup; rotating sample crosses lanes</td>
+      </tr>
+      <tr>
+        <td>Test data is inconsistent between testers</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td>Shared data packs per vertical, three states, reset instructions</td>
+      </tr>
+      <tr>
+        <td>Notification noise kills adoption</td>
+        <td><span class="badge b-med">Medium</span></td>
+        <td><span class="badge b-high">High</span></td>
+        <td>Digest by default, interrupt for blockers only</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 11 -->
+  <section>
+    <h2>11. Decisions needed</h2>
+    <table>
+      <tr><th style="width:5%">#</th><th style="width:31%">Decision</th><th style="width:27%">Options</th><th>Recommendation</th></tr>
+      <tr><td class="num">1</td><td>Who builds phases 0 to 3?</td><td>You, a developer, or the junior with guidance</td><td>A developer for E0 to E6; the junior can build E7 with help</td></tr>
+      <tr><td class="num">2</td><td>Test data packs</td><td>Shared per vertical, or per tester</td><td>Shared, three states</td></tr>
+      <tr><td class="num">3</td><td>Lane structure</td><td>By tool family, by application, or both</td><td>Tool family first, application second</td></tr>
+      <tr><td class="num">4</td><td>Notification channel</td><td>Email, chat, or both</td><td>One channel, digest only</td></tr>
+      <tr><td class="num">5</td><td>Tier-1 automation owner</td><td>Scripts in the repo, or a CI job</td><td>Scripts in the repo now, CI later</td></tr>
+      <tr><td class="num">6</td><td>Who owns the checklists</td><td>QA lead, or each tool owner</td><td>QA lead owns the base; tool owner owns the acceptance lines</td></tr>
+    </table>
+
+    <div class="foot">
+      <p>
+        Design reference: <a href="Tool-QA-Tracker-Architecture.html">Tool-QA-Tracker-Architecture.html</a>
+        (object model, the instance rule, easy mode). This document is the execution plan and the
+        scaling model. Build order is deliberately front-loaded: usable in week 1, complete in week 6.
+      </p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

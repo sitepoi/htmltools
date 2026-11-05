@@ -1,0 +1,1302 @@
+<!-- html build 2026-11-04-4 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Work Item Manager - self test harness</title>
+<style>
+  :root {
+    --harness-accent: #4f46e5;
+    --harness-line: #e2e8f0;
+    --harness-text: #1f2937;
+    --harness-muted: #64748b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: #f8fafc;
+    color: var(--harness-text);
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .wimh-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--harness-line);
+    background: #ffffff;
+  }
+  .wimh-bar-title { margin-right: 6px; font-weight: 700; }
+  .wimh-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    padding-left: 12px;
+    border-left: 1px solid var(--harness-line);
+  }
+  .wimh-group-label {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--harness-muted);
+  }
+  .wimh-bar a,
+  .wimh-bar button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 10px;
+    border: 1px solid var(--harness-line);
+    border-radius: 6px;
+    background: #ffffff;
+    color: var(--harness-text);
+    font: inherit;
+    font-size: 12px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .wimh-bar a:hover { border-color: var(--harness-accent); color: var(--harness-accent); }
+  .wimh-bar a.is-active { border-color: var(--harness-accent); background: #eef2ff; color: #3730a3; font-weight: 700; }
+  .wimh-bar select {
+    min-height: 28px;
+    padding: 3px 6px;
+    border: 1px solid var(--harness-line);
+    border-radius: 6px;
+    background: #ffffff;
+    font: inherit;
+    font-size: 12px;
+  }
+  .wimh-bar-note { font-size: 11px; color: var(--harness-muted); }
+  #wimh-stage { padding: 0; }
+
+  /* Checks panel: collapsed by default, only the state line is visible. */
+  .wimh-checks {
+    margin: 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--harness-line);
+    border-radius: 12px;
+    background: #ffffff;
+  }
+  .wimh-checks-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--harness-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .wimh-checks-status { font-weight: 700; }
+  .wimh-checks-status.is-pass { color: #16653f; }
+  .wimh-checks-status.is-fail { color: #a3231b; }
+  .wimh-checks-action { font-size: 12px; color: var(--accent, #4f46e5); }
+  .wimh-checks-note { margin: 2px 0 0; font-size: 11px; color: var(--harness-muted); }
+  #wimh-checks-body { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--harness-line); }
+  #wimh-checks-body p { margin: 0 0 8px; color: var(--harness-muted); }
+  #wimh-log { margin: 0; padding: 0; list-style: none; font-variant-numeric: tabular-nums; }
+  #wimh-log li { padding: 3px 0; border-bottom: 1px solid #eef2f7; white-space: pre-wrap; }
+  #wimh-log li.wimh-pass { color: #16653f; }
+  #wimh-log li.wimh-fail { color: #a3231b; font-weight: 600; }
+  #wimh-summary { margin-top: 10px; font-weight: 700; }
+
+  body.wimh-bare .wimh-bar,
+  body.wimh-bare .wimh-checks { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="wimh-bar" id="wimh-bar">
+  <span class="wimh-bar-title">Work Item Manager - harness</span>
+
+  <span class="wimh-group">
+    <span class="wimh-group-label">Sample</span>
+    <a href="?sample=a" id="wimh-link-a" data-sample="a">A - full item</a>
+    <a href="?sample=b" id="wimh-link-b" data-sample="b">B - empty fields</a>
+    <a href="?sample=new" id="wimh-link-new" data-sample="new">new item</a>
+  </span>
+
+  <span class="wimh-group">
+    <span class="wimh-group-label">State</span>
+    <label for="wimh-readonly"><input type="checkbox" id="wimh-readonly"> read-only</label>
+    <select id="wimh-role" aria-label="Role">
+      <option value="developer">developer</option>
+      <option value="admin">admin</option>
+      <option value="editor">editor</option>
+      <option value="viewer">viewer</option>
+    </select>
+    <select id="wimh-status" aria-label="Item status">
+      <option value="">status from sample</option>
+      <option value="new">new</option>
+      <option value="accepted">accepted</option>
+      <option value="working">working</option>
+      <option value="done">done</option>
+      <option value="rejected">rejected</option>
+    </select>
+    <a href="?sample=a&amp;deny=1" id="wimh-link-deny">deny save</a>
+    <a href="?sample=a&amp;store=off" id="wimh-link-store-off">store off</a>
+  </span>
+
+  <span class="wimh-group">
+    <span class="wimh-group-label">Params</span>
+    <a href="?sample=a&amp;template=custom" id="wimh-link-custom-template">custom template</a>
+    <a href="?sample=a&amp;inlinejs=1" id="wimh-link-inline">inline script</a>
+    <a href="?sample=a&amp;bare=1" id="wimh-link-bare">bare</a>
+  </span>
+
+  <span class="wimh-bar-note" id="wimh-mode-note">mode: starting</span>
+  <span class="wimh-bar-note" id="wimh-viewport">viewport: -</span>
+</div>
+
+<main id="wimh-stage"></main>
+
+<section class="wimh-checks" id="wimh-checks">
+  <button class="wimh-checks-toggle" id="wimh-checks-toggle" type="button" aria-expanded="false" aria-controls="wimh-checks-body">
+    <span class="wimh-checks-status" id="wimh-checks-status">Running checks...</span>
+    <span class="wimh-checks-action" id="wimh-checks-action">show details</span>
+  </button>
+  <p class="wimh-checks-note">Test harness only. This panel is not part of the tool.</p>
+  <div id="wimh-checks-body" hidden>
+    <p>The harness installs a mock <code>window.tool</code>, mounts the real tool and drives its tabs, form and buttons. Opened from disk it uses the embedded copy of the markup; served over http it reads the real file and reports whether the copy still matches.</p>
+    <ol id="wimh-log"></ol>
+    <p id="wimh-summary"></p>
+  </div>
+</section>
+
+<script type="text/plain" id="wimh-embedded-markup"><!-- html build 2026-11-04-4 -->
+<div class="wim-app" id="wim-app">
+
+  <header class="wim-header">
+    <div class="wim-header-main">
+      <h1 class="wim-title">Work Item Manager</h1>
+      <div class="wim-chip-row">
+        <span class="wim-chip wim-chip-key" id="wim-item-key">no key</span>
+        <span class="wim-chip" id="wim-item-kind">no kind</span>
+        <span class="wim-chip wim-chip-status" id="wim-item-status">no status</span>
+        <span class="wim-chip" id="wim-item-severity">no severity</span>
+      </div>
+    </div>
+    <span class="wim-build-badge" id="wim-build-badge" title="Tool code build">tool build</span>
+  </header>
+
+  <p class="wim-banner" id="wim-readonly-banner" role="status" hidden></p>
+
+  <nav class="wim-tabs" role="tablist" aria-label="Work item sections">
+    <button class="wim-tab is-active" id="wim-tab-item" type="button" role="tab" aria-selected="true" aria-controls="wim-panel-item" data-tab="item">Item</button>
+    <button class="wim-tab" id="wim-tab-progress" type="button" role="tab" aria-selected="false" aria-controls="wim-panel-progress" data-tab="progress">Progress</button>
+    <button class="wim-tab" id="wim-tab-notes" type="button" role="tab" aria-selected="false" aria-controls="wim-panel-notes" data-tab="notes">Notes <span class="wim-tab-count" id="wim-notes-tab-count">0</span></button>
+    <button class="wim-tab" id="wim-tab-prompt" type="button" role="tab" aria-selected="false" aria-controls="wim-panel-prompt" data-tab="prompt">Prompt</button>
+  </nav>
+
+  <section class="wim-panel" id="wim-panel-item" role="tabpanel" aria-labelledby="wim-tab-item">
+
+    <p class="wim-hint wim-new-item-hint" id="wim-item-warning" hidden></p>
+
+    <form class="wim-form" id="wim-item-form" action="#" method="get" novalidate>
+      <div class="wim-grid-2">
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-key">Key</label>
+          <input class="wim-input" id="wim-field-key" name="key" type="text" autocomplete="off" spellcheck="false" placeholder="WORK-0008">
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-kind">Kind</label>
+          <select class="wim-select" id="wim-field-kind" name="kind">
+            <option value="finding">finding</option>
+            <option value="request">request</option>
+            <option value="task">task</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="wim-field">
+        <label class="wim-label" for="wim-field-title">Title</label>
+        <input class="wim-input" id="wim-field-title" name="title" type="text" autocomplete="off">
+      </div>
+
+      <div class="wim-grid-3">
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-status">Status</label>
+          <select class="wim-select" id="wim-field-status" name="status">
+            <option value="new">new</option>
+            <option value="accepted">accepted</option>
+            <option value="working">working</option>
+            <option value="done">done</option>
+            <option value="rejected">rejected</option>
+          </select>
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-severity">Severity</label>
+          <select class="wim-select" id="wim-field-severity" name="severity">
+            <option value="">not set</option>
+            <option value="blocker">blocker</option>
+            <option value="high">high</option>
+            <option value="medium">medium</option>
+            <option value="low">low</option>
+          </select>
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-owner">Owner</label>
+          <input class="wim-input" id="wim-field-owner" name="owner" type="text" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="wim-grid-2">
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-product">Product</label>
+          <select class="wim-select" id="wim-field-product" name="product">
+            <option value="">loading products...</option>
+          </select>
+          <input class="wim-input" id="wim-field-product-text" name="productText" type="text" autocomplete="off" hidden>
+          <p class="wim-hint" id="wim-product-hint" hidden></p>
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-application">Application</label>
+          <select class="wim-select" id="wim-field-application" name="application">
+            <option value="">loading applications...</option>
+          </select>
+          <input class="wim-input" id="wim-field-application-text" name="applicationText" type="text" autocomplete="off" hidden>
+          <p class="wim-hint" id="wim-application-hint" hidden></p>
+        </div>
+      </div>
+
+      <div class="wim-grid-3">
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-reported-build">Reported build</label>
+          <input class="wim-input" id="wim-field-reported-build" name="reportedBuild" type="text" autocomplete="off" placeholder="2026-11-03-1">
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-library-build">Tool library build</label>
+          <input class="wim-input" id="wim-field-library-build" name="toolLibraryBuild" type="text" autocomplete="off" placeholder="2026-11-04-1">
+        </div>
+        <div class="wim-field">
+          <label class="wim-label" for="wim-field-checked-by">Checked by</label>
+          <input class="wim-input" id="wim-field-checked-by" name="checkedBy" type="text" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="wim-field">
+        <div class="wim-field-head">
+          <span class="wim-label" id="wim-images-label">Screenshots</span>
+          <span class="wim-chip" id="wim-image-count">0 images</span>
+        </div>
+        <div class="wim-images" id="wim-image-list" role="group" aria-labelledby="wim-images-label"></div>
+        <p class="wim-hint" id="wim-image-empty">No images yet. One screenshot makes a finding reproducible.</p>
+        <div class="wim-actions wim-image-actions">
+          <button class="wim-button wim-button-small" id="wim-image-add" type="button">Add image</button>
+          <span class="wim-hint wim-image-status" id="wim-image-status" role="status" aria-live="polite"></span>
+        </div>
+        <details class="wim-image-cleanup" id="wim-image-cleanup" hidden>
+          <summary>Storage paths for cleanup</summary>
+          <ul class="wim-image-paths" id="wim-image-paths"></ul>
+        </details>
+      </div>
+
+      <div class="wim-field">
+        <label class="wim-label" for="wim-field-detail">Detail</label>
+        <textarea class="wim-textarea" id="wim-field-detail" name="detail" rows="4"></textarea>
+      </div>
+
+      <div class="wim-actions">
+        <button class="wim-button wim-button-primary" id="wim-save-item" type="button">Save item</button>
+        <button class="wim-button" id="wim-discard-item" type="button">Discard changes</button>
+        <span class="wim-dirty" id="wim-dirty-indicator" hidden>unsaved changes</span>
+      </div>
+      <p class="wim-status" id="wim-item-status-line" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section class="wim-panel" id="wim-panel-progress" role="tabpanel" aria-labelledby="wim-tab-progress" hidden>
+    <ol class="wim-rail" id="wim-lifecycle-rail">
+      <li class="wim-step" data-step="new">
+        <span class="wim-step-dot" aria-hidden="true"></span>
+        <span class="wim-step-name">New</span>
+      </li>
+      <li class="wim-step" data-step="accepted">
+        <span class="wim-step-dot" aria-hidden="true"></span>
+        <span class="wim-step-name">Accepted</span>
+      </li>
+      <li class="wim-step" data-step="working">
+        <span class="wim-step-dot" aria-hidden="true"></span>
+        <span class="wim-step-name">Working</span>
+      </li>
+      <li class="wim-step" data-step="done">
+        <span class="wim-step-dot" aria-hidden="true"></span>
+        <span class="wim-step-name">Done</span>
+      </li>
+    </ol>
+
+    <p class="wim-next-step" id="wim-next-step">Set the status on the Item tab.</p>
+
+    <h2 class="wim-section-title">Before it can close</h2>
+    <ul class="wim-checks" id="wim-close-checks"></ul>
+  </section>
+
+  <section class="wim-panel" id="wim-panel-notes" role="tabpanel" aria-labelledby="wim-tab-notes" hidden>
+    <ol class="wim-notes" id="wim-note-list"></ol>
+    <p class="wim-empty" id="wim-note-empty">No notes yet.</p>
+
+    <div class="wim-note-form">
+      <label class="wim-label" for="wim-note-input">New note</label>
+      <textarea class="wim-textarea" id="wim-note-input" rows="2" placeholder="What did you check, decide or learn?"></textarea>
+      <div class="wim-actions">
+        <button class="wim-button wim-button-primary" id="wim-note-add" type="button">Add note</button>
+        <span class="wim-hint wim-note-count" id="wim-note-count">0 notes</span>
+      </div>
+    </div>
+    <p class="wim-status" id="wim-note-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="wim-panel" id="wim-panel-prompt" role="tabpanel" aria-labelledby="wim-tab-prompt" hidden>
+    <p class="wim-hint">Built from the Item tab. Edit the item there; this tab only generates and copies the text.</p>
+
+    <h2 class="wim-section-title">From the item</h2>
+    <dl class="wim-facts" id="wim-prompt-source">
+      <div class="wim-fact">
+        <dt>Key</dt>
+        <dd id="wim-source-key">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Kind</dt>
+        <dd id="wim-source-kind">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Title</dt>
+        <dd id="wim-source-title">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Product</dt>
+        <dd id="wim-source-product">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Application</dt>
+        <dd id="wim-source-application">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Severity</dt>
+        <dd id="wim-source-severity">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Reported build</dt>
+        <dd id="wim-source-reported-build">-</dd>
+      </div>
+      <div class="wim-fact">
+        <dt>Screenshots</dt>
+        <dd id="wim-source-images">none</dd>
+      </div>
+    </dl>
+
+    <div class="wim-actions">
+      <button class="wim-button wim-button-primary" id="wim-generate" type="button">Generate prompt</button>
+      <button class="wim-button" id="wim-copy" type="button">Copy</button>
+      <button class="wim-button" id="wim-download" type="button">Download .md</button>
+      <span class="wim-chip wim-chip-accent" id="wim-template-chip" hidden>custom template</span>
+      <span class="wim-chip" id="wim-prompt-char-count">0 characters</span>
+      <span class="wim-chip" id="wim-prompt-build">build -</span>
+    </div>
+
+    <div class="wim-template-row" id="wim-template-row" hidden>
+      <p class="wim-hint" id="wim-template-hint">The admin template is in use.</p>
+      <button class="wim-button wim-button-small" id="wim-use-builtin" type="button">Use built-in template</button>
+    </div>
+
+    <pre class="wim-prompt" id="wim-prompt-output" tabindex="0" aria-label="Generated build prompt">Press Generate prompt to build the text for this item.</pre>
+
+    <p class="wim-status" id="wim-prompt-status" role="status" aria-live="polite"></p>
+  </section>
+
+</div>
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var APP_HTML_FILE = 'WorkItemManager.html';
+  var APP_JS_FILE = 'WorkItemManager.js';
+  var APP_CSS_FILE = 'WorkItemManager.css';
+
+  var query = new URLSearchParams(window.location.search);
+  var sampleName = String(query.get('sample') || 'a').toLowerCase();
+  var isBare = query.get('bare') === '1';
+  var isInlineJs = query.get('inlinejs') === '1';
+  var requestedStatus = String(query.get('status') || '').toLowerCase();
+  var wantsCustomTemplate = query.get('template') === 'custom';
+  var startsReadOnly = query.get('readonly') === '1';
+  var deniesSave = query.get('deny') === '1';
+  var storeIsOff = query.get('store') === 'off';
+  var roleName = String(query.get('role') || 'developer');
+  var requestedTab = String(query.get('tab') || '');
+  /* The harness mocks the clipboard by default, so an automatic run never asks
+     the browser for clipboard access. Add ?realclipboard=1 to test the real one. */
+  var useRealClipboard = query.get('realclipboard') === '1';
+
+  var MODE_NOTE = document.getElementById('wimh-mode-note');
+  var STAGE = document.getElementById('wimh-stage');
+  var LOG = document.getElementById('wimh-log');
+  var SUMMARY = document.getElementById('wimh-summary');
+  var CHECKS_STATUS = document.getElementById('wimh-checks-status');
+  var CHECKS_ACTION = document.getElementById('wimh-checks-action');
+  var CHECKS_BODY = document.getElementById('wimh-checks-body');
+  var EMBEDDED_MARKUP = document.getElementById('wimh-embedded-markup').textContent.trim();
+
+  var SAMPLE_A = {
+    id: 'rec-work-0007',
+    _id: 'rec-work-0007',
+    name: 'WORK-0007 - Severity chip loses its colour after a re-render',
+    key: 'WORK-0007',
+    kind: 'finding',
+    title: 'Severity chip loses its colour after a re-render',
+    detail: 'Steps: open the QA tracker and filter by severity.\nExpected: the severity chip keeps its colour.\nActual: the chip turns grey after the list re-renders, so blockers look like low items.',
+    product: 'Personal Tax Preparation',
+    application: 'Finance Workspace',
+    severity: 'high',
+    reportedBuild: '2026-11-03-1',
+    owner: 'Dana Whitfield',
+    reporter: 'Sam Okafor',
+    status: 'working',
+    toolLibraryBuild: '2026-11-04-1',
+    checkedBy: 'Dana Whitfield'
+  };
+
+  var SAMPLE_B_FIELDS = {
+    id: 'rec-work-0007',
+    _id: 'rec-work-0007',
+    productData: {
+      data_categoriesBased: {
+        key: 'WORK-0007',
+        kind: 'finding',
+        title: 'Severity chip loses its colour after a re-render',
+        detail: 'Steps: open the QA tracker and filter by severity.\nExpected: the severity chip keeps its colour.\nActual: the chip turns grey after the list re-renders, so blockers look like low items.',
+        product: 'Personal Tax Preparation',
+        application: 'Finance Workspace',
+        severity: '',
+        reportedBuild: '',
+        owner: 'Dana Whitfield',
+        reporter: 'Sam Okafor',
+        status: 'new',
+        toolLibraryBuild: '',
+        checkedBy: ''
+      }
+    }
+  };
+
+  var SAMPLE_NEW_FIELDS = {
+    key: '',
+    kind: '',
+    title: '',
+    detail: '',
+    product: '',
+    application: '',
+    severity: '',
+    reportedBuild: '',
+    owner: '',
+    reporter: '',
+    status: '',
+    toolLibraryBuild: '',
+    checkedBy: ''
+  };
+
+  /* Mock store records. The tool reads both lists with one query each. */
+  var TOOL_STORE_ROWS = [
+    { id: 'tool-1', cmsObjectType: 'tools-applicationstore', productData: { data_categoriesBased: { gwAppName: 'Personal Tax Preparation', category: 'Personal Finance' } } },
+    { id: 'tool-2', cmsObjectType: 'tools-applicationstore', productData: { data_categoriesBased: { name: 'Invoice And Expense Collector', folder: 'Finance' } } },
+    { id: 'tool-3', cmsObjectType: 'tools-applicationstore', productData: { data_categoriesBased: { title: 'Company Profile', category: 'Business' } } }
+  ];
+
+  var APPLICATION_STORE_ROWS = [
+    { id: 'app-1', cmsObjectType: 'applications-applicationstore', productData: { data_categoriesBased: { name: 'Finance Workspace', category: 'Finance' } } },
+    { id: 'app-2', cmsObjectType: 'applications-applicationstore', productData: { data_categoriesBased: { gwAppName: 'HR Workspace', category: 'People' } } }
+  ];
+
+  var CUSTOM_TEMPLATE_MARKER = 'CUSTOM TEMPLATE MARKER';
+  var CUSTOM_TEMPLATE = [
+    CUSTOM_TEMPLATE_MARKER,
+    'Work item: {{WORK_ITEM_KEY}} {{WORK_ITEM_TITLE}}',
+    'Product: {{PRODUCT}} / {{APPLICATION}}',
+    'Detail:',
+    '  {{DETAIL}}',
+    'Unknown token stays filled: {{SOMETHING_UNKNOWN}}'
+  ].join('\n');
+
+  var buildLogs = [];
+  var consoleErrors = [];
+  var readyCallbacks = [];
+  var readonlyCallbacks = [];
+  var valueChangeCallbacks = [];
+
+  var SAMPLE_A_IMAGE_URL = 'https://firebasestorage.googleapis.com/v0/b/uniconhub-test.appspot.com/o/tmp%2Fharness%2Fwork-0007.png?alt=media&token=harness';
+  var SAMPLE_A_SAVED_VALUE = {
+    version: 4,
+    notes: [],
+    images: [{
+      id: 'img-harness-1',
+      name: 'work-0007.png',
+      url: SAMPLE_A_IMAGE_URL,
+      storagePath: 'tmp/harness/work-0007.png',
+      sizeBytes: 48213,
+      type: 'image/png',
+      addedAt: '2026-11-03T09:12:00.000Z',
+      removedAt: ''
+    }],
+    promptText: '',
+    generatedAt: '',
+    templateSource: wantsCustomTemplate ? 'admin' : 'built-in'
+  };
+
+  var mockState = {
+    savedValue: null,
+    readOnly: startsReadOnly,
+    roles: [roleName],
+    valueWrites: 0,
+    setFieldCalls: 0,
+    objectRequests: [],
+    notifications: [],
+    openedUrls: [],
+    uploadCalls: [],
+    clipboardText: '',
+    nextUploadName: 'after-fix.png'
+  };
+
+  var recordFields = sampleName === 'b' ? SAMPLE_B_FIELDS : (sampleName === 'new' ? SAMPLE_NEW_FIELDS : SAMPLE_A);
+  var recordIsBlank = sampleName === 'new';
+
+  if (sampleName === 'a') mockState.savedValue = SAMPLE_A_SAVED_VALUE;
+
+  function setFieldOnRecord(fieldName, fieldValue) {
+    if (recordFields.productData && recordFields.productData.data_categoriesBased) {
+      recordFields.productData.data_categoriesBased[fieldName] = fieldValue;
+    } else {
+      recordFields[fieldName] = fieldValue;
+    }
+  }
+
+  if (requestedStatus && !recordIsBlank) setFieldOnRecord('status', requestedStatus);
+
+  if (isBare) document.body.classList.add('wimh-bare');
+  document.getElementById('wimh-role').value = roleName;
+  document.getElementById('wimh-readonly').checked = startsReadOnly;
+  document.getElementById('wimh-status').value = requestedStatus;
+
+  document.querySelectorAll('[data-sample]').forEach(function (linkNode) {
+    if (linkNode.getAttribute('data-sample') === sampleName) linkNode.classList.add('is-active');
+  });
+
+  function reloadWithParam(paramName, paramValue) {
+    var nextQuery = new URLSearchParams(window.location.search);
+    if (paramValue === '' || paramValue === null) nextQuery.delete(paramName);
+    else nextQuery.set(paramName, paramValue);
+    window.location.search = nextQuery.toString();
+  }
+
+  document.getElementById('wimh-readonly').addEventListener('change', function (changeEvent) {
+    reloadWithParam('readonly', changeEvent.target.checked ? '1' : '');
+  });
+
+  document.getElementById('wimh-role').addEventListener('change', function (changeEvent) {
+    reloadWithParam('role', changeEvent.target.value);
+  });
+
+  document.getElementById('wimh-status').addEventListener('change', function (changeEvent) {
+    reloadWithParam('status', changeEvent.target.value);
+  });
+
+  /* The checks panel starts collapsed and only shows the state line. */
+  document.getElementById('wimh-checks-toggle').addEventListener('click', function () {
+    var willOpen = CHECKS_BODY.hidden === true;
+    CHECKS_BODY.hidden = !willOpen;
+    document.getElementById('wimh-checks-toggle').setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    CHECKS_ACTION.textContent = willOpen ? 'hide details' : 'show details';
+  });
+
+  var originalConsoleLog = console.log;
+  console.log = function () {
+    var parts = [];
+    for (var index = 0; index < arguments.length; index += 1) parts.push(String(arguments[index]));
+    buildLogs.push(parts.join(' '));
+    try { return originalConsoleLog.apply(console, arguments); } catch (error) { return undefined; }
+  };
+
+  window.addEventListener('error', function (event) {
+    consoleErrors.push(String(event && event.message ? event.message : 'script error'));
+  });
+
+  /* ── mock SDK ── */
+  function buildMockParams() {
+    var mockParams = {};
+    if (wantsCustomTemplate) mockParams.buildPromptTemplate = CUSTOM_TEMPLATE;
+    return mockParams;
+  }
+
+  function installMockTool() {
+    var mockParams = buildMockParams();
+
+    window.tool = {
+      onReady: function (callback) { readyCallbacks.push(callback); },
+      getFields: function () { return recordFields; },
+      getValue: function () { return mockState.savedValue; },
+      setValue: function (value) { mockState.savedValue = value; mockState.valueWrites += 1; },
+      onValueChange: function (callback) { valueChangeCallbacks.push(callback); },
+      param: function (paramName, fallbackValue) {
+        return Object.prototype.hasOwnProperty.call(mockParams, paramName) ? mockParams[paramName] : fallbackValue;
+      },
+      isReadOnly: function () { return mockState.readOnly; },
+      onReadonlyChange: function (callback) { readonlyCallbacks.push(callback); },
+      getUser: function () {
+        return { id: 'usr_harness', name: 'Harness User', email: 'harness@example.com', roles: mockState.roles, effectiveAccess: { isViewer: true, isEditor: true, isManager: false } };
+      },
+      getPermittedUsers: function () { return []; },
+      notify: function (messageText, severityName) { mockState.notifications.push(String(severityName) + ': ' + String(messageText)); },
+      resize: function () {},
+      openUrl: function (url) { mockState.openedUrls.push(String(url)); },
+      declareParams: function (paramList) { mockState.declaredParams = paramList; },
+      declareOutput: function (outputSchema) { mockState.declaredOutput = outputSchema; },
+      setField: function () { mockState.setFieldCalls += 1; },
+      setFields: function () { mockState.setFieldCalls += 1; },
+      requestUpload: function (acceptFilter, callback) {
+        var uploadedName = mockState.nextUploadName || 'after-fix.png';
+        mockState.uploadCalls.push(String(acceptFilter));
+        var uploadedUrl = 'https://firebasestorage.googleapis.com/v0/b/uniconhub-test.appspot.com/o/tmp%2Fharness%2F'
+          + encodeURIComponent(uploadedName) + '?alt=media&token=harness';
+        if (callback) {
+          callback(null, {
+            name: uploadedName,
+            url: uploadedUrl,
+            size: 2048,
+            type: 'image/png'
+          });
+        }
+      },
+      requestObjects: function (action, params, callback) {
+        mockState.objectRequests.push({ action: action, params: params });
+
+        if (action === 'query') {
+          if (storeIsOff) {
+            if (callback) callback('Store list is not available', null);
+            return;
+          }
+          var rows = params.mainObjectType === 'tools-applicationstore' ? TOOL_STORE_ROWS : APPLICATION_STORE_ROWS;
+          if (callback) callback(null, { objects: rows });
+          return;
+        }
+
+        if (deniesSave) {
+          if (callback) callback('Object CRUD is not enabled for this tool', null);
+          return;
+        }
+
+        if (action === 'create') {
+          if (callback) callback(null, { object: { id: 'rec-created-1', name: params.name } });
+          return;
+        }
+        if (callback) callback(null, { ok: true });
+      }
+    };
+
+    window.__wimHarness = {
+      state: mockState,
+      setReadOnly: function (nextReadOnly) {
+        mockState.readOnly = !!nextReadOnly;
+        readonlyCallbacks.forEach(function (callback) { callback(mockState.readOnly); });
+      }
+    };
+
+    /* The tool writes to the clipboard only when Copy is pressed. The automatic
+       run replaces the clipboard with a mock, so a page refresh never asks the
+       browser for clipboard access. */
+    if (!useRealClipboard) {
+      try {
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText: function (copiedText) {
+              mockState.clipboardText = String(copiedText);
+              return Promise.resolve();
+            }
+          }
+        });
+      } catch (error) {
+        console.warn('[HARNESS] clipboard mock could not be installed', error);
+      }
+    }
+  }
+
+  /* ── loading ── */
+  function fetchText(fileName, onSuccess, onFailure) {
+    fetch(fileName, { cache: 'no-store' })
+      .then(function (response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.text();
+      })
+      .then(onSuccess)
+      .catch(onFailure);
+  }
+
+  function addStylesheet() {
+    var linkNode = document.createElement('link');
+    linkNode.rel = 'stylesheet';
+    linkNode.href = APP_CSS_FILE;
+    document.head.appendChild(linkNode);
+  }
+
+  function setModeNote(noteText) {
+    if (MODE_NOTE) MODE_NOTE.textContent = noteText;
+  }
+
+  function showViewportWidth() {
+    var viewportNode = document.getElementById('wimh-viewport');
+    if (viewportNode) viewportNode.textContent = 'viewport: ' + window.innerWidth + ' x ' + window.innerHeight + ' px';
+  }
+
+  function flushReadyCallbacks() {
+    readyCallbacks.forEach(function (callback) {
+      try { callback(recordFields); } catch (error) { consoleErrors.push('onReady threw: ' + error.message); }
+    });
+    readyCallbacks = [];
+  }
+
+  function loadToolScript(onDone) {
+    if (!isInlineJs) {
+      var scriptNode = document.createElement('script');
+      scriptNode.src = APP_JS_FILE;
+      scriptNode.onload = function () { setModeNote('mode: external script file'); onDone(); };
+      scriptNode.onerror = function () { setModeNote('mode: external script failed'); onDone(); };
+      document.body.appendChild(scriptNode);
+      return;
+    }
+
+    fetchText(APP_JS_FILE, function (inlineScriptText) {
+      var inlineNode = document.createElement('script');
+      inlineNode.textContent = inlineScriptText;
+      document.body.appendChild(inlineNode);
+      setModeNote('mode: inline script');
+      onDone();
+    }, function () {
+      setModeNote('mode: inline requested, file read blocked - external script used');
+      isInlineJs = false;
+      loadToolScript(onDone);
+    });
+  }
+
+  function mountTool(markup, markupSource) {
+    installMockTool();
+    STAGE.innerHTML = markup;
+
+    loadToolScript(function () {
+      window.setTimeout(function () {
+        flushReadyCallbacks();
+        var requestedTabName = String(query.get('tab') || '');
+        if (requestedTabName) {
+          var requestedTabNode = document.getElementById('wim-tab-' + requestedTabName);
+          if (requestedTabNode) requestedTabNode.click();
+        }
+        runChecks(markupSource);
+      }, 0);
+    });
+  }
+
+  var fetchedMarkupText = '';
+
+  function start() {
+    addStylesheet();
+    showViewportWidth();
+    window.addEventListener('resize', showViewportWidth);
+
+    fetchText(APP_HTML_FILE, function (fetchedMarkup) {
+      fetchedMarkupText = fetchedMarkup;
+      mountTool(fetchedMarkup, 'file');
+    }, function () {
+      setModeNote('mode: embedded markup (file:// or offline)');
+      mountTool(EMBEDDED_MARKUP, 'embedded');
+    });
+  }
+
+  /* ── checks ── */
+  var results = [];
+  var markupSourceName = 'embedded';
+
+  function recordCheck(checkName, isOk, detailText) {
+    results.push({ name: checkName, ok: !!isOk });
+    var listItem = document.createElement('li');
+    listItem.className = isOk ? 'wimh-pass' : 'wimh-fail';
+    listItem.textContent = (isOk ? 'PASS ' : 'FAIL ') + checkName + (!isOk && detailText ? ' - ' + detailText : '');
+    if (LOG) LOG.appendChild(listItem);
+  }
+
+  function textOf(elementId) {
+    var node = document.getElementById(elementId);
+    return node ? String(node.textContent || '').trim() : '';
+  }
+
+  function valueOf(elementId) {
+    var node = document.getElementById(elementId);
+    return node ? String(node.value || '') : '';
+  }
+
+  function normalizeMarkup(textValue) {
+    return String(textValue || '').replace(/\r\n/g, '\n').trim();
+  }
+
+  function promptTextOf() {
+    return textOf('wim-prompt-output');
+  }
+
+  function railStates() {
+    var railNode = document.getElementById('wim-lifecycle-rail');
+    var stateList = [];
+    for (var stepIndex = 0; stepIndex < railNode.children.length; stepIndex += 1) {
+      var stepNode = railNode.children[stepIndex];
+      stateList.push({
+        step: stepNode.getAttribute('data-step'),
+        done: stepNode.classList.contains('is-done'),
+        current: stepNode.classList.contains('is-current')
+      });
+    }
+    return stateList;
+  }
+
+  function countChecksWithState(stateName) {
+    return document.querySelectorAll('#wim-close-checks .wim-check.is-' + stateName).length;
+  }
+
+  function countPromptReportLines(promptText) {
+    var expectedLines = [
+      '1. Folder you worked in.',
+      '2. Files created or changed.',
+      '3. The new TOOL_BUILD.',
+      '4. Checks you ran and their result.',
+      '5. Anything you could not do, and why.'
+    ];
+    return expectedLines.filter(function (lineText) { return promptText.indexOf(lineText) !== -1; }).length;
+  }
+
+  /* Presses Add image, which asks the host for one image. */
+  function chooseImageFile(fileName) {
+    var addButton = document.getElementById('wim-image-add');
+    if (!addButton) return false;
+    mockState.nextUploadName = fileName;
+    addButton.click();
+    return true;
+  }
+
+  function typeInto(elementId, nextValue) {
+    var inputNode = document.getElementById(elementId);
+    if (!inputNode) return false;
+    inputNode.value = nextValue;
+    inputNode.dispatchEvent(new Event('input'));
+    inputNode.dispatchEvent(new Event('change'));
+    return true;
+  }
+
+  function writeRequests() {
+    return mockState.objectRequests.filter(function (requestEntry) {
+      return requestEntry.action === 'update' || requestEntry.action === 'create';
+    });
+  }
+
+  function optionValues(selectId) {
+    var selectNode = document.getElementById(selectId);
+    if (!selectNode) return [];
+    var valueList = [];
+    for (var optionIndex = 0; optionIndex < selectNode.options.length; optionIndex += 1) {
+      valueList.push(selectNode.options[optionIndex].value);
+    }
+    return valueList;
+  }
+
+  function groupLabels(selectId) {
+    var selectNode = document.getElementById(selectId);
+    if (!selectNode) return [];
+    var labelList = [];
+    for (var childIndex = 0; childIndex < selectNode.children.length; childIndex += 1) {
+      var childNode = selectNode.children[childIndex];
+      if (childNode.tagName === 'OPTGROUP') labelList.push(childNode.label);
+    }
+    return labelList;
+  }
+
+  function runChecks(markupSource) {
+    if (isBare) return;
+    markupSourceName = markupSource;
+
+    var promptText = promptTextOf();
+    var effectiveStatus = requestedStatus || (sampleName === 'b' ? 'new' : (sampleName === 'new' ? 'new' : 'working'));
+
+    if (markupSource === 'file') {
+      recordCheck('embedded harness markup matches the app file',
+        normalizeMarkup(fetchedMarkupText) === normalizeMarkup(EMBEDDED_MARKUP),
+        'the embedded copy is out of date - paste the app markup again');
+    }
+
+    recordCheck('tool booted with a build log line',
+      buildLogs.some(function (logLine) { return logLine.indexOf('[TOOL:BOOT] build') === 0; }),
+      'no [TOOL:BOOT] line was logged');
+
+    recordCheck('header badge shows the tool build',
+      /^tool build \d{4}-\d{2}-\d{2}-\d+$/.test(textOf('wim-build-badge')),
+      'badge text was "' + textOf('wim-build-badge') + '"');
+
+    /* tabs */
+    document.getElementById('wim-tab-progress').click();
+    var progressTabOk = document.getElementById('wim-panel-progress').hidden === false
+      && document.getElementById('wim-panel-item').hidden === true;
+    document.getElementById('wim-tab-prompt').click();
+    var promptTabOk = document.getElementById('wim-panel-prompt').hidden === false
+      && document.getElementById('wim-panel-progress').hidden === true;
+    document.getElementById('wim-tab-notes').click();
+    var notesTabOk = document.getElementById('wim-panel-notes').hidden === false;
+    document.getElementById('wim-tab-item').click();
+    var itemTabOk = document.getElementById('wim-panel-item').hidden === false;
+
+    recordCheck('the four tabs switch their panels',
+      progressTabOk && promptTabOk && notesTabOk && itemTabOk,
+      'progress=' + progressTabOk + ', prompt=' + promptTabOk + ', notes=' + notesTabOk + ', item=' + itemTabOk);
+
+    /* form values */
+    if (recordIsBlank) {
+      recordCheck('a blank record opens as a new item with an editable key',
+        valueOf('wim-field-key') === ''
+          && document.getElementById('wim-field-key').readOnly === false
+          && document.getElementById('wim-item-warning').hidden === false,
+        'the new item form was not ready');
+    } else {
+      recordCheck('the form shows the item values and the key is read-only',
+        valueOf('wim-field-key') === 'WORK-0007'
+          && valueOf('wim-field-title') === 'Severity chip loses its colour after a re-render'
+          && valueOf('wim-field-status') === effectiveStatus
+          && document.getElementById('wim-field-key').readOnly === true,
+        'form was "' + valueOf('wim-field-key') + '" / "' + valueOf('wim-field-title') + '" / "' + valueOf('wim-field-status') + '"');
+    }
+
+    /* store trees */
+    if (storeIsOff) {
+      recordCheck('a store that cannot be read falls back to a text input',
+        document.getElementById('wim-field-product').hidden === true
+          && document.getElementById('wim-field-product-text').hidden === false
+          && document.getElementById('wim-product-hint').hidden === false
+          && valueOf('wim-field-product-text') === (recordIsBlank ? '' : 'Personal Tax Preparation'),
+        'fallback was not shown');
+    } else {
+      var productValues = optionValues('wim-field-product');
+      var productGroups = groupLabels('wim-field-product');
+      recordCheck('the product list is a grouped tree from the tool store',
+        productValues.indexOf('Personal Tax Preparation') !== -1
+          && productValues.indexOf('Invoice And Expense Collector') !== -1
+          && productValues.indexOf('Company Profile') !== -1
+          && productGroups.indexOf('Personal Finance') !== -1
+          && productGroups.indexOf('Business') !== -1
+          && valueOf('wim-field-product') === (recordIsBlank ? '' : 'Personal Tax Preparation'),
+        'values=' + productValues.length + ', groups=' + productGroups.join('|'));
+
+      var applicationValues = optionValues('wim-field-application');
+      var applicationGroups = groupLabels('wim-field-application');
+      recordCheck('the application list is a grouped tree from the application store',
+        applicationValues.indexOf('Finance Workspace') !== -1
+          && applicationValues.indexOf('HR Workspace') !== -1
+          && applicationGroups.indexOf('Finance') !== -1
+          && valueOf('wim-field-application') === (recordIsBlank ? '' : 'Finance Workspace'),
+        'values=' + applicationValues.length + ', groups=' + applicationGroups.join('|'));
+    }
+
+    /* screenshots */
+    var imageCards = document.querySelectorAll('#wim-image-list .wim-image');
+    if (recordIsBlank) {
+      recordCheck('a new item starts with no screenshots',
+        imageCards.length === 0 && textOf('wim-image-count') === '0 images',
+        'cards=' + imageCards.length + ', count="' + textOf('wim-image-count') + '"');
+    } else if (sampleName === 'b') {
+      recordCheck('an item without screenshots says so',
+        imageCards.length === 0
+          && textOf('wim-image-count') === '0 images'
+          && document.getElementById('wim-image-empty').hidden === false,
+        'cards=' + imageCards.length + ', count="' + textOf('wim-image-count') + '"');
+    } else {
+      recordCheck('the saved screenshots render and feed the prompt',
+        imageCards.length === 1
+          && textOf('wim-image-count') === '1 image'
+          && textOf('wim-source-images') === '1 image'
+          && (wantsCustomTemplate || promptTextOf().indexOf(SAMPLE_A_IMAGE_URL) !== -1)
+          && textOf('wim-image-paths').indexOf('tmp/harness/work-0007.png') !== -1,
+        'cards=' + imageCards.length + ', count="' + textOf('wim-image-count') + '", source="' + textOf('wim-source-images') + '"');
+    }
+
+    if (sampleName === 'a' && !startsReadOnly) {
+      var uploadStarted = chooseImageFile('after-fix.png');
+      var imagesAfterUpload = mockState.savedValue && Array.isArray(mockState.savedValue.images) ? mockState.savedValue.images : [];
+
+      recordCheck('an uploaded image is saved as a URL, not as bytes',
+        uploadStarted
+          && document.querySelectorAll('#wim-image-list .wim-image').length === 2
+          && imagesAfterUpload.length === 2
+          && String(imagesAfterUpload[1].url).indexOf('after-fix.png') !== -1
+          && textOf('wim-image-paths').indexOf('tmp/harness/after-fix.png') !== -1,
+        'cards=' + document.querySelectorAll('#wim-image-list .wim-image').length + ', saved images=' + imagesAfterUpload.length);
+
+      var removeButtons = document.querySelectorAll('#wim-image-list [data-image-remove]');
+      var uploadedRemoveButton = removeButtons[1] || removeButtons[0];
+      if (uploadedRemoveButton) uploadedRemoveButton.click();
+      var imagesAfterRemove = mockState.savedValue && Array.isArray(mockState.savedValue.images) ? mockState.savedValue.images : [];
+
+      recordCheck('removing an image keeps its storage path for cleanup',
+        document.querySelectorAll('#wim-image-list .wim-image').length === 1
+          && imagesAfterRemove.length === 2
+          && !!imagesAfterRemove[1].removedAt
+          && textOf('wim-image-paths').indexOf('after-fix.png') !== -1,
+        'cards=' + document.querySelectorAll('#wim-image-list .wim-image').length
+          + ', removedAt="' + ((imagesAfterRemove[1] || {}).removedAt || '') + '"');
+    }
+
+    /* saving */
+    if (startsReadOnly) {
+      recordCheck('read-only keeps the item form in view mode',
+        document.getElementById('wim-save-item').disabled === true
+          && document.getElementById('wim-field-title').disabled === true,
+        'the form was still editable');
+    } else if (!recordIsBlank) {
+      document.getElementById('wim-save-item').click();
+      recordCheck('save with no change asks for nothing',
+        writeRequests().length === 0 && textOf('wim-item-status-line') === 'Nothing to save.',
+        'writes=' + writeRequests().length + ', status="' + textOf('wim-item-status-line') + '"');
+
+      typeInto('wim-field-title', 'Severity chip loses its colour after a re-render (edited)');
+      recordCheck('editing the form marks it dirty',
+        document.getElementById('wim-dirty-indicator').hidden === false,
+        'the dirty indicator stayed hidden');
+
+      document.getElementById('wim-save-item').click();
+      var updateRequest = writeRequests()[0] || { action: '', params: { productData: { data_categoriesBased: {} } } };
+      var changedKeys = Object.keys(updateRequest.params.productData ? updateRequest.params.productData.data_categoriesBased : {});
+      var updateIsCorrect = deniesSave
+        ? (writeRequests().length === 1 && textOf('wim-item-status-line').indexOf('not enabled') !== -1)
+        : (updateRequest.action === 'update'
+          && changedKeys.length === 1
+          && changedKeys[0] === 'title'
+          && updateRequest.params.objectId === 'rec-work-0007');
+
+      recordCheck(deniesSave ? 'a denied save explains what to enable' : 'save sends only the changed field',
+        updateIsCorrect,
+        'action=' + updateRequest.action + ', keys=' + changedKeys.join(',') + ', status="' + textOf('wim-item-status-line') + '"');
+
+      if (!deniesSave) {
+        recordCheck('a saved item leaves the form clean and keeps the new value',
+          document.getElementById('wim-dirty-indicator').hidden === true
+            && valueOf('wim-field-title').indexOf('(edited)') !== -1,
+          'dirty=' + document.getElementById('wim-dirty-indicator').hidden + ', title="' + valueOf('wim-field-title') + '"');
+      }
+
+      recordCheck('the tool never writes a sibling field directly',
+        mockState.setFieldCalls === 0,
+        'setField calls=' + mockState.setFieldCalls);
+    } else {
+      typeInto('wim-field-key', 'WORK-0111');
+      typeInto('wim-field-title', 'New request from the harness');
+      document.getElementById('wim-save-item').click();
+      var createRequest = writeRequests()[0] || { action: '', params: {} };
+      recordCheck('a blank item is created with its key and title',
+        deniesSave
+          ? textOf('wim-item-status-line').indexOf('not enabled') !== -1
+          : (createRequest.action === 'create' && createRequest.params.name === 'WORK-0111 - New request from the harness'),
+        'action=' + createRequest.action + ', name="' + (createRequest.params ? createRequest.params.name : '') + '"');
+    }
+
+    /* progress tab */
+    document.getElementById('wim-tab-progress').click();
+    var rail = railStates();
+    var railOk = false;
+    if (effectiveStatus === 'rejected') {
+      railOk = rail.every(function (step) { return !step.done && !step.current; });
+    } else {
+      var currentIndex = ['new', 'accepted', 'working', 'done'].indexOf(effectiveStatus);
+      railOk = rail.every(function (step, stepIndex) {
+        if (stepIndex < currentIndex) return step.done && !step.current;
+        if (stepIndex === currentIndex) return step.current && !step.done;
+        return !step.done && !step.current;
+      });
+    }
+    recordCheck('progress rail marks the current step for status ' + effectiveStatus, railOk, JSON.stringify(rail));
+
+    var checkCount = document.querySelectorAll('#wim-close-checks .wim-check').length;
+    if (sampleName === 'a') {
+      recordCheck('a finished item passes every close check',
+        checkCount === 6 && countChecksWithState('pass') === 6 && countChecksWithState('fail') === 0,
+        checkCount + ' checks, ' + countChecksWithState('pass') + ' pass, ' + countChecksWithState('fail') + ' fail');
+    } else if (sampleName === 'b') {
+      recordCheck('an empty item shows the missing close checks',
+        checkCount === 6 && countChecksWithState('fail') === 4 && countChecksWithState('optional') === 1,
+        checkCount + ' checks, ' + countChecksWithState('fail') + ' fail, ' + countChecksWithState('optional') + ' optional');
+    }
+
+    /* notes */
+    document.getElementById('wim-tab-notes').click();
+    if (startsReadOnly) {
+      typeInto('wim-note-input', 'This note must not be saved.');
+      document.getElementById('wim-note-add').click();
+      recordCheck('read-only blocks a new note',
+        document.querySelectorAll('#wim-note-list .wim-note').length === 0,
+        'a note was saved in read-only mode');
+    } else {
+      typeInto('wim-note-input', 'Reproduced on the working build.');
+      document.getElementById('wim-note-add').click();
+      recordCheck('a note appears in the list and in the tool value',
+        document.querySelectorAll('#wim-note-list .wim-note').length === 1
+          && textOf('wim-note-count') === '1 note'
+          && textOf('wim-notes-tab-count') === '1'
+          && !!mockState.savedValue && Array.isArray(mockState.savedValue.notes) && mockState.savedValue.notes.length === 1,
+        'note list, tab count or saved value was wrong');
+    }
+
+    /* prompt tab */
+    document.getElementById('wim-tab-prompt').click();
+    promptText = promptTextOf();
+
+    recordCheck('the prompt tab has no input fields',
+      document.getElementById('wim-tool-name') === null
+        && document.getElementById('wim-taxonomy-path') === null
+        && document.getElementById('wim-mode-new-tool') === null,
+      'a prompt input was still in the markup');
+
+    if (!wantsCustomTemplate) {
+      recordCheck('the prompt opens with the item, not with background text',
+        recordIsBlank
+          ? (promptText.indexOf('WORK-0111 - New request from the harness') === 0
+            && promptText.indexOf('WHAT IS WRONG') === -1
+            && promptText.indexOf('not set') === -1)
+          : (promptText.indexOf('WORK-0007 - Severity chip') === 0
+            && promptText.indexOf('Personal Tax Preparation') !== -1
+            && promptText.indexOf('Actual: the chip turns grey') !== -1),
+        'prompt started with "' + promptText.slice(0, 90) + '"');
+    }
+
+    if (sampleName === 'b') {
+      recordCheck('empty item values are left out of the prompt',
+        promptText.indexOf('Severity:') === -1
+          && promptText.indexOf('Reported build:') === -1
+          && promptText.indexOf('SCREENSHOTS') === -1,
+        'an empty value still produced a label');
+    }
+
+    recordCheck('generated prompt keeps no double-brace placeholder',
+      promptText.indexOf('{{') === -1 && promptText.indexOf('}}') === -1,
+      'a placeholder survived');
+
+    if (wantsCustomTemplate) {
+      recordCheck('custom template replaces the default text',
+        promptText.indexOf(CUSTOM_TEMPLATE_MARKER) !== -1
+          && promptText.indexOf('DO THIS') === -1
+          && promptText.indexOf('SOMETHING_UNKNOWN') === -1,
+        'the custom template marker was missing or an unknown token survived');
+    } else {
+      recordCheck('generated prompt keeps a five-line report list',
+        countPromptReportLines(promptText) === 5,
+        'found ' + countPromptReportLines(promptText) + ' of 5');
+    }
+
+    recordCheck('generated prompt has no undefined or null',
+      /\bundefined\b|\bnull\b/.test(promptText) === false,
+      'the words undefined or null appeared');
+
+    recordCheck('character count matches the prompt',
+      textOf('wim-prompt-char-count') === (promptText.length + ' characters'),
+      'count was "' + textOf('wim-prompt-char-count') + '" for ' + promptText.length + ' characters');
+
+    recordCheck('page has no horizontal scroll',
+      document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      'scrollWidth ' + document.documentElement.scrollWidth + ' > clientWidth ' + document.documentElement.clientWidth);
+
+    /* download */
+    var originalAnchorClick = HTMLAnchorElement.prototype.click;
+    var capturedDownloadName = '';
+    HTMLAnchorElement.prototype.click = function () {
+      capturedDownloadName = this.getAttribute('download') || '';
+    };
+    document.getElementById('wim-download').click();
+    HTMLAnchorElement.prototype.click = originalAnchorClick;
+    recordCheck('download uses <key>-build-prompt.md',
+      capturedDownloadName === ((valueOf('wim-field-key') || 'work-item') + '-build-prompt.md'),
+      'file name was "' + capturedDownloadName + '"');
+
+    document.getElementById('wim-prompt-status').textContent = '';
+    document.getElementById('wim-copy').click();
+
+    window.setTimeout(function () {
+      recordCheck('copy puts the prompt on the clipboard and says so',
+        textOf('wim-prompt-status').length > 0
+          && (useRealClipboard || mockState.clipboardText === promptTextOf()),
+        'the status line stayed empty or the copied text differed');
+
+      /* read-only */
+      window.__wimHarness.setReadOnly(true);
+      recordCheck('read-only disables the form and keeps the prompt actions active',
+        document.getElementById('wim-field-title').disabled === true
+          && document.getElementById('wim-save-item').disabled === true
+          && document.getElementById('wim-note-add').disabled === true
+          && document.getElementById('wim-generate').disabled === false
+          && document.getElementById('wim-copy').disabled === false
+          && document.getElementById('wim-download').disabled === false,
+        'the disabled state was wrong');
+      window.__wimHarness.setReadOnly(false);
+
+      if (!startsReadOnly && !recordIsBlank) {
+        typeInto('wim-field-title', 'Temporary change');
+        document.getElementById('wim-discard-item').click();
+        recordCheck('discard restores the saved values',
+          valueOf('wim-field-title').indexOf('Temporary change') === -1
+            && document.getElementById('wim-dirty-indicator').hidden === true,
+          'title was "' + valueOf('wim-field-title') + '"');
+      }
+
+      if (wantsCustomTemplate) {
+        recordCheck('custom template param is used and labelled',
+          textOf('wim-template-chip') === 'custom template',
+          'chip was "' + textOf('wim-template-chip') + '"');
+        document.getElementById('wim-use-builtin').click();
+        recordCheck('built-in reset button restores the default prompt',
+          promptTextOf().indexOf(CUSTOM_TEMPLATE_MARKER) === -1 && promptTextOf().indexOf('DO THIS') !== -1,
+          'the built-in prompt was not restored');
+      }
+
+      /* The tool must leave the Item tab in front, so a refresh starts on the item. */
+      document.getElementById('wim-tab-item').click();
+      recordCheck('the item tab is the one left open',
+        document.getElementById('wim-tab-item').classList.contains('is-active')
+          && document.getElementById('wim-panel-item').hidden === false,
+        'the tool was left on another tab');
+
+      recordCheck('no console error was raised',
+        consoleErrors.length === 0,
+        consoleErrors.join(' | '));
+
+      var failedChecks = results.filter(function (resultEntry) { return !resultEntry.ok; });
+      var summaryText = failedChecks.length === 0
+        ? results.length + ' of ' + results.length + ' checks passed'
+        : results.length + ' checks, ' + failedChecks.length + ' failed: ' + failedChecks.map(function (resultEntry) { return resultEntry.name; }).join('; ');
+
+      if (SUMMARY) SUMMARY.textContent = summaryText;
+
+      if (CHECKS_STATUS) {
+        CHECKS_STATUS.textContent = failedChecks.length === 0
+          ? results.length + ' checks passed'
+          : failedChecks.length + ' of ' + results.length + ' checks failed';
+        CHECKS_STATUS.className = 'wimh-checks-status ' + (failedChecks.length === 0 ? 'is-pass' : 'is-fail');
+      }
+      if (CHECKS_ACTION) CHECKS_ACTION.textContent = 'show details';
+
+      console.log('[HARNESS] ' + markupSourceName + ' markup, ' + summaryText);
+    }, 1500);
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

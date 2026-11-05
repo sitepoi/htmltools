@@ -140,12 +140,23 @@ body.th-bare #app-container { min-height: 100vh; }
   </section>
 
   <section class="rbi-pane" id="pane-settings">
+    <p class="rbi-note">Changes save automatically to this CMS record - there is no separate save button.</p>
     <div class="rbi-card">
       <div class="rbi-card-head">
         <span class="rbi-card-title">🏢 Provider - your company</span>
-        <span class="rbi-card-sub">appears on the invoice header</span>
+        <span class="rbi-card-sub">linked to a CompanyProfile object and used on every invoice</span>
       </div>
       <div class="rbi-form-grid">
+        <div class="rbi-fld rbi-fld-full">
+          <label class="rbi-label" for="rbi-st-profile">Company profile</label>
+          <div class="rbi-profile-row">
+            <select id="rbi-st-profile" class="rbi-input rbi-select"></select>
+            <button type="button" class="rbi-btn rbi-btn-primary rbi-btn-sm" id="rbi-btn-link-profile">Link profile</button>
+            <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-btn-sync-profile">Sync now</button>
+            <button type="button" class="rbi-btn rbi-btn-danger rbi-btn-sm" id="rbi-btn-unlink-profile">Unlink</button>
+          </div>
+          <p class="rbi-note" id="rbi-profile-status">Loading company profiles…</p>
+        </div>
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-name">Company name</label><input type="text" id="rbi-st-name" class="rbi-input" placeholder="Acme Software Inc."></div>
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-taxid">Tax / GST ID</label><input type="text" id="rbi-st-taxid" class="rbi-input" placeholder="123456789 RT0001"></div>
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-email">Email</label><input type="text" id="rbi-st-email" class="rbi-input" placeholder="billing@company.com"></div>
@@ -182,18 +193,6 @@ body.th-bare #app-container { min-height: 100vh; }
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-nextseq">Next invoice number</label><input type="number" min="1" step="1" id="rbi-st-nextseq" class="rbi-input"></div>
         <div class="rbi-fld"><label class="rbi-label" for="rbi-st-terms">Payment terms</label><select id="rbi-st-terms" class="rbi-input rbi-select"></select></div>
       </div>
-    </div>
-
-    <div class="rbi-card rbi-danger-card rbi-admin">
-      <div class="rbi-card-head"><span class="rbi-card-title">🗑 Danger zone</span></div>
-      <p class="rbi-note">Delete all invoices and reset this tool to a fresh state. This cannot be undone.</p>
-      <div class="rbi-card-foot">
-        <button type="button" class="rbi-btn rbi-btn-danger" id="rbi-btn-reset-data">🗑 Delete All Data</button>
-      </div>
-    </div>
-
-    <div class="rbi-settings-actions">
-      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-btn-save-settings">💾 Save Settings</button>
     </div>
   </section>
 
@@ -330,7 +329,24 @@ body.th-bare #app-container { min-height: 100vh; }
 
   var qp = new URLSearchParams(location.search);
   var initialRole = qp.get('role') || 'admin';
+  var _role = initialRole;
   _readOnly = qp.get('ro') === '1';
+
+  /* Sample CompanyProfile objects (same schema the real tool saves). */
+  var SAMPLE_COMPANY_PROFILES = [
+    { id: 'cp_acme', name: 'Acme Software Inc.', productData: { data_categoriesBased: {
+      basicInfo: { legalName: 'Acme Software Inc.', tradeName: 'Acme', businessNumber: '123456789 RT0001' },
+      headquarters: { address: '100 King St W', city: 'Toronto', state: 'ON', postal: 'M5X 1A9', country: 'Canada', email: 'billing@acmesoftware.ca', phone: '+1 (416) 555-0142' },
+      billingAddress: { sameAsHQ: true, address: '', city: '', state: '', postal: '', country: '', email: 'billing@acmesoftware.ca' },
+      salesTaxDefinitions: [ { name: 'HST', rate: '13', taxNumber: '123456789 RT0001', notes: '' } ]
+    } } },
+    { id: 'cp_northwind', name: 'Northwind Labs Ltd.', productData: { data_categoriesBased: {
+      basicInfo: { legalName: 'Northwind Labs Ltd.', tradeName: 'Northwind', businessNumber: '987654321 RT0001' },
+      headquarters: { address: '200 Bay St', city: 'Toronto', state: 'ON', postal: 'M5J 2J1', country: 'Canada', email: 'accounts@northwindlabs.ca', phone: '+1 (416) 555-0199' },
+      billingAddress: { sameAsHQ: true, address: '', city: '', state: '', postal: '', country: '', email: '' },
+      salesTaxDefinitions: [ { name: 'HST', rate: '13', taxNumber: '987654321 RT0001', notes: '' } ]
+    } } }
+  ];
 
   window.tool = {
     getValue: function () { return _value; },
@@ -358,6 +374,21 @@ body.th-bare #app-container { min-height: 100vh; }
     reportValid: function () {},
     reportMissingParams: function () {},
     requestSave: function (cb) { console.log('[mock] requestSave'); if (cb) cb(null, true); },
+    requestObjects: function (action, params, cb) {
+      setTimeout(function () {
+        if (action === 'query') { cb(null, { objects: SAMPLE_COMPANY_PROFILES }); return; }
+        if (action === 'get') {
+          var found = null;
+          for (var i = 0; i < SAMPLE_COMPANY_PROFILES.length; i++) {
+            if (SAMPLE_COMPANY_PROFILES[i].id === params.objectId) { found = SAMPLE_COMPANY_PROFILES[i]; break; }
+          }
+          if (found) cb(null, { object: found });
+          else cb('Company profile not found');
+          return;
+        }
+        cb('Unsupported requestObjects action: ' + action);
+      }, 30);
+    },
     notify: function (msg, sev) {
       sev = sev || 'info';
       var cols = { info: '#4f46e5', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
@@ -415,7 +446,6 @@ body.th-bare #app-container { min-height: 100vh; }
     requestAIStream: function (prompt, ctx, callbacks) {
       if (callbacks && callbacks.onError) callbacks.onError('requestAIStream not mocked');
     },
-    requestObjects: function (action, params, cb) { if (cb) cb('CMS objects not used by this tool', null); },
     onReady: function (cb) { load(); cb(_value, _fields); },
     _loadSample: function () {
       localStorage.removeItem(STORAGE_KEY);
@@ -429,7 +459,6 @@ body.th-bare #app-container { min-height: 100vh; }
   };
 
   var _role = initialRole;
-
   document.addEventListener('keydown', function (e) {
     if (e.ctrlKey && e.shiftKey && e.key === 'R') {
       e.preventDefault();

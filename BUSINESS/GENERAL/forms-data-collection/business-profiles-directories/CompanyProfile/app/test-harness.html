@@ -15,7 +15,10 @@ body { padding-top: 28px !important; margin: 0; }
 .cp-header { top: 28px !important; }
 .cp-sidebar { top: calc(var(--cp-header-h) + 28px) !important; height: calc(100vh - var(--cp-header-h) - 28px) !important; }
 .cp-layout { min-height: calc(100vh - var(--cp-header-h) - 28px); }
-#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+@media (max-width: 820px) {
+  .cp-sidebar { top: auto !important; height: auto !important; }
+}
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
 #th-bar strong { color: #38bdf8; letter-spacing: 0.5px; }
 #th-bar .sep { color: #475569; }
 #th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
@@ -62,6 +65,8 @@ body { padding-top: 28px !important; margin: 0; }
   var STORAGE_KEY = 'company_profile_test_db';
   var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
   var _readOnly = false, _user = null, _fields = {}, _value = null;
+  // ?noupload=1 hides requestUpload so the URL fallback can be tested.
+  var _uploadDisabled = (new URLSearchParams(window.location.search)).get('noupload') === '1';
 
   function load() {
     try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
@@ -114,6 +119,28 @@ body { padding-top: 28px !important; margin: 0; }
     _dump: function() { console.log('DB:', JSON.parse(JSON.stringify(_value))); }
   };
 
+  if (!_uploadDisabled) {
+    window.tool.requestUpload = function(accept, callback) {
+      var picker = document.createElement('input');
+      picker.type = 'file';
+      picker.accept = accept || '';
+      picker.style.display = 'none';
+      document.body.appendChild(picker);
+      picker.addEventListener('change', function() {
+        var selectedFile = picker.files && picker.files[0];
+        picker.remove();
+        if (!selectedFile) { callback('No file selected'); return; }
+        callback(null, {
+          name: selectedFile.name,
+          url: URL.createObjectURL(selectedFile),
+          size: selectedFile.size,
+          type: selectedFile.type
+        });
+      });
+      picker.click();
+    };
+  }
+
   document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
     if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('Database dumped to console', 'info'); }
@@ -121,13 +148,14 @@ body { padding-top: 28px !important; margin: 0; }
 })();
 </script>
 
-<script type="text/template" id="cp-html-template"><div id="app">
+<script type="text/template" id="cp-html-template">
+<div id="app">
 	<header class="cp-header">
 		<div class="cp-header-left">
-			<div class="cp-logo">🏢</div>
+			<div class="cp-logo" data-icon="building"></div>
 			<div class="cp-title-group">
 				<div class="cp-app-title">Company Profile</div>
-				<div class="cp-app-sub" id="cp-org-name-display">—</div>
+				<div class="cp-app-sub" id="cp-org-name-display">Untitled company</div>
 			</div>
 		</div>
 		<div class="cp-header-right">
@@ -135,31 +163,38 @@ body { padding-top: 28px !important; margin: 0; }
 				<span class="cp-save-dot"></span>
 				<span class="cp-save-text">All changes saved</span>
 			</div>
-			<button class="cp-btn cp-btn-icon" id="cp-expand-all" title="Previous Section">◂</button>
-			<button class="cp-btn cp-btn-icon" id="cp-collapse-all" title="Next Section">▸</button>
-			<button class="cp-theme-toggle" id="cp-theme-toggle" title="Toggle dark / light mode">
-				<span class="cp-theme-toggle-icon-moon">🌙</span>
-				<span class="cp-theme-toggle-icon-sun">☀️</span>
-			</button>
+			<div class="cp-completion" id="cp-completion" title="Profile completion">
+				<span class="cp-ring" id="cp-completion-ring"><span class="cp-ring-inner" id="cp-completion-pct">0%</span></span>
+				<span class="cp-completion-text">
+					<strong id="cp-completion-count">0 of 0</strong>
+					<span>sections ready</span>
+				</span>
+			</div>
+			<button type="button" class="cp-btn cp-btn-icon" id="cp-theme-toggle" title="Toggle dark / light mode" aria-label="Toggle dark mode"></button>
 		</div>
 	</header>
+
 	<div class="cp-layout">
 		<aside class="cp-sidebar" id="cp-sidebar">
-			<nav class="cp-nav" id="cp-nav"></nav>
-			<div class="cp-sidebar-footer">
-				<div class="cp-progress">
-					<div class="cp-progress-label">Completion</div>
-					<div class="cp-progress-bar"><div class="cp-progress-fill" id="cp-progress-fill"></div></div>
-					<div class="cp-progress-pct" id="cp-progress-pct">0%</div>
-				</div>
+			<div class="cp-profile-chip">
+				<span class="cp-profile-chip-label">Profile</span>
+				<strong class="cp-profile-chip-value" id="cp-profile-chip-value">Not set</strong>
+				<span class="cp-profile-chip-sub" id="cp-profile-chip-sub">Choose an industry in Basic Information</span>
+			</div>
+			<nav class="cp-nav" id="cp-nav" aria-label="Profile sections"></nav>
+			<div class="cp-sidebar-foot">
+				<div class="cp-hidden-note" id="cp-hidden-note"></div>
+				<button type="button" class="cp-linkbtn" id="cp-scope-toggle">Show all sections</button>
+				<button type="button" class="cp-linkbtn cp-linkbtn-strong" id="cp-add-custom-section">+ New custom section</button>
 			</div>
 		</aside>
+
 		<main class="cp-main" id="cp-main">
 
 			<!-- BASIC INFORMATION -->
 			<section class="cp-section" data-section="basic" id="sec-basic">
-				<div class="cp-section-header" data-section-toggle="basic">
-					<div class="cp-section-icon">📋</div>
+				<div class="cp-section-header">
+					<div class="cp-section-icon" data-icon="building"></div>
 					<div class="cp-section-title-group">
 						<h2 class="cp-section-title">Basic Information</h2>
 						<p class="cp-section-desc">Core company identity and classification</p>
@@ -167,47 +202,81 @@ body { padding-top: 28px !important; margin: 0; }
 					<div class="cp-section-toggle">▾</div>
 				</div>
 				<div class="cp-section-body">
-					<div class="cp-field-row">
-						<div class="cp-field">
-							<label class="cp-label">Legal Company Name <span class="cp-required">*</span></label>
-							<input type="text" class="cp-input" id="f-legalName" placeholder="Registered legal name">
+					<div class="cp-setup">
+						<div class="cp-setup-head">
+							<span class="cp-step">1</span>
+							<div class="cp-setup-head-text">
+								<h3 class="cp-block-title">Profile setup</h3>
+								<p class="cp-block-sub">Choose the industry and the areas this profile covers. The sidebar adapts - no saved data is ever removed.</p>
+							</div>
 						</div>
-						<div class="cp-field">
-							<label class="cp-label">Trade Name / DBA</label>
-							<input type="text" class="cp-input" id="f-tradeName" placeholder="Doing business as (if different)">
+						<div class="cp-template-row">
+							<span class="cp-template-label">Start from a template</span>
+							<div class="cp-template-chips" id="cp-template-chips"></div>
 						</div>
+						<div class="cp-field-row">
+							<div class="cp-field cp-field-full">
+								<label class="cp-label" for="f-profile-industry">Primary Industry <span class="cp-required">*</span></label>
+								<select class="cp-input cp-select" id="f-profile-industry"></select>
+							</div>
+						</div>
+						<div class="cp-focus-head">
+							<span class="cp-label">What this profile covers</span>
+							<span class="cp-focus-hint" id="cp-focus-hint"></span>
+						</div>
+						<div class="cp-focus-grid" id="cp-focus-grid"></div>
+						<p class="cp-note" id="cp-profile-note"></p>
 					</div>
-					<div class="cp-field-row cp-field-row-3">
-						<div class="cp-field">
-							<label class="cp-label">Company Type <span class="cp-required">*</span></label>
-							<select class="cp-input cp-select" id="f-companyType">
-								<option value="">— Select —</option>
-								<option value="corporation">Corporation (For-Profit)</option>
-								<option value="llc">Limited Liability Company (LLC)</option>
-								<option value="partnership">Partnership</option>
-								<option value="sole-proprietorship">Sole Proprietorship</option>
-								<option value="nonprofit">Non-Profit Organization</option>
-								<option value="registered-charity">Registered Charity</option>
-								<option value="cooperative">Cooperative</option>
-								<option value="joint-venture">Joint Venture</option>
-								<option value="public">Public Company</option>
-								<option value="government">Government Entity</option>
-								<option value="other">Other</option>
-							</select>
+					<div class="cp-setup">
+						<div class="cp-setup-head">
+							<span class="cp-step">2</span>
+							<div class="cp-setup-head-text">
+								<h3 class="cp-block-title">Company identity</h3>
+								<p class="cp-block-sub">Legal details reused across tenders, contracts and invoices.</p>
+							</div>
 						</div>
-						<div class="cp-field">
-							<label class="cp-label">Year Established</label>
-							<input type="number" class="cp-input" id="f-yearEstablished" placeholder="e.g. 2010" min="1800" max="2099">
+						<div class="cp-field-row cp-field-row-2">
+							<div class="cp-field">
+								<label class="cp-label" for="f-legalName">Legal Company Name <span class="cp-required">*</span></label>
+								<input type="text" class="cp-input" id="f-legalName" placeholder="Registered legal name">
+							</div>
+							<div class="cp-field">
+								<label class="cp-label" for="f-tradeName">Trade Name / DBA</label>
+								<input type="text" class="cp-input" id="f-tradeName" placeholder="Doing business as (if different)">
+							</div>
 						</div>
-						<div class="cp-field">
-							<label class="cp-label">Number of Employees</label>
-							<input type="number" class="cp-input" id="f-numEmployees" placeholder="e.g. 250" min="0">
+						<div class="cp-field-row cp-field-row-2">
+							<div class="cp-field">
+								<label class="cp-label" for="f-companyType">Company Type <span class="cp-required">*</span></label>
+								<select class="cp-input cp-select" id="f-companyType">
+									<option value="">Select company type</option>
+									<option value="corporation">Corporation (For-Profit)</option>
+									<option value="llc">Limited Liability Company (LLC)</option>
+									<option value="partnership">Partnership</option>
+									<option value="sole-proprietorship">Sole Proprietorship</option>
+									<option value="nonprofit">Non-Profit Organization</option>
+									<option value="registered-charity">Registered Charity</option>
+									<option value="cooperative">Cooperative</option>
+									<option value="joint-venture">Joint Venture</option>
+									<option value="public">Public Company</option>
+									<option value="government">Government Entity</option>
+									<option value="other">Other</option>
+								</select>
+							</div>
+							<div class="cp-field">
+								<label class="cp-label" for="f-yearEstablished">Year Established</label>
+								<input type="number" class="cp-input" id="f-yearEstablished" placeholder="e.g. 2010" min="1800" max="2099">
+							</div>
 						</div>
-					</div>
-					<div class="cp-field-row">
-						<div class="cp-field cp-field-full">
-							<label class="cp-label">Registration / Business Number</label>
-							<input type="text" class="cp-input" id="f-businessNumber" placeholder="Government registration or business number">
+						<div class="cp-field-row cp-field-row-2">
+							<div class="cp-field">
+								<label class="cp-label" for="f-numEmployees">Number of Employees</label>
+								<input type="number" class="cp-input" id="f-numEmployees" placeholder="e.g. 250" min="0">
+							</div>
+							<div class="cp-field">
+								<label class="cp-label" for="f-businessNumber">Registration / Business Number</label>
+								<input type="text" class="cp-input" id="f-businessNumber" placeholder="Government registration or business number">
+							</div>
 						</div>
 					</div>
 				</div>
@@ -224,26 +293,8 @@ body { padding-top: 28px !important; margin: 0; }
 					<div class="cp-section-toggle">▾</div>
 				</div>
 				<div class="cp-section-body">
-					<div class="cp-field">
-						<label class="cp-label">Mission Statement</label>
-						<textarea class="cp-input cp-textarea" id="f-mission" rows="3" placeholder="Why does the organization exist? What is its core purpose?"></textarea>
-					</div>
-					<div class="cp-field">
-						<label class="cp-label">Vision Statement</label>
-						<textarea class="cp-input cp-textarea" id="f-vision" rows="3" placeholder="What does the organization aspire to become?"></textarea>
-					</div>
-					<div class="cp-field">
-						<label class="cp-label">Core Values</label>
-						<textarea class="cp-input cp-textarea" id="f-values" rows="3" placeholder="Guiding principles and beliefs (one per line)"></textarea>
-					</div>
-					<div class="cp-field">
-						<label class="cp-label">About the Organization</label>
-						<textarea class="cp-input cp-textarea" id="f-about" rows="4" placeholder="General description, history, and overview of products &amp; services"></textarea>
-					</div>
-					<div class="cp-field">
-						<label class="cp-label">Strategic Targets / Goals</label>
-						<textarea class="cp-input cp-textarea" id="f-targets" rows="3" placeholder="Key organizational targets and goals"></textarea>
-					</div>
+					<p class="cp-section-intro">These statements are shown as cards so you can read the profile at a glance. Open one card to write it - the others stay readable.</p>
+					<div class="cp-stmt-grid" id="cp-stmts"></div>
 				</div>
 			</section>
 
@@ -275,28 +326,42 @@ body { padding-top: 28px !important; margin: 0; }
 					<div class="cp-section-toggle">▾</div>
 				</div>
 				<div class="cp-section-body">
-					<div class="cp-field">
-						<label class="cp-label">Office / Location Name</label>
-						<input type="text" class="cp-input" id="f-hq-name" placeholder="e.g. Corporate Headquarters">
-					</div>
-					<div class="cp-field-row">
-						<div class="cp-field cp-field-full">
-							<label class="cp-label">Street Address</label>
-							<input type="text" class="cp-input" id="f-hq-address" placeholder="Street address, building, suite">
+					<div class="cp-subsection">
+						<div class="cp-subsection-head">
+							<h3 class="cp-subsection-title">Location</h3>
+							<span class="cp-subsection-note">Where the business is registered and reached by post</span>
+						</div>
+						<div class="cp-field-row cp-field-row-2">
+							<div class="cp-field">
+								<label class="cp-label">Office / Location Name</label>
+								<input type="text" class="cp-input" id="f-hq-name" placeholder="e.g. Corporate Headquarters">
+							</div>
+							<div class="cp-field"><label class="cp-label">Country</label><input type="text" class="cp-input" id="f-hq-country" placeholder="e.g. Canada"></div>
+						</div>
+						<div class="cp-field-row">
+							<div class="cp-field cp-field-full">
+								<label class="cp-label">Street Address</label>
+								<input type="text" class="cp-input" id="f-hq-address" placeholder="Street address, building, suite">
+							</div>
+						</div>
+						<div class="cp-field-row cp-field-row-3">
+							<div class="cp-field"><label class="cp-label">City</label><input type="text" class="cp-input" id="f-hq-city"></div>
+							<div class="cp-field"><label class="cp-label">State / Province</label><input type="text" class="cp-input" id="f-hq-state"></div>
+							<div class="cp-field"><label class="cp-label">Postal / ZIP Code</label><input type="text" class="cp-input" id="f-hq-postal"></div>
 						</div>
 					</div>
-					<div class="cp-field-row cp-field-row-3">
-						<div class="cp-field"><label class="cp-label">City</label><input type="text" class="cp-input" id="f-hq-city"></div>
-						<div class="cp-field"><label class="cp-label">State / Province</label><input type="text" class="cp-input" id="f-hq-state"></div>
-						<div class="cp-field"><label class="cp-label">Postal / ZIP Code</label><input type="text" class="cp-input" id="f-hq-postal"></div>
-					</div>
-					<div class="cp-field-row">
-						<div class="cp-field"><label class="cp-label">Country</label><input type="text" class="cp-input" id="f-hq-country" placeholder="e.g. Canada"></div>
-					</div>
-					<div class="cp-field-row cp-field-row-3">
-						<div class="cp-field"><label class="cp-label">Email</label><input type="email" class="cp-input" id="f-hq-email" placeholder="info@company.com"></div>
-						<div class="cp-field"><label class="cp-label">Phone</label><input type="text" class="cp-input" id="f-hq-phone" placeholder="+1 (555) 000-0000"></div>
-						<div class="cp-field"><label class="cp-label">Website</label><input type="url" class="cp-input" id="f-hq-website" placeholder="https://www.company.com"></div>
+					<div class="cp-subsection">
+						<div class="cp-subsection-head">
+							<h3 class="cp-subsection-title">Contact channels</h3>
+							<span class="cp-subsection-note">Used on the profile, invoices and tender documents</span>
+						</div>
+						<div class="cp-field-row cp-field-row-2">
+							<div class="cp-field"><label class="cp-label">Email</label><input type="email" class="cp-input" id="f-hq-email" placeholder="info@company.com"></div>
+							<div class="cp-field"><label class="cp-label">Phone</label><input type="text" class="cp-input" id="f-hq-phone" placeholder="+1 (555) 000-0000"></div>
+						</div>
+						<div class="cp-field-row">
+							<div class="cp-field cp-field-full"><label class="cp-label">Website</label><input type="url" class="cp-input" id="f-hq-website" placeholder="https://www.company.com"></div>
+						</div>
 					</div>
 				</div>
 			</section>
@@ -339,6 +404,35 @@ body { padding-top: 28px !important; margin: 0; }
 						</div>
 						<div class="cp-field-row"><div class="cp-field"><label class="cp-label">Country</label><input type="text" class="cp-input" id="f-billing-country"></div></div>
 						<div class="cp-field-row"><div class="cp-field cp-field-full"><label class="cp-label">Billing Email</label><input type="email" class="cp-input" id="f-billing-email" placeholder="billing@company.com"></div></div>
+					</div>
+				</div>
+			</section>
+
+			<!-- INVOICING -->
+			<section class="cp-section" data-section="invoicing" id="sec-invoicing">
+				<div class="cp-section-header" data-section-toggle="invoicing">
+					<div class="cp-section-icon"></div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Invoicing</h2>
+						<p class="cp-section-desc">Payment instructions and invoice branding</p>
+					</div>
+					<div class="cp-section-toggle">&#9662;</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-invoice-summary" id="cp-invoice-summary"></div>
+					<div class="cp-field cp-field-full">
+						<label class="cp-label" for="f-invoice-payment">Payment Instructions</label>
+						<textarea class="cp-input cp-textarea" id="f-invoice-payment" rows="7" placeholder="Bank name, account name, account number, IBAN, SWIFT, payment terms..."></textarea>
+						<span class="cp-field-help">Printed on the invoice as written. One instruction per line reads best.</span>
+					</div>
+					<div class="cp-field cp-field-full">
+						<label class="cp-label" for="f-invoice-footer">Invoice Footer Note</label>
+						<input type="text" class="cp-input" id="f-invoice-footer" maxlength="160" placeholder="Registered in Canada - GST/HST number on file">
+						<span class="cp-field-help">One short line at the bottom of the invoice. 160 characters maximum.</span>
+					</div>
+					<div class="cp-field cp-field-full">
+						<span class="cp-label">Invoice Logo</span>
+						<div class="cp-logo-field" id="cp-invoice-logo-field"></div>
 					</div>
 				</div>
 			</section>
@@ -419,20 +513,32 @@ body { padding-top: 28px !important; margin: 0; }
 					<div class="cp-section-toggle">▾</div>
 				</div>
 				<div class="cp-section-body">
-					<div class="cp-field-row cp-field-row-3">
-						<div class="cp-field"><label class="cp-label">🌐 Website</label><input type="url" class="cp-input" id="f-wl-website" placeholder="https://"></div>
-						<div class="cp-field"><label class="cp-label">📧 Email</label><input type="email" class="cp-input" id="f-wl-email" placeholder="info@company.com"></div>
-						<div class="cp-field"><label class="cp-label">🔗 LinkedIn</label><input type="url" class="cp-input" id="f-wl-linkedin" placeholder="https://linkedin.com/company/"></div>
+					<div class="cp-subsection">
+						<div class="cp-subsection-head">
+							<h3 class="cp-subsection-title">Primary channels</h3>
+							<span class="cp-subsection-note">The links a client should use first</span>
+						</div>
+						<div class="cp-field-row cp-field-row-3">
+							<div class="cp-field"><label class="cp-label">Website</label><input type="url" class="cp-input" id="f-wl-website" placeholder="https://"></div>
+							<div class="cp-field"><label class="cp-label">Email</label><input type="email" class="cp-input" id="f-wl-email" placeholder="info@company.com"></div>
+							<div class="cp-field"><label class="cp-label">LinkedIn</label><input type="url" class="cp-input" id="f-wl-linkedin" placeholder="https://linkedin.com/company/"></div>
+						</div>
 					</div>
-					<div class="cp-field-row cp-field-row-3">
-						<div class="cp-field"><label class="cp-label">📘 Facebook</label><input type="url" class="cp-input" id="f-wl-facebook" placeholder="https://facebook.com/"></div>
-						<div class="cp-field"><label class="cp-label">📷 Instagram</label><input type="url" class="cp-input" id="f-wl-instagram" placeholder="https://instagram.com/"></div>
-						<div class="cp-field"><label class="cp-label">🐦 X / Twitter</label><input type="url" class="cp-input" id="f-wl-twitter" placeholder="https://x.com/"></div>
-					</div>
-					<div class="cp-field-row cp-field-row-3">
-						<div class="cp-field"><label class="cp-label">▶️ YouTube</label><input type="url" class="cp-input" id="f-wl-youtube" placeholder="https://youtube.com/@"></div>
-						<div class="cp-field"><label class="cp-label">🎵 TikTok</label><input type="url" class="cp-input" id="f-wl-tiktok" placeholder="https://tiktok.com/@"></div>
-						<div class="cp-field"><label class="cp-label">💬 WhatsApp</label><input type="text" class="cp-input" id="f-wl-whatsapp" placeholder="WhatsApp number or link"></div>
+					<div class="cp-subsection">
+						<div class="cp-subsection-head">
+							<h3 class="cp-subsection-title">Social profiles</h3>
+							<span class="cp-subsection-note">Leave a field empty when the channel is not used</span>
+						</div>
+						<div class="cp-field-row cp-field-row-3">
+							<div class="cp-field"><label class="cp-label">Facebook</label><input type="url" class="cp-input" id="f-wl-facebook" placeholder="https://facebook.com/"></div>
+							<div class="cp-field"><label class="cp-label">Instagram</label><input type="url" class="cp-input" id="f-wl-instagram" placeholder="https://instagram.com/"></div>
+							<div class="cp-field"><label class="cp-label">X / Twitter</label><input type="url" class="cp-input" id="f-wl-twitter" placeholder="https://x.com/"></div>
+						</div>
+						<div class="cp-field-row cp-field-row-3">
+							<div class="cp-field"><label class="cp-label">YouTube</label><input type="url" class="cp-input" id="f-wl-youtube" placeholder="https://youtube.com/@"></div>
+							<div class="cp-field"><label class="cp-label">TikTok</label><input type="url" class="cp-input" id="f-wl-tiktok" placeholder="https://tiktok.com/@"></div>
+							<div class="cp-field"><label class="cp-label">WhatsApp</label><input type="text" class="cp-input" id="f-wl-whatsapp" placeholder="WhatsApp number or link"></div>
+						</div>
 					</div>
 					<div class="cp-subsection">
 						<h3 class="cp-subsection-title">Other Social Media Links</h3>
@@ -458,55 +564,46 @@ body { padding-top: 28px !important; margin: 0; }
 					<div class="cp-section-toggle">▾</div>
 				</div>
 				<div class="cp-section-body">
-					<div class="cp-field-row cp-field-row-2">
-						<div class="cp-field">
-							<label class="cp-label">Primary Industry</label>
-							<select class="cp-input cp-select" id="f-industry-primary">
-								<option value="">— Select —</option>
-								<option value="construction">Construction</option>
-								<option value="technology">Technology &amp; IT</option>
-								<option value="healthcare">Healthcare</option>
-								<option value="education">Education</option>
-								<option value="manufacturing">Manufacturing</option>
-								<option value="retail">Retail &amp; Wholesale</option>
-								<option value="finance">Finance &amp; Insurance</option>
-								<option value="transportation">Transportation &amp; Logistics</option>
-								<option value="energy">Energy &amp; Utilities</option>
-								<option value="agriculture">Agriculture &amp; Food</option>
-								<option value="hospitality">Hospitality &amp; Tourism</option>
-								<option value="realestate">Real Estate</option>
-								<option value="consulting">Consulting &amp; Professional Services</option>
-								<option value="nonprofit">Non-Profit &amp; Social Services</option>
-								<option value="media">Media &amp; Communications</option>
-								<option value="mining">Mining &amp; Natural Resources</option>
-								<option value="pharma">Pharmaceuticals &amp; Life Sciences</option>
-								<option value="environmental">Environmental Services</option>
-								<option value="security">Security &amp; Defense</option>
-								<option value="other">Other</option>
-							</select>
+					<div class="cp-inline-fact">
+						<span class="cp-inline-fact-label">Primary industry</span>
+						<strong class="cp-inline-fact-value" id="cp-industry-readout">Not set</strong>
+						<button type="button" class="cp-linkbtn" data-goto-section="basic">Change in Basic Information</button>
+					</div>
+					<div class="cp-subsection">
+						<div class="cp-subsection-head">
+							<h3 class="cp-subsection-title">Classification</h3>
+							<span class="cp-subsection-note">How the business describes what it does</span>
+						</div>
+						<div class="cp-field-row">
+							<div class="cp-field cp-field-full">
+								<label class="cp-label">Sub-Industries</label>
+								<input type="text" class="cp-input" id="f-industry-sub" placeholder="Comma-separated, e.g. Road Construction, Bridge Building">
+							</div>
 						</div>
 						<div class="cp-field">
-							<label class="cp-label">Sub-Industries</label>
-							<input type="text" class="cp-input" id="f-industry-sub" placeholder="Comma-separated, e.g. Road Construction, Bridge Building">
+							<label class="cp-label">Specializations / Special Notes</label>
+							<textarea class="cp-input cp-textarea" id="f-industry-specializations" rows="2" placeholder="Any special expertise, niche focus, or notable capabilities"></textarea>
 						</div>
 					</div>
-					<div class="cp-field">
-						<label class="cp-label">Specializations / Special Notes</label>
-						<textarea class="cp-input cp-textarea" id="f-industry-specializations" rows="2" placeholder="Any special expertise, niche focus, or notable capabilities"></textarea>
-					</div>
-					<div class="cp-field-row cp-field-row-2">
-						<div class="cp-field">
-							<label class="cp-label">UNSPSC Codes <span class="cp-hint">(comma-separated)</span></label>
-							<input type="text" class="cp-input" id="f-unspsc" placeholder="e.g. 72101500, 72102901">
+					<div class="cp-subsection">
+						<div class="cp-subsection-head">
+							<h3 class="cp-subsection-title">Procurement codes</h3>
+							<span class="cp-subsection-note">Used to match tender and vendor lists</span>
+						</div>
+						<div class="cp-field-row cp-field-row-2">
+							<div class="cp-field">
+								<label class="cp-label">UNSPSC Codes <span class="cp-hint">(comma-separated)</span></label>
+								<input type="text" class="cp-input" id="f-unspsc" placeholder="e.g. 72101500, 72102901">
+							</div>
+							<div class="cp-field">
+								<label class="cp-label">NAICS Codes <span class="cp-hint">(comma-separated)</span></label>
+								<input type="text" class="cp-input" id="f-naics" placeholder="e.g. 236220, 237310">
+							</div>
 						</div>
 						<div class="cp-field">
-							<label class="cp-label">NAICS Codes <span class="cp-hint">(comma-separated)</span></label>
-							<input type="text" class="cp-input" id="f-naics" placeholder="e.g. 236220, 237310">
+							<label class="cp-label">Other Keywords / Tags</label>
+							<input type="text" class="cp-input" id="f-otherkeywords" placeholder="Comma-separated search keywords">
 						</div>
-					</div>
-					<div class="cp-field">
-						<label class="cp-label">Other Keywords / Tags</label>
-						<input type="text" class="cp-input" id="f-otherkeywords" placeholder="Comma-separated search keywords">
 					</div>
 
 					<!-- CAPABILITIES -->
@@ -656,8 +753,12 @@ body { padding-top: 28px !important; margin: 0; }
 				</div>
 			</section>
 
+			<div class="cp-pager" id="cp-pager"></div>
+
 		</main>
 	</div>
+
+	<!-- MODAL for editing complex items -->
 	<div class="cp-modal-overlay" id="cp-modal-overlay">
 		<div class="cp-modal" id="cp-modal">
 			<div class="cp-modal-header">
@@ -671,7 +772,9 @@ body { padding-top: 28px !important; margin: 0; }
 			</div>
 		</div>
 	</div>
-</div></script>
+
+</div>
+</script>
 
 <script>
 /* ── Load embedded HTML, then JS ── */
@@ -840,6 +943,12 @@ function initTestHarnessControls() {
         currentAssets: '42500000',
         currentLiabilities: '18700000',
         workingCapital: '23800000'
+      },
+      invoicing: {
+        paymentInstructions: 'Bank: Royal Bank of Canada\nAccount name: Apex Construction & Engineering Ltd.\nAccount number: 12345-678-9012\nTransit: 00123 - Institution: 003\nSWIFT: ROYCCAT2\nPayment terms: Net 30 days from invoice date',
+        invoiceFooterNote: 'Registered in British Columbia - GST and PST numbers shown above.',
+        logoUrl: 'https://placehold.co/240x80/1f2937/ffffff?text=Company+logo',
+        logoName: 'company-logo.png'
       },
       referenceProjects: [
         { name: 'Granville Bridge Seismic Upgrade', clientName: 'City of Vancouver', contractValue: '$48,500,000', location: 'Vancouver, BC', description: 'Full seismic retrofit of 8-lane bridge including bearing replacement, column jacketing, and foundation strengthening.', startDate: '2023-03-01', endDate: '2024-11-30' },
