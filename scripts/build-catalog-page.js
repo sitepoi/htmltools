@@ -77,6 +77,7 @@ const TOOL_IDEA_MAP = {
   WarehouseManager: { idea: 'Warehouse Manager', code: 'B-V-07-b' },
   AIBlindsConsultation: { idea: 'AI Blinds Consultation', code: 'B-V-11-d' },
   PersonalTaxPreparation: { idea: 'Personal Tax Preparation', code: 'P-G-01-b' },
+  PersonalProfile: { idea: 'Personal Profile Builder', code: 'P-G-02-e' },
   SeniorHelperAICoordinator: { idea: 'Senior Helper AI Coordinator', code: 'P-G-04-c' },
   TravelPlanner: { idea: 'Travel Planner', code: 'P-V-01-a' },
 }

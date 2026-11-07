@@ -126,6 +126,31 @@ FIELD RULES
                  renders empty. The record then shows that text in the object
                  list, inside its folder, instead of a timestamp.
 
+                 PAGE SAFETY - NUNJUCKS (5 Nov 2026): the CMS renders an html-code
+                 block through Nunjucks before it reaches the browser, so a literal
+                 double curly brace anywhere in the page is read as a template
+                 expression. Two failures seen in production:
+                   - a bare "{{" inside inline JavaScript, for example
+                     indexOf('{{'), aborts the whole block with
+                     "expected variable end" and the page renders nothing;
+                   - a token written straight into an attribute is consumed by the
+                     template engine and arrives EMPTY, so the object is not named.
+                 When the token appears in page markup, write the braces as HTML
+                 entities instead:
+                     &#123;&#123;student_name&#125;&#125;
+                 The browser decodes that to the real token and the CMS never sees
+                 it. In JavaScript, test for the token with /\{\{/ rather than a
+                 literal double brace. Only the JSON payload keeps the raw token.
+
+                 PREFERRED when the object is named after an answer (student,
+                 applicant, patient): build objectName in the page script from that
+                 field and send it as a literal. It needs no template at all,
+                 survives every render path, and keeps braces out of the page:
+                     objectName: values.student_name
+                 If nameTemplate is absent or empty, the CMS falls back to its own
+                 default name (in the trial exam pages this read as a date, the
+                 same for every family), which is exactly what objectName avoids.
+
   objectName     optional. Final name as written; it WINS over nameTemplate.
                  Use it only for a fixed title that does not depend on the
                  answers. Send one of the two keys, not both.

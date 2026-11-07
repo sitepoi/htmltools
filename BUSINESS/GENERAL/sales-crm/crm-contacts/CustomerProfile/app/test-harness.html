@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Profile - Test Harness</title>
+<link rel="stylesheet" href="CustomerProfile.css">
+<style>
+	html, body { margin: 0; padding: 0; background: #f5f7fc; }
+	body { padding-top: 34px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+	body.th-bare { padding-top: 0; }
+	body.th-bare #th-bar { display: none; }
+	#th-bar {
+		position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+		display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+		padding: 5px 14px; min-height: 34px; box-sizing: border-box;
+		background: #0f172a; color: #e6edf5; font-size: 11px;
+	}
+	#th-bar strong { color: #7dd3fc; letter-spacing: 0.05em; }
+	#th-bar .sep { color: #475569; }
+	#th-bar button { border: 0; border-radius: 4px; padding: 3px 9px; font-size: 10px; font-weight: 700; cursor: pointer; color: #fff; }
+	#th-bar .btn-person { background: #0f766e; }
+	#th-bar .btn-company { background: #3f56e0; }
+	#th-bar .btn-clear { background: #b91c1c; }
+	#th-bar .btn-reload { background: #15803d; }
+	#th-bar .btn-quiet { background: #334155; }
+	#th-bar select { border: 1px solid #334155; border-radius: 4px; background: #1e293b; color: #e6edf5; font-size: 11px; padding: 2px 4px; }
+	#th-bar label { display: inline-flex; align-items: center; gap: 4px; }
+	#th-bar .hint { color: #94a3b8; font-size: 10px; }
+	#th-status { color: #cbd5e1; }
+	#app-container { min-height: 400px; }
+	#app-container .cp-top, #app-container .cp-header { top: 34px; }
+	body.th-bare #app-container .cp-top, body.th-bare #app-container .cp-header { top: 0; }
+	.th-toast {
+		position: fixed; right: 18px; bottom: 18px; z-index: 9999; max-width: 380px;
+		padding: 9px 16px; border-radius: 7px; color: #fff;
+		font-size: 12px; line-height: 1.4; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.28);
+	}
+	@keyframes thFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+	<strong>TEST HARNESS</strong><span class="sep">|</span>
+	<span class="hint">Customer Profile</span>
+	<span class="sep">|</span>
+	<button class="btn-person" id="th-sample-person">Load person</button>
+	<button class="btn-company" id="th-sample-company">Load company</button>
+	<button class="btn-quiet" id="th-clear">Clear</button>
+	<button class="btn-reload" id="th-reload">Reload</button>
+	<span class="sep">|</span>
+	<label>Role
+		<select id="th-role">
+			<option value="admin">Admin</option>
+			<option value="editor">Editor</option>
+			<option value="viewer">Viewer</option>
+			<option value="none">No user</option>
+		</select>
+	</label>
+	<label><input type="checkbox" id="th-readonly"> Read-only</label>
+	<span class="sep">|</span>
+	<button class="btn-quiet" id="th-dump">Dump value</button>
+	<span class="sep">|</span>
+	<span id="th-status">Loading...</span>
+</div>
+
+<div id="app-container"></div>
+
+<script>
+/* ── Mock CMS SDK ───────────────────────────────────────────────── */
+(function () {
+	var STORAGE_KEY = 'customerprofile_test_value';
+	var ROLE_KEY = 'customerprofile_test_role';
+	var READ_ONLY_KEY = 'customerprofile_test_readonly';
+	var listeners = { value: [], readonly: [], user: [], permitted: [] };
+	var readOnly = false;
+	var currentRole = 'admin';
+	var storedValue = null;
+
+	var ROLE_USERS = {
+		admin: { id: 'u-admin', name: 'Alex Admin', email: 'alex@example.com', roles: ['admin', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+		editor: { id: 'u-editor', name: 'Erin Editor', email: 'erin@example.com', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+		viewer: { id: 'u-viewer', name: 'Vic Viewer', email: 'vic@example.com', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } },
+		none: null
+	};
+
+	var PERMITTED_USERS = [
+		{ id: 'u-admin', name: 'Alex Admin', email: 'alex@example.com', roles: ['admin', 'editor'] },
+		{ id: 'u-editor', name: 'Erin Editor', email: 'erin@example.com', roles: ['editor'] },
+		{ id: 'u-viewer', name: 'Vic Viewer', email: 'vic@example.com', roles: ['viewer'] }
+	];
+
+	var PROFILE_EXAMPLE_SETTING = JSON.stringify([
+		{
+			key: 'supplier-account',
+			name: 'Supplier account',
+			description: 'Added from the tool settings for a supplier CRM',
+			sections: [
+				{
+					id: 'supplier',
+					title: 'Supplier details',
+					icon: 'briefcase',
+					description: 'Procurement questions for suppliers',
+					fields: [
+						{ id: 'supplierCategory', label: 'Supplier category', type: 'select', options: ['Materials', 'Services', 'Software'], width: 'half' },
+						{ id: 'leadTimeDays', label: 'Lead time (days)', type: 'number', width: 'half' },
+						{ id: 'qualityCertified', label: 'Quality certified', type: 'checkbox', width: 'half' }
+					]
+				}
+			]
+		}
+	]);
+
+	function loadStoredState() {
+		try { storedValue = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (error) { storedValue = null; }
+		try {
+			var savedRole = localStorage.getItem(ROLE_KEY);
+			if (savedRole && ROLE_USERS.hasOwnProperty(savedRole)) currentRole = savedRole;
+		} catch (error) { }
+		try { readOnly = localStorage.getItem(READ_ONLY_KEY) === '1'; } catch (error) { readOnly = false; }
+
+		var params = new URLSearchParams(window.location.search);
+		var roleParam = params.get('role');
+		if (roleParam && ROLE_USERS.hasOwnProperty(roleParam)) currentRole = roleParam;
+		if (params.get('ro') === '1') readOnly = true;
+		if (params.get('bare') === '1') document.body.classList.add('th-bare');
+
+		var sample = params.get('sample');
+		if (sample && !storedValue) {
+			storedValue = sample === 'company' ? buildCompanySample() : buildPersonSample();
+			saveValue(storedValue, true);
+		}
+	}
+
+	function saveValue(value, silent) {
+		storedValue = value;
+		try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch (error) { }
+		if (!silent) emit('value', value);
+	}
+
+	function emit(eventName, payload) {
+		(listeners[eventName] || []).forEach(function (callback) {
+			try { callback(payload); } catch (error) { console.warn('[harness listener]', error); }
+		});
+	}
+
+	function nowISO() { return new Date().toISOString(); }
+
+	function buildPersonSample() {
+		return {
+			version: 1,
+			customerType: 'person',
+			profileKey: 'person-basic',
+			profileKeys: ['person-basic'],
+			values: {
+				core_firstName: 'Maya',
+				core_lastName: 'Haddad',
+				core_preferredName: 'Maya',
+				core_jobTitle: 'Operations Manager',
+				core_status: 'Active',
+				core_priority: 'High',
+				core_source: 'Referral',
+				core_owner: 'Alex Admin',
+				core_since: '2024-03-18',
+				core_nextFollowUp: '2026-11-20',
+				core_tags: ['newsletter', 'local'],
+				core_notes: 'Prefers WhatsApp for quick questions. Send the renewal reminder two weeks before the date.',
+				dateOfBirth: '1989-07-04',
+				occupation: 'Operations Manager',
+				employer: 'Brightline Studio',
+				language: 'English',
+				preferredChannel: 'WhatsApp',
+				contactWindow: 'Weekdays 9-12',
+				emailOptIn: true,
+				smsOptIn: true,
+				doNotContact: false
+			},
+			lists: {
+				emails: [{ id: 'em-1', label: 'Work', value: 'maya.haddad@example.com' }],
+				phones: [{ id: 'ph-1', label: 'Mobile', value: '+1 604 555 0182' }],
+				addresses: [{ id: 'ad-1', label: 'Home', line1: '2210 Cambie Street', line2: '', city: 'Vancouver', region: 'BC', postal: 'V5Z 2T8', country: 'Canada' }],
+				contacts: [],
+				interactions: [
+					{ id: 'in-1', date: '2026-10-28', channel: 'Call', summary: 'Asked about the annual plan and extra seats.' },
+					{ id: 'in-2', date: '2026-11-02', channel: 'Email', summary: 'Sent the renewal summary.' }
+				]
+			},
+			customProfiles: [],
+			ui: { collapsed: [] },
+			meta: { createdAt: '2024-03-18T09:00:00.000Z', updatedAt: '2026-11-02T17:20:00.000Z', updatedByName: 'Alex Admin' }
+		};
+	}
+
+	function buildCompanySample() {
+		return {
+			version: 1,
+			customerType: 'company',
+			profileKey: 'company-account',
+			profileKeys: ['company-account'],
+			values: {
+				core_legalName: 'Brightline Studio Ltd.',
+				core_tradeName: 'Brightline',
+				core_registrationNumber: 'BC-7781245',
+				core_taxNumber: 'GST 81234 5678 RT0001',
+				core_status: 'Active',
+				core_priority: 'VIP',
+				core_source: 'Partner',
+				core_owner: 'Erin Editor',
+				core_since: '2022-06-01',
+				core_nextFollowUp: '2026-11-12',
+				core_tags: ['reseller', 'priority'],
+				core_notes: 'Quarterly review is booked for the first week of December. Always send invoices to the accounts inbox.',
+				industry: 'Technology',
+				companySize: '10-49',
+				foundedYear: '2014',
+				website: 'https://example.com',
+				parentCompany: '',
+				primaryMarket: 'Canada and the United States',
+				companyDescription: 'Product design studio working with retail and hospitality brands.',
+				accountNumber: 'AC-2041',
+				paymentTerms: 'Net 30',
+				currency: 'CAD',
+				creditLimit: '25000',
+				purchaseOrderRequired: true,
+				taxExempt: false,
+				decisionProcess: 'The design lead evaluates the work, finance approves anything above 10,000, and the founders sign the contract.',
+				procurementType: 'Direct purchase',
+				decisionTimeline: '1-3 months',
+				competitors: 'Two local design studios and one in-house team.',
+				contractStart: '2026-01-01',
+				contractEnd: '2026-12-31',
+				renewalDate: '2026-11-15',
+				noticePeriod: '60 days'
+			},
+			lists: {
+				emails: [
+					{ id: 'em-1', label: 'Accounts', value: 'accounts@example.com' },
+					{ id: 'em-2', label: 'Design lead', value: 'dana@example.com' }
+				],
+				phones: [{ id: 'ph-1', label: 'Office', value: '+1 604 555 0134' }],
+				addresses: [
+					{ id: 'ad-1', label: 'Billing', line1: '900 West Hastings Street', line2: 'Suite 400', city: 'Vancouver', region: 'BC', postal: 'V6C 1E5', country: 'Canada' },
+					{ id: 'ad-2', label: 'Studio', line1: '88 East Cordova Street', line2: '', city: 'Vancouver', region: 'BC', postal: 'V6A 1K2', country: 'Canada' }
+				],
+				contacts: [
+					{ id: 'co-1', name: 'Dana Whitfield', jobTitle: 'Design Lead', email: 'dana@example.com', phone: '+1 604 555 0199' },
+					{ id: 'co-2', name: 'Ravi Shah', jobTitle: 'Finance Manager', email: 'ravi@example.com', phone: '' }
+				],
+				interactions: [
+					{ id: 'in-1', date: '2026-10-14', channel: 'Meeting', summary: 'Quarterly review and roadmap walkthrough.' },
+					{ id: 'in-2', date: '2026-10-30', channel: 'Email', summary: 'Sent the updated contract and renewal dates.' }
+				]
+			},
+			customProfiles: [],
+			ui: { collapsed: [] },
+			meta: { createdAt: '2022-06-01T08:30:00.000Z', updatedAt: '2026-10-30T15:05:00.000Z', updatedByName: 'Erin Editor' }
+		};
+	}
+
+	loadStoredState();
+
+	window.tool = {
+		onReady: function (callback) { callback(storedValue, { name: 'Brightline Studio Ltd.', id: 'rec-customer-1' }); },
+		getValue: function () { return storedValue; },
+		setValue: function (value) {
+			saveValue(value, false);
+			console.log('[harness] setValue ->', value);
+		},
+		onValueChange: function (callback) { listeners.value.push(callback); },
+		getFields: function () { return { id: 'rec-customer-1', name: 'Brightline Studio Ltd.' }; },
+		setField: function () { },
+		setFields: function () { },
+		watchField: function () { },
+		onFieldsChange: function () { },
+		getPermittedUsers: function () { return PERMITTED_USERS; },
+		onPermittedUsersChange: function (callback) { listeners.permitted.push(callback); },
+		param: function (name, fallback) {
+			var params = new URLSearchParams(window.location.search);
+			if (name === 'profileDefinitions' && params.get('profiles') === 'example') return PROFILE_EXAMPLE_SETTING;
+			if (params.has(name)) return params.get(name);
+			var defaults = {
+				defaultCustomerType: 'person',
+				defaultProfileKey: '',
+				statusOptions: '',
+				sourceOptions: '',
+				showInteractions: 'yes',
+				allowExportPdf: 'yes'
+			};
+			return defaults.hasOwnProperty(name) ? defaults[name] : fallback;
+		},
+		isReadOnly: function () { return readOnly; },
+		onReadonlyChange: function (callback) { listeners.readonly.push(callback); },
+		getUser: function () { return ROLE_USERS[currentRole] || null; },
+		onUserChange: function (callback) { listeners.user.push(callback); },
+		reportValid: function (isValid, message) { if (!isValid) console.warn('[harness] reportValid false:', message); },
+		notify: function (message, severity) {
+			var colors = { info: '#0f766e', success: '#15803d', warning: '#a9660b', error: '#b91c1c' };
+			var toast = document.createElement('div');
+			toast.className = 'th-toast';
+			toast.style.background = colors[severity] || colors.info;
+			toast.style.animation = 'thFade 0.2s ease';
+			toast.textContent = message;
+			document.body.appendChild(toast);
+			setTimeout(function () {
+				toast.style.transition = 'opacity 0.25s';
+				toast.style.opacity = '0';
+				setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 260);
+			}, 2600);
+		},
+		resize: function () { },
+		openUrl: function (url) { console.log('[harness] openUrl', url); window.tool.notify('Would open: ' + url, 'info'); },
+		requestExportPdf: function (options, callback) {
+			console.log('[harness] requestExportPdf', options);
+			var html = (options && options.html) || '';
+			window.__lastPdfHtml = html;
+			var blob = new Blob([html], { type: 'text/html' });
+			var url = URL.createObjectURL(blob);
+			window.tool.notify('Printable summary created (harness mock).', 'success');
+			callback(null, { name: (options && options.filename ? options.filename : 'export') + '.html', url: url, size: blob.size, type: 'text/html' });
+		},
+		declareOutput: function (schema) { console.log('[harness] declareOutput', schema); },
+		declareParams: function (params) { console.log('[harness] declareParams', params); },
+		reportMissingParams: function (missing, message) { console.warn('[harness] missing params', missing, message); },
+
+		_setRole: function (role) {
+			currentRole = role;
+			try { localStorage.setItem(ROLE_KEY, role); } catch (error) { }
+			emit('user', ROLE_USERS[role] || null);
+		},
+		_setReadOnly: function (value) {
+			readOnly = !!value;
+			try { localStorage.setItem(READ_ONLY_KEY, readOnly ? '1' : '0'); } catch (error) { }
+			emit('readonly', readOnly);
+		},
+		_loadSample: function (kind) {
+			saveValue(kind === 'company' ? buildCompanySample() : buildPersonSample());
+			window.tool.notify('Sample ' + kind + ' loaded.', 'success');
+		},
+		_clear: function () {
+			try { localStorage.removeItem(STORAGE_KEY); } catch (error) { }
+			storedValue = null;
+			window.location.reload();
+		},
+		_getValue: function () { return JSON.parse(JSON.stringify(storedValue)); },
+		_dump: function () {
+			console.log('[harness] current value', JSON.parse(JSON.stringify(storedValue)));
+			window.tool.notify('Value written to the browser console.', 'info');
+		}
+	};
+
+	window.tool._setRole(currentRole);
+	window.tool._setReadOnly(readOnly);
+	document.getElementById('th-role').value = currentRole;
+	document.getElementById('th-readonly').checked = readOnly;
+})();
+</script>
+
+<script>
+/* ── Harness controls ───────────────────────────────────────────── */
+(function () {
+	var status = document.getElementById('th-status');
+	function setStatus(text) { if (status) status.textContent = text; }
+	window.addEventListener('error', function (event) {
+		setStatus('JS ERROR: ' + (event.message || 'unknown error'));
+		console.error('[harness] uncaught error', event.error || event.message);
+	});
+	window.addEventListener('unhandledrejection', function (event) {
+		setStatus('PROMISE ERROR: ' + (event.reason && event.reason.message ? event.reason.message : event.reason));
+	});
+	document.getElementById('th-sample-person').onclick = function () { window.tool._loadSample('person'); };
+	document.getElementById('th-sample-company').onclick = function () { window.tool._loadSample('company'); };
+	document.getElementById('th-clear').onclick = function () { window.tool._clear(); };
+	document.getElementById('th-reload').onclick = function () { window.location.reload(); };
+	document.getElementById('th-dump').onclick = function () { window.tool._dump(); };
+	document.getElementById('th-role').onchange = function () {
+		window.tool._setRole(this.value);
+		window.tool.notify('Now acting as: ' + (this.options[this.selectedIndex].text), 'info');
+	};
+	document.getElementById('th-readonly').onchange = function () {
+		window.tool._setReadOnly(this.checked);
+		window.tool.notify(this.checked ? 'Read-only mode on' : 'Edit mode on', 'info');
+	};
+	window.__thSetStatus = setStatus;
+})();
+</script>
+
+<script>
+/* ── Loader: external JS normally, inline JS with ?inlinejs=1 ──── */
+(function () {
+	var status = window.__thSetStatus || function () { };
+	var container = document.getElementById('app-container');
+	var inlineMode = /[?&]inlinejs=1/.test(window.location.search);
+	var htmlInjected = false;
+	var jsLoaded = false;
+
+	function loadExternalJs() {
+		if (jsLoaded) return;
+		jsLoaded = true;
+		status('Loading JS (external)...');
+		var script = document.createElement('script');
+		script.src = 'CustomerProfile.js';
+		script.onload = function () { status('Ready - external JS'); };
+		script.onerror = function () { status('JS FAILED - check the console'); };
+		document.body.appendChild(script);
+	}
+
+	function loadInlineJs() {
+		if (jsLoaded) return;
+		jsLoaded = true;
+		status('Loading JS (inline mode)...');
+		fetch('CustomerProfile.js')
+			.then(function (response) {
+				if (!response.ok) throw new Error('HTTP ' + response.status);
+				return response.text();
+			})
+			.then(function (code) {
+				var script = document.createElement('script');
+				script.textContent = code;
+				document.body.appendChild(script);
+				status('Ready - inline JS');
+			})
+			.catch(function (error) {
+				status('Inline fetch failed, falling back to external JS');
+				jsLoaded = false;
+				loadExternalJs();
+			});
+	}
+
+	function injectHtml(html) {
+		if (htmlInjected) return;
+		htmlInjected = true;
+		container.innerHTML = html;
+		if (inlineMode) loadInlineJs();
+		else loadExternalJs();
+	}
+
+	var fallbackTimer = setTimeout(function () {
+		status('Using embedded HTML (file:// mode)');
+		injectHtml(window.EMBEDDED_CUSTOMER_PROFILE_HTML || '<div class="cp-app"><p style="padding:24px">Embedded HTML not built. Run the harness build step.</p></div>');
+	}, 1500);
+
+	fetch('CustomerProfile.html')
+		.then(function (response) {
+			if (!response.ok) throw new Error('HTTP ' + response.status);
+			return response.text();
+		})
+		.then(function (html) {
+			clearTimeout(fallbackTimer);
+			status('HTML loaded (live file)');
+			injectHtml(html);
+		})
+		.catch(function () { /* the fallback timer handles file:// */ });
+})();
+</script>
+
+<script>
+/* Embedded copy of CustomerProfile.html so the harness also works from file:// */
+window.EMBEDDED_CUSTOMER_PROFILE_HTML = "\u003c!-- html build 2026-11-06-1 -->\r\n\u003cdiv id=\"app\" class=\"cp-app\">\r\n\t\u003cheader class=\"cp-header\">\r\n\t\t\u003cdiv class=\"cp-header-left\">\r\n\t\t\t\u003cdiv class=\"cp-logo\" id=\"cp-logo\" data-icon=\"user\">\u003c/div>\r\n\t\t\t\u003cdiv class=\"cp-title-group\">\r\n\t\t\t\t\u003cdiv class=\"cp-app-title\">Customer Profile\u003c/div>\r\n\t\t\t\t\u003cdiv class=\"cp-app-sub\" id=\"cp-person-name-display\">New customer\u003c/div>\r\n\t\t\t\u003c/div>\r\n\t\t\u003c/div>\r\n\t\t\u003cdiv class=\"cp-header-right\">\r\n\t\t\t\u003cspan class=\"cp-build\" id=\"cp-build-badge\">\u003cspan class=\"cp-build-prefix\">tool \u003c/span>build 2026-11-06-1\u003c/span>\r\n\t\t\t\u003cdiv class=\"cp-save-indicator\" id=\"cp-save-indicator\" title=\"Answers are saved into this CMS record automatically\">\r\n\t\t\t\t\u003cspan class=\"cp-save-dot\">\u003c/span>\r\n\t\t\t\t\u003cspan class=\"cp-save-text\" id=\"cp-save-text\">All changes saved\u003c/span>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cdiv class=\"cp-completion\" id=\"cp-completion\" title=\"Profile completion\">\r\n\t\t\t\t\u003cspan class=\"cp-ring\" id=\"cp-completion-ring\">\u003cspan class=\"cp-ring-inner\" id=\"cp-completion-pct\">0%\u003c/span>\u003c/span>\r\n\t\t\t\t\u003cspan class=\"cp-completion-text\">\r\n\t\t\t\t\t\u003cstrong id=\"cp-completion-count\">0 of 0\u003c/strong>\r\n\t\t\t\t\t\u003cspan>sections ready\u003c/span>\r\n\t\t\t\t\u003c/span>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cdiv class=\"cp-actions\">\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"cp-actions-btn\" id=\"cp-actions-toggle\" aria-haspopup=\"menu\" aria-expanded=\"false\" title=\"Customer actions\">\r\n\t\t\t\t\t\u003cspan class=\"cp-actions-ico\" data-icon=\"more\">\u003c/span>\r\n\t\t\t\t\t\u003cspan class=\"cp-actions-text\">Actions\u003c/span>\r\n\t\t\t\t\t\u003cspan class=\"cp-actions-caret\" data-icon=\"chevron\">\u003c/span>\r\n\t\t\t\t\u003c/button>\r\n\t\t\t\t\u003cdiv class=\"cp-menu\" id=\"cp-actions-menu\" role=\"menu\" hidden>\r\n\t\t\t\t\t\u003cdiv class=\"cp-menu-head\">\r\n\t\t\t\t\t\t\u003cspan class=\"cp-menu-head-ico\" id=\"cp-menu-head-ico\" data-icon=\"user\">\u003c/span>\r\n\t\t\t\t\t\t\u003cspan class=\"cp-menu-head-text\">\r\n\t\t\t\t\t\t\t\u003cstrong id=\"cp-menu-name\">Customer actions\u003c/strong>\r\n\t\t\t\t\t\t\t\u003cspan id=\"cp-menu-sub\">Share, export and question sets\u003c/span>\r\n\t\t\t\t\t\t\u003c/span>\r\n\t\t\t\t\t\u003c/div>\r\n\t\t\t\t\t\u003cbutton type=\"button\" class=\"cp-menu-item is-primary\" role=\"menuitem\" data-menu-action=\"share\">\u003cspan class=\"cp-menu-ico\" data-icon=\"share\">\u003c/span>Share &amp; export\u003c/button>\r\n\t\t\t\t\t\u003cbutton type=\"button\" class=\"cp-menu-item\" role=\"menuitem\" data-menu-action=\"manage-profiles\" id=\"cp-menu-manage\">\u003cspan class=\"cp-menu-ico\" data-icon=\"layers\">\u003c/span>\u003cspan id=\"cp-menu-manage-text\">Manage question sets\u003c/span>\u003c/button>\r\n\t\t\t\t\t\u003cbutton type=\"button\" class=\"cp-menu-item\" role=\"menuitem\" data-menu-action=\"basic\">\u003cspan class=\"cp-menu-ico\" data-icon=\"user\">\u003c/span>Basic information\u003c/button>\r\n\t\t\t\t\t\u003cdiv class=\"cp-menu-sep\" role=\"separator\">\u003c/div>\r\n\t\t\t\t\t\u003cbutton type=\"button\" class=\"cp-menu-item\" role=\"menuitem\" data-action=\"copy-summary\">\u003cspan class=\"cp-menu-ico\" data-icon=\"copy\">\u003c/span>Copy summary\u003c/button>\r\n\t\t\t\t\t\u003cbutton type=\"button\" class=\"cp-menu-item\" role=\"menuitem\" data-action=\"copy-json\">\u003cspan class=\"cp-menu-ico\" data-icon=\"copy\">\u003c/span>Copy JSON\u003c/button>\r\n\t\t\t\t\t\u003cbutton type=\"button\" class=\"cp-menu-item\" role=\"menuitem\" data-action=\"download-json\">\u003cspan class=\"cp-menu-ico\" data-icon=\"download\">\u003c/span>Download JSON\u003c/button>\r\n\t\t\t\t\t\u003cbutton type=\"button\" class=\"cp-menu-item\" role=\"menuitem\" data-action=\"export-pdf\">\u003cspan class=\"cp-menu-ico\" data-icon=\"share\">\u003c/span>Printable summary\u003c/button>\r\n\t\t\t\t\u003c/div>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cbutton type=\"button\" class=\"cp-btn cp-btn-icon\" id=\"cp-theme-toggle\" title=\"Toggle dark / light mode\" aria-label=\"Toggle dark mode\">\u003c/button>\r\n\t\t\u003c/div>\r\n\t\u003c/header>\r\n\r\n\t\u003cdiv class=\"cp-readonly-note\" id=\"cp-readonly-note\" hidden>\r\n\t\t\u003cspan class=\"cp-lock-icon\" data-icon=\"shield\">\u003c/span>\r\n\t\t\u003cspan>This customer is read-only. You can view and export the profile, but not change it.\u003c/span>\r\n\t\u003c/div>\r\n\r\n\t\u003cdiv class=\"cp-layout\">\r\n\t\t\u003caside class=\"cp-sidebar\" id=\"cp-sidebar\">\r\n\t\t\t\u003cdiv class=\"cp-profile-chip\">\r\n\t\t\t\t\u003cspan class=\"cp-profile-chip-label\">Question sets\u003c/span>\r\n\t\t\t\t\u003cstrong class=\"cp-profile-chip-value\" id=\"cp-profile-chip-value\">Not set\u003c/strong>\r\n\t\t\t\t\u003cspan class=\"cp-profile-chip-sub\" id=\"cp-profile-chip-sub\">Choose question sets in Basic Information\u003c/span>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cnav class=\"cp-nav\" id=\"cp-nav\" aria-label=\"Customer profile sections\">\u003c/nav>\r\n\t\t\t\u003cdiv class=\"cp-sidebar-foot\">\r\n\t\t\t\t\u003cdiv class=\"cp-hidden-note\" id=\"cp-hidden-note\">\u003c/div>\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"cp-linkbtn\" id=\"cp-scope-toggle\">Show all sections\u003c/button>\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"cp-linkbtn cp-linkbtn-strong\" id=\"cp-manage-profiles\">+ Manage question sets\u003c/button>\r\n\t\t\t\u003c/div>\r\n\t\t\u003c/aside>\r\n\r\n\t\t\u003cmain class=\"cp-main\" id=\"cp-main\">\r\n\t\t\t\u003cdiv class=\"cp-pager\" id=\"cp-pager\">\u003c/div>\r\n\t\t\u003c/main>\r\n\t\u003c/div>\r\n\r\n\t\u003cdiv class=\"cp-drawer-overlay\" id=\"cp-drawer-overlay\">\u003c/div>\r\n\t\u003caside class=\"cp-drawer\" id=\"cp-drawer\" role=\"dialog\" aria-modal=\"true\" aria-hidden=\"true\" aria-labelledby=\"cp-drawer-title\">\r\n\t\t\u003cheader class=\"cp-drawer-head\">\r\n\t\t\t\u003cdiv class=\"cp-drawer-title-group\">\r\n\t\t\t\t\u003ch2 class=\"cp-drawer-title\" id=\"cp-drawer-title\">Share &amp; export\u003c/h2>\r\n\t\t\t\t\u003cp class=\"cp-drawer-sub\">Built from this record only - nothing leaves until you copy or download it.\u003c/p>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cbutton type=\"button\" class=\"cp-btn cp-btn-icon\" id=\"cp-drawer-close\" aria-label=\"Close share and export\">\u003cspan data-icon=\"x\">\u003c/span>\u003c/button>\r\n\t\t\u003c/header>\r\n\t\t\u003cdiv class=\"cp-drawer-body\" id=\"cp-drawer-body\">\u003c/div>\r\n\t\u003c/aside>\r\n\r\n\t\u003cdiv class=\"cp-modal-overlay\" id=\"cp-modal-overlay\">\r\n\t\t\u003cdiv class=\"cp-modal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"cp-modal-title\">\r\n\t\t\t\u003cdiv class=\"cp-modal-header\">\r\n\t\t\t\t\u003ch2 class=\"cp-modal-title\" id=\"cp-modal-title\">Question sets\u003c/h2>\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"cp-btn cp-btn-icon\" id=\"cp-modal-close\" aria-label=\"Close\">\r\n\t\t\t\t\t\u003cspan data-icon=\"x\">\u003c/span>\r\n\t\t\t\t\u003c/button>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cdiv class=\"cp-modal-body\" id=\"cp-modal-body\">\u003c/div>\r\n\t\t\t\u003cdiv class=\"cp-modal-footer\" id=\"cp-modal-footer\">\u003c/div>\r\n\t\t\u003c/div>\r\n\t\u003c/div>\r\n\u003c/div>\r\n";
+</script>
+</body>
+</html>

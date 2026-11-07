@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Personal Profile - Technical Source of Truth</title>
+  <!--
+  ────────────────────────────────────────────────────────────────────────────
+  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
+
+  HOW TO USE THIS TEMPLATE
+  1. This template is copied into every tool folder as docs/ssot.html by
+     scripts/init-docs.js - never create a tool SSOT by hand.
+  2. Replace every [PLACEHOLDER] in the document.
+  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
+     Every decision row uses <prefix>-NN in order (01, 02, ...).
+  4. Remove all TEMPLATE comments (like this one) before the first publish.
+  5. Bump "Document version" on EVERY update, with "Last updated" date.
+  6. Never inline styles or scripts - the design lives in
+     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
+     linked below through ../../../../../../_docs/assets/.
+  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
+     marked ONE PUSH must ship in a single push and must never be split; a
+     RELATED group must not be broken across releases either. Each task
+     shows its main name collapsed and full details on click; the done
+     checkbox is remembered by the browser per document.
+  8. The right task panel (always visible on wide screens) is generated from
+     section 15 - never write tasks twice. Edit the board in section 15 and
+     the panel, progress bars, and sidebar counter follow automatically.
+  9. Task statuses: give a task `data-task-status` - `not-started` (default),
+     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
+     done checkbox switches the task to done; unticking returns it to the
+     previous status. Browser ticks stay in that browser only. PERMANENT
+     DONE is written into the file: set `data-task-status="done"` on the
+     task div (or `checked` on its checkbox) - `npm run rel` writes this
+     automatically for every pushed group.
+ 10. Ideas (section 16): future ideas are discussed there before they become
+     work. An agreed idea moves to the task list (section 15); a rejected one
+     is marked `data-idea-status="ignored"` with the reason in its details.
+     Done / waiting / ignored statistics update automatically.
+ 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
+     change is written in the risk register and linked to its release group
+     (`data-group`). Before every push, re-evaluate every OPEN risk of the
+     groups being pushed: solve them one by one (tick the checkbox), or mark
+     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
+     date, and update the `Last re-evaluation` line. Risk levels:
+     `critical` (mandatory - blocks every push until solved), `high` (blocks
+     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
+     A group shows PUSH READY in the task panel only when its tasks are done
+     AND it has no open risks.
+ 12. Push provenance: when running `npm run rel`, set
+     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
+     task in the shipped groups is stamped with the version, commit and
+     date-time of that push, and the groups move to "pushed".
+ 13. Satellite documents: docs/webpage.html, docs/help.html,
+     docs/presentation.html, docs/social.html are GENERATED from this file +
+     the code by scripts/generate-docs.js (run by npm run rel). They are
+     satellites - when they disagree with this SSOT, this SSOT wins.
+     docs/updates.html is maintained automatically by npm run rel.
+
+  GOVERNANCE RULES (apply to every tool SSOT in this repo)
+  - A tool SSOT is the REAL single source of truth for one tool (app,
+    listing, or reporting). There is exactly one SSOT per tool folder.
+  - No tool code change is made without updating the related document in
+    the SAME change. A decision that is not in section 11 did not happen.
+  - The decision register is APPEND-ONLY. Never delete rows; reverse a
+    decision by marking it "Reversed (date)" with a reason.
+  - When the code and the document disagree, the document is updated first to
+    capture the final decision, then the code follows. Never silently leave
+    them divergent.
+  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
+    always expanded next to their use.
+  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+    Status) - the automated change-documentation reads these rows.
+  ────────────────────────────────────────────────────────────────────────────
+  -->
+  <!-- Optional: nicer webfont (Inter) when online; falls back to the system
+       font stack in ssot.css when offline. Remove this line to stay fully offline. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <!-- ── Table of contents - a CLOSED drawer opened with the ☰ button ── -->
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">Personal Profile</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.1</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <!-- ── Task list - ALWAYS visible on the right on wide screens; on narrow
+       screens it becomes a drawer opened with the Tasks button. The list is
+       generated by ssot.js from section 15 - edit tasks ONLY in section 15. ── -->
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>Personal Profile</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for the personal profile record: the adaptive
+    section model, the data every section owns, the export rules and the
+    section readiness rules. Every decision made for this tool is logged in
+    section 11 and this document is updated in the same change as the code.
+    When this document or the code disagree, this document is the tiebreaker -
+    it is updated to capture the final decision, never silently left
+    divergent.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.1</td></tr>
+    <tr><th>Last updated</th><td>2026-11-05</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-implemented">IMPLEMENTED - PENDING PUSH</span></td></tr>
+    <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (PersonalProfile).</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/PersonalProfile.css</code>, <code>app/PersonalProfile.html</code>, <code>app/PersonalProfile.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>Applying to programs on the user's behalf, storing file bytes inside the record, AI writing of statements, and the visual styling of the CMS shell around the tool.</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
+  </table>
+
+  <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one tool and one set of invariants around
+  a reusable personal profile that changes shape for the application in front
+  of the person - and it is the <strong>single source of truth for
+  every decision we make</strong> about this tool, now and in the future.
+  No decision is considered made until it is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this tool, the decision is added to section 11 with
+    a date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the
+    code disagree, the discrepancy is resolved in this document first (with a
+    dated decision), then applied to the code - never the other way around,
+    and never silently left divergent.</li>
+    <li><strong>Check before changing.</strong> Before changing any behavior
+    covered here, read the relevant section and the register; after the
+    change, update this document in the same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function, and code snippet in any update uses understandable names. No
+    cryptic abbreviations. Short names are allowed only for loop indexes and
+    universally known abbreviations (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use - in
+    prose, tables, and headings. Literal identifiers stay as they are.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> Changing the profile use
+  changes ONLY which sections the sidebar shows. A saved answer can never be
+  deleted, rewritten or hidden from the record by switching the profile use,
+  toggling focus areas, or turning sections off.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <p>Every file involved in this tool: what it is for, and exactly which
+  parts of it belong to this tool (write "whole file" when everything
+  applies). Links open the file in VS Code. Keep this block in sync with the
+  <code>Primary code areas</code> row above.</p>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/PERSONAL/GENERAL/productivity/personal-records-applications/PersonalProfile/app/PersonalProfile.html"><code>app/PersonalProfile.html</code></a></td>
+      <td>Body markup of the tool (no document tags, no script tags)</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/PERSONAL/GENERAL/productivity/personal-records-applications/PersonalProfile/app/PersonalProfile.css"><code>app/PersonalProfile.css</code></a></td>
+      <td>Scoped design system (pp- classes, light and dark tokens)</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/PERSONAL/GENERAL/productivity/personal-records-applications/PersonalProfile/app/PersonalProfile.js"><code>app/PersonalProfile.js</code></a></td>
+      <td>Data model, section registry, rendering, saving, export</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/PERSONAL/GENERAL/productivity/personal-records-applications/PersonalProfile/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Self-contained preview with a mock CMS SDK, sample record and quality checks</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/UNICON-TOOLS/tools-catalog/catalog-data.js"><code>UNICON-TOOLS/tools-catalog/catalog-data.js</code></a></td>
+      <td>Idea catalog and folder taxonomy (single source of truth for placement)</td>
+      <td>Idea <code>P-G-02-e Personal Profile Builder</code>, subcategory <code>P-G-02-e Personal Records &amp; Applications</code></td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/scripts/build-catalog-page.js"><code>scripts/build-catalog-page.js</code></a></td>
+      <td>Catalog generator and tool-to-idea mapping</td>
+      <td><code>TOOL_IDEA_MAP.PersonalProfile</code></td>
+    </tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <p>The starting picture of this tool: what is <strong>already
+  developed, shipped and in effect right now</strong>, before any new work.
+  This section is the factual baseline - when a planned change (sections
+  5-8) ships, its result moves here, and the release log (section 19) keeps
+  the full history. Planned work never appears in this table - planned work
+  belongs in the task list (section 15) and the ideas backlog (section 16).</p>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>Eleven profile uses (general, resume, job, university, scholarship, research, volunteer, portfolio, immigration, government, health) each seed a suggested section set</td><td><code>PROFILE_KINDS</code>, <code>applyKindPreset</code></td><td>0.1 - 2026-11-05</td><td>D-PP-01, D-PP-03</td></tr>
+    <tr><td>C-02</td><td>Fourteen focus areas drive section visibility; every card can be switched on and off, an unconfigured record shows basic sections only, and Show all sections reveals every section without touching data</td><td><code>PROFILE_FOCUS_AREAS</code>, <code>focusToList</code>, <code>isSectionVisible</code></td><td>0.1 - 2026-11-05</td><td>D-PP-02, D-PP-15, D-PP-16</td></tr>
+    <tr><td>C-03</td><td>Twenty-two built-in sections covering identity, personal details, contact, education, tests, work, skills, projects, publications, awards, service, references, essays and preferences. Share and export are not a section.</td><td><code>SECTIONS</code> and the section markup</td><td>0.1 - 2026-11-05</td><td>D-PP-05, D-PP-21</td></tr>
+    <tr><td>C-04</td><td>Fifteen repeatable record types (links, languages, documents, education, tests, certifications, work, skills, projects, publications, awards, service, activities, references, essays) with a declarative field model</td><td><code>ARRAY_LISTS</code>, <code>renderArrayList</code>, <code>readArrayFields</code></td><td>0.1 - 2026-11-05</td><td>D-PP-06</td></tr>
+    <tr><td>C-05</td><td>Additional fields per built-in section and fully custom sections, both stored in the record</td><td><code>customFieldListFor</code>, <code>renderCustomFieldBlocks</code>, <code>renderCustomSections</code></td><td>0.1 - 2026-11-05</td><td>D-PP-07</td></tr>
+    <tr><td>C-06</td><td>Readiness checklist and a plain-text summary generated from the record, with copy and download, opened from the header menu drawer</td><td><code>buildReadiness</code>, <code>buildProfileSummaryText</code>, <code>downloadProfileJson</code>, <code>openDrawer</code></td><td>0.1 - 2026-11-05</td><td>D-PP-08, D-PP-21</td></tr>
+    <tr><td>C-07</td><td>Export excludes personal details, identity, health, funding and documents unless the user opts in</td><td><code>buildExportData</code></td><td>0.1 - 2026-11-05</td><td>D-PP-09, D-PP-18</td></tr>
+    <tr><td>C-08</td><td>First load can prefill name and email from the signed-in CMS user, only into empty fields</td><td><code>prefillFromAccount</code></td><td>0.1 - 2026-11-05</td><td>D-PP-10</td></tr>
+    <tr><td>C-09</td><td>Expiry warnings for documents and certifications within 90 days, plus completion percentage in the header</td><td><code>renderDocumentsAlert</code>, <code>updateCompletion</code></td><td>0.1 - 2026-11-05</td><td>D-PP-11</td></tr>
+    <tr><td>C-10</td><td>Read-only mode disables every edit control while keeping navigation and export readable</td><td><code>pp-readonly</code>, <code>tool.onReadonlyChange</code></td><td>0.1 - 2026-11-05</td><td>D-PP-12</td></tr>
+    <tr><td>C-11</td><td>Profile Summary renders as five read-only statement cards and edits one card at a time; repeatable list items render as read-only cards with meta chips and expand one editor at a time</td><td><code>renderSummaryCards</code>, <code>renderArrayItem</code>, <code>toggleArrayItem</code></td><td>0.1 - 2026-11-05</td><td>D-PP-17</td></tr>
+    <tr><td>C-12</td><td>Private personal details (year of birth, optional full date and place of birth, nationality, citizenship, marital status, gender, pronouns) live in their own section and appear only for immigration, government and health profiles</td><td><code>SECTIONS.personal</code>, <code>DB.personal</code>, <code>normalizeDB</code></td><td>0.1 - 2026-11-05</td><td>D-PP-18</td></tr>
+    <tr><td>C-13</td><td>Basic Information holds the name, email and phone together, with the photo card beside them; Contact keeps address and web presence</td><td><code>renderPhotoField</code>, <code>SCALAR_FIELDS</code></td><td>0.1 - 2026-11-05</td><td>D-PP-19, D-PP-20</td></tr>
+    <tr><td>C-14</td><td>The header shows an avatar, name and profile use; it opens a menu with edit, share, copy summary, copy JSON and download JSON</td><td><code>renderAvatars</code>, <code>setMenuOpen</code></td><td>0.1 - 2026-11-05</td><td>D-PP-20, D-PP-21</td></tr>
+    <tr><td>C-15</td><td>Every Profile Summary editor shows a concrete example that can be applied with one click, and the most ambiguous list fields carry an inline sample</td><td><code>SUMMARY_FIELDS[].sample</code>, <code>useSummarySample</code>, field <code>help</code></td><td>0.1 - 2026-11-05</td><td>D-PP-22</td></tr>
+  </table>
+  <p class="note">When adopting this template for an existing tool, fill
+  this section first: the current behavior is the baseline that the next
+  sections verify and improve. Capabilities listed here are in effect and
+  must keep working unless a decision in section 11 reverses them.</p>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <p>Terms used in this document, with the exact meaning used here. Add a row
+  whenever a discussion introduces a term - one meaning per term, so every
+  reader and every AI sees the same definition.</p>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Profile use</td><td>The main application this record is prepared for. It seeds the suggested focus areas (sections).</td></tr>
+    <tr><td>Focus area</td><td>One of fourteen capabilities the profile can cover (employment, university, immigration, health, and so on). A section is visible when one of its needs matches an enabled focus area.</td></tr>
+    <tr><td>Section</td><td>A named block of related answers (Education, Work Experience, References). Built-in sections live in <code>SECTIONS</code>; custom sections are user-defined.</td></tr>
+    <tr><td>Repeatable record</td><td>One item inside a list section, such as one education entry or one reference.</td></tr>
+    <tr><td>Sensitive sections</td><td>Identity &amp; Status, Health, Access &amp; Emergency, Funding &amp; Financial Aid, and Documents &amp; Records. Excluded from export unless the user opts in.</td></tr>
+    <tr><td>Summary text</td><td>The plain-text resume-style output built from the record. It never includes sensitive sections.</td></tr>
+    <tr><td>Readiness item</td><td>One check in Share &amp; Export that says whether the sections needed for the chosen focus areas have data.</td></tr>
+  </table>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <ul>
+    <li><strong>2026-11-05, request.</strong> The user asked for a personal profile tool built on the Company Profile pattern: a basic generic profile that asks for more data when the person is building a resume, applying to university, or filling some other application, with those profile scenarios added to the tool.</li>
+    <li><strong>2026-11-05, workspace review.</strong> The Company Profile tool already proves the adaptive pattern: an industry selection plus focus areas hide sections, and customs fields/sections absorb extra data. No personal equivalent existed; the closest tools are single-purpose (StudentFileBuilderForApplications holds one student's application file, VolunteerProfile holds one volunteer's portal).</li>
+    <li><strong>2026-11-05, data duplication.</strong> A person applying to a university, a scholarship and a job re-types the same identity, education, work and reference data into three separate tools because each tool owns a narrow slice.</li>
+  </ul>
+  <h3>5.2 Root cause</h3>
+  <p>The tool library models company data once and reuses it, but personal data has no shared record. Without one record, every application form becomes the source of truth and the answers drift apart.</p>
+  <ul>
+    <li>Every existing tool owns one narrow slice (student file, volunteer profile), so an application form outside that slice starts from an empty page.</li>
+    <li>The first screen asked for private data (date of birth, nationality, marital status, gender, pronouns) even when the chosen application never uses it.</li>
+    <li>Share and export were modelled as one more section in the sidebar, mixing "data about the person" with "actions on the record".</li>
+  </ul>
+  <h3>5.2 Current implementation (verified in code)</h3>
+  <p>The first build stored private details inside <code>basicInfo</code> and rendered Share &amp; Export as a section:</p>
+  <pre>
+// app/PersonalProfile.js - emptyDB() before 2026-11-05
+basicInfo: { legalName, preferredName, pronouns, dateOfBirth, placeOfBirth,
+             gender, maritalStatus, nationality, citizenship, photoUrl }
+// SECTIONS
+{ id: 'share', group: 'Output', title: 'Share &amp; Export' }
+  </pre>
+  <h3>5.3 Structural flaws</h3>
+  <ol>
+    <li><strong>Private fields were unconditional.</strong> Nothing tied date of birth, nationality, marital status, gender or pronouns to a profile need, so the tool collected sensitive data by default.</li>
+    <li><strong>Contact details were split.</strong> Email and phone sat in Contact while the name sat in Basic Information, so the top-of-application block was spread over two screens.</li>
+    <li><strong>Tool actions lived in the data tree.</strong> Share &amp; Export was a section in <code>SECTIONS</code>, counted in the pager and the completion logic, which mixed navigation with actions.</li>
+  </ol>
+  <p class="risk"><strong>Root cause:</strong> the original model treated every field and feature as a section, with no notion of "only ask when a profile needs it" and no place for tool-level actions.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li><strong>One record, many applications.</strong> A single record holds the answers reused by resumes, university applications, scholarships, immigration forms, volunteer applications, portfolios and care forms.</li>
+    <li><strong>Adaptive, never destructive.</strong> Changing the profile use or focus areas may hide sections but must never delete, rewrite or hide saved values from the record.</li>
+    <li><strong>No admin configuration required.</strong> The tool works with zero CMS parameters; every param is optional and only seeds or narrows behavior.</li>
+    <li><strong>Sensitive data is opt-in for export.</strong> Identity, health, funding and documents are excluded from exports until the user explicitly includes them; the summary text never contains them.</li>
+    <li><strong>Record size stays small.</strong> Files are linked by URL, never embedded; essays are plain text. The record must stay far below the 1MB CMS document limit.</li>
+    <li><strong>Fails soft.</strong> Missing upload support, missing user identity, copy denial and read-only hosts all degrade to a visible message, never to a broken screen or silent data loss.</li>
+    <li><strong>Multi-tenant safe.</strong> No tenant name, email, domain or organisation fact is baked into the tool or its sample data.</li>
+    <li><strong>Deterministic saving.</strong> Every edit is written to <code>tool.setValue</code> on a short debounce; structural changes save immediately. No unsaved state survives a section switch.</li>
+    <li><strong>Private by default.</strong> Date of birth, place of birth, nationality, citizenship, marital status, gender and pronouns appear only when a selected profile need requires them. The default birth detail is the year, not the day.</li>
+    <li><strong>Actions are not sections.</strong> Share and export live in a tool-level menu and drawer, never in the profile section list.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr>
+      <td><strong>A. One profile use plus focus areas</strong></td>
+      <td>One select states the main application; a grid of fourteen focus areas refines it. Section visibility is derived from the focus set. Custom fields and custom sections absorb anything the built-in model does not cover.</td>
+      <td>Yes - the same record serves every application and the sidebar stays short.</td>
+      <td>Low - one record, no CMS configuration.</td>
+      <td class="status-adopted">ADOPTED (D-PP-01, D-PP-02)</td>
+    </tr>
+    <tr>
+      <td><strong>B. Separate tool per profile type</strong></td>
+      <td>A resume tool, a university tool, a scholarship tool and so on, each with its own record.</td>
+      <td>No - duplicates identity, education and references, and the copies drift.</td>
+      <td>High - every new profile type is a new tool and a new record.</td>
+      <td class="status-rejected">REJECTED - the duplicate-data problem it claims to solve comes back.</td>
+    </tr>
+    <tr>
+      <td><strong>C. One long form with every field visible</strong></td>
+      <td>A single page with all personal fields, the way a paper application pack looks.</td>
+      <td>Partially - complete but intimidating and unusable on a phone.</td>
+      <td>Low.</td>
+      <td class="status-rejected">REJECTED - the Company Profile experience shows the adaptive sidebar is what makes a long record approachable.</td>
+    </tr>
+    <tr>
+      <td><strong>D. Store the whole profile in one CMS field</strong></td>
+      <td>Use <code>tool.setValue</code> only, never sibling fields or extra objects.</td>
+      <td>Yes - the tool stays portable and needs no CMS setup.</td>
+      <td>Low.</td>
+      <td class="status-adopted">ADOPTED (D-PP-05)</td>
+    </tr>
+  </table>
+  <p><strong>Decision: A + D.</strong> One record, adaptive sections, no CMS configuration. Option B is dropped; option C is kept only as the Show all sections toggle.</p>
+  <h3>7.1 Answers to open questions</h3>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Should changing the profile use keep a customised focus set?</td><td>No. Changing the profile use applies that use's suggested areas immediately, because an unchanged sidebar looks broken. Nothing is deleted, so the user can re-toggle any area. See D-PP-03.</td></tr>
+    <tr><td>Should sensitive sections be visible at all?</td><td>Yes, but only in the sections that ask for them and only with an explicit note. Export excludes them by default. See D-PP-09.</td></tr>
+    <tr><td>Should the tool write sibling CMS fields?</td><td>No. The record owns everything; the CMS form already saves the field value. See D-PP-05.</td></tr>
+  </table>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Core invariants</h3>
+  <p class="note"><strong>Invariant PP-1.</strong> Visibility is computed, never stored per field. A section is shown when one of its <code>needs</code> matches an enabled focus area (or when nothing is configured yet). No code path deletes a value because a section became hidden.</p>
+  <p class="note"><strong>Invariant PP-2.</strong> The saved record is the only source. <code>readAllFromDOM</code> runs before every export and before every structural change, so an export can never be built from stale in-memory data.</p>
+  <p class="note"><strong>Invariant PP-3.</strong> Sensitive sections leave the tool only through the explicit opt-in in Share &amp; Export. The summary text is always built from non-sensitive sections.</p>
+  <h3>8.2 Data model</h3>
+  <pre>
+{
+  schemaVersion: 1,
+  basicInfo: { legalName, preferredName, photoUrl, photoName },
+  personal: { birthYear, dateOfBirth, placeOfBirth, nationality,
+              citizenship, maritalStatus, gender, pronouns },
+  summary, contact, identity, health,
+  documents[], education[], testScores[], certifications[],
+  workExperience[], skills[], projects[], publications[],
+  achievements[], volunteer[], extracurricular[], references[],
+  essays[], languages[], preferences, funding,
+  profile: { kind, kindChosen, focus[], presetFocus[], showAllSections,
+             initialized, prefilledFromAccount, exportIncludeSensitive,
+             customFields{}, customSections[] }
+}
+  </pre>
+  <ul>
+    <li>Every list is an array of flat records with a stable <code>id</code>, normalised on load.</li>
+    <li><code>customFields</code> is keyed by section id or <code>custom:&lt;sectionId&gt;</code>; a custom field is <code>{id, label, type, value}</code>.</li>
+    <li>No file bytes: documents store <code>fileUrl</code> and <code>fileName</code> only.</li>
+  </ul>
+  <h3>8.3 Section registry and repeatable fields</h3>
+  <pre>
+var SECTIONS = [
+  { id: 'education', group: 'Education', icon: 'book',
+    title: 'Education', desc: '...',
+    count: function () { return DB.education.length; } },
+  { id: 'essays', group: 'Applications', icon: 'pen',
+    title: 'Essays &amp; Statements', needs: ['university', 'scholarship', 'research'], ... }
+];
+
+var ARRAY_LISTS = {
+  education: {
+    containerId: 'pp-education-container',
+    get: function () { return DB.education; },
+    rows: [[{ field: 'institution', label: 'Institution' }, ...], ...]
+  }
+};
+  </pre>
+  <ul>
+    <li>A new field is one entry in <code>rows</code>; a new list is one entry in <code>ARRAY_LISTS</code>.</li>
+    <li><code>renderArrayList</code> renders, <code>readArrayFields</code> reads through <code>data-list</code>, <code>data-idx</code> and <code>data-field</code>, so add/remove and saving stay in one place.</li>
+  </ul>
+  <h3>8.4 Saving and external changes</h3>
+  <ul>
+    <li>Text edits debounce 400ms, then <code>readAllFromDOM</code> and <code>tool.setValue</code>.</li>
+    <li>Add, remove, profile-use change, focus toggle and custom-section edits save immediately.</li>
+    <li><code>selfSaving</code> prevents the tool from re-rendering its own echo through <code>onValueChange</code>; a real external change reloads the record and re-renders.</li>
+    <li>Every structural change updates header name, completion, badges, pager and the share preview in one pass.</li>
+  </ul>
+  <h3>8.5 Export contract</h3>
+  <table>
+    <tr><th>Output</th><th>Contains</th><th>Sensitive data</th></tr>
+    <tr><td>Summary text (copy)</td><td>Name, headline, contact, links, summary, objectives, experience, education, skills, certifications, languages, projects, volunteering, achievements, references</td><td>Never - personal details, identity, health, funding and documents are excluded</td></tr>
+    <tr><td>JSON (copy or download)</td><td>The whole normalised record plus <code>exportedAt</code>, <code>exportedFrom</code>, <code>exportedSensitive</code></td><td>Only with the opt-in checkbox; <code>personal</code>, <code>identity</code>, <code>health</code>, <code>funding</code> and <code>documents</code> are blank when off</td></tr>
+    <tr><td>Readiness list</td><td>Up to six focus-aware checks, missing items first</td><td>Never</td></tr>
+  </table>
+
+  <h3>8.6 Read-first forms</h3>
+  <ul>
+    <li><strong>Profile Summary</strong> is five cards: headline, profile summary, objectives, values and interests. Only the edited card becomes an input or textarea with a word count, Cancel and Save; Escape cancels. The other cards stay readable.</li>
+    <li><strong>Examples</strong> sit inside each summary editor: one realistic sentence or paragraph plus a "Use this example" button that fills the field so the user can edit rather than invent from a blank box. Ambiguous list fields carry an inline <code>help</code> sample.</li>
+    <li><strong>List items</strong> are collapsed cards showing a title, a subtitle and meta chips (dates, levels, expiry, hours, word count). Edit opens the fields, Done closes them, opening another item closes the previous one, and a new item opens automatically.</li>
+    <li><strong>Read-only hosts</strong> expand every list item and hide the Edit controls; the data stays readable but not editable.</li>
+  </ul>
+
+  <h3>8.7 Privacy-first personal details</h3>
+  <ul>
+    <li>Private fields live in <code>DB.personal</code>, not in <code>basicInfo</code>; old records are migrated once in <code>normalizeDB</code> and the legacy keys are deleted.</li>
+    <li>The <strong>Personal Details</strong> section declares <code>needs: ['immigration', 'government', 'health']</code>. It is hidden for general, résumé, university, scholarship, research, volunteer and portfolio profiles, and for an unconfigured record.</li>
+    <li>The default birth question is <strong>year only</strong> (four digits, sanitised on input). The full date stays in the same section with the help text "Only when an official form demands the exact day".</li>
+    <li>The section is optional in completion: it never counts toward the profile percentage, so the tool does not push users to fill private data.</li>
+    <li><code>personal</code> is treated as sensitive: it is blanked in JSON export unless the opt-in is on, and it never enters the summary text.</li>
+  </ul>
+
+  <h3>8.8 Photo card and header avatar</h3>
+  <ul>
+    <li>Basic Information step 1 opens with a photo card: an 84px avatar, a short hint, Upload photo, Paste link and Remove. The URL field is collapsed behind Paste link so the default path is an upload.</li>
+    <li>The same image renders as a 32px avatar in the header and a 40px avatar in the menu, with initials from the legal or preferred name as the fallback.</li>
+    <li>Email and phone sit beside the name in the same block; Contact keeps alternate phone, address, time zone and the web links.</li>
+  </ul>
+
+  <h3>8.9 Header menu and share drawer</h3>
+  <ul>
+    <li>The header account control is the avatar plus name and profile use; it opens a menu with Edit basic information, Share &amp; export, Copy summary, Copy JSON and Download JSON.</li>
+    <li>Share &amp; export opens a right-hand drawer with the readiness list, the sensitive opt-in, the three export actions and the summary preview.</li>
+    <li>The drawer is not part of <code>SECTIONS</code>: it never appears in the sidebar, the pager, the completion count or the section visibility rules. Escape or a click on the overlay closes it.</li>
+  </ul>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>Profile use changes from university to immigration</td><td>The immigration preset replaces the focus set, the sidebar hides essays and shows identity and health. Every saved essay and identity value remains in the record.</td></tr>
+    <tr><td>User customises focus areas, then changes the profile use</td><td>The new use's suggested areas are applied and a toast says sections were suggested. Nothing is deleted; the user can re-toggle any area.</td></tr>
+    <tr><td>Show all sections is on</td><td>All built-in and custom sections appear; the toggle reads "Hide sections not needed"; the note says the profile normally hides N sections.</td></tr>
+    <tr><td>No profile use and no focus area chosen</td><td>Only Basic Information, Profile Summary, Contact &amp; Web Presence, Education and Skills &amp; Strengths appear; the sidebar note says "Basic sections only - choose a profile use to show more". Choosing a use or ticking an area adds its sections. Share and export are always available from the header menu.</td></tr>
+    <tr><td>A university or résumé profile is open</td><td>Personal Details stays hidden, so date of birth, nationality, marital status, gender and pronouns are never asked on that profile. Show all sections still reveals the section for a user who needs it.</td></tr>
+    <tr><td>An immigration, government or health profile is open</td><td>Personal Details appears with year of birth as the primary field; the full date sits beside it and is only used when a form demands it.</td></tr>
+    <tr><td>Share &amp; export is opened</td><td>A drawer opens from the header menu with readiness, the sensitive opt-in, the export actions and the summary preview. No section is added to the sidebar or the pager; Escape and the overlay close it.</td></tr>
+    <tr><td>Typing, then clicking Add on the same list</td><td>The pending text is read from the DOM before the item is inserted, so the last keystrokes are never lost.</td></tr>
+    <tr><td>Export with sensitive sections OFF</td><td>Personal details, identity, health, funding and documents are replaced with empty objects or arrays; the JSON carries <code>exportedSensitive: false</code>.</td></tr>
+    <tr><td>Copy denied by the browser</td><td>A warning toast says the browser blocked the copy and asks the user to select the preview text; the text stays visible in the preview.</td></tr>
+    <tr><td>Upload support missing (<code>tool.requestUpload</code> absent)</td><td>A warning asks the user to paste a link instead; the link field remains usable.</td></tr>
+    <tr><td>Signed-in user is unavailable at load</td><td>Name and email stay empty; the tool retries at 400, 1200, 2600 and 5000ms and only fills fields that are still empty.</td></tr>
+    <tr><td>Record opened read-only</td><td>Inputs are non-editable, add/remove/upload/custom controls and the drawer export buttons are hidden, navigation, the menu and the summary preview still work.</td></tr>
+    <tr><td>An old record still stores pronouns or date of birth in <code>basicInfo</code></td><td><code>normalizeDB</code> moves those values into <code>personal</code> once and deletes the legacy keys, so the record keeps its data and the privacy rule applies afterwards.</td></tr>
+    <tr><td>External change arrives while the tool is open</td><td><code>onValueChange</code> reloads and re-renders the whole record; the tool's own save echo is ignored through <code>selfSaving</code>.</td></tr>
+    <tr><td>Document or certification expires within 90 days</td><td>Documents &amp; Records shows "N expire within 90 days"; expired records are counted separately in red wording.</td></tr>
+    <tr><td>Existing record has an unknown <code>profile.kind</code></td><td>Normalisation falls back to the general profile; focus areas and all data are preserved.</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>The tool prepares data; it does not submit applications or track their status.</td><td>Users still need the application system itself.</td><td>Accepted - idea I-01.</td></tr>
+    <tr><td>L-02</td><td>Documents are links, not stored files.</td><td>A broken link is only visible when the file is opened outside the tool.</td><td>Accepted - keeps the record inside the 1MB limit (D-PP-05).</td></tr>
+    <tr><td>L-03</td><td>The summary text is generated, not editable in place.</td><td>Users copy it into the target form and adjust there.</td><td>Accepted - idea I-02.</td></tr>
+    <tr><td>L-04</td><td>No per-application snapshots (a copy of the profile as it looked for one submission).</td><td>A later edit changes what the record says about an older application.</td><td>Deferred - idea I-03.</td></tr>
+    <tr><td>L-05</td><td>Completeness is a simple section checklist, not a scoring model.</td><td>The percentage can look high while an application still misses a field.</td><td>Accepted - idea I-04.</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <!-- TEMPLATE: replace D-PP below with the tool's unique prefix once,
+       then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr><td>D-PP-01</td><td>2026-11-05</td><td>Eleven profile uses preselect the focus areas a record usually needs: general, resume, job, university, scholarship, research, volunteer, portfolio, immigration, government, health.</td><td>Separate tools per profile type would duplicate the same identity data (option B rejected).</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-02</td><td>2026-11-05</td><td>Fourteen focus areas drive section visibility through each section's <code>needs</code> list; Show all sections overrides the result for one record.</td><td>Adaptive sidebar without destructive configuration; copied from the Company Profile pattern.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-03</td><td>2026-11-05</td><td>Changing the profile use always applies that use's suggested areas, even when the user has customised focus before. A toast says what happened; nothing is deleted.</td><td>An unchanged sidebar after changing the use looks broken. Because data is never deleted, re-applying a preset is safe.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-04</td><td>2026-11-05</td><td>A record with no profile use chosen shows every section, so a new user can see what exists before configuring anything.</td><td>Discovery beats an empty sidebar on first contact. Once a use is chosen, the record counts as configured.</td><td class="status-rejected">Reversed (2026-11-05) by D-PP-16</td></tr>
+    <tr><td>D-PP-05</td><td>2026-11-05</td><td>Everything is stored in <code>tool.setValue</code>: no sibling field writes, no <code>requestObjects</code>, no file bytes. Documents store a link plus a file name.</td><td>Zero CMS configuration and a record far below the 1MB document limit. The trade-off is that a broken file link is not detected by the tool.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-06</td><td>2026-11-05</td><td>Repeatable records are declared in one <code>ARRAY_LISTS</code> table: container, getter, title, and rows of field descriptors. Rendering, reading, adding and removing are generic.</td><td>A new field or list is a data change; there is no per-section copy of the read/render code.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-07</td><td>2026-11-05</td><td>Any built-in section can receive additional custom fields, and the record can hold whole custom sections.</td><td>Applications ask for fields nobody can predict; this keeps the record complete without changing the code for every form.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-08</td><td>2026-11-05</td><td>Share &amp; Export provides a readiness checklist, a plain-text summary, JSON copy and JSON download.</td><td>The profile is only useful when it can leave the tool. The output is generated from the record at the moment of use.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-09</td><td>2026-11-05</td><td>Identity, health, funding and documents are excluded from export unless "Include sensitive sections" is enabled. The summary text never includes them.</td><td>Default-safe sharing: the common export path leaks nothing. The opt-in is explicit and visible next to the buttons.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-10</td><td>2026-11-05</td><td>On first load the tool fills name, preferred name and email from the signed-in CMS user, only into empty fields. It retries at 400, 1200, 2600 and 5000ms while the session arrives.</td><td>Keeps the promise of a personal profile for the active user without overwriting anything already typed.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-11</td><td>2026-11-05</td><td>Documents and certifications inside 90 days of expiry are reported; the header ring counts sections whose required checks are all filled.</td><td>A profile is a living record: expired records and half-filled sections are what actually stops an application.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-12</td><td>2026-11-05</td><td>Read-only mode hides every editing control through the <code>pp-readonly</code> class and guards handlers with <code>isReadOnly</code>; navigation, readiness and the summary preview stay available.</td><td>A viewer should still be able to read and copy the profile. Only writes are blocked.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-13</td><td>2026-11-05</td><td>Placed in <code>PERSONAL/GENERAL/productivity/personal-records-applications/PersonalProfile</code> with idea <code>P-G-02-e Personal Profile Builder</code> and new subcategory <code>P-G-02-e Personal Records &amp; Applications</code>.</td><td>The profile is a personal record, not a business form; the new subcategory keeps it apart from to-do lists and notes. Taxonomy stays the single source of truth in <code>catalog-data.js</code>.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-14</td><td>2026-11-05</td><td>Health, Access &amp; Emergency appears for the health and immigration focus areas only, not for university applications.</td><td>University forms rarely need medical detail; showing it by default adds noise and sensitive data to the wrong profile.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-15</td><td>2026-11-05</td><td>Focus areas are switches: unselecting an area removes it from the saved focus list, and a section hides when no remaining selected area needs it. Basic Information shows Personal identity first and Profile setup second.</td><td>The first <code>focusToList</code> copied the old list back into the new one, so an area could be added but never removed. Ordering identity first gives a first-time user familiar fields before the profile-use decision.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-16</td><td>2026-11-05</td><td>With no profile use and no focus area, only the six sections without needs show: Basic Information, Profile Summary, Contact &amp; Web Presence, Education, Skills &amp; Strengths and Share &amp; Export. Every section with needs stays hidden until a related profile or area is selected.</td><td>The full list read as an intimidating form and made the profile switch look optional. Basic sections give a usable first screen; Show all sections still reveals everything.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-17</td><td>2026-11-05</td><td>Forms read first: Profile Summary statements and repeatable list entries render as read-only cards with an Edit control. Only one card or list item opens at a time; a new list item opens automatically.</td><td>Always-visible textareas read like a technical form. Cards keep the profile scannable and make editing deliberate; one editor at a time avoids a wall of inputs. Read-only hosts expand list items and hide the Edit controls.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-18</td><td>2026-11-05</td><td>Private personal details move out of <code>basicInfo</code> into <code>DB.personal</code> and a Personal Details section that needs immigration, government or health. The default birth question is the year; the full date is optional and explicitly marked. The section never counts toward completion and is blanked in exports unless sensitive export is on.</td><td>The first screen asked for pronouns, date of birth, nationality, marital status and gender even when the application never used them. Asking only when a selected profile requires it keeps the general and university screens light, and the year-only default avoids collecting an exact date by habit.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-19</td><td>2026-11-05</td><td>Basic Information holds the full name, preferred name, email and phone together. Contact keeps alternate phone, address, time zone and the web links.</td><td>Email and phone are the top of every application; splitting them from the name pushed the most-used block across two sections. The address is longer and less often reused, so it stays in Contact.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-20</td><td>2026-11-05</td><td>The profile photo is a photo card at the top of Basic Information (avatar, hint, upload, optional paste link, remove) and also renders as the header and menu avatar, with name initials as the fallback.</td><td>A 46px preview with a permanent URL input made the photo feel like a link field. The card shows the photo at a useful size and puts upload first; the header avatar makes the profile feel personal without adding a section.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-21</td><td>2026-11-05</td><td>Share &amp; export leaves the section list. The header avatar opens a menu (edit, share, copy summary, copy JSON, download JSON) and share opens a right-hand drawer with readiness, the sensitive opt-in, the export actions and the summary preview.</td><td>Readiness and export are actions on the whole record, not a part of the person's data. Keeping them in the sidebar made the section list longer and implied that sharing was a thing to fill in. The drawer is reachable from every section and never affects visibility, completion or the pager.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-PP-22</td><td>2026-11-05</td><td>Every Profile Summary editor shows a concrete example plus a "Use this example" action; the most ambiguous list fields (work summary, achievements, skill evidence, project description, volunteer description, coursework, essay text) carry an inline sample.</td><td>The user asked what to write in fields like Profile Summary and headline. A blank textarea with a one-line hint still forces invention; a concrete sentence the user can adapt is faster to understand and keeps the output realistic.</td><td class="status-adopted">Adopted</td></tr>
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li><strong>This document is the single source of truth for every decision
+    about this tool.</strong> Every decision is recorded in section 11 with
+    a date, and the affected section is updated in the same change as the
+    code. A decision that is not in the register did not happen.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
+    delete rows.</li>
+    <li><strong>Section visibility is computed in one place.</strong> Add a section with its <code>needs</code> list; never hard-code a hidden section with inline styles or a conditional render list.</li>
+    <li><strong>No new list code.</strong> A new repeatable list or field goes into <code>ARRAY_LISTS</code>. Hand-written read/render loops are not allowed.</li>
+    <li>Never introduce an export path that bypasses <code>buildExportData</code> or a summary path that bypasses <code>buildProfileSummaryText</code>.</li>
+    <li>Global naming rule: any update - code or documentation - MUST use
+    understandable, self-explanatory names. No cryptic abbreviations. Existing
+    misleading names are renamed when their code is touched.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Section registry, profile uses, focus areas, declarative lists</td><td><code>app/PersonalProfile.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Shell markup: header, sidebar, 22 sections, custom-section modal</td><td><code>app/PersonalProfile.html</code> - DONE</td></tr>
+    <tr><td>3</td><td>Design system with light and dark tokens, responsive rules</td><td><code>app/PersonalProfile.css</code> - DONE</td></tr>
+    <tr><td>4</td><td>Harness with mock SDK, sample record, 79 quality checks</td><td><code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>5</td><td>Catalog idea, subcategory and tool mapping</td><td><code>catalog-data.js</code>, <code>scripts/build-catalog-page.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Satellite documents</td><td><code>docs/*.html</code> - DONE</td></tr>
+    <tr><td>7</td><td>User review of the tool and this SSOT before any push</td><td>pending user review</td></tr>
+    <tr><td>8</td><td>Focus areas removable again (focusToList fix) and Basic Information reordered</td><td><code>app/PersonalProfile.js</code>, <code>app/PersonalProfile.html</code> - DONE</td></tr>
+    <tr><td>9</td><td>Privacy-first personal details, contact on Basic Information, photo card and avatar, header menu with share drawer, and examples in the summary editors</td><td><code>app/PersonalProfile.js</code>, <code>app/PersonalProfile.html</code>, <code>app/PersonalProfile.css</code>, <code>app/test-harness.html</code> - DONE</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <p>Decision points we resolve together before or during implementation.
+  Every answer becomes a dated row in section 11.</p>
+  <ol>
+    <li><strong>Should the record link to other tools?</strong> A Company Profile record links to invoices already. A personal profile could feed StudentFileBuilderForApplications, VolunteerProfile and future resume tools through a param holding the record id. Not built yet because it needs a CMS-side contract.</li>
+    <li><strong>Should an application target list live in the profile?</strong> A list of programs or jobs with deadlines and status would turn the profile into a tracker. It overlaps with idea I-01 and is deliberately out of scope for 0.1.</li>
+    <li><strong>How long should essays be capped?</strong> Essays are plain text today with no limit. A per-essay character cap (for example 20,000) would protect the record size; no cap was chosen because competition essays can be long.</li>
+    <li><strong>Should sensitive sections be locked behind a reveal action?</strong> Identity and health are visible whenever their section is visible. A reveal toggle would add friction but reduce shoulder-surfing risk.</li>
+    <li><strong>Which profile use should be the default in a new record?</strong> Today the select starts empty and only the basic sections show (D-PP-16). Once real usage exists, a most-used default can be seeded through the <code>defaultKind</code> param.</li>
+    <li><strong>Should Personal Details be reachable from the basic sections on demand?</strong> Today it appears only for immigration, government and health. A "needs this form" link on Basic Information could reveal it for one profile without changing the focus set; not built yet because it adds a second visibility rule.</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE push (the badge
+  says so) or is a related set that must not be broken across releases.
+  Click a task to expand its full details. Tick the checkbox when a task is
+  done - progress is remembered by the browser per document and shown in the
+  sidebar.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong> - a task starts only when:
+      <ul>
+        <li>Its requirement is written in section 6.</li>
+        <li>Options are evaluated and the decision is logged (section 11).</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong> - a group is done only when:
+      <ul>
+        <li>All its tasks are checked.</li>
+        <li>Its open risks are solved or accepted (section 18).</li>
+        <li>Tests you chose to track pass (if any).</li>
+        <li>The document version is bumped and PUSH READY shows.</li>
+      </ul>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the
+    core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong
+    benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap
+    cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> -
+    unclear benefit or a product decision is required; see section 14.</li>
+  </ul>
+
+  <!-- Auto-updated by ssot.js: done / waiting percentages of ALL tasks below. -->
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <!-- TEMPLATE: copy one .task-group block per release group. The group name,
+       the "ships together" reason, and the tasks inside form one unit.
+       Badge variants: "ONE PUSH - do not split" for groups that must ship in
+       a single push, or "RELATED - do not split" for groups that must not be
+       broken across releases.
+       data-group-status: planned | in-progress | testing | pushed.
+       PUSH READY is computed automatically by ssot.js. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
+       uncomment it, and edit).
+  <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: [Group name]</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="[GROUP-KEY]">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="[GROUP-KEY]"></div></div>
+    <p class="task-group-note">Why these belong together: [the shared dependency -
+    e.g. "T-01 changes the protocol; T-02 and T-03 adapt every caller.
+    Publishing T-01 alone breaks all writers."]</p>
+
+    TEMPLATE (inside the commented sample): one .task-item block per task.
+    data-task-id must be unique across the whole document; data-group matches
+    the group key above. data-task-status: not-started | in-progress | ignored.
+    Done is the checkbox. The status chip is rendered by ssot.js.
+    PERMANENT DONE: write data-task-status="done" on the task div (or
+    checked="checked" on the checkbox) to mark it done for every browser;
+    npm run rel does this for pushed groups.
+    <div class="task-item" data-task-id="T-01" data-group="[GROUP-KEY]" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">[Short task name - the main name]</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> [why this task exists]</p>
+          <p><strong>How we will solve it:</strong> [approach, files]</p>
+          <p><strong>Benefit:</strong> [what the user or system gains]</p>
+          <p><strong>Files:</strong> <code>[file paths]</code></p>
+          <p><strong>Status:</strong> [edit data-task-status above - the chip updates automatically]</p>
+        </div>
+      </details>
+    </div>
+
+    TEMPLATE (inside the commented sample): duplicate the .task-item block above for T-02, T-03, ...
+  </section>
+  END OF TEMPLATE SAMPLE -->
+
+  <section class="task-group" data-release-group="PP-1" data-group-status="testing">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: First build - adaptive personal profile</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="PP-1">0/10</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="PP-1"></div></div>
+    <p class="task-group-note">Why these belong together: the section registry, the profile-use presets, the declarative lists and the export all read the same record shape. Shipping one without the others would leave a half-adaptive tool.</p>
+
+    <div class="task-item" data-task-id="T-01" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-01</span><span class="task-title">Section registry and computed visibility</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> a long personal record needs a short sidebar.</p><p><strong>How we will solve it:</strong> <code>SECTIONS</code> with <code>needs</code>, <code>isSectionVisible</code>, Show all toggle, pager over the visible list.</p><p><strong>Benefit:</strong> the same record reads as a resume, a university profile or an immigration file.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-02" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-02</span><span class="task-title">Profile uses and focus presets</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> users should not have to choose fourteen focus areas by hand.</p><p><strong>How we will solve it:</strong> eleven profile uses with preset focus sets, a focus grid, and Apply suggested areas.</p><p><strong>Benefit:</strong> one select adapts the sidebar immediately.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-03" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-03</span><span class="task-title">Declarative repeatable lists</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> fourteen lists would otherwise need fourteen copies of render and read code.</p><p><strong>How we will solve it:</strong> <code>ARRAY_LISTS</code> with container, getter, title and rows; generic render, read, add and remove.</p><p><strong>Benefit:</strong> a new list is a data change.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-04" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-04</span><span class="task-title">Additional fields and custom sections</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> application forms ask for fields the tool cannot predict.</p><p><strong>How we will solve it:</strong> extra fields per section plus whole custom sections, both stored under <code>profile</code>.</p><p><strong>Benefit:</strong> no code change for a new form field.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code>, <code>app/PersonalProfile.html</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-05" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-05</span><span class="task-title">Saving, echo guard and read-only</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> losing the last keystrokes or re-rendering on the tool's own save.</p><p><strong>How we will solve it:</strong> 400ms debounce, immediate save on structure changes, <code>selfSaving</code> echo guard, read-only class and handler guards.</p><p><strong>Benefit:</strong> edits are durable and the screen never fights the user.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code>, <code>app/PersonalProfile.css</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-06" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-06</span><span class="task-title">Summary, readiness and safe JSON export</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> a profile that cannot leave the tool is not used.</p><p><strong>How we will solve it:</strong> plain-text summary, focus-aware readiness list, JSON copy and download, sensitive sections excluded by default.</p><p><strong>Benefit:</strong> safe reuse in any application form.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-07" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-07</span><span class="task-title">Prefill from the signed-in CMS user</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> an empty profile does not feel like "the active user's profile".</p><p><strong>How we will solve it:</strong> fill name, preferred name and email into empty fields only, with the repository's retry schedule while the session arrives.</p><p><strong>Benefit:</strong> fewer fields to type, nothing overwritten.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-08" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-08</span><span class="task-title">Harness, quality checks and narrow probe</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> the tool must be provable without the CMS.</p><p><strong>How we will solve it:</strong> mock SDK, sample record, <code>?qa=1</code> with 79 checks, <code>?section=</code>, <code>?kind=</code>, <code>?menu=1</code>, <code>?summaryEdit=</code> and <code>?bare=1</code> for screenshots.</p><p><strong>Benefit:</strong> every behavior in section 9 is repeatable.</p><p><strong>Files:</strong> <code>app/test-harness.html</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-09" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-09</span><span class="task-title">Docs shell, catalog idea and tool mapping</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> a tool outside the taxonomy and the docs system is invisible.</p><p><strong>How we will solve it:</strong> subcategory <code>P-G-02-e</code>, idea <code>P-G-02-e Personal Profile Builder</code>, <code>TOOL_IDEA_MAP</code>, seven generated docs, this SSOT.</p><p><strong>Benefit:</strong> the tool appears in the catalog, the docs index and the store pipeline.</p><p><strong>Files:</strong> <code>catalog-data.js</code>, <code>scripts/build-catalog-page.js</code>, <code>docs/*.html</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-09A" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-09A</span><span class="task-title">Read-first summary cards and collapsible list previews</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09A as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> a screen of live textareas reads like a technical form, and long lists are hard to scan.</p><p><strong>How we will solve it:</strong> Profile Summary renders five read-only statement cards with Edit, word count, Cancel and Save; list items collapse to a title, subtitle and meta chips, expand one at a time and auto-open when new.</p><p><strong>Benefit:</strong> the profile reads before it is edited, and only one editor is open at a time.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code>, <code>app/PersonalProfile.html</code>, <code>app/PersonalProfile.css</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-09B" data-group="PP-1" data-task-status="done">
+      <details>
+        <summary><span class="task-id">T-09B</span><span class="task-title">Privacy-first details, photo card, header menu and share drawer</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09B as done" checked="checked" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> the first screen asked for private data, the photo looked like a link field, and share/export sat in the section list.</p><p><strong>How we will solve it:</strong> move private fields into a needs-gated Personal Details section with year-of-birth first, put email and phone beside the name, render a photo card plus header avatars, and move readiness/export into a drawer opened from the avatar menu.</p><p><strong>Benefit:</strong> the general profile asks only for what an application asks, the photo is usable, and the section list stays about the person.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code>, <code>app/PersonalProfile.html</code>, <code>app/PersonalProfile.css</code>, <code>app/test-harness.html</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-10" data-group="PP-1" data-task-status="not-started">
+      <details>
+        <summary><span class="task-id">T-10</span><span class="task-title">User review and first push</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> no push happens without the owner reading the tool and this SSOT.</p><p><strong>How we will solve it:</strong> open <code>app/test-harness.html</code>, walk every section, confirm the copy and the taxonomy placement.</p><p><strong>Benefit:</strong> the first published version is the one the owner chose.</p><p><strong>Files:</strong> <code>app/test-harness.html</code>, <code>docs/ssot.html</code></p></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="PP-2" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Application tracking and reuse</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="PP-2">0/3</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="PP-2"></div></div>
+    <p class="task-group-note">Why these belong together: each one needs a stable application snapshot as its base. Building them separately would create three different ideas of "the profile as it was".</p>
+    <div class="task-item" data-task-id="T-11" data-group="PP-2" data-task-status="not-started">
+      <details>
+        <summary><span class="task-id">T-11</span><span class="task-title">Application targets list</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-optional">Optional - needs decision</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> users still track deadlines elsewhere.</p><p><strong>How we will solve it:</strong> a list of programs or jobs with deadline, stage and links. Agreed only if section 14 question 2 is answered yes.</p><p><strong>Benefit:</strong> one place for the record and the applications that use it.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code>, <code>app/PersonalProfile.html</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-12" data-group="PP-2" data-task-status="not-started">
+      <details>
+        <summary><span class="task-id">T-12</span><span class="task-title">Per-application snapshots</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-optional">Optional - needs decision</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> a later edit rewrites what an older application said.</p><p><strong>How we will solve it:</strong> store an immutable snapshot next to each target. Depends on T-11.</p><p><strong>Benefit:</strong> an honest history of what was submitted.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code></p></div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-13" data-group="PP-2" data-task-status="not-started">
+      <details>
+        <summary><span class="task-id">T-13</span><span class="task-title">Provide the record to other tools</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-optional">Optional - needs decision</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" /></summary>
+        <div class="task-details"><p><strong>Problem it solves:</strong> Student Application File Builder and Volunteer Profile hold their own copy of identity data.</p><p><strong>How we will solve it:</strong> a <code>personalProfileId</code> param plus <code>requestObjects get</code> on the agreed object type. Needs the CMS contract in section 14 question 1.</p><p><strong>Benefit:</strong> one personal record feeds every personal tool.</p><p><strong>Files:</strong> <code>app/PersonalProfile.js</code> and the consuming tools</p></div>
+      </details>
+    </div>
+  </section>
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. We discuss each idea and
+  write the outcome inside its details. An agreed idea moves to the task list
+  (section 15) with a priority; a rejected idea is marked Ignored with the
+  reason. Tick the checkbox when an idea is done - progress is remembered by
+  the browser per document.</p>
+
+  <!-- Auto-updated by ssot.js: done / waiting / ignored percentages. -->
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
+       data-idea-status: new | discussing | ignored. Done = the checkbox. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">[Short idea name]</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> [what the idea is]</p>
+        <p><strong>Why:</strong> [what it would improve]</p>
+        <p><strong>Discussion / outcome:</strong> [notes and decisions; or "Ignored - reason"]</p>
+      </div>
+    </details>
+  </div>
+  END OF TEMPLATE SAMPLE -->
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-01</span><span class="idea-title">Application targets with deadlines</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> a list of programs, jobs or awards the profile is being prepared for, each with a deadline, stage and link.</p><p><strong>Why:</strong> the profile answers "who am I", not "where am I applying". Users still track deadlines elsewhere.</p><p><strong>Discussion / outcome:</strong> new - see section 14 question 2 and task T-11.</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-02</span><span class="idea-title">Editable generated summary</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> turn the summary preview into an editable block with a reset to generated text.</p><p><strong>Why:</strong> users always rewrite the generated summary for a specific application.</p><p><strong>Discussion / outcome:</strong> new - depends on deciding whether the edited text is part of the record or a throwaway export.</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-03</span><span class="idea-title">Per-application snapshots</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> keep the profile exactly as it looked when an application was submitted.</p><p><strong>Why:</strong> a later edit changes what the record claims about an older submission.</p><p><strong>Discussion / outcome:</strong> new - task T-12, needs the target list from I-01.</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-04</span><span class="idea-title">Completeness per application</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> ask which fields one target form requires and score the record against that exact list.</p><p><strong>Why:</strong> the current section checklist is honest but coarse.</p><p><strong>Discussion / outcome:</strong> new - needs a per-target field checklist, which overlaps with T-11.</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-05</span><span class="idea-title">AI drafting of statements</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> draft a personal statement from the record (education, projects, service) in the user's voice.</p><p><strong>Why:</strong> the hardest part of an application is the first draft, and the record already holds the evidence.</p><p><strong>Discussion / outcome:</strong> new - needs an <code>allowAi</code> contract and a clear rule that the AI never invents facts.</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-06</span><span class="idea-title">Expiry reminders by email</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> send a reminder when a passport, permit or certification approaches expiry.</p><p><strong>Why:</strong> the in-tool alert only works when the record is open.</p><p><strong>Discussion / outcome:</strong> new - needs <code>allowSendEmail</code> and a scheduling owner; a tool cannot run on its own.</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-07</span><span class="idea-title">Feed other personal tools</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> a consuming tool points at a personal profile record and reads its identity, education and work data.</p><p><strong>Why:</strong> Student Application File Builder and Volunteer Profile already hold their own copy of the same facts.</p><p><strong>Discussion / outcome:</strong> new - task T-13, blocked on the CMS object contract (section 14 question 1).</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-08" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-08</span><span class="idea-title">Printable profile sheet</span><span class="idea-status-chip" data-idea-status-chip"></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-08 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> a clean two-page PDF of the profile for interviews and paper forms.</p><p><strong>Why:</strong> some processes still ask for a printed record.</p><p><strong>Discussion / outcome:</strong> new - use <code>tool.requestExportPdf</code> with the same section data used by the summary.</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-09" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-09</span><span class="idea-title">Several people per record</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-09 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> a parent keeps profiles for more than one child on a single record.</p><p><strong>Why:</strong> family applications often sit with one adult.</p><p><strong>Discussion / outcome:</strong> new - one record per person is the current model (D-PP-05). Revisit only if requested.</p></div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-10" data-idea-status="new">
+    <details>
+      <summary><span class="idea-id">I-10</span><span class="idea-title">Import from an existing resume</span><span class="idea-status-chip" data-idea-status-chip"></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-10 as done" /></summary>
+      <div class="idea-details"><p><strong>Idea:</strong> upload a resume or transcript and prefill the record.</p><p><strong>Why:</strong> most users already have a resume file.</p><p><strong>Discussion / outcome:</strong> new - depends on AI extraction and an upload contract; the record shape is ready for it.</p></div>
+    </details>
+  </div>
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>Preparation: open <code>app/test-harness.html</code> from disk. Use Load Sample Data for a populated record and Clear All for an empty one. <code>?qa=1</code> runs the 79 automatic checks; <code>?sample=1&amp;section=&lt;id&gt;&amp;bare=1</code> opens one section without the harness bar for screenshots. <code>?kind=immigration</code> switches the sample to another profile use, <code>?menu=1</code> opens the header menu and <code>?section=share</code> opens the share drawer.</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>PP-T01 - first load.</strong> Steps: open the harness with no stored record. PASS if: the header shows "Untitled profile" and a fallback avatar, only the five basic sections are in the sidebar, the completion ring shows a percentage and one section is active.</li>
+    <li><strong>PP-T02 - profile use adapts the sidebar.</strong> Steps: choose University application, then Immigration and relocation, then back. PASS if: university shows essays and hides identity and health; immigration shows identity and health and hides essays; returning re-hides identity; all typed data survives.</li>
+    <li><strong>PP-T03 - Show all sections.</strong> Steps: click Show all sections, then Hide sections not needed. PASS if: hidden sections appear and disappear without any data change.</li>
+    <li><strong>PP-T04 - repeatable records.</strong> Steps: add a skill, type a name, click Remove. PASS if: the new row appears at the top, the typed value is saved, and removing it restores the previous count.</li>
+    <li><strong>PP-T05 - summary and sensitive data.</strong> Steps: open the header menu, then Share &amp; export, with the sample record. PASS if: the drawer opens, the preview starts with the legal name, contains the experience and education blocks, and never contains the identity document number, the date of birth or the pronouns.</li>
+    <li><strong>PP-T06 - export opt-in.</strong> Steps: tick Include sensitive sections, then open the JSON copy. PASS if: <code>profile.exportIncludeSensitive</code> is true and the personal, identity and health blocks are present; unticked, all three blocks are empty.</li>
+    <li><strong>PP-T11 - privacy by profile.</strong> Steps: choose University application, then Immigration and relocation. PASS if: Personal Details is absent from the sidebar for university and present for immigration; Basic Information never contains pronouns, date of birth, nationality, marital status or gender.</li>
+    <li><strong>PP-T12 - photo and examples.</strong> Steps: open Basic Information with the sample record; open the summary editor. PASS if: the photo card and header initials render, the editor shows an example and "Use this example" fills the field.</li>
+    <li><strong>PP-T07 - custom sections.</strong> Steps: open the sample record's custom section. PASS if: the custom field values render and the nav shows the custom section with its field count.</li>
+    <li><strong>PP-T08 - read-only.</strong> Steps: toggle read-only. PASS if: inputs do not accept edits, add/remove/export buttons are hidden, navigation still works.</li>
+    <li><strong>PP-T09 - signed-in prefill.</strong> Steps: clear storage, open with <code>?user=1</code>. PASS if: legal name, preferred name and email are filled once and editing them is never overwritten on re-render.</li>
+    <li><strong>PP-T10 - narrow layout.</strong> Steps: open the harness in a 390px iframe. PASS if: no element extends past the viewport and the share grid collapses to one column.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>PP-T01 to PP-T08</td><td>PASS</td><td>Automatic suite: 79 of 79 checks green in headless Edge on 2026-11-05.</td></tr>
+    <tr><td>PP-T09</td><td>PASS</td><td><code>?user=1</code> filled the three fields; second attempt left typed values untouched.</td></tr>
+    <tr><td>PP-T10</td><td>PASS</td><td>Probe at 390px: document scrollWidth 375 = clientWidth 375, 0 overflowing elements, share grid one column.</td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when the whole automatic suite passes, PP-T09 and PP-T10 pass, and T-01 to T-09 ship in the same release. T-10 is the owner review.</p>
+  <p><strong>Progress log:</strong> 2026-11-05 - first pass complete: 30/30 checks, narrow probe clean, screenshots of Basic Information, Documents and Share &amp; Export reviewed. Second pass: 63/63 checks after the focus removal, basic-only default and read-first card work; summary, skills and editor screenshots reviewed. Third pass: 79/79 checks after the privacy split, contact move, photo card, header menu and share drawer; Basic Information, menu, personal details, summary example and drawer screenshots reviewed, narrow probe still 0 overflowing elements.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is NOT pushed yet lives here,
+  linked to its release group (section 15). <strong>Before every push</strong>
+  re-evaluate every OPEN risk of the groups being pushed: solve them one by
+  one (tick the checkbox), or mark the risk Accepted
+  (<code>data-risk-status="accepted"</code>) with a reason and the date, and
+  update the <code>Last re-evaluation</code> line inside the risk. A group is
+  push-ready when its tasks are done AND it has no OPEN risks - the task
+  panel shows a PUSH READY badge per group and the open-risk count.</p>
+
+  <!-- Auto-updated by ssot.js: open / solved / accepted counts. -->
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <!-- TEMPLATE: one .risk-item per risk or side effect. data-risk-id unique;
+       data-group = the release group it belongs to (must match a
+       data-release-group in section 15; leave empty for cross-cutting risks).
+       data-risk-level: critical (mandatory - blocks every push until solved)
+       | high (blocks unless accepted) | medium (warns) | low (nice-to-have,
+       reported only).
+       data-risk-status: open | accepted. Solved = the checkbox. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
+  <div class="risk-item" data-risk-id="R-01" data-group="[GROUP-KEY]" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">[Risk or side effect name]</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> [task T-xx / whole group]</p>
+        <p><strong>What can go wrong:</strong> [the side effect if this ships wrong]</p>
+        <p><strong>Likelihood / impact:</strong> [how likely, how bad]</p>
+        <p><strong>Mitigation:</strong> [what we do about it]</p>
+        <p><strong>Last re-evaluation:</strong> [date + result - update before every push]</p>
+      </div>
+    </details>
+  </div>
+  END OF TEMPLATE SAMPLE -->
+
+  <div class="risk-item" data-risk-id="R-01" data-group="PP-1" data-risk-level="high" data-risk-status="accepted">
+    <details>
+      <summary><span class="risk-id">R-01</span><span class="risk-title">Sensitive data is visible to anyone who can open the record</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" /></summary>
+      <div class="risk-details"><p><strong>Applies to:</strong> whole group PP-1.</p><p><strong>What can go wrong:</strong> identity numbers, medical details and funding data sit in a CMS record, and the CMS permissions decide who reads them.</p><p><strong>Likelihood / impact:</strong> medium likelihood, high impact.</p><p><strong>Mitigation:</strong> sensitive sections sit behind their own section with an explicit note, are excluded from every export by default (D-PP-09), and never enter the summary text. Record access stays a CMS permission decision.</p><p><strong>Last re-evaluation:</strong> 2026-11-05 - accepted with the export default and the section notes; record sharing remains an owner/CMS decision.</p></div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-02" data-group="PP-1" data-risk-level="medium" data-risk-status="accepted">
+    <details>
+      <summary><span class="risk-id">R-02</span><span class="risk-title">Essays and long notes grow the record</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" /></summary>
+      <div class="risk-details"><p><strong>Applies to:</strong> T-03 and T-06.</p><p><strong>What can go wrong:</strong> a record with dozens of long essays approaches the 1MB CMS document limit.</p><p><strong>Likelihood / impact:</strong> low likelihood, medium impact.</p><p><strong>Mitigation:</strong> no file bytes are stored, only links; essays are plain text. Section 14 question 3 covers an optional per-essay cap.</p><p><strong>Last re-evaluation:</strong> 2026-11-05 - accepted; revisit if a real record crosses 700KB.</p></div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-03" data-group="PP-1" data-risk-level="medium" data-risk-status="accepted">
+    <details>
+      <summary><span class="risk-id">R-03</span><span class="risk-title">Clipboard or download blocked by the host frame</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" /></summary>
+      <div class="risk-details"><p><strong>Applies to:</strong> T-06.</p><p><strong>What can go wrong:</strong> a sandboxed CMS iframe denies <code>navigator.clipboard</code> or blob downloads, so Copy and Download appear to do nothing.</p><p><strong>Likelihood / impact:</strong> medium likelihood, low impact.</p><p><strong>Mitigation:</strong> clipboard falls back to <code>execCommand</code> and then to a visible warning that asks the user to select the preview text; the preview is always on screen.</p><p><strong>Last re-evaluation:</strong> 2026-11-05 - accepted; preview text is the guaranteed fallback.</p></div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-04" data-group="PP-1" data-risk-level="low" data-risk-status="accepted">
+    <details>
+      <summary><span class="risk-id">R-04</span><span class="risk-title">A hidden section looks missing on first load</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" /></summary>
+      <div class="risk-details"><p><strong>Applies to:</strong> T-01.</p><p><strong>What can go wrong:</strong> an unconfigured record shows only five sections, so someone looking for Work Experience may think it is missing.</p><p><strong>Likelihood / impact:</strong> medium likelihood, low impact.</p><p><strong>Mitigation:</strong> the sidebar always shows "N sections hidden by this profile" next to the Show all sections toggle, and the setup note explains the rule (D-PP-16).</p><p><strong>Last re-evaluation:</strong> 2026-11-05 - accepted; the toggle sits above the fold in the sidebar foot.</p></div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-05" data-group="PP-1" data-risk-level="medium" data-risk-status="accepted">
+    <details>
+      <summary><span class="risk-id">R-05</span><span class="risk-title">Account prefill fills the wrong person on a shared device</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" /></summary>
+      <div class="risk-details"><p><strong>Applies to:</strong> T-07.</p><p><strong>What can go wrong:</strong> the signed-in user's name is written into a record that belongs to someone else.</p><p><strong>Likelihood / impact:</strong> low likelihood, medium impact.</p><p><strong>Mitigation:</strong> prefill only writes into empty fields, runs once per record, and the user can edit every value; nothing is sent anywhere.</p><p><strong>Last re-evaluation:</strong> 2026-11-05 - accepted.</p></div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to test locally in the harness and safe to hand to the owner for review. Publishing waits for the owner review (T-10); the only open owner decisions are the questions in section 14, and none of them block the first release.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. The <code>npm run rel</code> script appends
+  a row here automatically after every successful push - do not edit or remove
+  the marker comment below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Personal Profile - single source of truth for all decisions about this
+    tool. Version 0.1, 2026-11-05. First build complete (PP-1, 11 of 12 tasks,
+    owner review pending).
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync. Tasks stamped by <code>npm run rel</code> show the push version
+    they shipped in.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks. Critical risks block every push until solved; high
+    risks block unless accepted; medium risks warn; low risks are reported
+    only.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved
+    state. Tick the checkbox here or in section 18 - both stay in sync.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>

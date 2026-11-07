@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Future Bridge Academy - CEMC Trial Exams</title>
+<style>
+  /* =========================================================================
+     FUTURE BRIDGE ACADEMY - CEMC TRIAL EXAM FLYER
+     Two sheets per format: A4 (210x297) and phone (105x230mm).
+     Sheet 1 - poster: the benefit of the CEMC contest, then our one-hour trial.
+     Sheet 2 - proof: CEMC-published student stories, what participants get,
+               and where a contest result helps.
+
+     Brand colours (SSOT): #FF6B35 primary - #004E89 secondary - #FFD23F accent
+     Every trial paper is one hour, Grades 5 to 11.
+     The certificate and the honour roll come from CEMC, not from us: the
+     academy runs the practice sitting, CEMC runs the contest.
+     ========================================================================= */
+  :root {
+    --brand-1: #FF6B35;
+    --brand-1-deep: #E8541F;
+    --brand-2: #004E89;
+    --brand-2-deep: #00365F;
+    --brand-3: #FFD23F;
+    --brand-4: #06D6A0;
+    --ink: #102A43;
+    --muted: #486581;
+    --line: #E2E8F0;
+    --paper: #FFFFFF;
+    --paper-soft: #F5F8FC;
+    --shadow: 0 10px 30px rgba(16, 42, 67, 0.08);
+    --grad: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-2-deep) 60%, #00294a 100%);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #DCE4EE;
+    line-height: 1.4;
+  }
+
+  @page { size: A4; margin: 0; }
+
+  @media print {
+    html, body { background: #fff !important; }
+    *, *::before, *::after { box-shadow: none !important; text-shadow: none !important; }
+    .flyer { max-width: none !important; margin: 0 !important; padding: 0 !important; gap: 0 !important; }
+    .page {
+      width: 210mm; height: 297mm; margin: 0 !important;
+      border-radius: 0 !important; box-shadow: none !important;
+      overflow: hidden;
+      page-break-after: always; break-after: page;
+    }
+    .page:last-child { page-break-after: auto; break-after: auto; }
+    .no-print { display: none !important; }
+    a { text-decoration: none; color: inherit; }
+
+    /* Rule 3.1 - WhatsApp Web and Quick Look drop alpha gradients over photos,
+       so the contrast is baked into the bitmap instead of a CSS wash */
+    .hero-wash { display: none !important; }
+    .hero-photo { filter: brightness(0.34) saturate(0.88) contrast(1.1); }
+  }
+
+  /* ============ screen shell ============ */
+  .flyer {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 18px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .page {
+    width: 100%;
+    background: var(--paper);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .page > * { flex: 0 0 auto; }
+
+  .inner { padding: 6mm 10mm; }
+  @media (max-width: 639px) { .inner { padding: 14px 12px; } }
+
+  /* ============ shared ============ */
+  h1, h2, h3 { letter-spacing: -0.02em; }
+  .hl { color: var(--brand-3); }
+  .kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--brand-1); margin-bottom: 6px;
+  }
+  .kicker::before { content: ""; width: 22px; height: 3px; border-radius: 2px; background: var(--brand-1); }
+  .kicker.gold { color: var(--brand-3); }
+  .kicker.gold::before { background: var(--brand-3); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--brand-3); color: var(--brand-2-deep);
+    font-weight: 900; font-size: 15px;
+    padding: 13px 22px; border-radius: 11px;
+    text-decoration: none;
+  }
+  .btn .arrow { font-size: 16px; }
+  .btn.ghost { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.6); font-size: 14px; }
+
+  /* ============ top bar ============ */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    background: var(--brand-2-deep); padding: 10px 10mm; position: relative; z-index: 5;
+  }
+  .topbar-logo { height: 40px; width: auto; display: block; filter: brightness(0) invert(1); }
+  .topbar-tag {
+    font-size: 10px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(255,255,255,0.85); text-align: right; line-height: 1.5;
+    border-left: 1px solid rgba(255,255,255,0.22); padding-left: 14px;
+  }
+  @media (max-width: 639px) { .topbar { padding: 9px 12px; } .topbar-logo { height: 30px; } }
+
+  /* ============ hero ============ */
+  .hero {
+    position: relative; overflow: hidden; background: var(--brand-2-deep); color: #fff;
+    clip-path: polygon(0 0, 100% 0, 100% 95%, 0 100%);
+  }
+  .hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 26%; }
+  .hero-wash {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(100deg, rgba(0,28,52,0.96) 0%, rgba(0,54,95,0.88) 48%, rgba(0,54,95,0.28) 100%),
+      radial-gradient(120% 90% at 98% 4%, rgba(255,107,53,0.50) 0%, rgba(255,107,53,0) 62%);
+  }
+  .hero .hero-inner { position: relative; z-index: 2; padding: 6.5mm 10mm 7.5mm; max-width: 155mm; }
+
+  .hero-pill {
+    display: inline-flex; align-items: center; gap: 9px;
+    margin: 0 0 14px; padding: 8px 16px; border-radius: 999px;
+    background: #fff; color: var(--brand-2-deep);
+    font-size: 12px; font-weight: 900; letter-spacing: 0.13em; text-transform: uppercase;
+  }
+  .hero-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brand-1); }
+
+  .hero-title {
+    font-size: 48px; line-height: 0.96; letter-spacing: -0.03em; font-weight: 900;
+  }
+  .hero-title .hl { display: block; color: var(--brand-3); }
+  .hero-lede {
+    margin-top: 14px; font-size: 16.5px; line-height: 1.4;
+    color: rgba(255,255,255,0.94); max-width: 44ch;
+  }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+  .ribbon { position: absolute; top: 0; right: 0; width: 122px; height: 122px; overflow: hidden; z-index: 3; }
+  .ribbon span {
+    position: absolute; top: 28px; right: -46px; width: 188px;
+    transform: rotate(45deg);
+    background: var(--brand-1); color: #fff; text-align: center;
+    font-size: 10px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 7px 0;
+  }
+
+  .slash {
+    height: 10px; margin-top: -5px; position: relative; z-index: 4;
+    background: linear-gradient(90deg, var(--brand-1) 0%, var(--brand-3) 68%, var(--brand-4) 100%);
+    transform: rotate(-1.1deg) scaleX(1.04);
+  }
+
+  /* ============ where it counts (kept high on the sheet) ============ */
+  .use { background: var(--grad); color: #fff; }
+  .use .inner { padding-top: 4mm; padding-bottom: 4mm; }
+  .use h2 { font-size: 30px; line-height: 1.05; letter-spacing: -0.025em; margin-bottom: 10px; }
+  .use h2 em { font-style: normal; color: var(--brand-3); }
+  .use-tags-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .use-tag {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.32);
+    border-radius: 999px; padding: 9px 14px;
+    font-size: 14px; font-weight: 800; letter-spacing: 0.01em;
+  }
+  .use-tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brand-3); }
+  .use p { margin-top: 10px; font-size: 14px; color: rgba(255,255,255,0.82); max-width: 66ch; }
+
+  /* ============ benefits ============ */
+  .benefits { background: var(--paper-soft); }
+  .benefits .inner { padding-top: 4mm; padding-bottom: 4mm; }
+  .benefits-head { margin-bottom: 14px; }
+  .benefits-h2 { font-size: 34px; line-height: 1.04; letter-spacing: -0.025em; }
+  .benefits-h2 .hl2 { color: var(--brand-1); }
+  .benefits-sub { margin-top: 6px; font-size: 15px; color: var(--muted); }
+
+  .benefit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .benefit {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 15px 13px;
+  }
+  .benefit-ico {
+    width: 46px; height: 46px; border-radius: 13px; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand-1); background: #FFF1EA;
+  }
+  .benefit-ico svg { width: 25px; height: 25px; display: block; }
+  .benefit:nth-child(2) .benefit-ico { color: var(--brand-2); background: #EDF4FB; }
+  .benefit:nth-child(3) .benefit-ico { color: #A97800; background: #FFF7DE; }
+  .benefit:nth-child(4) .benefit-ico { color: #04A97E; background: #E8FAF4; }
+
+  /* CEMC recognition is the reason parents say yes: it carries the eye */
+  .benefit.is-key { background: #FFFAEC; border: 2px solid var(--brand-3); }
+
+  .benefit h3 { font-size: 19px; line-height: 1.15; margin-bottom: 4px; }
+  .benefit p { font-size: 13.5px; line-height: 1.35; color: var(--muted); }
+  .benefit .use-tags {
+    display: block; margin-top: 6px;
+    font-size: 11px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--brand-1-deep);
+  }
+
+  /* ============ who does what ============ */
+  .clarify { background: #fff; }
+  .clarify .inner { padding-top: 2.5mm; padding-bottom: 2.5mm; display: flex; align-items: center; gap: 10px; }
+  .clarify p { font-size: 12px; font-weight: 700; color: var(--muted); line-height: 1.4; }
+  .clarify strong { color: var(--brand-2-deep); }
+  .clarify::before { display: none; }
+  .clarify-bar { width: 4px; align-self: stretch; border-radius: 3px; background: var(--brand-3); flex: 0 0 auto; }
+
+  /* ============ closing call to action ============ */
+  /* grows to the paper edge on A4, so sheet 1 closes on solid gold */
+  .cta-band { background: var(--brand-3); color: var(--brand-2-deep); flex: 1 0 auto; display: flex; align-items: center; }
+  .cta-band .inner { width: 100%; padding-top: 4.5mm; padding-bottom: 4.5mm; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .cta-band h2 { font-size: 28px; line-height: 1.02; letter-spacing: -0.025em; }
+  .cta-band p { margin-top: 5px; font-size: 14px; font-weight: 600; color: rgba(0,54,95,0.78); }
+  .cta-btn {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px;
+    background: var(--brand-2); color: #fff;
+    font-size: 15px; font-weight: 900; padding: 14px 22px; border-radius: 12px;
+    text-decoration: none;
+  }
+  .cta-band.is-page2 { flex: 1 0 auto; }
+  .cta-band.is-page2 h2 { font-size: 34px; max-width: 420px; }
+  .cta-band.is-page2 p { font-size: 15px; }
+  .cta-band .cta-url { margin-top: 4px; font-size: 12px; font-weight: 700; color: rgba(0,54,95,0.68); }
+
+  /* ============ footer ============ */
+  .foot-one {
+    margin-top: auto;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px 16px; flex-wrap: wrap;
+    padding: 9px 10mm 10px;
+    background: var(--brand-2-deep); color: rgba(255,255,255,0.85);
+  }
+  .foot-name { font-size: 11px; font-weight: 900; color: #fff; }
+  .foot-name small {
+    display: block; font-size: 8px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(255,255,255,0.62);
+  }
+  .foot-meta {
+    display: flex; flex-direction: column; gap: 1px;
+    font-size: 9.5px; line-height: 1.45;
+    flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere;
+  }
+  .foot-meta a { color: var(--brand-3); font-weight: 700; text-decoration: none; }
+  .foot-apply {
+    display: inline-flex; align-items: center;
+    background: var(--brand-3); color: var(--brand-2-deep);
+    font-size: 10px; font-weight: 900; letter-spacing: 0.03em;
+    padding: 8px 14px; border-radius: 999px; text-decoration: none;
+  }
+  html[data-format="desktop"] .foot-apply { display: none; }
+
+  /* ============ sheet 2: stories ============ */
+  .story-intro { padding: 6mm 10mm 0; background: #fff; }
+  .story-intro h2 { font-size: 32px; line-height: 1.03; letter-spacing: -0.025em; }
+  .story-intro h2 em { font-style: normal; color: var(--brand-1); }
+  .story-intro .sub { margin-top: 5px; font-size: 13px; color: var(--muted); }
+
+  .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 5mm 10mm 0; }
+  .story {
+    background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--brand-1);
+    border-radius: 12px; padding: 18px 18px 16px;
+  }
+  .story:nth-child(2) { border-left-color: var(--brand-2); }
+  .story-label {
+    font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--brand-1-deep);
+  }
+  .story:nth-child(2) .story-label { color: var(--brand-2); }
+  .story-quote { margin-top: 8px; font-size: 18px; line-height: 1.36; font-weight: 600; color: var(--ink); }
+  .story-attr { margin-top: 10px; font-size: 10px; font-weight: 700; color: var(--muted); }
+
+  .page-stats { background: var(--brand-2-deep); color: #fff; }
+  .page-stats .inner {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;
+    padding-top: 4mm; padding-bottom: 4mm;
+  }
+  .page-stat b { display: block; font-size: 30px; line-height: 1; letter-spacing: -0.02em; color: var(--brand-3); }
+  .page-stat span { display: block; margin-top: 4px; font-size: 10px; line-height: 1.35; color: rgba(255,255,255,0.8); }
+
+  .proof { margin-top: 5mm; background: var(--paper-soft); }
+  .proof .inner { padding-top: 5mm; padding-bottom: 5mm; }
+  .proof h2 { font-size: 24px; line-height: 1.05; }
+  .proof-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+  .proof-item { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px 11px; }
+  .proof-item b { display: block; font-size: 12.5px; line-height: 1.2; margin-bottom: 3px; }
+  .proof-item span { display: block; font-size: 9px; line-height: 1.32; color: var(--muted); }
+
+  .where2 { background: #fff; }
+  .where2 .inner { padding-top: 5mm; padding-bottom: 4mm; }
+  .where2 h2 { font-size: 24px; line-height: 1.05; }
+  .where2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; margin-top: 9px; }
+  .where2-item { border-left: 3px solid var(--brand-3); padding-left: 10px; }
+  .where2-item b { display: block; font-size: 13px; }
+  .where2-item span { display: block; font-size: 10px; line-height: 1.35; color: var(--muted); }
+
+  /* ============ export bar (screen only) ============ */
+  .export-bar {
+    max-width: 210mm; margin: 0 auto 12px; padding: 10px 12px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(16,42,67,0.10);
+    font-size: 12px; color: var(--ink);
+  }
+  .export-bar .export-label { font-weight: 800; color: var(--brand-2-deep); }
+  .export-bar button {
+    font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+    background: var(--brand-2); color: #fff; border: 0; border-radius: 8px; padding: 8px 14px;
+  }
+  .export-bar button:hover { background: var(--brand-2-deep); }
+  .export-bar button.is-on { background: var(--brand-1); }
+  .export-bar .export-hint { flex: 1 1 240px; color: var(--muted); font-size: 11px; }
+
+  /* =========================================================================
+     MOBILE SHEET - 105 x 230 mm
+     Sheet 1 drops the closing band (the footer carries the action).
+     Sheet 2 stacks the two stories.
+     ========================================================================= */
+  html[data-format="mobile"] .flyer { max-width: 105mm; padding: 10px; gap: 0; }
+  html[data-format="mobile"] .export-bar { max-width: 105mm; }
+  html[data-format="mobile"] .page { width: 100%; }
+
+  html[data-format="mobile"] .inner,
+  html[data-format="mobile"] .topbar,
+  html[data-format="mobile"] .story-intro,
+  html[data-format="mobile"] .story-grid,
+  html[data-format="mobile"] .foot-one { padding-left: 6mm; padding-right: 6mm; }
+
+  html[data-format="mobile"] .topbar { padding-top: 8px; padding-bottom: 8px; }
+  html[data-format="mobile"] .topbar-logo { height: 26px; }
+  html[data-format="mobile"] .topbar-tag { font-size: 7.5px; padding-left: 9px; }
+
+  html[data-format="mobile"] .hero { clip-path: none; }
+  html[data-format="mobile"] .hero-wash {
+    background:
+      linear-gradient(180deg, rgba(0,22,42,0.94) 0%, rgba(0,40,72,0.84) 58%, rgba(0,46,82,0.42) 100%),
+      radial-gradient(120% 90% at 98% 4%, rgba(255,107,53,0.42) 0%, rgba(255,107,53,0) 62%);
+  }
+  html[data-format="mobile"] .hero-photo { object-position: 62% 24%; }
+  html[data-format="mobile"] .hero .hero-inner { padding: 18px 6mm 18px; max-width: none; }
+  html[data-format="mobile"] .hero-pill { font-size: 8px; letter-spacing: 0.11em; padding: 5px 11px; margin-bottom: 8px; }
+  html[data-format="mobile"] .hero-pill::before { width: 6px; height: 6px; }
+  html[data-format="mobile"] .hero-title { font-size: 30px; line-height: 0.98; }
+  html[data-format="mobile"] .hero-lede { font-size: 12.5px; margin-top: 9px; max-width: none; }
+  html[data-format="mobile"] .hero-cta { margin-top: 11px; }
+  html[data-format="mobile"] .btn { font-size: 12px; padding: 10px 14px; }
+  html[data-format="mobile"] .hero .hero-cta .btn.ghost { display: none; }
+  html[data-format="mobile"] .ribbon { display: none; }
+  html[data-format="mobile"] .slash { height: 7px; }
+
+  html[data-format="mobile"] .use .inner { padding-top: 11px; padding-bottom: 12px; }
+  html[data-format="mobile"] .use h2 { font-size: 18px; margin-bottom: 8px; }
+  html[data-format="mobile"] .use-tags-grid { gap: 5px; }
+  html[data-format="mobile"] .use-tag { font-size: 9.5px; padding: 5px 10px; gap: 5px; }
+  html[data-format="mobile"] .use-tag::before { width: 5px; height: 5px; }
+  html[data-format="mobile"] .use p { font-size: 9px; margin-top: 8px; }
+
+  html[data-format="mobile"] .benefits .inner { padding-top: 12px; padding-bottom: 12px; }
+  html[data-format="mobile"] .benefits-head { margin-bottom: 9px; }
+  html[data-format="mobile"] .benefits-h2 { font-size: 20px; }
+  html[data-format="mobile"] .benefits-sub { font-size: 10.5px; margin-top: 4px; }
+  html[data-format="mobile"] .kicker { font-size: 8px; letter-spacing: 0.11em; gap: 6px; }
+  html[data-format="mobile"] .kicker::before { width: 14px; height: 2px; }
+  html[data-format="mobile"] .benefit-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  html[data-format="mobile"] .benefit { flex-direction: column; gap: 6px; padding: 9px 9px 10px; border-radius: 10px; }
+  html[data-format="mobile"] .benefit.is-key { border-width: 2px; }
+  html[data-format="mobile"] .benefit-ico { width: 27px; height: 27px; border-radius: 8px; }
+  html[data-format="mobile"] .benefit-ico svg { width: 15px; height: 15px; }
+  html[data-format="mobile"] .benefit h3 { font-size: 11px; }
+  html[data-format="mobile"] .benefit p { font-size: 8.5px; line-height: 1.3; }
+  html[data-format="mobile"] .benefit .use-tags { font-size: 6.5px; margin-top: 4px; letter-spacing: 0.04em; }
+
+  html[data-format="mobile"] .clarify .inner { padding-top: 8px; padding-bottom: 8px; }
+  html[data-format="mobile"] .clarify p { font-size: 8.5px; }
+
+  /* the phone sheet 1 ends on the footer, which carries the action */
+  html[data-format="mobile"] .cta-band { display: none; }
+
+  html[data-format="mobile"] .story-intro { padding-top: 12px; }
+  html[data-format="mobile"] .story-intro h2 { font-size: 20px; }
+  html[data-format="mobile"] .story-intro .sub { font-size: 9.5px; margin-top: 4px; }
+  html[data-format="mobile"] .story-grid { grid-template-columns: 1fr; gap: 6px; padding-top: 9px; }
+  html[data-format="mobile"] .story { padding: 10px 11px 10px; border-left-width: 4px; border-radius: 9px; }
+  html[data-format="mobile"] .story-label { font-size: 7px; }
+  html[data-format="mobile"] .story-quote { font-size: 11.5px; margin-top: 5px; }
+  html[data-format="mobile"] .story-attr { font-size: 8px; margin-top: 6px; }
+
+  html[data-format="mobile"] .page-stats .inner { gap: 7px; padding-top: 9px; padding-bottom: 9px; }
+  html[data-format="mobile"] .page-stat b { font-size: 17px; }
+  html[data-format="mobile"] .page-stat span { font-size: 7.5px; margin-top: 3px; }
+
+  html[data-format="mobile"] .proof { margin-top: 10px; }
+  html[data-format="mobile"] .proof .inner { padding-top: 10px; padding-bottom: 10px; }
+  html[data-format="mobile"] .proof h2 { font-size: 15px; }
+  html[data-format="mobile"] .proof-grid { grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 7px; }
+  html[data-format="mobile"] .proof-item { padding: 7px 8px 8px; border-radius: 8px; }
+  html[data-format="mobile"] .proof-item b { font-size: 9.5px; margin-bottom: 2px; }
+  html[data-format="mobile"] .proof-item span { font-size: 7.5px; }
+
+  html[data-format="mobile"] .where2 .inner { padding-top: 10px; padding-bottom: 8px; }
+  html[data-format="mobile"] .where2 h2 { font-size: 15px; }
+  html[data-format="mobile"] .where2-grid { grid-template-columns: 1fr; gap: 5px; margin-top: 7px; }
+  html[data-format="mobile"] .where2-item b { font-size: 9.5px; }
+  html[data-format="mobile"] .where2-item span { font-size: 8px; }
+
+  html[data-format="mobile"] .foot-one {
+    display: grid; grid-template-columns: 1fr auto; align-items: center;
+    gap: 7px 10px; padding-top: 9px; padding-bottom: 12px;
+  }
+  html[data-format="mobile"] .foot-name { grid-column: 1; grid-row: 1; font-size: 10px; }
+  html[data-format="mobile"] .foot-apply { display: inline-flex; grid-column: 2; grid-row: 1; font-size: 9px; padding: 7px 12px; }
+  html[data-format="mobile"] .foot-meta {
+    grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap;
+    gap: 2px 9px; font-size: 8px;
+  }
+
+  @media print {
+    html[data-format="mobile"] .flyer {
+      display: block; width: 100%; max-width: none; margin: 0; padding: 0; gap: 0;
+    }
+    html[data-format="mobile"] .page {
+      width: 100%; height: auto; overflow: visible;
+      border-radius: 0; box-shadow: none;
+      page-break-after: always; break-after: page;
+      display: flex; flex-direction: column;
+      min-height: 229.8mm;
+    }
+    html[data-format="mobile"] .page:last-child { page-break-after: auto; break-after: auto; }
+    html[data-format="mobile"] .page > .foot-one { flex: 1 0 auto; align-content: space-between; }
+    html[data-format="mobile"] .foot-one { margin-top: 0; }
+  }
+
+  @media (max-width: 639px) {
+    .hero .hero-inner { padding: 16px 12px 18px; max-width: none; }
+    .hero-title { font-size: 34px; }
+    .benefit-grid { grid-template-columns: 1fr; }
+    .story-grid { grid-template-columns: 1fr; }
+  }
+</style>
+<style id="fba-page-size"></style>
+</head>
+<body>
+
+<div class="export-bar no-print">
+  <span class="export-label">Save as PDF:</span>
+  <button type="button" data-export="desktop">Desktop (A4, 2 pages)</button>
+  <button type="button" data-export="mobile">Mobile (phone, 2 pages)</button>
+  <span class="export-hint">In the print dialog choose Destination "Save as PDF", Margins "None" and turn Background graphics on.</span>
+</div>
+
+<div class="flyer">
+
+  <!-- ============================ SHEET 1 ============================ -->
+  <div class="page page-1">
+
+    <div class="topbar">
+      <img class="topbar-logo" src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-CMMY.webp?alt=media&token=0b0e973f-f3de-4f7e-9abf-d94c5871a9cd" alt="Future Bridge Academy">
+      <span class="topbar-tag">CEMC Trial Exams<br>Grades 5 to 11</span>
+    </div>
+
+    <section class="hero">
+      <img class="hero-photo" src="https://images.pexels.com/photos/5306456/pexels-photo-5306456.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="">
+      <div class="hero-wash" aria-hidden="true"></div>
+      <div class="inner hero-inner">
+        <p class="hero-pill">CEMC Trial Exams</p>
+        <h1 class="hero-title">One hour.<span class="hl">A real advantage.</span></h1>
+        <p class="hero-lede">
+          The CEMC contest gives your child a real paper, a real score and CEMC
+          recognition. Our one-hour trial gets them ready. Grades 5 to 11.
+        </p>
+        <div class="hero-cta">
+          <a class="btn" href="https://futurebridgeacademy.ca/cemc-trial-exams">See how it works <span class="arrow">&rarr;</span></a>
+          <a class="btn ghost" href="mailto:info@futurebridgeacademy.ca">Ask a question</a>
+        </div>
+      </div>
+      <div class="ribbon" aria-hidden="true"><span>One hour</span></div>
+    </section>
+
+    <div class="slash" aria-hidden="true"></div>
+
+    <section class="use">
+      <div class="inner">
+        <p class="kicker gold">Where it counts</p>
+        <h2>More than <em>a mark.</em></h2>
+        <div class="use-tags-grid">
+          <span class="use-tag">University applications</span>
+          <span class="use-tag">IB portfolio</span>
+          <span class="use-tag">Scholarship forms</span>
+          <span class="use-tag">School files</span>
+        </div>
+        <p>A dated result from Waterloo's contest programme.</p>
+      </div>
+    </section>
+
+    <section class="benefits">
+      <div class="inner">
+        <div class="benefits-head">
+          <p class="kicker">Why attend</p>
+          <h2 class="benefits-h2">What the contest gives <span class="hl2">your child.</span></h2>
+          <p class="benefits-sub">Because the first attempt should not be the one that counts.</p>
+        </div>
+
+        <div class="benefit-grid">
+          <article class="benefit">
+            <span class="benefit-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.4h16"/><path d="M7 19.4v-5.2M12 19.4V7.2M17 19.4v-8.4"/></svg>
+            </span>
+            <div>
+              <h3>A real score</h3>
+              <p>A marked paper, not a practice sheet.</p>
+            </div>
+          </article>
+
+          <article class="benefit">
+            <span class="benefit-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.4V12l3.3 2"/></svg>
+            </span>
+            <div>
+              <h3>Exam calm</h3>
+              <p>One hour of real pressure, before it counts.</p>
+            </div>
+          </article>
+
+          <article class="benefit is-key">
+            <span class="benefit-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.6h6.6L18 8v12.4H7z"/><path d="M13.4 3.6V8H18"/><path d="M9.6 12.4h5.4M9.6 16h3.6"/></svg>
+            </span>
+            <div>
+              <h3>CEMC recognition</h3>
+              <p>Certificates and honour rolls come from CEMC.</p>
+              <span class="use-tags">Certificate - honour roll</span>
+            </div>
+          </article>
+
+          <article class="benefit">
+            <span class="benefit-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 16.8 9.2 11l3.4 3.4 7.4-7.6"/><path d="M15.8 6.8H20v4.2"/></svg>
+            </span>
+            <div>
+              <h3>A path forward</h3>
+              <p>A result that shows what to work on next.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="clarify">
+      <div class="inner">
+        <span class="clarify-bar" aria-hidden="true"></span>
+        <p><strong>Our trial is one hour of practice.</strong> The contest, the certificates and the honour
+          rolls are CEMC's.</p>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <div class="inner">
+        <div>
+          <h2>One hour. Ask about the next sitting.</h2>
+          <p>futurebridgeacademy.ca/cemc-trial-exams</p>
+        </div>
+        <a class="cta-btn" href="https://futurebridgeacademy.ca/cemc-trial-exams">See the trial <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </section>
+
+    <div class="foot-one">
+      <div class="foot-name">Future Bridge Academy<small>CEMC trial exams</small></div>
+      <div class="foot-meta">
+        <span>Questions? <a href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a></span>
+        <span><a href="https://futurebridgeacademy.ca/cemc-trial-exams">futurebridgeacademy.ca/cemc-trial-exams</a></span>
+      </div>
+      <a class="foot-apply" href="https://futurebridgeacademy.ca/cemc-trial-exams">See the trial &rarr;</a>
+    </div>
+
+  </div>
+
+  <!-- ============================ SHEET 2 ============================ -->
+  <div class="page page-2">
+
+    <div class="topbar">
+      <img class="topbar-logo" src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-CMMY.webp?alt=media&token=0b0e973f-f3de-4f7e-9abf-d94c5871a9cd" alt="Future Bridge Academy">
+      <span class="topbar-tag">The contest behind<br>the trial</span>
+    </div>
+
+    <section class="story-intro">
+      <p class="kicker">CEMC in students' words</p>
+      <h2>What a contest does <em>for a student.</em></h2>
+      <p class="sub">Quotes published by CEMC, University of Waterloo.</p>
+    </section>
+
+    <section class="story-grid">
+      <article class="story">
+        <p class="story-label">Euclid Contest</p>
+        <p class="story-quote">&ldquo;&hellip;it's crazy to imagine how much doing math contests has shaped me
+          as a person, from thinking more logically and with structure to gaining more confidence in
+          myself&hellip;&rdquo;</p>
+        <p class="story-attr">Student from Ontario, Canada - cemc.uwaterloo.ca</p>
+      </article>
+
+      <article class="story">
+        <p class="story-label">Canadian Computing Competition</p>
+        <p class="story-quote">&ldquo;Doing contest problems dramatically improved my programming and
+          problem-solving skills. Now I'm studying Computer Science, and I love it!&rdquo;</p>
+        <p class="story-attr">Student from Ontario, Canada - cemc.uwaterloo.ca</p>
+      </article>
+    </section>
+
+    <section class="page-stats">
+      <div class="inner">
+        <div class="page-stat"><b>25,000+</b><span>students write the Euclid Contest every year</span></div>
+        <div class="page-stat"><b>300,000+</b><span>students from 85+ countries write CEMC contests</span></div>
+        <div class="page-stat"><b>1963</b><span>the CEMC's first contest, University of Waterloo</span></div>
+      </div>
+    </section>
+
+    <section class="proof">
+      <div class="inner">
+        <p class="kicker">What participants get</p>
+        <h2>Recognition that comes from CEMC.</h2>
+        <div class="proof-grid">
+          <div class="proof-item"><b>Certificate</b><span>Generated by the contest supervisor after results are released.</span></div>
+          <div class="proof-item"><b>Honour roll</b><span>Top performers are named in the official results booklet.</span></div>
+          <div class="proof-item"><b>A real score</b><span>Marked against a national and international field.</span></div>
+          <div class="proof-item"><b>A written paper</b><span>Built by CEMC educators, Grades 5 to 12.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="where2">
+      <div class="inner">
+        <p class="kicker">Where it helps</p>
+        <h2>Keep it. Use it.</h2>
+        <div class="where2-grid">
+          <div class="where2-item"><b>University applications</b><span>A dated, external result next to school marks.</span></div>
+          <div class="where2-item"><b>IB portfolio</b><span>Evidence of academic commitment beyond the classroom.</span></div>
+          <div class="where2-item"><b>Scholarship forms</b><span>A concrete achievement to describe.</span></div>
+          <div class="where2-item"><b>School files</b><span>A record the school can keep.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band is-page2">
+      <div class="inner">
+        <div>
+          <h2>Our trial is practice. CEMC runs the contest.</h2>
+          <p>One hour, in person, Grades 5 to 11.</p>
+          <p class="cta-url">futurebridgeacademy.ca/cemc-trial-exams</p>
+        </div>
+        <a class="cta-btn" href="https://futurebridgeacademy.ca/cemc-trial-exams">See how the trial works <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </section>
+
+    <div class="foot-one">
+      <div class="foot-name">Future Bridge Academy<small>CEMC trial exams</small></div>
+      <div class="foot-meta">
+        <span>Quotes and facts: cemc.uwaterloo.ca</span>
+        <span><a href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a></span>
+      </div>
+      <a class="foot-apply" href="https://futurebridgeacademy.ca/cemc-trial-exams">See the trial &rarr;</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  /* Export switch: one document, two page formats, two sheets each.
+     Desktop keeps the A4 poster pair. Mobile prints two 105mm wide sheets.
+     .html?format=mobile opens straight in the mobile preview. */
+  (function () {
+    'use strict';
+
+    var html = document.documentElement;
+    var pageStyle = document.getElementById('fba-page-size');
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.export-bar [data-export]'));
+
+    function applyFormat(format) {
+      var isMobile = format === 'mobile';
+      html.setAttribute('data-format', isMobile ? 'mobile' : 'desktop');
+
+      if (pageStyle) {
+        pageStyle.textContent = isMobile
+          ? '@page { size: 105mm 230mm; margin: 0; }'
+          : '@page { size: A4; margin: 0; }';
+      }
+
+      buttons.forEach(function (button) {
+        button.classList.toggle('is-on', button.getAttribute('data-export') === format);
+      });
+    }
+
+    var requested = '';
+    try {
+      requested = new URLSearchParams(window.location.search).get('format') || '';
+    } catch (err) {
+      requested = '';
+    }
+    applyFormat(requested === 'mobile' ? 'mobile' : 'desktop');
+
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        applyFormat(button.getAttribute('data-export'));
+        window.setTimeout(function () { window.print(); }, 80);
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

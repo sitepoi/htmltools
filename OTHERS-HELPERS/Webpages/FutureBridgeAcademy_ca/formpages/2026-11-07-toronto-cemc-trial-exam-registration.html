@@ -42,13 +42,12 @@
        folderId. Set data-fba-form-folder-id instead when the folder already
        exists and you know its id.
      - OBJECT NAME (same section, D-PFI-30): the form also names the record. This
-       page sets data-fba-form-name-template="{{student_name}}", so the CMS renders
-       the name from the submitted values and the object list shows "Ada Yilmaz"
-       inside the folder above instead of a timestamp. data-fba-form-object-name
-       (a fixed literal) wins over the template if it is ever set; the object id
-       and slug are never changed by either key. Neither key is sent when both
-       attributes are empty, and the CMS then falls back to the application's
-       formIntake.nameTemplate or its own default name.
+       page names it from the student_name answer at submit time
+       (data-fba-form-object-name-field), so the object list shows "Ada Yilmaz"
+       inside the folder above instead of a date. data-fba-form-object-name
+       (a fixed literal) wins over the field if it is ever set; the object id
+       and slug are never changed by either key. When no name is available the
+       CMS falls back to its own default name.
      - WHY data-fba-* AND NOT data-gw-* (29 Oct 2026): the CMS shell also binds
        form[data-gw-form]. It posts to the RETIRED /api/forms/submit, gets a 400
        and writes "Something went wrong. Please try again." into
@@ -56,7 +55,7 @@
        error flash for a second before this page answered. This page owns its
        form, so every form marker lives in its own namespace: data-fba-form,
        data-fba-form-type, data-fba-form-folder, data-fba-form-folder-id,
-       data-fba-form-name-template, data-fba-form-object-name,
+       data-fba-form-object-name, data-fba-form-object-name-field,
        data-fba-form-endpoint, data-fba-cms-object-type and data-fba-form-status.
        The submit event is also taken in the CAPTURE phase with
        stopImmediatePropagation(), and clicks on the submit button stop
@@ -106,10 +105,10 @@
           data-fba-form-folder-id      -> paste the real folder id once the folder
                                          exists; empty is ignored. Both travel in
                                          the payload, the id wins when it resolves
-       5b. data-fba-form-name-template -> the CMS object name, rendered from the
-                                         answers: {{student_name}}. Use
+       5b. data-fba-form-object-name-field -> the field whose answer names the CMS
+                                         object (student_name). Use
                                          data-fba-form-object-name for a fixed text
-                                         (it wins over the template).
+                                         (it wins over the field).
        6. the Google Maps directions link (destination = the new address)
        7. formDefaultCmsObjectType    -> form-submissions-uniconbaseapps unless the
                                          CMS gives that city or exam its own
@@ -212,7 +211,7 @@
 					data-fba-form-type="2026-11-07-toronto-cemc-trial-exam-registration"
 					data-fba-form-folder-id=""
 					data-fba-form-folder="2026-11-07-toronto-cemc-trial-exam-registration"
-					data-fba-form-name-template="{{student_name}}" novalidate>
+					data-fba-form-object-name-field="student_name" novalidate>
 					<div class="fba-trial-form-head">
 						<h2>Register for this exam</h2>
 						<p>One form per student. It takes under a minute.</p>
@@ -1251,29 +1250,24 @@
 			var rawFolderId = form.getAttribute('data-fba-form-folder-id');
 			var folderId = rawFolderId === null ? '' : String(rawFolderId).trim();
 			if (!folderId || folderId === 'default-one-folder') { return ''; }
-			/* an unreplaced placeholder means "not configured yet" */
-			if (folderId.indexOf('<') !== -1 || folderId.indexOf('{{') !== -1) { return ''; }
+			/* an unreplaced placeholder means "not configured yet".
+			   NUNJUCKS: a literal double curly brace may not appear anywhere in this
+			   block - the CMS would parse it as a template expression and the whole
+			   block fails. The token is matched with escaped braces instead. */
+			if (folderId.indexOf('<') !== -1 || /\{\{/.test(folderId)) { return ''; }
 			return folderId.slice(0, 160);
 		}
 
-		/* Object name, section 8.10 / D-PFI-30: objectName (final text) wins;
-		   nameTemplate is rendered by the CMS from the submitted values, so
-		   {{student_name}} becomes the name this visitor typed. Neither key is
-		   sent when both are empty - the CMS then uses the application's
-		   formIntake.nameTemplate or its own default. The object id and slug are
-		   never affected by either key. */
+		/* Object name, section 8.10 / D-PFI-30: objectName (final text) wins over
+		   any template, so this page builds it from the student_name field at submit
+		   time and sends it. No server-side template is involved, which also keeps
+		   the literal double-brace token out of the page entirely. When no name is
+		   available the CMS falls back to its own default name. */
 		function objectNameForForm(form) {
 			var rawObjectName = form.getAttribute('data-fba-form-object-name');
 			var objectName = rawObjectName === null ? '' : String(rawObjectName).trim();
 			if (!objectName) { return ''; }
 			return objectName.slice(0, 200);
-		}
-
-		function nameTemplateForForm(form) {
-			var rawNameTemplate = form.getAttribute('data-fba-form-name-template');
-			var nameTemplate = rawNameTemplate === null ? '' : String(rawNameTemplate).trim();
-			if (!nameTemplate) { return ''; }
-			return nameTemplate.slice(0, 200);
 		}
 
 		function formErrorMessage(statusCode) {
@@ -1300,7 +1294,17 @@
 			var targetFolderName = folderNameForForm(form);
 			var targetFolderId = folderIdForForm(form);
 			var targetObjectName = objectNameForForm(form);
-			var targetNameTemplate = nameTemplateForForm(form);
+			if (!targetObjectName) {
+				/* the record is named after an answered field (the student), so the
+				   CMS object list reads as a list of students, not of dates. The name
+				   is built HERE, in the browser: no server-side template is involved,
+				   so no double-brace token ever enters the page. */
+				var objectNameFieldName = form.getAttribute('data-fba-form-object-name-field');
+				var objectNameField = objectNameFieldName ? form.elements[objectNameFieldName] : null;
+				if (objectNameField) {
+					targetObjectName = String(objectNameField.value || '').trim().slice(0, 200);
+				}
+			}
 			var submitButton = form.querySelector('[type="submit"]');
 
 			/* the honeypot travels at the root of the payload, never inside values */
@@ -1324,12 +1328,10 @@
 			if (targetFolderId) { payload.typeId = targetFolderId; }
 			if (targetFolderName) { payload.folder = { name: targetFolderName }; }
 
-			/* object name: the literal objectName wins, otherwise the template the
-			   CMS renders from values (student name in this form) */
+			/* object name: the literal objectName wins. It was built above from the
+			   student_name field, so the CMS stores "Ada Yilmaz" rather than a date. */
 			if (targetObjectName) {
 				payload.objectName = targetObjectName;
-			} else if (targetNameTemplate) {
-				payload.nameTemplate = targetNameTemplate;
 			}
 
 			form.classList.add('gw-busy');

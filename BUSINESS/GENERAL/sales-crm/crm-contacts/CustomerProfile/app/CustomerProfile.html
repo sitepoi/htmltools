@@ -1,0 +1,101 @@
+<!-- html build 2026-11-06-1 -->
+<div id="app" class="cp-app">
+	<header class="cp-header">
+		<div class="cp-header-left">
+			<div class="cp-logo" id="cp-logo" data-icon="user"></div>
+			<div class="cp-title-group">
+				<div class="cp-app-title">Customer Profile</div>
+				<div class="cp-app-sub" id="cp-person-name-display">New customer</div>
+			</div>
+		</div>
+		<div class="cp-header-right">
+			<span class="cp-build" id="cp-build-badge"><span class="cp-build-prefix">tool </span>build 2026-11-06-1</span>
+			<div class="cp-save-indicator" id="cp-save-indicator" title="Answers are saved into this CMS record automatically">
+				<span class="cp-save-dot"></span>
+				<span class="cp-save-text" id="cp-save-text">All changes saved</span>
+			</div>
+			<div class="cp-completion" id="cp-completion" title="Profile completion">
+				<span class="cp-ring" id="cp-completion-ring"><span class="cp-ring-inner" id="cp-completion-pct">0%</span></span>
+				<span class="cp-completion-text">
+					<strong id="cp-completion-count">0 of 0</strong>
+					<span>sections ready</span>
+				</span>
+			</div>
+			<div class="cp-actions">
+				<button type="button" class="cp-actions-btn" id="cp-actions-toggle" aria-haspopup="menu" aria-expanded="false" title="Customer actions">
+					<span class="cp-actions-ico" data-icon="more"></span>
+					<span class="cp-actions-text">Actions</span>
+					<span class="cp-actions-caret" data-icon="chevron"></span>
+				</button>
+				<div class="cp-menu" id="cp-actions-menu" role="menu" hidden>
+					<div class="cp-menu-head">
+						<span class="cp-menu-head-ico" id="cp-menu-head-ico" data-icon="user"></span>
+						<span class="cp-menu-head-text">
+							<strong id="cp-menu-name">Customer actions</strong>
+							<span id="cp-menu-sub">Share, export and question sets</span>
+						</span>
+					</div>
+					<button type="button" class="cp-menu-item is-primary" role="menuitem" data-menu-action="share"><span class="cp-menu-ico" data-icon="share"></span>Share &amp; export</button>
+					<button type="button" class="cp-menu-item" role="menuitem" data-menu-action="manage-profiles" id="cp-menu-manage"><span class="cp-menu-ico" data-icon="layers"></span><span id="cp-menu-manage-text">Manage question sets</span></button>
+					<button type="button" class="cp-menu-item" role="menuitem" data-menu-action="basic"><span class="cp-menu-ico" data-icon="user"></span>Basic information</button>
+					<div class="cp-menu-sep" role="separator"></div>
+					<button type="button" class="cp-menu-item" role="menuitem" data-action="copy-summary"><span class="cp-menu-ico" data-icon="copy"></span>Copy summary</button>
+					<button type="button" class="cp-menu-item" role="menuitem" data-action="copy-json"><span class="cp-menu-ico" data-icon="copy"></span>Copy JSON</button>
+					<button type="button" class="cp-menu-item" role="menuitem" data-action="download-json"><span class="cp-menu-ico" data-icon="download"></span>Download JSON</button>
+					<button type="button" class="cp-menu-item" role="menuitem" data-action="export-pdf"><span class="cp-menu-ico" data-icon="share"></span>Printable summary</button>
+				</div>
+			</div>
+			<button type="button" class="cp-btn cp-btn-icon" id="cp-theme-toggle" title="Toggle dark / light mode" aria-label="Toggle dark mode"></button>
+		</div>
+	</header>
+
+	<div class="cp-readonly-note" id="cp-readonly-note" hidden>
+		<span class="cp-lock-icon" data-icon="shield"></span>
+		<span>This customer is read-only. You can view and export the profile, but not change it.</span>
+	</div>
+
+	<div class="cp-layout">
+		<aside class="cp-sidebar" id="cp-sidebar">
+			<div class="cp-profile-chip">
+				<span class="cp-profile-chip-label">Question sets</span>
+				<strong class="cp-profile-chip-value" id="cp-profile-chip-value">Not set</strong>
+				<span class="cp-profile-chip-sub" id="cp-profile-chip-sub">Choose question sets in Basic Information</span>
+			</div>
+			<nav class="cp-nav" id="cp-nav" aria-label="Customer profile sections"></nav>
+			<div class="cp-sidebar-foot">
+				<div class="cp-hidden-note" id="cp-hidden-note"></div>
+				<button type="button" class="cp-linkbtn" id="cp-scope-toggle">Show all sections</button>
+				<button type="button" class="cp-linkbtn cp-linkbtn-strong" id="cp-manage-profiles">+ Manage question sets</button>
+			</div>
+		</aside>
+
+		<main class="cp-main" id="cp-main">
+			<div class="cp-pager" id="cp-pager"></div>
+		</main>
+	</div>
+
+	<div class="cp-drawer-overlay" id="cp-drawer-overlay"></div>
+	<aside class="cp-drawer" id="cp-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="cp-drawer-title">
+		<header class="cp-drawer-head">
+			<div class="cp-drawer-title-group">
+				<h2 class="cp-drawer-title" id="cp-drawer-title">Share &amp; export</h2>
+				<p class="cp-drawer-sub">Built from this record only - nothing leaves until you copy or download it.</p>
+			</div>
+			<button type="button" class="cp-btn cp-btn-icon" id="cp-drawer-close" aria-label="Close share and export"><span data-icon="x"></span></button>
+		</header>
+		<div class="cp-drawer-body" id="cp-drawer-body"></div>
+	</aside>
+
+	<div class="cp-modal-overlay" id="cp-modal-overlay">
+		<div class="cp-modal" role="dialog" aria-modal="true" aria-labelledby="cp-modal-title">
+			<div class="cp-modal-header">
+				<h2 class="cp-modal-title" id="cp-modal-title">Question sets</h2>
+				<button type="button" class="cp-btn cp-btn-icon" id="cp-modal-close" aria-label="Close">
+					<span data-icon="x"></span>
+				</button>
+			</div>
+			<div class="cp-modal-body" id="cp-modal-body"></div>
+			<div class="cp-modal-footer" id="cp-modal-footer"></div>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,1287 @@
+<!--
+  =========================================================================
+  WHY THE IB - fragment for the academy website (ib-diploma.html)
+
+  - Everything lives inside ONE parent <div class="fba-page fba-ib">
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - Design tokens and shared components live in header-footer/header.html
+  - Only page layout is written here, and every rule is scoped to .fba-ib
+  - IB facts verified against ibo.org:
+      * Diploma Programme for students aged 16 to 19
+      * six subject groups plus the DP core (TOK, extended essay, CAS)
+      * three or four subjects at higher level (240 teaching hours),
+        the rest at standard level (150 teaching hours)
+      * extended essay 4,000 words, externally assessed
+      * theory of knowledge: exhibition + 1,600-word essay
+      * CAS required for the diploma but not scored
+      * grades 7 to 1 per subject, diploma at 24 points, maximum 45
+      * TOK + EE can add up to 3 points
+      * bilingual diploma at grade 3 or higher in two languages
+      * 4,500+ universities in 110+ countries receive IB transcripts
+      * 6,200+ IB World Schools in 160+ countries, 2 million+ students
+  - The academy does not award the diploma. Only an authorised IB World
+    School can enter candidates. The page says so, twice, and offers
+    preparation instead of pretending to be the programme.
+
+  Nunjucks safety: the CMS renders html-code blocks through Nunjucks, so
+  this file must never contain a literal opening brace pair or brace-percent
+  or brace-hash sequence. No template tokens are used anywhere below.
+  =========================================================================
+-->
+<div class="fba-page fba-ib">
+
+	<!-- ============================== HERO ============================== -->
+	<section class="fba-ib-hero">
+		<div class="fba-wrap fba-ib-hero-grid">
+			<div class="fba-ib-hero-copy">
+				<p class="fba-kicker">IB Diploma Programme</p>
+				<h1 class="fba-ib-title">Ask more of yourself.<br><span class="fba-ib-hl">Then prove it.</span></h1>
+				<p class="fba-ib-lede">
+					The IB Diploma is a two-year programme for Grades 11 and 12: six subjects, a
+					4,000-word research paper, a second language and a service record, examined by the
+					International Baccalaureate. Students who can study hard do well in it - and
+					universities in more than 110 countries read it closely.
+				</p>
+				<ul class="fba-pills">
+					<li class="fba-pill">Grades 11 and 12</li>
+					<li class="fba-pill">Six subjects plus the core</li>
+					<li class="fba-pill">45 points maximum</li>
+					<li class="fba-pill">4,500+ universities</li>
+				</ul>
+				<div class="fba-actions">
+					<a class="fba-btn fba-btn-primary" href="#fba-ib-asks">What the IB asks</a>
+					<a class="fba-btn fba-btn-ghost" href="#fba-ib-start">Start in Grade 9</a>
+				</div>
+			</div>
+
+			<aside class="fba-ib-hero-card">
+				<p class="fba-ib-card-title">What the diploma proves</p>
+				<ul class="fba-ticks fba-ticks-light">
+					<li>Six subjects carried at once, three or four of them at higher level</li>
+					<li>A 4,000-word research paper, planned and written independently</li>
+					<li>Two languages, with a bilingual diploma possible</li>
+					<li>A service and activity record kept across two years</li>
+					<li>External exams marked against international standards</li>
+				</ul>
+				<p class="fba-ib-card-note">The IB awards the diploma. An authorised IB World School
+					enters candidates.</p>
+			</aside>
+		</div>
+	</section>
+
+	<!-- =========================== WHAT THE IB IS ======================= -->
+	<section class="fba-ib-what" id="fba-ib-what">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">The programme behind the diploma</p>
+				<h2>Six subjects, a core, and two years to carry them</h2>
+				<p class="fba-sec-sub">The Diploma Programme (DP) is the IB's qualification for students
+					aged 16 to 19. It is one programme with two parts: the subjects you choose and the core
+					every student completes.</p>
+			</div>
+
+			<div class="fba-ib-what-grid">
+				<div class="fba-ib-what-copy">
+					<p>Students choose from <strong>six subject groups</strong>: studies in language and
+						literature, language acquisition, individuals and societies, sciences, mathematics and
+						the arts. A student may take a second sciences, individuals and societies or languages
+						subject instead of an arts subject.</p>
+					<p>Most students take <strong>three or four subjects at higher level</strong> (240 teaching
+						hours each) and the rest at standard level (150 hours). Higher and standard level are
+						graded on the same scale, but higher level expects a greater body of knowledge and
+						skill - which is why universities look at the combination, not just the total.</p>
+					<p>The <strong>core</strong> is what makes the diploma different: theory of knowledge,
+						the extended essay and creativity, activity, service. None of them can be revised the
+						night before, and none of them can be copied from a textbook.</p>
+					<p class="fba-ib-callout">The diploma is awarded by the IB, not by a school and not by a
+						tutor. A school must be authorised as an IB World School to enter candidates - that
+						rule decides what a family can and cannot arrange.</p>
+				</div>
+
+				<aside class="fba-ib-benefits">
+					<p class="fba-kicker">What students gain</p>
+					<ul class="fba-ticks">
+						<li>Breadth: six subjects kept alive at once instead of three or four</li>
+						<li>Research habits: a question, sources, an argument, a word limit</li>
+						<li>Thinking about thinking, through theory of knowledge</li>
+						<li>A second language strong enough to use, not just to pass</li>
+						<li>Evidence of service and activity beside the academic record</li>
+					</ul>
+					<p class="fba-ib-source">Source: International Baccalaureate -
+						<a href="https://www.ibo.org/programmes/diploma-programme/curriculum/" target="_blank" rel="noopener">ibo.org</a></p>
+				</aside>
+			</div>
+
+			<div class="fba-ib-stats">
+				<div class="fba-ib-stat"><b>2m+</b><span>students in IB programmes worldwide</span></div>
+				<div class="fba-ib-stat"><b>6,200+</b><span>IB World Schools</span></div>
+				<div class="fba-ib-stat"><b>160+</b><span>countries and territories</span></div>
+				<div class="fba-ib-stat"><b>4,500+</b><span>universities receive IB transcripts</span></div>
+			</div>
+
+			<p class="fba-ib-network">
+				<strong>One programme, more than 160 countries.</strong> The IB is taught to the same
+				standard wherever it runs, so a student who moves country or school carries the same
+				qualification - and IB graduates can join the IB's global alumni network.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================ REQUIREMENTS ======================== -->
+	<section class="fba-ib-asks" id="fba-ib-asks">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">What the diploma actually requires</p>
+				<h2>The whole specification, in one table</h2>
+				<p class="fba-sec-sub">No mystery and no marketing: this is the work, and this is how it is
+					measured.</p>
+			</div>
+
+			<div class="fba-ib-table-wrap">
+				<table class="fba-ib-table">
+					<thead>
+						<tr>
+							<th scope="col">Part</th>
+							<th scope="col">What it means</th>
+							<th scope="col">Size</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<th scope="row">Six subject groups</th>
+							<td data-label="What">Language and literature, language acquisition, individuals and
+								societies, sciences, mathematics, and the arts (or a second subject from another
+								group).</td>
+							<td data-label="Size">3-4 at higher level, the rest at standard level</td>
+						</tr>
+						<tr>
+							<th scope="row">Theory of knowledge</th>
+							<td data-label="What">How we know what we claim to know - assessed through an exhibition
+								and an essay.</td>
+							<td data-label="Size">1,600-word essay plus an exhibition</td>
+						</tr>
+						<tr>
+							<th scope="row">Extended essay</th>
+							<td data-label="What">An independent piece of research on a topic of the student's
+								choice, supervised and externally assessed.</td>
+							<td data-label="Size">4,000 words, with three reflection sessions</td>
+						</tr>
+						<tr>
+							<th scope="row">Creativity, activity, service</th>
+							<td data-label="What">A project and a record across the three strands. Required for the
+								diploma, but not scored.</td>
+							<td data-label="Size">Seven learning outcomes, across two years</td>
+						</tr>
+						<tr>
+							<th scope="row">Points</th>
+							<td data-label="What">Each subject is graded 7 to 1. Theory of knowledge and the extended
+								essay together add up to three more.</td>
+							<td data-label="Size">24 points to be awarded, 45 maximum</td>
+						</tr>
+						<tr>
+							<th scope="row">Bilingual diploma</th>
+							<td data-label="What">Awarded when two languages are completed at grade 3 or higher, or
+								one language plus a subject studied in another language.</td>
+							<td data-label="Size">An outcome, not an extra course</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<p class="fba-note fba-ib-note">
+				<strong>Higher level is not a harder label on the same course.</strong> Higher level runs 240
+				teaching hours and standard level 150, and both are graded against the same descriptors. The
+				combination of subjects matters as much as the total.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================== WHY =============================== -->
+	<section class="fba-ib-why">
+		<div class="fba-wrap">
+			<div class="fba-sec-head fba-sec-head-light">
+				<p class="fba-kicker">Why choose the harder option</p>
+				<h2>Because the work leaves a record</h2>
+				<p class="fba-sec-sub">Four things the IB asks for that a transcript alone cannot show.</p>
+			</div>
+
+			<div class="fba-ib-why-grid">
+				<article class="fba-ib-why-card fba-reveal">
+					<p class="fba-ib-why-num">01</p>
+					<h3>Your result is a number</h3>
+					<p>Six subjects at up to 7 points each, plus up to 3 from the core: a total out of 45
+						that universities can compare with every other IB applicant. More than 4,500
+						universities in 110+ countries receive IB transcripts.</p>
+				</article>
+				<article class="fba-ib-why-card fba-reveal">
+					<p class="fba-ib-why-num">02</p>
+					<h3>Research becomes a habit</h3>
+					<p>The extended essay is practical preparation for undergraduate research: a question, a
+						method, sources and an argument, held to a word limit. Students meet that demand before
+						university, not during first year.</p>
+				</article>
+				<article class="fba-ib-why-card fba-reveal">
+					<p class="fba-ib-why-num">03</p>
+					<h3>Thinking gets examined</h3>
+					<p>Theory of knowledge asks students to reflect on the nature of knowledge and on how we know
+						what we claim to know. It is assessed - the thinking has to be shown, not described.</p>
+				</article>
+				<article class="fba-ib-why-card fba-reveal">
+					<p class="fba-ib-why-num">04</p>
+					<h3>Language stays alive</h3>
+					<p>Every student studies at least two languages, and a bilingual diploma is available at grade
+						3 or higher. A second language held for two more years is an asset no short course can
+						fake.</p>
+				</article>
+			</div>
+
+			<p class="fba-ib-record">
+				<strong>What the research says.</strong> DP students enrol, persist and graduate at higher rates
+				than the national average in a US postsecondary study. In the United Kingdom, IB students have
+				greater odds of positive higher education outcomes than their A-level peers. In an Asia-Pacific
+				study, DP alumni reported higher capacities on a range of 21st-century skills. Sources:
+				<a href="https://www.ibo.org/research/outcomes-research/diploma-studies/" target="_blank" rel="noopener">IB
+					outcomes research</a>.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================ THE WORKLOAD ======================== -->
+	<section class="fba-ib-workload">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">The honest part</p>
+				<h2>What two years of IB actually feel like</h2>
+				<p class="fba-sec-sub">Students who can study a lot do well here. Students who wait to be chased
+					do not.</p>
+			</div>
+
+			<ol class="fba-ib-work-grid">
+				<li class="fba-ib-work-card fba-reveal">
+					<span class="fba-ib-work-num">1</span>
+					<h3>Six subjects, not three</h3>
+					<p>Every subject keeps running. There is no year of coasting on the ones you like and
+						abandoning the ones you do not.</p>
+				</li>
+				<li class="fba-ib-work-card fba-reveal">
+					<span class="fba-ib-work-num">2</span>
+					<h3>Deadlines that are marked</h3>
+					<p>Extended essay, theory of knowledge, internal assessments and CAS reflections all land
+						during the two years. They are graded, not collected.</p>
+				</li>
+				<li class="fba-ib-work-card fba-reveal">
+					<span class="fba-ib-work-num">3</span>
+					<h3>Writing is continuous</h3>
+					<p>Essays, lab reports, commentaries, an extended essay. A student who avoids writing will
+						struggle in every subject, not just English.</p>
+				</li>
+				<li class="fba-ib-work-card fba-reveal">
+					<span class="fba-ib-work-num">4</span>
+					<h3>The pace is set for you</h3>
+					<p>Higher level carries 240 teaching hours. Falling behind in October is expensive by
+						March, because the exams are external and fixed.</p>
+				</li>
+			</ol>
+
+			<p class="fba-ib-record fba-ib-record-dark">
+				<strong>If a student is already stretched thin,</strong> the honest answer is to fix the
+				foundations first. The IB rewards stamina and organisation - it does not create them.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================ WHO IT SUITS ======================== -->
+	<section class="fba-ib-suits">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">Who it suits</p>
+				<h2>A programme for students who would rather go deep</h2>
+			</div>
+
+			<div class="fba-ib-suits-grid">
+				<div class="fba-ib-suits-copy">
+					<ul class="fba-ticks">
+						<li>You would rather understand a topic than finish the worksheet</li>
+						<li>You can carry several deadlines without being reminded</li>
+						<li>You are willing to write, and then rewrite</li>
+						<li>You want a second language to stay part of your week</li>
+						<li>You want something to show for service and activity, not just marks</li>
+					</ul>
+				</div>
+				<aside class="fba-ib-suits-card">
+					<p class="fba-kicker">Who it does not suit</p>
+					<p>A student who is already behind in mathematics or English, or who is carrying too many
+						commitments, will find the IB multiplying the problem rather than fixing it. The diploma
+						is a harder programme - it is not a shortcut to a better average.</p>
+				</aside>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================= GRADES 9 AND 10 ======================== -->
+	<section class="fba-ib-start" id="fba-ib-start">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">Grade 9 and Grade 10</p>
+				<h2>The runway is built before Grade 11</h2>
+				<p class="fba-sec-sub">The diploma starts in Grade 11. The habits it needs are built two years
+					earlier - and they help whether or not the student ends up in the IB.</p>
+			</div>
+
+			<div class="fba-ib-runway">
+				<div class="fba-ib-runway-col">
+					<p class="fba-ib-runway-label">Grade 9</p>
+					<ul class="fba-ib-runway-list">
+						<li>
+							<strong>Close the gaps.</strong>
+							<span>Mathematics, English and science solid. The IB moves fast, and a gap in Grade 9
+								travels with you into Grade 12.</span>
+						</li>
+						<li>
+							<strong>Read longer, write weekly.</strong>
+							<span>One page a week, marked and corrected, is what turns into a 4,000-word essay
+								later. Start now, when the stakes are low.</span>
+						</li>
+						<li>
+							<strong>Keep the second language.</strong>
+							<span>Two languages are required and grades 9 and 10 are the years that make the
+								bilingual diploma possible.</span>
+						</li>
+						<li>
+							<strong>Learn how you study.</strong>
+							<span>Weekly review beats last-night revision. The IB does not give you a week to catch
+								up between assessments.</span>
+						</li>
+					</ul>
+				</div>
+
+				<div class="fba-ib-runway-col">
+					<p class="fba-ib-runway-label">Grade 10</p>
+					<ul class="fba-ib-runway-list">
+						<li>
+							<strong>Choose a direction, not a label.</strong>
+							<span>Decide which subjects you would take at higher level, and check what the
+								universities you are aiming for require.</span>
+						</li>
+						<li>
+							<strong>Write something longer.</strong>
+							<span>An independent project or a research-style essay teaches the moves the extended
+								essay will demand.</span>
+						</li>
+						<li>
+							<strong>Start the record.</strong>
+							<span>Service, activities, competitions, a part-time job. CAS asks for evidence across
+								two years, not intentions in June.</span>
+						</li>
+						<li>
+							<strong>Visit the schools.</strong>
+							<span>The DP must be delivered by an authorised IB World School. Ask about entry
+								requirements, subject offerings and deadlines in Grade 10, not Grade 11.</span>
+						</li>
+					</ul>
+				</div>
+			</div>
+
+			<p class="fba-note fba-ib-note">
+				<strong>Then, in Grade 11,</strong> the runway becomes the programme: higher level choices,
+				extended essay topic, theory of knowledge, CAS and internal assessments - all at once, which is
+				why the habits matter more than the content.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================ WHERE IT HELPS ====================== -->
+	<section class="fba-ib-where">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">Where it helps</p>
+				<h2>Four places the diploma keeps working</h2>
+			</div>
+
+			<div class="fba-ib-where-grid">
+				<article class="fba-ib-where-card fba-reveal">
+					<h3>University admission</h3>
+					<p>A qualification recognised in more than 110 countries, with published recognition
+						statements from universities and governments.</p>
+				</article>
+				<article class="fba-ib-where-card fba-reveal">
+					<h3>Credit and advanced standing</h3>
+					<p>Where a university's policy offers it for higher or standard level subjects. The IB
+						recognition database lists credit policies by institution - check the ones you are
+						applying to.</p>
+				</article>
+				<article class="fba-ib-where-card fba-reveal">
+					<h3>Interviews and statements</h3>
+					<p>Six subjects, a research paper and a service record give a student something concrete to
+						describe when asked what they have done.</p>
+				</article>
+				<article class="fba-ib-where-card fba-reveal">
+					<h3>Scholarships and bilingual diploma</h3>
+					<p>A second language completed at grade 3 or higher, and a diploma that carries external
+						examination results, are usable evidence on scholarship forms.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== HOW WE HELP ====================== -->
+	<section class="fba-ib-help" id="fba-ib-help">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">How we help</p>
+				<h2>Preparation, not a promise</h2>
+				<p class="fba-sec-sub">We do not award the diploma and we do not replace the school. We work on
+					the parts students usually have to learn alone.</p>
+			</div>
+
+			<div class="fba-ib-help-grid">
+				<div class="fba-ib-help-item">
+					<h3>Subject foundations</h3>
+					<p>Mathematics, English and science support in Grades 9 and 10, so the IB subjects start from
+						solid ground rather than repair work.</p>
+				</div>
+				<div class="fba-ib-help-item">
+					<h3>Writing and research habits</h3>
+					<p>Practice with longer writing, sources and revision - the skills the extended essay and
+						theory of knowledge assume.</p>
+				</div>
+				<div class="fba-ib-help-item">
+					<h3>Choosing the combination</h3>
+					<p>Higher level choices checked against the prerequisites of the programmes a student is
+						aiming for, before the Grade 11 timetable is fixed.</p>
+				</div>
+				<div class="fba-ib-help-item">
+					<h3>Keeping the record</h3>
+					<p>A simple running file of service, activities and results, so the CAS record and the
+						application file are built as the years go, not rebuilt at the end.</p>
+				</div>
+			</div>
+
+			<p class="fba-note fba-ib-note">
+				<strong>Pathway seminars run now.</strong> The full IB preparation track opens with the centre;
+				the guidance above is available to families before then.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================== FAQ =============================== -->
+	<section class="fba-ib-faq">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">Questions parents ask</p>
+				<h2>The honest answers</h2>
+			</div>
+
+			<div class="fba-ib-faq-list">
+				<details class="fba-ib-faq-item">
+					<summary>How do universities evaluate an IB result?</summary>
+					<p>They look at the total out of 45, the grades in the higher level subjects the degree
+						requires, and the evidence behind the score - the extended essay, theory of knowledge
+						and internal assessments. The IB sends an official transcript directly to universities,
+						up to six free before results day, and each university publishes its own IB requirement
+						and credit policy.</p>
+				</details>
+				<details class="fba-ib-faq-item">
+					<summary>Is the IB harder than the regular programme?</summary>
+					<p>Yes. Six subjects continue at once, the core adds a research paper and a theory of knowledge
+						essay, and the exams are external. The workload is the point: the diploma is evidence that
+						a student carried it.</p>
+				</details>
+				<details class="fba-ib-faq-item">
+					<summary>Do universities prefer IB students?</summary>
+					<p>Universities recognise the IB diploma, and the IB reports that DP students enrol, persist
+						and graduate at higher rates than the national average in a US study, and outperform
+						A-level peers on higher education outcomes in a UK study. Recognition and offers still
+						depend on the university and the programme, so check each one.</p>
+				</details>
+				<details class="fba-ib-faq-item">
+					<summary>Can my child start the IB in Grade 11 without the MYP?</summary>
+					<p>Yes. The Middle Years Programme prepares students well, but it is not a formal entry
+						requirement for the Diploma Programme. Schools set their own admission rules - what
+						actually matters is the foundation in mathematics, English, science and a second
+						language.</p>
+				</details>
+				<details class="fba-ib-faq-item">
+					<summary>What if our school does not offer the IB?</summary>
+					<p>Only an authorised IB World School can deliver the DP. If your school does not offer it, ask
+						the board which nearby schools do, and what their Grade 11 entry looks like. Either way,
+						the Grade 9 and 10 preparation on this page transfers to any demanding programme.</p>
+				</details>
+				<details class="fba-ib-faq-item">
+					<summary>How many points does a student need?</summary>
+					<p>The diploma is awarded at 24 points or more, subject to minimum performance and completion
+						of the core, out of a maximum of 45. Competitive university programmes usually ask for far
+						more than the minimum, and each one publishes its own requirement.</p>
+				</details>
+				<details class="fba-ib-faq-item">
+					<summary>Does the IB limit which universities a student can apply to?</summary>
+					<p>No. More than 4,500 universities in over 110 countries receive IB transcripts. The
+						practical limits come from subject choices and grades, not from the diploma itself - which
+						is why the higher level combination is worth planning in Grade 10.</p>
+				</details>
+				<details class="fba-ib-faq-item">
+					<summary>Is the IB only for students with top marks?</summary>
+					<p>No, but it is for students who can sustain work. A student with strong marks and poor
+						organisation will find the IB punishing; a student with good habits and average marks can
+						do very well. The programme rewards stamina more than brilliance.</p>
+				</details>
+				<details class="fba-ib-faq-item">
+					<summary>What can a Grade 9 or Grade 10 student do now?</summary>
+					<p>Close subject gaps, read and write every week, keep the second language, start a service
+						record, and plan the higher level subjects before the Grade 11 timetable is set. That list
+						is the whole runway on this page.</p>
+				</details>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== CTA =============================== -->
+	<section class="fba-cta">
+		<div class="fba-wrap fba-cta-inner">
+			<h2>Thinking about the IB?</h2>
+			<p>Start with the Grade 9 and 10 plan, then check the higher level combination against the
+				programmes your child is aiming for. We can work through both with you.</p>
+			<div class="fba-actions fba-actions-center">
+				<a class="fba-btn fba-btn-primary" href="/contact">Ask about IB preparation</a>
+				<a class="fba-btn fba-btn-ghost" href="/programs">See all programmes</a>
+			</div>
+			<p class="fba-cta-links">
+				<span>Read next:</span>
+				<a href="/programs">All programmes</a>
+				<a href="/mock-exams">Monthly mock exams</a>
+				<a href="/how-it-works">How it works</a>
+				<a href="/faq">Questions and answers</a>
+			</p>
+		</div>
+	</section>
+
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		/* Shared design system lives centrally in header-footer/header.html.
+		   Everything below is layout for this page only, scoped to .fba-ib. */
+
+		/* anchor links land below the sticky header instead of under it */
+		.fba-ib section[id] {
+			scroll-margin-top: 96px;
+		}
+
+		/* ---------- hero ---------- */
+		.fba-ib .fba-ib-hero {
+			position: relative;
+			padding: 66px 0 62px;
+			background:
+				radial-gradient(circle at 12% 90%, rgba(255, 210, 63, 0.22) 0%, transparent 55%),
+				radial-gradient(circle at 92% 6%, rgba(255, 107, 53, 0.20) 0%, transparent 55%),
+				linear-gradient(140deg, #00325A 0%, #004E89 62%, #0A62A8 100%);
+			color: #fff;
+			overflow: hidden;
+		}
+
+		.fba-ib .fba-ib-hero-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+			gap: 46px;
+			align-items: center;
+		}
+
+		.fba-ib .fba-ib-title {
+			color: #fff;
+			font-size: clamp(2.05rem, 4.6vw, 3.2rem);
+			line-height: 1.04;
+		}
+
+		.fba-ib .fba-ib-hl {
+			color: var(--fba-accent);
+		}
+
+		.fba-ib .fba-ib-lede {
+			margin-top: 18px;
+			font-size: 1.08rem;
+			line-height: 1.6;
+			color: rgba(255, 255, 255, 0.88);
+			max-width: 660px;
+		}
+
+		.fba-ib .fba-pills {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-top: 24px;
+		}
+
+		.fba-ib .fba-pill {
+			background: rgba(255, 255, 255, 0.12);
+			border-color: rgba(255, 255, 255, 0.28);
+			color: #fff;
+		}
+
+		.fba-ib .fba-actions {
+			margin-top: 26px;
+		}
+
+		.fba-ib .fba-ib-hero-card {
+			background: rgba(255, 255, 255, 0.09);
+			border: 1px solid rgba(255, 255, 255, 0.24);
+			border-radius: var(--fba-radius);
+			padding: 28px 26px 24px;
+		}
+
+		.fba-ib .fba-ib-card-title {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.12rem;
+			font-weight: 800;
+			color: #fff;
+			margin-bottom: 6px;
+		}
+
+		.fba-ib .fba-ib-card-note {
+			margin-top: 16px;
+			padding-top: 14px;
+			border-top: 1px solid rgba(255, 255, 255, 0.22);
+			font-size: 0.84rem;
+			font-weight: 700;
+			color: rgba(255, 255, 255, 0.72);
+		}
+
+		/* ---------- what the IB is ---------- */
+		.fba-ib .fba-ib-what {
+			padding: 74px 0 70px;
+			background: #fff;
+		}
+
+		.fba-ib .fba-ib-what-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+			gap: 44px;
+			align-items: start;
+		}
+
+		.fba-ib .fba-ib-what-copy > p {
+			color: var(--fba-muted);
+			max-width: 660px;
+		}
+
+		.fba-ib .fba-ib-what-copy > p + p {
+			margin-top: 16px;
+		}
+
+		.fba-ib .fba-ib-what-copy strong {
+			color: var(--fba-secondary);
+		}
+
+		.fba-ib .fba-ib-callout {
+			margin-top: 22px;
+			padding: 18px 20px;
+			background: var(--fba-light);
+			border-left: 4px solid var(--fba-primary);
+			border-radius: 0 12px 12px 0;
+			font-weight: 600;
+			color: var(--fba-secondary-deep) !important;
+		}
+
+		.fba-ib .fba-ib-benefits {
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 28px 26px 22px;
+		}
+
+		.fba-ib .fba-ib-benefits .fba-ticks li {
+			background: #fff;
+		}
+
+		.fba-ib .fba-ib-source {
+			margin-top: 14px;
+			font-size: 0.78rem;
+			color: var(--fba-muted);
+		}
+
+		.fba-ib .fba-ib-source a {
+			color: var(--fba-primary);
+			font-weight: 700;
+		}
+
+		.fba-ib .fba-ib-stats {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 16px;
+			margin-top: 40px;
+			padding-top: 26px;
+			border-top: 1px solid var(--fba-line);
+		}
+
+		.fba-ib .fba-ib-stat {
+			border-left: 3px solid var(--fba-line);
+			padding-left: 14px;
+		}
+
+		.fba-ib .fba-ib-stat:nth-child(1) { border-left-color: var(--fba-primary); }
+		.fba-ib .fba-ib-stat:nth-child(2) { border-left-color: var(--fba-secondary); }
+		.fba-ib .fba-ib-stat:nth-child(3) { border-left-color: var(--fba-accent); }
+		.fba-ib .fba-ib-stat:nth-child(4) { border-left-color: #06D6A0; }
+
+		.fba-ib .fba-ib-stat b {
+			display: block;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.9rem;
+			line-height: 1.05;
+			color: var(--fba-secondary-deep);
+		}
+
+		.fba-ib .fba-ib-stat span {
+			display: block;
+			margin-top: 4px;
+			font-size: 0.84rem;
+			line-height: 1.35;
+			color: var(--fba-muted);
+		}
+
+		.fba-ib .fba-ib-network {
+			margin-top: 24px;
+			padding-left: 16px;
+			border-left: 3px solid var(--fba-primary);
+			max-width: 820px;
+			font-size: 0.92rem;
+			color: var(--fba-muted);
+		}
+
+		.fba-ib .fba-ib-network strong {
+			color: var(--fba-secondary-deep);
+		}
+
+		/* ---------- requirements ---------- */
+		.fba-ib .fba-ib-asks {
+			padding: 72px 0 70px;
+			background: linear-gradient(180deg, var(--fba-light), #fff);
+		}
+
+		.fba-ib .fba-ib-table-wrap {
+			overflow-x: auto;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			background: #fff;
+			box-shadow: var(--fba-shadow);
+		}
+
+		.fba-ib .fba-ib-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.94rem;
+			min-width: 660px;
+		}
+
+		.fba-ib .fba-ib-table thead th {
+			text-align: left;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 0.74rem;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: var(--fba-secondary);
+			background: var(--fba-light);
+			padding: 14px 18px;
+			border-bottom: 1px solid var(--fba-line);
+		}
+
+		.fba-ib .fba-ib-table tbody th,
+		.fba-ib .fba-ib-table tbody td {
+			text-align: left;
+			padding: 14px 18px;
+			border-bottom: 1px solid var(--fba-line);
+			color: var(--fba-muted);
+			vertical-align: top;
+		}
+
+		.fba-ib .fba-ib-table tbody th {
+			color: var(--fba-secondary-deep);
+			font-weight: 800;
+			white-space: nowrap;
+		}
+
+		.fba-ib .fba-ib-table tbody tr:last-child th,
+		.fba-ib .fba-ib-table tbody tr:last-child td {
+			border-bottom: 0;
+		}
+
+		.fba-ib .fba-ib-table tbody tr:hover {
+			background: #FFF9F5;
+		}
+
+		.fba-ib .fba-ib-note {
+			margin-top: 22px;
+		}
+
+		/* ---------- why ---------- */
+		.fba-ib .fba-ib-why {
+			padding: 76px 0 72px;
+			background: linear-gradient(135deg, #00325A 0%, #004E89 100%);
+		}
+
+		.fba-ib .fba-ib-why-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 20px;
+		}
+
+		.fba-ib .fba-ib-why-card {
+			background: rgba(255, 255, 255, 0.08);
+			border: 1px solid rgba(255, 255, 255, 0.18);
+			border-radius: var(--fba-radius);
+			padding: 26px 26px 22px;
+		}
+
+		.fba-ib .fba-ib-why-num {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.5rem;
+			font-weight: 800;
+			color: var(--fba-accent);
+			margin-bottom: 6px;
+		}
+
+		.fba-ib .fba-ib-why-card h3 {
+			color: #fff;
+			font-size: 1.14rem;
+			margin-bottom: 8px;
+		}
+
+		.fba-ib .fba-ib-why-card p:last-child {
+			color: rgba(255, 255, 255, 0.82);
+			font-size: 0.95rem;
+		}
+
+		.fba-ib .fba-ib-record {
+			margin-top: 24px;
+			padding-top: 18px;
+			border-top: 1px solid rgba(255, 255, 255, 0.22);
+			color: rgba(255, 255, 255, 0.82);
+			font-size: 0.95rem;
+			max-width: 900px;
+		}
+
+		.fba-ib .fba-ib-record strong {
+			color: #fff;
+		}
+
+		.fba-ib .fba-ib-record a {
+			color: var(--fba-accent);
+			font-weight: 700;
+		}
+
+		/* ---------- workload ---------- */
+		.fba-ib .fba-ib-workload {
+			padding: 74px 0 70px;
+			background: #fff;
+		}
+
+		.fba-ib .fba-ib-work-grid {
+			list-style: none;
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 20px;
+		}
+
+		.fba-ib .fba-ib-work-card {
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 24px 22px;
+		}
+
+		.fba-ib .fba-ib-work-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 34px;
+			height: 34px;
+			border-radius: 50%;
+			background: var(--fba-secondary);
+			color: #fff;
+			font-weight: 800;
+			font-size: 0.95rem;
+			margin-bottom: 12px;
+		}
+
+		.fba-ib .fba-ib-work-card h3 {
+			font-size: 1.06rem;
+			margin-bottom: 6px;
+		}
+
+		.fba-ib .fba-ib-work-card p {
+			color: var(--fba-muted);
+			font-size: 0.92rem;
+		}
+
+		.fba-ib .fba-ib-record-dark {
+			margin-top: 26px;
+			padding-top: 18px;
+			border-top: 1px solid var(--fba-line);
+			color: var(--fba-muted);
+			max-width: 900px;
+			font-size: 0.95rem;
+		}
+
+		.fba-ib .fba-ib-record-dark strong {
+			color: var(--fba-secondary-deep);
+		}
+
+		/* ---------- who it suits ---------- */
+		.fba-ib .fba-ib-suits {
+			padding: 70px 0 66px;
+			background: linear-gradient(180deg, var(--fba-light), #fff);
+		}
+
+		.fba-ib .fba-ib-suits-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+			gap: 36px;
+			align-items: start;
+		}
+
+		.fba-ib .fba-ib-suits-copy .fba-ticks li {
+			background: #fff;
+		}
+
+		.fba-ib .fba-ib-suits-card {
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-left: 5px solid var(--fba-primary);
+			border-radius: 0 14px 14px 0;
+			padding: 24px 24px 20px;
+		}
+
+		.fba-ib .fba-ib-suits-card p:last-child {
+			color: var(--fba-muted);
+			font-size: 0.95rem;
+		}
+
+		/* ---------- grades 9 and 10 ---------- */
+		.fba-ib .fba-ib-start {
+			padding: 74px 0 72px;
+			background: #fff;
+		}
+
+		.fba-ib .fba-ib-runway {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 22px;
+		}
+
+		.fba-ib .fba-ib-runway-col {
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 26px 26px 10px;
+		}
+
+		.fba-ib .fba-ib-runway-label {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.24rem;
+			font-weight: 800;
+			color: var(--fba-secondary-deep);
+			padding-bottom: 12px;
+			border-bottom: 1px solid var(--fba-line);
+		}
+
+		.fba-ib .fba-ib-runway-list {
+			list-style: none;
+			margin-top: 4px;
+		}
+
+		.fba-ib .fba-ib-runway-list li {
+			padding: 14px 0;
+			border-bottom: 1px solid var(--fba-line);
+		}
+
+		.fba-ib .fba-ib-runway-list li:last-child {
+			border-bottom: 0;
+		}
+
+		.fba-ib .fba-ib-runway-list strong {
+			display: block;
+			color: var(--fba-secondary-deep);
+			font-size: 0.98rem;
+			margin-bottom: 3px;
+		}
+
+		.fba-ib .fba-ib-runway-list span {
+			display: block;
+			color: var(--fba-muted);
+			font-size: 0.92rem;
+		}
+
+		/* ---------- where it helps ---------- */
+		.fba-ib .fba-ib-where {
+			padding: 72px 0 70px;
+			background: linear-gradient(180deg, var(--fba-light), #fff);
+		}
+
+		.fba-ib .fba-ib-where-grid {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 18px;
+		}
+
+		.fba-ib .fba-ib-where-card {
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-top: 4px solid var(--fba-primary);
+			border-radius: 14px;
+			padding: 22px 22px 20px;
+			box-shadow: var(--fba-shadow);
+		}
+
+		.fba-ib .fba-ib-where-card:nth-child(2) { border-top-color: var(--fba-secondary); }
+		.fba-ib .fba-ib-where-card:nth-child(3) { border-top-color: var(--fba-accent); }
+		.fba-ib .fba-ib-where-card:nth-child(4) { border-top-color: #06D6A0; }
+
+		.fba-ib .fba-ib-where-card h3 {
+			font-size: 1.02rem;
+			margin-bottom: 6px;
+		}
+
+		.fba-ib .fba-ib-where-card p {
+			color: var(--fba-muted);
+			font-size: 0.9rem;
+		}
+
+		/* ---------- how we help ---------- */
+		.fba-ib .fba-ib-help {
+			padding: 72px 0 70px;
+			background: #fff;
+		}
+
+		.fba-ib .fba-ib-help-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 20px;
+		}
+
+		.fba-ib .fba-ib-help-item {
+			border-left: 3px solid var(--fba-accent);
+			padding-left: 16px;
+		}
+
+		.fba-ib .fba-ib-help-item h3 {
+			font-size: 1.06rem;
+			margin-bottom: 5px;
+		}
+
+		.fba-ib .fba-ib-help-item p {
+			color: var(--fba-muted);
+			font-size: 0.94rem;
+		}
+
+		/* ---------- FAQ ---------- */
+		.fba-ib .fba-ib-faq {
+			padding: 74px 0 80px;
+			background: linear-gradient(180deg, var(--fba-light), #fff);
+		}
+
+		.fba-ib .fba-ib-faq-list {
+			border-top: 1px solid var(--fba-line);
+		}
+
+		.fba-ib .fba-ib-faq-item {
+			border-bottom: 1px solid var(--fba-line);
+		}
+
+		.fba-ib .fba-ib-faq-item summary {
+			cursor: pointer;
+			list-style: none;
+			padding: 20px 44px 20px 0;
+			position: relative;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.06rem;
+			font-weight: 700;
+			color: var(--fba-secondary-deep);
+		}
+
+		.fba-ib .fba-ib-faq-item summary::-webkit-details-marker { display: none; }
+
+		.fba-ib .fba-ib-faq-item summary::after {
+			content: "+";
+			position: absolute;
+			right: 6px;
+			top: 50%;
+			transform: translateY(-50%);
+			font-size: 1.5rem;
+			font-weight: 400;
+			color: var(--fba-primary);
+			line-height: 1;
+		}
+
+		.fba-ib .fba-ib-faq-item[open] summary::after {
+			content: "\2013";
+		}
+
+		.fba-ib .fba-ib-faq-item summary:focus-visible {
+			outline: 2px solid var(--fba-secondary);
+			outline-offset: 4px;
+		}
+
+		.fba-ib .fba-ib-faq-item p {
+			padding: 0 0 22px;
+			color: var(--fba-muted);
+			max-width: 780px;
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 980px) {
+			.fba-ib .fba-ib-hero-grid,
+			.fba-ib .fba-ib-what-grid,
+			.fba-ib .fba-ib-suits-grid {
+				grid-template-columns: 1fr;
+				gap: 32px;
+			}
+
+			.fba-ib .fba-ib-work-grid,
+			.fba-ib .fba-ib-where-grid {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+
+			.fba-ib .fba-ib-stats {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+				gap: 18px 16px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.fba-ib .fba-ib-hero {
+				padding: 48px 0 44px;
+			}
+
+			/* the requirements table becomes one card per part */
+			.fba-ib .fba-ib-table-wrap {
+				overflow: visible;
+				border: 0;
+				background: transparent;
+				box-shadow: none;
+				border-radius: 0;
+			}
+
+			.fba-ib .fba-ib-table {
+				display: block;
+				min-width: 0;
+			}
+
+			.fba-ib .fba-ib-table thead {
+				display: none;
+			}
+
+			.fba-ib .fba-ib-table tbody,
+			.fba-ib .fba-ib-table tr {
+				display: block;
+			}
+
+			.fba-ib .fba-ib-table tr {
+				background: #fff;
+				border: 1px solid var(--fba-line);
+				border-radius: 16px;
+				margin-bottom: 10px;
+				padding: 4px 0 10px;
+			}
+
+			.fba-ib .fba-ib-table tbody th,
+			.fba-ib .fba-ib-table tbody td {
+				display: block;
+				border: 0;
+				padding: 4px 16px;
+			}
+
+			.fba-ib .fba-ib-table tbody th {
+				padding-top: 12px;
+				font-size: 0.76rem;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: var(--fba-primary);
+				white-space: normal;
+			}
+
+			.fba-ib .fba-ib-table tbody td:first-of-type {
+				font-family: 'Bricolage Grotesque', sans-serif;
+				font-weight: 700;
+				font-size: 1.02rem;
+				color: var(--fba-secondary-deep);
+				padding-bottom: 6px;
+			}
+
+			.fba-ib .fba-ib-table tbody td[data-label]::before {
+				content: attr(data-label) ": ";
+				font-weight: 800;
+				color: var(--fba-secondary);
+			}
+
+			.fba-ib .fba-ib-what,
+			.fba-ib .fba-ib-asks,
+			.fba-ib .fba-ib-why,
+			.fba-ib .fba-ib-workload,
+			.fba-ib .fba-ib-suits,
+			.fba-ib .fba-ib-start,
+			.fba-ib .fba-ib-where,
+			.fba-ib .fba-ib-help,
+			.fba-ib .fba-ib-faq {
+				padding: 52px 0 50px;
+			}
+
+			.fba-ib .fba-ib-why-grid,
+			.fba-ib .fba-ib-work-grid,
+			.fba-ib .fba-ib-where-grid,
+			.fba-ib .fba-ib-help-grid,
+			.fba-ib .fba-ib-runway {
+				grid-template-columns: 1fr;
+			}
+
+			.fba-ib .fba-ib-benefits {
+				padding: 22px 18px 18px;
+			}
+
+			.fba-ib .fba-ib-hero-card {
+				padding: 22px 20px 20px;
+			}
+
+			.fba-ib .fba-ib-runway-col {
+				padding: 22px 18px 6px;
+			}
+
+			.fba-ib .fba-ib-suits-card {
+				padding: 20px 18px 16px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var root = document.querySelector('.fba-ib');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!root || root.getAttribute('data-fba-ib-ready') === '1') { return; }
+			root.setAttribute('data-fba-ib-ready', '1');
+			root.classList.add('fba-js');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (err) { reduceMotion = false; }
+
+			var revealItems = Array.prototype.slice.call(root.querySelectorAll('.fba-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.18, rootMargin: '0px 0px -40px 0px' });
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

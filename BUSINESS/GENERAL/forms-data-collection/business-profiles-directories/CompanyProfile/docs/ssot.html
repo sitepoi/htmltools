@@ -129,7 +129,7 @@
   <h1>Company Profile</h1>
   <p class="meta">
     SINGLE SOURCE OF TRUTH for every decision about the Company Profile tool -
-    a 17-section company record that feeds tenders, contracts, invoices and
+    an 18-section company record that feeds tenders, contracts, invoices and
     directories. It owns the profile scope model (industry + coverage areas),
     the section visibility rules, the completion model and the saved value
     shape. Every decision made for this tool is logged in section 11 and this
@@ -138,8 +138,8 @@
     capture the final decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.3</td></tr>
-    <tr><th>Last updated</th><td>2026-11-04</td></tr>
+    <tr><th>Document version</th><td>0.9</td></tr>
+    <tr><th>Last updated</th><td>2026-11-05</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
@@ -234,7 +234,7 @@
          ships, move its finished task here from section 15. -->
     <tr>
       <td>C-01</td>
-      <td>Profile setup in Basic Information drives which sections appear in the sidebar. Nothing is hidden until an industry or coverage area is chosen.</td>
+      <td>Profile setup in Basic Information drives which sections appear in the sidebar. Until an industry, a template or a coverage area is chosen, only Basic Information and Brand &amp; Positioning are shown; every other section returns as soon as the profile is configured.</td>
       <td><code>app/CompanyProfile.js</code> - SECTIONS, sectionMatchesProfile, isSectionVisible</td>
       <td>2026-11-04</td>
       <td>D-CP-01 / verified in code 2026-11-04</td>
@@ -308,6 +308,55 @@
       <td><code>app/CompanyProfile.js</code> - ensureCustomSectionElements, renderCustomSections, openCustomSectionModal, deleteCustomSection</td>
       <td>2026-11-04</td>
       <td>D-CP-04 / verified in the harness 2026-11-04</td>
+    </tr>
+    <tr>
+      <td>C-12</td>
+      <td>Invoicing section: a read-only summary (legal name, billing email, tax numbers, each with an Open link) plus editable payment instructions, a 160-character footer note and an invoice logo. The logo is uploaded through tool.requestUpload when the tool allows uploads and falls back to a logo URL otherwise; only the link and the file name are stored.</td>
+      <td><code>app/CompanyProfile.js</code> - renderInvoicing, readInvoicing, renderInvoiceSummary, renderInvoiceLogoField, uploadInvoiceLogo, removeInvoiceLogo; <code>app/CompanyProfile.html</code> - sec-invoicing; <code>app/CompanyProfile.css</code> - cp-invoice-*, cp-logo-*</td>
+      <td>2026-11-05</td>
+      <td>D-CP-06 / verified in the harness 2026-11-05</td>
+    </tr>
+    <tr>
+      <td>C-13</td>
+      <td>Read-first record cards: every repeating list renders saved records as cards with a title, status tags, description, key facts and an Edit action. One card opens for editing at a time; Save applies the fields, Cancel and Escape leave the saved record untouched, and Remove needs a second click. Single-record groups (classification, procurement codes, primary contact, financial position, geographic coverage) follow the same read card plus Edit pattern.</td>
+      <td><code>app/CompanyProfile.js</code> - RECORD_VIEWS, FIELD_GROUPS, renderRecordList, openRecordEditor, saveRecordEditor, removeRecordItem, renderFieldGroup, openFieldGroupEditor; <code>app/CompanyProfile.css</code> - cp-card-*, cp-tag-*, cp-record-empty</td>
+      <td>2026-11-05</td>
+      <td>D-CP-07 / verified in the harness 2026-11-05</td>
+    </tr>
+    <tr>
+      <td>C-14</td>
+      <td>Basic Information opens with the company identity: a read card with the legal name, company type, employee count and registration details, with Edit for the six identity fields. The profile setup (templates, industry and coverage areas) follows it as step 2, so the company data is read before the section scope is configured.</td>
+      <td><code>app/CompanyProfile.html</code> - sec-basic; <code>app/CompanyProfile.js</code> - FIELD_GROUPS company-identity, renderBasicInfo, readBasicInfo, saveFieldGroup afterSave; <code>app/CompanyProfile.css</code> - cp-card-*</td>
+      <td>2026-11-05</td>
+      <td>D-CP-08 / verified in the harness 2026-11-05</td>
+    </tr>
+    <tr>
+      <td>C-15</td>
+      <td>Headquarters, Billing Address, Weblinks &amp; Social Media and Invoicing read as cards with an Edit action: location and contact channels, billing address with a same-as-headquarters flag, primary channels, social profiles, payment instructions and the invoice footer note. Extra social links and web sources are record cards. Long URLs wrap in the read card instead of being clipped by an input.</td>
+      <td><code>app/CompanyProfile.js</code> - FIELD_GROUPS hq-location, hq-channels, billing-address, weblink-channels, weblink-social, invoice-payment, invoice-footer; RECORD_VIEWS othersocial, otherweb; renderHeadquarters, renderBilling, renderWeblinks, renderInvoicing</td>
+      <td>2026-11-05</td>
+      <td>D-CP-09 / verified in the harness 2026-11-05</td>
+    </tr>
+    <tr>
+      <td>C-16</td>
+      <td>An empty single-record group opens as a form instead of an empty card. Company identity shows its six fields with one Save action while every identity field is blank; as soon as one value is saved the section switches back to the read card. Cancel is hidden on that first entry because there is nothing to cancel to.</td>
+      <td><code>app/CompanyProfile.js</code> - FIELD_GROUPS company-identity (autoEditWhenEmpty, isEmpty), renderFieldGroup, fieldGroupEditorHtml</td>
+      <td>2026-11-05</td>
+      <td>D-CP-11 / verified in the harness 2026-11-05</td>
+    </tr>
+    <tr>
+      <td>C-17</td>
+      <td>Brand &amp; Positioning carries the company brand images: a gallery of saved images with image type, name, caption and Edit, plus an editor that uploads through tool.requestUpload (or accepts an image URL when uploads are unavailable). Images show a thumbnail on the card and a broken-image fallback.</td>
+      <td><code>app/CompanyProfile.js</code> - BRAND_IMAGE_KINDS, renderBrandAssets, addBrandAsset, editBrandAsset, saveBrandAsset, removeBrandAsset, uploadBrandAssetImage; <code>app/CompanyProfile.html</code> - cp-brand-assets; <code>app/CompanyProfile.css</code> - cp-brand-*</td>
+      <td>2026-11-05</td>
+      <td>D-CP-12 / verified in the harness 2026-11-05</td>
+    </tr>
+    <tr>
+      <td>C-18</td>
+      <td>First load with an empty record shows a short sidebar: Basic Information and Brand &amp; Positioning only, with the note "16 sections appear once you choose an industry, template or area". Choosing a template, an industry with a preset, or any coverage area brings the matching sections back; "Show all sections" still reveals everything.</td>
+      <td><code>app/CompanyProfile.js</code> - BASIC_SECTION_IDS, isSectionVisible, sectionHiddenByProfile, updateScopeControls, renderProfileSetup</td>
+      <td>2026-11-05</td>
+      <td>D-CP-13 / verified in the harness 2026-11-05</td>
     </tr>
   </table>
   <p class="note">When adopting this template for an existing tool, fill
@@ -411,6 +460,80 @@
     <td>[exact obligation of this caller]</td></tr>
   </table>
 
+  <h3>8.4 Saved value shape - invoicing (schema version 3)</h3>
+  <pre>
+{
+  schemaVersion: 3,
+  ...
+  invoicing: {
+    paymentInstructions: '',   // free text, printed as written
+    invoiceFooterNote: '',     // max 160 characters, one line
+    logoUrl: '',               // CMS upload link or external image URL
+    logoName: ''               // file name for display, never a path
+  }
+}
+  </pre>
+  <ul>
+    <li>normalizeDB creates the four keys when a record predates schema version 3, so old records open unchanged.</li>
+    <li>The summary reads basicInfo.legalName, billingAddress.email (or headquarters.email) and salesTaxDefinitions; it never writes them.</li>
+    <li>The logo field shows Upload, Replace and Remove when tool.requestUpload exists, and a logo URL input when it does not; both paths save only logoUrl and logoName.</li>
+    <li>sectionProgress returns no criteria for invoicing, so updateCompletion prints Optional and leaves the section out of the completion ring.</li>
+  </ul>
+
+  <h3>8.5 Record card contract</h3>
+  <ul>
+    <li>Data model unchanged: cards read and write the same arrays (salesTaxDefinitions, otherOffices, contacts.others, industryOps.capabilities, documents.certificates, referenceLetters, assets.owned, assets.partnerAccessible, humanResources.staffCapabilities, financials.annualRevenues, referenceProjects). A new list is one entry in RECORD_VIEWS with a list accessor, a create factory and field definitions.</li>
+    <li>Only one record editor exists at a time (openRecordViewId, openRecordIndex, recordEditorDraft). Opening another card saves the open card first, so no draft is lost silently.</li>
+    <li>Card editors are excluded from the debounced auto-save: inputs inside [data-record-editor] and [data-group-editor] use data-record-field and data-group-field, never data-section or data-field, so readAllFromDOM cannot half-read a draft.</li>
+    <li>Cancel and Escape drop the draft without writing. The Remove button arms on the first click and deletes on the second.</li>
+    <li>Field group editors write into the existing object on Save (industryOps, contacts.primary, financials, geographicCoverage). The matching read functions guard on element existence so a record is never wiped when the old inputs are gone.</li>
+    <li>Read-only mode hides Edit and Add actions and keeps every card readable.</li>
+  </ul>
+
+  <h3>8.6 Basic Information order</h3>
+  <ul>
+    <li>Step 1 is the company identity card (legal name, trade name, company type, year established, employees, registration number). Step 2 is the profile setup block with templates, the primary industry select and the coverage chips.</li>
+    <li>The identity card writes DB.basicInfo through the shared field group engine and runs afterSave, which adds the grants area once when the company type becomes non-profit or registered charity.</li>
+    <li>readBasicInfo only reads an identity input when it exists, so the card markup cannot blank a saved record during the debounced auto-save.</li>
+    <li>The industry select stays in the profile setup block because it drives section visibility, and Template chips still set industry plus coverage in one click.</li>
+  </ul>
+
+  <h3>8.7 Additional details on every section</h3>
+  <ul>
+    <li>Each built-in section ends with an Additional details area. With fields it lists the rows and offers a "+ Add another detail" button; without fields it shows a compact "+ Add a custom detail" link, so the add action sits where the result appears.</li>
+    <li>The section header + remains a shortcut. After adding, the new row is scrolled into view and its field name is focused.</li>
+    <li>Read-only mode hides both add actions while keeping existing custom values readable.</li>
+  </ul>
+
+  <h3>8.8 Brand images</h3>
+  <pre>
+{
+  brandAssets: [
+    {
+      id: 'bi_xxx',              // stable id for edit and remove
+      kind: 'Company logo',      // one of BRAND_IMAGE_KINDS
+      name: 'ApexCon logo',      // display name, defaults to the file name
+      url: 'https://...',        // CMS upload link or public image URL
+      caption: 'Used on invoices' // optional, max 160 characters
+    }
+  ]
+}
+  </pre>
+  <ul>
+    <li>The gallery follows the card contract: one editor at a time, Save applies, Cancel and Escape discard, Remove needs a second click.</li>
+    <li>Uploads accept PNG, JPG, SVG and WebP up to 5 MB. Only the link and the name are stored, never the binary.</li>
+    <li>normalizeDB keeps only entries with a URL, so a record saved without an image cannot create an empty gallery card.</li>
+    <li>An image that fails to load shows a preview fallback on the card instead of a broken icon.</li>
+  </ul>
+
+  <h3>8.9 First-load visibility</h3>
+  <ul>
+    <li>profileIsConfigured() is true when a coverage area is selected, a template is stored, or the selected industry has a preset. It never changes data, only which sections the sidebar shows.</li>
+    <li>sectionHiddenByProfile() returns true for every section outside BASIC_SECTION_IDS while unconfigured, and falls back to the normal needs matching afterwards.</li>
+    <li>The sidebar note reads "N sections appear once you choose an industry, template or area" in that state, and "Show all sections" still reveals everything without configuring anything.</li>
+    <li>Custom sections are user-created and always visible, so nothing the user added disappears.</li>
+  </ul>
+
   <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
   <table>
     <tr><th>Scenario</th><th>Outcome</th></tr>
@@ -467,6 +590,54 @@
       <td>D-CP-05</td><td>2026-11-04</td>
       <td>Long statements are edited one card at a time: the Brand &amp; Positioning section renders five read-only statement cards; Edit opens that card's textarea with a word count and Save / Cancel, and opening another card saves the current one first.</td>
       <td>Five stacked textareas looked like a draft form and made the section hard to scan. Cards keep the written profile readable while editing stays deliberate. The trade-off is that typing is not auto-saved until Save, which is why Cancel and Save are explicit.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-06</td><td>2026-11-05</td>
+      <td>Invoicing is one optional Commercial section that reuses existing data instead of copying it: legal name (Basic Information), billing email (Billing Address, falling back to Headquarters) and tax numbers (Sales Tax) are shown read-only with Open links. It stores only invoicing.paymentInstructions, invoicing.invoiceFooterNote (160 characters), invoicing.logoUrl and invoicing.logoName. Currency, tax rate, invoice numbering, structured payment terms and customer fields stay out of this tool. The section carries no completeness criteria and is labelled Optional.</td>
+      <td>Invoice producers need payment instructions and branding from the company record, but a second copy of the legal name or tax numbers would sooner or later disagree with the first. Keeping the section out of completeness lets a company that never invoices finish the profile without inventing values. The risk is that a stored logo link can point at a moved file; the preview then shows a broken-image note instead of failing silently.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-07</td><td>2026-11-05</td>
+      <td>Data-heavy sections show the saved record first. Each repeating list (capabilities, taxes, offices, contacts, documents, reference letters, owned and partner assets, workforce, revenue years, reference projects) renders as record cards with status tags and key facts; one card can be opened for editing at a time, and Save is explicit. Classification, procurement codes, primary contact, financial position and geographic coverage use the same read card with an Edit action. The saved value shape does not change, and every existing add and remove path still writes the same arrays.</td>
+      <td>Ten tabs opened a 5 to 9 field form for every row, so the data could not be scanned and an accidental edit was invisible until it was saved. Cards make the saved record the primary view and editing deliberate. The trade-off is one extra click to edit and no auto-save inside a card; Save and Cancel stay explicit, Escape cancels, and the remove action needs a second click.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-08</td><td>2026-11-05</td>
+      <td>Basic Information shows the company identity first, as a read card in the same card language as the other sections, and the profile setup (templates, industry, coverage areas) second. The identity editor writes the same basicInfo fields, keeps the company type as a code with a readable label, and still adds the grants coverage area when the company type becomes non-profit or registered charity.</td>
+      <td>A new user met the profile scope questions before seeing which company the profile was for. Leading with the identity makes the record self-explanatory and keeps the scope decisions as a second, deliberate step. The trade-off is one extra click to change an identity field; the card stays readable in read-only mode, and the industry select remains visible because it drives the sidebar.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-09</td><td>2026-11-05</td>
+      <td>Every remaining single-record tab uses the read card with Edit on demand: Headquarters (location and contact channels), Billing Address (with a use-headquarters flag), Primary and Social weblinks, and Invoice payment instructions plus footer note. Extra social links and web sources use the record card engine. The invoice logo keeps its upload control. Card editors write the same saved fields as the previous forms, and readAllFromDOM only updates a section when its legacy inputs exist.</td>
+      <td>Inputs clipped long URLs and web addresses even on wide screens, and the always-open forms made the tabs hard to scan. Read cards show the full value, wrap it, and keep editing deliberate. Billing keeps sameAsHQ as a boolean in the editor so the headquarters sync still works. The trade-off is another click to edit; the payment and footer cards stay optional for companies that never invoice.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-10</td><td>2026-11-05</td>
+      <td>The section header + button is removed. Custom fields are added only from the Additional details area at the bottom of each section, which shows an add link while empty and an add button once rows exist.</td>
+      <td>The header button added a row at the bottom of a long section, far from the click. One entry point next to the result is easier to understand; after adding, the new row scrolls into view and focuses its field name.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-11</td><td>2026-11-05</td>
+      <td>Company identity opens as a form while all six identity fields are empty, and as a read card once a value is saved. The first-entry form has a single Save action.</td>
+      <td>A brand new profile has nothing to read, so an empty card plus an Edit click is an extra step. Showing the form immediately removes that step for first-time use, while every later visit reads the card. The rule is generic (autoEditWhenEmpty) so another group can adopt it without new code.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-12</td><td>2026-11-05</td>
+      <td>Brand &amp; Positioning stores brand images as brandAssets: { id, kind, name, url, caption }. Images upload through tool.requestUpload with an image URL fallback, and the gallery shows a thumbnail, the image type tag, the name and the caption. normalizeDB drops entries without a URL.</td>
+      <td>Invoices, tender covers and listings all need the logo, and keeping it in the company record avoids uploading it again in every tool. A separate list keeps the statement cards untouched and allows several images (logo, icon, team photo). The trade-off is that uploads require allowUpload: yes on the field; without it the editor accepts a public image URL.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-CP-13</td><td>2026-11-05</td>
+      <td>While the profile is unconfigured (no industry with a preset, no template, no coverage area, no Show all), only Basic Information and Brand &amp; Positioning are visible. The rule lives in BASIC_SECTION_IDS and sectionHiddenByProfile; a custom section always stays visible.</td>
+      <td>An empty record opened with seventeen sections, which read as a finished profile and buried the identity form. Showing the two foundation sections makes the first step obvious. The trade-off is that a returning empty record no longer discovers sections by scrolling; the sidebar note states how many sections are waiting and the Show all toggle covers exploration.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
@@ -785,6 +956,115 @@
           <p><strong>Benefit:</strong> the tool can carry any new profile requirement without a code change.</p>
           <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - ensureCustomSectionElements, renderCustomSections, openCustomSectionModal, deleteCustomSection</p>
           <p><strong>Status:</strong> done - verified in the harness 2026-11-04 (Safety statistics created with fields)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-10" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Invoicing section</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> invoice producers need payment instructions and a logo from the company record, and a second copy of the legal name or tax numbers would drift from the first.</p>
+          <p><strong>How we will solve it:</strong> an optional Commercial section shows legal name, billing email and tax numbers read-only with Open links, stores payment instructions, a 160-character footer note, a logo link and the logo file name, and offers upload through tool.requestUpload with a logo URL fallback.</p>
+          <p><strong>Benefit:</strong> one invoicing source for every generator, with no duplicated company data and no required field for companies that never invoice.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - renderInvoicing, readInvoicing, renderInvoiceSummary, renderInvoiceLogoField, uploadInvoiceLogo, removeInvoiceLogo; <code>app/CompanyProfile.html</code> - sec-invoicing; <code>app/CompanyProfile.css</code> - cp-invoice-*, cp-logo-*</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-05 (summary, save, logo preview, upload and URL fallback)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-11" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-11</span>
+          <span class="task-title">Read-first record cards for data-heavy sections</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> capabilities, documents, workforce, assets, projects and the other data tabs showed a 5 to 9 field form for every row, so the profile could not be read and every edit was live.</p>
+          <p><strong>How we will solve it:</strong> one card engine renders a saved record with tags and facts; one editor opens at a time with Save, Cancel and Escape; single-record groups (classification, codes, primary contact, financial position, coverage) use the same read card plus Edit pattern.</p>
+          <p><strong>Benefit:</strong> the profile reads like a document, editing is deliberate, and the saved value shape never changes.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - RECORD_VIEWS, FIELD_GROUPS, renderRecordList, openRecordEditor, saveRecordEditor, openFieldGroupEditor; <code>app/CompanyProfile.html</code> - cp-record-stack containers; <code>app/CompanyProfile.css</code> - cp-card-*, cp-tag-*</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-05 (cards, cancel, save, add, remove, skills, Escape, read-only)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-12" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-12</span>
+          <span class="task-title">Company identity first, profile setup second</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Basic Information opened with the profile scope questions, so a reader met the setup before knowing which company the profile described.</p>
+          <p><strong>How we will solve it:</strong> the identity becomes a read card at the top (legal name, trade name, company type, year, employees, registration) with Edit, and the profile setup block moves below it as step 2.</p>
+          <p><strong>Benefit:</strong> the record explains itself first; scope decisions stay visible but second.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.html</code> - sec-basic order; <code>app/CompanyProfile.js</code> - FIELD_GROUPS company-identity, renderBasicInfo, readBasicInfo, afterSave; <code>app/CompanyProfile.css</code> - card title flex on narrow screens</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-05 (identity card, save, company type code, grants suggestion, mobile layout)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-13" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-13</span>
+          <span class="task-title">Read cards for the remaining tabs and a visible add detail action</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Headquarters, Billing, Weblinks and Invoicing were always-open forms, and long URLs were clipped inside single-line inputs. The section header + added a custom field whose row appeared at the bottom of the section, away from the button.</p>
+          <p><strong>How we will solve it:</strong> those tabs use read cards with Edit on demand, extra social and web links use record cards, and every section ends with an Additional details area that offers its own add button or link. New rows scroll into view and focus their field name.</p>
+          <p><strong>Benefit:</strong> full values are readable, editing is deliberate, and the add action is where its result appears.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - FIELD_GROUPS, RECORD_VIEWS, renderCustomFieldBlocks, addCustomField; <code>app/CompanyProfile.html</code> - headquarters, billing, weblinks and invoicing bodies; <code>app/CompanyProfile.css</code> - cp-custom-add, cp-custom-add-link</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-05 (cards, save, billing flag, long URL wrap, extra links, custom add from the bottom)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-14" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-14</span>
+          <span class="task-title">First-entry identity form, bottom-only add action and brand images</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-14 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> an empty Company identity showed a read card with nothing in it, the header + added fields away from where they appear, and there was nowhere to store the company logo.</p>
+          <p><strong>How we will solve it:</strong> single-record groups can auto-open their editor while empty (Company identity does), the header + is removed because the Additional details area owns the add action, and Brand &amp; Positioning gains a brand image gallery with upload or image URL, image type, name and caption.</p>
+          <p><strong>Benefit:</strong> first-time entry takes one step, adding a detail happens where the row appears, and the logo is stored once in the profile for invoices, tenders and listings.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - renderFieldGroup, FIELD_GROUPS company-identity, BRAND_IMAGE_KINDS, renderBrandAssets, uploadBrandAssetImage, renderCustomFieldBlocks; <code>app/CompanyProfile.html</code> - cp-brand-assets; <code>app/CompanyProfile.css</code> - cp-brand-*</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-05 (empty form, save to card, add links at the bottom, upload stub, URL fallback, edit, remove)</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-15" data-group="PROFILE-MODERN" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-15</span>
+          <span class="task-title">Short sidebar while the profile is unconfigured</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-15 as done" checked />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the first load of an empty record listed every section, so the tool looked like a finished profile and the identity form was lost among sixteen links.</p>
+          <p><strong>How we will solve it:</strong> BASIC_SECTION_IDS keeps Basic Information and Brand &amp; Positioning visible until an industry with a preset, a template or a coverage area is chosen; the sidebar note states how many sections are waiting and Show all remains available.</p>
+          <p><strong>Benefit:</strong> the first screen is about the company, not about sections that have no data yet.</p>
+          <p><strong>Files:</strong> <code>app/CompanyProfile.js</code> - BASIC_SECTION_IDS, isSectionVisible, sectionHiddenByProfile, updateScopeControls, renderProfileSetup</p>
+          <p><strong>Status:</strong> done - verified in the harness 2026-11-05 (two sections on first load, 17 after the tenders template, 18 with Show all)</p>
         </div>
       </details>
     </div>

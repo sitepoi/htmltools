@@ -34,6 +34,9 @@ var SECTIONS = [
 	{ id: 'projects',      group: 'Experience',         icon: 'folder',   title: 'Reference Projects',         desc: 'Past projects, clients and outcomes', needs: ['portfolio', 'tenders'], count: function() { return (DB.referenceProjects || []).length; } }
 ];
 
+/* ── Sections available before the profile is configured ── */
+var BASIC_SECTION_IDS = ['basic', 'mission'];
+
 /* ── Profile focus areas (drive which sections are shown) ── */
 var PROFILE_FOCUS_AREAS = [
 	{ id: 'tenders',    label: 'Bids & tenders',        desc: 'Public procurement, RFPs, prequalification' },
@@ -207,6 +210,27 @@ var EXPERTISE_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Maste
 var SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 var EDUCATION_LEVELS = ['High School', 'Associate Degree', 'Bachelor\'s Degree', 'Master\'s Degree', 'Doctorate', 'Professional Certification', 'Trade Certification', 'Other'];
 var DOC_TYPES = ['Business License', 'Insurance Certificate', 'ISO Certification', 'Safety Certification', 'Environmental Permit', 'Professional License', 'Tax Certificate', 'WCB / Workers Comp', 'Bond / Surety', 'Patent', 'Trademark', 'Copyright', 'Industry Certification', 'Supplier Registration', 'Other'];
+var COMPANY_TYPE_OPTIONS = [
+	{ value: 'corporation', label: 'Corporation (for-profit)' },
+	{ value: 'llc', label: 'Limited liability company (LLC)' },
+	{ value: 'partnership', label: 'Partnership' },
+	{ value: 'sole-proprietorship', label: 'Sole proprietorship' },
+	{ value: 'nonprofit', label: 'Non-profit organization' },
+	{ value: 'registered-charity', label: 'Registered charity' },
+	{ value: 'cooperative', label: 'Cooperative' },
+	{ value: 'joint-venture', label: 'Joint venture' },
+	{ value: 'public', label: 'Public company' },
+	{ value: 'government', label: 'Government entity' },
+	{ value: 'other', label: 'Other' }
+];
+
+function companyTypeLabel(companyType) {
+	for (var i = 0; i < COMPANY_TYPE_OPTIONS.length; i++) {
+		if (COMPANY_TYPE_OPTIONS[i].value === companyType) return COMPANY_TYPE_OPTIONS[i].label;
+	}
+	return companyType;
+}
+
 var COMPANY_TYPES_EXTRA = {
 	'nonprofit': ['Non-Profit Organization', 'Registered Charity', 'Foundation', 'Social Enterprise', 'NGO', 'Community Organization', 'Association'],
 	'default': []
@@ -233,6 +257,7 @@ function emptyDB() {
 		financials:      { annualRevenues:[], currentAssets:'', currentLiabilities:'', workingCapital:'' },
 		invoicing:       { paymentInstructions:'', invoiceFooterNote:'', logoUrl:'', logoName:'' },
 		referenceProjects: [],
+		brandAssets: [],
 		profile:         {
 			focus: [], presetFocus: [], showAllSections: false, updatedAt: '', initialized: false,
 			templateId: '', customFields: {}, customSections: []
@@ -303,6 +328,16 @@ function normalizeDB() {
 		section.fields = normalizeCustomFields(section.fields);
 		return true;
 	});
+	if (!Array.isArray(DB.brandAssets)) DB.brandAssets = [];
+	DB.brandAssets = DB.brandAssets.filter(function(brandAsset) {
+		if (!brandAsset || typeof brandAsset !== 'object') return false;
+		if (!brandAsset.id || typeof brandAsset.id !== 'string') brandAsset.id = newId('bi');
+		brandAsset.kind = String(brandAsset.kind || '').slice(0, 60);
+		brandAsset.name = String(brandAsset.name || '').slice(0, 120);
+		brandAsset.url = String(brandAsset.url || '').slice(0, 1000);
+		brandAsset.caption = String(brandAsset.caption || '').slice(0, 160);
+		return !!brandAsset.url;
+	});
 	if (!DB.invoicing || typeof DB.invoicing !== 'object' || Array.isArray(DB.invoicing)) {
 		DB.invoicing = { paymentInstructions: '', invoiceFooterNote: '', logoUrl: '', logoName: '' };
 	}
@@ -363,7 +398,14 @@ function isSectionVisible(sectionId) {
 	if (sectionId.indexOf('custom-') === 0) return true;
 	if (visibleSections && !visibleSections.has(sectionId)) return false;
 	if (DB.profile && DB.profile.showAllSections) return true;
-	return sectionMatchesProfile(sectionId);
+	return !sectionHiddenByProfile(sectionId);
+}
+
+/* Before an industry, template or area is chosen only the basics are shown.
+   Nothing is deleted: the other sections return as soon as the profile is set. */
+function sectionHiddenByProfile(sectionId) {
+	if (!profileIsConfigured()) return BASIC_SECTION_IDS.indexOf(sectionId) === -1;
+	return !sectionMatchesProfile(sectionId);
 }
 
 function parseVisibleSections() {
@@ -397,7 +439,6 @@ function focusToList(focusSet) {
 function sectionMatchesProfile(sectionId) {
 	var section = sectionById(sectionId);
 	if (!section || !section.needs || !section.needs.length) return true;
-	if (!profileIsConfigured()) return true;
 	var focus = profileFocusSet();
 	for (var i = 0; i < section.needs.length; i++) {
 		if (focus.has(section.needs[i])) return true;
@@ -474,6 +515,1308 @@ function buildSelect(name, options, selectedVal, extraClass) {
 		'<option value="">— Select —</option>' + buildSelectOptions(options, selectedVal) + '</select>';
 }
 
+/* ── Record cards ──
+   Every repeating list renders as read-first cards instead of an always-open
+   form. A card shows the saved data, and one card at a time can be opened for
+   editing. Save writes the fields, Cancel leaves the saved record untouched.
+   Adding a list means adding one entry to RECORD_VIEWS - no new render code. */
+
+var openRecordViewId = '';
+var openRecordIndex = -1;
+var recordEditorDraft = null;
+var openFieldGroupId = '';
+
+function recordView(viewId) { return RECORD_VIEWS[viewId] || null; }
+
+function recordListFor(view) {
+	var list = view && typeof view.list === 'function' ? view.list() : [];
+	return Array.isArray(list) ? list : [];
+}
+
+function recordChipsHtml(chips) {
+	var html = '';
+	for (var i = 0; i < (chips || []).length; i++) {
+		var chip = chips[i];
+		if (!chip || !chip.label) continue;
+		html += '<span class="cp-tag' + (chip.tone ? ' cp-tag-' + chip.tone : '') + '">' + esc(chip.label) + '</span>';
+	}
+	return html;
+}
+
+function recordFactsHtml(facts) {
+	var html = '';
+	for (var i = 0; i < (facts || []).length; i++) {
+		var fact = facts[i];
+		if (!fact || fact.value === undefined || fact.value === null || !String(fact.value).trim()) continue;
+		html += '<div class="cp-card-fact">' +
+			'<span class="cp-card-fact-label">' + esc(fact.label) + '</span>' +
+			'<span class="cp-card-fact-value">' + esc(fact.value) + '</span>' +
+			'</div>';
+	}
+	return html ? '<div class="cp-card-facts">' + html + '</div>' : '';
+}
+
+function formatAmount(value) {
+	var text = String(value === undefined || value === null ? '' : value).trim();
+	if (!text) return '';
+	var amount = Number(text.replace(/,/g, ''));
+	if (!isFinite(amount)) return text;
+	return amount.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function recordEmptyHtml(view) {
+	return '<div class="cp-record-empty">' +
+		'<span class="cp-record-empty-icon">' + iconSvg(view.icon || 'folder') + '</span>' +
+		'<div class="cp-record-empty-text">' +
+			'<strong>' + esc(view.emptyTitle || 'Nothing here yet') + '</strong>' +
+			'<span>' + esc(view.emptyHint || 'Use the button below to add the first entry.') + '</span>' +
+		'</div>' +
+	'</div>';
+}
+
+function recordCardHtml(view, index, item) {
+	var title = view.title ? view.title(item) : '';
+	var subtitle = view.subtitle ? view.subtitle(item) : '';
+	var chips = view.chips ? view.chips(item) : [];
+	var facts = view.facts ? view.facts(item) : [];
+	var note = view.note ? view.note(item) : '';
+	var bodyHtml = view.bodyHtml ? view.bodyHtml(item) : '';
+	var html = '<article class="cp-card">' +
+		'<header class="cp-card-head">' +
+			'<span class="cp-card-avatar">' + iconSvg(view.icon || 'folder') + '</span>' +
+			'<div class="cp-card-titles">' +
+				'<h4 class="cp-card-title' + (title ? '' : ' is-empty') + '">' + esc(title || view.untitled || 'Untitled') + '</h4>' +
+				(subtitle ? '<p class="cp-card-sub">' + esc(subtitle) + '</p>' : '') +
+			'</div>' +
+			(chips.length ? '<div class="cp-card-tags">' + recordChipsHtml(chips) + '</div>' : '') +
+			'<button type="button" class="cp-btn cp-btn-sm cp-card-edit" data-record-action="edit" data-record-view="' + view.id + '" data-record-idx="' + index + '">' + iconSvg('pencil') + 'Edit</button>' +
+		'</header>' +
+		(note ? '<p class="cp-card-note">' + esc(note) + '</p>' : '') +
+		bodyHtml +
+		recordFactsHtml(facts) +
+	'</article>';
+	return html;
+}
+
+function recordSelectHtml(field, value, fieldId) {
+	var html = '<select class="cp-input cp-select" id="' + fieldId + '" data-record-field="' + field.key + '">';
+	html += '<option value="">' + esc(field.emptyLabel || 'Not set') + '</option>';
+	if (field.type === 'boolean') {
+		html += '<option value="true"' + (value === 'true' ? ' selected' : '') + '>Yes</option>';
+		html += '<option value="false"' + (value === 'false' ? ' selected' : '') + '>No</option>';
+	} else {
+		var options = field.options || [];
+		for (var i = 0; i < options.length; i++) {
+			var optionValue = typeof options[i] === 'object' ? options[i].value : options[i];
+			var optionLabel = typeof options[i] === 'object' ? options[i].label : options[i];
+			html += '<option value="' + esc(optionValue) + '"' + (optionValue === value ? ' selected' : '') + '>' + esc(optionLabel) + '</option>';
+		}
+	}
+	return html + '</select>';
+}
+
+function recordFieldHtml(view, field, item) {
+	var fieldId = 'rf-' + view.id + '-' + field.key;
+	var rawValue = item && item[field.key] !== undefined && item[field.key] !== null ? item[field.key] : '';
+	var value = field.type === 'boolean' ? (rawValue === true ? 'true' : (rawValue === false ? 'false' : '')) : String(rawValue);
+	var control = '';
+	if (field.type === 'textarea') {
+		control = '<textarea class="cp-input cp-textarea" id="' + fieldId + '" data-record-field="' + field.key + '" rows="' + (field.rows || 3) + '"' +
+			(field.placeholder ? ' placeholder="' + esc(field.placeholder) + '"' : '') + '>' + esc(value) + '</textarea>';
+	} else if (field.type === 'select' || field.type === 'boolean') {
+		control = recordSelectHtml(field, value, fieldId);
+	} else {
+		var inputType = field.type || 'text';
+		control = '<input type="' + inputType + '" class="cp-input" id="' + fieldId + '" data-record-field="' + field.key + '" value="' + esc(value) + '"' +
+			(field.placeholder ? ' placeholder="' + esc(field.placeholder) + '"' : '') +
+			(field.min !== undefined ? ' min="' + field.min + '"' : '') +
+			(field.maxLength ? ' maxlength="' + field.maxLength + '"' : '') + '>';
+	}
+	return '<div class="cp-field' + (field.span === 2 || field.type === 'textarea' ? ' cp-field-full' : '') + '">' +
+		'<label class="cp-label" for="' + fieldId + '">' + esc(field.label) + '</label>' +
+		control +
+		(field.help ? '<span class="cp-field-help">' + esc(field.help) + '</span>' : '') +
+	'</div>';
+}
+
+function recordSkillRowHtml(view, skill, rowIndex) {
+	var fields = view.nested.fields || [];
+	var html = '<div class="cp-skill-row" data-skill-row="' + rowIndex + '">';
+	for (var i = 0; i < fields.length; i++) {
+		var field = fields[i];
+		var fieldId = 'rf-' + view.id + '-skill-' + rowIndex + '-' + field.key;
+		var value = skill && skill[field.key] !== undefined && skill[field.key] !== null ? String(skill[field.key]) : '';
+		html += '<div class="cp-skill-cell' + (field.span === 2 ? ' cp-skill-cell-wide' : '') + '">' +
+			'<label class="cp-label" for="' + fieldId + '">' + esc(field.label) + '</label>';
+		if (field.type === 'select') {
+			html += '<select class="cp-input cp-select" id="' + fieldId + '" data-skill-field="' + field.key + '">' +
+				'<option value="">Not set</option>' + buildSelectOptions(field.options || [], value) + '</select>';
+		} else {
+			html += '<input type="text" class="cp-input" id="' + fieldId + '" data-skill-field="' + field.key + '" value="' + esc(value) + '"' +
+				(field.placeholder ? ' placeholder="' + esc(field.placeholder) + '"' : '') + '>';
+		}
+		html += '</div>';
+	}
+	html += '<button type="button" class="cp-btn cp-btn-sm cp-btn-danger cp-skill-remove" data-record-action="skill-remove" data-skill-index="' + rowIndex + '" title="Remove this skill" aria-label="Remove this skill">&#10005;</button>';
+	return html + '</div>';
+}
+
+function recordNestedHtml(view, item) {
+	var nested = view.nested;
+	var skills = item && Array.isArray(item[nested.key]) ? item[nested.key] : [];
+	var html = '<div class="cp-card-nested">' +
+		'<div class="cp-card-nested-head"><span class="cp-label">' + esc(nested.label) + '</span>' +
+		'<span class="cp-hint">' + skills.length + ' listed</span></div>';
+	if (!skills.length) {
+		html += '<p class="cp-card-nested-empty">' + esc(nested.emptyText || 'Nothing listed yet.') + '</p>';
+	}
+	for (var i = 0; i < skills.length; i++) {
+		html += recordSkillRowHtml(view, skills[i], i);
+	}
+	html += '<button type="button" class="cp-btn cp-btn-sm cp-btn-add" data-record-action="skill-add">+ ' + esc(nested.addLabel || 'Add row') + '</button>';
+	return html + '</div>';
+}
+
+function recordEditorHtml(view, index, item) {
+	var fields = view.fields || [];
+	var formHtml = '';
+	for (var i = 0; i < fields.length; i++) {
+		formHtml += recordFieldHtml(view, fields[i], item);
+	}
+	var html = '<article class="cp-card editing" data-record-editor data-record-view="' + view.id + '" data-record-idx="' + index + '">' +
+		'<header class="cp-card-head">' +
+			'<span class="cp-card-avatar is-editing">' + iconSvg(view.icon || 'folder') + '</span>' +
+			'<div class="cp-card-titles">' +
+				'<h4 class="cp-card-title">' + esc(view.editorTitle || 'Edit entry') + '</h4>' +
+				'<p class="cp-card-sub">' + esc(view.editorHint || 'Changes are applied when you save.') + '</p>' +
+			'</div>' +
+		'</header>' +
+		'<div class="cp-card-form">' + formHtml + '</div>' +
+		(view.nested ? recordNestedHtml(view, item) : '') +
+		'<footer class="cp-card-foot">' +
+			'<button type="button" class="cp-btn cp-btn-sm cp-btn-danger cp-card-remove" data-record-action="remove" data-record-view="' + view.id + '" data-record-idx="' + index + '">Remove</button>' +
+			'<span class="cp-card-foot-note">Nothing is changed until you save.</span>' +
+			'<button type="button" class="cp-btn cp-btn-sm" data-record-action="cancel">Cancel</button>' +
+			'<button type="button" class="cp-btn cp-btn-sm cp-btn-primary" data-record-action="save">Save</button>' +
+		'</footer>' +
+	'</article>';
+	return html;
+}
+
+function renderRecordList(viewId) {
+	var view = recordView(viewId);
+	if (!view) return;
+	var container = el(view.containerId);
+	if (!container) return;
+	var items = recordListFor(view);
+	if (!items.length) {
+		container.innerHTML = recordEmptyHtml(view);
+		return;
+	}
+	var html = '';
+	for (var i = 0; i < items.length; i++) {
+		var isOpen = openRecordViewId === viewId && openRecordIndex === i && recordEditorDraft;
+		html += isOpen ? recordEditorHtml(view, i, recordEditorDraft.item) : recordCardHtml(view, i, items[i]);
+	}
+	container.innerHTML = html;
+}
+
+function focusRecordEditor() {
+	var firstField = document.querySelector('[data-record-editor] .cp-input');
+	if (firstField && typeof firstField.focus === 'function') {
+		firstField.focus({ preventScroll: true });
+	}
+}
+
+function openRecordEditor(viewId, index) {
+	var view = recordView(viewId);
+	if (!view) return;
+	var items = recordListFor(view);
+	if (index < 0 || index >= items.length) return;
+	if (openRecordViewId === viewId && openRecordIndex === index) return;
+	var previousViewId = openRecordViewId;
+	if (recordEditorDraft) saveRecordEditor(true);
+	openRecordViewId = viewId;
+	openRecordIndex = index;
+	recordEditorDraft = { item: JSON.parse(JSON.stringify(items[index])) };
+	if (!Array.isArray(recordEditorDraft.item[view.nested ? view.nested.key : ''])) {
+		// no-op: keeps the draft shape identical to the saved item
+	}
+	renderRecordList(viewId);
+	if (previousViewId && previousViewId !== viewId) renderRecordList(previousViewId);
+	focusRecordEditor();
+}
+
+function collectRecordEditorFields() {
+	if (!recordEditorDraft) return;
+	var editor = document.querySelector('[data-record-editor]');
+	if (!editor) return;
+	editor.querySelectorAll('[data-record-field]').forEach(function(input) {
+		recordEditorDraft.item[input.getAttribute('data-record-field')] = input.value;
+	});
+}
+
+function closeRecordEditor() {
+	var previousViewId = openRecordViewId;
+	openRecordViewId = '';
+	openRecordIndex = -1;
+	recordEditorDraft = null;
+	if (previousViewId) renderRecordList(previousViewId);
+}
+
+function saveRecordEditor(silent) {
+	if (!recordEditorDraft) return;
+	var view = recordView(openRecordViewId);
+	if (!view) { closeRecordEditor(); return; }
+	collectRecordEditorFields();
+	var editor = document.querySelector('[data-record-editor]');
+	if (view.nested && editor) {
+		var nestedSkills = [];
+		editor.querySelectorAll('[data-skill-row]').forEach(function(row) {
+			var skill = {};
+			var hasValue = false;
+			row.querySelectorAll('[data-skill-field]').forEach(function(input) {
+				var value = input.value;
+				skill[input.getAttribute('data-skill-field')] = value;
+				if (String(value).trim()) hasValue = true;
+			});
+			if (hasValue) nestedSkills.push(skill);
+		});
+		recordEditorDraft.item[view.nested.key] = nestedSkills;
+	}
+	var items = recordListFor(view);
+	var target = items[openRecordIndex];
+	if (target) {
+		Object.keys(recordEditorDraft.item).forEach(function(key) {
+			if (view.fields && view.fields.some(function(field) { return field.key === key && field.type === 'boolean'; })) {
+				var rawBoolean = recordEditorDraft.item[key];
+				target[key] = rawBoolean === 'true' ? true : (rawBoolean === 'false' ? false : null);
+			} else {
+				target[key] = recordEditorDraft.item[key];
+			}
+		});
+	}
+	saveDB();
+	closeRecordEditor();
+	if (!silent && tool.notify) tool.notify(view.savedMessage || 'Changes saved.', 'success');
+}
+
+function addRecordItem(viewId) {
+	var view = recordView(viewId);
+	if (!view) return;
+	var items = recordListFor(view);
+	items.push(view.create());
+	saveDB();
+	openRecordEditor(viewId, items.length - 1);
+	renderRecordList(viewId);
+}
+
+function removeRecordItem(viewId, index) {
+	var view = recordView(viewId);
+	if (!view) return;
+	var items = recordListFor(view);
+	if (index < 0 || index >= items.length) return;
+	items.splice(index, 1);
+	if (openRecordViewId === viewId) {
+		openRecordViewId = '';
+		openRecordIndex = -1;
+		recordEditorDraft = null;
+	}
+	saveDB();
+	renderRecordList(viewId);
+	if (tool.notify) tool.notify(view.removedMessage || 'Entry removed.', 'info');
+}
+
+function requestRemoveRecord(button) {
+	if (button.getAttribute('data-armed') !== '1') {
+		button.setAttribute('data-armed', '1');
+		button.textContent = 'Click again to remove';
+		return;
+	}
+	removeRecordItem(button.getAttribute('data-record-view'), parseInt(button.getAttribute('data-record-idx'), 10));
+}
+
+function addRecordSkill() {
+	if (!recordEditorDraft) return;
+	collectRecordEditorFields();
+	var view = recordView(openRecordViewId);
+	if (!view || !view.nested) return;
+	if (!Array.isArray(recordEditorDraft.item[view.nested.key])) recordEditorDraft.item[view.nested.key] = [];
+	recordEditorDraft.item[view.nested.key].push(view.nested.create());
+	renderRecordList(openRecordViewId);
+	focusRecordEditor();
+}
+
+function removeRecordSkill(rowIndex) {
+	if (!recordEditorDraft) return;
+	collectRecordEditorFields();
+	var view = recordView(openRecordViewId);
+	if (!view || !view.nested) return;
+	var skills = recordEditorDraft.item[view.nested.key] || [];
+	skills.splice(rowIndex, 1);
+	renderRecordList(openRecordViewId);
+}
+
+/* ── Field groups: single read card with one inline editor ── */
+function fieldGroup(groupId) { return FIELD_GROUPS[groupId] || null; }
+
+function fieldGroupCardHtml(group) {
+	var data = group.target();
+	var displayTitle = group.titleValue ? group.titleValue(data) : group.title;
+	var chips = group.chips ? group.chips(data) : [];
+	var facts = group.facts ? group.facts(data) : [];
+	var note = group.note ? group.note(data) : '';
+	var bodyHtml = group.bodyHtml ? group.bodyHtml(data) : '';
+	return '<article class="cp-card cp-card-wide">' +
+		'<header class="cp-card-head">' +
+			'<span class="cp-card-avatar">' + iconSvg(group.icon || 'folder') + '</span>' +
+			'<div class="cp-card-titles">' +
+				'<h4 class="cp-card-title">' + esc(displayTitle || group.title) + '</h4>' +
+				(group.hint ? '<p class="cp-card-sub">' + esc(group.subtitle || (group.titleValue ? group.title : group.hint)) + '</p>' : '') +
+			'</div>' +
+			(chips.length ? '<div class="cp-card-tags">' + recordChipsHtml(chips) + '</div>' : '') +
+			'<button type="button" class="cp-btn cp-btn-sm cp-card-edit" data-group-action="edit" data-group-id="' + group.id + '">' + iconSvg('pencil') + 'Edit</button>' +
+		'</header>' +
+		(note ? '<p class="cp-card-note">' + esc(note) + '</p>' : '') +
+		bodyHtml +
+		recordFactsHtml(facts) +
+	'</article>';
+}
+
+function fieldGroupEditorHtml(group, isFirstEntry) {
+	var data = group.target();
+	var formHtml = '';
+	for (var i = 0; i < group.fields.length; i++) {
+		var field = group.fields[i];
+		var fieldId = 'gf-' + group.id + '-' + field.key;
+		var rawValue = data[field.key] === undefined || data[field.key] === null ? '' : data[field.key];
+		var value = String(rawValue);
+		var control;
+		if (field.type === 'textarea') {
+			control = '<textarea class="cp-input cp-textarea" id="' + fieldId + '" data-group-field="' + field.key + '" rows="' + (field.rows || 3) + '"' +
+				(field.placeholder ? ' placeholder="' + esc(field.placeholder) + '"' : '') + '>' + esc(value) + '</textarea>';
+		} else if (field.type === 'boolean') {
+			control = '<select class="cp-input cp-select" id="' + fieldId + '" data-group-field="' + field.key + '">';
+			control += '<option value="">Not set</option>';
+			control += '<option value="true"' + (value === 'true' ? ' selected' : '') + '>Yes</option>';
+			control += '<option value="false"' + (value === 'false' ? ' selected' : '') + '>No</option>';
+			control += '</select>';
+		} else if (field.type === 'select') {
+			control = '<select class="cp-input cp-select" id="' + fieldId + '" data-group-field="' + field.key + '">';
+			control += '<option value="">Not set</option>';
+			for (var optionIndex = 0; optionIndex < (field.options || []).length; optionIndex++) {
+				var option = field.options[optionIndex];
+				var optionValue = typeof option === 'object' ? option.value : option;
+				var optionLabel = typeof option === 'object' ? option.label : option;
+				control += '<option value="' + esc(optionValue) + '"' + (optionValue === value ? ' selected' : '') + '>' + esc(optionLabel) + '</option>';
+			}
+			control += '</select>';
+		} else {
+		control = '<input type="' + (field.type || 'text') + '" class="cp-input" id="' + fieldId + '" data-group-field="' + field.key + '" value="' + esc(value) + '"' +
+			(field.placeholder ? ' placeholder="' + esc(field.placeholder) + '"' : '') +
+			(field.maxLength ? ' maxlength="' + field.maxLength + '"' : '') + '>';
+		}
+		formHtml += '<div class="cp-field' + (field.span === 2 || field.type === 'textarea' ? ' cp-field-full' : '') + '">' +
+			'<label class="cp-label" for="' + fieldId + '">' + esc(field.label) + '</label>' + control +
+			(field.help ? '<span class="cp-field-help">' + esc(field.help) + '</span>' : '') +
+		'</div>';
+	}
+	return '<article class="cp-card cp-card-wide editing" data-group-editor data-group-id="' + group.id + '">' +
+		'<header class="cp-card-head">' +
+			'<span class="cp-card-avatar is-editing">' + iconSvg(group.icon || 'folder') + '</span>' +
+			'<div class="cp-card-titles">' +
+				'<h4 class="cp-card-title">' + (isFirstEntry ? esc(group.title) : 'Edit ' + esc(group.title.toLowerCase())) + '</h4>' +
+				'<p class="cp-card-sub">' + (isFirstEntry ? 'Fill this in once - every section reuses it.' : 'Nothing is changed until you save.') + '</p>' +
+			'</div>' +
+		'</header>' +
+		'<div class="cp-card-form">' + formHtml + '</div>' +
+		'<footer class="cp-card-foot">' +
+			'<span class="cp-card-foot-note">' + (isFirstEntry ? 'Fill this in once - it is reused across every section.' : 'Nothing is changed until you save.') + '</span>' +
+			(isFirstEntry ? '' : '<button type="button" class="cp-btn cp-btn-sm" data-group-action="cancel" data-group-id="' + group.id + '">Cancel</button>') +
+			'<button type="button" class="cp-btn cp-btn-sm cp-btn-primary" data-group-action="save" data-group-id="' + group.id + '">Save</button>' +
+		'</footer>' +
+	'</article>';
+}
+
+function renderFieldGroup(groupId) {
+	var group = fieldGroup(groupId);
+	if (!group) return;
+	var container = el(group.containerId);
+	if (!container) return;
+	var autoEdit = group.autoEditWhenEmpty && group.isEmpty && group.isEmpty(group.target());
+	var isFirstEntry = autoEdit && openFieldGroupId !== groupId;
+	container.innerHTML = (openFieldGroupId === groupId || autoEdit) ? fieldGroupEditorHtml(group, isFirstEntry) : fieldGroupCardHtml(group);
+}
+
+function openFieldGroupEditor(groupId) {
+	if (openFieldGroupId === groupId) return;
+	var previousGroupId = openFieldGroupId;
+	if (previousGroupId) saveFieldGroup(previousGroupId, true);
+	openFieldGroupId = groupId;
+	renderFieldGroup(groupId);
+	var firstField = document.querySelector('[data-group-editor] .cp-input');
+	if (firstField) firstField.focus({ preventScroll: true });
+}
+
+function saveFieldGroup(groupId, silent) {
+	var group = fieldGroup(groupId);
+	if (!group) return;
+	var editor = document.querySelector('[data-group-editor]');
+	if (editor) {
+		var target = group.target();
+		editor.querySelectorAll('[data-group-field]').forEach(function(input) {
+			var groupFieldKey = input.getAttribute('data-group-field');
+			var isBooleanField = (group.fields || []).some(function(field) { return field.key === groupFieldKey && field.type === 'boolean'; });
+			if (isBooleanField) {
+				target[groupFieldKey] = input.value === 'true' ? true : (input.value === 'false' ? false : null);
+			} else {
+				target[groupFieldKey] = input.value;
+			}
+		});
+		if (group.afterSave) group.afterSave(target);
+		saveDB();
+	}
+	if (openFieldGroupId === groupId) openFieldGroupId = '';
+	renderFieldGroup(groupId);
+	if (editor && !silent && tool.notify) tool.notify(group.savedMessage || 'Changes saved.', 'success');
+}
+
+function cancelFieldGroup(groupId) {
+	openFieldGroupId = '';
+	renderFieldGroup(groupId);
+}
+
+function handleRecordAction(button) {
+	var action = button.getAttribute('data-record-action');
+	var viewId = button.getAttribute('data-record-view');
+	var index = parseInt(button.getAttribute('data-record-idx'), 10);
+	if (action === 'edit') openRecordEditor(viewId, index);
+	else if (action === 'save') saveRecordEditor();
+	else if (action === 'cancel') closeRecordEditor();
+	else if (action === 'remove') requestRemoveRecord(button);
+	else if (action === 'skill-add') addRecordSkill();
+	else if (action === 'skill-remove') removeRecordSkill(parseInt(button.getAttribute('data-skill-index'), 10));
+}
+
+function handleGroupAction(button) {
+	var action = button.getAttribute('data-group-action');
+	var groupId = button.getAttribute('data-group-id') || openFieldGroupId;
+	if (action === 'edit') openFieldGroupEditor(groupId);
+	else if (action === 'save') saveFieldGroup(groupId);
+	else if (action === 'cancel') cancelFieldGroup(groupId);
+}
+
+/* ── Read models for every repeating list ── */
+var RECORD_VIEWS = {
+	capabilities: {
+		id: 'capabilities',
+		containerId: 'cp-capabilities-container',
+		icon: 'spark',
+		untitled: 'Untitled capability',
+		editorTitle: 'Edit capability',
+		savedMessage: 'Capability saved.',
+		removedMessage: 'Capability removed.',
+		emptyTitle: 'No capabilities yet',
+		emptyHint: 'Add what the company can deliver, with the evidence that supports it.',
+		list: function() { return DB.industryOps.capabilities || []; },
+		create: function() { return { name:'', description:'', serviceCategories:'', expertiseLevel:'', certified:'', relatedStandards:'', supportingDocs:'' }; },
+		title: function(item) { return item.name; },
+		chips: function(item) {
+			return [
+				{ label: item.expertiseLevel, tone: 'accent' },
+				{ label: item.certified === 'Yes' ? 'Certified' : '', tone: 'success' }
+			];
+		},
+		note: function(item) { return item.description; },
+		facts: function(item) {
+			return [
+				{ label: 'Service categories', value: item.serviceCategories },
+				{ label: 'Standards', value: item.relatedStandards },
+				{ label: 'Supporting documents', value: item.supportingDocs }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Capability name', span: 2, placeholder: 'e.g. Seismic bridge retrofit' },
+			{ key: 'serviceCategories', label: 'Service categories', span: 2, placeholder: 'Comma-separated, e.g. Bridge design, Seismic retrofit' },
+			{ key: 'description', label: 'What it means in practice', type: 'textarea', rows: 3, placeholder: 'What the company delivers, for whom, and with what result' },
+			{ key: 'expertiseLevel', label: 'Expertise level', type: 'select', options: EXPERTISE_LEVELS },
+			{ key: 'certified', label: 'Certified for this work', type: 'select', options: ['Yes', 'No'] },
+			{ key: 'relatedStandards', label: 'Related standards or regulations', span: 2, placeholder: 'e.g. CSA S6, ISO 9001' },
+			{ key: 'supportingDocs', label: 'Supporting documents', span: 2, placeholder: 'Links or references to evidence' }
+		]
+	},
+
+	taxes: {
+		id: 'taxes',
+		containerId: 'cp-taxes-container',
+		icon: 'receipt',
+		untitled: 'Untitled tax registration',
+		editorTitle: 'Edit tax registration',
+		savedMessage: 'Tax registration saved.',
+		removedMessage: 'Tax registration removed.',
+		emptyTitle: 'No tax registrations yet',
+		emptyHint: 'Add each sales tax number the company uses on invoices.',
+		list: function() { return DB.salesTaxDefinitions; },
+		create: function() { return { name:'', rate:'', taxNumber:'', notes:'' }; },
+		title: function(item) { return item.name; },
+		chips: function(item) { return [{ label: item.rate, tone: 'accent' }]; },
+		facts: function(item) {
+			return [
+				{ label: 'Tax number', value: item.taxNumber },
+				{ label: 'Notes', value: item.notes }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Tax name', span: 2, placeholder: 'e.g. Canada GST' },
+			{ key: 'rate', label: 'Rate', placeholder: 'e.g. 5%' },
+			{ key: 'taxNumber', label: 'Tax number / ID', placeholder: 'e.g. 123456789 RT0001' },
+			{ key: 'notes', label: 'Notes', span: 2, placeholder: 'Where this registration applies' }
+		]
+	},
+
+	offices: {
+		id: 'offices',
+		containerId: 'cp-offices-container',
+		icon: 'pin',
+		untitled: 'Untitled office',
+		editorTitle: 'Edit office',
+		savedMessage: 'Office saved.',
+		removedMessage: 'Office removed.',
+		emptyTitle: 'No other offices yet',
+		emptyHint: 'Add branches, warehouses and satellite locations.',
+		list: function() { return DB.otherOffices; },
+		create: function() { return { name:'', type:'branch', address:'', city:'', state:'', postal:'', country:'', email:'', phone:'' }; },
+		title: function(item) { return item.name; },
+		subtitle: function(item) { return [item.city, item.country].filter(Boolean).join(', '); },
+		chips: function(item) { return [{ label: officeTypeLabel(item.type), tone: 'neutral' }]; },
+		facts: function(item) {
+			return [
+				{ label: 'Address', value: [item.address, item.postal].filter(Boolean).join(', ') },
+				{ label: 'Email', value: item.email },
+				{ label: 'Phone', value: item.phone }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Office name', span: 2, placeholder: 'e.g. Alberta Operations Centre' },
+			{ key: 'type', label: 'Type', type: 'select', options: ['Branch', 'Satellite Office', 'Warehouse', 'Retail Location', 'Other'] },
+			{ key: 'address', label: 'Street address', span: 2 },
+			{ key: 'city', label: 'City' },
+			{ key: 'state', label: 'State / province' },
+			{ key: 'postal', label: 'Postal / ZIP' },
+			{ key: 'country', label: 'Country' },
+			{ key: 'email', label: 'Email', type: 'email' },
+			{ key: 'phone', label: 'Phone' }
+		]
+	},
+
+	contacts: {
+		id: 'contacts',
+		containerId: 'cp-contacts-container',
+		icon: 'users',
+		untitled: 'Untitled contact',
+		editorTitle: 'Edit contact',
+		savedMessage: 'Contact saved.',
+		removedMessage: 'Contact removed.',
+		emptyTitle: 'No other contacts yet',
+		emptyHint: 'Add the people clients and partners should reach.',
+		list: function() { return DB.contacts.others; },
+		create: function() { return { name:'', title:'', email:'', phone:'', linkedin:'' }; },
+		title: function(item) { return item.name; },
+		chips: function(item) { return [{ label: item.title, tone: 'neutral' }]; },
+		facts: function(item) {
+			return [
+				{ label: 'Email', value: item.email },
+				{ label: 'Phone', value: item.phone },
+				{ label: 'LinkedIn', value: item.linkedin }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Full name', span: 2 },
+			{ key: 'title', label: 'Title / position', span: 2 },
+			{ key: 'email', label: 'Email', type: 'email' },
+			{ key: 'phone', label: 'Phone' },
+			{ key: 'linkedin', label: 'LinkedIn URL', type: 'url', span: 2 }
+		]
+	},
+
+	certs: {
+		id: 'certs',
+		containerId: 'cp-certs-container',
+		icon: 'shield',
+		untitled: 'Untitled document',
+		editorTitle: 'Edit document',
+		savedMessage: 'Document saved.',
+		removedMessage: 'Document removed.',
+		emptyTitle: 'No documents yet',
+		emptyHint: 'Add licences, insurance certificates and certifications.',
+		list: function() { return DB.documents.certificates || []; },
+		create: function() { return { name:'', type:'', effectiveDate:'', expiryDate:'', file:'', isValid:null, description:'' }; },
+		title: function(item) { return item.name; },
+		chips: function(item) {
+			return [
+				{ label: item.type, tone: 'neutral' },
+				{ label: item.isValid === true ? 'Valid' : (item.isValid === false ? 'Expired' : ''), tone: item.isValid === false ? 'danger' : 'success' }
+			];
+		},
+		facts: function(item) {
+			return [
+				{ label: 'Effective', value: item.effectiveDate },
+				{ label: 'Expires', value: item.expiryDate },
+				{ label: 'File', value: item.file },
+				{ label: 'Description', value: item.description }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Document name', span: 2 },
+			{ key: 'type', label: 'Document type', type: 'select', options: DOC_TYPES },
+			{ key: 'isValid', label: 'Currently valid', type: 'boolean' },
+			{ key: 'effectiveDate', label: 'Effective date', type: 'date' },
+			{ key: 'expiryDate', label: 'Expiry date', type: 'date' },
+			{ key: 'file', label: 'File reference', span: 2, placeholder: 'File link or reference' },
+			{ key: 'description', label: 'Description', span: 2 }
+		]
+	},
+
+	refletters: {
+		id: 'refletters',
+		containerId: 'cp-refletters-container',
+		icon: 'mail',
+		untitled: 'Untitled reference letter',
+		editorTitle: 'Edit reference letter',
+		savedMessage: 'Reference letter saved.',
+		removedMessage: 'Reference letter removed.',
+		emptyTitle: 'No reference letters yet',
+		emptyHint: 'Add letters from clients and partners who can vouch for the work.',
+		list: function() { return DB.referenceLetters || []; },
+		create: function() { return { title:'', file:'', issuedBy:'', issueDate:'', summary:'', associatedProjects:'' }; },
+		title: function(item) { return item.title; },
+		chips: function(item) { return [{ label: item.issuedBy, tone: 'neutral' }]; },
+		note: function(item) { return item.summary; },
+		facts: function(item) {
+			return [
+				{ label: 'Issued', value: item.issueDate },
+				{ label: 'Projects', value: item.associatedProjects },
+				{ label: 'File', value: item.file }
+			];
+		},
+		fields: [
+			{ key: 'title', label: 'Letter title', span: 2 },
+			{ key: 'issuedBy', label: 'Issued by' },
+			{ key: 'issueDate', label: 'Issue date', type: 'date' },
+			{ key: 'associatedProjects', label: 'Projects it covers', span: 2 },
+			{ key: 'file', label: 'File reference', span: 2 },
+			{ key: 'summary', label: 'Summary / comments', type: 'textarea', rows: 3 }
+		]
+	},
+
+	'assets-owned': {
+		id: 'assets-owned',
+		containerId: 'cp-assets-owned-container',
+		icon: 'truck',
+		untitled: 'Untitled asset',
+		editorTitle: 'Edit owned asset',
+		savedMessage: 'Asset saved.',
+		removedMessage: 'Asset removed.',
+		emptyTitle: 'No owned assets yet',
+		emptyHint: 'Add equipment, vehicles and facilities the company owns.',
+		list: function() { return DB.assets.owned || []; },
+		create: function() { return { name:'', type:'', quantity:'', description:'', ownership:'', readiness:'', technicalSpecs:'', certifications:'' }; },
+		title: function(item) { return item.name; },
+		chips: function(item) {
+			return [
+				{ label: item.type, tone: 'neutral' },
+				{ label: item.quantity ? 'x ' + item.quantity : '', tone: 'accent' },
+				{ label: item.readiness, tone: readinessTone(item.readiness) }
+			];
+		},
+		note: function(item) { return item.description; },
+		facts: function(item) {
+			return [
+				{ label: 'Ownership', value: item.ownership },
+				{ label: 'Certifications', value: item.certifications },
+				{ label: 'Technical specs', value: item.technicalSpecs }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Asset name', span: 2 },
+			{ key: 'type', label: 'Asset type', type: 'select', options: ASSET_TYPES },
+			{ key: 'quantity', label: 'Quantity', type: 'number', min: 0 },
+			{ key: 'description', label: 'Description', span: 2 },
+			{ key: 'ownership', label: 'Ownership', type: 'select', options: OWNERSHIP_TYPES },
+			{ key: 'readiness', label: 'Readiness', type: 'select', options: READINESS_TYPES },
+			{ key: 'technicalSpecs', label: 'Technical specs', type: 'textarea', rows: 2 },
+			{ key: 'certifications', label: 'Certifications', span: 2 }
+		]
+	},
+
+	othersocial: {
+		id: 'othersocial',
+		containerId: 'cp-othersocial-container',
+		icon: 'link',
+		untitled: 'Untitled social link',
+		editorTitle: 'Edit social link',
+		savedMessage: 'Social link saved.',
+		removedMessage: 'Social link removed.',
+		emptyTitle: 'No extra social links yet',
+		emptyHint: 'Add any channel that is not covered by the social profiles card.',
+		list: function() { return DB.weblinks.otherSocials || []; },
+		create: function() { return { platform:'', url:'' }; },
+		title: function(item) { return item.platform; },
+		facts: function(item) { return [{ label: 'URL', value: item.url }]; },
+		fields: [
+			{ key: 'platform', label: 'Platform', span: 2, placeholder: 'e.g. Threads, Pinterest' },
+			{ key: 'url', label: 'URL', type: 'url', span: 2, placeholder: 'https://' }
+		]
+	},
+
+	otherweb: {
+		id: 'otherweb',
+		containerId: 'cp-otherweb-container',
+		icon: 'globe',
+		untitled: 'Untitled web source',
+		editorTitle: 'Edit web source',
+		savedMessage: 'Web source saved.',
+		removedMessage: 'Web source removed.',
+		emptyTitle: 'No other web sources yet',
+		emptyHint: 'Add catalogues, directories or extra company pages.',
+		list: function() { return DB.weblinks.otherWebSources || []; },
+		create: function() { return { label:'', url:'' }; },
+		title: function(item) { return item.label; },
+		facts: function(item) { return [{ label: 'URL', value: item.url }]; },
+		fields: [
+			{ key: 'label', label: 'Label', span: 2, placeholder: 'e.g. Product catalogue' },
+			{ key: 'url', label: 'URL', type: 'url', span: 2, placeholder: 'https://' }
+		]
+	},
+
+	'assets-partner': {		id: 'assets-partner',
+		containerId: 'cp-assets-partner-container',
+		icon: 'share',
+		untitled: 'Untitled partner asset',
+		editorTitle: 'Edit partner asset',
+		savedMessage: 'Partner asset saved.',
+		removedMessage: 'Partner asset removed.',
+		emptyTitle: 'No partner assets yet',
+		emptyHint: 'Add resources available through partners and alliances.',
+		list: function() { return DB.assets.partnerAccessible || []; },
+		create: function() { return { name:'', type:'', quantity:'', description:'', reliability:'', readiness:'', technicalSpecs:'', certifications:'' }; },
+		title: function(item) { return item.name; },
+		chips: function(item) {
+			return [
+				{ label: item.type, tone: 'neutral' },
+				{ label: item.quantity ? 'x ' + item.quantity : '', tone: 'accent' },
+				{ label: item.readiness, tone: readinessTone(item.readiness) }
+			];
+		},
+		note: function(item) { return item.description; },
+		facts: function(item) {
+			return [
+				{ label: 'Reliability', value: item.reliability },
+				{ label: 'Certifications', value: item.certifications },
+				{ label: 'Technical specs', value: item.technicalSpecs }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Asset name', span: 2 },
+			{ key: 'type', label: 'Asset type', type: 'select', options: ASSET_TYPES },
+			{ key: 'quantity', label: 'Quantity', type: 'number', min: 0 },
+			{ key: 'description', label: 'Description', span: 2 },
+			{ key: 'reliability', label: 'Reliability', type: 'select', options: RELIABILITY_TYPES },
+			{ key: 'readiness', label: 'Readiness', type: 'select', options: READINESS_TYPES },
+			{ key: 'technicalSpecs', label: 'Technical specs', type: 'textarea', rows: 2 },
+			{ key: 'certifications', label: 'Certifications', span: 2 }
+		]
+	},
+
+	hr: {
+		id: 'hr',
+		containerId: 'cp-hr-container',
+		icon: 'users2',
+		untitled: 'Untitled staff member',
+		editorTitle: 'Edit staff member',
+		savedMessage: 'Staff member saved.',
+		removedMessage: 'Staff member removed.',
+		emptyTitle: 'No staff members yet',
+		emptyHint: 'Add the roles the team can staff, with the skills behind them.',
+		list: function() { return DB.humanResources.staffCapabilities || []; },
+		create: function() { return { name:'', role:'', experience:'', educationLevel:'', skills:[] }; },
+		title: function(item) { return item.role || item.name; },
+		subtitle: function(item) { return item.role && item.name ? item.name : ''; },
+		chips: function(item) {
+			return [
+				{ label: item.experience, tone: 'accent' },
+				{ label: item.educationLevel, tone: 'neutral' }
+			];
+		},
+		bodyHtml: function(item) {
+			var skills = item.skills || [];
+			if (!skills.length) return '';
+			var rows = '';
+			for (var i = 0; i < skills.length; i++) {
+				var skill = skills[i];
+				rows += '<div class="cp-card-skill">' +
+					'<span class="cp-card-skill-name">' + esc(skill.name || 'Unnamed skill') + '</span>' +
+					(skill.years ? '<span class="cp-card-skill-meta">' + esc(skill.years) + ' yrs</span>' : '') +
+					(skill.level ? '<span class="cp-tag cp-tag-neutral">' + esc(skill.level) + '</span>' : '') +
+					(skill.certification ? '<span class="cp-card-skill-meta">' + esc(skill.certification) + '</span>' : '') +
+				'</div>';
+			}
+			return '<div class="cp-card-skills">' + rows + '</div>';
+		},
+		nested: {
+			key: 'skills',
+			label: 'Skills',
+			emptyText: 'No skills listed yet.',
+			addLabel: 'Add skill',
+			create: function() { return { name:'', years:'', level:'', certification:'' }; },
+			fields: [
+				{ key: 'name', label: 'Skill', placeholder: 'e.g. Structural design', span: 2 },
+				{ key: 'years', label: 'Years', placeholder: 'e.g. 10' },
+				{ key: 'level', label: 'Level', type: 'select', options: SKILL_LEVELS },
+				{ key: 'certification', label: 'Certification', placeholder: 'e.g. P.Eng.' }
+			]
+		},
+		fields: [
+			{ key: 'role', label: 'Role', span: 2, placeholder: 'e.g. Site Superintendent' },
+			{ key: 'name', label: 'Name (optional)' },
+			{ key: 'experience', label: 'Experience', placeholder: 'e.g. 10 years' },
+			{ key: 'educationLevel', label: 'Education level', type: 'select', options: EDUCATION_LEVELS }
+		]
+	},
+
+	revenues: {
+		id: 'revenues',
+		containerId: 'cp-revenues-container',
+		icon: 'chart',
+		untitled: 'Untitled year',
+		editorTitle: 'Edit revenue year',
+		savedMessage: 'Revenue year saved.',
+		removedMessage: 'Revenue year removed.',
+		emptyTitle: 'No revenue history yet',
+		emptyHint: 'Add one line per year so tender and grant reviews see the trend.',
+		list: function() { return DB.financials.annualRevenues || []; },
+		create: function() { return { year:'', revenue:'', netIncome:'' }; },
+		title: function(item) { return item.year; },
+		chips: function(item) { return [{ label: item.revenue ? 'Revenue ' + formatAmount(item.revenue) : '', tone: 'accent' }]; },
+		facts: function(item) {
+			return [
+				{ label: 'Revenue', value: formatAmount(item.revenue) },
+				{ label: 'Net income', value: formatAmount(item.netIncome) }
+			];
+		},
+		fields: [
+			{ key: 'year', label: 'Year', type: 'number', placeholder: '2025' },
+			{ key: 'revenue', label: 'Annual revenue', type: 'number', placeholder: '0' },
+			{ key: 'netIncome', label: 'Net income', type: 'number', placeholder: '0' }
+		]
+	},
+
+	projects: {
+		id: 'projects',
+		containerId: 'cp-projects-container',
+		icon: 'folder',
+		untitled: 'Untitled project',
+		editorTitle: 'Edit reference project',
+		savedMessage: 'Project saved.',
+		removedMessage: 'Project removed.',
+		emptyTitle: 'No reference projects yet',
+		emptyHint: 'Add completed work that proves the company can deliver.',
+		list: function() { return DB.referenceProjects || []; },
+		create: function() { return { name:'', clientName:'', contractValue:'', location:'', description:'', startDate:'', endDate:'' }; },
+		title: function(item) { return item.name; },
+		subtitle: function(item) { return item.clientName; },
+		chips: function(item) {
+			return [
+				{ label: item.contractValue, tone: 'accent' },
+				{ label: item.location, tone: 'neutral' }
+			];
+		},
+		note: function(item) { return item.description; },
+		facts: function(item) {
+			return [
+				{ label: 'Timeline', value: [item.startDate, item.endDate].filter(Boolean).join(' to ') }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Project name', span: 2 },
+			{ key: 'clientName', label: 'Client' },
+			{ key: 'contractValue', label: 'Contract value', placeholder: 'e.g. $4.2M' },
+			{ key: 'location', label: 'Location' },
+			{ key: 'startDate', label: 'Start date', type: 'date' },
+			{ key: 'endDate', label: 'End date', type: 'date' },
+			{ key: 'description', label: 'Description / scope', type: 'textarea', rows: 3 }
+		]
+	}
+};
+
+function officeTypeLabel(type) {
+	var labels = { branch: 'Branch', satellite: 'Satellite office', warehouse: 'Warehouse', retail: 'Retail location', other: 'Other' };
+	return labels[type] || '';
+}
+
+function readinessTone(readiness) {
+	if (!readiness) return 'neutral';
+	if (readiness.indexOf('Ready (Immediate)') === 0 || readiness.indexOf('Ready (< 1') === 0) return 'success';
+	if (readiness === 'Not Available') return 'danger';
+	return 'warning';
+}
+
+var FIELD_GROUPS = {
+	'hq-location': {
+		id: 'hq-location',
+		containerId: 'cp-hq-location',
+		icon: 'pin',
+		title: 'Headquarters location',
+		hint: 'Where the business is registered and reached by post',
+		target: function() { return DB.headquarters; },
+		titleValue: function(data) { return data.name || 'Headquarters'; },
+		subtitle: 'Main office',
+		savedMessage: 'Headquarters saved.',
+		facts: function(data) {
+			return [
+				{ label: 'Address', value: [data.address, data.city, data.state, data.postal].filter(Boolean).join(', ') },
+				{ label: 'Country', value: data.country }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Office / location name', span: 2, placeholder: 'e.g. Corporate Headquarters' },
+			{ key: 'address', label: 'Street address', span: 2, placeholder: 'Street address, building, suite' },
+			{ key: 'city', label: 'City' },
+			{ key: 'state', label: 'State / province' },
+			{ key: 'postal', label: 'Postal / ZIP code' },
+			{ key: 'country', label: 'Country' }
+		]
+	},
+
+	'hq-channels': {
+		id: 'hq-channels',
+		containerId: 'cp-hq-channels',
+		icon: 'mail',
+		title: 'Contact channels',
+		hint: 'Used on the profile, invoices and tender documents',
+		target: function() { return DB.headquarters; },
+		savedMessage: 'Contact channels saved.',
+		facts: function(data) {
+			return [
+				{ label: 'Email', value: data.email },
+				{ label: 'Phone', value: data.phone },
+				{ label: 'Website', value: data.website }
+			];
+		},
+		fields: [
+			{ key: 'email', label: 'Email', type: 'email', span: 2 },
+			{ key: 'phone', label: 'Phone', span: 2 },
+			{ key: 'website', label: 'Website', type: 'url', span: 2 }
+		]
+	},
+
+	'billing-address': {
+		id: 'billing-address',
+		containerId: 'cp-billing-card',
+		icon: 'card',
+		title: 'Billing address',
+		hint: 'Address used for invoicing and financial correspondence',
+		target: function() { return DB.billingAddress; },
+		savedMessage: 'Billing address saved.',
+		chips: function(data) {
+			return [{ label: data.sameAsHQ !== false ? 'Same as headquarters' : '', tone: 'success' }];
+		},
+		bodyHtml: function(data) {
+			if (data.sameAsHQ === false) return '';
+			var hq = DB.headquarters;
+			var addressLine = [hq.address, hq.city, hq.state, hq.postal, hq.country].filter(Boolean).join(', ');
+			return '<p class="cp-card-note">' + esc(addressLine || 'No headquarters address recorded yet.') + '</p>';
+		},
+		facts: function(data) {
+			if (data.sameAsHQ !== false) {
+				return [{ label: 'Billing email', value: data.email }];
+			}
+			return [
+				{ label: 'Address', value: [data.address, data.city, data.state, data.postal].filter(Boolean).join(', ') },
+				{ label: 'Country', value: data.country },
+				{ label: 'Billing email', value: data.email }
+			];
+		},
+		fields: [
+			{ key: 'sameAsHQ', label: 'Use the headquarters address', type: 'boolean' },
+			{ key: 'email', label: 'Billing email', type: 'email' },
+			{ key: 'address', label: 'Street address', span: 2 },
+			{ key: 'city', label: 'City' },
+			{ key: 'state', label: 'State / province' },
+			{ key: 'postal', label: 'Postal / ZIP code' },
+			{ key: 'country', label: 'Country' }
+		]
+	},
+
+	'weblink-channels': {
+		id: 'weblink-channels',
+		containerId: 'cp-weblink-channels',
+		icon: 'link',
+		title: 'Primary channels',
+		hint: 'The links a client should use first',
+		target: function() { return DB.weblinks; },
+		savedMessage: 'Primary channels saved.',
+		facts: function(data) {
+			return [
+				{ label: 'Website', value: data.website },
+				{ label: 'Email', value: data.email },
+				{ label: 'LinkedIn', value: data.linkedin }
+			];
+		},
+		fields: [
+			{ key: 'website', label: 'Website', type: 'url', span: 2, placeholder: 'https://' },
+			{ key: 'email', label: 'Email', type: 'email', span: 2, placeholder: 'info@company.com' },
+			{ key: 'linkedin', label: 'LinkedIn', type: 'url', span: 2, placeholder: 'https://linkedin.com/company/' }
+		]
+	},
+
+	'weblink-social': {
+		id: 'weblink-social',
+		containerId: 'cp-weblink-social',
+		icon: 'share',
+		title: 'Social profiles',
+		hint: 'Channels the company is active on',
+		target: function() { return DB.weblinks; },
+		savedMessage: 'Social profiles saved.',
+		bodyHtml: function(data) {
+			var channels = [
+				{ label: 'Facebook', value: data.facebook },
+				{ label: 'Instagram', value: data.instagram },
+				{ label: 'X / Twitter', value: data.twitter },
+				{ label: 'YouTube', value: data.youtube },
+				{ label: 'TikTok', value: data.tiktok },
+				{ label: 'WhatsApp', value: data.whatsapp }
+			];
+			var html = '';
+			for (var i = 0; i < channels.length; i++) {
+				if (!channels[i].value) continue;
+				html += '<div class="cp-card-fact"><span class="cp-card-fact-label">' + esc(channels[i].label) + '</span><span class="cp-card-fact-value">' + esc(channels[i].value) + '</span></div>';
+			}
+			return html ? '<div class="cp-card-facts">' + html + '</div>' : '<p class="cp-card-note">No social profiles recorded yet.</p>';
+		},
+		fields: [
+			{ key: 'facebook', label: 'Facebook', type: 'url', span: 2, placeholder: 'https://facebook.com/' },
+			{ key: 'instagram', label: 'Instagram', type: 'url', span: 2, placeholder: 'https://instagram.com/' },
+			{ key: 'twitter', label: 'X / Twitter', type: 'url', span: 2, placeholder: 'https://x.com/' },
+			{ key: 'youtube', label: 'YouTube', type: 'url', span: 2, placeholder: 'https://youtube.com/@' },
+			{ key: 'tiktok', label: 'TikTok', type: 'url', span: 2, placeholder: 'https://tiktok.com/@' },
+			{ key: 'whatsapp', label: 'WhatsApp', span: 2, placeholder: 'WhatsApp number or link' }
+		]
+	},
+
+	'invoice-payment': {
+		id: 'invoice-payment',
+		containerId: 'cp-invoice-payment-card',
+		icon: 'receipt',
+		title: 'Payment instructions',
+		hint: 'Printed on the invoice as written',
+		target: function() { return DB.invoicing; },
+		savedMessage: 'Payment instructions saved.',
+		note: function(data) { return data.paymentInstructions || 'No payment instructions recorded yet.'; },
+		fields: [
+			{ key: 'paymentInstructions', label: 'Payment instructions', type: 'textarea', rows: 7, placeholder: 'Bank name, account name, account number, IBAN, SWIFT, payment terms...', help: 'One instruction per line reads best.' }
+		]
+	},
+
+	'invoice-footer': {
+		id: 'invoice-footer',
+		containerId: 'cp-invoice-footer-card',
+		icon: 'mail',
+		title: 'Invoice footer note',
+		hint: 'One short line at the bottom of the invoice',
+		target: function() { return DB.invoicing; },
+		savedMessage: 'Invoice footer note saved.',
+		note: function(data) { return data.invoiceFooterNote || 'No footer note recorded yet.'; },
+		fields: [
+			{ key: 'invoiceFooterNote', label: 'Footer note', span: 2, maxLength: 160, placeholder: 'Registered in Canada - GST/HST number on file', help: '160 characters maximum.' }
+		]
+	},
+
+	'company-identity': {		id: 'company-identity',
+		containerId: 'cp-company-identity',
+		icon: 'building',
+		title: 'Company identity',
+		hint: 'Legal details reused across tenders, contracts and invoices',
+		target: function() { return DB.basicInfo; },
+		titleValue: function(data) { return data.legalName || data.tradeName; },
+		subtitle: 'Legal name',
+		autoEditWhenEmpty: true,
+		isEmpty: function(data) {
+			return !data.legalName && !data.tradeName && !data.companyType && !data.yearEstablished && !data.numEmployees && !data.businessNumber;
+		},
+		savedMessage: 'Company identity saved.',
+		chips: function(data) {
+		return [
+			{ label: companyTypeLabel(data.companyType), tone: 'accent' },
+			{ label: data.numEmployees ? data.numEmployees + ' employees' : '', tone: 'neutral' }
+		];
+		},
+		facts: function(data) {
+		return [
+			{ label: 'Trade name', value: data.tradeName },
+			{ label: 'Established', value: data.yearEstablished },
+			{ label: 'Employees', value: data.numEmployees },
+			{ label: 'Registration / business number', value: data.businessNumber }
+		];
+		},
+		afterSave: function() {
+		// Non-profit and charity records usually work with grants, so offer that area once.
+		var companyType = DB.basicInfo.companyType;
+		if (companyType !== 'nonprofit' && companyType !== 'registered-charity') return;
+		var focus = profileFocusSet();
+		if (focus.has('grants')) return;
+		focus.add('grants');
+		DB.profile.focus = focusToList(focus);
+		},
+		fields: [
+		{ key: 'legalName', label: 'Legal company name', span: 2, placeholder: 'Registered legal name' },
+		{ key: 'tradeName', label: 'Trade name / DBA', span: 2, placeholder: 'Doing business as (if different)' },
+		{ key: 'companyType', label: 'Company type', type: 'select', options: COMPANY_TYPE_OPTIONS },
+		{ key: 'yearEstablished', label: 'Year established', type: 'number', placeholder: 'e.g. 2010' },
+		{ key: 'numEmployees', label: 'Number of employees', type: 'number', placeholder: 'e.g. 250' },
+		{ key: 'businessNumber', label: 'Registration / business number', span: 2, placeholder: 'Government registration or business number' }
+		]
+		},
+
+	'industry-classification': {
+		id: 'industry-classification',
+		containerId: 'cp-industry-classification',
+		icon: 'factory',
+		title: 'Classification',
+		hint: 'How the business describes what it does',
+		target: function() { return DB.industryOps; },
+		savedMessage: 'Classification saved.',
+		chips: function(data) {
+			return parseCsv(data.subIndustries).map(function(tag) { return { label: tag, tone: 'accent' }; });
+		},
+		note: function(data) { return data.specializations || 'No specializations recorded yet.'; },
+		facts: function(data) {
+			return parseCsv(data.subIndustries).length ? [] : [{ label: 'Sub-industries', value: 'No sub-industries tagged yet' }];
+		},
+		fields: [
+			{ key: 'subIndustries', label: 'Sub-industries', span: 2, placeholder: 'Comma-separated, e.g. Road construction, Bridge building', help: 'Each comma-separated value becomes a tag on the card.' },
+			{ key: 'specializations', label: 'Specializations / special notes', type: 'textarea', rows: 3, placeholder: 'Any special expertise, niche focus, or notable capability' }
+		]
+	},
+
+	'industry-codes': {
+		id: 'industry-codes',
+		containerId: 'cp-industry-codes',
+		icon: 'shield',
+		title: 'Procurement codes',
+		hint: 'Used to match tender and vendor lists',
+		target: function() { return DB.industryOps; },
+		savedMessage: 'Procurement codes saved.',
+		bodyHtml: function(data) {
+			var groups = [
+				{ label: 'UNSPSC', value: data.unscspCodes },
+				{ label: 'NAICS', value: data.naicsCodes },
+				{ label: 'Keywords / tags', value: data.otherKeywords }
+			];
+			var html = '';
+			for (var i = 0; i < groups.length; i++) {
+				var tags = parseCsv(groups[i].value);
+				if (!tags.length) continue;
+				html += '<div class="cp-card-tagrow"><span class="cp-card-tagrow-label">' + esc(groups[i].label) + '</span>' +
+					'<div class="cp-card-tags is-inline">' + recordChipsHtml(tags.map(function(tag) { return { label: tag, tone: 'neutral' }; })) + '</div></div>';
+			}
+			return html || '<p class="cp-card-note">No procurement codes recorded yet. Add UNSPSC, NAICS or search keywords to be matched with tender lists.</p>';
+		},
+		fields: [
+			{ key: 'unscspCodes', label: 'UNSPSC codes', span: 2, placeholder: 'Comma-separated, e.g. 72101500, 72102901' },
+			{ key: 'naicsCodes', label: 'NAICS codes', span: 2, placeholder: 'Comma-separated, e.g. 236220, 237310' },
+			{ key: 'otherKeywords', label: 'Other keywords / tags', span: 2, placeholder: 'Comma-separated search keywords' }
+		]
+	},
+
+	'primary-contact': {
+		id: 'primary-contact',
+		containerId: 'cp-primary-contact-card',
+		icon: 'users',
+		title: 'Primary contact',
+		hint: 'The person a client should reach first',
+		target: function() { return DB.contacts.primary; },
+		titleValue: function(data) { return data.name; },
+		subtitle: 'Primary contact',
+		savedMessage: 'Primary contact saved.',
+		chips: function(data) { return [{ label: data.title, tone: 'accent' }]; },
+		facts: function(data) {
+			return [
+				{ label: 'Email', value: data.email },
+				{ label: 'Phone', value: data.phone },
+				{ label: 'LinkedIn', value: data.linkedin }
+			];
+		},
+		fields: [
+			{ key: 'name', label: 'Full name', span: 2 },
+			{ key: 'title', label: 'Title / position', span: 2 },
+			{ key: 'email', label: 'Email', type: 'email' },
+			{ key: 'phone', label: 'Phone' },
+			{ key: 'linkedin', label: 'LinkedIn URL', type: 'url', span: 2 }
+		]
+	},
+
+	'financial-position': {
+		id: 'financial-position',
+		containerId: 'cp-financial-position',
+		icon: 'chart',
+		title: 'Financial position',
+		hint: 'Current balance sheet snapshot',
+		target: function() { return DB.financials; },
+		savedMessage: 'Financial position saved.',
+		facts: function(data) {
+			return [
+				{ label: 'Current assets', value: formatAmount(data.currentAssets) },
+				{ label: 'Current liabilities', value: formatAmount(data.currentLiabilities) },
+				{ label: 'Working capital', value: formatAmount(data.workingCapital) }
+			];
+		},
+		fields: [
+			{ key: 'currentAssets', label: 'Current assets', type: 'number', placeholder: '0' },
+			{ key: 'currentLiabilities', label: 'Current liabilities', type: 'number', placeholder: '0' },
+			{ key: 'workingCapital', label: 'Working capital', type: 'number', placeholder: '0' }
+		]
+	},
+
+	'geographic-coverage': {
+		id: 'geographic-coverage',
+		containerId: 'cp-geographic-card',
+		icon: 'globe',
+		title: 'Coverage',
+		hint: 'Where the business can take work',
+		target: function() { return DB.geographicCoverage; },
+		savedMessage: 'Coverage saved.',
+		bodyHtml: function(data) {
+			function tagRow(label, text, tone) {
+				var tags = parseLines(text);
+				if (!tags.length) return '';
+				var visibleTags = tags.slice(0, 8);
+				var hiddenCount = tags.length - visibleTags.length;
+				var chips = recordChipsHtml(visibleTags.map(function(tag) { return { label: tag, tone: tone }; }));
+				if (hiddenCount > 0) chips += '<span class="cp-tag cp-tag-muted">+' + hiddenCount + ' more</span>';
+				return '<div class="cp-card-tagrow"><span class="cp-card-tagrow-label">' + esc(label) + '</span><div class="cp-card-tags is-inline">' + chips + '</div></div>';
+			}
+			var html = tagRow('Countries', data.countries, 'accent') +
+				tagRow('States / provinces', data.states, 'neutral') +
+				tagRow('Cities / service areas', data.cities, 'neutral') +
+				tagRow('Excluded', data.excluded, 'danger');
+			return html || '<p class="cp-card-note">No coverage recorded yet.</p>';
+		},
+		facts: function(data) {
+			return [{ label: 'Service radius / notes', value: data.notes }];
+		},
+		fields: [
+			{ key: 'countries', label: 'Countries', type: 'textarea', rows: 2, placeholder: 'One country per line', help: 'One value per line.' },
+			{ key: 'states', label: 'States / provinces', type: 'textarea', rows: 2, placeholder: 'One per line' },
+			{ key: 'cities', label: 'Cities / service areas', type: 'textarea', rows: 3, placeholder: 'One per line' },
+			{ key: 'excluded', label: 'Excluded cities / areas', type: 'textarea', rows: 2, placeholder: 'One per line' },
+			{ key: 'notes', label: 'Service radius / coverage notes', span: 2, placeholder: 'e.g. Within 200km of Vancouver' }
+		]
+	}
+};
+
+
+
 /* ── Initialize ── */
 tool.onReady(function(val, fields) {
 	loadDB(val);
@@ -491,6 +1834,8 @@ tool.onReady(function(val, fields) {
 
 	tool.onValueChange(function(v) {
 		if (selfSaving) return; // skip re-render on self-initiated saves
+		// An external change replaces the data, so any open card editor is dropped.
+		openRecordViewId = ''; openRecordIndex = -1; recordEditorDraft = null; openFieldGroupId = '';
 		loadDB(v); renderAll(); updateHeaderName();
 	});
 	tool.onReadonlyChange(function(ro) { isReadOnly = ro; lockUI(ro); });
@@ -528,16 +1873,6 @@ function applySectionMeta() {
 			var badgeEl = headerEl.querySelector('.cp-section-badge');
 			if (badgeEl) headerEl.insertBefore(stateEl, badgeEl);
 			else headerEl.appendChild(stateEl);
-		}
-		if (!headerEl.querySelector('.cp-section-add')) {
-			var addFieldButton = document.createElement('button');
-			addFieldButton.type = 'button';
-			addFieldButton.className = 'cp-btn cp-btn-icon cp-section-add';
-			addFieldButton.setAttribute('data-custom-add', section.id);
-			addFieldButton.title = 'Add a custom field to this section';
-			addFieldButton.setAttribute('aria-label', 'Add a custom field to this section');
-			addFieldButton.innerHTML = iconSvg('plus');
-			headerEl.insertBefore(addFieldButton, stateEl);
 		}
 	}
 }
@@ -763,11 +2098,13 @@ function updateScopeControls() {
 	for (var i = 0; i < SECTIONS.length; i++) {
 		var section = SECTIONS[i];
 		if (visibleSections && !visibleSections.has(section.id)) { configHidden++; continue; }
-		if (!sectionMatchesProfile(section.id)) profileHidden++;
+		if (sectionHiddenByProfile(section.id)) profileHidden++;
 	}
 	var note = el('cp-hidden-note');
 	if (note) {
-		if (!profileHidden) {
+		if (!profileIsConfigured() && !DB.profile.showAllSections) {
+			note.textContent = profileHidden + ' sections appear once you choose an industry, template or area';
+		} else if (!profileHidden) {
 			note.textContent = configHidden ? configHidden + ' sections hidden by configuration' : 'All sections match this profile';
 		} else if (DB.profile.showAllSections) {
 			note.textContent = profileHidden + ' sections hidden by this profile - currently showing all';
@@ -935,25 +2272,20 @@ function renderAll() {
 /* ── Basic Info ── */
 function renderBasicInfo() {
 	var b = DB.basicInfo;
-	setVal('f-legalName', b.legalName);
-	setVal('f-tradeName', b.tradeName);
+	renderFieldGroup('company-identity');
 	setVal('f-profile-industry', DB.industryOps.primaryIndustry);
-	setVal('f-companyType', b.companyType);
-	setVal('f-yearEstablished', b.yearEstablished);
-	setVal('f-numEmployees', b.numEmployees);
-	setVal('f-businessNumber', b.businessNumber);
 	renderProfileSetup();
 }
 
 function readBasicInfo() {
 	var b = DB.basicInfo;
-	b.legalName = val('f-legalName');
-	b.tradeName = val('f-tradeName');
-	DB.industryOps.primaryIndustry = val('f-profile-industry');
-	b.companyType = val('f-companyType');
-	b.yearEstablished = val('f-yearEstablished');
-	b.numEmployees = val('f-numEmployees');
-	b.businessNumber = val('f-businessNumber');
+	if (el('f-legalName')) b.legalName = val('f-legalName');
+	if (el('f-tradeName')) b.tradeName = val('f-tradeName');
+	if (el('f-profile-industry')) DB.industryOps.primaryIndustry = val('f-profile-industry');
+	if (el('f-companyType')) b.companyType = val('f-companyType');
+	if (el('f-yearEstablished')) b.yearEstablished = val('f-yearEstablished');
+	if (el('f-numEmployees')) b.numEmployees = val('f-numEmployees');
+	if (el('f-businessNumber')) b.businessNumber = val('f-businessNumber');
 }
 
 function renderProfileSetup() {
@@ -983,7 +2315,7 @@ function renderProfileSetup() {
 	var note = el('cp-profile-note');
 	if (note) {
 		if (!profileIsConfigured()) {
-			note.innerHTML = 'Nothing is hidden yet - every section is shown until an industry or area is chosen.';
+			note.innerHTML = 'Only Basic Information and Brand &amp; Positioning are shown until you choose an industry, a template or an area. Nothing is deleted - the matching sections appear immediately.';
 		} else if (DB.profile.showAllSections) {
 			note.innerHTML = 'All sections are shown. Hiding a section never deletes its data.';
 		} else if (!focusMatchesPreset()) {
@@ -1045,7 +2377,257 @@ function renderMission() {
 		input.focus();
 		input.setSelectionRange(input.value.length, input.value.length);
 	}
+	renderBrandAssets();
 }
+
+/* ── Brand images ──
+   Logo, icon and company images used on documents and listings. They follow
+   the same read-card pattern as the other sections: a gallery of saved images
+   and one editor at a time. */
+var BRAND_IMAGE_KINDS = [
+	'Company logo',
+	'Logo for dark backgrounds',
+	'Logo for light backgrounds',
+	'Icon / favicon',
+	'Hero / banner',
+	'Team photo',
+	'Office photo',
+	'Product photo',
+	'Other'
+];
+var BRAND_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+var brandAssetDraft = null;
+
+function brandAssetKindOptions(selectedKind) {
+	var html = '<option value="">Choose an image type</option>';
+	for (var i = 0; i < BRAND_IMAGE_KINDS.length; i++) {
+		html += '<option value="' + esc(BRAND_IMAGE_KINDS[i]) + '"' + (BRAND_IMAGE_KINDS[i] === selectedKind ? ' selected' : '') + '>' + esc(BRAND_IMAGE_KINDS[i]) + '</option>';
+	}
+	return html;
+}
+
+function brandAssetCardHtml(item, index) {
+	return '<article class="cp-brand-card">' +
+		'<div class="cp-brand-thumb">' +
+			'<img src="' + esc(item.url) + '" alt="' + esc(item.name || 'Brand image') + '">' +
+			'<span class="cp-brand-thumb-fallback">' + iconSvg('spark') + 'Preview unavailable</span>' +
+		'</div>' +
+		'<div class="cp-brand-body">' +
+			(item.kind ? '<span class="cp-tag cp-tag-accent">' + esc(item.kind) + '</span>' : '') +
+			'<h4 class="cp-brand-name">' + esc(item.name || 'Untitled image') + '</h4>' +
+			(item.caption ? '<p class="cp-brand-caption">' + esc(item.caption) + '</p>' : '') +
+		'</div>' +
+		'<button type="button" class="cp-btn cp-btn-sm cp-card-edit" data-brand-action="edit" data-brand-index="' + index + '">' + iconSvg('pencil') + 'Edit</button>' +
+	'</article>';
+}
+
+function brandAssetEditorHtml() {
+	var item = brandAssetDraft.item;
+	var canUpload = typeof tool.requestUpload === 'function';
+	var html = '<article class="cp-card cp-card-wide editing" data-brand-editor>' +
+		'<header class="cp-card-head">' +
+			'<span class="cp-card-avatar is-editing">' + iconSvg('spark') + '</span>' +
+			'<div class="cp-card-titles">' +
+				'<h4 class="cp-card-title">' + (brandAssetDraft.index === -1 ? 'Add a brand image' : 'Edit brand image') + '</h4>' +
+				'<p class="cp-card-sub">The logo and company images used on documents, invoices and listings.</p>' +
+			'</div>' +
+		'</header>' +
+		'<div class="cp-card-form">' +
+			'<div class="cp-field"><label class="cp-label" for="bf-kind">Image type</label>' +
+				'<select class="cp-input cp-select" id="bf-kind" data-brand-field="kind">' + brandAssetKindOptions(item.kind) + '</select>' +
+			'</div>' +
+			'<div class="cp-field"><label class="cp-label" for="bf-name">Name</label>' +
+				'<input type="text" class="cp-input" id="bf-name" data-brand-field="name" value="' + esc(item.name) + '" placeholder="e.g. ApexCon logo">' +
+			'</div>' +
+			'<div class="cp-field cp-field-full">' +
+				'<span class="cp-label">Image</span>' +
+				'<div class="cp-logo-field">' +
+					(item.url ? '<div class="cp-logo-preview"><img id="cp-brand-draft-img" src="' + esc(item.url) + '" alt="Brand image preview"><span class="cp-logo-fallback">Preview unavailable - the image link did not load.</span></div>' : '') +
+					'<div class="cp-logo-actions">' +
+						(canUpload ? '<button type="button" class="cp-btn cp-btn-sm" data-brand-action="upload">' + (item.url ? 'Replace image' : 'Upload image') + '</button>' : '') +
+						(!canUpload ? '<div class="cp-logo-url"><label class="cp-label" for="bf-url">Image URL</label><input type="url" class="cp-input" id="bf-url" data-brand-field="url" value="' + esc(item.url) + '" placeholder="https://example.com/logo.png"></div>' : '') +
+					'</div>' +
+					'<span class="cp-field-help">PNG, JPG, SVG or WebP, up to 5 MB. ' + (canUpload ? 'Uploads go to CMS storage; only the link and the name are saved.' : 'Paste a public image link; only the link is saved.') + '</span>' +
+				'</div>' +
+			'</div>' +
+			'<div class="cp-field cp-field-full"><label class="cp-label" for="bf-caption">Caption</label>' +
+				'<input type="text" class="cp-input" id="bf-caption" data-brand-field="caption" maxlength="160" value="' + esc(item.caption) + '" placeholder="Where or how this image is used">' +
+			'</div>' +
+		'</div>' +
+		'<footer class="cp-card-foot">' +
+			'<button type="button" class="cp-btn cp-btn-sm cp-btn-danger cp-card-remove" data-brand-action="remove">Remove</button>' +
+			'<span class="cp-card-foot-note">Nothing is changed until you save.</span>' +
+			'<button type="button" class="cp-btn cp-btn-sm" data-brand-action="cancel">Cancel</button>' +
+			'<button type="button" class="cp-btn cp-btn-sm cp-btn-primary" data-brand-action="save">Save</button>' +
+		'</footer>' +
+	'</article>';
+	return html;
+}
+
+function renderBrandAssets() {
+	var grid = el('cp-brand-assets');
+	if (!grid) return;
+	var items = DB.brandAssets || [];
+	var html = '';
+	if (brandAssetDraft && brandAssetDraft.index === -1) html += brandAssetEditorHtml();
+	for (var i = 0; i < items.length; i++) {
+		if (brandAssetDraft && brandAssetDraft.index === i) {
+			html += brandAssetEditorHtml();
+		} else {
+			html += brandAssetCardHtml(items[i], i);
+		}
+	}
+	if (!html) {
+		html = '<div class="cp-record-empty">' +
+			'<span class="cp-record-empty-icon">' + iconSvg('spark') + '</span>' +
+			'<div class="cp-record-empty-text"><strong>No brand images yet</strong><span>Add the company logo first, then any image used on documents or listings.</span></div>' +
+		'</div>';
+	}
+	grid.innerHTML = html;
+	attachBrandImageErrorHandlers();
+}
+
+function attachBrandImageErrorHandlers() {
+	var images = document.querySelectorAll('#cp-brand-assets .cp-brand-thumb img, #cp-brand-draft-img');
+	for (var i = 0; i < images.length; i++) {
+		images[i].addEventListener('error', function() {
+			var thumb = this.closest('.cp-brand-thumb');
+			if (thumb) { thumb.classList.add('is-broken'); return; }
+			var preview = this.closest('.cp-logo-preview');
+			if (preview) preview.classList.add('is-broken');
+		});
+	}
+}
+
+function addBrandAsset() {
+	if (brandAssetDraft) saveBrandAsset(true);
+	brandAssetDraft = {
+		index: -1,
+		item: { id: newId('bi'), kind: 'Company logo', name: '', url: '', caption: '' }
+	};
+	renderBrandAssets();
+	var nameInput = el('bf-name');
+	if (nameInput) nameInput.focus({ preventScroll: true });
+	var editor = document.querySelector('[data-brand-editor]');
+	if (editor && editor.scrollIntoView) editor.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+function editBrandAsset(index) {
+	var items = DB.brandAssets || [];
+	if (index < 0 || index >= items.length) return;
+	if (brandAssetDraft) saveBrandAsset(true);
+	brandAssetDraft = { index: index, item: JSON.parse(JSON.stringify(items[index])) };
+	renderBrandAssets();
+	var nameInput = el('bf-name');
+	if (nameInput) nameInput.focus({ preventScroll: true });
+}
+
+function collectBrandAssetFields() {
+	if (!brandAssetDraft) return;
+	var editor = document.querySelector('[data-brand-editor]');
+	if (!editor) return;
+	editor.querySelectorAll('[data-brand-field]').forEach(function(input) {
+		brandAssetDraft.item[input.getAttribute('data-brand-field')] = input.value;
+	});
+}
+
+function saveBrandAsset(silent) {
+	if (!brandAssetDraft) return false;
+	collectBrandAssetFields();
+	if (!String(brandAssetDraft.item.url || '').trim()) {
+		if (!silent && tool.notify) tool.notify('Upload or paste an image before saving.', 'warning');
+		return false;
+	}
+	var item = brandAssetDraft.item;
+	if (brandAssetDraft.index === -1) {
+		DB.brandAssets.push(item);
+	} else {
+		DB.brandAssets[brandAssetDraft.index] = item;
+	}
+	saveDB();
+	if (!silent && tool.notify) tool.notify('Brand image saved.', 'success');
+	closeBrandAssetEditor();
+	return true;
+}
+
+function closeBrandAssetEditor() {
+	brandAssetDraft = null;
+	renderBrandAssets();
+}
+
+function cancelBrandAsset() {
+	closeBrandAssetEditor();
+}
+
+function removeBrandAsset(index) {
+	var items = DB.brandAssets || [];
+	if (index < 0 || index >= items.length) return;
+	items.splice(index, 1);
+	saveDB();
+	closeBrandAssetEditor();
+	if (tool.notify) tool.notify('Brand image removed.', 'info');
+}
+
+function requestRemoveBrandAsset(button) {
+	if (button.getAttribute('data-armed') !== '1') {
+		button.setAttribute('data-armed', '1');
+		button.textContent = 'Click again to remove';
+		return;
+	}
+	removeBrandAsset(brandAssetDraft ? brandAssetDraft.index : -1);
+}
+
+function isAllowedBrandImage(uploadedFile) {
+	var fileType = String(uploadedFile.type || '').toLowerCase();
+	if (fileType) {
+		return fileType === 'image/png' || fileType === 'image/jpeg' || fileType === 'image/svg+xml' || fileType === 'image/webp';
+	}
+	return /\.(png|jpe?g|svg|webp)$/.test(String(uploadedFile.name || '').toLowerCase());
+}
+
+function uploadBrandAssetImage() {
+	if (!brandAssetDraft) return;
+	if (typeof tool.requestUpload !== 'function') {
+		if (tool.notify) tool.notify('Uploads are not enabled - set allowUpload: yes in the field settings.', 'warning');
+		return;
+	}
+	tool.requestUpload('image/*', function(uploadError, uploadedFile) {
+		if (uploadError) {
+			if (tool.notify) tool.notify('Image upload failed: ' + uploadError, 'error');
+			return;
+		}
+		if (!uploadedFile || !uploadedFile.url) {
+			if (tool.notify) tool.notify('No image selected.', 'warning');
+			return;
+		}
+		if (uploadedFile.size && uploadedFile.size > BRAND_IMAGE_MAX_BYTES) {
+			if (tool.notify) tool.notify('The image must be 5 MB or smaller.', 'warning');
+			return;
+		}
+		if (!isAllowedBrandImage(uploadedFile)) {
+			if (tool.notify) tool.notify('Use a PNG, JPG, SVG or WebP image.', 'warning');
+			return;
+		}
+		collectBrandAssetFields();
+		brandAssetDraft.item.url = uploadedFile.url;
+		if (!String(brandAssetDraft.item.name || '').trim()) {
+			brandAssetDraft.item.name = String(uploadedFile.name || '').replace(/\.[^.]+$/, '');
+		}
+		renderBrandAssets();
+		if (tool.notify) tool.notify('Image added - save the card to keep it.', 'success');
+	});
+}
+
+function handleBrandAction(button) {
+	var action = button.getAttribute('data-brand-action');
+	var index = parseInt(button.getAttribute('data-brand-index'), 10);
+	if (action === 'edit') editBrandAsset(index);
+	else if (action === 'upload') uploadBrandAssetImage();
+	else if (action === 'save') saveBrandAsset();
+	else if (action === 'cancel') cancelBrandAsset();
+	else if (action === 'remove') requestRemoveBrandAsset(button);
+}
+
 
 function statementWordCountLabel(text) {
 	var trimmed = String(text || '').trim();
@@ -1128,14 +2710,19 @@ function renderCustomFieldBlocks() {
 		var existing = el(blockId);
 		if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
 		var fields = (DB.profile.customFields && DB.profile.customFields[section.id]) || [];
-		if (!fields.length || !body) continue;
+		if (!body) continue;
 		var block = document.createElement('div');
-		block.className = 'cp-custom-block';
+		block.className = 'cp-custom-block' + (fields.length ? '' : ' is-empty');
 		block.id = blockId;
-		block.innerHTML = '<div class="cp-custom-head">' +
-			'<span class="cp-custom-title">Additional details</span>' +
-			'<span class="cp-custom-note">Extra fields for this profile</span>' +
-			'</div>' + customFieldRowsHtml(section.id, fields);
+		block.innerHTML = fields.length ? (
+			'<div class="cp-custom-head">' +
+				'<span class="cp-custom-title">Additional details</span>' +
+				'<span class="cp-custom-note">Extra fields for this profile</span>' +
+			'</div>' + customFieldRowsHtml(section.id, fields) +
+			'<button type="button" class="cp-btn cp-btn-add cp-custom-add" data-custom-add="' + esc(section.id) + '">+ Add another detail</button>'
+		) : (
+			'<button type="button" class="cp-linkbtn cp-custom-add-link" data-custom-add="' + esc(section.id) + '">+ Add a custom detail</button>'
+		);
 		body.appendChild(block);
 	}
 }
@@ -1190,7 +2777,11 @@ function addCustomField(owner) {
 	buildNav();
 	saveDB();
 	var labelInput = document.querySelector('[data-custom-owner="' + owner + '"][data-custom-id="' + field.id + '"][data-custom-prop="label"]');
-	if (labelInput) labelInput.focus();
+	if (labelInput) {
+		labelInput.focus({ preventScroll: true });
+		var addedRow = labelInput.closest('.cp-custom-row');
+		if (addedRow && addedRow.scrollIntoView) addedRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+	}
 }
 
 function removeCustomField(owner, fieldId) {
@@ -1363,57 +2954,23 @@ function deleteCustomSection(sectionId) {
 
 /* ── Tax Definitions ── */
 function renderTaxes() {
-	var container = el('cp-taxes-container');
-	var items = DB.salesTaxDefinitions;
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No tax definitions added yet. Click "Add Tax Definition" below.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var t = items[i];
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(t.name || 'Tax #' + (i+1)) + ' — ' + esc(t.rate || '?') + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-tax" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Tax Name</label><input class="cp-input" data-field="name" data-section="taxes" data-idx="' + i + '" value="' + esc(t.name || '') + '" placeholder="e.g. Canada GST"></div>' +
-				'<div><label class="cp-label">Rate</label><input class="cp-input" data-field="rate" data-section="taxes" data-idx="' + i + '" value="' + esc(t.rate || '') + '" placeholder="e.g. 5%"></div>' +
-				'<div><label class="cp-label">Tax Number / ID</label><input class="cp-input" data-field="taxNumber" data-section="taxes" data-idx="' + i + '" value="' + esc(t.taxNumber || '') + '" placeholder="e.g. 123456789 RT0001"></div></div>' +
-				'<div><label class="cp-label">Notes</label><input class="cp-input" data-field="notes" data-section="taxes" data-idx="' + i + '" value="' + esc(t.notes || '') + '" placeholder="Additional notes"></div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderRecordList('taxes');
 }
 function addTax() {
-	DB.salesTaxDefinitions.push({ name:'', rate:'', taxNumber:'', notes:'' });
-	saveDB();
-	renderTaxes();
+	addRecordItem('taxes');
 }
 function removeTax(idx) {
-	DB.salesTaxDefinitions.splice(idx, 1);
-	saveDB();
-	renderTaxes();
+	removeRecordItem('taxes', idx);
 }
 
 /* ── Headquarters ── */
 function renderHeadquarters() {
-	var h = DB.headquarters;
-	setVal('f-hq-name', h.name);
-	setVal('f-hq-address', h.address);
-	setVal('f-hq-city', h.city);
-	setVal('f-hq-state', h.state);
-	setVal('f-hq-postal', h.postal);
-	setVal('f-hq-country', h.country);
-	setVal('f-hq-email', h.email);
-	setVal('f-hq-phone', h.phone);
-	setVal('f-hq-website', h.website);
+	renderFieldGroup('hq-location');
+	renderFieldGroup('hq-channels');
 }
 function readHeadquarters() {
+	// Headquarters is edited through its cards; legacy inputs may still exist.
+	if (!el('f-hq-address')) return;
 	var h = DB.headquarters;
 	h.name = val('f-hq-name');
 	h.address = val('f-hq-address');
@@ -1428,66 +2985,22 @@ function readHeadquarters() {
 
 /* ── Other Offices ── */
 function renderOffices() {
-	var container = el('cp-offices-container');
-	var items = DB.otherOffices;
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No additional offices added yet.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var o = items[i];
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(o.name || 'Office #' + (i+1)) + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-office" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Office / Branch Name</label><input class="cp-input" data-field="name" data-idx="' + i + '" data-section="offices" value="' + esc(o.name || '') + '"></div>' +
-				'<div><label class="cp-label">Type</label><select class="cp-input cp-select" data-field="type" data-idx="' + i + '" data-section="offices"><option value="branch"' + (o.type==='branch'?' selected':'') + '>Branch</option><option value="satellite"' + (o.type==='satellite'?' selected':'') + '>Satellite Office</option><option value="warehouse"' + (o.type==='warehouse'?' selected':'') + '>Warehouse</option><option value="retail"' + (o.type==='retail'?' selected':'') + '>Retail Location</option><option value="other"' + (o.type==='other'?' selected':'') + '>Other</option></select></div></div>' +
-				'<div><label class="cp-label">Address</label><input class="cp-input" data-field="address" data-idx="' + i + '" data-section="offices" value="' + esc(o.address || '') + '"></div>' +
-				'<div class="cp-array-item-row">' +
-					'<div><label class="cp-label">City</label><input class="cp-input" data-field="city" data-idx="' + i + '" data-section="offices" value="' + esc(o.city || '') + '"></div>' +
-					'<div><label class="cp-label">State/Province</label><input class="cp-input" data-field="state" data-idx="' + i + '" data-section="offices" value="' + esc(o.state || '') + '"></div>' +
-					'<div><label class="cp-label">Postal Code</label><input class="cp-input" data-field="postal" data-idx="' + i + '" data-section="offices" value="' + esc(o.postal || '') + '"></div>' +
-				'</div>' +
-				'<div class="cp-array-item-row">' +
-					'<div><label class="cp-label">Country</label><input class="cp-input" data-field="country" data-idx="' + i + '" data-section="offices" value="' + esc(o.country || '') + '"></div>' +
-					'<div><label class="cp-label">Email</label><input class="cp-input" data-field="email" data-idx="' + i + '" data-section="offices" value="' + esc(o.email || '') + '"></div>' +
-					'<div><label class="cp-label">Phone</label><input class="cp-input" data-field="phone" data-idx="' + i + '" data-section="offices" value="' + esc(o.phone || '') + '"></div>' +
-				'</div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderRecordList('offices');
 }
 function addOffice() {
-	DB.otherOffices.push({ name:'', type:'branch', address:'', city:'', state:'', postal:'', country:'', email:'', phone:'' });
-	saveDB();
-	renderOffices();
+	addRecordItem('offices');
 }
 function removeOffice(idx) {
-	DB.otherOffices.splice(idx, 1);
-	saveDB();
-	renderOffices();
+	removeRecordItem('offices', idx);
 }
 
 /* ── Billing ── */
 function renderBilling() {
-	var b = DB.billingAddress;
-	el('f-billing-same').checked = b.sameAsHQ !== false;
-	var fieldsDiv = el('cp-billing-fields');
-	fieldsDiv.style.display = b.sameAsHQ !== false ? 'none' : '';
-	setVal('f-billing-address', b.address);
-	setVal('f-billing-city', b.city);
-	setVal('f-billing-state', b.state);
-	setVal('f-billing-postal', b.postal);
-	setVal('f-billing-country', b.country);
-	setVal('f-billing-email', b.email);
+	renderFieldGroup('billing-address');
 }
 function readBilling() {
+	// Billing is edited through its card; legacy inputs may still exist.
+	if (!el('f-billing-same')) return;
 	var b = DB.billingAddress;
 	b.sameAsHQ = el('f-billing-same').checked;
 	b.address = val('f-billing-address');
@@ -1501,13 +3014,15 @@ function readBilling() {
 /* ── Invoicing ── */
 function renderInvoicing() {
 	if (!DB.invoicing) DB.invoicing = { paymentInstructions: '', invoiceFooterNote: '', logoUrl: '', logoName: '' };
-	setVal('f-invoice-payment', DB.invoicing.paymentInstructions);
-	setVal('f-invoice-footer', DB.invoicing.invoiceFooterNote);
 	renderInvoiceSummary();
+	renderFieldGroup('invoice-payment');
+	renderFieldGroup('invoice-footer');
 	renderInvoiceLogoField();
 }
 
 function readInvoicing() {
+	// Invoicing is edited through its cards; legacy inputs may still exist.
+	if (!el('f-invoice-payment')) return;
 	if (!DB.invoicing) DB.invoicing = { paymentInstructions: '', invoiceFooterNote: '', logoUrl: '', logoName: '' };
 	DB.invoicing.paymentInstructions = val('f-invoice-payment');
 	DB.invoicing.invoiceFooterNote = val('f-invoice-footer').slice(0, 160);
@@ -1636,6 +3151,7 @@ function removeInvoiceLogo() {
 /* ── Geographic Coverage ── */
 function renderGeographic() {
 	var g = DB.geographicCoverage;
+	renderFieldGroup('geographic-coverage');
 	setVal('f-geo-countries', g.countries);
 	setVal('f-geo-states', g.states);
 	setVal('f-geo-cities', g.cities);
@@ -1643,6 +3159,7 @@ function renderGeographic() {
 	setVal('f-geo-notes', g.notes);
 }
 function readGeographic() {
+	if (!el('f-geo-countries')) return;
 	var g = DB.geographicCoverage;
 	g.countries = val('f-geo-countries');
 	g.states = val('f-geo-states');
@@ -1653,42 +3170,12 @@ function readGeographic() {
 
 /* ── Contacts ── */
 function renderContacts() {
-	var p = DB.contacts.primary;
-	setVal('f-primary-name', p.name);
-	setVal('f-primary-title', p.title);
-	setVal('f-primary-email', p.email);
-	setVal('f-primary-phone', p.phone);
-	setVal('f-primary-linkedin', p.linkedin);
-
-	var container = el('cp-contacts-container');
-	var items = DB.contacts.others;
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No additional contacts.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var c = items[i];
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(c.name || 'Contact #' + (i+1)) + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-contact" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Name</label><input class="cp-input" data-field="name" data-idx="' + i + '" data-section="contacts" value="' + esc(c.name || '') + '"></div>' +
-				'<div><label class="cp-label">Title</label><input class="cp-input" data-field="title" data-idx="' + i + '" data-section="contacts" value="' + esc(c.title || '') + '"></div></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Email</label><input class="cp-input" data-field="email" data-idx="' + i + '" data-section="contacts" value="' + esc(c.email || '') + '"></div>' +
-				'<div><label class="cp-label">Phone</label><input class="cp-input" data-field="phone" data-idx="' + i + '" data-section="contacts" value="' + esc(c.phone || '') + '"></div>' +
-				'<div><label class="cp-label">LinkedIn</label><input class="cp-input" data-field="linkedin" data-idx="' + i + '" data-section="contacts" value="' + esc(c.linkedin || '') + '"></div></div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderFieldGroup('primary-contact');
+	renderRecordList('contacts');
 }
 function readPrimaryContact() {
 	var p = DB.contacts.primary;
+	if (!el('f-primary-name')) return;
 	p.name = val('f-primary-name');
 	p.title = val('f-primary-title');
 	p.email = val('f-primary-email');
@@ -1696,62 +3183,22 @@ function readPrimaryContact() {
 	p.linkedin = val('f-primary-linkedin');
 }
 function addContact() {
-	DB.contacts.others.push({ name:'', title:'', email:'', phone:'', linkedin:'' });
-	saveDB();
-	renderContacts();
+	addRecordItem('contacts');
 }
 function removeContact(idx) {
-	DB.contacts.others.splice(idx, 1);
-	saveDB();
-	renderContacts();
+	removeRecordItem('contacts', idx);
 }
 
 /* ── Weblinks ── */
 function renderWeblinks() {
-	var w = DB.weblinks;
-	setVal('f-wl-website', w.website);
-	setVal('f-wl-email', w.email);
-	setVal('f-wl-linkedin', w.linkedin);
-	setVal('f-wl-facebook', w.facebook);
-	setVal('f-wl-instagram', w.instagram);
-	setVal('f-wl-twitter', w.twitter);
-	setVal('f-wl-youtube', w.youtube);
-	setVal('f-wl-tiktok', w.tiktok);
-	setVal('f-wl-whatsapp', w.whatsapp);
-
-	// Other socials
-	var socContainer = el('cp-othersocial-container');
-	var socItems = w.otherSocials || [];
-	if (!socItems.length) {
-		socContainer.innerHTML = '<div class="cp-array-item-empty">No additional social links.</div>';
-	} else {
-		var sh = '';
-		for (var i = 0; i < socItems.length; i++) {
-			sh += '<div class="cp-array-item"><div class="cp-array-item-header"><span class="cp-array-item-title">' + esc(socItems[i].platform || 'Link #'+(i+1)) + '</span>' +
-				'<div class="cp-array-item-actions"><button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-othersocial" data-idx="' + i + '">✕</button></div></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Platform</label><input class="cp-input" data-field="platform" data-idx="'+i+'" data-section="othersocial" value="'+esc(socItems[i].platform||'')+'"></div>' +
-				'<div><label class="cp-label">URL</label><input class="cp-input" data-field="url" data-idx="'+i+'" data-section="othersocial" value="'+esc(socItems[i].url||'')+'"></div></div></div>';
-		}
-		socContainer.innerHTML = sh;
-	}
-
-	// Other web sources
-	var webContainer = el('cp-otherweb-container');
-	var webItems = w.otherWebSources || [];
-	if (!webItems.length) {
-		webContainer.innerHTML = '<div class="cp-array-item-empty">No additional web sources.</div>';
-	} else {
-		var wh = '';
-		for (var j = 0; j < webItems.length; j++) {
-			wh += '<div class="cp-array-item"><div class="cp-array-item-header"><span class="cp-array-item-title">' + esc(webItems[j].label || 'Source #'+(j+1)) + '</span>' +
-				'<div class="cp-array-item-actions"><button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-otherweb" data-idx="' + j + '">✕</button></div></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Label</label><input class="cp-input" data-field="label" data-idx="'+j+'" data-section="otherweb" value="'+esc(webItems[j].label||'')+'"></div>' +
-				'<div><label class="cp-label">URL</label><input class="cp-input" data-field="url" data-idx="'+j+'" data-section="otherweb" value="'+esc(webItems[j].url||'')+'"></div></div></div>';
-		}
-		webContainer.innerHTML = wh;
-	}
+	renderFieldGroup('weblink-channels');
+	renderFieldGroup('weblink-social');
+	renderRecordList('othersocial');
+	renderRecordList('otherweb');
 }
 function readWeblinks() {
+	// Weblinks are edited through their cards; legacy inputs may still exist.
+	if (!el('f-wl-website')) return;
 	var w = DB.weblinks;
 	w.website = val('f-wl-website');
 	w.email = val('f-wl-email');
@@ -1764,427 +3211,135 @@ function readWeblinks() {
 	w.whatsapp = val('f-wl-whatsapp');
 }
 function addOtherSocial() {
-	if (!DB.weblinks.otherSocials) DB.weblinks.otherSocials = [];
-	DB.weblinks.otherSocials.push({ platform:'', url:'' });
-	saveDB();
-	renderWeblinks();
+	addRecordItem('othersocial');
 }
 function removeOtherSocial(idx) {
-	DB.weblinks.otherSocials.splice(idx, 1);
-	saveDB();
-	renderWeblinks();
+	removeRecordItem('othersocial', idx);
 }
 function addOtherWeb() {
-	if (!DB.weblinks.otherWebSources) DB.weblinks.otherWebSources = [];
-	DB.weblinks.otherWebSources.push({ label:'', url:'' });
-	saveDB();
-	renderWeblinks();
+	addRecordItem('otherweb');
 }
 function removeOtherWeb(idx) {
-	DB.weblinks.otherWebSources.splice(idx, 1);
-	saveDB();
-	renderWeblinks();
+	removeRecordItem('otherweb', idx);
 }
 
 /* ── Industry ── */
 function renderIndustry() {
-	var o = DB.industryOps;
-	setVal('f-industry-sub', o.subIndustries);
-	setVal('f-industry-specializations', o.specializations);
-	setVal('f-unspsc', o.unscspCodes);
-	setVal('f-naics', o.naicsCodes);
-	setVal('f-otherkeywords', o.otherKeywords);
+	renderFieldGroup('industry-classification');
+	renderFieldGroup('industry-codes');
 	updateIndustryReadout();
-	renderCapabilities();
+	renderRecordList('capabilities');
 }
 function readIndustry() {
 	var o = DB.industryOps;
-	o.subIndustries = val('f-industry-sub');
-	o.specializations = val('f-industry-specializations');
-	o.unscspCodes = val('f-unspsc');
-	o.naicsCodes = val('f-naics');
-	o.otherKeywords = val('f-otherkeywords');
+	if (el('f-industry-sub')) o.subIndustries = val('f-industry-sub');
+	if (el('f-industry-specializations')) o.specializations = val('f-industry-specializations');
+	if (el('f-unspsc')) o.unscspCodes = val('f-unspsc');
+	if (el('f-naics')) o.naicsCodes = val('f-naics');
+	if (el('f-otherkeywords')) o.otherKeywords = val('f-otherkeywords');
 }
 
 function renderCapabilities() {
-	var container = el('cp-capabilities-container');
-	var items = DB.industryOps.capabilities || [];
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No capabilities added yet.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var c = items[i];
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(c.name || 'Capability #' + (i+1)) + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-capability" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Name</label><input class="cp-input" data-field="name" data-idx="'+i+'" data-section="capabilities" value="'+esc(c.name||'')+'"></div>' +
-				'<div><label class="cp-label">Service Categories</label><input class="cp-input" data-field="serviceCategories" data-idx="'+i+'" data-section="capabilities" value="'+esc(c.serviceCategories||'')+'"></div></div>' +
-				'<div><label class="cp-label">Description</label><textarea class="cp-input cp-textarea" data-field="description" data-idx="'+i+'" data-section="capabilities" rows="2">'+esc(c.description||'')+'</textarea></div>' +
-				'<div class="cp-array-item-row">' +
-					'<div><label class="cp-label">Expertise Level</label><select class="cp-input cp-select" data-field="expertiseLevel" data-idx="'+i+'" data-section="capabilities">'+buildSelectOptions(EXPERTISE_LEVELS, c.expertiseLevel||'')+'</select></div>' +
-					'<div><label class="cp-label">Certified?</label><select class="cp-input cp-select" data-field="certified" data-idx="'+i+'" data-section="capabilities"><option value="">—</option><option value="Yes"'+(c.certified==='Yes'?' selected':'')+'>Yes</option><option value="No"'+(c.certified==='No'?' selected':'')+'>No</option></select></div>' +
-				'</div>' +
-				'<div><label class="cp-label">Related Standards / Regulations</label><input class="cp-input" data-field="relatedStandards" data-idx="'+i+'" data-section="capabilities" value="'+esc(c.relatedStandards||'')+'"></div>' +
-				'<div><label class="cp-label">Supporting Documents</label><input class="cp-input" data-field="supportingDocs" data-idx="'+i+'" data-section="capabilities" value="'+esc(c.supportingDocs||'')+'" placeholder="Document URLs or references"></div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderRecordList('capabilities');
 }
 function addCapability() {
-	if (!DB.industryOps.capabilities) DB.industryOps.capabilities = [];
-	DB.industryOps.capabilities.push({ name:'', description:'', serviceCategories:'', expertiseLevel:'', certified:'', relatedStandards:'', supportingDocs:'' });
-	saveDB();
-	renderCapabilities();
+	addRecordItem('capabilities');
 }
 function removeCapability(idx) {
-	DB.industryOps.capabilities.splice(idx, 1);
-	saveDB();
-	renderCapabilities();
+	removeRecordItem('capabilities', idx);
 }
 
 /* ── Documents / Certificates ── */
 function renderDocuments() {
-	var container = el('cp-certs-container');
-	var items = DB.documents.certificates || [];
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No certificates or documents added.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var d = items[i];
-		var validBadge = d.isValid === false ? '<span style="color:var(--cp-danger);font-size:10px;">● Expired</span>' : (d.isValid === true ? '<span style="color:var(--cp-success);font-size:10px;">● Valid</span>' : '');
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(d.name || 'Document #'+(i+1)) + ' ' + validBadge + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-cert" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Document Name</label><input class="cp-input" data-field="name" data-idx="'+i+'" data-section="certs" value="'+esc(d.name||'')+'"></div>' +
-				'<div><label class="cp-label">Document Type</label><select class="cp-input cp-select" data-field="type" data-idx="'+i+'" data-section="certs">'+buildSelectOptions(DOC_TYPES, d.type||'')+'</select></div></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Effective Date</label><input type="date" class="cp-input" data-field="effectiveDate" data-idx="'+i+'" data-section="certs" value="'+esc(d.effectiveDate||'')+'"></div>' +
-				'<div><label class="cp-label">Expiry Date</label><input type="date" class="cp-input" data-field="expiryDate" data-idx="'+i+'" data-section="certs" value="'+esc(d.expiryDate||'')+'"></div></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Currently Valid?</label><select class="cp-input cp-select" data-field="isValid" data-idx="'+i+'" data-section="certs"><option value="">—</option><option value="true"'+(d.isValid===true?' selected':'')+'>Yes</option><option value="false"'+(d.isValid===false?' selected':'')+'>No</option></select></div>' +
-				'<div><label class="cp-label">File Reference</label><input class="cp-input" data-field="file" data-idx="'+i+'" data-section="certs" value="'+esc(d.file||'')+'" placeholder="File URL or path"></div></div>' +
-				'<div><label class="cp-label">Description</label><input class="cp-input" data-field="description" data-idx="'+i+'" data-section="certs" value="'+esc(d.description||'')+'"></div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderRecordList('certs');
 }
 function addCert() {
-	if (!DB.documents.certificates) DB.documents.certificates = [];
-	DB.documents.certificates.push({ name:'', type:'', effectiveDate:'', expiryDate:'', file:'', isValid:null, description:'' });
-	saveDB();
-	renderDocuments();
+	addRecordItem('certs');
 }
 function removeCert(idx) {
-	DB.documents.certificates.splice(idx, 1);
-	saveDB();
-	renderDocuments();
+	removeRecordItem('certs', idx);
 }
 
 /* ── Reference Letters ── */
 function renderRefLetters() {
-	var container = el('cp-refletters-container');
-	var items = DB.referenceLetters || [];
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No reference letters added.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var r = items[i];
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(r.title || 'Letter #'+(i+1)) + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-refletter" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Letter Title</label><input class="cp-input" data-field="title" data-idx="'+i+'" data-section="refletters" value="'+esc(r.title||'')+'"></div>' +
-				'<div><label class="cp-label">Issued By</label><input class="cp-input" data-field="issuedBy" data-idx="'+i+'" data-section="refletters" value="'+esc(r.issuedBy||'')+'"></div></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Issue Date</label><input type="date" class="cp-input" data-field="issueDate" data-idx="'+i+'" data-section="refletters" value="'+esc(r.issueDate||'')+'"></div>' +
-				'<div><label class="cp-label">File Reference</label><input class="cp-input" data-field="file" data-idx="'+i+'" data-section="refletters" value="'+esc(r.file||'')+'" placeholder="File URL or path"></div></div>' +
-				'<div><label class="cp-label">Summary / Comments</label><textarea class="cp-input cp-textarea" data-field="summary" data-idx="'+i+'" data-section="refletters" rows="2">'+esc(r.summary||'')+'</textarea></div>' +
-				'<div><label class="cp-label">Associated Projects</label><input class="cp-input" data-field="associatedProjects" data-idx="'+i+'" data-section="refletters" value="'+esc(r.associatedProjects||'')+'" placeholder="Project names or references"></div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderRecordList('refletters');
 }
 function addRefLetter() {
-	if (!DB.referenceLetters) DB.referenceLetters = [];
-	DB.referenceLetters.push({ title:'', file:'', issuedBy:'', issueDate:'', summary:'', associatedProjects:'' });
-	saveDB();
-	renderRefLetters();
+	addRecordItem('refletters');
 }
 function removeRefLetter(idx) {
-	DB.referenceLetters.splice(idx, 1);
-	saveDB();
-	renderRefLetters();
+	removeRecordItem('refletters', idx);
 }
 
 /* ── Assets: Owned ── */
 function renderAssetsOwned() {
-	var container = el('cp-assets-owned-container');
-	var items = DB.assets.owned || [];
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No owned assets added.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var a = items[i];
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(a.name || 'Asset #'+(i+1)) + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-asset-owned" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Asset Name</label><input class="cp-input" data-field="name" data-idx="'+i+'" data-section="assets-owned" value="'+esc(a.name||'')+'"></div>' +
-				'<div><label class="cp-label">Asset Type</label><select class="cp-input cp-select" data-field="type" data-idx="'+i+'" data-section="assets-owned">'+buildSelectOptions(ASSET_TYPES, a.type||'')+'</select></div>' +
-				'<div><label class="cp-label">Quantity</label><input type="number" class="cp-input" data-field="quantity" data-idx="'+i+'" data-section="assets-owned" value="'+esc(a.quantity||'')+'" min="0"></div></div>' +
-				'<div><label class="cp-label">Asset Description</label><input class="cp-input" data-field="description" data-idx="'+i+'" data-section="assets-owned" value="'+esc(a.description||'')+'"></div>' +
-				'<div class="cp-array-item-row">' +
-					'<div><label class="cp-label">Ownership</label><select class="cp-input cp-select" data-field="ownership" data-idx="'+i+'" data-section="assets-owned">'+buildSelectOptions(OWNERSHIP_TYPES, a.ownership||'')+'</select></div>' +
-					'<div><label class="cp-label">Readiness</label><select class="cp-input cp-select" data-field="readiness" data-idx="'+i+'" data-section="assets-owned">'+buildSelectOptions(READINESS_TYPES, a.readiness||'')+'</select></div>' +
-				'</div>' +
-				'<div><label class="cp-label">Technical Specs</label><textarea class="cp-input cp-textarea" data-field="technicalSpecs" data-idx="'+i+'" data-section="assets-owned" rows="2">'+esc(a.technicalSpecs||'')+'</textarea></div>' +
-				'<div><label class="cp-label">Certifications</label><input class="cp-input" data-field="certifications" data-idx="'+i+'" data-section="assets-owned" value="'+esc(a.certifications||'')+'"></div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderRecordList('assets-owned');
 }
 function addAssetOwned() {
-	if (!DB.assets.owned) DB.assets.owned = [];
-	DB.assets.owned.push({ name:'', type:'', quantity:'', description:'', ownership:'', readiness:'', technicalSpecs:'', certifications:'' });
-	saveDB();
-	renderAssetsOwned();
+	addRecordItem('assets-owned');
 }
 function removeAssetOwned(idx) {
-	DB.assets.owned.splice(idx, 1);
-	saveDB();
-	renderAssetsOwned();
+	removeRecordItem('assets-owned', idx);
 }
 
 /* ── Assets: Partner ── */
 function renderAssetsPartner() {
-	var container = el('cp-assets-partner-container');
-	var items = DB.assets.partnerAccessible || [];
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No partner assets added.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var a = items[i];
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(a.name || 'Partner Asset #'+(i+1)) + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-asset-partner" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Asset Name</label><input class="cp-input" data-field="name" data-idx="'+i+'" data-section="assets-partner" value="'+esc(a.name||'')+'"></div>' +
-				'<div><label class="cp-label">Asset Type</label><select class="cp-input cp-select" data-field="type" data-idx="'+i+'" data-section="assets-partner">'+buildSelectOptions(ASSET_TYPES, a.type||'')+'</select></div>' +
-				'<div><label class="cp-label">Quantity</label><input type="number" class="cp-input" data-field="quantity" data-idx="'+i+'" data-section="assets-partner" value="'+esc(a.quantity||'')+'" min="0"></div></div>' +
-				'<div><label class="cp-label">Asset Description</label><input class="cp-input" data-field="description" data-idx="'+i+'" data-section="assets-partner" value="'+esc(a.description||'')+'"></div>' +
-				'<div class="cp-array-item-row">' +
-					'<div><label class="cp-label">Reliability</label><select class="cp-input cp-select" data-field="reliability" data-idx="'+i+'" data-section="assets-partner">'+buildSelectOptions(RELIABILITY_TYPES, a.reliability||'')+'</select></div>' +
-					'<div><label class="cp-label">Readiness</label><select class="cp-input cp-select" data-field="readiness" data-idx="'+i+'" data-section="assets-partner">'+buildSelectOptions(READINESS_TYPES, a.readiness||'')+'</select></div>' +
-				'</div>' +
-				'<div><label class="cp-label">Technical Specs</label><textarea class="cp-input cp-textarea" data-field="technicalSpecs" data-idx="'+i+'" data-section="assets-partner" rows="2">'+esc(a.technicalSpecs||'')+'</textarea></div>' +
-				'<div><label class="cp-label">Certifications</label><input class="cp-input" data-field="certifications" data-idx="'+i+'" data-section="assets-partner" value="'+esc(a.certifications||'')+'"></div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderRecordList('assets-partner');
 }
 function addAssetPartner() {
-	if (!DB.assets.partnerAccessible) DB.assets.partnerAccessible = [];
-	DB.assets.partnerAccessible.push({ name:'', type:'', quantity:'', description:'', reliability:'', readiness:'', technicalSpecs:'', certifications:'' });
-	saveDB();
-	renderAssetsPartner();
+	addRecordItem('assets-partner');
 }
 function removeAssetPartner(idx) {
-	DB.assets.partnerAccessible.splice(idx, 1);
-	saveDB();
-	renderAssetsPartner();
+	removeRecordItem('assets-partner', idx);
 }
 
 /* ── Human Resources ── */
 function renderHR() {
-	var container = el('cp-hr-container');
-	var items = DB.humanResources.staffCapabilities || [];
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No staff members added.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var s = items[i];
-		var skillCount = (s.skills && s.skills.length) ? s.skills.length : 0;
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(s.role || s.name || 'Staff #'+(i+1)) + (skillCount ? ' (' + skillCount + ' skills)' : '') + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-hr" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Name (Optional)</label><input class="cp-input" data-field="name" data-idx="'+i+'" data-section="hr" value="'+esc(s.name||'')+'"></div>' +
-				'<div><label class="cp-label">Role</label><input class="cp-input" data-field="role" data-idx="'+i+'" data-section="hr" value="'+esc(s.role||'')+'"></div></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Experience</label><input class="cp-input" data-field="experience" data-idx="'+i+'" data-section="hr" value="'+esc(s.experience||'')+'" placeholder="e.g. 10 years"></div>' +
-				'<div><label class="cp-label">Education Level</label><select class="cp-input cp-select" data-field="educationLevel" data-idx="'+i+'" data-section="hr">'+buildSelectOptions(EDUCATION_LEVELS, s.educationLevel||'')+'</select></div></div>' +
-				'<div class="cp-nested-array" id="hr-skills-' + i + '">' + renderHRSkills(i, s.skills || []) + '</div>' +
-				'<button class="cp-btn cp-btn-sm cp-btn-add" style="margin-top:6px;" data-action="add-skill" data-hr-idx="' + i + '">+ Add Skill</button>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
-}
-function renderHRSkills(hrIdx, skills) {
-	if (!skills.length) return '<div class="cp-array-item-empty" style="padding:12px;">No skills listed.</div>';
-	var h = '';
-	for (var i = 0; i < skills.length; i++) {
-		var sk = skills[i];
-		h += '<div class="cp-nested-item">' +
-			'<input class="cp-input" placeholder="Skill Name" data-hr-idx="'+hrIdx+'" data-skill-idx="'+i+'" data-skill-field="name" value="'+esc(sk.name||'')+'" style="flex:2;">' +
-			'<input class="cp-input" placeholder="Years" data-hr-idx="'+hrIdx+'" data-skill-idx="'+i+'" data-skill-field="years" value="'+esc(sk.years||'')+'" style="flex:1;">' +
-			'<select class="cp-input cp-select" data-hr-idx="'+hrIdx+'" data-skill-idx="'+i+'" data-skill-field="level" style="flex:1.5;">'+buildSelectOptions(SKILL_LEVELS, sk.level||'')+'</select>' +
-			'<input class="cp-input" placeholder="Certification" data-hr-idx="'+hrIdx+'" data-skill-idx="'+i+'" data-skill-field="certification" value="'+esc(sk.certification||'')+'" style="flex:1.5;">' +
-			'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-skill" data-hr-idx="'+hrIdx+'" data-skill-idx="'+i+'">✕</button>' +
-		'</div>';
-	}
-	return h;
+	renderRecordList('hr');
 }
 function addHR() {
-	if (!DB.humanResources.staffCapabilities) DB.humanResources.staffCapabilities = [];
-	DB.humanResources.staffCapabilities.push({ name:'', role:'', experience:'', educationLevel:'', skills:[] });
-	saveDB();
-	renderHR();
+	addRecordItem('hr');
 }
 function removeHR(idx) {
-	DB.humanResources.staffCapabilities.splice(idx, 1);
-	saveDB();
-	renderHR();
+	removeRecordItem('hr', idx);
 }
 function addSkill(hrIdx) {
-	var staff = DB.humanResources.staffCapabilities[hrIdx];
-	if (!staff.skills) staff.skills = [];
-	staff.skills.push({ name:'', years:'', level:'', certification:'' });
-	saveDB();
-	renderHR();
+	// Skills are edited inside the staff card; this keeps the old action harmless.
+	openRecordEditor('hr', hrIdx);
+	addRecordSkill();
 }
 function removeSkill(hrIdx, skillIdx) {
-	var staff = DB.humanResources.staffCapabilities[hrIdx];
-	if (staff && staff.skills) staff.skills.splice(skillIdx, 1);
-	saveDB();
-	renderHR();
+	openRecordEditor('hr', hrIdx);
+	removeRecordSkill(skillIdx);
 }
 
 /* ── Financials ── */
 function renderFinancials() {
-	// Annual revenues
-	var revContainer = el('cp-revenues-container');
-	var items = DB.financials.annualRevenues || [];
-	if (!items.length) {
-		revContainer.innerHTML = '<div class="cp-array-item-empty">No revenue entries.</div>';
-	} else {
-		var html = '';
-		for (var i = 0; i < items.length; i++) {
-			var r = items[i];
-			html += '<div class="cp-array-item">' +
-				'<div class="cp-array-item-header"><span class="cp-array-item-title">' + esc(r.year || 'Year #'+(i+1)) + '</span>' +
-				'<div class="cp-array-item-actions"><button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-revenue" data-idx="'+i+'">✕</button></div></div>' +
-				'<div class="cp-array-item-body"><div class="cp-array-item-row">' +
-				'<div><label class="cp-label">Year</label><input type="number" class="cp-input" data-field="year" data-idx="'+i+'" data-section="revenues" value="'+esc(r.year||'')+'" placeholder="2024"></div>' +
-				'<div><label class="cp-label">Annual Revenue ($)</label><input type="number" class="cp-input" data-field="revenue" data-idx="'+i+'" data-section="revenues" value="'+esc(r.revenue||'')+'" placeholder="0.00" step="0.01"></div>' +
-				'<div><label class="cp-label">Net Income ($)</label><input type="number" class="cp-input" data-field="netIncome" data-idx="'+i+'" data-section="revenues" value="'+esc(r.netIncome||'')+'" placeholder="0.00" step="0.01"></div>' +
-				'</div></div></div>';
-		}
-		revContainer.innerHTML = html;
-	}
-
-	// Summary
-	setVal('f-currentAssets', DB.financials.currentAssets);
-	setVal('f-currentLiabilities', DB.financials.currentLiabilities);
-	setVal('f-workingCapital', DB.financials.workingCapital);
+	renderRecordList('revenues');
+	renderFieldGroup('financial-position');
 }
 function readFinancialsSummary() {
+	if (!el('f-currentAssets')) return;
 	DB.financials.currentAssets = val('f-currentAssets');
 	DB.financials.currentLiabilities = val('f-currentLiabilities');
 	DB.financials.workingCapital = val('f-workingCapital');
 }
 function addRevenue() {
-	if (!DB.financials.annualRevenues) DB.financials.annualRevenues = [];
-	DB.financials.annualRevenues.push({ year:'', revenue:'', netIncome:'' });
-	saveDB();
-	renderFinancials();
+	addRecordItem('revenues');
 }
 function removeRevenue(idx) {
-	DB.financials.annualRevenues.splice(idx, 1);
-	saveDB();
-	renderFinancials();
+	removeRecordItem('revenues', idx);
 }
 
 /* ── Reference Projects ── */
 function renderProjects() {
-	var container = el('cp-projects-container');
-	var items = DB.referenceProjects || [];
-	if (!items.length) {
-		container.innerHTML = '<div class="cp-array-item-empty">No reference projects added.</div>';
-		return;
-	}
-	var html = '';
-	for (var i = 0; i < items.length; i++) {
-		var p = items[i];
-		html += '<div class="cp-array-item">' +
-			'<div class="cp-array-item-header">' +
-				'<span class="cp-array-item-title">' + esc(p.name || 'Project #'+(i+1)) + '</span>' +
-				'<div class="cp-array-item-actions">' +
-					'<button class="cp-btn cp-btn-sm cp-btn-danger" data-action="remove-project" data-idx="' + i + '">✕</button>' +
-				'</div>' +
-			'</div>' +
-			'<div class="cp-array-item-body">' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Project Name</label><input class="cp-input" data-field="name" data-idx="'+i+'" data-section="projects" value="'+esc(p.name||'')+'"></div>' +
-				'<div><label class="cp-label">Client Name</label><input class="cp-input" data-field="clientName" data-idx="'+i+'" data-section="projects" value="'+esc(p.clientName||'')+'"></div></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Contract Value</label><input class="cp-input" data-field="contractValue" data-idx="'+i+'" data-section="projects" value="'+esc(p.contractValue||'')+'" placeholder="e.g. $500,000"></div>' +
-				'<div><label class="cp-label">Project Location</label><input class="cp-input" data-field="location" data-idx="'+i+'" data-section="projects" value="'+esc(p.location||'')+'"></div></div>' +
-				'<div><label class="cp-label">Description / Scope</label><textarea class="cp-input cp-textarea" data-field="description" data-idx="'+i+'" data-section="projects" rows="2">'+esc(p.description||'')+'</textarea></div>' +
-				'<div class="cp-array-item-row"><div><label class="cp-label">Start Date</label><input type="date" class="cp-input" data-field="startDate" data-idx="'+i+'" data-section="projects" value="'+esc(p.startDate||'')+'"></div>' +
-				'<div><label class="cp-label">End Date</label><input type="date" class="cp-input" data-field="endDate" data-idx="'+i+'" data-section="projects" value="'+esc(p.endDate||'')+'"></div></div>' +
-			'</div>' +
-		'</div>';
-	}
-	container.innerHTML = html;
+	renderRecordList('projects');
 }
 function addProject() {
-	if (!DB.referenceProjects) DB.referenceProjects = [];
-	DB.referenceProjects.push({ name:'', clientName:'', contractValue:'', location:'', description:'', startDate:'', endDate:'' });
-	saveDB();
-	renderProjects();
+	addRecordItem('projects');
 }
 function removeProject(idx) {
-	DB.referenceProjects.splice(idx, 1);
-	saveDB();
-	renderProjects();
+	removeRecordItem('projects', idx);
 }
 
 /* ── Progress ── */
@@ -2342,6 +3497,21 @@ function updateBadges() {
 
 /* ── Global Event Delegation ── */
 document.getElementById('app').addEventListener('click', function(e) {
+	var brandButton = e.target.closest('[data-brand-action]');
+	if (brandButton) {
+		if (!isReadOnly) handleBrandAction(brandButton);
+		return;
+	}
+	var recordButton = e.target.closest('[data-record-action]');
+	if (recordButton) {
+		if (!isReadOnly) handleRecordAction(recordButton);
+		return;
+	}
+	var groupButton = e.target.closest('[data-group-action]');
+	if (groupButton) {
+		if (!isReadOnly) handleGroupAction(groupButton);
+		return;
+	}
 	if (isReadOnly) return;
 
 	var target = e.target;
@@ -2382,6 +3552,7 @@ document.getElementById('app').addEventListener('click', function(e) {
 		case 'add-revenue': addRevenue(); break;
 		case 'remove-revenue': removeRevenue(idx); break;
 		case 'add-project': addProject(); break;
+	case 'add-brand-asset': addBrandAsset(); break;
 		case 'remove-project': removeProject(idx); break;
 	}
 });
@@ -2391,6 +3562,7 @@ document.getElementById('app').addEventListener('input', function(e) {
 	if (isReadOnly) return;
 	var target = e.target;
 	if (!target.closest('.cp-input')) return;
+	if (target.closest('[data-record-editor], [data-group-editor], [data-brand-editor]')) return;
 
 	// Debounced save
 	clearTimeout(saveTimeout);
@@ -2409,6 +3581,7 @@ document.getElementById('app').addEventListener('change', function(e) {
 	if (isReadOnly) return;
 	var target = e.target;
 	if (!target.closest('.cp-input, .cp-select')) return;
+	if (target.closest('[data-record-editor], [data-group-editor], [data-brand-editor]')) return;
 
 	// Billing same-as-HQ toggle
 	if (target.id === 'f-billing-same') {
@@ -2577,6 +3750,7 @@ tool.declareOutput({
 		humanResources: { type: 'object' },
 		financials: { type: 'object' },
 		referenceProjects: { type: 'array' },
+		brandAssets: { type: 'array' },
 		profile: { type: 'object' }
 	}
 });
@@ -2587,6 +3761,11 @@ tool.declareParams([
 
 /* ── Keyboard shortcuts ── */
 document.addEventListener('keydown', function(e) {
+	if (e.key === 'Escape') {
+		if (brandAssetDraft) { closeBrandAssetEditor(); return; }
+		if (recordEditorDraft) { closeRecordEditor(); return; }
+		if (openFieldGroupId) { cancelFieldGroup(openFieldGroupId); return; }
+	}
 	if (e.ctrlKey && e.shiftKey && e.key === 'E') {
 		e.preventDefault();
 		navigateSection(1);

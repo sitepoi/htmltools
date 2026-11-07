@@ -1,0 +1,769 @@
+<div id="app">
+	<header class="pp-header">
+		<div class="pp-header-left">
+			<div class="pp-logo" data-icon="user"></div>
+			<div class="pp-title-group">
+				<div class="pp-app-title">Personal Profile</div>
+				<div class="pp-app-sub" id="pp-person-name-display">Untitled profile</div>
+			</div>
+		</div>
+		<div class="pp-header-right">
+			<div class="pp-save-indicator" id="pp-save-indicator">
+				<span class="pp-save-dot"></span>
+				<span class="pp-save-text">All changes saved</span>
+			</div>
+			<div class="pp-completion" id="pp-completion" title="Profile completion">
+				<span class="pp-ring" id="pp-completion-ring"><span class="pp-ring-inner" id="pp-completion-pct">0%</span></span>
+				<span class="pp-completion-text">
+					<strong id="pp-completion-count">0 of 0</strong>
+					<span>sections ready</span>
+				</span>
+			</div>
+			<div class="pp-account">
+				<button type="button" class="pp-account-btn" id="pp-menu-toggle" aria-haspopup="menu" aria-expanded="false" title="Profile menu">
+					<span class="pp-avatar pp-avatar-sm" id="pp-header-avatar" aria-hidden="true"><span class="pp-avatar-initials" id="pp-header-avatar-initials">?</span></span>
+					<span class="pp-account-text">
+						<strong id="pp-account-name">Your profile</strong>
+						<span id="pp-account-sub">Choose a profile use</span>
+					</span>
+					<span class="pp-account-caret" data-icon="chevronDown"></span>
+				</button>
+				<div class="pp-menu" id="pp-menu" role="menu" hidden>
+					<div class="pp-menu-head">
+						<span class="pp-avatar pp-avatar-md" id="pp-menu-avatar" aria-hidden="true"><span class="pp-avatar-initials" id="pp-menu-avatar-initials">?</span></span>
+						<span class="pp-menu-head-text">
+							<strong id="pp-menu-name">Your profile</strong>
+							<span id="pp-menu-sub">Choose a profile use</span>
+						</span>
+					</div>
+					<button type="button" class="pp-menu-item" role="menuitem" data-menu-action="basic"><span class="pp-menu-ico" data-icon="user"></span>Edit basic information</button>
+					<button type="button" class="pp-menu-item" role="menuitem" data-menu-action="share"><span class="pp-menu-ico" data-icon="share"></span>Share &amp; export</button>
+					<div class="pp-menu-sep" role="separator"></div>
+					<button type="button" class="pp-menu-item" role="menuitem" data-action="copy-summary"><span class="pp-menu-ico" data-icon="copy"></span>Copy summary</button>
+					<button type="button" class="pp-menu-item" role="menuitem" data-action="copy-json"><span class="pp-menu-ico" data-icon="copy"></span>Copy JSON</button>
+					<button type="button" class="pp-menu-item" role="menuitem" data-action="download-json"><span class="pp-menu-ico" data-icon="download"></span>Download JSON</button>
+				</div>
+			</div>
+			<button type="button" class="pp-btn pp-btn-icon" id="pp-theme-toggle" title="Toggle dark / light mode" aria-label="Toggle dark mode"></button>
+		</div>
+	</header>
+
+	<div class="pp-layout">
+		<aside class="pp-sidebar" id="pp-sidebar">
+			<div class="pp-profile-chip">
+				<span class="pp-profile-chip-label">Profile</span>
+				<strong class="pp-profile-chip-value" id="pp-profile-chip-value">Not set</strong>
+				<span class="pp-profile-chip-sub" id="pp-profile-chip-sub">Choose a profile use in Basic Information</span>
+			</div>
+			<nav class="pp-nav" id="pp-nav" aria-label="Profile sections"></nav>
+			<div class="pp-sidebar-foot">
+				<div class="pp-hidden-note" id="pp-hidden-note"></div>
+				<button type="button" class="pp-linkbtn" id="pp-scope-toggle">Show all sections</button>
+				<button type="button" class="pp-linkbtn pp-linkbtn-strong" id="pp-add-custom-section">+ New custom section</button>
+			</div>
+		</aside>
+
+		<main class="pp-main" id="pp-main">
+
+			<!-- BASIC INFORMATION -->
+			<section class="pp-section" data-section="basic" id="sec-basic">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="user"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Basic Information</h2>
+						<p class="pp-section-desc">Who you are and what this profile is for</p>
+					</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-setup">
+						<div class="pp-setup-head">
+							<span class="pp-step">1</span>
+							<div class="pp-setup-head-text">
+								<h3 class="pp-block-title">Personal identity</h3>
+								<p class="pp-block-sub">The details every résumé and application asks for. Private details stay out of this block and appear only in the sections that need them.</p>
+							</div>
+						</div>
+						<div class="pp-identity-head">
+							<div class="pp-photo-field" id="pp-photo-field"></div>
+							<div class="pp-identity-fields">
+								<div class="pp-field-row pp-field-row-2">
+									<div class="pp-field">
+										<label class="pp-label" for="f-legalName">Full legal name <span class="pp-required">*</span></label>
+										<input type="text" class="pp-input" id="f-legalName" placeholder="As printed on your ID" maxlength="120">
+										<span class="pp-field-help">Exactly as it appears on your passport, licence or school record.</span>
+									</div>
+									<div class="pp-field">
+										<label class="pp-label" for="f-preferredName">Preferred name</label>
+										<input type="text" class="pp-input" id="f-preferredName" placeholder="What people should call you" maxlength="80">
+										<span class="pp-field-help">The name you want on the top of a résumé, if it differs.</span>
+									</div>
+								</div>
+								<div class="pp-field-row pp-field-row-2">
+									<div class="pp-field">
+										<label class="pp-label" for="f-email">Email <span class="pp-required">*</span></label>
+										<input type="email" class="pp-input" id="f-email" placeholder="you@example.com">
+										<span class="pp-field-help">Use an address you check every day - applications reply here.</span>
+									</div>
+									<div class="pp-field">
+										<label class="pp-label" for="f-phone">Phone</label>
+										<input type="text" class="pp-input" id="f-phone" placeholder="+1 (555) 000-0000" maxlength="40">
+										<span class="pp-field-help">Include the country code if you may be called from abroad.</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="pp-setup">
+						<div class="pp-setup-head">
+							<span class="pp-step">2</span>
+							<div class="pp-setup-head-text">
+								<h3 class="pp-block-title">Profile setup</h3>
+								<p class="pp-block-sub">Now choose the main use of this profile. The sidebar adapts to what that use needs - changing it never removes saved data.</p>
+							</div>
+						</div>
+						<div class="pp-field-row">
+							<div class="pp-field pp-field-full">
+								<label class="pp-label" for="f-profile-kind">Primary profile use</label>
+								<select class="pp-input pp-select" id="f-profile-kind"></select>
+								<span class="pp-field-help" id="pp-kind-hint"></span>
+							</div>
+						</div>
+						<div class="pp-focus-head">
+							<span class="pp-label">What this profile covers</span>
+							<span class="pp-focus-hint" id="pp-focus-hint"></span>
+						</div>
+						<div class="pp-focus-grid" id="pp-focus-grid"></div>
+						<div class="pp-setup-actions">
+							<button type="button" class="pp-btn pp-btn-sm" data-apply-preset>Use suggested areas</button>
+							<span class="pp-setup-hint">Only the sidebar changes - every answer stays saved.</span>
+						</div>
+						<p class="pp-note" id="pp-profile-note"></p>
+					</div>
+				</div>
+			</section>
+
+			<!-- PROFILE SUMMARY -->
+			<section class="pp-section" data-section="summary" id="sec-summary">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="spark"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Profile Summary</h2>
+						<p class="pp-section-desc">Your headline, story and direction</p>
+					</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<p class="pp-section-intro">These statements are read-only cards, so the profile reads at a glance. Open Edit on one card - the other cards stay readable, and every editor shows an example you can start from.</p>
+					<div class="pp-stmt-grid" id="pp-summary-cards"></div>
+				</div>
+			</section>
+
+			<!-- CONTACT -->
+			<section class="pp-section" data-section="contact" id="sec-contact">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="mail"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Contact &amp; Web Presence</h2>
+						<p class="pp-section-desc">How you can be reached and found online</p>
+					</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-subsection">
+						<div class="pp-subsection-head">
+							<h3 class="pp-subsection-title">Contact details</h3>
+							<span class="pp-subsection-note">Email and phone are in Basic Information</span>
+						</div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field">
+								<label class="pp-label" for="f-altPhone">Alternate phone</label>
+								<input type="text" class="pp-input" id="f-altPhone" placeholder="Optional second number" maxlength="40">
+							</div>
+							<div class="pp-field">
+								<label class="pp-label" for="f-timeZone">Time zone</label>
+								<input type="text" class="pp-input" id="f-timeZone" placeholder="e.g. Pacific Time (UTC-8)" maxlength="60">
+							</div>
+						</div>
+						<div class="pp-field">
+							<label class="pp-label" for="f-address">Street address</label>
+							<input type="text" class="pp-input" id="f-address" placeholder="Street, building, unit" maxlength="200">
+						</div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field"><label class="pp-label" for="f-city">City</label><input type="text" class="pp-input" id="f-city" maxlength="80"></div>
+							<div class="pp-field"><label class="pp-label" for="f-state">State / Province</label><input type="text" class="pp-input" id="f-state" maxlength="80"></div>
+							<div class="pp-field"><label class="pp-label" for="f-postal">Postal / ZIP code</label><input type="text" class="pp-input" id="f-postal" maxlength="20"></div>
+						</div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field"><label class="pp-label" for="f-country">Country</label><input type="text" class="pp-input" id="f-country" maxlength="80"></div>
+						</div>
+					</div>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head">
+							<h3 class="pp-subsection-title">Links</h3>
+							<span class="pp-subsection-note">Leave a field empty when it does not apply</span>
+						</div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field"><label class="pp-label" for="f-website">Website</label><input type="url" class="pp-input" id="f-website" placeholder="https://"></div>
+							<div class="pp-field"><label class="pp-label" for="f-linkedin">LinkedIn</label><input type="url" class="pp-input" id="f-linkedin" placeholder="https://linkedin.com/in/"></div>
+							<div class="pp-field"><label class="pp-label" for="f-github">GitHub / code</label><input type="url" class="pp-input" id="f-github" placeholder="https://github.com/"></div>
+						</div>
+						<div class="pp-array-container" id="pp-links-container"></div>
+						<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="links">+ Add another link</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- LANGUAGES -->
+			<section class="pp-section" data-section="languages" id="sec-languages">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="globe"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Languages</h2>
+						<p class="pp-section-desc">Spoken and written languages with proficiency</p>
+					</div>
+					<div class="pp-section-badge" id="pp-languages-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-languages-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="languages">+ Add language</button>
+				</div>
+			</section>
+
+			<!-- PERSONAL DETAILS -->
+			<section class="pp-section" data-section="personal" id="sec-personal">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="shield"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Personal Details</h2>
+						<p class="pp-section-desc">Private details that only official forms ask for</p>
+					</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<p class="pp-note">This section appears only for immigration, government and health profiles. Fill in what the form in front of you asks for - empty answers are fine.</p>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head">
+							<h3 class="pp-subsection-title">Birth details</h3>
+							<span class="pp-subsection-note">The year is enough for most forms</span>
+						</div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field">
+								<label class="pp-label" for="f-birthYear">Year of birth</label>
+								<input type="text" class="pp-input" id="f-birthYear" inputmode="numeric" maxlength="4" placeholder="e.g. 2005">
+								<span class="pp-field-help">Four digits. A general profile never needs more than this.</span>
+							</div>
+							<div class="pp-field">
+								<label class="pp-label" for="f-placeOfBirth">Place of birth</label>
+								<input type="text" class="pp-input" id="f-placeOfBirth" placeholder="City, country" maxlength="120">
+							</div>
+							<div class="pp-field">
+								<label class="pp-label" for="f-dateOfBirth">Full date of birth</label>
+								<input type="date" class="pp-input" id="f-dateOfBirth">
+								<span class="pp-field-help">Only when an official form demands the exact day.</span>
+							</div>
+						</div>
+					</div>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head">
+							<h3 class="pp-subsection-title">Personal status</h3>
+							<span class="pp-subsection-note">Leave anything empty that the form does not ask</span>
+						</div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field">
+								<label class="pp-label" for="f-nationality">Nationality</label>
+								<input type="text" class="pp-input" id="f-nationality" placeholder="e.g. Canadian" maxlength="80">
+							</div>
+							<div class="pp-field">
+								<label class="pp-label" for="f-citizenship">Citizenship</label>
+								<input type="text" class="pp-input" id="f-citizenship" placeholder="e.g. Canadian" maxlength="80">
+							</div>
+							<div class="pp-field">
+								<label class="pp-label" for="f-maritalStatus">Marital status</label>
+								<select class="pp-input pp-select" id="f-maritalStatus"></select>
+							</div>
+						</div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field">
+								<label class="pp-label" for="f-gender">Gender</label>
+								<select class="pp-input pp-select" id="f-gender"></select>
+							</div>
+							<div class="pp-field">
+								<label class="pp-label" for="f-pronouns">Pronouns</label>
+								<select class="pp-input pp-select" id="f-pronouns"></select>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- IDENTITY -->
+			<section class="pp-section" data-section="identity" id="sec-identity">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="shield"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Identity &amp; Status</h2>
+						<p class="pp-section-desc">Identity documents, passport and residency status</p>
+					</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<p class="pp-note">These details are stored only in this CMS record. Leave anything empty that the profile does not need.</p>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Identity document</h3></div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field">
+								<label class="pp-label" for="f-idType">Document type</label>
+								<select class="pp-input pp-select" id="f-idType"></select>
+							</div>
+							<div class="pp-field"><label class="pp-label" for="f-idNumber">Document number</label><input type="text" class="pp-input" id="f-idNumber" maxlength="60"></div>
+							<div class="pp-field"><label class="pp-label" for="f-idIssuedBy">Issued by</label><input type="text" class="pp-input" id="f-idIssuedBy" placeholder="Authority / country" maxlength="120"></div>
+						</div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field"><label class="pp-label" for="f-idIssueDate">Issue date</label><input type="date" class="pp-input" id="f-idIssueDate"></div>
+							<div class="pp-field"><label class="pp-label" for="f-idExpiry">Expiry date</label><input type="date" class="pp-input" id="f-idExpiry"></div>
+							<div class="pp-field"><label class="pp-label" for="f-taxIdNumber">Tax / national ID number</label><input type="text" class="pp-input" id="f-taxIdNumber" maxlength="60"></div>
+						</div>
+					</div>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Passport</h3></div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field"><label class="pp-label" for="f-passportNumber">Passport number</label><input type="text" class="pp-input" id="f-passportNumber" maxlength="60"></div>
+							<div class="pp-field"><label class="pp-label" for="f-passportCountry">Issuing country</label><input type="text" class="pp-input" id="f-passportCountry" maxlength="80"></div>
+							<div class="pp-field"><label class="pp-label" for="f-passportIssueDate">Issue date</label><input type="date" class="pp-input" id="f-passportIssueDate"></div>
+						</div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field"><label class="pp-label" for="f-passportExpiry">Expiry date</label><input type="date" class="pp-input" id="f-passportExpiry"></div>
+						</div>
+					</div>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Residency status</h3></div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field">
+								<label class="pp-label" for="f-statusType">Status</label>
+								<select class="pp-input pp-select" id="f-statusType"></select>
+							</div>
+							<div class="pp-field"><label class="pp-label" for="f-statusDetail">Details</label><input type="text" class="pp-input" id="f-statusDetail" placeholder="Permit type or reference" maxlength="120"></div>
+							<div class="pp-field"><label class="pp-label" for="f-statusExpiry">Status expiry</label><input type="date" class="pp-input" id="f-statusExpiry"></div>
+						</div>
+						<div class="pp-field">
+							<label class="pp-label" for="f-identityNotes">Notes</label>
+							<textarea class="pp-input pp-textarea" id="f-identityNotes" rows="2" placeholder="Anything an application needs to know"></textarea>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- DOCUMENTS -->
+			<section class="pp-section" data-section="documents" id="sec-documents">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="folder"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Documents &amp; Records</h2>
+						<p class="pp-section-desc">Reusable documents, certificates and their expiry dates</p>
+					</div>
+					<div class="pp-section-badge" id="pp-documents-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<p class="pp-note" id="pp-documents-alert"></p>
+					<div class="pp-array-container" id="pp-documents-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="documents">+ Add document</button>
+				</div>
+			</section>
+
+			<!-- HEALTH -->
+			<section class="pp-section" data-section="health" id="sec-health">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="heart"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Health, Access &amp; Emergency</h2>
+						<p class="pp-section-desc">Only needed for care, campus and travel forms</p>
+					</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<p class="pp-note">Medical details are sensitive. Fill in only what an application actually asks for, and share the record deliberately.</p>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Health</h3></div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field">
+								<label class="pp-label" for="f-bloodType">Blood type</label>
+								<select class="pp-input pp-select" id="f-bloodType"></select>
+							</div>
+							<div class="pp-field"><label class="pp-label" for="f-allergies">Allergies</label><input type="text" class="pp-input" id="f-allergies" maxlength="300"></div>
+							<div class="pp-field"><label class="pp-label" for="f-conditions">Conditions</label><input type="text" class="pp-input" id="f-conditions" maxlength="300"></div>
+						</div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field"><label class="pp-label" for="f-medications">Medications</label><input type="text" class="pp-input" id="f-medications" maxlength="300"></div>
+							<div class="pp-field"><label class="pp-label" for="f-accessibilityNeeds">Accessibility needs</label><input type="text" class="pp-input" id="f-accessibilityNeeds" maxlength="300"></div>
+						</div>
+						<div class="pp-field">
+							<label class="pp-label" for="f-accommodations">Accommodations to request</label>
+							<textarea class="pp-input pp-textarea" id="f-accommodations" rows="2" placeholder="e.g. extra time in exams, step-free access"></textarea>
+						</div>
+					</div>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Insurance</h3></div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field"><label class="pp-label" for="f-insuranceProvider">Provider</label><input type="text" class="pp-input" id="f-insuranceProvider" maxlength="120"></div>
+							<div class="pp-field"><label class="pp-label" for="f-policyNumber">Policy number</label><input type="text" class="pp-input" id="f-policyNumber" maxlength="80"></div>
+							<div class="pp-field"><label class="pp-label" for="f-insuranceExpiry">Coverage expiry</label><input type="date" class="pp-input" id="f-insuranceExpiry"></div>
+						</div>
+					</div>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Emergency contact</h3></div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field"><label class="pp-label" for="f-emergencyName">Name</label><input type="text" class="pp-input" id="f-emergencyName" maxlength="120"></div>
+							<div class="pp-field"><label class="pp-label" for="f-emergencyRelationship">Relationship</label><input type="text" class="pp-input" id="f-emergencyRelationship" maxlength="60"></div>
+						</div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field"><label class="pp-label" for="f-emergencyPhone">Phone</label><input type="text" class="pp-input" id="f-emergencyPhone" maxlength="40"></div>
+							<div class="pp-field"><label class="pp-label" for="f-emergencyEmail">Email</label><input type="email" class="pp-input" id="f-emergencyEmail"></div>
+						</div>
+						<div class="pp-field">
+							<label class="pp-label" for="f-healthNotes">Notes</label>
+							<textarea class="pp-input pp-textarea" id="f-healthNotes" rows="2"></textarea>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- EDUCATION -->
+			<section class="pp-section" data-section="education" id="sec-education">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="book"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Education</h2>
+						<p class="pp-section-desc">Schools, programs, grades and coursework</p>
+					</div>
+					<div class="pp-section-badge" id="pp-education-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-education-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="education">+ Add education</button>
+				</div>
+			</section>
+
+			<!-- TEST SCORES -->
+			<section class="pp-section" data-section="testscores" id="sec-testscores">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="chart"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Test Scores</h2>
+						<p class="pp-section-desc">Standardized tests and language proficiency results</p>
+					</div>
+					<div class="pp-section-badge" id="pp-testscores-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-testscores-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="testScores">+ Add test score</button>
+				</div>
+			</section>
+
+			<!-- CERTIFICATIONS -->
+			<section class="pp-section" data-section="certifications" id="sec-certifications">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="badge"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Certifications &amp; Licences</h2>
+						<p class="pp-section-desc">Tickets, licences and professional credentials</p>
+					</div>
+					<div class="pp-section-badge" id="pp-certifications-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-certifications-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="certifications">+ Add certification</button>
+				</div>
+			</section>
+
+			<!-- WORK -->
+			<section class="pp-section" data-section="work" id="sec-work">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="briefcase"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Work Experience</h2>
+						<p class="pp-section-desc">Paid, freelance and internship roles</p>
+					</div>
+					<div class="pp-section-badge" id="pp-work-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-work-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="workExperience">+ Add work experience</button>
+				</div>
+			</section>
+
+			<!-- SKILLS -->
+			<section class="pp-section" data-section="skills" id="sec-skills">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="tools"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Skills &amp; Strengths</h2>
+						<p class="pp-section-desc">What you can do, at what level and with what evidence</p>
+					</div>
+					<div class="pp-section-badge" id="pp-skills-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-skills-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="skills">+ Add skill</button>
+				</div>
+			</section>
+
+			<!-- PROJECTS -->
+			<section class="pp-section" data-section="projects" id="sec-projects">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="layers"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Projects &amp; Portfolio</h2>
+						<p class="pp-section-desc">Work you built, the role you played and the result</p>
+					</div>
+					<div class="pp-section-badge" id="pp-projects-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-projects-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="projects">+ Add project</button>
+				</div>
+			</section>
+
+			<!-- PUBLICATIONS -->
+			<section class="pp-section" data-section="publications" id="sec-publications">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="document"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Research &amp; Publications</h2>
+						<p class="pp-section-desc">Papers, reports, theses and patents</p>
+					</div>
+					<div class="pp-section-badge" id="pp-publications-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-publications-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="publications">+ Add publication</button>
+				</div>
+			</section>
+
+			<!-- ACHIEVEMENTS -->
+			<section class="pp-section" data-section="achievements" id="sec-achievements">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="award"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Awards &amp; Achievements</h2>
+						<p class="pp-section-desc">Recognition, competition results and honours</p>
+					</div>
+					<div class="pp-section-badge" id="pp-achievements-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-achievements-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="achievements">+ Add achievement</button>
+				</div>
+			</section>
+
+			<!-- VOLUNTEER -->
+			<section class="pp-section" data-section="volunteer" id="sec-volunteer">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="hands"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Volunteer &amp; Community</h2>
+						<p class="pp-section-desc">Service, causes and documented hours</p>
+					</div>
+					<div class="pp-section-badge" id="pp-volunteer-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-volunteer-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="volunteer">+ Add volunteer role</button>
+				</div>
+			</section>
+
+			<!-- EXTRACURRICULAR -->
+			<section class="pp-section" data-section="extracurricular" id="sec-extracurricular">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="users"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Activities &amp; Leadership</h2>
+						<p class="pp-section-desc">Clubs, teams, societies and leadership roles</p>
+					</div>
+					<div class="pp-section-badge" id="pp-extracurricular-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-extracurricular-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="extracurricular">+ Add activity</button>
+				</div>
+			</section>
+
+			<!-- REFERENCES -->
+			<section class="pp-section" data-section="references" id="sec-references">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="message"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">References</h2>
+						<p class="pp-section-desc">People who can speak about your work</p>
+					</div>
+					<div class="pp-section-badge" id="pp-references-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-references-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="references">+ Add reference</button>
+				</div>
+			</section>
+
+			<!-- ESSAYS -->
+			<section class="pp-section" data-section="essays" id="sec-essays">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="pen"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Essays &amp; Statements</h2>
+						<p class="pp-section-desc">A reusable bank of written material</p>
+					</div>
+					<div class="pp-section-badge" id="pp-essays-count">0</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-array-container" id="pp-essays-container"></div>
+					<button type="button" class="pp-btn pp-btn-add" data-action="add-item" data-list="essays">+ Add essay or statement</button>
+				</div>
+			</section>
+
+			<!-- PREFERENCES -->
+			<section class="pp-section" data-section="preferences" id="sec-preferences">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="target"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Goals &amp; Preferences</h2>
+						<p class="pp-section-desc">What you are looking for next</p>
+					</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Work preferences</h3></div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field"><label class="pp-label" for="f-jobTitles">Target roles</label><input type="text" class="pp-input" id="f-jobTitles" placeholder="Comma-separated" maxlength="300"></div>
+							<div class="pp-field"><label class="pp-label" for="f-jobIndustries">Industries</label><input type="text" class="pp-input" id="f-jobIndustries" placeholder="Comma-separated" maxlength="300"></div>
+						</div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field"><label class="pp-label" for="f-jobLocations">Preferred locations</label><input type="text" class="pp-input" id="f-jobLocations" placeholder="Cities or regions" maxlength="300"></div>
+							<div class="pp-field"><label class="pp-label" for="f-workModes">Work modes</label><input type="text" class="pp-input" id="f-workModes" placeholder="On-site, hybrid, remote" maxlength="120"></div>
+						</div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field"><label class="pp-label" for="f-salaryExpectation">Salary expectation</label><input type="text" class="pp-input" id="f-salaryExpectation" placeholder="e.g. 65000" maxlength="40"><span class="pp-field-help">Annual gross pay, before tax.</span></div>
+							<div class="pp-field"><label class="pp-label" for="f-currency">Currency</label><input type="text" class="pp-input" id="f-currency" placeholder="CAD" maxlength="10"></div>
+							<div class="pp-field"><label class="pp-label" for="f-availability">Available from</label><input type="text" class="pp-input" id="f-availability" placeholder="e.g. May 2027" maxlength="60"></div>
+						</div>
+						<div class="pp-field">
+							<label class="pp-label" for="f-noticePeriod">Notice period</label>
+							<input type="text" class="pp-input" id="f-noticePeriod" placeholder="e.g. 2 weeks" maxlength="60">
+						</div>
+					</div>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Study preferences</h3></div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field"><label class="pp-label" for="f-studyFields">Fields of study</label><input type="text" class="pp-input" id="f-studyFields" placeholder="Comma-separated" maxlength="300"></div>
+							<div class="pp-field"><label class="pp-label" for="f-studyPrograms">Target programs</label><input type="text" class="pp-input" id="f-studyPrograms" placeholder="Program names or levels" maxlength="300"></div>
+						</div>
+						<div class="pp-field-row pp-field-row-2">
+							<div class="pp-field"><label class="pp-label" for="f-studyCountries">Countries</label><input type="text" class="pp-input" id="f-studyCountries" placeholder="Comma-separated" maxlength="300"></div>
+							<div class="pp-field"><label class="pp-label" for="f-studyIntake">Target intake</label><input type="text" class="pp-input" id="f-studyIntake" placeholder="e.g. Fall 2027" maxlength="80"><span class="pp-field-help">The term you are applying for.</span></div>
+						</div>
+					</div>
+					<div class="pp-subsection">
+						<div class="pp-subsection-head"><h3 class="pp-subsection-title">Relocation</h3></div>
+						<div class="pp-field-row pp-field-row-3">
+							<div class="pp-field"><label class="pp-label" for="f-relocationCountries">Countries</label><input type="text" class="pp-input" id="f-relocationCountries" maxlength="300"></div>
+							<div class="pp-field"><label class="pp-label" for="f-relocationCities">Cities</label><input type="text" class="pp-input" id="f-relocationCities" maxlength="300"></div>
+							<div class="pp-field"><label class="pp-label" for="f-relocationTimeFrame">Time frame</label><input type="text" class="pp-input" id="f-relocationTimeFrame" placeholder="e.g. within 12 months" maxlength="80"></div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- FUNDING -->
+			<section class="pp-section" data-section="funding" id="sec-funding">
+				<div class="pp-section-header">
+					<div class="pp-section-icon" data-icon="wallet"></div>
+					<div class="pp-section-title-group">
+						<h2 class="pp-section-title">Funding &amp; Financial Aid</h2>
+						<p class="pp-section-desc">What funding you need and what you are applying for</p>
+					</div>
+					<div class="pp-section-toggle">▾</div>
+				</div>
+				<div class="pp-section-body">
+					<label class="pp-checkbox-label"><input type="checkbox" id="f-funding-needsAid"> This profile is used for financial aid or funding applications</label>
+					<div class="pp-field-row pp-field-row-2">
+						<div class="pp-field"><label class="pp-label" for="f-sponsorship">Sponsorship / funding source</label><input type="text" class="pp-input" id="f-sponsorship" placeholder="e.g. employer, government, family" maxlength="200"></div>
+						<div class="pp-field"><label class="pp-label" for="f-householdSize">Household size</label><input type="text" class="pp-input" id="f-householdSize" placeholder="Only if a form asks" maxlength="10"></div>
+					</div>
+					<div class="pp-field">
+						<label class="pp-label" for="f-scholarshipTargets">Scholarships &amp; awards targeted</label>
+						<textarea class="pp-input pp-textarea" id="f-scholarshipTargets" rows="3" placeholder="Name, value and deadline of each award"></textarea>
+					</div>
+					<div class="pp-field">
+						<label class="pp-label" for="f-financialNotes">Financial notes</label>
+						<textarea class="pp-input pp-textarea" id="f-financialNotes" rows="3" placeholder="Costs, budget or aid already secured"></textarea>
+					</div>
+				</div>
+			</section>
+
+			<div class="pp-pager" id="pp-pager"></div>
+
+		</main>
+	</div>
+
+	<!-- Modal for custom sections -->
+	<div class="pp-modal-overlay" id="pp-modal-overlay">
+		<div class="pp-modal" id="pp-modal">
+			<div class="pp-modal-header">
+				<h3 class="pp-modal-title" id="pp-modal-title"></h3>
+				<button type="button" class="pp-btn pp-btn-icon pp-modal-close" id="pp-modal-close">✕</button>
+			</div>
+			<div class="pp-modal-body" id="pp-modal-body"></div>
+			<div class="pp-modal-footer">
+				<button class="pp-btn pp-btn-secondary" id="pp-modal-cancel">Cancel</button>
+				<button class="pp-btn pp-btn-primary" id="pp-modal-save">Save</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Share and export drawer -->
+	<div class="pp-drawer-overlay" id="pp-drawer-overlay"></div>
+	<aside class="pp-drawer" id="pp-drawer" aria-hidden="true" aria-labelledby="pp-drawer-title">
+		<header class="pp-drawer-head">
+			<div class="pp-drawer-title-group">
+				<h2 class="pp-drawer-title" id="pp-drawer-title">Share &amp; export</h2>
+				<p class="pp-drawer-sub">Built from this record only - nothing leaves until you copy or download it.</p>
+			</div>
+			<button type="button" class="pp-btn pp-btn-icon" id="pp-drawer-close" aria-label="Close share and export">✕</button>
+		</header>
+		<div class="pp-drawer-body">
+			<div class="pp-share-card">
+				<h3 class="pp-subsection-title">Profile readiness</h3>
+				<ul class="pp-readiness-list" id="pp-readiness-list"></ul>
+			</div>
+			<div class="pp-share-card">
+				<h3 class="pp-subsection-title">Export</h3>
+				<label class="pp-checkbox-label"><input type="checkbox" id="f-export-sensitive"> Include sensitive sections</label>
+				<p class="pp-field-help">Adds personal details, identity, health, funding and document numbers to the export. The summary text never includes them.</p>
+				<div class="pp-share-actions">
+					<button type="button" class="pp-btn" data-action="copy-summary">Copy summary</button>
+					<button type="button" class="pp-btn" data-action="copy-json">Copy JSON</button>
+					<button type="button" class="pp-btn pp-btn-primary" data-action="download-json">Download JSON</button>
+				</div>
+			</div>
+			<div class="pp-field">
+				<label class="pp-label" for="pp-output-preview">Summary preview</label>
+				<pre class="pp-output-preview" id="pp-output-preview"></pre>
+			</div>
+		</div>
+	</aside>
+
+</div>

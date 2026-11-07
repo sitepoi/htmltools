@@ -1,0 +1,213 @@
+<!-- Personal Profile - marketing webpage fragment.
+     SSOT: ssot.html - this fragment retells the SSOT; when they disagree,
+     the SSOT wins. Updated: 2026-11-05.
+
+     WEBPAGE DESIGN SYSTEM (stable, shared by every tool page)
+     - Design + behavior come from _docs/assets/webpage.css + webpage.js
+       (linked below). The design is IDENTICAL across all tool pages - pages
+       pasted together on the website never fight.
+     - Each tool expresses its own identity ONLY through the accent colors
+       in the small inline <style> below (--wp-accent / --wp-accent-2),
+       extracted from the tool's own CSS --primary when the page is built.
+     - Customize the DESIGN once in _docs/assets/webpage.css; customize a
+       tool's COLOR here.
+     - CODE PROTECTION: the public page carries SCREENSHOTS ONLY - the
+       gallery band below is the "demo". The tool's HTML/CSS/JS is NEVER
+       embedded in this page, so no visitor, scraper or AI can reach the
+       code from here. Never add iframes, <script> of tool code, or code
+       blocks to this file.
+     - Screenshots live in docs/screenshots/ (captured by
+       npm run screenshots -- <ToolName>; 5-10 shots = the gallery) and
+       are used in the highlight rows and the gallery band.
+     - For the website: paste the WHOLE file, or run
+       `npm run webpage:export -- <ToolName>` to get a fully self-contained
+       copy with the shared css/js inlined.
+-->
+<style>
+  /* Doubled class: keeps this page's accent when the shared sheet loads after this block. */
+  .wp-page.wp-page { --wp-accent: #0f766e; --wp-accent-2: #0b554f; }
+</style>
+<link rel="stylesheet" href="../../../../../../_docs/assets/webpage.css" />
+<script src="../../../../../../_docs/assets/webpage.js" defer="defer"></script>
+<div class="wp-page">
+
+  <!-- HERO - full width -->
+  <section class="wp-hero">
+    <span class="wp-eyebrow">One record, every application</span>
+    <h1>Fill the form once. Reuse it everywhere.</h1>
+    <p class="wp-hero-sub">Personal Profile keeps your identity, education, work, skills and references in one place, then reshapes itself for a resume, a university application, a scholarship, an immigration form or a volunteer role.</p>
+    <div class="wp-hero-actions">
+      <a class="wp-btn wp-btn-primary" href="#wp-demo">See it in action</a>
+      <a class="wp-btn wp-btn-ghost" href="help.html">Read the help guide</a>
+    </div>
+    <div class="wp-trust">
+      <span>No setup required</span><span>Saved automatically</span><span>Private details only when a profile needs them</span>
+    </div>
+  </section>
+
+  <!-- GENERATED-START - generate-docs.js replaces the content between the two markers -->
+  <!-- STATS - overlapping the hero edge -->
+  <div class="wp-container">
+    <div class="wp-stats">
+      <div class="wp-stats-grid">
+        <div class="wp-stat"><b>11</b><span>profile uses</span></div>
+        <div class="wp-stat"><b>22</b><span>built-in sections</span></div>
+        <div class="wp-stat"><b>15</b><span>repeatable record types</span></div>
+        <div class="wp-stat"><b>0</b><span>settings to configure</span></div>
+      </div>
+    </div>
+
+    <!-- BENEFITS -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <span class="wp-section-eyebrow">Why Personal Profile</span>
+        <h2>The profile changes shape, not your answers</h2>
+        <p>Pick the application in front of you and the sidebar keeps only the sections it needs.</p>
+      </div>
+      <div class="wp-grid-3">
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+          <h3>Adaptive sections</h3><p>Eleven profile uses and fourteen focus areas decide which sections show. Switching never deletes a saved answer.</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6z"/></svg></div>
+          <h3>Private by default</h3><p>Date of birth, nationality, marital status, gender and pronouns appear only for profiles that need them - and personal details, identity, health, funding and documents stay out of exports until you include them.</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div>
+          <h3>Export in seconds</h3><p>Copy a plain-text summary for a form or take the full record as JSON when a system accepts it.</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+          <h3>Readiness and expiry</h3><p>A checklist shows what is missing for the chosen use, and documents inside 90 days of expiry are flagged.</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <h3>Built for real forms</h3><p>Essays, references, test scores, publications, service hours, preferences and funding live in the same record.</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></svg></div>
+          <h3>Room to grow</h3><p>Add extra fields to any section, or a whole custom section, without waiting for a new version of the tool.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HIGHLIGHT ROWS - real screenshots from docs/screenshots/ -->
+    <section class="wp-section">
+      <div class="wp-split">
+        <div class="wp-visual"><img src="screenshots/01-dashboard-desktop.png" alt="Personal Profile basic information and profile setup" loading="lazy" /></div>
+        <div>
+          <h2>Start with the application, not the form</h2>
+          <p>Choose the profile use and the tool suggests the areas that use needs. Adjust them with one click whenever the next application asks for something different.</p>
+          <ul class="wp-checklist">
+            <li>Resume, university, scholarship, research, volunteer, portfolio, immigration, government and health profiles</li>
+            <li>Photo, name, email and phone together at the top of every application</li>
+            <li>Show all sections at any time; saved answers are never hidden from the record</li>
+          </ul>
+        </div>
+      </div>
+      <div class="wp-split wp-reverse">
+        <div class="wp-visual"><img src="screenshots/03-documents-desktop.png" alt="Personal Profile documents with expiry dates" loading="lazy" /></div>
+        <div>
+          <h2>Keep the evidence next to the claim</h2>
+          <p>Documents, certifications, test scores and references are tracked as records with dates, numbers and links, so you know what is current before a deadline.</p>
+          <ul class="wp-checklist">
+            <li>Expiry warnings for documents and certifications 90 days ahead</li>
+            <li>Files stay outside the record; only the link and file name are stored</li>
+            <li>Ready-to-paste summary text without any sensitive detail</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <span class="wp-section-eyebrow">Get started</span>
+        <h2>Three steps to a reusable profile</h2>
+        <p>No setup, no import step, no configuration screen.</p>
+      </div>
+      <div class="wp-steps">
+        <div class="wp-step"><div class="wp-step-num">1</div><h3>Add your details</h3><p>Basic Information starts with your photo, name, email and phone, then asks what the profile is for. Every card under "What this profile covers" can be switched on or off.</p></div>
+        <div class="wp-step"><div class="wp-step-num">2</div><h3>Fill what you have</h3><p>Statements and list entries read as cards; press Edit on the one you need and start from the example if the wording is unclear.</p></div>
+        <div class="wp-step"><div class="wp-step-num">3</div><h3>Copy or download</h3><p>Open the avatar menu, choose Share &amp; export, check the readiness list, then copy the summary or take the JSON with you.</p></div>
+      </div>
+    </section>
+
+    <!-- COMPARISON -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <h2>Better than a folder of old resumes</h2>
+        <p>The same facts, kept current and shaped for each application.</p>
+      </div>
+      <div class="wp-table-wrap">
+        <table>
+          <thead><tr><th></th><th>The usual way</th><th>Personal Profile</th></tr></thead>
+          <tbody>
+            <tr><td>Reusing answers</td><td class="wp-no">✕ Retype the same details in every form</td><td class="wp-yes">✓ One record feeds every application</td></tr>
+            <tr><td>Knowing what is current</td><td class="wp-no">✕ Discover an expired document at submission</td><td class="wp-yes">✓ Expiry warnings and a readiness checklist</td></tr>
+            <tr><td>Sharing safely</td><td class="wp-no">✕ Copy everything and delete the private parts by hand</td><td class="wp-yes">✓ Personal details and sensitive sections excluded from exports by default</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- WHO IT IS FOR -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <span class="wp-section-eyebrow">Who it is for</span>
+        <h2>Anyone who fills the same details twice</h2>
+      </div>
+      <div class="wp-grid-3">
+        <div class="wp-card"><h3>Students</h3><p>Keep grades, test scores, activities, service and essays ready for several university and scholarship applications.</p></div>
+        <div class="wp-card"><h3>Job seekers</h3><p>Hold work history, skills, references and preferences together, then copy the summary into any application form.</p></div>
+        <div class="wp-card"><h3>People on the move</h3><p>Keep identity, status, health, insurance and language records in one place for immigration and relocation paperwork.</p></div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <h2>Common questions</h2>
+      </div>
+      <div class="wp-faq">
+        <details><summary>Does switching the profile use delete my answers?</summary><p>No. It only changes which sections the sidebar shows. Every saved value stays in the record, and Show all sections brings every section back.</p></details>
+        <details><summary>Can one record serve a university application and a job?</summary><p>Yes. Switch the use, fill what the new application needs, then switch back - education, work and references are reused.</p></details>
+        <details><summary>Where are my documents stored?</summary><p>The record stores the link and file name only. The file itself stays wherever the link points.</p></details>
+        <details><summary>Who can see identity and health data?</summary><p>Anyone who can open the record in the workspace. Personal details, identity and health stay out of exports by default, but access to the record itself is controlled by the platform.</p></details>
+        <details><summary>Why is my date of birth not on the first screen?</summary><p>Because most applications never ask for it. Date of birth, nationality, marital status, gender and pronouns live in Personal Details, which appears only for immigration, government and health profiles. The tool asks for the year, and the full date only when an official form requires it.</p></details>
+        <details><summary>Where is Share &amp; Export?</summary><p>Behind your avatar in the top right. The menu opens Share &amp; export as a panel, so the section list stays about your data - never about tool actions.</p></details>
+        <details><summary>Do I need to configure anything?</summary><p>No. A new record starts with the basic sections only; choose a profile use and the related sections appear. Every optional parameter only seeds or narrows that choice.</p></details>
+      </div>
+    </section>
+  </div>
+  <!-- GENERATED-END -->
+
+  <!-- SCREENSHOT GALLERY - images only (the tool's code NEVER ships to a public page) -->
+  <section class="wp-section">
+    <div class="wp-container">
+      <div class="wp-gallery-band" id="wp-demo">
+        <h2>See it in action</h2>
+        <p>Browse real screenshots of Personal Profile with sample data - click any image to open it full size.</p>
+        <div class="wp-gallery-grid">
+          <button type="button" class="wp-gallery-item"><img src="screenshots/01-dashboard-desktop.png" alt="Personal Profile desktop: photo, name, contact details and profile setup" loading="lazy" /></button>
+          <button type="button" class="wp-gallery-item"><img src="screenshots/04-summary-desktop.png" alt="Profile Summary shown as read-only cards" loading="lazy" /></button>
+          <button type="button" class="wp-gallery-item"><img src="screenshots/05-summary-edit-desktop.png" alt="One summary card open for editing while the others stay readable" loading="lazy" /></button>
+          <button type="button" class="wp-gallery-item"><img src="screenshots/06-share-drawer-desktop.png" alt="Share and export drawer opened from the profile menu" loading="lazy" /></button>
+          <button type="button" class="wp-gallery-item"><img src="screenshots/07-personal-details-desktop.png" alt="Personal Details shown for an immigration profile, with year of birth first" loading="lazy" /></button>
+          <button type="button" class="wp-gallery-item"><img src="screenshots/03-documents-desktop.png" alt="Personal Profile documents with dates and upload links" loading="lazy" /></button>
+          <button type="button" class="wp-gallery-item"><img src="screenshots/02-dashboard-mobile.png" alt="Personal Profile on a narrow screen" loading="lazy" /></button>
+        </div>
+        <p class="wp-gallery-note">Screenshots show the tool with sample data - the real tool connects to your own workspace. <a href="help.html">Read the help guide</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA - full width -->
+  <section class="wp-cta">
+    <h2>Your details are already written somewhere</h2>
+    <p>Keep them once, keep them current, and stop retyping them into every form.</p>
+    <a class="wp-btn wp-btn-primary" href="help.html">See how it works</a>
+  </section>
+
+</div>
