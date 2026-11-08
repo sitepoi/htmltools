@@ -1,0 +1,214 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uniconhub.local/schemas/customer-profile-config.schema.json",
+  "title": "CustomerProfile app configuration",
+  "description": "App-level configuration for the CustomerProfile html-tool. Paste one of these objects into the CMS parameter named profileConfig.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "appTitle": {
+      "type": "string",
+      "maxLength": 80,
+      "description": "Title shown in the tool header. Example: Tutor Profiles."
+    },
+    "labels": {
+      "$ref": "#/definitions/labels",
+      "description": "Defaults for user-facing words. Segment labels can override these."
+    },
+    "defaultSegmentKey": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "Segment used for new records. Defaults to the first segment."
+    },
+    "allowSegmentSelection": {
+      "type": "boolean",
+      "default": true,
+      "description": "When false, the app is locked to defaultSegmentKey and no segment switch is shown."
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 24,
+      "description": "Customer types or profile types supported by this app.",
+      "items": { "$ref": "#/definitions/segment" }
+    },
+    "definitions": {
+      "type": "array",
+      "description": "Question sets owned by this app. They are merged with the tool's built-in question sets and with the optional profileDefinitions parameter.",
+      "items": { "$ref": "#/definitions/questionSet" }
+    }
+  },
+  "definitions": {
+    "labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "appTitle": { "type": "string", "maxLength": 80 },
+        "record": { "type": "string", "maxLength": 60, "description": "Singular noun for one record. Example: Student." },
+        "person": { "type": "string", "maxLength": 60 },
+        "company": { "type": "string", "maxLength": 60 },
+        "questionSets": { "type": "string", "maxLength": 60, "description": "Plural label for question sets. Example: Forms." },
+        "profileType": { "type": "string", "maxLength": 60 },
+        "sections": { "type": "string", "maxLength": 60 },
+        "form": { "type": "string", "maxLength": 60 }
+      }
+    },
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "baseType"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Stable key stored on records. Never change it after records exist."
+        },
+        "name": { "type": "string", "maxLength": 90 },
+        "description": { "type": "string", "maxLength": 240, "description": "Short helper text shown in the segment switch and sidebar." },
+        "icon": {
+          "type": "string",
+          "enum": ["user", "users", "building", "briefcase", "mail", "phone", "pin", "calendar", "check", "note", "layers", "tag", "star", "activity", "globe", "shield", "card", "heart", "truck", "factory", "hardHat", "cart", "server", "code"],
+          "default": "user"
+        },
+        "baseType": {
+          "type": "string",
+          "enum": ["person", "company"],
+          "description": "Which core identity fields to use: person names or company legal/trade/registration fields."
+        },
+        "profileKeys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Fixed question sets for this segment. Required when allowProfileSelection is false."
+        },
+        "allowedProfileKeys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Question sets a user may choose from when allowProfileSelection is true."
+        },
+        "allowProfileSelection": {
+          "type": "boolean",
+          "default": false,
+          "description": "True shows a question-set picker limited to allowedProfileKeys. False gives a fixed, vertical-specific form."
+        },
+        "allowCombinations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only meaningful when allowProfileSelection is true. True lets the user combine multiple allowed question sets."
+        },
+        "allowFocusSelection": {
+          "type": "boolean",
+          "default": false,
+          "description": "True shows focus-area chips. False shows the full fixed form."
+        },
+        "allowProfileEditing": {
+          "type": "boolean",
+          "default": false,
+          "description": "True exposes the question-set library and JSON editor. Keep false for a clean vertical app."
+        },
+        "labels": { "$ref": "#/definitions/labels" },
+        "identityHint": { "type": "string", "maxLength": 240, "description": "Helper text under the identity heading." },
+        "nameFieldIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional subset of core identity field ids. Person: core_firstName, core_lastName, core_preferredName, core_jobTitle. Company: core_legalName, core_tradeName, core_registrationNumber, core_taxNumber."
+        },
+        "adminFieldIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional subset of core admin field ids: core_status, core_priority, core_source, core_owner, core_since, core_nextFollowUp."
+        },
+        "showAdminFields": {
+          "type": "boolean",
+          "default": true,
+          "description": "False hides all admin fields for this segment. AdminFieldIds is applied first."
+        },
+        "showTags": {
+          "type": "boolean",
+          "default": true,
+          "description": "False hides the tags editor for this segment."
+        },
+        "hiddenSectionIds": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["contact", "addresses", "people", "interactions", "notes"] },
+          "description": "Optional core record sections to hide for this segment. Basic Information always remains. Available: contact, addresses, people, interactions, notes."
+        },
+        "statusOptions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Status choices for this segment, replacing the tool-level status list."
+        },
+        "sourceOptions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Source choices for this segment, replacing the tool-level source list."
+        }
+      }
+    },
+    "questionSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "sections"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Stable question-set key. Segment profileKeys/allowedProfileKeys reference this."
+        },
+        "name": { "type": "string", "maxLength": 90 },
+        "description": { "type": "string", "maxLength": 240 },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/section" }
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "fields"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Stable section id. Keep it unique inside the question set."
+        },
+        "title": { "type": "string", "maxLength": 90 },
+        "description": { "type": "string", "maxLength": 240 },
+        "icon": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/field" }
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+          "description": "Stable answer key. Changing it starts a new answer; old answers are preserved under the old id."
+        },
+        "label": { "type": "string", "maxLength": 120 },
+        "type": {
+          "type": "string",
+          "enum": ["text", "textarea", "number", "date", "email", "phone", "url", "select", "multiselect", "checkbox", "tags"]
+        },
+        "width": { "type": "string", "enum": ["full", "half", "third"] },
+        "required": { "type": "boolean" },
+        "placeholder": { "type": "string" },
+        "hint": { "type": "string" },
+        "rows": { "type": "number" },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required for select and multiselect fields."
+        }
+      }
+    }
+  }
+}

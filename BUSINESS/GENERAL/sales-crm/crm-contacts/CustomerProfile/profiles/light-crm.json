@@ -1,0 +1,77 @@
+{
+  "appTitle": "Light CRM Profiles",
+  "labels": {
+    "record": "Customer",
+    "person": "Person",
+    "company": "Company",
+    "questionSets": "Question sets",
+    "profileType": "Customer type",
+    "sections": "Sections",
+    "form": "Form"
+  },
+  "defaultSegmentKey": "person",
+  "allowSegmentSelection": true,
+  "segments": [
+    {
+      "key": "person",
+      "name": "Person",
+      "description": "Individual contact or consumer",
+      "icon": "user",
+      "baseType": "person",
+      "profileKeys": ["customer-basics", "person-basic"],
+      "allowedProfileKeys": ["customer-basics", "person-basic", "person-business", "loyalty-member"],
+      "allowProfileSelection": true,
+      "allowCombinations": true,
+      "allowFocusSelection": true,
+      "allowProfileEditing": true,
+      "labels": {
+        "record": "Person",
+        "questionSets": "Question sets"
+      },
+      "identityHint": "Who this person is and how your team should work with them.",
+      "statusOptions": ["Lead", "Prospect", "Active", "Dormant", "Inactive", "Blocked"],
+      "sourceOptions": ["Referral", "Website", "Event", "Social", "Partner", "Other"]
+    },
+    {
+      "key": "company",
+      "name": "Company",
+      "description": "B2B account or organisation",
+      "icon": "building",
+      "baseType": "company",
+      "profileKeys": ["company-basic", "company-account"],
+      "allowedProfileKeys": ["customer-basics", "company-basic", "company-account", "procurement-onboarding", "support-sla", "renewal-expansion", "stakeholders-relationship"],
+      "allowProfileSelection": true,
+      "allowCombinations": true,
+      "allowFocusSelection": true,
+      "allowProfileEditing": true,
+      "labels": {
+        "record": "Company",
+        "questionSets": "Account question sets"
+      },
+      "identityHint": "The legal entity, how you classify it and how your team works with it.",
+      "statusOptions": ["Lead", "Prospect", "Active customer", "At risk", "Churned", "Blocked"],
+      "sourceOptions": ["Referral", "Website", "Outbound", "Partner", "Event", "Other"]
+    },
+    {
+      "key": "partner",
+      "name": "Partner",
+      "description": "Reseller, referral or delivery partner",
+      "icon": "users",
+      "baseType": "company",
+      "profileKeys": ["company-basic", "stakeholders-relationship"],
+      "allowedProfileKeys": ["company-basic", "stakeholders-relationship", "renewal-expansion", "support-sla"],
+      "allowProfileSelection": true,
+      "allowCombinations": true,
+      "allowFocusSelection": true,
+      "allowProfileEditing": true,
+      "labels": {
+        "record": "Partner",
+        "questionSets": "Partner question sets"
+      },
+      "identityHint": "The partner organisation, its main contacts and the relationship your team owns.",
+      "statusOptions": ["Prospect", "Onboarding", "Active", "Paused", "Ended"],
+      "sourceOptions": ["Referral", "Partner programme", "Outbound", "Event"]
+    }
+  ],
+  "definitions": []
+}

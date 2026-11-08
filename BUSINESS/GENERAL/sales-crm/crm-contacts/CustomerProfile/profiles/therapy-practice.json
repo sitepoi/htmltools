@@ -1,0 +1,143 @@
+{
+  "appTitle": "Therapy Practice Profiles",
+  "labels": {
+    "record": "Client",
+    "person": "Client",
+    "company": "Clinic",
+    "questionSets": "Intake forms",
+    "profileType": "Client type",
+    "sections": "Sections",
+    "form": "Form"
+  },
+  "defaultSegmentKey": "client",
+  "allowSegmentSelection": true,
+  "segments": [
+    {
+      "key": "client",
+      "name": "Client",
+      "description": "Person receiving therapy services",
+      "icon": "user",
+      "baseType": "person",
+      "profileKeys": ["client-intake"],
+      "allowedProfileKeys": ["client-intake"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Client", "questionSets": "Client intake form" },
+      "identityHint": "Administrative intake: contact, scheduling and funding details.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since", "core_nextFollowUp"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Enquiry", "Waitlist", "Active", "Paused", "Discharged"],
+      "sourceOptions": ["Self-referral", "GP", "Insurer", "Community service", "Other"]
+    },
+    {
+      "key": "referrer",
+      "name": "Referrer",
+      "description": "GP, insurer or community referrer",
+      "icon": "users",
+      "baseType": "person",
+      "profileKeys": ["referrer-contact"],
+      "allowedProfileKeys": ["referrer-contact"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Referrer", "questionSets": "Referrer form" },
+      "identityHint": "The person or organisation that sends referrals.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "showAdminFields": false,
+      "showTags": false,
+      "sourceOptions": ["GP", "Insurer", "Community service", "Other"]
+    },
+    {
+      "key": "clinic",
+      "name": "Clinic",
+      "description": "Clinic, practice or partner location",
+      "icon": "building",
+      "baseType": "company",
+      "profileKeys": ["clinic-account"],
+      "allowedProfileKeys": ["clinic-account"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Clinic", "questionSets": "Clinic form" },
+      "identityHint": "The clinic account, main contact and billing arrangement.",
+      "nameFieldIds": ["core_legalName", "core_tradeName", "core_registrationNumber"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Prospect", "Active", "Paused", "Ended"],
+      "sourceOptions": ["Referral", "Website", "Outbound", "Partner"]
+    }
+  ],
+  "definitions": [
+    {
+      "key": "client-intake",
+      "name": "Client intake",
+      "description": "Administrative contact, scheduling and funding details",
+      "sections": [
+        {
+          "id": "client-admin",
+          "title": "Client administration",
+          "icon": "note",
+          "description": "Practical details for scheduling and contact. Clinical notes belong in a separate secure tool.",
+          "fields": [
+            { "id": "therapyPreferredLanguage", "label": "Preferred language", "type": "text", "width": "half" },
+            { "id": "therapyAppointmentMode", "label": "Appointment mode", "type": "select", "width": "half", "options": ["In person", "Video", "Phone", "No preference"] },
+            { "id": "therapyAvailability", "label": "Preferred times", "type": "multiselect", "width": "full", "options": ["Weekday mornings", "Weekday afternoons", "Weekday evenings", "Saturday"] },
+            { "id": "therapyFunding", "label": "Funding source", "type": "select", "width": "half", "options": ["Self-funded", "Private insurance", "Public funding", "Employer", "Other"] },
+            { "id": "therapyFundingReference", "label": "Funding reference", "type": "text", "width": "half", "hint": "Only the administrative reference, not clinical information." },
+            { "id": "therapyEmergencyName", "label": "Emergency contact name", "type": "text", "width": "half" },
+            { "id": "therapyEmergencyPhone", "label": "Emergency contact phone", "type": "phone", "width": "half" },
+            { "id": "therapyAccessibility", "label": "Accessibility needs", "type": "textarea", "width": "full", "rows": 3, "hint": "Practical access needs only. Do not record clinical details." },
+            { "id": "therapyContactConsent", "label": "Consent to contact", "type": "checkbox", "width": "half" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "referrer-contact",
+      "name": "Referrer contact",
+      "description": "Organisation, role and contact route",
+      "sections": [
+        {
+          "id": "referrer-details",
+          "title": "Referrer details",
+          "icon": "users",
+          "fields": [
+            { "id": "referrerOrganisation", "label": "Organisation", "type": "text", "width": "half" },
+            { "id": "referrerRole", "label": "Role", "type": "text", "width": "half" },
+            { "id": "referrerPhone", "label": "Phone", "type": "phone", "width": "half" },
+            { "id": "referrerEmail", "label": "Email", "type": "email", "width": "half" },
+            { "id": "referrerRoute", "label": "Referral route", "type": "select", "width": "half", "options": ["GP", "Insurer", "Community service", "School", "Employer", "Other"] },
+            { "id": "referrerNotes", "label": "Administrative notes", "type": "textarea", "width": "full", "rows": 3, "hint": "Contact and routing notes only. Clinical information stays in the clinical record." }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "clinic-account",
+      "name": "Clinic account",
+      "description": "Clinic contact, rooms and billing details",
+      "sections": [
+        {
+          "id": "clinic-details",
+          "title": "Clinic details",
+          "icon": "building",
+          "fields": [
+            { "id": "clinicType", "label": "Clinic type", "type": "select", "width": "half", "options": ["Solo practice", "Group practice", "Community clinic", "Hospital department", "Other"] },
+            { "id": "clinicContact", "label": "Main contact email", "type": "email", "width": "half" },
+            { "id": "clinicBillingEmail", "label": "Billing email", "type": "email", "width": "half" },
+            { "id": "clinicRooms", "label": "Rooms available", "type": "number", "width": "half" },
+            { "id": "clinicServices", "label": "Services offered", "type": "multiselect", "width": "full", "options": ["Individual therapy", "Couples therapy", "Family therapy", "Group sessions", "Assessments", "Other"] },
+            { "id": "clinicNotes", "label": "Account notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    }
+  ]
+}

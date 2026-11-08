@@ -1,12 +1,12 @@
 <!-- CDN Dependencies -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<!-- PDF text extraction and spreadsheet read/write for the menu file import (T-79 to T-82) -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <!-- ===== TAB NAVIGATION ===== -->
 <nav class="main-tabs" id="main-tabs">
@@ -18,6 +18,7 @@
   <button type="button" class="main-tab" data-tab="deals">🏷️ Deals</button>
   <button type="button" class="main-tab" data-tab="alerts">🔔 Alerts</button>
   <button type="button" class="main-tab" data-tab="devices">📱 Devices</button>
+  <button type="button" class="main-tab" data-tab="addons">🧰 Add-ons</button>
 </nav>
 
 <!-- ===================================================================== -->
@@ -26,9 +27,9 @@
 <section class="tab-panel active" data-tab="general">
   <div class="tab-scroll">
 
-    <!-- Basic Info -->
-    <div class="card">
-      <div class="card-header"><span class="card-icon">🏪</span> Restaurant Information</div>
+    <!-- Basic Info: rendered as a page hero, so the card carries no header -->
+    <div class="card card-hero" data-view-card="basic">
+      <div class="gv-hero-actions" data-view-actions></div>
       <div class="card-body">
         <div class="form-row">
           <div class="form-group">
@@ -42,11 +43,8 @@
         </div>
         <div class="form-group">
           <label class="form-label">Cuisine Types</label>
-          <div class="cuisine-grid" id="gen-cuisine-grid"></div>
-          <div class="cuisine-custom-row">
-            <input type="text" class="form-input form-input-sm" id="gen-cuisine-custom" placeholder="+ Add custom cuisine type (press Enter)">
-            <button type="button" class="btn btn-sm btn-outline" id="gen-add-cuisine-btn">Add</button>
-          </div>
+          <div class="cuisine-selected" id="gen-cuisine-selected"></div>
+          <button type="button" class="btn btn-sm btn-outline cuisine-picker-open" id="gen-cuisine-picker-btn">🍽️ Select cuisine types</button>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -80,7 +78,7 @@
     </div>
 
     <!-- Address & Location -->
-    <div class="card">
+    <div class="card" data-view-card="address">
       <div class="card-header"><span class="card-icon">📍</span> Address &amp; Location</div>
       <div class="card-body">
         <div class="form-group">
@@ -106,6 +104,16 @@
             <label class="form-label">State / Province</label>
             <div id="gen-address-state-container"></div>
           </div>
+        </div>
+        <div class="form-group address-search-group">
+          <label class="form-label">Find the address</label>
+          <div class="address-search-scope" id="gen-address-search-scope"></div>
+          <div class="address-search-row-input">
+            <input type="search" class="form-input" id="gen-address-search" placeholder="Search the restaurant name or the street address" autocomplete="off">
+            <button type="button" class="btn btn-sm btn-outline" id="gen-address-search-btn">🔍 Find</button>
+          </div>
+          <div class="address-search-panel" id="gen-address-search-panel" style="display:none;"></div>
+          <span class="field-hint">Results come from OpenStreetMap and stay inside the selected country and state. Picking one fills street, city, state, country and the map point.</span>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -138,7 +146,7 @@
     </div>
 
     <!-- Legal Data -->
-    <div class="card">
+    <div class="card" data-view-card="legal">
       <div class="card-header"><span class="card-icon">⚖️</span> Legal Information</div>
       <div class="card-body">
         <div class="form-row">
@@ -269,6 +277,48 @@
       </div>
       <div class="card-body" style="padding:0;">
         <div class="hours-table-wrap" id="svc-hours-table"></div>
+        <div class="hours-tools">
+          <!-- T-73: one time range applied to several days -->
+          <div class="hours-tool-block">
+            <div class="hours-tool-head">
+              <span class="hours-tool-title">Change several days at once</span>
+              <span class="hours-tool-hint">Tick the days, set one time range, apply.</span>
+            </div>
+            <div class="bulk-day-chips" id="svc-bulk-days"></div>
+            <div class="hours-tool-row">
+              <input type="time" id="svc-bulk-open" value="11:00" aria-label="Opening time for the selected days">
+              <span class="hours-tool-sep">to</span>
+              <input type="time" id="svc-bulk-close" value="21:00" aria-label="Closing time for the selected days">
+              <button type="button" class="btn btn-sm btn-primary" id="svc-bulk-apply">Apply to selected days</button>
+            </div>
+          </div>
+
+          <!-- T-74: closed for one date -->
+          <div class="hours-tool-block">
+            <div class="hours-tool-head">
+              <span class="hours-tool-title">Temporary closure</span>
+              <span class="hours-tool-hint">Close the restaurant for one date, for example a holiday or a repair.</span>
+            </div>
+            <div class="hours-tool-row">
+              <label class="hours-inline-check"><input type="checkbox" id="svc-closure-enabled"> Close for one date</label>
+              <input type="date" id="svc-closure-date" aria-label="Date of the temporary closure">
+              <input type="text" id="svc-closure-reason" class="form-input" placeholder="Reason (internal note)" aria-label="Reason for the temporary closure">
+            </div>
+            <div class="closure-status" id="svc-closure-status"></div>
+          </div>
+
+          <!-- T-75: dated special hours -->
+          <div class="hours-tool-block">
+            <div class="hours-tool-head">
+              <span class="hours-tool-title">Special hours by date</span>
+              <span class="hours-tool-hint">A date with different hours or a full closure. It overrides the weekday row.</span>
+            </div>
+            <div class="special-hours-list" id="svc-special-hours"></div>
+            <div class="hours-tool-row">
+              <button type="button" class="btn btn-sm btn-outline" id="svc-special-add">+ Add date</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -353,7 +403,7 @@
   <div class="tab-scroll">
 
     <!-- Taxation -->
-    <div class="card">
+    <div class="card" data-view-card="taxation">
       <div class="card-header"><span class="card-icon">💰</span> Taxation</div>
       <div class="card-body">
         <div class="form-group"><label class="form-label">Tax Name</label><input type="text" class="form-input" id="tax-name" data-path="taxation_currency.tax_name" placeholder="e.g. VAT, Sales Tax, GST" value="Tax"></div>
@@ -377,7 +427,7 @@
     </div>
 
     <!-- Payment Methods -->
-    <div class="card">
+    <div class="card" data-view-card="payment">
       <div class="card-header"><span class="card-icon">💳</span> Payment Methods</div>
       <div class="card-body" style="padding:12px 28px 20px;">
         <div class="payment-grid">
@@ -422,7 +472,7 @@
     </div>
 
     <!-- Currency -->
-    <div class="card">
+    <div class="card" data-view-card="currency">
       <div class="card-header"><span class="card-icon">💱</span> Currency</div>
       <div class="card-body">
         <div class="form-group">
@@ -453,6 +503,11 @@
       <div class="zones-map-side">
         <div class="zone-map-toolbar">
           <button type="button" class="btn btn-sm btn-outline" id="zone-center-btn">📍 Center on restaurant</button>
+          <div class="zone-search-wrap">
+            <input type="search" class="form-input form-input-sm" id="zone-search-input" placeholder="Search an address or a business name" autocomplete="off" aria-label="Search an address or a business name on the map">
+            <button type="button" class="btn btn-sm btn-outline" id="zone-search-btn">🔍 Search</button>
+            <div class="zone-search-results" id="zone-search-results" style="display:none;"></div>
+          </div>
         </div>
         <div id="delivery-map"></div>
       </div>
@@ -479,6 +534,11 @@
           <div class="zone-shapes-section" id="zone-shapes-section" style="display:none;">
             <label class="form-label">Zone Shapes <span class="zone-shapes-count" id="zone-shapes-count"></span></label>
             <div class="zone-shapes-list" id="zone-shapes-list"></div>
+            <div class="zone-shape-edit-bar" id="zone-shape-edit-bar" style="display:none;">
+              <span class="zone-shape-edit-label" id="zone-shape-edit-label">Editing shape</span>
+              <button type="button" class="btn btn-sm btn-primary" id="zone-shape-edit-save">Save shape</button>
+              <button type="button" class="btn btn-sm btn-ghost" id="zone-shape-edit-cancel">Cancel</button>
+            </div>
           </div>
           <div class="form-actions"><button type="button" class="btn btn-primary btn-sm" id="zone-save-btn">Save Zone</button><button type="button" class="btn btn-ghost btn-sm" id="zone-cancel-btn">Cancel</button><button type="button" class="btn btn-danger btn-sm zone-delete-form-btn" id="zone-delete-form-btn" style="display:none;">🗑 Delete Zone</button></div>
         </div>
@@ -584,6 +644,8 @@
         <button type="button" class="btn btn-sm btn-primary" id="menu-add-item-btn">+ Add Item</button>
         <button type="button" class="btn btn-sm btn-ghost" id="menu-import-gloria-btn" title="Import menu from Gloria JSON">📥 Import Gloria</button>
         <button type="button" class="btn btn-sm btn-ghost" id="menu-import-sample-btn" title="Import the bundled sample menu or a pasted menu JSON">📥 Samples</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="menu-import-file-btn" title="Import a PDF, Excel or CSV menu and review it first">📄 Import file</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="menu-export-btn" title="Export the whole menu as a spreadsheet">📊 Export</button>
       </div>
       <div class="items-grid" id="menu-items-grid"><div class="empty-state">No items yet - click "+ Add Item" to add the first one.</div></div>
     </main>
@@ -598,6 +660,10 @@
           <label class="form-label">Sizes <span class="form-hint">(e.g. Small, Medium, Large — leave empty if single-size)</span></label>
           <div id="menu-item-sizes-list"></div>
           <button type="button" class="btn btn-sm btn-outline" id="menu-item-size-add-btn" style="margin-top:4px;">+ Add Size</button>
+          <div class="size-quick-add">
+            <input type="text" class="form-input form-input-sm" id="menu-item-size-bulk-input" placeholder="Quick add: Small=9.99, Medium=12.99, Large=15.99">
+            <button type="button" class="btn btn-sm btn-outline" id="menu-item-size-bulk-btn">+ Add all</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Photos <span class="form-hint form-hint-inline">— First is primary · Click to set primary · Drag to reorder</span></label>
@@ -816,6 +882,10 @@
     <div class="modal-dialog">
       <div class="modal-title" id="menu-mg-modal-title">New Modifier Group</div>
       <div class="form-group"><label class="form-label">Group Name</label><input type="text" class="form-input" id="menu-mg-name" placeholder="e.g. Toppings"></div>
+      <div class="form-group">
+        <label class="form-label">Parent group <span class="form-hint">(optional - makes this group a subgroup, one level only)</span></label>
+        <select class="form-input" id="menu-mg-parent"><option value="">-- Top-level group --</option></select>
+      </div>
       <div class="toggle-row modal-toggle-row">
         <div class="toggle-info"><span class="toggle-label">Multiple selections (Pick Any)</span><span class="toggle-desc">When ON, customers can pick multiple options from this group. When OFF, only one option can be selected.</span></div>
         <label class="switch"><input type="checkbox" id="menu-mg-multi" checked><span class="slider"></span></label>
@@ -932,6 +1002,46 @@
         <div style="display:flex;gap:8px;">
           <button type="button" class="btn btn-sm btn-ghost" id="menu-cat-cancel">Cancel</button>
           <button type="button" class="btn btn-sm btn-primary" id="menu-cat-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cuisine type picker -->
+  <div class="modal-overlay" id="gen-cuisine-modal" style="display:none;">
+    <div class="modal-dialog cuisine-modal-dialog">
+      <div class="modal-title">🍽️ Cuisine types</div>
+      <p class="modal-hint">Pick everything that describes the restaurant. The chosen types appear on the website and in search.</p>
+      <input type="search" class="form-input" id="gen-cuisine-search" placeholder="Search cuisines" autocomplete="off" aria-label="Search cuisines">
+      <div class="cuisine-picker-grid" id="gen-cuisine-picker-grid"></div>
+      <div class="cuisine-custom-row">
+        <input type="text" class="form-input form-input-sm" id="gen-cuisine-new" placeholder="Add a cuisine that is not listed">
+        <button type="button" class="btn btn-sm btn-outline" id="gen-cuisine-add-new">Add</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-sm btn-ghost" id="gen-cuisine-cancel">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="gen-cuisine-done">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu file import modal (T-79 to T-82) -->
+  <div class="modal-overlay" id="menu-file-modal" style="display:none;">
+    <div class="modal-dialog menu-file-dialog">
+      <div class="modal-title">📄 Import a menu file</div>
+      <p class="modal-hint">Choose a PDF or an Excel/CSV file. A PDF is read as text and turned into a draft; nothing is added before you approve the rows below.</p>
+      <div class="import-file-row">
+        <input type="file" id="menu-file-input" accept=".pdf,.xlsx,.xls,.csv" style="display:none;">
+        <button type="button" class="btn btn-sm btn-outline" id="menu-file-choose">📂 Choose a file</button>
+        <span class="import-file-name" id="menu-file-name">No file chosen</span>
+      </div>
+      <div class="menu-import-preview" id="menu-file-preview"></div>
+      <div class="menu-import-summary" id="menu-file-summary"></div>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button type="button" class="btn btn-sm btn-outline" id="menu-pdf-to-sheet" disabled>📊 Download as spreadsheet</button>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm btn-ghost" id="menu-file-cancel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" id="menu-file-apply" disabled>Apply approved rows</button>
         </div>
       </div>
     </div>
@@ -1322,13 +1432,15 @@
       <button type="button" class="btn btn-sm btn-ghost" id="deal-editor-close">✕</button>
     </div>
     <div class="deal-modal-tabs" id="deal-editor-tabs">
-      <button type="button" class="deal-modal-tab active" data-deal-tab="basics">1 · Basics</button>
-      <button type="button" class="deal-modal-tab" data-deal-tab="rule">2 · Offer rule</button>
-      <button type="button" class="deal-modal-tab" data-deal-tab="schedule">3 · Schedule</button>
+      <button type="button" class="deal-modal-tab active" data-deal-tab="type">1 · Deal type</button>
+      <button type="button" class="deal-modal-tab" data-deal-tab="rule">2 · Offer setup</button>
+      <button type="button" class="deal-modal-tab" data-deal-tab="basics">3 · Details</button>
+      <button type="button" class="deal-modal-tab" data-deal-tab="schedule">4 · Schedule</button>
     </div>
     <div class="deal-editor-body" id="deal-editor-body">
+      <div id="deal-editor-errors" class="deal-editor-errors" style="display:none;"></div>
       <div class="deal-tab-content-wrap">
-      <div class="deal-tab-content active" id="deal-tab-basics">
+      <div class="deal-tab-content" id="deal-tab-basics">
       <div class="form-group">
         <label class="form-label">Title *</label>
         <input type="text" class="form-input" id="deal-title" placeholder="e.g. 2 Pizzas + 4 Dips">
@@ -1340,8 +1452,9 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Section</label>
-          <input type="text" class="form-input" id="deal-section" list="deal-section-options" placeholder="e.g. Weekend">
-          <datalist id="deal-section-options"></datalist>
+          <input type="hidden" id="deal-section" value="">
+          <div class="deal-section-control" id="deal-section-control"></div>
+          <span class="field-hint">Sections group deals on the website, for example Weekend or Lunch. Pick one, or add a name.</span>
         </div>
         <div class="form-group">
           <label class="form-label">Price</label>
@@ -1368,43 +1481,44 @@
         <label class="switch"><input type="checkbox" id="deal-active" checked><span class="slider"></span></label>
       </div>
       <div class="deal-tab-next-row">
-        <button type="button" class="btn btn-sm btn-outline" data-deal-tab-goto="rule">Next: Offer rule →</button>
+        <button type="button" class="btn btn-sm btn-outline" data-deal-tab-goto="schedule">Next: Schedule →</button>
       </div>
+      </div>
+      <div class="deal-tab-content active" id="deal-tab-type">
+        <div class="deal-type-intro">
+          <div class="deal-type-intro-title">What kind of offer is this?</div>
+          <p class="deal-rule-hint">The deal type decides how the offer is priced and enforced on the website. Pick one - the next step shows only the fields that type needs.</p>
+        </div>
+        <input type="hidden" id="deal-rule-type" value="bundle">
+        <div class="deal-type-grid" id="deal-type-grid"></div>
+        <div class="deal-tab-next-row">
+          <button type="button" class="btn btn-sm btn-primary" data-deal-tab-goto="rule">Next: Offer setup →</button>
+        </div>
       </div>
       <div class="deal-tab-content" id="deal-tab-rule">
-      <div class="form-group">
-        <label class="form-label">Deal type *</label>
-        <select class="form-input" id="deal-rule-type">
-          <option value="bundle">Bundle - one fixed total price</option>
-          <option value="min_quantity">Minimum quantity - price per unit</option>
-          <option value="tiered">Tiered - price depends on quantity</option>
-          <option value="two_for_one">Two for one - cheapest item free</option>
-          <option value="percentage_discount">Percent off - discount line</option>
-          <option value="subtotal_threshold">Subtotal threshold - save a fixed amount</option>
-          <option value="free_delivery">Free delivery</option>
-          <option value="free_item_with_purchase">Free item with purchase</option>
-          <option value="buy_n_get_m">Buy N get M free</option>
-          <option value="volume_pricing">Volume pricing - quantity bands</option>
-          <option value="free_modifier">Free modifier options</option>
-        </select>
+      <div class="deal-rule-head">
+        <div class="deal-rule-type-summary" id="deal-rule-type-summary"></div>
+        <button type="button" class="btn btn-sm btn-ghost deal-rule-change-btn" data-deal-tab-goto="type">← Change type</button>
       </div>
       <div id="deal-rule-editor"></div>
       <div id="deal-match-preview" class="deal-match-preview"></div>
       <div class="deal-tab-next-row">
-        <button type="button" class="btn btn-sm btn-outline" data-deal-tab-goto="schedule">Next: Schedule →</button>
+        <button type="button" class="btn btn-sm btn-outline" data-deal-tab-goto="basics">Next: Details →</button>
       </div>
       </div>
       <div class="deal-tab-content" id="deal-tab-schedule">
         <div id="deal-schedule-editor"></div>
       </div>
       </div>
-      <div id="deal-editor-errors" class="deal-editor-errors" style="display:none;"></div>
     </div>
     <div class="deal-editor-actions">
       <button type="button" class="btn btn-sm btn-danger-outline" id="deal-delete-btn" style="display:none;">🗑 Delete</button>
+      <span class="deal-step-progress" id="deal-step-progress"></span>
       <div class="deal-editor-actions-right">
         <button type="button" class="btn btn-sm btn-ghost" id="deal-cancel-btn">Cancel</button>
-        <button type="button" class="btn btn-sm btn-primary" id="deal-save-btn">Save Deal</button>
+        <button type="button" class="btn btn-sm btn-outline" id="deal-footer-back" style="display:none;">← Back</button>
+        <button type="button" class="btn btn-sm btn-primary" id="deal-footer-next">Next: Offer setup →</button>
+        <button type="button" class="btn btn-sm btn-primary" id="deal-save-btn" style="display:none;">Save Deal</button>
       </div>
     </div>
   </div>
@@ -1527,6 +1641,49 @@
           <div class="form-group"><label class="form-label">Device ID / Serial</label><input type="text" class="form-input" id="dev-new-id" placeholder="Enter device serial or ID"></div>
           <div class="form-actions"><button type="button" class="btn btn-primary btn-sm" id="dev-confirm-connect">Connect</button><button type="button" class="btn btn-ghost btn-sm" id="dev-cancel-connect">Cancel</button></div>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- TAB 9: ADDITIONAL SERVICES -->
+<!-- ===================================================================== -->
+<section class="tab-panel" data-tab="addons">
+  <div class="tab-scroll">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">🧰</span> Additional services
+        <span class="card-header-hint">We do the work for you: choose a service, send what it needs, and follow its status here</span>
+      </div>
+      <div class="card-body">
+        <div class="addon-grid" id="addon-catalog"></div>
+      </div>
+    </div>
+
+    <div class="card" id="addon-request-card" style="display:none;">
+      <div class="card-header"><span class="card-icon">📝</span> <span id="addon-request-title">Request a service</span></div>
+      <div class="card-body">
+        <div class="addon-request-summary" id="addon-request-summary"></div>
+        <div class="form-group"><label class="form-label">Contact for this request</label><input type="text" class="form-input" id="addon-contact" placeholder="Email or phone"></div>
+        <div class="form-group"><label class="form-label">What should we know?</label><textarea class="form-input" id="addon-note" rows="3" placeholder="Describe what you need"></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Files for this request</label>
+          <div class="addon-files" id="addon-files"></div>
+          <button type="button" class="upload-btn upload-btn-sm" id="addon-upload-btn">📎 Add a file</button>
+          <span class="field-hint">PDF, Excel or a photo of the menu.</span>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="addon-submit-btn">Send request</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="addon-cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-icon">📄</span> Your requests</div>
+      <div class="card-body" style="padding:0;">
+        <div id="addon-requests"></div>
       </div>
     </div>
   </div>

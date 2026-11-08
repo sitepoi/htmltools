@@ -1,0 +1,180 @@
+{
+  "appTitle": "School & Training Profiles",
+  "labels": {
+    "record": "Student",
+    "person": "Student",
+    "company": "School",
+    "questionSets": "Forms",
+    "profileType": "Person type",
+    "sections": "Sections",
+    "form": "Form"
+  },
+  "defaultSegmentKey": "student",
+  "allowSegmentSelection": true,
+  "segments": [
+    {
+      "key": "student",
+      "name": "Student",
+      "description": "Enrolled learner or applicant",
+      "icon": "user",
+      "baseType": "person",
+      "profileKeys": ["enrolment-intake"],
+      "allowedProfileKeys": ["enrolment-intake"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Student", "questionSets": "Enrolment form" },
+      "identityHint": "Who the learner is and what they are enrolling in.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "adminFieldIds": ["core_status", "core_source", "core_owner", "core_since"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Applicant", "Enrolled", "Waitlist", "Paused", "Graduated", "Withdrawn"],
+      "sourceOptions": ["Referral", "Website", "School fair", "Word of mouth", "Agent"]
+    },
+    {
+      "key": "guardian",
+      "name": "Guardian",
+      "description": "Parent, carer or payer",
+      "icon": "users",
+      "baseType": "person",
+      "profileKeys": ["guardian-contact"],
+      "allowedProfileKeys": ["guardian-contact"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Guardian", "questionSets": "Guardian form" },
+      "identityHint": "The adult responsible for contact, pickup and billing.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "showAdminFields": false,
+      "showTags": false,
+      "sourceOptions": ["Referral", "Website", "Word of mouth"]
+    },
+    {
+      "key": "teacher",
+      "name": "Teacher",
+      "description": "Teacher, trainer or support staff",
+      "icon": "briefcase",
+      "baseType": "person",
+      "profileKeys": ["staff-profile"],
+      "allowedProfileKeys": ["staff-profile"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Teacher", "questionSets": "Staff form" },
+      "identityHint": "The teacher's role, subjects and availability.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Applicant", "Active", "On leave", "Former"],
+      "sourceOptions": ["Recruitment", "Referral", "Website"]
+    },
+    {
+      "key": "school",
+      "name": "School",
+      "description": "School, academy or training centre account",
+      "icon": "building",
+      "baseType": "company",
+      "profileKeys": ["school-account"],
+      "allowedProfileKeys": ["school-account"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "School", "questionSets": "School form" },
+      "identityHint": "The institution, its programmes and the main account contact.",
+      "nameFieldIds": ["core_legalName", "core_tradeName", "core_registrationNumber"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Prospect", "Partner", "Active", "Paused", "Ended"],
+      "sourceOptions": ["Referral", "Website", "Outbound", "Event"]
+    }
+  ],
+  "definitions": [
+    {
+      "key": "enrolment-intake",
+      "name": "Enrolment intake",
+      "description": "Programme, year level and learning preferences",
+      "sections": [
+        {
+          "id": "enrolment",
+          "title": "Enrolment",
+          "icon": "note",
+          "description": "What the student is enrolling in",
+          "fields": [
+            { "id": "schoolProgramme", "label": "Programme", "type": "select", "width": "half", "required": true, "options": ["Primary school", "Secondary school", "Language course", "Exam preparation", "Holiday programme", "Other"] },
+            { "id": "schoolYearLevel", "label": "Year level", "type": "text", "width": "half" },
+            { "id": "schoolStartDate", "label": "Start date", "type": "date", "width": "half" },
+            { "id": "schoolSchedule", "label": "Preferred schedule", "type": "select", "width": "half", "options": ["Weekday mornings", "Weekday afternoons", "Weekday evenings", "Saturday", "Flexible"] },
+            { "id": "schoolSubjects", "label": "Subjects or modules", "type": "multiselect", "width": "full", "options": ["Mathematics", "English", "Science", "Languages", "Arts", "Sports", "Other"] },
+            { "id": "schoolLearningNeeds", "label": "Learning support notes", "type": "textarea", "width": "full", "rows": 3, "hint": "Administrative notes only. Keep medical or clinical records in the appropriate secure system." }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "guardian-contact",
+      "name": "Guardian contact",
+      "description": "Contact, pickup and billing details",
+      "sections": [
+        {
+          "id": "guardian-details",
+          "title": "Guardian details",
+          "icon": "users",
+          "fields": [
+            { "id": "schoolGuardianRelation", "label": "Relationship to student", "type": "select", "width": "half", "options": ["Parent", "Carer", "Grandparent", "Other"] },
+            { "id": "schoolGuardianPhone", "label": "Best phone", "type": "phone", "width": "half" },
+            { "id": "schoolGuardianEmail", "label": "Email", "type": "email", "width": "half" },
+            { "id": "schoolGuardianPickup", "label": "Authorised for pickup", "type": "checkbox", "width": "half" },
+            { "id": "schoolGuardianBilling", "label": "Billing email", "type": "email", "width": "half" },
+            { "id": "schoolGuardianNotes", "label": "Contact notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "staff-profile",
+      "name": "Teacher profile",
+      "description": "Role, subjects and availability",
+      "sections": [
+        {
+          "id": "staff-details",
+          "title": "Teacher details",
+          "icon": "briefcase",
+          "fields": [
+            { "id": "schoolStaffRole", "label": "Role", "type": "select", "width": "half", "options": ["Teacher", "Trainer", "Teaching assistant", "Coordinator", "Other"] },
+            { "id": "schoolStaffSubjects", "label": "Subjects", "type": "multiselect", "width": "full", "options": ["Mathematics", "English", "Science", "Languages", "Arts", "Sports", "Other"] },
+            { "id": "schoolStaffQualifications", "label": "Qualifications", "type": "textarea", "width": "full", "rows": 3 },
+            { "id": "schoolStaffAvailability", "label": "Availability", "type": "multiselect", "width": "full", "options": ["Weekday mornings", "Weekday afternoons", "Weekday evenings", "Saturday", "Sunday"] },
+            { "id": "schoolStaffCheckDate", "label": "Background check date", "type": "date", "width": "half" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "school-account",
+      "name": "School account",
+      "description": "Institution details and billing contact",
+      "sections": [
+        {
+          "id": "school-account-details",
+          "title": "School account",
+          "icon": "building",
+          "fields": [
+            { "id": "schoolAccountType", "label": "Institution type", "type": "select", "width": "half", "options": ["Primary", "Secondary", "College", "Training centre", "Other"] },
+            { "id": "schoolAccountStudents", "label": "Students enrolled", "type": "number", "width": "half" },
+            { "id": "schoolAccountContact", "label": "Main contact email", "type": "email", "width": "half" },
+            { "id": "schoolAccountBilling", "label": "Billing email", "type": "email", "width": "half" },
+            { "id": "schoolAccountProgrammes", "label": "Programmes offered", "type": "multiselect", "width": "full", "options": ["Primary curriculum", "Secondary curriculum", "Languages", "Exam preparation", "Holiday programmes", "Teacher training"] },
+            { "id": "schoolAccountNotes", "label": "Account notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    }
+  ]
+}

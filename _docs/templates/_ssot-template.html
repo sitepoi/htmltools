@@ -9,6 +9,8 @@
   SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
 
   HOW TO USE THIS TEMPLATE
+  0. The canonical rules entry point is _docs/DOCUMENTATION-RULES.md. This
+     template is the STRUCTURE; the rules document is the GOVERNANCE.
   1. This template is copied into every tool folder as docs/ssot.html by
      scripts/init-docs.js - never create a tool SSOT by hand.
   2. Replace every [PLACEHOLDER] in the document.
@@ -72,6 +74,11 @@
     always expanded next to their use.
   - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
     Status) - the automated change-documentation reads these rows.
+  - When a tool exposes a profileConfig parameter or a profiles/ preset
+    library, section 4.1 (Profile configuration usage) is MANDATORY and the
+    profile-usage task type in section 15 must be used. The Profiles copy
+    page (docs/profiles.html) is a convenience; section 4.1 is the
+    authoritative statement of which profile an application uses.
   ────────────────────────────────────────────────────────────────────────────
   -->
   <!-- Optional: nicer webfont (Inter) when online; falls back to the system
@@ -146,7 +153,7 @@
     <tr><th>Applies to</th><td>[tool parts covered - e.g. the app part of this tool folder, plus listing and reporting parts when they exist]</td></tr>
     <tr><th>Primary code areas</th><td><code>[file-or-folder paths, comma-separated]</code></td></tr>
     <tr><th>Explicitly out of scope</th><td>[what this document does NOT decide - UI styling, other features, etc.]</td></tr>
-    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel). Optional profile companion: <code>profiles.html</code> (copy presets; usage truth stays section 4.1).</td></tr>
   </table>
 
   <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
@@ -254,6 +261,26 @@
     <!-- TEMPLATE: one row per term. -->
     <tr><td>[Term]</td><td>[Exact meaning used in this document]</td></tr>
   </table>
+
+  <h3 id="sec-profile-usage">4.1 Profile configuration usage</h3>
+  <p class="note"><strong>Required when this tool exposes a
+  <code>profileConfig</code> parameter or a <code>profiles/</code> preset
+  library.</strong> Remove this section only when neither exists. When
+  present, this table is the authoritative register of which profile a
+  consuming application uses. The generated <code>docs/profiles.html</code>
+  copy page and its browser-local usage reminder are convenience tools and
+  are not the source of truth.</p>
+  <table>
+    <tr><th>Profile / config</th><th>Mode</th><th>Segments</th><th>Usage status</th><th>Application / notes</th><th>Decision</th></tr>
+    <tr><td><code>[profile-file.json]</code></td><td>[fixed / selectable]</td><td>[segment keys]</td><td>[not-reviewed / available / planned / in-use / retired]</td><td>[which application or CMS configuration uses it, or "Available - not selected"]</td><td>[D-XX-NN]</td></tr>
+  </table>
+  <p><strong>Usage status vocabulary:</strong> <code>not-reviewed</code> means
+  no decision yet; <code>available</code> means the profile is usable but not
+  selected; <code>planned</code> means selected for a future application;
+  <code>in-use</code> means a real application configuration depends on it;
+  <code>retired</code> means kept for history but no longer selected. Change
+  a status only in the same change that updates the application
+  configuration.</p>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
   <h3>5.1 Verified evidence</h3>
@@ -409,6 +436,16 @@
   done - progress is remembered by the browser per document and shown in the
   sidebar.</p>
 
+  <p class="note"><strong>Profile usage management task type.</strong> When
+  this tool exposes a <code>profileConfig</code> parameter or a
+  <code>profiles/</code> preset library, add a release group with
+  <code>data-release-group="profile-usage"</code> and put
+  <code>data-task-type="profile-usage"</code> on every task in that group.
+  The group covers: registering selected profiles in section 4.1, keeping
+  <code>docs/profiles.html</code> and the test-harness preset selector in
+  sync, and testing segment switching plus answer preservation. See the
+  commented sample below.</p>
+
   <div class="dor-dod-grid">
     <div class="dor-dod-box">
       <strong>Definition of READY</strong> - a task starts only when:
@@ -453,6 +490,35 @@
        broken across releases.
        data-group-status: planned | in-progress | testing | pushed.
        PUSH READY is computed automatically by ssot.js. -->
+  <!-- PROFILE USAGE TASK TYPE SAMPLE (commented out - uncomment only when
+       this tool has profileConfig or profiles/). Keep the data-task-type
+       attribute on each task so reports can find profile-usage work.
+  <section class="task-group" data-release-group="profile-usage" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Profile usage management</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="profile-usage">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="profile-usage"></div></div>
+    <p class="task-group-note">Why these belong together: the profile register,
+    the copy page, the harness preset and the application configuration must
+    tell the same story.</p>
+    <div class="task-item" data-task-id="T-PU-01" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-01</span><span class="task-title">Register profile usage in section 4.1</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> nobody can tell which preset an application uses.</p><p><strong>How we will solve it:</strong> fill every row in section 4.1 with mode, segments, status and decision id.</p><p><strong>Files:</strong> <code>docs/ssot.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-02" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-02</span><span class="task-title">Keep profiles page and harness preset in sync</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-02 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run <code>npm run docs:profiles -- &lt;Tool&gt;</code> and <code>node app/build-harness-presets.js</code> after every preset change.</p><p><strong>Files:</strong> <code>profiles/index.json</code>, <code>docs/profiles.html</code>, <code>app/test-harness.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-03" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-03</span><span class="task-title">Test segment switching and answer preservation</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-03 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> load the preset in the harness, switch every segment, verify the visible form and that saved values remain in the record.</p><p><strong>Files:</strong> <code>app/qa-segments.js</code>, <code>app/qa-presets.js</code></p></div></details>
+    </div>
+  </section>
+  END PROFILE USAGE TASK TYPE SAMPLE -->
+
   <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
        uncomment it, and edit).
   <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">

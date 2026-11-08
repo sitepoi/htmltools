@@ -27,14 +27,18 @@ var DEFAULTS = {
       anonymous_ordering_allowed: false, table_reservation_enabled: false
     },
     opening_hours: [
-      { day: 0, ranges: [{ open: '09:00', close: '17:00' }], is_closed: false },
-      { day: 1, ranges: [{ open: '09:00', close: '17:00' }], is_closed: false },
-      { day: 2, ranges: [{ open: '09:00', close: '17:00' }], is_closed: false },
-      { day: 3, ranges: [{ open: '09:00', close: '17:00' }], is_closed: false },
-      { day: 4, ranges: [{ open: '09:00', close: '17:00' }], is_closed: false },
-      { day: 5, ranges: [{ open: '09:00', close: '17:00' }], is_closed: false },
-      { day: 6, ranges: [{ open: '09:00', close: '17:00' }], is_closed: false }
+      { day: 0, ranges: [{ open: '11:00', close: '21:00' }], is_closed: false },
+      { day: 1, ranges: [{ open: '11:00', close: '21:00' }], is_closed: false },
+      { day: 2, ranges: [{ open: '11:00', close: '21:00' }], is_closed: false },
+      { day: 3, ranges: [{ open: '11:00', close: '21:00' }], is_closed: false },
+      { day: 4, ranges: [{ open: '11:00', close: '21:00' }], is_closed: false },
+      { day: 5, ranges: [{ open: '11:00', close: '21:00' }], is_closed: false },
+      { day: 6, ranges: [{ open: '11:00', close: '21:00' }], is_closed: false }
     ],
+    /* One-date closure: { date: 'YYYY-MM-DD', reason: '' } or null (T-74). */
+    temporary_closure: null,
+    /* Dated overrides of the weekday hours (T-75). */
+    special_hours: [],
     scheduled_orders: {
       enabled: false, pickup_min_advance: 30, pickup_max_advance: 1440,
       delivery_min_advance: 45, delivery_max_advance: 1440, time_slot_interval: 15
@@ -83,7 +87,58 @@ var DEFAULTS = {
     facebook_url: '', smart_menu_link: 'https://menu.your-restaurant.com',
     website_enabled: false, website_domain: '', ios_app_enabled: false, android_app_enabled: false
   },
-  device_connections: []
+  device_connections: [],
+  /* Paid services requested from this tool (T-86, T-87 - D-RAMM-49). */
+  additional_services: { requests: [] }
+};
+
+/* --------------------------------------------------------------------- */
+/* ADDITIONAL SERVICES CATALOG (T-86)                                     */
+/* Prices ship with a release; a request snapshots the price it was seen  */
+/* with, so a later price change never rewrites history (D-RAMM-49).      */
+/* --------------------------------------------------------------------- */
+var SERVICE_CATALOG = [
+  {
+    id: 'menu-setup',
+    name: 'Menu setup by our team',
+    price: 149,
+    currency: 'USD',
+    summary: 'Send your menu and we enter every category, item, size and price for you.',
+    needs_file: true,
+    file_hint: 'Your menu as PDF, Excel or a photo.',
+    turnaround: '2 business days',
+    deliverables: 'A complete menu ready to publish'
+  },
+  {
+    id: 'menu-update',
+    name: 'Menu update',
+    price: 49,
+    currency: 'USD',
+    summary: 'Send the changed pages and we apply the price and item changes to your menu.',
+    needs_file: true,
+    file_hint: 'The updated menu or a list of what changed.',
+    turnaround: '1 business day',
+    deliverables: 'Your menu updated and checked'
+  },
+  {
+    id: 'promotion-setup',
+    name: 'Promotion setup',
+    price: 79,
+    currency: 'USD',
+    summary: 'We design and enter a promotion or deal campaign for you, schedule included.',
+    needs_file: false,
+    file_hint: '',
+    turnaround: '2 business days',
+    deliverables: 'Published deals with their schedule and promo codes'
+  }
+];
+
+var ADDON_STATUS_LABELS = {
+  requested: 'Requested',
+  paid: 'Paid',
+  in_progress: 'In progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled'
 };
 
 var DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -212,6 +267,8 @@ var NUTRITION_NUTRIENTS = [
 var data = {};
 var activeTab = 'general';
 var editingDayIndex = -1;
+/* Days ticked in the bulk hours block - all seven by default (T-73). */
+var bulkDaySelection = [0, 1, 2, 3, 4, 5, 6];
 var selectedCategoryId = null;
 var editingCategoryId = null;
 var editingItemId = null;
@@ -232,6 +289,8 @@ var zoneDrawnItems = null;
 var zoneActiveTool = null;
 var zoneEditingIndex = -1;
 var zoneDrawControl = null;
+/* Active in-place shape edit: { zoneIdx, shapeIdx, layer, snapshot } (T-84). */
+var zoneShapeEdit = null;
 
 /* ===== UTILITIES ===== */
 function uid() {
@@ -1412,6 +1471,16 @@ function lockUI(ro) {
     if (ro) { el.setAttribute('disabled', 'disabled'); el.style.pointerEvents = 'none'; }
     else { el.removeAttribute('disabled'); el.style.pointerEvents = ''; }
   });
+
+  /* Read-only hides the edit affordance entirely and forces the summary view. */
+  document.querySelectorAll('.view-card-actions').forEach(function(actions) {
+    actions.style.display = ro ? 'none' : '';
+  });
+  if (ro) {
+    VIEW_CARD_KEYS.forEach(function(cardKey) { _viewCardMode[cardKey] = 'view'; });
+    _viewCardSnapshot = {};
+    applyViewCardModes();
+  }
 }
 
 /* ===== CONDITIONAL DISPLAYS (ALL TABS) ===== */
@@ -1483,18 +1552,26 @@ function renderGeneralInfo() {
   /* Logo preview */
   renderLogoPreview();
   /* Cuisine grid */
-  renderCuisineGrid();
+  renderSelectedCuisines();
   /* Country / State dropdowns */
   renderCountryDropdown();
   renderStateDropdown();
+  /* Address search only looks inside the selected country and state */
+  renderAddressSearchScope();
   /* Legal conditional fields */
   renderLegalFields();
   /* Timezone */
   renderTimezoneDropdown();
   /* Additional phones */
   renderAdditionalPhones();
-  /* Hours */
+  /* Hours: week table, bulk change, one-date closure, special dates */
+  initHoursTools();
   renderOpeningHours();
+  renderBulkHourDays();
+  renderTemporaryClosure();
+  renderSpecialHours();
+  /* Paid additional services (T-86, T-87) */
+  renderAddons();
   /* Tax categories */
   renderTaxCategories();
   /* Devices */
@@ -1505,6 +1582,8 @@ function renderGeneralInfo() {
   /* Coordinate hint and state/province tax template hint */
   updateCoordinateHint();
   renderTaxTemplateHint();
+  /* Read-only cards with an explicit edit mode */
+  initViewCardModes();
 }
 
 function renderLogoPreview() {
@@ -1553,6 +1632,8 @@ function renderStateDropdown() {
     });
     sel.addEventListener('change', function() {
       setNested(data, 'general_info.address.state', this.value);
+      renderAddressSearchScope();
+      closeAddressSearchResults();
       scheduleSave();
     });
     container.appendChild(sel);
@@ -1566,6 +1647,7 @@ function renderStateDropdown() {
     input.value = current || '';
     input.addEventListener('input', function() {
       setNested(data, 'general_info.address.state', this.value);
+      renderAddressSearchScope();
       scheduleSave();
     });
     container.appendChild(input);
@@ -1663,71 +1745,578 @@ function addExtraPhone() {
   }, 100);
 }
 
-function renderCuisineGrid() {
-  var grid = document.getElementById('gen-cuisine-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
+/* --------------------------------------------------------------------- */
+/* CUISINE TYPES - chosen chips on the card, full catalogue in a popup     */
+/* The form only shows what is selected, so the card stays short and the   */
+/* long list lives where it belongs: behind one clear action.              */
+/* --------------------------------------------------------------------- */
+var _cuisineDraft = [];
 
-  var selected = getNested(data, 'general_info.cuisine_types') || [];
+function selectedCuisineIds() {
+  var ids = getNested(data, 'general_info.cuisine_types');
+  return Object.prototype.toString.call(ids) === '[object Array]' ? ids.slice() : [];
+}
 
-  CUISINE_OPTIONS.forEach(function(opt) {
-    var chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'cuisine-chip' + (selected.indexOf(opt.id) !== -1 ? ' selected' : '');
-    chip.dataset.cuisineId = opt.id;
-    chip.innerHTML = '<span class="chip-icon">' + opt.icon + '</span>' + opt.label + '<span class="chip-check">✓</span>';
-    chip.addEventListener('click', function() {
-      toggleCuisine(opt.id);
+function cuisineOptionOf(cuisineId) {
+  for (var i = 0; i < CUISINE_OPTIONS.length; i++) {
+    if (CUISINE_OPTIONS[i].id === cuisineId) return CUISINE_OPTIONS[i];
+  }
+  return null;
+}
+
+function cuisineLabelOf(cuisineId) {
+  var option = cuisineOptionOf(cuisineId);
+  return option ? option.label : cuisineId;
+}
+
+function cuisineIconOf(cuisineId) {
+  var option = cuisineOptionOf(cuisineId);
+  return option ? option.icon : '🍽️';
+}
+
+/* A cuisine name becomes a stable id: accents and Turkish letters fold to
+   plain ASCII first, so "İtalyan" never becomes "i-talyan". */
+function cuisineIdFromName(name) {
+  var text = String(name || '').trim();
+  if (!text) return '';
+  if (text.normalize) text = text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  text = text.replace(/ı/g, 'i').replace(/İ/g, 'i').replace(/ş/g, 's').replace(/Ş/g, 's')
+    .replace(/ğ/g, 'g').replace(/Ğ/g, 'g').replace(/ü/g, 'u').replace(/Ü/g, 'u')
+    .replace(/ö/g, 'o').replace(/Ö/g, 'o').replace(/ç/g, 'c').replace(/Ç/g, 'c');
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function selectedCuisineChipsHtml(readOnly) {
+  var ids = selectedCuisineIds();
+  if (ids.length === 0) {
+    return '<span class="cuisine-empty">No cuisine type selected yet</span>';
+  }
+  return ids.map(function(cuisineId) {
+    return '<span class="cuisine-chip selected static">' +
+      '<span class="chip-icon">' + cuisineIconOf(cuisineId) + '</span>' +
+      esc(cuisineLabelOf(cuisineId)) +
+      (readOnly ? '' : '<button type="button" class="cuisine-chip-remove" data-cuisine-remove="' + esc(cuisineId) + '" title="Remove this cuisine">✕</button>') +
+      '</span>';
+  }).join('');
+}
+
+function renderSelectedCuisines() {
+  var wrap = document.getElementById('gen-cuisine-selected');
+  if (!wrap) return;
+  wrap.innerHTML = selectedCuisineChipsHtml(false);
+  wrap.querySelectorAll('[data-cuisine-remove]').forEach(function(button) {
+    button.addEventListener('click', function(event) {
+      event.stopPropagation();
+      var remaining = selectedCuisineIds().filter(function(id) { return id !== button.dataset.cuisineRemove; });
+      setNested(data, 'general_info.cuisine_types', remaining);
+      renderSelectedCuisines();
+      renderViewCardViews();
+      scheduleSave();
     });
-    grid.appendChild(chip);
+  });
+}
+
+function openCuisinePicker() {
+  _cuisineDraft = selectedCuisineIds();
+  var search = document.getElementById('gen-cuisine-search');
+  if (search) search.value = '';
+  var custom = document.getElementById('gen-cuisine-new');
+  if (custom) custom.value = '';
+  renderCuisinePickerGrid('');
+  renderCuisineDraftCount();
+  var modal = document.getElementById('gen-cuisine-modal');
+  if (modal) modal.style.display = 'flex';
+  if (search && search.focus) search.focus();
+}
+
+function closeCuisinePicker() {
+  var modal = document.getElementById('gen-cuisine-modal');
+  if (modal) modal.style.display = 'none';
+  _cuisineDraft = [];
+}
+
+function renderCuisinePickerGrid(filter) {
+  var grid = document.getElementById('gen-cuisine-picker-grid');
+  if (!grid) return;
+  var needle = String(filter || '').trim().toLowerCase();
+  var html = '';
+
+  CUISINE_OPTIONS.forEach(function(option) {
+    if (needle && option.label.toLowerCase().indexOf(needle) === -1) return;
+    var isOn = _cuisineDraft.indexOf(option.id) !== -1;
+    html += '<button type="button" class="cuisine-chip' + (isOn ? ' selected' : '') + '" data-pick-cuisine="' + esc(option.id) + '">' +
+      '<span class="chip-icon">' + option.icon + '</span>' + esc(option.label) + '<span class="chip-check">✓</span></button>';
   });
 
-  /* Also render any custom cuisines not in the predefined list */
-  selected.forEach(function(id) {
-    var isPredefined = CUISINE_OPTIONS.some(function(o) { return o.id === id; });
-    if (!isPredefined) {
-      var chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'cuisine-chip selected';
-      chip.dataset.cuisineId = id;
-      chip.innerHTML = '<span class="chip-icon">🍽️</span>' + esc(id) + '<span class="chip-check">✓</span>';
-      chip.addEventListener('click', function() {
-        toggleCuisine(id);
-      });
-      grid.appendChild(chip);
+  /* Custom types the owner already picked stay visible and removable. */
+  _cuisineDraft.forEach(function(cuisineId) {
+    if (cuisineOptionOf(cuisineId)) return;
+    if (needle && cuisineId.toLowerCase().indexOf(needle) === -1) return;
+    html += '<button type="button" class="cuisine-chip selected" data-pick-cuisine="' + esc(cuisineId) + '">' +
+      '<span class="chip-icon">🍽️</span>' + esc(cuisineId) + '<span class="chip-check">✓</span></button>';
+  });
+
+  if (!html) {
+    html = '<div class="cuisine-picker-empty">Nothing matches "' + esc(filter) + '". Add it below.</div>';
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('[data-pick-cuisine]').forEach(function(button) {
+    button.addEventListener('click', function() { toggleDraftCuisine(button.dataset.pickCuisine); });
+  });
+}
+
+function toggleDraftCuisine(cuisineId) {
+  var at = _cuisineDraft.indexOf(cuisineId);
+  if (at === -1) _cuisineDraft.push(cuisineId); else _cuisineDraft.splice(at, 1);
+  var search = document.getElementById('gen-cuisine-search');
+  renderCuisinePickerGrid(search ? search.value : '');
+  renderCuisineDraftCount();
+}
+
+function renderCuisineDraftCount() {
+  var done = document.getElementById('gen-cuisine-done');
+  if (!done) return;
+  done.textContent = _cuisineDraft.length > 0 ? ('Done · ' + _cuisineDraft.length + ' selected') : 'Done';
+}
+
+function addCustomCuisineToDraft() {
+  var input = document.getElementById('gen-cuisine-new');
+  var raw = input ? input.value.trim() : '';
+  if (!raw) { tool.notify('Type a cuisine name first', 'warning'); return; }
+  var cuisineId = cuisineIdFromName(raw);
+  if (!cuisineId) { tool.notify('That name cannot be used as a cuisine', 'warning'); return; }
+  if (_cuisineDraft.indexOf(cuisineId) === -1) _cuisineDraft.push(cuisineId);
+  if (input) input.value = '';
+  renderCuisinePickerGrid('');
+  renderCuisineDraftCount();
+}
+
+function applyCuisinePicker() {
+  var chosen = _cuisineDraft.slice();
+  setNested(data, 'general_info.cuisine_types', chosen);
+  closeCuisinePicker();
+  renderSelectedCuisines();
+  renderViewCardViews();
+  scheduleSave();
+  tool.notify(chosen.length > 0 ? (chosen.length + ' cuisine type(s) saved') : 'Cuisine types cleared', 'success');
+}
+
+/* --------------------------------------------------------------------- */
+/* READ-ONLY CARDS WITH AN EXPLICIT EDIT MODE                             */
+/* General and Tax & Pay both read as designed summaries and only become  */
+/* forms when the owner asks to edit. One engine drives every card:       */
+/* `data-view-card` names the card, VIEW_CARD_DATA_PATHS names the slice  */
+/* of data it owns, so Cancel can restore exactly that slice.             */
+/* --------------------------------------------------------------------- */
+var VIEW_CARD_KEYS = ['basic', 'address', 'legal', 'taxation', 'payment', 'currency'];
+var VIEW_CARD_DATA_PATHS = {
+  basic: 'general_info',
+  address: 'general_info',
+  legal: 'general_info',
+  taxation: 'taxation_currency',
+  payment: 'payment_methods',
+  currency: 'taxation_currency'
+};
+var _viewCardMode = {
+  basic: 'view', address: 'view', legal: 'view',
+  taxation: 'view', payment: 'view', currency: 'view'
+};
+var _viewCardSnapshot = {};
+
+var LEGAL_ENTITY_TYPE_LABELS = {
+  sole_proprietorship: 'Sole Proprietorship',
+  partnership: 'Partnership',
+  llc: 'LLC',
+  corporation: 'Corporation (Inc)',
+  non_profit: 'Non-Profit',
+  other: 'Other'
+};
+
+var CURRENCY_INFO = {
+  USD: { symbol: '$', name: 'US Dollar' },
+  EUR: { symbol: '€', name: 'Euro' },
+  GBP: { symbol: '£', name: 'British Pound' },
+  TRY: { symbol: '₺', name: 'Turkish Lira' },
+  AED: { symbol: 'د.إ', name: 'UAE Dirham' },
+  SAR: { symbol: 'ر.س', name: 'Saudi Riyal' },
+  CAD: { symbol: 'CA$', name: 'Canadian Dollar' },
+  AUD: { symbol: 'A$', name: 'Australian Dollar' }
+};
+
+var PAYMENT_METHOD_DEFS = [
+  { key: 'cash', label: 'Cash', icon: '💵' },
+  { key: 'card', label: 'Card', icon: '💳' },
+  { key: 'call_for_card', label: 'Call for card', icon: '📞' },
+  { key: 'interac', label: 'Interac e-transfer', icon: '🏦' }
+];
+
+var PAYMENT_CHANNEL_DEFS = [
+  { key: 'delivery', label: 'Delivery' },
+  { key: 'pickup', label: 'Pickup' },
+  { key: 'on_premise', label: 'On-premise' },
+  { key: 'reservation', label: 'Reservation' }
+];
+
+function viewValue(path) {
+  var value = getNested(data, path);
+  return value === null || value === undefined ? '' : value;
+}
+
+function viewRow(label, value, options) {
+  var settings = options || {};
+  var text = String(value === null || value === undefined ? '' : value).trim();
+  if (!text) {
+    return '<div class="gv-item"><span class="gv-label">' + esc(label) + '</span><span class="gv-empty">Not set</span></div>';
+  }
+
+  var inner = esc(text);
+  if (settings.type === 'link') {
+    inner = '<a class="gv-link" href="' + esc(text) + '" target="_blank" rel="noopener">' + esc(text) + '</a>';
+  } else if (settings.type === 'email') {
+    inner = '<a class="gv-link" href="mailto:' + esc(text) + '">' + esc(text) + '</a>';
+  } else if (settings.type === 'phone') {
+    inner = '<a class="gv-link" href="tel:' + esc(text.replace(/[^+0-9]/g, '')) + '">' + esc(text) + '</a>';
+  } else if (settings.badge) {
+    inner = '<span class="gv-badge gv-badge-' + esc(settings.badge) + '">' + esc(text) + '</span>';
+  }
+  return '<div class="gv-item"><span class="gv-label">' + esc(label) + '</span><span class="gv-value">' + inner + '</span></div>';
+}
+
+function accountStatusBadgeClass(status) {
+  if (status === 'Active') return 'good';
+  if (status === 'Suspended' || status === 'Inactive') return 'bad';
+  return status ? 'warn' : '';
+}
+
+/* ---- Restaurant information: page hero --------------------------------- */
+function generalProfileCompleteness() {
+  var checks = [
+    !!String(viewValue('general_info.restaurant_name') || '').trim(),
+    !!String(viewValue('general_info.logo_url') || '').trim(),
+    selectedCuisineIds().length > 0,
+    !!String(viewValue('general_info.phone') || '').trim(),
+    !!String(viewValue('general_info.email') || '').trim(),
+    !!String(viewValue('general_info.website_url') || '').trim(),
+    !!String(viewValue('general_info.address.street') || '').trim(),
+    !!String(viewValue('general_info.legal.entity_name') || '').trim()
+  ];
+  var done = checks.filter(Boolean).length;
+  return { done: done, total: checks.length };
+}
+
+function generalContactTileHtml(icon, label, value, href, extraClass) {
+  var text = String(value || '').trim();
+  if (!text) {
+    return '<div class="gv-contact is-empty' + (extraClass ? ' ' + extraClass : '') + '">' +
+      '<span class="gv-contact-icon">' + icon + '</span>' +
+      '<span class="gv-contact-body"><span class="gv-contact-label">' + esc(label) + '</span>' +
+      '<span class="gv-contact-value">Not set</span></span></div>';
+  }
+  var tag = href ? 'a' : 'div';
+  var attrs = href ? ' href="' + esc(href) + '"' + (href.indexOf('http') === 0 ? ' target="_blank" rel="noopener"' : '') : '';
+  return '<' + tag + attrs + ' class="gv-contact">' +
+    '<span class="gv-contact-icon">' + icon + '</span>' +
+    '<span class="gv-contact-body"><span class="gv-contact-label">' + esc(label) + '</span>' +
+    '<span class="gv-contact-value">' + esc(text) + '</span></span></' + tag + '>';
+}
+
+function generalBasicViewHtml() {
+  var name = String(viewValue('general_info.restaurant_name') || '').trim();
+  var brand = String(viewValue('general_info.brand_name') || '').trim();
+  var logo = String(viewValue('general_info.logo_url') || '').trim();
+  var status = String(viewValue('general_info.legal.account_status') || '').trim();
+  var statusClass = accountStatusBadgeClass(status);
+
+  var phones = [viewValue('general_info.phone')].concat(viewValue('general_info.additional_phones') || [])
+    .map(function(entry) { return String(entry || '').trim(); })
+    .filter(Boolean);
+  var email = String(viewValue('general_info.email') || '').trim();
+  var website = String(viewValue('general_info.website_url') || '').trim();
+
+  var html = '';
+  html += '<div class="gv-hero">';
+  html += '<div class="gv-hero-cover"></div>';
+  html += '<div class="gv-hero-body">';
+  html += '<div class="gv-logo' + (logo ? ' has-image' : '') + '">' +
+    (logo ? '<img src="' + esc(logo) + '" alt="">' : '<span>🏪</span>') + '</div>';
+  html += '<div class="gv-hero-text">';
+  html += '<div class="gv-title">' + (name ? esc(name) : '<span class="gv-empty">Name your restaurant</span>') + '</div>';
+  if (brand) html += '<div class="gv-subtitle">' + esc(brand) + '</div>';
+  html += '<div class="gv-chips">' + selectedCuisineChipsHtml(true) + '</div>';
+  html += '</div>';
+  if (status) {
+    html += '<div class="gv-hero-status"><span class="gv-badge gv-badge-' + statusClass + '">' + esc(status) + '</span></div>';
+  }
+  html += '</div></div>';
+
+  html += '<div class="gv-contact-row">';
+  html += generalContactTileHtml('📞', phones.length > 1 ? 'Phone · ' + phones.length + ' numbers' : 'Phone',
+    phones[0] || '', phones[0] ? 'tel:' + phones[0].replace(/[^+0-9]/g, '') : '');
+  html += generalContactTileHtml('✉️', 'Email', email, email ? 'mailto:' + email : '');
+  html += generalContactTileHtml('🌐', 'Website', website.replace(/^https?:\/\//, ''), website);
+  html += '</div>';
+
+  var completeness = generalProfileCompleteness();
+  var percent = Math.round((completeness.done / completeness.total) * 100);
+  html += '<div class="gv-complete">' +
+    '<div class="gv-complete-head"><span>Profile completeness</span><span>' + completeness.done + ' of ' + completeness.total + '</span></div>' +
+    '<div class="gv-complete-bar"><span style="width:' + percent + '%"></span></div>' +
+    '</div>';
+
+  return html;
+}
+
+function generalAddressViewHtml() {
+  var address = viewValue('general_info.address') || {};
+  var coordinates = viewValue('general_info.coordinates') || {};
+  var coordinateText = '';
+  if (coordinates && coordinates.lat !== undefined && coordinates.lng !== undefined) {
+    coordinateText = String(coordinates.lat) + ', ' + String(coordinates.lng);
+  }
+  var oneLine = [address.street, address.city, address.state, address.zip]
+    .map(function(part) { return String(part || '').trim(); })
+    .filter(Boolean)
+    .join(', ');
+
+  var html = '';
+  if (oneLine || address.country) {
+    html += '<div class="gv-address-hero">' +
+      '<span class="gv-address-pin">📍</span>' +
+      '<div><div class="gv-address-line">' + (oneLine ? esc(oneLine) : '<span class="gv-empty">Street not set</span>') + '</div>' +
+      (address.country ? '<div class="gv-address-country">' + esc(address.country) + '</div>' : '') +
+      '</div></div>';
+  }
+
+  html += '<div class="gv-grid">';
+  html += viewRow('Street', address.street);
+  html += viewRow('City', address.city);
+  html += viewRow('State / Province', address.state);
+  html += viewRow('ZIP / Postal code', address.zip);
+  html += viewRow('Country', address.country);
+  html += viewRow('Time zone', viewValue('general_info.timezone'));
+  html += viewRow('Coordinates', coordinateText);
+  html += '</div>';
+  return html;
+}
+
+function generalLegalViewHtml() {
+  var legal = viewValue('general_info.legal') || {};
+  var legalAddress = legal.legal_address || {};
+  var addressText = [legalAddress.street, legalAddress.city, legalAddress.state, legalAddress.zip, legalAddress.country]
+    .map(function(part) { return String(part || '').trim(); })
+    .filter(Boolean)
+    .join(', ');
+  var status = String(legal.account_status || '').trim();
+  var statusBadge = accountStatusBadgeClass(status);
+  var entityType = legal.entity_type ? (LEGAL_ENTITY_TYPE_LABELS[legal.entity_type] || legal.entity_type) : '';
+
+  var html = '<div class="gv-grid">';
+  html += viewRow('Legal entity', legal.entity_name);
+  html += viewRow('VAT / TAX number', legal.vat_tax_number);
+  html += viewRow('Entity type', entityType);
+  html += viewRow('Account status', status, statusBadge ? { badge: statusBadge } : {});
+  html += viewRow('Registration number', legal.registration_number);
+  html += viewRow('Data protection officer', legal.dpo_name);
+  html += '</div>';
+  if (addressText) {
+    html += '<div class="gv-address-block"><span class="gv-label">Registered legal address</span><span class="gv-value">' + esc(addressText) + '</span></div>';
+  }
+  return html;
+}
+
+/* ---- Tax & Pay -------------------------------------------------------- */
+function formatTaxRate(value) {
+  var rate = parseFloat(value);
+  if (isNaN(rate)) rate = 0;
+  return (Math.round(rate * 100) / 100) + '%';
+}
+
+function generalTaxationViewHtml() {
+  var taxName = String(viewValue('taxation_currency.tax_name') || '').trim();
+  var mode = String(viewValue('taxation_currency.tax_mode') || 'exclusive');
+  var categories = viewValue('taxation_currency.tax_categories') || [];
+  var deliveryRate = viewValue('taxation_currency.delivery_fee_tax_rate');
+
+  var html = '<div class="gv-grid gv-grid-lead">';
+  html += '<div class="gv-item"><span class="gv-label">Tax name</span><span class="gv-value gv-value-lg">' +
+    (taxName ? esc(taxName) : '<span class="gv-empty">Not set</span>') + '</span></div>';
+  html += '<div class="gv-item"><span class="gv-label">Applied</span><span class="gv-value"><span class="gv-badge gv-badge-info">' +
+    (mode === 'inclusive' ? 'Included in the price' : 'Added at checkout') + '</span></span></div>';
+  html += '<div class="gv-item"><span class="gv-label">Delivery fee tax</span><span class="gv-value gv-value-lg">' +
+    formatTaxRate(deliveryRate) + '</span></div>';
+  html += '</div>';
+
+  if (!categories.length) {
+    html += '<div class="gv-empty-note">No tax categories yet. Everything is charged at the tax name above; add categories in edit mode to split rates by menu group.</div>';
+    return html;
+  }
+
+  html += '<div class="gv-table-wrap"><table class="gv-table"><thead><tr>' +
+    '<th>Category</th><th>Pickup</th><th>Delivery</th><th>In-restaurant</th>' +
+    '</tr></thead><tbody>';
+  categories.forEach(function(category) {
+    var isZero = !category.pickup && !category.delivery && !category.in_restaurant;
+    html += '<tr>' +
+      '<td>' + (String(category.name || '').trim() ? esc(category.name) : '<span class="gv-empty">Unnamed</span>') + '</td>' +
+      (isZero
+        ? '<td colspan="3"><span class="gv-badge gv-badge-muted">0% everywhere</span></td>'
+        : '<td>' + formatTaxRate(category.pickup) + '</td><td>' + formatTaxRate(category.delivery) + '</td><td>' + formatTaxRate(category.in_restaurant) + '</td>') +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function generalPaymentViewHtml() {
+  var methods = viewValue('payment_methods') || {};
+  var online = !!methods.online_payment;
+
+  var enabled = 0;
+  PAYMENT_METHOD_DEFS.forEach(function(method) {
+    PAYMENT_CHANNEL_DEFS.forEach(function(channel) {
+      if (methods[method.key + '_' + channel.key]) enabled++;
+    });
+  });
+
+  var html = '<div class="gv-pay-summary">' +
+    '<span class="gv-pay-count">' + enabled + '</span>' +
+    '<span class="gv-pay-summary-text">of ' + (PAYMENT_METHOD_DEFS.length * PAYMENT_CHANNEL_DEFS.length) + ' method and channel combinations enabled' +
+    (online ? ' · online gateway connected' : ' · online gateway off') + '</span></div>';
+
+  html += '<div class="gv-pay-list">';
+  PAYMENT_METHOD_DEFS.forEach(function(method) {
+    html += '<div class="gv-pay-row"><div class="gv-pay-name"><span class="gv-pay-icon">' + method.icon + '</span>' + esc(method.label) + '</div>' +
+      '<div class="gv-pay-channels">';
+    PAYMENT_CHANNEL_DEFS.forEach(function(channel) {
+      var on = !!methods[method.key + '_' + channel.key];
+      html += '<span class="gv-pay-chip' + (on ? ' is-on' : '') + '">' + esc(channel.label) + '</span>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  html += '<div class="gv-pay-gateway ' + (online ? 'is-on' : '') + '">' +
+    '<span class="gv-pay-icon">🌐</span>' +
+    '<span class="gv-pay-gateway-text"><strong>Online payment gateway</strong>' +
+    '<span>' + (online ? 'Card payments are processed online at checkout.' : 'Not connected. Customers pay on delivery or at pickup.') + '</span></span>' +
+    '<span class="gv-badge gv-badge-' + (online ? 'good' : 'muted') + '">' + (online ? 'Connected' : 'Off') + '</span>' +
+    '</div>';
+  return html;
+}
+
+function generalCurrencyViewHtml() {
+  var code = String(viewValue('taxation_currency.currency') || 'USD');
+  var info = CURRENCY_INFO[code] || { symbol: code, name: code };
+
+  var html = '<div class="gv-currency">' +
+    '<div class="gv-currency-symbol">' + esc(info.symbol) + '</div>' +
+    '<div class="gv-currency-text"><div class="gv-currency-code">' + esc(code) + '</div>' +
+    '<div class="gv-currency-name">' + esc(info.name) + '</div></div></div>';
+  html += '<div class="gv-empty-note">Every price in the menu, the deals and the website is shown in ' + esc(code) + '.</div>';
+  return html;
+}
+
+function viewCardHtml(cardKey) {
+  if (cardKey === 'basic') return generalBasicViewHtml();
+  if (cardKey === 'address') return generalAddressViewHtml();
+  if (cardKey === 'legal') return generalLegalViewHtml();
+  if (cardKey === 'taxation') return generalTaxationViewHtml();
+  if (cardKey === 'payment') return generalPaymentViewHtml();
+  if (cardKey === 'currency') return generalCurrencyViewHtml();
+  return '';
+}
+
+function renderViewCardViews() {
+  VIEW_CARD_KEYS.forEach(function(cardKey) {
+    var view = document.getElementById('gen-view-' + cardKey);
+    if (view) view.innerHTML = viewCardHtml(cardKey);
+  });
+}
+
+function initViewCardModes() {
+  document.querySelectorAll('[data-view-card]').forEach(function(card) {
+    var cardKey = card.dataset.viewCard;
+
+    if (!card.querySelector('.view-card-actions')) {
+      /* The hero card has no header, so it carries its own mount point. */
+      var mount = card.querySelector('[data-view-actions]') || card.querySelector('.card-header');
+      var actions = document.createElement('div');
+      actions.className = 'view-card-actions';
+      actions.innerHTML =
+        '<button type="button" class="btn btn-sm btn-ghost view-edit-btn" data-view-action="edit" data-view-key="' + cardKey + '">✎ Edit</button>' +
+        '<button type="button" class="btn btn-sm btn-ghost view-cancel-btn" data-view-action="cancel" data-view-key="' + cardKey + '">Cancel</button>' +
+        '<button type="button" class="btn btn-sm btn-primary view-done-btn" data-view-action="done" data-view-key="' + cardKey + '">✓ Done</button>';
+      if (mount) mount.appendChild(actions);
+      else card.insertBefore(actions, card.firstChild);
+    }
+
+    if (!card.querySelector('.general-view')) {
+      var formBody = card.querySelector('.card-body');
+      if (formBody && formBody.parentNode) {
+        var view = document.createElement('div');
+        view.className = 'card-body general-view gv-' + cardKey;
+        view.id = 'gen-view-' + cardKey;
+        formBody.parentNode.insertBefore(view, formBody);
+      }
     }
   });
+
+  document.querySelectorAll('[data-view-action]').forEach(function(button) {
+    if (button.dataset.viewBound) return;
+    button.dataset.viewBound = '1';
+    button.addEventListener('click', function() {
+      handleViewCardAction(button.dataset.viewKey, button.dataset.viewAction);
+    });
+  });
+
+  applyViewCardModes();
+  renderViewCardViews();
 }
 
-function toggleCuisine(cuisineId) {
-  var types = getNested(data, 'general_info.cuisine_types') || [];
-  var idx = types.indexOf(cuisineId);
-  if (idx === -1) {
-    types.push(cuisineId);
-  } else {
-    types.splice(idx, 1);
-  }
-  setNested(data, 'general_info.cuisine_types', types);
-  renderCuisineGrid();
-  scheduleSave();
-}
-
-function addCustomCuisine() {
-  var input = document.getElementById('gen-cuisine-custom');
-  var name = (input.value || '').trim();
-  if (!name) { tool.notify('Enter a cuisine name', 'warning'); return; }
-  var id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  var types = getNested(data, 'general_info.cuisine_types') || [];
-  if (types.indexOf(id) === -1) {
-    types.push(id);
-    setNested(data, 'general_info.cuisine_types', types);
-    input.value = '';
-    renderCuisineGrid();
+function handleViewCardAction(cardKey, action) {
+  if (action === 'edit') {
+    _viewCardSnapshot[cardKey] = JSON.parse(JSON.stringify(getNested(data, VIEW_CARD_DATA_PATHS[cardKey]) || {}));
+    _viewCardMode[cardKey] = 'edit';
+  } else if (action === 'cancel') {
+    if (_viewCardSnapshot[cardKey]) {
+      setNested(data, VIEW_CARD_DATA_PATHS[cardKey], JSON.parse(JSON.stringify(_viewCardSnapshot[cardKey])));
+      delete _viewCardSnapshot[cardKey];
+      renderGeneralInfo();
+      renderTaxCategories();
+      renderTaxTemplateHint();
+      updateCoordinateHint();
+      renderViewCardViews();
+    }
+    _viewCardMode[cardKey] = 'view';
+  } else if (action === 'done') {
+    delete _viewCardSnapshot[cardKey];
+    _viewCardMode[cardKey] = 'view';
     scheduleSave();
-    tool.notify('Cuisine "' + name + '" added', 'success');
-  } else {
-    tool.notify('This cuisine is already selected', 'info');
+    tool.notify('Changes saved', 'success');
   }
+  applyViewCardModes();
+  renderViewCardViews();
+  tool.resize();
+}
+
+function applyViewCardModes() {
+  document.querySelectorAll('[data-view-card]').forEach(function(card) {
+    var cardKey = card.dataset.viewCard;
+    var isEditing = _viewCardMode[cardKey] === 'edit';
+    var formBody = card.querySelector('.card-body:not(.general-view)');
+    var viewBody = card.querySelector('.general-view');
+
+    card.classList.toggle('general-editing', isEditing);
+    if (formBody) formBody.style.display = isEditing ? '' : 'none';
+    if (viewBody) viewBody.style.display = isEditing ? 'none' : '';
+
+    var editButton = card.querySelector('[data-view-action="edit"]');
+    var cancelButton = card.querySelector('[data-view-action="cancel"]');
+    var doneButton = card.querySelector('[data-view-action="done"]');
+    if (editButton) editButton.style.display = isEditing ? 'none' : '';
+    if (cancelButton) cancelButton.style.display = isEditing ? '' : 'none';
+    if (doneButton) doneButton.style.display = isEditing ? '' : 'none';
+  });
 }
 
 /* ===================================================================== */
@@ -1758,6 +2347,7 @@ function renderOpeningHours() {
     } else {
       html += '<span class="time-pill">No hours set</span>';
     }
+    html += todayHourOverrideBadge(idx);
     html += '</div>';
     html += '<div class="hours-row-edit">' + (isEditing ? '▲' : '✎') + '</div>';
     html += '</div>';
@@ -1769,12 +2359,12 @@ function renderOpeningHours() {
       html += '<div class="hours-editor-closed"><label><input type="checkbox" id="svc-hours-closed-' + idx + '" ' + (isClosed ? 'checked' : '') + '> Closed all day</label></div>';
       /* Ranges */
       html += '<div class="hours-editor-ranges" id="svc-hours-ranges-' + idx + '">';
-      var ranges = (dayData.ranges && dayData.ranges.length > 0) ? dayData.ranges : [{ open: '09:00', close: '17:00' }];
+      var ranges = (dayData.ranges && dayData.ranges.length > 0) ? dayData.ranges : [{ open: '11:00', close: '21:00' }];
       ranges.forEach(function(r, ri) {
         html += '<div class="hours-editor-range">';
-        html += '<input type="time" value="' + (r.open || '09:00') + '" data-range-idx="' + ri + '" data-field="open">';
+        html += '<input type="time" value="' + (r.open || '11:00') + '" data-range-idx="' + ri + '" data-field="open">';
         html += '<span>to</span>';
-        html += '<input type="time" value="' + (r.close || '17:00') + '" data-range-idx="' + ri + '" data-field="close">';
+        html += '<input type="time" value="' + (r.close || '21:00') + '" data-range-idx="' + ri + '" data-field="close">';
         html += '<button type="button" class="btn btn-ghost btn-sm hours-remove-range" data-idx="' + ri + '">✕</button>';
         html += '</div>';
       });
@@ -1815,7 +2405,7 @@ function renderOpeningHours() {
       var div = document.createElement('div');
       div.className = 'hours-editor-range';
       var ri = container.querySelectorAll('.hours-editor-range').length;
-      div.innerHTML = '<input type="time" value="09:00" data-range-idx="' + ri + '" data-field="open"> <span>to</span> <input type="time" value="17:00" data-range-idx="' + ri + '" data-field="close"> <button type="button" class="btn btn-ghost btn-sm hours-remove-range" data-idx="' + ri + '">✕</button>';
+      div.innerHTML = '<input type="time" value="11:00" data-range-idx="' + ri + '" data-field="open"> <span>to</span> <input type="time" value="21:00" data-range-idx="' + ri + '" data-field="close"> <button type="button" class="btn btn-ghost btn-sm hours-remove-range" data-idx="' + ri + '">✕</button>';
       container.appendChild(div);
       div.querySelector('.hours-remove-range').addEventListener('click', function() { div.remove(); tool.resize(); });
       tool.resize();
@@ -1865,12 +2455,286 @@ function saveDayHours(dayIdx) {
       }
     });
   }
-  dayData.ranges = ranges.length > 0 ? ranges : [{ open: '09:00', close: '17:00' }];
+  dayData.ranges = ranges.length > 0 ? ranges : [{ open: '11:00', close: '21:00' }];
 
   editingDayIndex = -1;
   renderOpeningHours();
   scheduleSave();
   tool.resize();
+}
+
+/* --------------------------------------------------------------------- */
+/* OPENING HOURS TOOLS: bulk change, one-date closure, special dates      */
+/* (T-73, T-74, T-75 - D-RAMM-45)                                         */
+/* --------------------------------------------------------------------- */
+function todayIsoDate() {
+  var now = new Date();
+  var month = String(now.getMonth() + 1);
+  var day = String(now.getDate());
+  if (month.length < 2) month = '0' + month;
+  if (day.length < 2) day = '0' + day;
+  return now.getFullYear() + '-' + month + '-' + day;
+}
+
+/* The week is Monday-first, matching opening_hours[].day in the contract. */
+function getTodayDayIndex() {
+  return (new Date().getDay() + 6) % 7;
+}
+
+function findSpecialHour(dateIso) {
+  var rows = getNested(data, 'service_settings.special_hours') || [];
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i] && rows[i].date === dateIso) return rows[i];
+  }
+  return null;
+}
+
+/* Badge on today's row when a temporary closure or a special date applies. */
+function todayHourOverrideBadge(dayIdx) {
+  if (dayIdx !== getTodayDayIndex()) return '';
+  var todayIso = todayIsoDate();
+  var closure = getNested(data, 'service_settings.temporary_closure');
+  if (closure && closure.date === todayIso) {
+    return '<span class="hours-row-note closure">Temporarily closed today</span>';
+  }
+  var special = findSpecialHour(todayIso);
+  if (!special) return '';
+  var label = special.is_closed
+    ? 'Special hours today: closed'
+    : 'Special hours today: ' + (special.open || '--:--') + ' - ' + (special.close || '--:--');
+  return '<span class="hours-row-note">' + esc(label) + '</span>';
+}
+
+/* Binds the hours tools once; the render functions only draw. */
+function initHoursTools() {
+  var bulkDays = document.getElementById('svc-bulk-days');
+  if (bulkDays && !bulkDays.dataset.bound) {
+    bulkDays.dataset.bound = '1';
+    bulkDays.addEventListener('click', function(e) {
+      var chip = (e.target && e.target.closest) ? e.target.closest('.bulk-day-chip') : null;
+      if (!chip) return;
+      var dayIdx = parseInt(chip.dataset.bulkDay, 10);
+      if (isNaN(dayIdx)) return;
+      var at = bulkDaySelection.indexOf(dayIdx);
+      if (at === -1) bulkDaySelection.push(dayIdx); else bulkDaySelection.splice(at, 1);
+      renderBulkHourDays();
+    });
+  }
+
+  var applyBtn = document.getElementById('svc-bulk-apply');
+  if (applyBtn && !applyBtn.dataset.bound) {
+    applyBtn.dataset.bound = '1';
+    applyBtn.addEventListener('click', applyBulkHours);
+  }
+
+  var closureToggle = document.getElementById('svc-closure-enabled');
+  if (closureToggle && !closureToggle.dataset.bound) {
+    closureToggle.dataset.bound = '1';
+    closureToggle.addEventListener('change', function() { updateTemporaryClosure(false); });
+  }
+
+  var closureDate = document.getElementById('svc-closure-date');
+  if (closureDate && !closureDate.dataset.bound) {
+    closureDate.dataset.bound = '1';
+    closureDate.addEventListener('change', function() { updateTemporaryClosure(false); });
+  }
+
+  var closureReason = document.getElementById('svc-closure-reason');
+  if (closureReason && !closureReason.dataset.bound) {
+    closureReason.dataset.bound = '1';
+    closureReason.addEventListener('input', function() { updateTemporaryClosure(true); });
+  }
+
+  var addSpecial = document.getElementById('svc-special-add');
+  if (addSpecial && !addSpecial.dataset.bound) {
+    addSpecial.dataset.bound = '1';
+    addSpecial.addEventListener('click', addSpecialHour);
+  }
+
+  var specialList = document.getElementById('svc-special-hours');
+  if (specialList && !specialList.dataset.bound) {
+    specialList.dataset.bound = '1';
+    specialList.addEventListener('click', function(e) {
+      var removeBtn = (e.target && e.target.closest) ? e.target.closest('.special-hour-remove') : null;
+      if (!removeBtn) return;
+      removeSpecialHour(removeBtn.dataset.shId);
+    });
+    /* Free text saves while typing; dates, times and the closed flag save on change. */
+    specialList.addEventListener('input', function(e) {
+      if (!e.target || e.target.dataset.shField !== 'note') return;
+      updateSpecialHourField(e.target.dataset.shId, 'note', e.target.value, true);
+    });
+    specialList.addEventListener('change', function(e) {
+      var field = e.target ? e.target.dataset.shField : '';
+      if (!field || field === 'note') return;
+      updateSpecialHourField(e.target.dataset.shId, field, e.target.type === 'checkbox' ? e.target.checked : e.target.value, false);
+    });
+  }
+}
+
+function renderBulkHourDays() {
+  var wrap = document.getElementById('svc-bulk-days');
+  if (!wrap) return;
+  initHoursTools();
+  var html = '';
+  for (var i = 0; i < 7; i++) {
+    var on = bulkDaySelection.indexOf(i) !== -1;
+    html += '<button type="button" class="bulk-day-chip' + (on ? ' active' : '') + '" data-bulk-day="' + i + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + DAY_NAMES_FULL[i].slice(0, 3) + '</button>';
+  }
+  wrap.innerHTML = html;
+}
+
+function applyBulkHours() {
+  var openInput = document.getElementById('svc-bulk-open');
+  var closeInput = document.getElementById('svc-bulk-close');
+  var open = openInput ? openInput.value : '';
+  var close = closeInput ? closeInput.value : '';
+  if (!open || !close) { tool.notify('Set an opening and a closing time first', 'warning'); return; }
+  if (open === close) { tool.notify('The opening and closing time are the same', 'warning'); return; }
+  if (bulkDaySelection.length === 0) { tool.notify('Tick at least one day', 'warning'); return; }
+
+  var hours = getNested(data, 'service_settings.opening_hours') || [];
+  var changed = 0;
+  bulkDaySelection.slice().sort(function(a, b) { return a - b; }).forEach(function(dayIdx) {
+    if (!hours[dayIdx]) return;
+    hours[dayIdx].ranges = [{ open: open, close: close }];
+    hours[dayIdx].is_closed = false;
+    changed += 1;
+  });
+
+  editingDayIndex = -1;
+  renderOpeningHours();
+  scheduleSave();
+  tool.resize();
+  tool.notify('Hours set to ' + open + ' - ' + close + ' on ' + changed + ' day(s)', 'success');
+}
+
+function renderTemporaryClosure() {
+  var toggle = document.getElementById('svc-closure-enabled');
+  var dateInput = document.getElementById('svc-closure-date');
+  var reasonInput = document.getElementById('svc-closure-reason');
+  var status = document.getElementById('svc-closure-status');
+  var closure = getNested(data, 'service_settings.temporary_closure');
+  var active = !!(closure && closure.date);
+
+  if (toggle) toggle.checked = active;
+  if (dateInput) {
+    dateInput.value = active ? closure.date : todayIsoDate();
+    dateInput.disabled = !active;
+  }
+  if (reasonInput) {
+    reasonInput.value = active ? (closure.reason || '') : '';
+    reasonInput.disabled = !active;
+  }
+  if (status) {
+    if (!active) {
+      status.className = 'closure-status';
+      status.textContent = 'No temporary closure set.';
+    } else {
+      var isToday = closure.date === todayIsoDate();
+      status.className = 'closure-status active';
+      status.textContent = 'Closed on ' + closure.date + (isToday ? ' (today)' : '') + (closure.reason ? ' - ' + closure.reason : '');
+    }
+  }
+}
+
+function updateTemporaryClosure(silent) {
+  var toggle = document.getElementById('svc-closure-enabled');
+  var dateInput = document.getElementById('svc-closure-date');
+  var reasonInput = document.getElementById('svc-closure-reason');
+  if (!toggle || !dateInput) return;
+
+  if (toggle.checked) {
+    var date = (dateInput.value || '').trim() || todayIsoDate();
+    var reason = (reasonInput && reasonInput.value) ? reasonInput.value.trim() : '';
+    setNested(data, 'service_settings.temporary_closure', { date: date, reason: reason });
+  } else {
+    setNested(data, 'service_settings.temporary_closure', null);
+  }
+
+  renderTemporaryClosure();
+  renderOpeningHours();
+  scheduleSave();
+  tool.resize();
+  if (!silent) {
+    tool.notify(toggle.checked ? 'Temporary closure saved' : 'Temporary closure removed', toggle.checked ? 'info' : 'success');
+  }
+}
+
+function renderSpecialHours() {
+  var wrap = document.getElementById('svc-special-hours');
+  if (!wrap) return;
+  initHoursTools();
+  var rows = (getNested(data, 'service_settings.special_hours') || []).slice();
+  if (rows.length === 0) {
+    wrap.innerHTML = '<div class="special-hours-empty">No special dates yet. Add a holiday, an event day or a one-off late opening.</div>';
+    return;
+  }
+
+  rows.sort(function(a, b) { return String(a.date || '').localeCompare(String(b.date || '')); });
+  var todayIso = todayIsoDate();
+  var html = '';
+  rows.forEach(function(row) {
+    var rowId = esc(row.id || '');
+    var isClosed = !!row.is_closed;
+    var isToday = row.date === todayIso;
+    html += '<div class="special-hour-row' + (isClosed ? ' is-closed' : '') + (isToday ? ' is-today' : '') + '" data-sh-id="' + rowId + '">';
+    html += '<input type="date" value="' + esc(row.date || '') + '" data-sh-id="' + rowId + '" data-sh-field="date" aria-label="Special date">';
+    html += '<label class="hours-inline-check"><input type="checkbox" data-sh-id="' + rowId + '" data-sh-field="is_closed"' + (isClosed ? ' checked' : '') + '> Closed</label>';
+    html += '<input type="time" value="' + esc(row.open || '11:00') + '" data-sh-id="' + rowId + '" data-sh-field="open"' + (isClosed ? ' disabled' : '') + ' aria-label="Opens at">';
+    html += '<span class="hours-tool-sep">to</span>';
+    html += '<input type="time" value="' + esc(row.close || '21:00') + '" data-sh-id="' + rowId + '" data-sh-field="close"' + (isClosed ? ' disabled' : '') + ' aria-label="Closes at">';
+    html += '<input type="text" class="form-input special-hour-note" value="' + esc(row.note || '') + '" data-sh-id="' + rowId + '" data-sh-field="note" placeholder="Note (for example Christmas Eve)">';
+    html += '<button type="button" class="btn btn-ghost btn-sm special-hour-remove" data-sh-id="' + rowId + '" title="Remove this date">✕</button>';
+    html += '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function addSpecialHour() {
+  var rows = getNested(data, 'service_settings.special_hours');
+  if (!rows) {
+    rows = [];
+    setNested(data, 'service_settings.special_hours', rows);
+  }
+  rows.push({
+    id: 'sh-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    date: todayIsoDate(),
+    is_closed: true,
+    open: '11:00',
+    close: '21:00',
+    note: ''
+  });
+  renderSpecialHours();
+  renderOpeningHours();
+  scheduleSave();
+  tool.resize();
+}
+
+function updateSpecialHourField(id, field, value, silent) {
+  var rows = getNested(data, 'service_settings.special_hours') || [];
+  var row = null;
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i] && rows[i].id === id) { row = rows[i]; break; }
+  }
+  if (!row) return;
+  row[field] = value;
+  if (!silent) renderSpecialHours();
+  renderOpeningHours();
+  scheduleSave();
+  tool.resize();
+}
+
+function removeSpecialHour(id) {
+  var rows = getNested(data, 'service_settings.special_hours') || [];
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i] && rows[i].id === id) { rows.splice(i, 1); break; }
+  }
+  renderSpecialHours();
+  renderOpeningHours();
+  scheduleSave();
+  tool.resize();
+  tool.notify('Special date removed', 'success');
 }
 
 /* ===================================================================== */
@@ -2117,6 +2981,7 @@ function findLayersByZoneIndex(idx) {
 }
 
 function editZone(idx) {
+  if (zoneShapeEdit) cancelShapeEdit(true);
   zoneEditingIndex = idx;
   var zones = data.delivery_zones.zones || [];
   var zone = zones[idx];
@@ -2221,10 +3086,24 @@ function renderZoneShapesList() {
     var tdMeta = document.createElement('td');
     tdMeta.className = 'shape-meta-cell';
     tdMeta.textContent = metaText;
+    if (isShapeBeingEdited(zoneEditingIndex, shapeIdx)) {
+      tr.classList.add('is-editing');
+      tdMeta.textContent = metaText ? metaText + ' - editing on the map' : 'Editing on the map';
+    }
 
     /* Action cell */
     var tdAction = document.createElement('td');
     tdAction.className = 'shape-action-cell';
+    var editBtn = document.createElement('button');
+    editBtn.className = 'shape-edit-btn';
+    editBtn.title = 'Edit this shape on the map';
+    editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 1.5l3 3L5 14H2v-3z"/><path d="M9.5 3.5l3 3"/></svg>';
+    editBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      beginShapeEdit(zoneEditingIndex, shapeIdx);
+    });
+    tdAction.appendChild(editBtn);
+
     var delBtn = document.createElement('button');
     delBtn.className = 'shape-delete-btn';
     delBtn.title = 'Remove this shape';
@@ -2244,6 +3123,149 @@ function renderZoneShapesList() {
 
   table.appendChild(tbody);
   container.appendChild(table);
+}
+
+/* --------------------------------------------------------------------- */
+/* EDIT AN EXISTING SHAPE ON THE MAP (T-84, D-RAMM-46)                    */
+/* The shape keeps its slot in zone.shapes; the owner drags the handles,    */
+/* saves, or cancels back to the stored geometry.                          */
+/* --------------------------------------------------------------------- */
+function findShapeLayer(zoneIdx, shapeIdx) {
+  var found = null;
+  if (!zoneDrawnItems) return null;
+  zoneDrawnItems.eachLayer(function(layer) {
+    if (found) return;
+    if (layer._zoneIndex === zoneIdx && layer._shapeIndex === shapeIdx) found = layer;
+  });
+  return found;
+}
+
+function isShapeBeingEdited(zoneIdx, shapeIdx) {
+  return !!(zoneShapeEdit && zoneShapeEdit.zoneIdx === zoneIdx && zoneShapeEdit.shapeIdx === shapeIdx);
+}
+
+/* Copy of the current geometry, used to roll back a cancelled edit. */
+function snapshotLayerGeometry(layer) {
+  if (!layer) return null;
+  if (layer instanceof L.Circle) {
+    var center = layer.getLatLng();
+    return { kind: 'circle', lat: center.lat, lng: center.lng, radius: layer.getRadius() };
+  }
+  if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+    return { kind: 'polygon', latlngs: JSON.parse(JSON.stringify(layer.getLatLngs())) };
+  }
+  return null;
+}
+
+function restoreLayerGeometry(layer, snapshot) {
+  if (!layer || !snapshot) return;
+  if (snapshot.kind === 'circle') {
+    if (typeof layer.setLatLng === 'function') layer.setLatLng([snapshot.lat, snapshot.lng]);
+    if (typeof layer.setRadius === 'function') layer.setRadius(snapshot.radius);
+    return;
+  }
+  if (snapshot.kind === 'polygon' && typeof layer.setLatLngs === 'function') {
+    layer.setLatLngs(snapshot.latlngs);
+  }
+}
+
+function shapeTypeLabel(geom) {
+  if (!geom) return 'shape';
+  if (geom.type === 'Circle' || (geom.type === 'Point' && geom.radius)) return 'circle';
+  if (geom.type === 'MultiPolygon') return 'multi-polygon';
+  return 'polygon';
+}
+
+function startShapeEditing(layer, snapshot, zoneIdx, shapeIdx, geom) {
+  zoneShapeEdit = { zoneIdx: zoneIdx, shapeIdx: shapeIdx, layer: layer, snapshot: snapshot };
+  layer.editing.enable();
+
+  var bar = document.getElementById('zone-shape-edit-bar');
+  var label = document.getElementById('zone-shape-edit-label');
+  if (label) {
+    label.textContent = 'Editing ' + shapeTypeLabel(geom) + ' ' + (shapeIdx + 1) +
+      ' - drag the handles on the map, then save. Cancel keeps the shape as it was.';
+  }
+  if (bar) bar.style.display = '';
+  renderZoneShapesList();
+  tool.resize();
+}
+
+function shapeGeometryAt(zoneIdx, shapeIdx) {
+  var zones = data.delivery_zones.zones || [];
+  if (zoneIdx < 0 || zoneIdx >= zones.length) return null;
+  var shapes = zones[zoneIdx].shapes || [];
+  if (shapeIdx < 0 || shapeIdx >= shapes.length) return null;
+  return shapes[shapeIdx];
+}
+
+function beginShapeEdit(zoneIdx, shapeIdx) {
+  if (isShapeBeingEdited(zoneIdx, shapeIdx)) return;
+  /* Only one shape is edited at a time; leaving the previous one keeps its geometry. */
+  if (zoneShapeEdit) cancelShapeEdit(true);
+
+  var geom = shapeGeometryAt(zoneIdx, shapeIdx);
+  if (!geom) return;
+
+  var layer = findShapeLayer(zoneIdx, shapeIdx);
+  if (!layer) {
+    tool.notify('This shape is not on the map yet - save the zone first', 'warning');
+    return;
+  }
+  var snapshot = snapshotLayerGeometry(layer);
+  if (!layer.editing || typeof layer.editing.enable !== 'function' || !snapshot) {
+    tool.notify('This shape cannot be edited in place - remove it and draw it again', 'warning');
+    return;
+  }
+
+  /* A running draw tool would fight the edit handles. */
+  deactivateZoneDraw();
+  startShapeEditing(layer, snapshot, zoneIdx, shapeIdx, geom);
+}
+
+function disableShapeEditing(layer) {
+  if (layer && layer.editing && typeof layer.editing.disable === 'function') layer.editing.disable();
+}
+
+function hideShapeEditBar() {
+  var bar = document.getElementById('zone-shape-edit-bar');
+  if (bar) bar.style.display = 'none';
+}
+
+function saveShapeEdit() {
+  if (!zoneShapeEdit) return false;
+  var state = zoneShapeEdit;
+  var geom = zoneLayerToGeoJSON(state.layer);
+  if (!geom) { tool.notify('Could not read the edited shape - nothing was changed', 'warning'); return false; }
+
+  var zone = (data.delivery_zones.zones || [])[state.zoneIdx];
+  if (!zone || !zone.shapes || state.shapeIdx >= zone.shapes.length) {
+    cancelShapeEdit(true);
+    return false;
+  }
+
+  disableShapeEditing(state.layer);
+  /* The shape keeps its position in the list; its neighbours keep their indexes. */
+  zone.shapes[state.shapeIdx] = geom;
+  zoneShapeEdit = null;
+  hideShapeEditBar();
+  renderZoneShapesList();
+  scheduleSave();
+  tool.resize();
+  tool.notify('Shape updated', 'success');
+  return true;
+}
+
+function cancelShapeEdit(silent) {
+  if (!zoneShapeEdit) { hideShapeEditBar(); return; }
+  var state = zoneShapeEdit;
+  disableShapeEditing(state.layer);
+  restoreLayerGeometry(state.layer, state.snapshot);
+  zoneShapeEdit = null;
+  hideShapeEditBar();
+  renderZoneShapesList();
+  tool.resize();
+  if (!silent) tool.notify('Shape edit cancelled - the stored shape was kept', 'info');
 }
 
 /* ---- Shape delete with confirmation ---- */
@@ -2269,6 +3291,9 @@ function removeShapeConfirmed() {
   if (zoneIdx >= zones.length) return;
   var zone = zones[zoneIdx];
   if (!zone.shapes || shapeIdx >= zone.shapes.length) return;
+
+  /* Removing the shape that is being edited ends the edit first. */
+  if (isShapeBeingEdited(zoneIdx, shapeIdx)) cancelShapeEdit(true);
 
   /* Remove from data */
   zone.shapes.splice(shapeIdx, 1);
@@ -2317,6 +3342,7 @@ function deleteZoneConfirmed() {
   document.getElementById('zone-delete-modal').style.display = 'none';
   var zones = data.delivery_zones.zones || [];
   if (idx < 0 || idx >= zones.length) return;
+  if (zoneShapeEdit) cancelShapeEdit(true);
   zones.splice(idx, 1);
 
   /* Remove ALL layers for this zone */
@@ -2340,6 +3366,8 @@ function cancelZoneDelete() {
 function saveZone() {
   var name = document.getElementById('zone-name').value.trim();
   if (!name) { tool.notify('Zone name is required', 'warning'); return; }
+  /* An open shape edit is committed with the zone save so nothing is lost (T-84). */
+  if (zoneShapeEdit) saveShapeEdit();
   var color = document.getElementById('zone-color').value;
   var minOrder = parseFloat(document.getElementById('zone-min-order').value) || 0;
   var fee = parseFloat(document.getElementById('zone-fee').value) || 0;
@@ -2460,6 +3488,7 @@ function removeOrphanDrawings() {
 }
 
 function clearZoneForm() {
+  if (zoneShapeEdit) cancelShapeEdit(true);
   document.getElementById('zone-form').style.display = 'none';
   document.getElementById('zone-name').value = '';
   document.getElementById('zone-min-order').value = '0';
@@ -2525,6 +3554,787 @@ function geometriesMatch(a, b) {
   return false;
 }
 
+/* --------------------------------------------------------------------- */
+/* ADDITIONAL SERVICES (T-86 catalog, T-87 requests) - D-RAMM-49          */
+/* The owner picks a service, supplies its inputs, sends the request and  */
+/* follows its status here. The paying step is T-88 (blocked by Q-22).    */
+/* --------------------------------------------------------------------- */
+var _addonServiceId = null;
+var _addonFiles = [];
+
+function getServiceById(serviceId) {
+  for (var i = 0; i < SERVICE_CATALOG.length; i++) {
+    if (SERVICE_CATALOG[i].id === serviceId) return SERVICE_CATALOG[i];
+  }
+  return null;
+}
+
+function renderAddons() {
+  renderAddonCatalog();
+  renderAddonRequestForm();
+  renderAddonRequests();
+}
+
+function renderAddonCatalog() {
+  var grid = document.getElementById('addon-catalog');
+  if (!grid) return;
+  var html = '';
+  SERVICE_CATALOG.forEach(function(service) {
+    html += '<div class="addon-card">' +
+      '<div class="addon-card-head">' +
+        '<span class="addon-card-name">' + esc(service.name) + '</span>' +
+        '<span class="addon-card-price">$' + service.price + ' <small>' + esc(service.currency) + '</small></span>' +
+      '</div>' +
+      '<p class="addon-card-summary">' + esc(service.summary) + '</p>' +
+      '<ul class="addon-card-facts">' +
+        '<li><strong>You get:</strong> ' + esc(service.deliverables) + '</li>' +
+        '<li><strong>Turnaround:</strong> ' + esc(service.turnaround) + '</li>' +
+        (service.needs_file ? '<li><strong>Send us:</strong> ' + esc(service.file_hint) + '</li>' : '') +
+      '</ul>' +
+      '<button type="button" class="btn btn-sm btn-primary addon-request-btn" data-service-id="' + esc(service.id) + '">Request this service</button>' +
+      '</div>';
+  });
+  grid.innerHTML = html;
+  grid.querySelectorAll('.addon-request-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { openAddonRequest(btn.dataset.serviceId); });
+  });
+}
+
+function openAddonRequest(serviceId) {
+  _addonServiceId = serviceId;
+  _addonFiles = [];
+  var contactEl = document.getElementById('addon-contact');
+  if (contactEl && !contactEl.value) {
+    contactEl.value = getNested(data, 'general_info.email') || getNested(data, 'general_info.phone') || '';
+  }
+  renderAddonRequestForm();
+  var card = document.getElementById('addon-request-card');
+  if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  tool.resize();
+}
+
+function closeAddonRequest() {
+  _addonServiceId = null;
+  _addonFiles = [];
+  renderAddonRequestForm();
+  tool.resize();
+}
+
+function renderAddonRequestForm() {
+  var card = document.getElementById('addon-request-card');
+  if (!card) return;
+  var service = getServiceById(_addonServiceId);
+  if (!service) { card.style.display = 'none'; return; }
+
+  card.style.display = '';
+  var title = document.getElementById('addon-request-title');
+  if (title) title.textContent = 'Request: ' + service.name;
+  var summary = document.getElementById('addon-request-summary');
+  if (summary) {
+    summary.innerHTML = '<strong>' + esc(service.name) + '</strong> - $' + service.price + ' ' + esc(service.currency) +
+      ' &middot; ' + esc(service.turnaround) +
+      '<div class="addon-request-note">' + esc(service.summary) + '</div>' +
+      (service.needs_file ? '<div class="addon-request-note">Required: ' + esc(service.file_hint) + '</div>' : '');
+  }
+  renderAddonFiles();
+}
+
+function renderAddonFiles() {
+  var wrap = document.getElementById('addon-files');
+  if (!wrap) return;
+  if (_addonFiles.length === 0) {
+    wrap.innerHTML = '<div class="addon-files-empty">No file added yet.</div>';
+    return;
+  }
+  var html = '';
+  _addonFiles.forEach(function(file, idx) {
+    html += '<div class="addon-file-row"><span class="addon-file-name">' + esc(file.name || 'File') + '</span>' +
+      '<button type="button" class="addon-file-remove" data-file-idx="' + idx + '" title="Remove this file">✕</button></div>';
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.addon-file-remove').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      _addonFiles.splice(parseInt(btn.dataset.fileIdx, 10), 1);
+      renderAddonFiles();
+    });
+  });
+}
+
+function addAddonFile() {
+  if (typeof tool.requestUpload !== 'function') { tool.notify('File upload is not available here', 'warning'); return; }
+  tool.requestUpload('.pdf,application/pdf,.xls,.xlsx,.csv,image/*', function(err, file) {
+    if (err || !file) { if (err) tool.notify('Upload failed: ' + err, 'error'); return; }
+    _addonFiles.push({ name: file.name || 'File', url: file.url || '' });
+    renderAddonFiles();
+  });
+}
+
+function submitAddonRequest() {
+  var service = getServiceById(_addonServiceId);
+  if (!service) return;
+  var contactEl = document.getElementById('addon-contact');
+  var noteEl = document.getElementById('addon-note');
+  var contact = contactEl ? contactEl.value.trim() : '';
+  var note = noteEl ? noteEl.value.trim() : '';
+  if (!contact) { tool.notify('Add a contact so we can reach you', 'warning'); return; }
+  if (service.needs_file && _addonFiles.length === 0) { tool.notify('Add the file this service needs', 'warning'); return; }
+
+  if (!data.additional_services || typeof data.additional_services !== 'object') data.additional_services = { requests: [] };
+  if (Object.prototype.toString.call(data.additional_services.requests) !== '[object Array]') data.additional_services.requests = [];
+
+  var now = new Date().toISOString();
+  data.additional_services.requests.unshift({
+    id: 'as-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    service_id: service.id,
+    service_name: service.name,
+    price: service.price,
+    currency: service.currency,
+    status: 'requested',
+    contact: contact,
+    note: note,
+    files: _addonFiles.slice(),
+    created_at: now,
+    updated_at: now
+  });
+
+  _addonServiceId = null;
+  _addonFiles = [];
+  if (contactEl) contactEl.value = '';
+  if (noteEl) noteEl.value = '';
+  renderAddons();
+  scheduleSave();
+  tool.resize();
+  tool.notify('Request sent: ' + service.name, 'success');
+}
+
+function cancelAddonRequest(requestId) {
+  var requests = (data.additional_services && data.additional_services.requests) || [];
+  for (var i = 0; i < requests.length; i++) {
+    if (requests[i] && requests[i].id === requestId) {
+      requests[i].status = 'cancelled';
+      requests[i].updated_at = new Date().toISOString();
+      break;
+    }
+  }
+  renderAddonRequests();
+  scheduleSave();
+  tool.notify('Request cancelled', 'info');
+}
+
+function renderAddonRequests() {
+  var wrap = document.getElementById('addon-requests');
+  if (!wrap) return;
+  var requests = (data.additional_services && data.additional_services.requests) || [];
+  if (requests.length === 0) {
+    wrap.innerHTML = '<div class="addon-requests-empty">No requests yet. Choose a service above to get started.</div>';
+    return;
+  }
+
+  var html = '';
+  requests.forEach(function(request) {
+    var statusKey = request.status || 'requested';
+    var label = ADDON_STATUS_LABELS[statusKey] || statusKey;
+    var when = request.created_at ? String(request.created_at).slice(0, 10) : '';
+    var files = (request.files || []).map(function(f) {
+      return '<span class="addon-file-chip">' + esc(f.name || 'File') + '</span>';
+    }).join('');
+
+    html += '<div class="addon-request-row">' +
+      '<div class="addon-request-main">' +
+        '<div class="addon-request-name">' + esc(request.service_name || 'Service') + '</div>' +
+        '<div class="addon-request-meta">$' + (request.price || 0) + ' ' + esc(request.currency || '') +
+          (when ? ' &middot; ' + esc(when) : '') +
+          (request.contact ? ' &middot; ' + esc(request.contact) : '') + '</div>' +
+        (request.note ? '<div class="addon-request-note-line">' + esc(request.note) + '</div>' : '') +
+        (files ? '<div class="addon-request-files">' + files + '</div>' : '') +
+      '</div>' +
+      '<span class="addon-status addon-status-' + esc(statusKey) + '">' + esc(label) + '</span>' +
+      ((statusKey === 'requested' || statusKey === 'paid')
+        ? '<button type="button" class="addon-cancel-request" data-request-id="' + esc(request.id) + '" title="Cancel this request">Cancel</button>'
+        : '') +
+      '</div>';
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.addon-cancel-request').forEach(function(btn) {
+    btn.addEventListener('click', function() { cancelAddonRequest(btn.dataset.requestId); });
+  });
+}
+
+/* --------------------------------------------------------------------- */
+/* MENU FILE IMPORT AND EXPORT (T-79 to T-82) - D-RAMM-48                  */
+/* One column layout is shared by the spreadsheet export, the PDF-to-      */
+/* spreadsheet file and the import, so a downloaded file can be edited     */
+/* offline and imported back without mapping. Nothing is written before    */
+/* the owner approves the review table.                                    */
+/* --------------------------------------------------------------------- */
+var MENU_SHEET_HEADERS = ['ID', 'Category', 'Item name', 'Size', 'Price', 'Sale price', 'Description', 'Availability', 'Tax category', 'Modifier groups'];
+var MENU_TEXT_SIZE_WORDS = ['small', 'medium', 'large', 'xlarge', 'xl', 'xxl', 'personal', 'regular', 'family', 'junior', 'senior', 'mini', 'single', 'double', 'slice', 's', 'm', 'l'];
+
+var _menuImportRows = [];
+var _menuImportModel = [];
+var _menuImportSource = '';
+
+function menuMoney(value) {
+  var number = parseFloat(value);
+  return isNaN(number) ? '0.00' : number.toFixed(2);
+}
+
+function menuPriceValue(value) {
+  if (value === null || value === undefined) return '';
+  var text = String(value).trim();
+  if (!text) return '';
+  if (!/\d/.test(text)) return NaN;
+  var number = parseFloat(text.replace(',', '.').replace(/[^0-9.\-]/g, ''));
+  return isNaN(number) ? NaN : number;
+}
+
+function categoryNameOfId(categoryId) {
+  var cat = (data.menu.categories || []).find(function(c) { return c.id === categoryId; });
+  return cat ? (cat.name || '') : '';
+}
+
+function findCategoryByName(name) {
+  var clean = String(name || '').trim().toLowerCase();
+  return (data.menu.categories || []).find(function(c) { return String(c.name || '').trim().toLowerCase() === clean; }) || null;
+}
+
+function findMenuItemById(itemId) {
+  if (!itemId) return null;
+  return (data.menu.items || []).find(function(i) { return i.id === itemId; }) || null;
+}
+
+function findMenuItemByNameCategory(name, categoryName) {
+  var cleanName = String(name || '').trim().toLowerCase();
+  var cleanCategory = String(categoryName || '').trim().toLowerCase();
+  return (data.menu.items || []).find(function(item) {
+    if (String(item.item_name || '').trim().toLowerCase() !== cleanName) return false;
+    if (!cleanCategory) return true;
+    return categoryNameOfId(item.category_id).trim().toLowerCase() === cleanCategory;
+  }) || null;
+}
+
+function menuTaxCategoryNameOf(item) {
+  return (item && item.tax_category_id) ? String(item.tax_category_id) : '';
+}
+
+function menuModifierGroupNamesOf(item) {
+  var ids = (item && item.modifier_group_ids) || [];
+  return ids.map(function(id) {
+    var mg = (data.menu.modifier_groups || []).find(function(g) { return g.id === id; });
+    return mg ? (mg.group_name || '') : '';
+  }).filter(Boolean).join(', ');
+}
+
+/* ---- Export (T-82) ---- */
+function buildMenuSheetRows() {
+  var rows = [];
+  var categories = data.menu.categories || [];
+  var items = data.menu.items || [];
+
+  categories.forEach(function(cat) {
+    items.filter(function(item) { return item.category_id === cat.id; }).forEach(function(item) {
+      var base = [
+        item.id,
+        cat.name || '',
+        item.item_name || '',
+        '',
+        (item.price === null || item.price === undefined) ? '' : item.price,
+        (item.sale_price === null || item.sale_price === undefined) ? '' : item.sale_price,
+        item.description || '',
+        item.availability || 'available',
+        menuTaxCategoryNameOf(item),
+        menuModifierGroupNamesOf(item)
+      ];
+      if (item.sizes && item.sizes.length > 0) {
+        item.sizes.forEach(function(size) {
+          var sizeRow = base.slice();
+          sizeRow[3] = size.label || '';
+          sizeRow[4] = (size.price === null || size.price === undefined) ? '' : size.price;
+          sizeRow[5] = '';
+          rows.push(sizeRow);
+        });
+      } else {
+        rows.push(base);
+      }
+    });
+  });
+
+  /* Items whose category no longer exists still export, so nothing is lost. */
+  var knownCategoryIds = categories.map(function(c) { return c.id; });
+  items.forEach(function(item) {
+    if (knownCategoryIds.indexOf(item.category_id) !== -1) return;
+    rows.push([item.id, '', item.item_name || '', '', item.price || '', item.sale_price || '', item.description || '', item.availability || 'available', menuTaxCategoryNameOf(item), menuModifierGroupNamesOf(item)]);
+  });
+
+  return rows;
+}
+
+function exportMenuToSpreadsheet() {
+  if (typeof XLSX === 'undefined') { tool.notify('The spreadsheet library did not load - check the connection and try again', 'error'); return; }
+  var rows = buildMenuSheetRows();
+  if (rows.length === 0) { tool.notify('There is no menu to export yet', 'warning'); return; }
+  var sheet = XLSX.utils.aoa_to_sheet([MENU_SHEET_HEADERS].concat(rows));
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheet, 'Menu');
+  XLSX.writeFile(wb, 'menu-' + todayIsoDate() + '.xlsx');
+  tool.notify('Menu exported: ' + rows.length + ' row(s)', 'success');
+}
+
+/* ---- Import: modal, file reading, review, apply (T-79, T-81) ---- */
+function openMenuFileImport() {
+  _menuImportRows = [];
+  _menuImportModel = [];
+  _menuImportSource = '';
+  var modal = document.getElementById('menu-file-modal');
+  if (modal) modal.style.display = 'flex';
+  setMenuImportFileName('');
+  renderMenuImportPreview();
+}
+
+function closeMenuFileImport() {
+  var modal = document.getElementById('menu-file-modal');
+  if (modal) modal.style.display = 'none';
+  var input = document.getElementById('menu-file-input');
+  if (input) input.value = '';
+}
+
+function setMenuImportFileName(name) {
+  var el = document.getElementById('menu-file-name');
+  if (el) el.textContent = name || 'No file chosen';
+}
+
+function handleMenuFileChosen(file) {
+  if (!file) return;
+  setMenuImportFileName(file.name || 'file');
+  var lower = String(file.name || '').toLowerCase();
+  if (/\.pdf$/.test(lower)) { readMenuPdf(file); return; }
+  if (/\.(xlsx|xls|csv)$/.test(lower)) { readMenuSpreadsheet(file); return; }
+  tool.notify('Choose a PDF, Excel or CSV file', 'warning');
+}
+
+function readMenuSpreadsheet(file) {
+  if (typeof XLSX === 'undefined') { tool.notify('The spreadsheet library did not load - check the connection', 'error'); return; }
+  var reader = new FileReader();
+  reader.onload = function() {
+    try {
+      var workbook = XLSX.read(reader.result, { type: 'array' });
+      var sheet = workbook.Sheets[workbook.SheetNames[0]];
+      var matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
+      _menuImportRows = rowsFromMenuMatrix(matrix);
+      _menuImportSource = 'spreadsheet';
+      buildAndRenderMenuImport();
+    } catch (err) {
+      tool.notify('The spreadsheet could not be read: ' + (err && err.message ? err.message : 'unknown error'), 'error');
+    }
+  };
+  reader.onerror = function() { tool.notify('The file could not be read', 'error'); };
+  reader.readAsArrayBuffer(file);
+}
+
+function readMenuPdf(file) {
+  if (typeof pdfjsLib === 'undefined') { tool.notify('The PDF library did not load - check the connection', 'error'); return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  var reader = new FileReader();
+  reader.onload = function() {
+    pdfjsLib.getDocument({ data: new Uint8Array(reader.result) }).promise.then(function(pdf) {
+      var texts = [];
+      var chain = Promise.resolve();
+      for (var pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        (function(pageNo) {
+          chain = chain.then(function() {
+            return pdf.getPage(pageNo).then(function(page) {
+              return page.getTextContent().then(function(content) {
+                texts.push(content.items.map(function(itemPart) { return itemPart.str; }).join(' '));
+              });
+            });
+          });
+        })(pageNumber);
+      }
+      return chain.then(function() { return texts.join('\n'); });
+    }).then(function(text) {
+      if (!String(text || '').trim()) {
+        tool.notify('This PDF has no text layer (it looks like a scan). Use the "Menu setup by our team" add-on instead.', 'warning');
+        _menuImportRows = [];
+        _menuImportModel = [];
+        renderMenuImportPreview();
+        return;
+      }
+      _menuImportRows = rowsFromMenuText(text);
+      _menuImportSource = 'pdf';
+      buildAndRenderMenuImport();
+    }).catch(function() {
+      tool.notify('The PDF could not be read', 'error');
+    });
+  };
+  reader.onerror = function() { tool.notify('The file could not be read', 'error'); };
+  reader.readAsArrayBuffer(file);
+}
+
+function rowsFromMenuMatrix(matrix) {
+  if (!matrix || matrix.length === 0) return [];
+  var header = matrix[0].map(function(cell) {
+    return String(cell === null || cell === undefined ? '' : cell).trim().toLowerCase();
+  });
+  function columnOf(names) {
+    for (var i = 0; i < names.length; i++) {
+      var at = header.indexOf(names[i]);
+      if (at !== -1) return at;
+    }
+    return -1;
+  }
+  var columns = {
+    id: columnOf(['id']),
+    category: columnOf(['category', 'category name', 'kategori']),
+    name: columnOf(['item name', 'name', 'item', 'product']),
+    size: columnOf(['size', 'size label']),
+    price: columnOf(['price', 'base price']),
+    sale_price: columnOf(['sale price', 'sale']),
+    description: columnOf(['description', 'desc']),
+    availability: columnOf(['availability', 'status']),
+    tax_category: columnOf(['tax category', 'tax']),
+    modifier_groups: columnOf(['modifier groups', 'modifiers'])
+  };
+  if (columns.name === -1) return [];
+
+  var rows = [];
+  for (var r = 1; r < matrix.length; r++) {
+    var line = matrix[r] || [];
+    function cell(key) {
+      if (columns[key] === -1) return '';
+      var value = line[columns[key]];
+      return value === null || value === undefined ? '' : value;
+    }
+    var name = String(cell('name')).trim();
+    if (!name) continue;
+    rows.push({
+      id: String(cell('id')).trim(),
+      category: String(cell('category')).trim(),
+      name: name,
+      size: String(cell('size')).trim(),
+      price: cell('price'),
+      sale_price: cell('sale_price'),
+      description: String(cell('description')).trim(),
+      availability: String(cell('availability')).trim(),
+      tax_category: String(cell('tax_category')).trim(),
+      modifier_groups: String(cell('modifier_groups')).trim()
+    });
+  }
+  return rows;
+}
+
+function menuImportRow(category, name, size, price) {
+  return {
+    id: '', category: category || '', name: name, size: size || '',
+    price: price, sale_price: '', description: '', availability: '',
+    tax_category: '', modifier_groups: ''
+  };
+}
+
+/* PDF text layer -> draft rows. Deliberately conservative: a line needs a
+   trailing price to become an item, so headings and prose are ignored. */
+function rowsFromMenuText(text) {
+  var lines = String(text || '')
+    .split(/\r?\n/)
+    .map(function(line) { return line.replace(/\s+/g, ' ').trim(); })
+    .filter(Boolean);
+
+  var rows = [];
+  var category = '';
+  var priceAtEnd = /^(.*?)[\s.·•]*\$?\s*(\d{1,4}(?:[.,]\d{1,2})?)$/;
+
+  lines.forEach(function(line) {
+    /* Size columns first: "Pizza small 9.99 medium 12.99 large 15.99" */
+    var sizeMatches = [];
+    var sizeRe = /([A-Za-z]{1,10})\s+\$?(\d{1,4}(?:[.,]\d{1,2})?)/g;
+    var sizeMatch;
+    while ((sizeMatch = sizeRe.exec(line)) !== null) {
+      if (MENU_TEXT_SIZE_WORDS.indexOf(sizeMatch[1].toLowerCase()) !== -1) {
+        sizeMatches.push({
+          label: sizeMatch[1],
+          price: parseFloat(sizeMatch[2].replace(',', '.')),
+          index: sizeMatch.index
+        });
+      }
+    }
+    if (sizeMatches.length >= 2) {
+      var baseName = line.slice(0, sizeMatches[0].index).replace(/[\s.,:]+$/, '').trim();
+      if (baseName.length >= 2) {
+        sizeMatches.forEach(function(sizeEntry) {
+          rows.push(menuImportRow(category, baseName, sizeEntry.label, sizeEntry.price));
+        });
+        return;
+      }
+    }
+
+    var match = line.match(priceAtEnd);
+    if (!match) {
+      var looksLikeHeading = line.length <= 45 && /[A-Za-z]/.test(line) && !/\d/.test(line);
+      if (looksLikeHeading) category = line.replace(/[:.]+$/, '').trim();
+      return;
+    }
+
+    var namePart = match[1].replace(/[.·•\s]+$/, '').trim();
+    var price = parseFloat(match[2].replace(',', '.'));
+    if (!namePart || namePart.length < 2 || isNaN(price)) return;
+
+    rows.push(menuImportRow(category, namePart, '', price));
+  });
+
+  return rows;
+}
+
+function buildAndRenderMenuImport() {
+  _menuImportModel = buildMenuImportModel(_menuImportRows);
+  renderMenuImportPreview();
+}
+
+function buildMenuImportModel(rows) {
+  var model = [];
+  (rows || []).forEach(function(row) {
+    var name = String(row.name || '').trim();
+    if (!name) return;
+
+    var entry = {
+      include: true, action: 'new', reason: '', changes: [],
+      item_id: '',
+      id: String(row.id || '').trim(),
+      category: String(row.category || '').trim(),
+      name: name,
+      size: String(row.size || '').trim(),
+      price: menuPriceValue(row.price),
+      sale_price: menuPriceValue(row.sale_price),
+      description: String(row.description || '').trim(),
+      availability: String(row.availability || '').trim(),
+      tax_category: String(row.tax_category || '').trim(),
+      modifier_groups: String(row.modifier_groups || '').trim()
+    };
+
+    if (entry.price !== '' && (isNaN(entry.price) || entry.price < 0)) {
+      entry.action = 'invalid';
+      entry.include = false;
+      entry.reason = 'price is not a number';
+      model.push(entry);
+      return;
+    }
+
+    var existing = entry.id ? findMenuItemById(entry.id) : null;
+    if (!existing) existing = findMenuItemByNameCategory(entry.name, entry.category);
+    if (!existing) { model.push(entry); return; }
+
+    entry.item_id = existing.id;
+    entry.category = entry.category || categoryNameOfId(existing.category_id);
+
+    var changes = [];
+    if (entry.size) {
+      var size = (existing.sizes || []).find(function(candidate) {
+        return String(candidate.label || '').toLowerCase() === entry.size.toLowerCase();
+      });
+      if (!size) changes.push('new size "' + entry.size + '"');
+      else if (entry.price !== '' && Number(size.price || 0) !== Number(entry.price)) changes.push('size price ' + menuMoney(size.price) + ' -> ' + menuMoney(entry.price));
+    } else if (entry.price !== '' && Number(existing.price || 0) !== Number(entry.price)) {
+      changes.push('price ' + menuMoney(existing.price) + ' -> ' + menuMoney(entry.price));
+    }
+    if (entry.description && entry.description !== String(existing.description || '')) changes.push('description');
+    if (entry.availability && entry.availability !== String(existing.availability || '')) changes.push('availability');
+    if (entry.tax_category && entry.tax_category !== menuTaxCategoryNameOf(existing)) changes.push('tax category');
+
+    entry.changes = changes;
+    entry.action = changes.length > 0 ? 'changed' : 'unchanged';
+    if (entry.action === 'unchanged') entry.include = false;
+    model.push(entry);
+  });
+  return model;
+}
+
+function renderMenuImportPreview() {
+  var wrap = document.getElementById('menu-file-preview');
+  var summary = document.getElementById('menu-file-summary');
+  var applyBtn = document.getElementById('menu-file-apply');
+  var pdfToSheetBtn = document.getElementById('menu-pdf-to-sheet');
+  if (pdfToSheetBtn) pdfToSheetBtn.disabled = !(_menuImportModel && _menuImportModel.length > 0);
+  if (!wrap) return;
+
+  if (!_menuImportModel || _menuImportModel.length === 0) {
+    wrap.innerHTML = '<div class="menu-import-empty">' +
+      (_menuImportSource ? 'No priced item was found in this file.' : 'Choose a file to see what will be imported.') +
+      '</div>';
+    if (summary) summary.textContent = '';
+    if (applyBtn) applyBtn.disabled = true;
+    return;
+  }
+
+  var counts = { new: 0, changed: 0, unchanged: 0, invalid: 0 };
+  _menuImportModel.forEach(function(entry) { counts[entry.action] = (counts[entry.action] || 0) + 1; });
+
+  var html = '<table class="menu-import-table"><thead><tr><th class="mi-check"></th><th>Category</th><th>Item</th><th>Size</th><th>Price</th><th>Status</th></tr></thead><tbody>';
+  _menuImportModel.forEach(function(entry, idx) {
+    var statusText = entry.action === 'new' ? 'New item'
+      : entry.action === 'changed' ? ('Changed: ' + entry.changes.join(', '))
+      : entry.action === 'unchanged' ? 'No change - tick to write it anyway'
+      : ('Skipped: ' + entry.reason);
+
+    html += '<tr class="mi-row mi-' + esc(entry.action) + '">' +
+      '<td class="mi-check"><input type="checkbox" data-row-check="' + idx + '"' + (entry.include ? ' checked' : '') + (entry.action === 'invalid' ? ' disabled' : '') + '></td>' +
+      '<td><input type="text" class="form-input form-input-sm" data-row-field="category" data-row-idx="' + idx + '" value="' + esc(entry.category) + '"></td>' +
+      '<td><input type="text" class="form-input form-input-sm" data-row-field="name" data-row-idx="' + idx + '" value="' + esc(entry.name) + '"></td>' +
+      '<td><input type="text" class="form-input form-input-sm" data-row-field="size" data-row-idx="' + idx + '" value="' + esc(entry.size) + '"></td>' +
+      '<td><input type="text" class="form-input form-input-sm mi-price" data-row-field="price" data-row-idx="' + idx + '" value="' + (entry.price === '' ? '' : esc(String(entry.price))) + '"></td>' +
+      '<td class="mi-status">' + esc(statusText) + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+
+  if (summary) {
+    summary.textContent = counts.new + ' new, ' + counts.changed + ' changed, ' + counts.unchanged + ' unchanged, ' + counts.invalid + ' skipped';
+  }
+  if (applyBtn) applyBtn.disabled = (counts.new + counts.changed) === 0;
+
+  wrap.querySelectorAll('[data-row-check]').forEach(function(box) {
+    box.addEventListener('change', function() {
+      var idx = parseInt(box.dataset.rowCheck, 10);
+      if (_menuImportModel[idx]) _menuImportModel[idx].include = box.checked;
+    });
+  });
+  wrap.querySelectorAll('[data-row-field]').forEach(function(input) {
+    input.addEventListener('input', function() {
+      var idx = parseInt(input.dataset.rowIdx, 10);
+      var entry = _menuImportModel[idx];
+      if (!entry) return;
+      var field = input.dataset.rowField;
+      if (field === 'price') {
+        var value = menuPriceValue(input.value);
+        entry.price = isNaN(value) ? '' : value;
+      } else {
+        entry[field] = input.value;
+      }
+    });
+  });
+}
+
+function ensureImportCategory(name) {
+  var clean = String(name || '').trim() || 'Imported';
+  var existing = findCategoryByName(clean);
+  if (existing) return existing;
+  var created = {
+    id: uid(), name: clean, description: '',
+    photos: [], primary_photo_url: null,
+    visibility_mode: 'show', tax_category_id: null
+  };
+  if (!data.menu.categories) data.menu.categories = [];
+  data.menu.categories.push(created);
+  return created;
+}
+
+function createItemFromImportRow(entry, categoryId) {
+  var name = String(entry.name || '').trim();
+  var sale = entry.sale_price;
+  return {
+    id: uid(), category_id: categoryId,
+    item_name: name, slug: slugify(name),
+    description: entry.description || '',
+    price: entry.size ? null : (entry.price === '' ? 0 : entry.price),
+    sale_price: (sale === '' || sale === undefined || isNaN(sale)) ? null : sale,
+    primary_photo_url: null, photos: [],
+    allergens: [], dietary_marks: [], tags: [], modifier_group_ids: [],
+    is_vegetarian: false, is_vegan: false, is_gluten_free: false,
+    spice_level: 0, calories: null, prep_time_minutes: null,
+    ingredients: '', additives: '',
+    nutrition_per: 'serving', nutrition: [],
+    sizes: [],
+    visibility_mode: 'show', hide_until_date: null,
+    schedule_type: null, schedule_time_windows: null, schedule_from: null, schedule_until: null,
+    availability: entry.availability || 'available',
+    show_on_channels: [],
+    tax_category_id: entry.tax_category || null,
+    show_internal_name: false, internal_name: '', hide_instructions: false
+  };
+}
+
+function applyMenuImportModel() {
+  var rows = (_menuImportModel || []).filter(function(entry) {
+    return entry.include && entry.action !== 'invalid';
+  });
+  if (rows.length === 0) { tool.notify('Tick at least one row to apply', 'warning'); return; }
+
+  if (!data.menu.items) data.menu.items = [];
+  if (!data.menu.categories) data.menu.categories = [];
+
+  var created = 0;
+  var updated = 0;
+  var addedSizes = 0;
+
+  rows.forEach(function(entry) {
+    var category = ensureImportCategory(entry.category);
+    var existing = entry.item_id ? findMenuItemById(entry.item_id) : findMenuItemByNameCategory(entry.name, entry.category);
+
+    if (!existing) {
+      existing = createItemFromImportRow(entry, category.id);
+      data.menu.items.push(existing);
+      created += 1;
+    } else {
+      updated += 1;
+    }
+
+    if (!existing.sizes) existing.sizes = [];
+    if (entry.size) {
+      var size = existing.sizes.find(function(candidate) {
+        return String(candidate.label || '').toLowerCase() === entry.size.toLowerCase();
+      });
+      if (!size) {
+        existing.sizes.push({ id: uid(), label: entry.size, price: entry.price === '' ? 0 : entry.price, modifier_group_ids: [] });
+        addedSizes += 1;
+      } else if (entry.price !== '') {
+        size.price = entry.price;
+      }
+      /* A sized item carries its prices in sizes, never in the base price. */
+      existing.price = null;
+    } else if (entry.price !== '' && existing.sizes.length === 0) {
+      existing.price = entry.price;
+    }
+
+    if (entry.description) existing.description = entry.description;
+    if (entry.availability) existing.availability = entry.availability;
+    if (entry.tax_category) existing.tax_category_id = entry.tax_category;
+    existing.category_id = category.id;
+  });
+
+  renderCategories();
+  renderItems();
+  closeMenuFileImport();
+  scheduleSave();
+  tool.notify('Import applied: ' + created + ' new, ' + updated + ' updated, ' + addedSizes + ' size(s) added', 'success');
+}
+
+/* T-80: turn the draft rows (for example from a PDF) into the same
+   spreadsheet layout the export uses, so it can be corrected offline. */
+function exportMenuImportRowsToSpreadsheet() {
+  if (typeof XLSX === 'undefined') { tool.notify('The spreadsheet library did not load - check the connection and try again', 'error'); return; }
+  var source = (_menuImportModel && _menuImportModel.length > 0) ? _menuImportModel : _menuImportRows;
+  if (!source || source.length === 0) { tool.notify('Load a PDF or a spreadsheet first', 'warning'); return; }
+
+  var rows = source.map(function(entry) {
+    return [
+      entry.id || entry.item_id || '',
+      entry.category || '',
+      entry.name || '',
+      entry.size || '',
+      entry.price === '' || entry.price === undefined ? '' : entry.price,
+      entry.sale_price === '' || entry.sale_price === undefined ? '' : entry.sale_price,
+      entry.description || '',
+      entry.availability || '',
+      entry.tax_category || '',
+      entry.modifier_groups || ''
+    ];
+  });
+
+  var sheet = XLSX.utils.aoa_to_sheet([MENU_SHEET_HEADERS].concat(rows));
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheet, 'Menu');
+  XLSX.writeFile(wb, 'menu-draft-' + todayIsoDate() + '.xlsx');
+  tool.notify('Draft exported: ' + rows.length + ' row(s)', 'success');
+}
+
 /* ---- Zone Map ---- */
 function initZoneMap() {
   var mapEl = document.getElementById('delivery-map');
@@ -2564,6 +4374,8 @@ function initZoneMap() {
 
 function loadZonesOnMap() {
   if (!zoneMap || !zoneDrawnItems) return;
+  /* Rebuilding the layers ends any running shape edit. */
+  if (zoneShapeEdit) cancelShapeEdit(true);
   zoneDrawnItems.clearLayers();
   var zones = data.delivery_zones.zones || [];
   zones.forEach(function(zone, zi) {
@@ -2623,6 +4435,8 @@ function syncAllZoneLayers() {
 }
 
 function activateZoneDraw(type) {
+  /* Drawing and in-place shape editing are exclusive (T-84). */
+  if (zoneShapeEdit) cancelShapeEdit(true);
   deactivateZoneDraw();
   if (!zoneMap) return;
   /* Use editing zone's color if available */
@@ -3351,6 +5165,71 @@ function duplicateCategory() {
   tool.notify('Category duplicated', 'success');
 }
 
+/* Duplicate one menu item right below the original */
+function duplicateItem(itemId) {
+  var source = (data.menu.items || []).find(function (i) { return i.id === itemId; });
+  if (!source) return;
+  var copy = JSON.parse(JSON.stringify(source));
+  copy.id = uid();
+  copy.item_name = (source.item_name || 'Item') + ' (Copy)';
+  copy.slug = slugify(copy.item_name);
+  (copy.sizes || []).forEach(function (size) { size.id = uid(); });
+  var sourceIndex = data.menu.items.indexOf(source);
+  data.menu.items.splice(sourceIndex + 1, 0, copy);
+  renderItems();
+  scheduleSave();
+  tool.notify('Item duplicated', 'success');
+}
+
+/* Duplicate a modifier group with fresh option ids */
+function duplicateModGroup(groupId) {
+  var groups = data.menu.modifier_groups || [];
+  var source = groups.find(function (g) { return g.id === groupId; });
+  if (!source) return;
+  var copy = JSON.parse(JSON.stringify(source));
+  copy.id = uid();
+  copy.group_name = (source.group_name || 'Group') + ' (Copy)';
+  (copy.options || []).forEach(function (opt) { opt.id = uid(); });
+  var sourceIndex = groups.indexOf(source);
+  groups.splice(sourceIndex + 1, 0, copy);
+  renderModGroups();
+  renderModGroupCheckboxes();
+  scheduleSave();
+  tool.notify('Modifier group duplicated', 'success');
+}
+
+/* Quick add: several sizes at once from a line like "Small=9.99, Medium=12.99" */
+function addBulkItemSizes() {
+  var input = document.getElementById('menu-item-size-bulk-input');
+  if (!input) return;
+  var raw = input.value.trim();
+  if (!raw) return;
+  var parsed = [];
+  raw.split(/[,\n;]+/).forEach(function (chunk) {
+    var match = chunk.trim().match(/^(.+?)\s*[=:]\s*([0-9]+(?:\.[0-9]+)?)$/);
+    if (match) parsed.push({ label: match[1].trim(), price: parseFloat(match[2]) });
+  });
+  if (parsed.length === 0) {
+    tool.notify('Use the format Small=9.99, Medium=12.99', 'warning');
+    return;
+  }
+  var target = editingItemId
+    ? (data.menu.items.find(function (i) { return i.id === editingItemId; }) || null)
+    : _newItemDraft;
+  if (!target) {
+    _newItemDraft = _newItemDraft || { sizes: [] };
+    target = _newItemDraft;
+  }
+  target.sizes = target.sizes || [];
+  parsed.forEach(function (entry) {
+    target.sizes.push({ id: uid(), label: entry.label, price: entry.price, modifier_group_ids: [] });
+  });
+  input.value = '';
+  renderItemSizes(target);
+  if (editingItemId) scheduleSave();
+  tool.notify(parsed.length + ' size(s) added', 'success');
+}
+
 /* Category delete with confirmation */
 var catDeleteId = null;
 
@@ -3503,41 +5382,84 @@ function getModGroupUsage(mgId) {
   return result;
 }
 
+/* Parents first, each immediately followed by its subgroups (T-71). */
+function orderModifierGroups(groups) {
+  var ordered = [];
+  var seen = {};
+  groups.forEach(function(parent) {
+    if (parent.parent_group_id && groups.some(function(possibleParent) { return possibleParent.id === parent.parent_group_id; })) return;
+    ordered.push({ group: parent, isSub: false });
+    seen[parent.id] = true;
+    groups.forEach(function(child) {
+      if (child.parent_group_id === parent.id) {
+        ordered.push({ group: child, isSub: true });
+        seen[child.id] = true;
+      }
+    });
+  });
+  /* A subgroup whose parent disappeared still renders, so nothing is hidden. */
+  groups.forEach(function(group) {
+    if (!seen[group.id]) ordered.push({ group: group, isSub: !!group.parent_group_id });
+  });
+  return ordered;
+}
+
 function renderModGroups() {
   var list = document.getElementById('menu-mg-list');
   if (!list) return;
   list.innerHTML = '';
-  (data.menu.modifier_groups || []).forEach(function(mg) {
-    var hasOpts = mg.options && mg.options.length > 0;
+  var allGroups = data.menu.modifier_groups || [];
+  var orderedEntries = orderModifierGroups(allGroups);
+  orderedEntries.forEach(function(entry) {
+    var mg = entry.group;
+    var isSub = entry.isSub;
+    var subCount = allGroups.filter(function(group) { return group.parent_group_id === mg.id; }).length;
+    var options = mg.options || [];
+    var usage = getModGroupUsage(mg.id);
+    var parentGroup = isSub ? getModGroupById(mg.parent_group_id) : null;
     /* Track expand state: default collapsed unless previously expanded */
     if (_expandedModGroups[mg.id] === undefined) _expandedModGroups[mg.id] = false;
     var isExpanded = _expandedModGroups[mg.id] || highlightedModGroupId === mg.id;
 
-    /* Group row — two-line layout: name on top, metadata below */
+    /* One card per group: header, facts as chips, then the body. The body
+       owns the options and the usage list, so the card edges are the group
+       edges and nothing can look like it belongs to the next group. */
     var el = document.createElement('div');
-    el.className = 'modgroup-item' + (editingModGroupId === mg.id ? ' active' : '') + (highlightedModGroupId === mg.id ? ' highlighted' : '');
+    el.className = 'modgroup-item' + (isSub ? ' mg-is-subgroup' : '') + (editingModGroupId === mg.id ? ' active' : '') + (highlightedModGroupId === mg.id ? ' highlighted' : '');
     el.dataset.mgId = mg.id;
+    el.setAttribute('draggable', 'true');
+    el.addEventListener('dragstart', function (event) {
+      event.dataTransfer.setData('application/x-ramm-modgroup', mg.id);
+      event.dataTransfer.effectAllowed = 'copy';
+    });
 
-    /* Top row: expand, filter, name, actions */
-    var topRow = document.createElement('div');
-    topRow.className = 'mg-row-top';
-    topRow.innerHTML =
-      '<span class="mg-expand">' + (isExpanded ? '▼' : '▶') + '</span>' +
+    /* Header: expander, optional subgroup badge, name, actions */
+    var head = document.createElement('div');
+    head.className = 'mg-head';
+    head.innerHTML =
+      '<span class="mg-expand" role="button" aria-label="Expand or collapse this group">' + (isExpanded ? '▾' : '▸') + '</span>' +
+      (isSub ? '<span class="mg-kind" title="Subgroup of ' + esc(parentGroup ? parentGroup.group_name : 'a parent group') + '">sub</span>' : '') +
       '<span class="mg-name">' + esc(mg.group_name) + '</span>' +
-      '<span class="mg-actions"><button class="mg-edit-btn" title="Edit">✎</button></span>';
-    el.appendChild(topRow);
+      '<span class="mg-actions">' +
+        (isSub ? '' : '<button type="button" class="mg-add-sub-btn" title="Add a subgroup inside this group">＋sub</button>') +
+        '<button type="button" class="mg-edit-btn" title="Edit">✎</button>' +
+        '<button type="button" class="mg-duplicate-btn" title="Duplicate">⎘</button>' +
+      '</span>';
+    el.appendChild(head);
 
-    /* Bottom row: metadata */
-    var bottomRow = document.createElement('div');
-    bottomRow.className = 'mg-row-bottom';
-    bottomRow.innerHTML =
-      '<span class="mg-meta">' + (hasOpts ? mg.options.length + ' options' : '0 options') + ' · ' +
-      (mg.selection_type === 'single' ? 'Single' : 'Multi') +
-      (mg.allow_duplicates ? ' · Dup' : '') +
-      (mg.is_required ? ' · Req' : '') +
-      (mg.force_min > 0 ? ' · Min ' + mg.force_min : '') +
-      (mg.force_max > 0 ? ' · Max ' + mg.force_max : '') + '</span>';
-    el.appendChild(bottomRow);
+    /* Facts as chips: readable at a glance, unlike a dotted micro line */
+    var chips = document.createElement('div');
+    chips.className = 'mg-chips';
+    chips.innerHTML =
+      '<span class="mg-chip mg-chip-count">' + options.length + ' option' + (options.length === 1 ? '' : 's') + '</span>' +
+      '<span class="mg-chip">' + (mg.selection_type === 'single' ? 'pick 1' : 'pick many') + '</span>' +
+      (mg.is_required ? '<span class="mg-chip mg-chip-required">required</span>' : '') +
+      (mg.force_min > 0 ? '<span class="mg-chip">min ' + mg.force_min + '</span>' : '') +
+      (mg.force_max > 0 ? '<span class="mg-chip">max ' + mg.force_max + '</span>' : '') +
+      (mg.allow_duplicates ? '<span class="mg-chip">duplicates</span>' : '') +
+      (subCount > 0 ? '<span class="mg-chip mg-chip-sub">' + subCount + ' subgroup' + (subCount === 1 ? '' : 's') + '</span>' : '') +
+      (usage.length > 0 ? '<span class="mg-chip mg-chip-used">used on ' + usage.length + ' product' + (usage.length === 1 ? '' : 's') + '</span>' : '');
+    el.appendChild(chips);
 
     el.querySelector('.mg-expand').addEventListener('click', function(e) {
       e.stopPropagation();
@@ -3546,7 +5468,7 @@ function renderModGroups() {
       renderModGroups();
     });
     el.addEventListener('click', function(e) {
-      if (e.target.closest('.mg-actions') || e.target.closest('.mg-expand')) return;
+      if (e.target.closest('.mg-actions') || e.target.closest('.mg-expand') || e.target.closest('.mg-body')) return;
       highlightedModGroupId = null;
       _expandedModGroups[mg.id] = !_expandedModGroups[mg.id];
       renderModGroups();
@@ -3567,73 +5489,103 @@ function renderModGroups() {
     el.querySelector('.mg-expand').insertAdjacentElement('afterend', filterCb);
 
     el.querySelector('.mg-edit-btn').addEventListener('click', function(e) { e.stopPropagation(); editModGroup(mg.id); });
+    el.querySelector('.mg-duplicate-btn').addEventListener('click', function(e) { e.stopPropagation(); duplicateModGroup(mg.id); });
+    var addSubBtn = el.querySelector('.mg-add-sub-btn');
+    if (addSubBtn) addSubBtn.addEventListener('click', function(e) { e.stopPropagation(); addModGroupWithParent(mg.id); });
     list.appendChild(el);
 
-    /* Sub-list (always rendered so Add button is available even for empty groups) */
-    var subList = document.createElement('div');
-    subList.className = 'mg-sub-list';
-    subList.style.display = isExpanded ? '' : 'none';
+    /* Body: options inside the card, each on its own readable row */
+    var body = document.createElement('div');
+    body.className = 'mg-body';
+    body.style.display = isExpanded ? '' : 'none';
 
-    /* Existing options */
-    (mg.options || []).forEach(function(opt, idx) {
+    var optList = document.createElement('div');
+    optList.className = 'mg-options';
+    if (options.length === 0) {
+      optList.innerHTML = '<div class="mg-options-empty">No options yet</div>';
+    }
+    options.forEach(function(opt, idx) {
+      var adjustment = opt.price_adjustment || 0;
+      var priceStr = adjustment !== 0 ? ((adjustment > 0 ? '+' : '−') + '$' + Math.abs(adjustment).toFixed(2)) : '';
       var optRow = document.createElement('div');
-      optRow.className = 'mg-sub-row';
-      var priceStr = (opt.price_adjustment && opt.price_adjustment !== 0) ? ((opt.price_adjustment > 0 ? '+' : '') + '$' + opt.price_adjustment.toFixed(2)) : '';
+      optRow.className = 'mg-opt' + (opt.is_available === false ? ' is-hidden' : '');
       optRow.innerHTML =
-        '<span class="mg-sub-name">' + esc(opt.option_name || '(unnamed)') + '</span>' +
-        (opt.is_default ? '<span class="mg-sub-default">★ Default</span>' : '') +
-        (opt.is_available === false ? '<span style="color:var(--slate-300);font-size:10px;">Hidden</span>' : '') +
-        (opt.availability === 'out_of_stock' ? '<span class="oos-badge opt-oos-badge" title="' + esc(optOosTooltip(opt)) + '">OOS</span>' : '') +
-        '<span class="mg-sub-price">' + priceStr + '</span>' +
-        '<button class="mg-sub-edit" title="Edit">✎</button>';
-      optRow.querySelector('.mg-sub-edit').addEventListener('click', function(e) {
+        '<span class="mg-opt-mark"></span>' +
+        '<span class="mg-opt-name">' + esc(opt.option_name || '(unnamed)') + '</span>' +
+        (opt.is_default ? '<span class="mg-flag mg-flag-default">★ default</span>' : '') +
+        (opt.is_available === false ? '<span class="mg-flag">hidden</span>' : '') +
+        (opt.availability === 'out_of_stock' ? '<span class="mg-flag mg-flag-oos" title="' + esc(optOosTooltip(opt)) + '">out of stock</span>' : '') +
+        (priceStr ? '<span class="mg-opt-price">' + priceStr + '</span>' : '') +
+        '<button type="button" class="mg-opt-edit" title="Edit this option">✎</button>';
+      optRow.querySelector('.mg-opt-edit').addEventListener('click', function(e) {
         e.stopPropagation();
         editModOption(mg.id, idx);
       });
-      subList.appendChild(optRow);
+      optList.appendChild(optRow);
     });
+    body.appendChild(optList);
 
     /* Add Option button (always visible) */
     var addBtn = document.createElement('button');
+    addBtn.type = 'button';
     addBtn.className = 'mg-sub-add-btn';
-    addBtn.textContent = '+ Add Option';
+    addBtn.textContent = '+ Add option';
     addBtn.addEventListener('click', function(e) {
       e.stopPropagation();
       addModOption(mg.id);
     });
-    subList.appendChild(addBtn);
-    list.appendChild(subList);
+    body.appendChild(addBtn);
+    el.appendChild(body);
 
-    /* ---- Usage: show where this modifier group is used ---- */
-    var usage = getModGroupUsage(mg.id);
+    /* ---- Usage: a labelled section inside the card; the count is already
+       one of the header chips, so this is detail, not a floating line ---- */
     if (usage.length > 0) {
-      var usageToggle = document.createElement('div');
-      usageToggle.className = 'mg-usage-toggle';
-      usageToggle.textContent = '▸ Used in ' + usage.length + ' product(s)';
-      usageToggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var ul = this.nextElementSibling;
-        var isOpen = ul.classList.toggle('open');
-        this.textContent = (isOpen ? '▾' : '▸') + ' Used in ' + usage.length + ' product(s)';
-      });
-      list.appendChild(usageToggle);
+      var usageBlock = document.createElement('div');
+      usageBlock.className = 'mg-usage';
+
+      var usageHead = document.createElement('div');
+      usageHead.className = 'mg-usage-head';
+      /* A short list opens straight away; a long one starts collapsed so the
+         card stays scannable. */
+      var usageOpen = usage.length <= 3;
+      usageHead.innerHTML = '<span class="mg-usage-title">Used in ' + usage.length + ' product' + (usage.length === 1 ? '' : 's') + '</span>' +
+        '<span class="mg-usage-toggle" role="button" tabindex="0">' + (usageOpen ? 'Hide' : 'Show') + '</span>';
+      usageBlock.appendChild(usageHead);
 
       var usageList = document.createElement('div');
-      usageList.className = 'mg-usage-list';
+      usageList.className = 'mg-usage-list' + (usageOpen ? ' open' : '');
       usage.forEach(function(u) {
-        var line = document.createElement('span');
-        line.innerHTML = '<span class="mg-usage-item-name">' + esc(u.itemName) + '</span>' + (u.sizeLabel ? '<span class="mg-usage-size">→ ' + esc(u.sizeLabel) + '</span>' : '');
+        var line = document.createElement('div');
+        line.className = 'mg-usage-row';
+        line.innerHTML = '<span class="mg-usage-item-name">' + esc(u.itemName) + '</span>' + (u.sizeLabel ? '<span class="mg-usage-size">' + esc(u.sizeLabel) + '</span>' : '');
         usageList.appendChild(line);
       });
-      list.appendChild(usageList);
+      usageBlock.appendChild(usageList);
+
+      var usageToggleBtn = usageHead.querySelector('.mg-usage-toggle');
+      usageToggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var isOpen = usageList.classList.toggle('open');
+        usageToggleBtn.textContent = isOpen ? 'Hide' : 'Show';
+      });
+      body.appendChild(usageBlock);
     }
   });
 }
 
 function addModGroup() {
+  addModGroupWithParent(null);
+}
+
+/* T-71: a subgroup is a REAL group carrying parent_group_id, so it keeps its
+   own options and its own selection limits (D-RAMM-47). One level only. */
+function addModGroupWithParent(parentGroupId) {
   editingModGroupId = null;
   _tempMgPhoto = null;
-  document.getElementById('menu-mg-modal-title').textContent = 'New Modifier Group';
+  var parent = parentGroupId ? getModGroupById(parentGroupId) : null;
+  document.getElementById('menu-mg-modal-title').textContent = parent
+    ? ('New Subgroup in ' + (parent.group_name || 'group'))
+    : 'New Modifier Group';
   document.getElementById('menu-mg-name').value = '';
   document.getElementById('menu-mg-multi').checked = true;
   document.getElementById('menu-mg-allow-duplicates').checked = false;
@@ -3641,10 +5593,32 @@ function addModGroup() {
   document.getElementById('menu-mg-force-min').value = '0';
   document.getElementById('menu-mg-force-max').value = '0';
   populateTaxCategorySelect('menu-mg-tax-cat', '');
+  populateModGroupParentSelect(parent ? parent.id : '', null);
   renderSinglePhoto('menu-mg-photo-area', null, null);
   document.getElementById('menu-mg-delete-btn').style.display = 'none';
   document.getElementById('menu-mg-modal').style.display = 'flex';
   document.getElementById('menu-mg-name').focus();
+}
+
+/* Only a top-level group can become a parent, and a group that already has
+   subgroups cannot become a subgroup itself, so nesting stays one level. */
+function populateModGroupParentSelect(selectedParentId, selfId) {
+  var select = document.getElementById('menu-mg-parent');
+  if (!select) return;
+  var groups = data.menu.modifier_groups || [];
+  var hasSubGroups = groups.some(function(group) { return selfId && group.parent_group_id === selfId; });
+
+  var html = '<option value="">-- Top-level group --</option>';
+  if (!hasSubGroups) {
+    groups.forEach(function(group) {
+      if (group.id === selfId) return;
+      if (group.parent_group_id) return; /* a subgroup cannot be a parent */
+      html += '<option value="' + esc(group.id) + '"' + (group.id === selectedParentId ? ' selected' : '') + '>' +
+        esc(group.group_name || 'Unnamed group') + '</option>';
+    });
+  }
+  select.innerHTML = html;
+  select.disabled = hasSubGroups;
 }
 
 function editModGroup(mgId) {
@@ -3658,6 +5632,7 @@ function editModGroup(mgId) {
   document.getElementById('menu-mg-required').checked = !!mg.is_required;
   document.getElementById('menu-mg-force-min').value = mg.force_min || 0;
   document.getElementById('menu-mg-force-max').value = mg.force_max || 0;
+  populateModGroupParentSelect(mg.parent_group_id || '', mgId);
   populateTaxCategorySelect('menu-mg-tax-cat', mg.tax_category_id || '');
   /* Photo */
   _tempMgPhoto = mg.photo_url || null;
@@ -3685,17 +5660,31 @@ function deleteModGroupConfirmed() {
   document.getElementById('mg-delete-modal').style.display = 'none';
   if (!editingModGroupId) return;
   var mgId = editingModGroupId;
-  data.menu.modifier_groups = data.menu.modifier_groups.filter(function(g) { return g.id !== mgId; });
-  (data.menu.items || []).forEach(function(item) {
-    if (item.modifier_group_ids) item.modifier_group_ids = item.modifier_group_ids.filter(function(id) { return id !== mgId; });
+
+  /* Deleting a parent removes its subgroups too (T-71). */
+  var idsToDelete = [mgId];
+  (data.menu.modifier_groups || []).forEach(function(group) {
+    if (group.parent_group_id === mgId) idsToDelete.push(group.id);
   });
+  var removedSubGroups = idsToDelete.length - 1;
+
+  data.menu.modifier_groups = data.menu.modifier_groups.filter(function(g) { return idsToDelete.indexOf(g.id) === -1; });
+  (data.menu.items || []).forEach(function(item) {
+    if (item.modifier_group_ids) item.modifier_group_ids = item.modifier_group_ids.filter(function(id) { return idsToDelete.indexOf(id) === -1; });
+    if (item.sizes) {
+      item.sizes.forEach(function(size) {
+        if (size.modifier_group_ids) size.modifier_group_ids = size.modifier_group_ids.filter(function(id) { return idsToDelete.indexOf(id) === -1; });
+      });
+    }
+  });
+
   editingModGroupId = null;
   document.getElementById('menu-mg-modal').style.display = 'none';
   document.getElementById('menu-mg-options-panel').style.display = 'none';
   renderModGroups();
   renderModGroupCheckboxes();
   scheduleSave();
-  tool.notify('Group deleted', 'info');
+  tool.notify(removedSubGroups > 0 ? ('Group and ' + removedSubGroups + ' subgroup(s) deleted') : 'Group deleted', 'info');
 }
 
 function cancelDeleteModGroup() {
@@ -3705,9 +5694,29 @@ function cancelDeleteModGroup() {
 function saveModGroup() {
   var name = document.getElementById('menu-mg-name').value.trim();
   if (!name) { tool.notify('Group name required', 'warning'); return; }
+
+  /* Nested subgroups: one level only (T-71, D-RAMM-47). */
+  var parentSelect = document.getElementById('menu-mg-parent');
+  var parentId = parentSelect ? (parentSelect.value || '') : '';
+  if (parentId) {
+    var parentGroup = getModGroupById(parentId);
+    if (!parentGroup) {
+      parentId = '';
+    } else if (parentGroup.parent_group_id) {
+      tool.notify('A subgroup cannot hold another subgroup - pick a top-level group', 'warning');
+      return;
+    } else if (editingModGroupId && (data.menu.modifier_groups || []).some(function(group) {
+      return group.parent_group_id === editingModGroupId;
+    })) {
+      tool.notify('This group already has subgroups, so it cannot become a subgroup itself', 'warning');
+      return;
+    }
+  }
+
   var mgData = {
     id: editingModGroupId || uid(),
     group_name: name,
+    parent_group_id: parentId || null,
     selection_type: document.getElementById('menu-mg-multi').checked ? 'multi' : 'single',
     allow_duplicates: document.getElementById('menu-mg-allow-duplicates').checked,
     is_required: document.getElementById('menu-mg-required').checked,
@@ -3914,12 +5923,18 @@ function showModPickerDropdown(container, getSelectedIds, onIdsChanged, onClose,
   var dropdown = document.createElement('div');
   dropdown.className = 'mod-picker-dropdown';
 
-  (data.menu.modifier_groups || []).forEach(function(mg) {
+  var pickerGroups = data.menu.modifier_groups || [];
+  /* Only top-level groups can be assigned: a parent brings its subgroups. */
+  var pickerTopLevel = pickerGroups.filter(function(group) {
+    return !group.parent_group_id || !pickerGroups.some(function(parent) { return parent.id === group.parent_group_id; });
+  });
+  pickerTopLevel.forEach(function(mg) {
     var checked = selectedIds.indexOf(mg.id) !== -1;
+    var subCount = pickerGroups.filter(function(group) { return group.parent_group_id === mg.id; }).length;
     var row = document.createElement('div');
     row.className = 'mod-picker-option' + (checked ? ' checked' : '');
     var optCount = (mg.options && mg.options.length) ? mg.options.length : 0;
-    row.innerHTML = '<span class="mod-picker-option-name">' + esc(mg.group_name) + '</span><span class="mod-picker-option-meta">' + optCount + ' opt · ' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + '</span>';
+    row.innerHTML = '<span class="mod-picker-option-name">' + esc(mg.group_name) + '</span><span class="mod-picker-option-meta">' + optCount + ' opt' + (subCount > 0 ? ' · ' + subCount + ' sub' : '') + ' · ' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + '</span>';
     row.addEventListener('click', function() {
       var ids = getSelectedIds();
       if (checked) {
@@ -4141,6 +6156,7 @@ function renderItems() {
         '</div>' +
       '</div>' +
       '<div class="item-actions">' +
+        '<button class="item-duplicate-btn" title="Duplicate item">⎘</button>' +
         '<button class="item-add-size-btn" title="Add Size">📏</button>' +
       '</div>';
 
@@ -4159,7 +6175,7 @@ function renderItems() {
     }
 
     row.addEventListener('click', function(e) {
-      if (e.target.closest('.item-expand') || e.target.closest('.item-add-size-btn') || e.target.closest('.mod-chip')) return;
+      if (e.target.closest('.item-expand') || e.target.closest('.item-add-size-btn') || e.target.closest('.item-duplicate-btn') || e.target.closest('.mod-chip')) return;
       openItemDrawer(item.id);
     });
 
@@ -4167,6 +6183,39 @@ function renderItems() {
     row.querySelector('.item-add-size-btn').addEventListener('click', function(e) {
       e.stopPropagation();
       openAddSizeModal(item);
+    });
+
+    /* Duplicate button on item row → creates a copy right below */
+    row.querySelector('.item-duplicate-btn').addEventListener('click', function(e) {
+      e.stopPropagation();
+      duplicateItem(item.id);
+    });
+
+    /* Drop a modifier group dragged from the left panel onto this item */
+    row.addEventListener('dragover', function (event) {
+      if (event.dataTransfer.types.indexOf('application/x-ramm-modgroup') === -1) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+      row.classList.add('mod-drop-target');
+    });
+    row.addEventListener('dragleave', function () { row.classList.remove('mod-drop-target'); });
+    row.addEventListener('drop', function (event) {
+      var mgId = event.dataTransfer.getData('application/x-ramm-modgroup');
+      if (!mgId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      row.classList.remove('mod-drop-target');
+      var draggedGroup = (data.menu.modifier_groups || []).find(function (g) { return g.id === mgId; });
+      if (!draggedGroup) return;
+      item.modifier_group_ids = item.modifier_group_ids || [];
+      if (item.modifier_group_ids.indexOf(mgId) !== -1) {
+        tool.notify('"' + draggedGroup.group_name + '" is already on this item', 'info');
+        return;
+      }
+      item.modifier_group_ids.push(mgId);
+      scheduleSave();
+      renderItems();
+      tool.notify('Added "' + draggedGroup.group_name + '" to ' + (item.item_name || 'the item'), 'success');
     });
 
     row.addEventListener('dragstart', function(e) {
@@ -4303,7 +6352,7 @@ function openItemDrawer(itemId) {
     (data.menu.categories || []).forEach(function(c) {
       catSelect.innerHTML += '<option value="' + c.id + '">' + esc(c.name) + '</option>';
     });
-    catSelect.value = item ? (item.category_id || '') : (selectedCategoryId || '');
+    catSelect.value = item ? (item.category_id || '') : (selectedCategoryId || ((data.menu.categories && data.menu.categories[0]) ? data.menu.categories[0].id : '') || '');
   }
 
   if (item) {
@@ -4975,9 +7024,19 @@ function handleSinglePhotoUpload(requestUploadFn, areaId, getPhotoFn, setPhotoFn
 /* ---- Save / Delete Item ---- */
 function saveItem() {
   var name = document.getElementById('menu-item-name').value.trim();
-  var price = parseFloat(document.getElementById('menu-item-price').value);
+  var priceInput = document.getElementById('menu-item-price').value.trim();
+  var price = priceInput === '' ? null : parseFloat(priceInput);
+  var draftSizes = editingItemId
+    ? ((data.menu.items.find(function (i) { return i.id === editingItemId; }) || {}).sizes || [])
+    : ((_newItemDraft || {}).sizes || []);
+  var hasSizes = draftSizes.length > 0;
   if (!name) { tool.notify('Item name is required', 'warning'); return; }
-  if (isNaN(price) || price < 0) { tool.notify('Valid price is required', 'warning'); return; }
+  if (hasSizes) {
+    price = null; /* sized items carry their price per size */
+  } else if (price === null || isNaN(price) || price < 0) {
+    tool.notify('Enter a base price, or add at least one size', 'warning');
+    return;
+  }
 
   var catSelect = document.getElementById('menu-item-category');
   var categoryId = catSelect ? (catSelect.value || null) : (selectedCategoryId || null);
@@ -5327,13 +7386,25 @@ function initAllEvents() {
     });
   }
 
-  /* General Info: add cuisine */
-  var addCuisineBtn = document.getElementById('gen-add-cuisine-btn');
-  if (addCuisineBtn) addCuisineBtn.addEventListener('click', addCustomCuisine);
-  var cuisineCustomInput = document.getElementById('gen-cuisine-custom');
-  if (cuisineCustomInput) {
-    cuisineCustomInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') { e.preventDefault(); addCustomCuisine(); }
+  /* General Info: cuisine type picker popup */
+  var cuisinePickerBtn = document.getElementById('gen-cuisine-picker-btn');
+  if (cuisinePickerBtn) cuisinePickerBtn.addEventListener('click', openCuisinePicker);
+  var cuisineCancelBtn = document.getElementById('gen-cuisine-cancel');
+  if (cuisineCancelBtn) cuisineCancelBtn.addEventListener('click', closeCuisinePicker);
+  var cuisineDoneBtn = document.getElementById('gen-cuisine-done');
+  if (cuisineDoneBtn) cuisineDoneBtn.addEventListener('click', applyCuisinePicker);
+  var cuisineAddNewBtn = document.getElementById('gen-cuisine-add-new');
+  if (cuisineAddNewBtn) cuisineAddNewBtn.addEventListener('click', addCustomCuisineToDraft);
+  var cuisineNewInput = document.getElementById('gen-cuisine-new');
+  if (cuisineNewInput) {
+    cuisineNewInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); addCustomCuisineToDraft(); }
+    });
+  }
+  var cuisineSearchInput = document.getElementById('gen-cuisine-search');
+  if (cuisineSearchInput) {
+    cuisineSearchInput.addEventListener('input', function() {
+      renderCuisinePickerGrid(cuisineSearchInput.value);
     });
   }
 
@@ -5349,6 +7420,8 @@ function initAllEvents() {
       setNested(data, 'general_info.address.state', '');
       renderStateDropdown();
       renderLegalFields();
+      renderAddressSearchScope();
+      closeAddressSearchResults();
       scheduleSave();
     });
   }
@@ -5404,6 +7477,20 @@ function initAllEvents() {
     });
   }
 
+  /* General Info: restaurant address search (Nominatim, D-RAMM-57) */
+  var addressSearchInput = document.getElementById('gen-address-search');
+  if (addressSearchInput) {
+    addressSearchInput.addEventListener('input', scheduleAddressSearch);
+    addressSearchInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        runAddressSearch();
+      }
+    });
+  }
+  var addressSearchButton = document.getElementById('gen-address-search-btn');
+  if (addressSearchButton) addressSearchButton.addEventListener('click', runAddressSearch);
+
   /* Tax: add category */
   var addTaxBtn = document.getElementById('tax-add-cat');
   if (addTaxBtn) addTaxBtn.addEventListener('click', addTaxCategory);
@@ -5433,6 +7520,34 @@ function initAllEvents() {
   /* Zones: add button */
   var zoneCenterButton = document.getElementById('zone-center-btn');
   if (zoneCenterButton) zoneCenterButton.addEventListener('click', centerZoneMapOnRestaurant);
+
+  /* Delivery map search (T-85, D-RAMM-50 - Nominatim). */
+  var zoneSearchInput = document.getElementById('zone-search-input');
+  if (zoneSearchInput) {
+    zoneSearchInput.addEventListener('input', scheduleZoneSearch);
+    zoneSearchInput.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (zoneSearchTimer) { clearTimeout(zoneSearchTimer); zoneSearchTimer = null; }
+      runZoneSearch();
+    });
+  }
+  var zoneSearchBtn = document.getElementById('zone-search-btn');
+  if (zoneSearchBtn) zoneSearchBtn.addEventListener('click', runZoneSearch);
+
+  /* Additional services (T-86, T-87) */
+  var addonUploadBtn = document.getElementById('addon-upload-btn');
+  if (addonUploadBtn) addonUploadBtn.addEventListener('click', addAddonFile);
+  var addonSubmitBtn = document.getElementById('addon-submit-btn');
+  if (addonSubmitBtn) addonSubmitBtn.addEventListener('click', submitAddonRequest);
+  var addonCancelBtn = document.getElementById('addon-cancel-btn');
+  if (addonCancelBtn) addonCancelBtn.addEventListener('click', closeAddonRequest);
+  document.addEventListener('click', function(e) {
+    var panel = zoneSearchPanel();
+    if (!panel || panel.style.display === 'none') return;
+    if (e.target && e.target.closest && e.target.closest('.zone-search-wrap')) return;
+    closeZoneSearchResults();
+  });
 
   document.getElementById('zone-add-btn').addEventListener('click', function() {
     zoneEditingIndex = -1;
@@ -5465,6 +7580,12 @@ function initAllEvents() {
   });
   document.getElementById('zone-save-btn').addEventListener('click', saveZone);
   document.getElementById('zone-cancel-btn').addEventListener('click', clearZoneForm);
+
+  /* In-place shape editing (T-84) - guards keep older shells working. */
+  var shapeEditSaveBtn = document.getElementById('zone-shape-edit-save');
+  if (shapeEditSaveBtn) shapeEditSaveBtn.addEventListener('click', saveShapeEdit);
+  var shapeEditCancelBtn = document.getElementById('zone-shape-edit-cancel');
+  if (shapeEditCancelBtn) shapeEditCancelBtn.addEventListener('click', function() { cancelShapeEdit(false); });
   document.getElementById('zone-delete-form-btn').addEventListener('click', confirmDeleteZone);
   document.getElementById('zone-delete-confirm-btn').addEventListener('click', deleteZoneConfirmed);
   document.getElementById('zone-delete-cancel-btn').addEventListener('click', cancelZoneDelete);
@@ -5527,6 +7648,27 @@ function initAllEvents() {
   var menuImportCloseBtn = document.getElementById('menu-import-close');
   if (menuImportCloseBtn) menuImportCloseBtn.addEventListener('click', closeMenuImportModal);
   wireJsonFilePicker('menu-import-file-input', 'menu-import-file-btn', 'menu-import-file-name', 'menu-import-json');
+
+  /* Menu file import and export (T-79 to T-82) */
+  var menuImportFileBtn = document.getElementById('menu-import-file-btn');
+  if (menuImportFileBtn) menuImportFileBtn.addEventListener('click', openMenuFileImport);
+  var menuExportBtn = document.getElementById('menu-export-btn');
+  if (menuExportBtn) menuExportBtn.addEventListener('click', exportMenuToSpreadsheet);
+  var menuFileChooseBtn = document.getElementById('menu-file-choose');
+  var menuFileInput = document.getElementById('menu-file-input');
+  if (menuFileChooseBtn && menuFileInput) {
+    menuFileChooseBtn.addEventListener('click', function() { menuFileInput.click(); });
+    menuFileInput.addEventListener('change', function() {
+      var file = menuFileInput.files && menuFileInput.files[0];
+      if (file) handleMenuFileChosen(file);
+    });
+  }
+  var menuFileApplyBtn = document.getElementById('menu-file-apply');
+  if (menuFileApplyBtn) menuFileApplyBtn.addEventListener('click', applyMenuImportModel);
+  var menuFileCancelBtn = document.getElementById('menu-file-cancel');
+  if (menuFileCancelBtn) menuFileCancelBtn.addEventListener('click', closeMenuFileImport);
+  var menuPdfToSheetBtn = document.getElementById('menu-pdf-to-sheet');
+  if (menuPdfToSheetBtn) menuPdfToSheetBtn.addEventListener('click', exportMenuImportRowsToSpreadsheet);
 
   /* Menu: Panel Tabs */
   document.querySelectorAll('.panel-tab').forEach(function(tab) {
@@ -5643,6 +7785,7 @@ function initAllEvents() {
     var item = getEditingItem();
     openAddSizeModal(item || _newItemDraft);
   });
+  document.getElementById('menu-item-size-bulk-btn').addEventListener('click', addBulkItemSizes);
 
   /* Item visibility mode listeners */
   var itemVisMode = document.getElementById('menu-item-vis-mode');
@@ -5931,17 +8074,85 @@ function renderDealCardHtml(deal) {
   '</div>';
 }
 
-function refreshDealSectionOptions() {
-  var dataList = document.getElementById('deal-section-options');
-  if (!dataList) return;
-  var seenSections = {};
+/* Section names already used by the deals, plus any name typed in this
+   editing session, so a freshly added chip does not vanish when the owner
+   changes their mind and picks another one. */
+var _dealSectionDrafts = [];
+
+function dealSectionNames() {
+  var seen = {};
   (data.deals || []).forEach(function (deal) {
-    var sectionName = deal.section || '';
-    if (sectionName) seenSections[sectionName] = true;
+    var name = String(deal.section || '').trim();
+    if (name) seen[name] = true;
   });
-  dataList.innerHTML = Object.keys(seenSections).sort().map(function (sectionName) {
-    return '<option value="' + esc(sectionName) + '"></option>';
-  }).join('');
+  _dealSectionDrafts.forEach(function (name) {
+    if (name) seen[name] = true;
+  });
+  return Object.keys(seen).sort(function (a, b) {
+    return a.toLowerCase().localeCompare(b.toLowerCase());
+  });
+}
+
+/* The section is a free text field in the data, but a plain input with a
+   datalist reads as an unknown dropdown. Existing sections are offered as
+   chips, the current value is selected, and a name can still be typed. */
+function renderDealSectionControl() {
+  var control = document.getElementById('deal-section-control');
+  var hiddenInput = document.getElementById('deal-section');
+  if (!control || !hiddenInput) return;
+
+  var current = String(hiddenInput.value || '').trim();
+  var names = dealSectionNames();
+  if (current && names.indexOf(current) === -1) names.push(current);
+
+  var html = '<div class="deal-section-chips">' +
+    '<button type="button" class="deal-section-chip' + (current ? '' : ' is-selected') + '" data-deal-section-pick="">No section</button>';
+  names.forEach(function (name) {
+    html += '<button type="button" class="deal-section-chip' + (name === current ? ' is-selected' : '') +
+      '" data-deal-section-pick="' + esc(name) + '">' + esc(name) + '</button>';
+  });
+  html += '</div>';
+  html += '<div class="deal-section-add">' +
+    '<input type="text" class="form-input form-input-sm" id="deal-section-new" placeholder="New section name" autocomplete="off">' +
+    '<button type="button" class="btn btn-sm btn-outline" id="deal-section-add-btn">Add</button>' +
+    '</div>';
+  control.innerHTML = html;
+
+  control.querySelectorAll('[data-deal-section-pick]').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      hiddenInput.value = chip.getAttribute('data-deal-section-pick') || '';
+      renderDealSectionControl();
+    });
+  });
+
+  var newInput = document.getElementById('deal-section-new');
+  var addButton = document.getElementById('deal-section-add-btn');
+
+  function addSectionFromInput() {
+    if (!newInput) return;
+    var name = String(newInput.value || '').trim();
+    if (!name) { if (newInput.focus) newInput.focus(); return; }
+    if (_dealSectionDrafts.indexOf(name) === -1) _dealSectionDrafts.push(name);
+    hiddenInput.value = name;
+    newInput.value = '';
+    renderDealSectionControl();
+    var focusTarget = document.getElementById('deal-section-new');
+    if (focusTarget && focusTarget.focus) focusTarget.focus();
+  }
+
+  if (addButton) addButton.addEventListener('click', addSectionFromInput);
+  if (newInput) {
+    newInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addSectionFromInput();
+      }
+    });
+  }
+}
+
+function refreshDealSectionOptions() {
+  renderDealSectionControl();
 }
 
 function renderDeals() {
@@ -6156,13 +8367,13 @@ function renderDealGroupCard(group, groupIndex, options) {
         : '') +
       '<button type="button" class="deal-group-remove" data-deal-remove-group title="Remove group">✕</button>' +
     '</div>' +
-    '<div class="form-group"><label class="form-label">Option pool</label>' + renderDealCategoryChips(group.category_ids || []) + '</div>' +
+    '<div class="form-group"><label class="form-label">Customer picks from these categories</label>' + renderDealCategoryChips(group.category_ids || []) + '</div>' +
     '<div class="form-row">' +
-      '<div class="form-group"><label class="form-label">Size filter</label>' + renderDealSizeSelect(group.size_label || '', 'deal-group-size') + '</div>' +
+      '<div class="form-group"><label class="form-label">Only items with this size</label>' + renderDealSizeSelect(group.size_label || '', 'deal-group-size') + '</div>' +
       '<div class="form-group"><label class="form-label">Name filter</label>' +
         '<input type="text" class="form-input deal-group-name-filter" value="' + esc(group.name_filter || '') + '" placeholder="Optional text in the item name"></div>' +
     '</div>' +
-    '<div class="form-group"><label class="form-label">Fixed extras (optional)</label>' +
+    '<div class="form-group"><label class="form-label">Included items (optional, no picking)</label>' +
       '<p class="deal-rule-hint">Tick any item here and the group becomes a fixed extra: the customer picks nothing and the filters above are ignored.</p>' +
       renderDealItemPicker(group.item_ids || [], 'deal-group-item') + '</div>' +
     (isFixedExtra ? '<p class="deal-rule-hint"><strong>This group is a fixed extra.</strong></p>' : '') +
@@ -6225,6 +8436,112 @@ function renderDealScheduleEditor(schedule) {
   '</div>';
 }
 
+/* --------------------------------------------------------------------- */
+/* VISUAL DEAL TYPE PICKER                                               */
+/* The deal type is the biggest choice in the editor, so it is a grid of  */
+/* cards instead of a dropdown. #deal-rule-type stays as a hidden input   */
+/* so every reader and writer of the form keeps working unchanged.        */
+/* --------------------------------------------------------------------- */
+var DEAL_TYPE_CARDS = [
+  { id: 'bundle', icon: '🎁', name: 'Bundle', blurb: 'The customer picks from a set and pays one fixed price.', tip: 'Family meal for 4 for 39.00', fields: 'the groups, what each group allows, and the fixed price' },
+  { id: 'min_quantity', icon: '🔢', name: 'Minimum quantity', blurb: 'The order must contain at least N items, charged per unit.', tip: 'Any 3 sides for 4.00 each', fields: 'the minimum count, the categories and the price per unit' },
+  { id: 'tiered', icon: '📊', name: 'Tiered pricing', blurb: 'A fixed item list where the unit price depends on the quantity.', tip: '2 pizzas 20.00, 4 pizzas 36.00', fields: 'the item list and a quantity tier per price' },
+  { id: 'two_for_one', icon: '✌️', name: 'Two for one', blurb: 'The customer picks two and pays for the cheaper one only.', tip: 'Two pizzas, the cheaper one free', fields: 'the categories or items and an optional size filter' },
+  { id: 'buy_n_get_m', icon: '🔁', name: 'Buy N get M', blurb: 'Buy N of the same offer and M of them are free.', tip: 'Buy 3 get 1 free', fields: 'N, M and the categories the deal applies to' },
+  { id: 'volume_pricing', icon: '📈', name: 'Volume pricing', blurb: 'The unit price drops as the quantity band grows.', tip: '1-5 at 5.00, 6 or more at 4.20', fields: 'the quantity bands and the unit price per band' },
+  { id: 'free_item_with_purchase', icon: '🥤', name: 'Free item', blurb: 'A free item is added when the order qualifies.', tip: 'Free drink with any meal', fields: 'the qualifying items and the free item' },
+  { id: 'free_modifier', icon: '🧂', name: 'Free modifiers', blurb: 'Selected extras cost the customer nothing.', tip: 'Free extra cheese', fields: 'the modifier groups and options that become free' },
+  { id: 'percentage_discount', icon: '％', name: 'Percent off', blurb: 'A percentage is taken off the line or the whole order.', tip: '-10% on the whole menu', fields: 'the percentage and what it applies to' },
+  { id: 'subtotal_threshold', icon: '💵', name: 'Spend and save', blurb: 'A fixed amount off once the subtotal passes a limit.', tip: 'Spend 50, save 5', fields: 'the subtotal limit and the amount off' },
+  { id: 'free_delivery', icon: '🚚', name: 'Free delivery', blurb: 'The delivery fee is waived above a subtotal.', tip: 'Free delivery over 30', fields: 'the subtotal limit and the delivery zones' }
+];
+
+/* Grouped so an owner reads the eleven types as three families instead of a
+   flat list: package deals, volume and free items, money off the order. */
+var DEAL_TYPE_GROUPS = [
+  { title: 'Fixed price packages', hint: 'The customer picks from a set and pays one price.', types: ['bundle', 'min_quantity', 'tiered'] },
+  { title: 'Volume and free items', hint: 'Reward a bigger basket with free or cheaper items.', types: ['two_for_one', 'buy_n_get_m', 'volume_pricing', 'free_item_with_purchase', 'free_modifier'] },
+  { title: 'Money off the order', hint: 'Take an amount off the line or the whole order.', types: ['percentage_discount', 'subtotal_threshold', 'free_delivery'] }
+];
+
+function getDealTypeCard(typeId) {
+  for (var i = 0; i < DEAL_TYPE_CARDS.length; i++) {
+    if (DEAL_TYPE_CARDS[i].id === typeId) return DEAL_TYPE_CARDS[i];
+  }
+  return null;
+}
+
+function renderDealTypeGrid(selectedType) {
+  var grid = document.getElementById('deal-type-grid');
+  if (!grid) return;
+  var hidden = document.getElementById('deal-rule-type');
+  var current = selectedType || (hidden ? hidden.value : '') || 'bundle';
+  if (DEAL_RULE_TYPES.indexOf(current) === -1) current = 'bundle';
+
+  var html = '';
+  DEAL_TYPE_GROUPS.forEach(function (group) {
+    html += '<div class="deal-type-group">' +
+      '<div class="deal-type-group-head">' +
+        '<span class="deal-type-group-title">' + esc(group.title) + '</span>' +
+        '<span class="deal-type-group-hint">' + esc(group.hint) + '</span>' +
+      '</div>' +
+      '<div class="deal-type-cards">';
+
+    group.types.forEach(function (typeId) {
+      var cardType = getDealTypeCard(typeId);
+      if (!cardType) return;
+      var active = cardType.id === current;
+      html += '<button type="button" class="deal-type-card' + (active ? ' active' : '') + '" ' +
+        'data-deal-type="' + esc(cardType.id) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' +
+        '<span class="deal-type-icon">' + cardType.icon + '</span>' +
+        '<span class="deal-type-main">' +
+          '<span class="deal-type-name">' + esc(cardType.name) + '</span>' +
+          '<span class="deal-type-blurb">' + esc(cardType.blurb) + '</span>' +
+          '<span class="deal-type-line"><b>Example</b> ' + esc(cardType.tip) + '</span>' +
+          '<span class="deal-type-line"><b>You set</b> ' + esc(cardType.fields) + '</span>' +
+        '</span>' +
+        '<span class="deal-type-check">✓</span>' +
+      '</button>';
+    });
+
+    html += '</div></div>';
+  });
+  grid.innerHTML = html;
+
+  if (hidden) hidden.value = current;
+  grid.querySelectorAll('.deal-type-card').forEach(function (card) {
+    card.addEventListener('click', function () { chooseDealType(card.dataset.dealType); });
+  });
+
+  renderDealRuleTypeSummary(current);
+}
+
+/* Header of step 2 - always names the type that step will configure. */
+function renderDealRuleTypeSummary(ruleType) {
+  var box = document.getElementById('deal-rule-type-summary');
+  if (!box) return;
+  var cardType = getDealTypeCard(ruleType);
+  if (!cardType) { box.innerHTML = ''; return; }
+  box.innerHTML =
+    '<span class="deal-rule-type-icon">' + cardType.icon + '</span>' +
+    '<span class="deal-rule-type-text">' +
+      '<span class="deal-rule-type-name">' + esc(cardType.name) + '</span>' +
+      '<span class="deal-rule-type-blurb">' + esc(cardType.blurb) + '</span>' +
+    '</span>';
+}
+
+function chooseDealType(ruleType) {
+  if (DEAL_RULE_TYPES.indexOf(ruleType) === -1) return;
+  var hidden = document.getElementById('deal-rule-type');
+  if (hidden) hidden.value = ruleType;
+  updateDealPriceFieldState(ruleType);
+  renderDealRuleEditor(ruleType, {});
+  renderDealTypeGrid(ruleType);
+  renderDealMatchPreview();
+  refreshDealStepIndicators();
+  tool.resize();
+}
+
 function renderDealRuleEditor(ruleType, rule) {
   var container = document.getElementById('deal-rule-editor');
   if (!container) return;
@@ -6232,11 +8549,11 @@ function renderDealRuleEditor(ruleType, rule) {
   var html = '';
 
   if (ruleType === 'bundle') {
-    var groups = (ruleData.groups && ruleData.groups.length > 0) ? ruleData.groups : [{ group_id: uid(), label: '', quantity: 1 }];
+    var bundleGroups = (ruleData.groups && ruleData.groups.length > 0) ? ruleData.groups : [{ group_id: uid(), label: '', quantity: 1 }];
     html += '<div class="deal-rule-block">' +
       '<div class="deal-rule-block-title">Bundle groups</div>' +
-      '<p class="deal-rule-hint">Each group is one choice the customer makes. The bundle price is the fixed total for everything.</p>' +
-      '<div id="deal-groups">' + groups.map(renderDealGroupCard).join('') + '</div>' +
+      '<p class="deal-rule-hint">Each group is one choice. Categories decide what the customer can pick from. Tick items under "Included items" to add them automatically instead.</p>' +
+      '<div id="deal-groups">' + bundleGroups.map(renderDealGroupCard).join('') + '</div>' +
       '<div class="deal-inline-actions"><button type="button" class="btn btn-sm btn-outline" data-deal-add-group>+ Add group</button></div>' +
     '</div>';
   }
@@ -6255,7 +8572,7 @@ function renderDealRuleEditor(ruleType, rule) {
   }
 
   if (ruleType === 'tiered') {
-    var tiers = (ruleData.tiers && ruleData.tiers.length > 0) ? ruleData.tiers : [{ quantity: 2, price: null, label: '' }];
+    var tiers = (ruleData.tiers && ruleData.tiers.length > 0) ? ruleData.tiers : [{ quantity: 2, price: null, label: 'Tier 1' }];
     html += '<div class="deal-rule-block">' +
       '<div class="deal-rule-block-title">Tiered pricing</div>' +
       '<p class="deal-rule-hint">The customer picks from this fixed item list. The price comes from the matching tier, so the price field above stays empty.</p>' +
@@ -6270,14 +8587,14 @@ function renderDealRuleEditor(ruleType, rule) {
   if (ruleType === 'two_for_one') {
     html += '<div class="deal-rule-block">' +
       '<div class="deal-rule-block-title">Two for one rule</div>' +
-      '<p class="deal-rule-hint">The customer picks the required number of items and the cheapest is free. The price field above stays empty.</p>' +
+      '<p class="deal-rule-hint">Pick how many items the deal needs. The cheapest pick is free. The price field above stays empty.</p>' +
       '<div class="form-row">' +
-        '<div class="form-group"><label class="form-label">Items the customer picks</label>' +
+        '<div class="form-group"><label class="form-label">How many items the customer picks</label>' +
           '<input type="number" class="form-input" id="deal-required-count" min="2" step="1" value="' + (ruleData.required_item_count || 2) + '"></div>' +
         '<div class="form-group"><label class="form-label">Same size only</label>' +
           '<label class="switch" style="margin-top:6px;"><input type="checkbox" id="deal-same-size"' + (ruleData.same_size !== false ? ' checked' : '') + '><span class="slider"></span></label></div>' +
       '</div>' +
-      '<div class="form-group"><label class="form-label">Categories</label>' + renderDealCategoryChips(ruleData.category_ids || []) + '</div>' +
+      '<div class="form-group"><label class="form-label">Customer picks from these categories</label>' + renderDealCategoryChips(ruleData.category_ids || []) + '</div>' +
     '</div>';
   }
 
@@ -6379,10 +8696,38 @@ function renderDealScheduleTab(schedule) {
   container.innerHTML = renderDealScheduleEditor(schedule);
 }
 
-function refreshDealScheduleTabBadge() {
-  var tabButton = document.querySelector('#deal-editor-tabs .deal-modal-tab[data-deal-tab="schedule"]');
-  if (!tabButton) return;
-  tabButton.classList.toggle('has-value', collectDealScheduleFromForm() !== null);
+/* Marks every editor step that already carries content, so the owner can see
+   at a glance which steps still need attention in the new four-step flow. */
+function refreshDealStepIndicators() {
+  var modal = document.getElementById('deal-editor-modal');
+  if (!modal) return;
+
+  function markStep(tabName, done) {
+    var button = modal.querySelector('.deal-modal-tab[data-deal-tab="' + tabName + '"]');
+    if (button) button.classList.toggle('has-value', !!done);
+  }
+
+  var draft = null;
+  try { draft = collectDealDraftFromForm(); } catch (err) { draft = null; }
+
+  markStep('type', !!(draft && draft.rule_type));
+  markStep('basics', !!(draft && String(draft.title || '').trim()));
+
+  var ruleHasContent = false;
+  var rule = (draft && draft.rule) ? draft.rule : {};
+  Object.keys(rule).forEach(function (key) {
+    var value = rule[key];
+    if (Object.prototype.toString.call(value) === '[object Array]') {
+      if (value.length > 0) ruleHasContent = true;
+    } else if (value !== null && value !== undefined && value !== '') {
+      ruleHasContent = true;
+    }
+  });
+  markStep('rule', ruleHasContent);
+
+  var hasSchedule = false;
+  try { hasSchedule = collectDealScheduleFromForm() !== null; } catch (err2) { hasSchedule = false; }
+  markStep('schedule', hasSchedule);
 }
 
 function updateDealPriceFieldState(ruleType) {
@@ -6453,12 +8798,14 @@ function openDealEditor(dealId) {
 
   editingDealId = deal ? deal.id : null;
 
-  switchDealEditorTab('basics');
+  switchDealEditorTab('type');
 
   document.getElementById('deal-editor-title').textContent = deal ? 'Edit Deal' : 'New Deal';
   document.getElementById('deal-title').value = deal ? (deal.title || '') : '';
   document.getElementById('deal-description').value = deal ? (deal.description || '') : '';
+  _dealSectionDrafts = [];
   document.getElementById('deal-section').value = deal ? (deal.section || '') : '';
+  renderDealSectionControl();
   document.getElementById('deal-image-url').value = deal ? (deal.image_url || '') : '';
   document.getElementById('deal-active').checked = deal ? deal.active !== false : true;
   document.getElementById('deal-delete-btn').style.display = deal ? '' : 'none';
@@ -6466,6 +8813,7 @@ function openDealEditor(dealId) {
 
   var ruleType = deal ? deal.rule_type : 'bundle';
   document.getElementById('deal-rule-type').value = ruleType;
+  renderDealTypeGrid(ruleType);
 
   var priceInput = document.getElementById('deal-price');
   priceInput.value = (deal && deal.price !== null && deal.price !== undefined) ? deal.price : '';
@@ -6474,7 +8822,7 @@ function openDealEditor(dealId) {
   setDealImagePreview(deal ? deal.image_url : '');
   renderDealRuleEditor(ruleType, deal ? deal.rule : {});
   renderDealScheduleTab(deal ? deal.schedule : undefined);
-  refreshDealScheduleTabBadge();
+  refreshDealStepIndicators();
   renderDealMatchPreview();
 
   document.getElementById('deal-editor-modal').style.display = 'flex';
@@ -6487,7 +8835,7 @@ function closeDealEditor() {
   editingDealId = null;
 }
 
-function switchDealEditorTab(tabName) {
+function switchDealEditorTab(tabName, keepErrors) {
   var modal = document.getElementById('deal-editor-modal');
   if (!modal) return;
   modal.querySelectorAll('.deal-modal-tab').forEach(function (tabButton) {
@@ -6496,7 +8844,98 @@ function switchDealEditorTab(tabName) {
   modal.querySelectorAll('.deal-tab-content').forEach(function (tabContent) {
     tabContent.classList.toggle('active', tabContent.id === 'deal-tab-' + tabName);
   });
+  /* Errors from a failed save stay only while we jump the owner to them. */
+  if (!keepErrors) hideDealEditorErrors();
+  /* Every step shares one scroll container, so without this the next step
+     opens at the offset the previous step was scrolled to. */
+  var editorBody = document.getElementById('deal-editor-body');
+  if (editorBody) editorBody.scrollTop = 0;
+  var contentWrap = modal.querySelector('.deal-tab-content-wrap');
+  if (contentWrap) contentWrap.scrollTop = 0;
+  refreshDealFooter();
   tool.resize();
+}
+
+var DEAL_STEP_ORDER = ['type', 'rule', 'basics', 'schedule'];
+var DEAL_STEP_LABELS = { type: 'Deal type', rule: 'Offer setup', basics: 'Details', schedule: 'Schedule' };
+
+/* The footer follows the step. Save Deal exists only on the last step, so the
+   only way forward from step 1 is the visible "Next" action - the owner can no
+   longer save a deal they have not configured. */
+function refreshDealFooter() {
+  var nextButton = document.getElementById('deal-footer-next');
+  var backButton = document.getElementById('deal-footer-back');
+  var saveButton = document.getElementById('deal-save-btn');
+  if (!nextButton || !saveButton) return;
+
+  var index = DEAL_STEP_ORDER.indexOf(activeDealTab());
+  if (index === -1) index = 0;
+  var isLastStep = index === DEAL_STEP_ORDER.length - 1;
+  var nextTab = isLastStep ? '' : DEAL_STEP_ORDER[index + 1];
+
+  if (backButton) backButton.style.display = index === 0 ? 'none' : '';
+  nextButton.style.display = isLastStep ? 'none' : '';
+  saveButton.style.display = isLastStep ? '' : 'none';
+  if (!isLastStep) {
+    nextButton.textContent = 'Next: ' + DEAL_STEP_LABELS[nextTab] + ' →';
+    nextButton.setAttribute('data-deal-footer-goto', nextTab);
+  } else {
+    nextButton.removeAttribute('data-deal-footer-goto');
+  }
+
+  var progressLabel = document.getElementById('deal-step-progress');
+  if (progressLabel) {
+    progressLabel.textContent = 'Step ' + (index + 1) + ' of ' + DEAL_STEP_ORDER.length + ' · ' + DEAL_STEP_LABELS[DEAL_STEP_ORDER[index]];
+  }
+}
+
+function goToNextDealStep() {
+  var index = DEAL_STEP_ORDER.indexOf(activeDealTab());
+  if (index === -1 || index === DEAL_STEP_ORDER.length - 1) return;
+  if (!canLeaveDealStep()) return;
+  switchDealEditorTab(DEAL_STEP_ORDER[index + 1]);
+}
+
+function goToPreviousDealStep() {
+  var index = DEAL_STEP_ORDER.indexOf(activeDealTab());
+  if (index <= 0) return;
+  switchDealEditorTab(DEAL_STEP_ORDER[index - 1]);
+}
+
+function activeDealTab() {
+  var activePanel = document.querySelector('#deal-editor-modal .deal-tab-content.active');
+  if (!activePanel || !activePanel.id) return 'type';
+  return activePanel.id.replace('deal-tab-', '');
+}
+
+/* Steps are guarded one at a time, in the order the editor now uses: a field
+   is only demanded when the owner leaves the step that owns it. Everything is
+   validated once more when the deal is saved. */
+function canLeaveDealStep() {
+  if (activeDealTab() !== 'basics') return true;
+  var titleInput = document.getElementById('deal-title');
+  if (titleInput && !String(titleInput.value || '').trim()) {
+    tool.notify('Step 3 · Details: add a title before moving on', 'warning');
+    if (titleInput.focus) titleInput.focus();
+    return false;
+  }
+  return true;
+}
+
+function hideDealEditorErrors() {
+  var container = document.getElementById('deal-editor-errors');
+  if (!container) return;
+  container.style.display = 'none';
+  container.innerHTML = '';
+}
+
+/* One error string -> the step that owns the fix. Rule keywords are checked
+   first because a rule error may also mention a price or a date. */
+function dealStepOfErrorMessage(message) {
+  var text = String(message || '').toLowerCase();
+  if (/tier|band|group|item|categor|modifier|option|size|quantity|percent|threshold|zone|rule/.test(text)) return 'rule';
+  if (/schedule|weekday|time_from|time_until|date_from|date_until|window/.test(text)) return 'schedule';
+  return 'basics';
 }
 
 function collectDealDraftFromForm() {
@@ -6916,10 +9355,44 @@ function renderDealMatchPreview() {
 function showDealEditorErrors(errors) {
   var container = document.getElementById('deal-editor-errors');
   if (!container) return;
+
+  var stepOrder = ['rule', 'basics', 'schedule'];
+  var stepLabels = {
+    rule: 'Step 2 · Offer setup',
+    basics: 'Step 3 · Details',
+    schedule: 'Step 4 · Schedule'
+  };
+  var grouped = { rule: [], basics: [], schedule: [] };
+  (errors || []).forEach(function (message) {
+    var step = dealStepOfErrorMessage(message);
+    if (!grouped[step]) grouped[step] = [];
+    grouped[step].push(message);
+  });
+
+  var html = '<strong>Fix these before saving:</strong><ul>';
+  var stepsWithErrors = [];
+  stepOrder.forEach(function (step) {
+    if (!grouped[step] || grouped[step].length === 0) return;
+    stepsWithErrors.push(step);
+    html += '<li class="deal-error-step">' +
+      '<span class="deal-error-step-head">' +
+        '<span class="deal-error-step-label">' + esc(stepLabels[step]) + '</span>' +
+        '<button type="button" class="deal-error-step-goto" data-deal-error-step="' + step + '">Go to this step</button>' +
+      '</span>' +
+      '<ul>' + grouped[step].map(function (message) { return '<li>' + esc(message) + '</li>'; }).join('') + '</ul>' +
+      '</li>';
+  });
+  html += '</ul>';
+
+  container.innerHTML = html;
   container.style.display = '';
-  container.innerHTML = '<strong>Fix these before saving:</strong><ul>' + errors.map(function (message) {
-    return '<li>' + esc(message) + '</li>';
-  }).join('') + '</ul>';
+  container.querySelectorAll('[data-deal-error-step]').forEach(function (button) {
+    button.addEventListener('click', function () { switchDealEditorTab(button.dataset.dealErrorStep, true); });
+  });
+
+  /* Land on the first step that needs a fix instead of only listing errors. */
+  if (stepsWithErrors.length > 0) switchDealEditorTab(stepsWithErrors[0], true);
+  if (container.scrollIntoView) container.scrollIntoView({ block: 'nearest' });
 }
 
 function saveDealFromEditor() {
@@ -7352,12 +9825,14 @@ function wireDealEditor() {
   if (editorTabs) {
     editorTabs.querySelectorAll('.deal-modal-tab').forEach(function (tabButton) {
       tabButton.addEventListener('click', function () {
+        if (!canLeaveDealStep()) return;
         switchDealEditorTab(tabButton.dataset.dealTab);
       });
     });
   }
   document.querySelectorAll('[data-deal-tab-goto]').forEach(function (gotoButton) {
     gotoButton.addEventListener('click', function () {
+      if (!canLeaveDealStep()) return;
       switchDealEditorTab(gotoButton.dataset.dealTabGoto);
     });
   });
@@ -7384,6 +9859,12 @@ function wireDealEditor() {
   if (cancelButton) cancelButton.addEventListener('click', closeDealEditor);
   var saveButton = document.getElementById('deal-save-btn');
   if (saveButton) saveButton.addEventListener('click', saveDealFromEditor);
+
+  /* Footer step navigation: Next carries the flow forward, Back never validates. */
+  var footerNextButton = document.getElementById('deal-footer-next');
+  if (footerNextButton) footerNextButton.addEventListener('click', goToNextDealStep);
+  var footerBackButton = document.getElementById('deal-footer-back');
+  if (footerBackButton) footerBackButton.addEventListener('click', goToPreviousDealStep);
 
   var deleteButton = document.getElementById('deal-delete-btn');
   if (deleteButton) {
@@ -7422,9 +9903,12 @@ function wireDealEditor() {
   var editorBody = document.getElementById('deal-editor-body');
   if (!editorBody) return;
 
+  /* The visual deal type grid is ready before the editor is first opened. */
+  renderDealTypeGrid('bundle');
+
   editorBody.addEventListener('input', function () {
     renderDealMatchPreview();
-    refreshDealScheduleTabBadge();
+    refreshDealStepIndicators();
   });
 
   editorBody.addEventListener('change', function (event) {
@@ -7434,7 +9918,7 @@ function wireDealEditor() {
       renderDealRuleEditor(nextRuleType, {});
     }
     renderDealMatchPreview();
-    refreshDealScheduleTabBadge();
+    refreshDealStepIndicators();
   });
 
   editorBody.addEventListener('click', function (event) {
@@ -7448,7 +9932,7 @@ function wireDealEditor() {
     if (weekdayChip) {
       weekdayChip.classList.toggle('active');
       renderDealMatchPreview();
-      refreshDealScheduleTabBadge();
+      refreshDealStepIndicators();
       return;
     }
 
@@ -8861,6 +11345,409 @@ function resolveMapCenter() {
   return readRestaurantCoordinates() || readFirstZoneCenter() || { latitude: DEFAULT_MAP_CENTER[0], longitude: DEFAULT_MAP_CENTER[1] };
 }
 
+/* --------------------------------------------------------------------- */
+/* DELIVERY MAP SEARCH - Nominatim / OpenStreetMap (T-85, D-RAMM-50)       */
+/* Free and keyless, so the usage policy is enforced in code: at most one  */
+/* request per second, results cached for the session, attribution shown.  */
+/* --------------------------------------------------------------------- */
+var ZONE_SEARCH_ENDPOINT = 'https://nominatim.openstreetmap.org/search';
+var NOMINATIM_MIN_INTERVAL_MS = 1100;
+var zoneSearchCache = {};
+var zoneSearchLastAt = 0;
+var zoneSearchTimer = null;
+var zoneSearchMarker = null;
+
+function zoneSearchPanel() {
+  return document.getElementById('zone-search-results');
+}
+
+function scheduleZoneSearch() {
+  if (zoneSearchTimer) clearTimeout(zoneSearchTimer);
+  zoneSearchTimer = setTimeout(function() {
+    zoneSearchTimer = null;
+    runZoneSearch();
+  }, 700);
+}
+
+function showZoneSearchMessage(text) {
+  var panel = zoneSearchPanel();
+  if (!panel) return;
+  panel.innerHTML = '<div class="zone-search-message">' + esc(text) + '</div>';
+  panel.style.display = '';
+}
+
+function runZoneSearch() {
+  var input = document.getElementById('zone-search-input');
+  if (!input) return;
+  var query = (input.value || '').trim();
+  if (query.length < 3) { showZoneSearchMessage('Type at least three characters.'); return; }
+  if (typeof fetch !== 'function') { showZoneSearchMessage('This browser cannot run the map search.'); return; }
+
+  var cacheKey = query.toLowerCase();
+  if (zoneSearchCache[cacheKey]) { renderZoneSearchResults(zoneSearchCache[cacheKey]); return; }
+
+  /* Nominatim's usage policy allows one request per second. */
+  var wait = NOMINATIM_MIN_INTERVAL_MS - (Date.now() - zoneSearchLastAt);
+  if (wait > 0) {
+    showZoneSearchMessage('Searching...');
+    setTimeout(runZoneSearch, wait);
+    return;
+  }
+  zoneSearchLastAt = Date.now();
+  showZoneSearchMessage('Searching...');
+
+  fetch(ZONE_SEARCH_ENDPOINT + '?format=jsonv2&limit=6&q=' + encodeURIComponent(query), {
+    headers: { Accept: 'application/json' }
+  }).then(function(response) {
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return response.json();
+  }).then(function(list) {
+    zoneSearchCache[cacheKey] = Array.isArray(list) ? list : [];
+    renderZoneSearchResults(zoneSearchCache[cacheKey]);
+  }).catch(function() {
+    showZoneSearchMessage('The address service could not be reached. Check the connection and try again.');
+  });
+}
+
+function renderZoneSearchResults(list) {
+  var panel = zoneSearchPanel();
+  if (!panel) return;
+  if (!list || list.length === 0) { showZoneSearchMessage('No place found for that search.'); return; }
+
+  var html = '<div class="zone-search-head">Results from OpenStreetMap Nominatim</div>';
+  list.forEach(function(place, idx) {
+    var title = place.name || String(place.display_name || '').split(',')[0];
+    html += '<div class="zone-search-row" data-place-idx="' + idx + '">' +
+      '<div class="zone-search-text">' +
+        '<div class="zone-search-name">' + esc(title) + '</div>' +
+        '<div class="zone-search-address">' + esc(place.display_name || '') + '</div>' +
+      '</div>' +
+      '<button type="button" class="zone-search-pin" data-place-pin="' + idx + '" title="Use as restaurant location">📍</button>' +
+      '</div>';
+  });
+  panel.innerHTML = html;
+  panel.style.display = '';
+
+  panel.querySelectorAll('.zone-search-row').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('.zone-search-pin')) return;
+      focusZoneSearchResult(list[parseInt(row.dataset.placeIdx, 10)]);
+    });
+  });
+  panel.querySelectorAll('.zone-search-pin').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      useZoneSearchResultAsRestaurant(list[parseInt(btn.dataset.placePin, 10)]);
+    });
+  });
+}
+
+function focusZoneSearchResult(place) {
+  if (!place || !zoneMap) return;
+  var lat = parseFloat(place.lat);
+  var lon = parseFloat(place.lon);
+  if (isNaN(lat) || isNaN(lon)) return;
+  if (zoneSearchMarker) { zoneMap.removeLayer(zoneSearchMarker); zoneSearchMarker = null; }
+  zoneSearchMarker = L.marker([lat, lon]).addTo(zoneMap).bindPopup(esc(place.display_name || '')).openPopup();
+  zoneMap.setView([lat, lon], 16);
+  closeZoneSearchResults();
+}
+
+function useZoneSearchResultAsRestaurant(place) {
+  if (!place) return;
+  var lat = parseFloat(place.lat);
+  var lon = parseFloat(place.lon);
+  if (isNaN(lat) || isNaN(lon)) return;
+  if (!data.general_info) data.general_info = {};
+  data.general_info.coordinates = { lat: lat, lng: lon };
+  updateRestaurantMarker();
+  if (zoneMap) zoneMap.setView([lat, lon], 15);
+  scheduleSave();
+  tool.notify('Restaurant location updated from the search result', 'success');
+  closeZoneSearchResults();
+}
+
+function closeZoneSearchResults() {
+  var panel = zoneSearchPanel();
+  if (!panel) return;
+  panel.style.display = 'none';
+  panel.innerHTML = '';
+}
+
+/* --------------------------------------------------------------------- */
+/* RESTAURANT ADDRESS SEARCH (General > Address & Location)               */
+/* Same keyless Nominatim service as the delivery map, on the card that    */
+/* owns the address: one pick fills street, city, state, zip, country and  */
+/* the map point. The search is scoped to the country already selected on  */
+/* the card, and to the state while the scope toggle is on, so a name like */
+/* "Anatolia" cannot return a place on another continent. The one request  */
+/* per second rule is shared with the zone search through the timestamps. */
+/* --------------------------------------------------------------------- */
+var addressSearchCache = {};
+var addressSearchTimer = null;
+var addressSearchLastAt = 0;
+var _addressSearchOnlyState = true;
+
+function addressSearchPanel() {
+  return document.getElementById('gen-address-search-panel');
+}
+
+/* The scope is whatever the card already says: a country is required, and
+   the state is applied as a hard filter while the toggle is on. */
+function addressSearchScope() {
+  var countryCode = String(getNested(data, 'general_info.address.country') || '').toUpperCase();
+  var stateValue = String(getNested(data, 'general_info.address.state') || '').trim();
+  var countryName = '';
+  var stateName = '';
+
+  COUNTRIES.forEach(function(country) {
+    if (country.code === countryCode) countryName = country.name;
+  });
+
+  if (stateValue && (countryCode === 'US' || countryCode === 'CA')) {
+    var states = countryCode === 'US' ? US_STATES : CA_PROVINCES;
+    states.forEach(function(state) {
+      if (state.code === stateValue) stateName = state.name;
+    });
+  }
+  if (stateValue && !stateName) stateName = stateValue;
+
+  return {
+    countryCode: countryCode,
+    countryName: countryName || countryCode,
+    countryParam: /^[A-Z]{2}$/.test(countryCode) ? countryCode.toLowerCase() : '',
+    stateValue: stateValue,
+    stateName: stateName,
+    onlyState: _addressSearchOnlyState && !!stateValue
+  };
+}
+
+/* Shows the owner exactly where the search will look, and lets them widen it
+   to the whole country without touching the address fields. */
+function renderAddressSearchScope() {
+  var scopeHost = document.getElementById('gen-address-search-scope');
+  if (!scopeHost) return;
+  var scope = addressSearchScope();
+
+  if (!scope.countryCode) {
+    scopeHost.innerHTML = '<span class="address-scope-empty">Select the country above first - the search only looks inside it.</span>';
+    return;
+  }
+
+  var html = '<span class="address-scope-label">Searching in</span>' +
+    '<span class="address-scope-chip">' + esc(scope.countryName) + '</span>';
+  if (scope.stateName) {
+    if (scope.onlyState) {
+      html += '<span class="address-scope-chip">' + esc(scope.stateName) + '</span>' +
+        '<button type="button" class="address-scope-toggle" id="gen-address-search-widen">search the whole country</button>';
+    } else {
+      html += '<button type="button" class="address-scope-toggle" id="gen-address-search-narrow">only ' + esc(scope.stateName) + '</button>';
+    }
+  }
+  scopeHost.innerHTML = html;
+
+  var widenButton = document.getElementById('gen-address-search-widen');
+  if (widenButton) widenButton.addEventListener('click', function() {
+    _addressSearchOnlyState = false;
+    renderAddressSearchScope();
+  });
+  var narrowButton = document.getElementById('gen-address-search-narrow');
+  if (narrowButton) narrowButton.addEventListener('click', function() {
+    _addressSearchOnlyState = true;
+    renderAddressSearchScope();
+  });
+}
+
+function buildAddressSearchQuery(raw, scope) {
+  var parts = [raw];
+  if (scope.onlyState && scope.stateName) parts.push(scope.stateName);
+  if (scope.countryName) parts.push(scope.countryName);
+  return parts.join(', ');
+}
+
+/* Nominatim has no state parameter, so the state is enforced on the answers:
+   the ISO 3166-2 code is exact for the US and Canada, the state name for the
+   rest. An answer without any state information is kept rather than dropped. */
+function addressPlaceMatchesScope(place, scope) {
+  if (!scope.onlyState || !scope.stateName) return true;
+  var placeAddress = place.address || {};
+
+  if (scope.countryCode === 'US' || scope.countryCode === 'CA') {
+    var iso = placeAddress['ISO3166-2-lvl4'] || placeAddress['ISO3166-2-lvl6'] || '';
+    var isoCode = iso && iso.indexOf('-') !== -1 ? iso.split('-').pop() : '';
+    if (isoCode) return isoCode === scope.stateValue;
+  }
+  var placeState = String(placeAddress.state || placeAddress.province || placeAddress.region || '').toLowerCase();
+  if (!placeState) return true;
+  return placeState === scope.stateName.toLowerCase();
+}
+
+function scheduleAddressSearch() {
+  if (addressSearchTimer) clearTimeout(addressSearchTimer);
+  addressSearchTimer = setTimeout(function() {
+    addressSearchTimer = null;
+    runAddressSearch();
+  }, 700);
+}
+
+function showAddressSearchMessage(text) {
+  var panel = addressSearchPanel();
+  if (!panel) return;
+  panel.innerHTML = '<div class="address-search-message">' + esc(text) + '</div>';
+  panel.style.display = '';
+}
+
+function runAddressSearch() {
+  var input = document.getElementById('gen-address-search');
+  if (!input) return;
+  var raw = (input.value || '').trim();
+  if (raw.length < 3) { showAddressSearchMessage('Type at least three characters, or paste the full address.'); return; }
+  if (typeof fetch !== 'function') { showAddressSearchMessage('This browser cannot run the address search.'); return; }
+
+  var scope = addressSearchScope();
+  if (!scope.countryCode) {
+    renderAddressSearchScope();
+    tool.notify('Select the country first so the search stays inside it', 'warning');
+    var countrySelect = document.getElementById('gen-address-country');
+    if (countrySelect && countrySelect.focus) countrySelect.focus();
+    return;
+  }
+
+  var query = buildAddressSearchQuery(raw, scope);
+  var cacheKey = scope.countryCode + '|' + (scope.onlyState ? scope.stateValue : '*') + '|' + query.toLowerCase();
+  if (addressSearchCache[cacheKey]) { renderAddressSearchResults(addressSearchCache[cacheKey], scope); return; }
+
+  var now = Date.now();
+  var sinceAny = Math.min(now - zoneSearchLastAt, now - addressSearchLastAt);
+  var wait = NOMINATIM_MIN_INTERVAL_MS - sinceAny;
+  if (wait > 0) {
+    showAddressSearchMessage('Searching...');
+    setTimeout(runAddressSearch, wait);
+    return;
+  }
+  addressSearchLastAt = now;
+  zoneSearchLastAt = now;
+  showAddressSearchMessage('Searching in ' + scope.countryName + '...');
+
+  var url = ZONE_SEARCH_ENDPOINT + '?format=jsonv2&addressdetails=1&limit=8&accept-language=en' +
+    (scope.countryParam ? '&countrycodes=' + encodeURIComponent(scope.countryParam) : '') +
+    '&q=' + encodeURIComponent(query);
+
+  fetch(url, { headers: { Accept: 'application/json' } }).then(function(response) {
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return response.json();
+  }).then(function(list) {
+    var inScope = (Array.isArray(list) ? list : []).filter(function(place) {
+      return addressPlaceMatchesScope(place, scope);
+    });
+    addressSearchCache[cacheKey] = inScope;
+    renderAddressSearchResults(inScope, scope);
+  }).catch(function() {
+    showAddressSearchMessage('The address service could not be reached. Check the connection and try again.');
+  });
+}
+
+function renderAddressSearchResults(list, scope) {
+  var panel = addressSearchPanel();
+  if (!panel) return;
+  var activeScope = scope || addressSearchScope();
+
+  if (!list || list.length === 0) {
+    showAddressSearchMessage(activeScope.onlyState && activeScope.stateName
+      ? 'Nothing in ' + activeScope.stateName + '. Check the spelling, or widen the search to the whole country.'
+      : 'Nothing in ' + activeScope.countryName + '. Try the street address instead of the name.');
+    return;
+  }
+
+  var head = esc(activeScope.countryName) +
+    (activeScope.onlyState && activeScope.stateName ? ' · ' + esc(activeScope.stateName) : '') +
+    ' · pick the right place';
+  var html = '<div class="address-search-head">' + head + '</div>';
+  list.forEach(function(place, idx) {
+    var title = place.name || String(place.display_name || '').split(',')[0];
+    html += '<button type="button" class="address-search-row" data-address-idx="' + idx + '">' +
+      '<span class="address-search-icon">📍</span>' +
+      '<span class="address-search-text">' +
+        '<span class="address-search-name">' + esc(title) + '</span>' +
+        '<span class="address-search-detail">' + esc(place.display_name || '') + '</span>' +
+      '</span>' +
+      '<span class="address-search-use">Use</span>' +
+      '</button>';
+  });
+  html += '<div class="address-search-credit">Search by OpenStreetMap Nominatim, limited to the selected country</div>';
+  panel.innerHTML = html;
+  panel.style.display = '';
+
+  panel.querySelectorAll('[data-address-idx]').forEach(function(row) {
+    row.addEventListener('click', function() {
+      applyAddressSearchResult(list[parseInt(row.dataset.addressIdx, 10)]);
+    });
+  });
+}
+
+/* US and Canadian states are stored as codes in this tool, everywhere else
+   the field is free text, so the mapping depends on the country. */
+function addressStateValue(countryCode, placeAddress) {
+  var iso = placeAddress['ISO3166-2-lvl4'] || placeAddress['ISO3166-2-lvl6'] || '';
+  var isoCode = iso && iso.indexOf('-') !== -1 ? iso.split('-').pop() : '';
+  if (countryCode === 'US' || countryCode === 'CA') {
+    var list = countryCode === 'US' ? US_STATES : CA_PROVINCES;
+    var matched = null;
+    if (isoCode) {
+      list.forEach(function(state) { if (state.code === isoCode) matched = state.code; });
+    }
+    if (!matched) {
+      var stateName = String(placeAddress.state || '').toLowerCase();
+      list.forEach(function(state) { if (state.name.toLowerCase() === stateName) matched = state.code; });
+    }
+    return matched || isoCode || '';
+  }
+  return placeAddress.state || placeAddress.province || placeAddress.region || '';
+}
+
+function applyAddressSearchResult(place) {
+  if (!place) return;
+  var placeAddress = place.address || {};
+  var countryCode = String(placeAddress.country_code || '').toUpperCase();
+  var street = [placeAddress.house_number, placeAddress.road]
+    .map(function(part) { return String(part || '').trim(); })
+    .filter(Boolean)
+    .join(' ');
+  if (!street) street = placeAddress.pedestrian || placeAddress.neighbourhood || placeAddress.suburb || '';
+  var city = placeAddress.city || placeAddress.town || placeAddress.village || placeAddress.municipality || placeAddress.hamlet || '';
+
+  if (!data.general_info) data.general_info = {};
+  var currentCountry = getNested(data, 'general_info.address.country') || '';
+  data.general_info.address = {
+    street: street,
+    city: city,
+    state: addressStateValue(countryCode, placeAddress),
+    zip: placeAddress.postcode || '',
+    country: countryCode || currentCountry
+  };
+
+  var lat = parseFloat(place.lat);
+  var lon = parseFloat(place.lon);
+  if (!isNaN(lat) && !isNaN(lon)) data.general_info.coordinates = { lat: lat, lng: lon };
+
+  renderGeneralInfo();
+  renderViewCardViews();
+  scheduleSave();
+  updateRestaurantMarker();
+  closeAddressSearchResults();
+  var searchInput = document.getElementById('gen-address-search');
+  if (searchInput) searchInput.value = '';
+  tool.notify('Address and map point filled from the search result', 'success');
+  tool.resize();
+}
+
+function closeAddressSearchResults() {
+  var panel = addressSearchPanel();
+  if (!panel) return;
+  panel.style.display = 'none';
+  panel.innerHTML = '';
+}
+
 function updateRestaurantMarker() {
   if (!zoneMap) return;
   var coordinates = readRestaurantCoordinates();
@@ -9229,6 +12116,10 @@ function render(value) {
   if (!data.general_info.timezone) data.general_info.timezone = '';
   if (!data.service_settings) data.service_settings = DEFAULTS.service_settings;
   if (!data.service_settings.opening_hours || data.service_settings.opening_hours.length < 7) data.service_settings.opening_hours = DEFAULTS.service_settings.opening_hours;
+  if (data.service_settings.temporary_closure === undefined) data.service_settings.temporary_closure = null;
+  if (!data.service_settings.special_hours || Object.prototype.toString.call(data.service_settings.special_hours) !== '[object Array]') data.service_settings.special_hours = [];
+  if (!data.additional_services || typeof data.additional_services !== 'object') data.additional_services = { requests: [] };
+  if (Object.prototype.toString.call(data.additional_services.requests) !== '[object Array]') data.additional_services.requests = [];
   /* Migrate old reservation advance field names */
   var rs = data.service_settings.reservation_settings;
   if (rs) {

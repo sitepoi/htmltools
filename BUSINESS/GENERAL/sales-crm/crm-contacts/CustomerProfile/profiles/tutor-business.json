@@ -1,0 +1,183 @@
+{
+  "appTitle": "Tutor Profiles",
+  "labels": {
+    "record": "Student",
+    "person": "Student",
+    "company": "School",
+    "questionSets": "Forms",
+    "profileType": "Student type",
+    "sections": "Sections",
+    "form": "Form"
+  },
+  "defaultSegmentKey": "student",
+  "allowSegmentSelection": true,
+  "segments": [
+    {
+      "key": "student",
+      "name": "Student",
+      "description": "Learner intake and goals",
+      "icon": "user",
+      "baseType": "person",
+      "profileKeys": ["student-intake"],
+      "allowedProfileKeys": ["student-intake"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Student", "questionSets": "Student form" },
+      "identityHint": "Capture who the learner is and what they want to achieve.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since", "core_nextFollowUp"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Enquiry", "Active", "Paused", "Graduated", "Withdrawn"],
+      "sourceOptions": ["Referral", "Website", "Word of mouth", "School", "Walk-in"]
+    },
+    {
+      "key": "guardian",
+      "name": "Guardian",
+      "description": "Payer and emergency contact",
+      "icon": "users",
+      "baseType": "person",
+      "profileKeys": ["guardian-contact"],
+      "allowedProfileKeys": ["guardian-contact"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Guardian", "questionSets": "Guardian form" },
+      "identityHint": "The adult who handles billing, scheduling and emergency contact.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "showAdminFields": false,
+      "showTags": false,
+      "sourceOptions": ["Referral", "Website", "Word of mouth", "School"]
+    },
+    {
+      "key": "tutor",
+      "name": "Tutor",
+      "description": "Tutor or teaching staff profile",
+      "icon": "briefcase",
+      "baseType": "person",
+      "profileKeys": ["tutor-profile"],
+      "allowedProfileKeys": ["tutor-profile"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Tutor", "questionSets": "Tutor form" },
+      "identityHint": "The tutor's subjects, availability and teaching background.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Applicant", "Active", "Paused", "Former"],
+      "sourceOptions": ["Referral", "Website", "Recruitment", "Word of mouth"]
+    },
+    {
+      "key": "school",
+      "name": "School",
+      "description": "School or learning centre account",
+      "icon": "building",
+      "baseType": "company",
+      "profileKeys": ["school-account"],
+      "allowedProfileKeys": ["school-account"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "School", "questionSets": "School form" },
+      "identityHint": "The school account, main contact and billing arrangement.",
+      "nameFieldIds": ["core_legalName", "core_tradeName", "core_registrationNumber"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Prospect", "Active partner", "Paused", "Ended"],
+      "sourceOptions": ["Referral", "Website", "Outbound", "Event"]
+    }
+  ],
+  "definitions": [
+    {
+      "key": "student-intake",
+      "name": "Student intake",
+      "description": "Learning goals, level and scheduling preferences",
+      "sections": [
+        {
+          "id": "learning-goals",
+          "title": "Learning goals",
+          "icon": "note",
+          "description": "What the student wants to improve and when they can attend",
+          "fields": [
+            { "id": "tutorSubject", "label": "Subject", "type": "text", "width": "half", "required": true, "placeholder": "Mathematics, English, piano..." },
+            { "id": "tutorLevel", "label": "Current level", "type": "select", "width": "half", "options": ["Beginner", "Intermediate", "Advanced", "Exam preparation"] },
+            { "id": "tutorGoal", "label": "What should improve?", "type": "textarea", "width": "full", "rows": 4, "placeholder": "Confidence, exam grade, specific topic..." },
+            { "id": "tutorStart", "label": "Preferred start date", "type": "date", "width": "half" },
+            { "id": "tutorSchedule", "label": "Preferred days", "type": "multiselect", "width": "half", "options": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+            { "id": "tutorLearningStyle", "label": "Learning preferences", "type": "textarea", "width": "full", "rows": 3, "placeholder": "Short sessions, visual examples, quiet room..." }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "guardian-contact",
+      "name": "Guardian contact",
+      "description": "Relationship, billing and emergency contact details",
+      "sections": [
+        {
+          "id": "guardian-details",
+          "title": "Guardian details",
+          "icon": "users",
+          "description": "How to reach the guardian and who pays",
+          "fields": [
+            { "id": "guardianRelation", "label": "Relationship to student", "type": "select", "width": "half", "options": ["Parent", "Carer", "Grandparent", "Other"] },
+            { "id": "guardianPhone", "label": "Best phone", "type": "phone", "width": "half", "placeholder": "+1 604 555 0100" },
+            { "id": "guardianBillingEmail", "label": "Billing email", "type": "email", "width": "half" },
+            { "id": "guardianPickup", "label": "Authorised for pickup", "type": "checkbox", "width": "half" },
+            { "id": "guardianEmergency", "label": "Emergency contact", "type": "text", "width": "half" },
+            { "id": "guardianBillingNotes", "label": "Billing notes", "type": "textarea", "width": "full", "rows": 3, "placeholder": "Invoice recipient, payment schedule..." }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "tutor-profile",
+      "name": "Tutor profile",
+      "description": "Subjects, availability and teaching background",
+      "sections": [
+        {
+          "id": "tutor-details",
+          "title": "Tutor details",
+          "icon": "briefcase",
+          "description": "What this tutor teaches and when they are available",
+          "fields": [
+            { "id": "tutorSubjects", "label": "Subjects taught", "type": "multiselect", "width": "full", "options": ["Mathematics", "English", "Science", "Languages", "Music", "Test preparation", "Other"] },
+            { "id": "tutorQualifications", "label": "Qualifications", "type": "textarea", "width": "full", "rows": 3 },
+            { "id": "tutorAvailability", "label": "Availability", "type": "multiselect", "width": "full", "options": ["Weekday mornings", "Weekday afternoons", "Weekday evenings", "Saturday", "Sunday"] },
+            { "id": "tutorCheckDate", "label": "Background check date", "type": "date", "width": "half" },
+            { "id": "tutorBio", "label": "Short bio", "type": "textarea", "width": "full", "rows": 4 }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "school-account",
+      "name": "School account",
+      "description": "School details and main billing contact",
+      "sections": [
+        {
+          "id": "school-details",
+          "title": "School details",
+          "icon": "building",
+          "description": "The school, its size and the main account contact",
+          "fields": [
+            { "id": "schoolType", "label": "School type", "type": "select", "width": "half", "options": ["Primary", "Secondary", "College", "Training centre", "Other"] },
+            { "id": "schoolStudents", "label": "Students enrolled", "type": "number", "width": "half" },
+            { "id": "schoolContact", "label": "Main contact email", "type": "email", "width": "half" },
+            { "id": "schoolBillingEmail", "label": "Billing email", "type": "email", "width": "half" },
+            { "id": "schoolPrograms", "label": "Programmes needed", "type": "multiselect", "width": "full", "options": ["After-school tutoring", "Exam preparation", "Holiday programme", "Staff training", "Other"] },
+            { "id": "schoolNotes", "label": "Account notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    }
+  ]
+}

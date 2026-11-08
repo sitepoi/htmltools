@@ -411,6 +411,7 @@
 			<li><a href="#services">5. service_settings</a></li>
 			<li class="toc-l2"><a href="#svc-toggles">5.1 Service channels</a></li>
 			<li class="toc-l2"><a href="#svc-hours">5.2 Opening hours</a></li>
+			<li class="toc-l2"><a href="#svc-hours-exceptions">5.2.1 Opening-hour exceptions</a></li>
 			<li class="toc-l2"><a href="#svc-sched">5.3 Scheduled orders</a></li>
 			<li class="toc-l2"><a href="#svc-res">5.4 Reservations</a></li>
 			<li><a href="#tax">6. taxation_currency (Tax Categories)</a></li>
@@ -445,10 +446,15 @@
 		<h1>Restaurant &amp; Menu Manager — Client Data Contract</h1>
 		<p class="subtitle">The complete data structure consumed and produced by the Restaurant &amp; Menu Manager tool,
 			for building the customer-facing (client-side) website around it.</p>
-		<p class="meta">Version 3.3 · 2026-10-21 · Document of record for the embedded tool at
+		<p class="meta">Version 3.5 · 2026-11-08 · Document of record for the embedded tool at
 			<code>BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager</code>
 		</p>
-		<p class="meta">v3.3 changes: the manager tool now authors every extended rule type and
+		<p class="meta">v3.5 changes: modifier groups may carry <code>parent_group_id</code> for real nested
+			subgroups (§10.4, tool SSOT task T-71) and the admin-only <code>additional_services</code> section is
+			documented (§17, tasks T-86 and T-87). v3.4 changes: opening-hour exceptions - <code>service_settings.temporary_closure</code>
+			(one-date closure) and <code>service_settings.special_hours</code> (dated overrides) are now authored by the
+			manager tool (tool SSOT tasks T-74 and T-75), documented in new section 5.2.1 and listed in the complete
+			example. v3.3 changes: the manager tool now authors every extended rule type and
 			<code>promo_codes</code> as well (tool SSOT tasks T-30..T-42): the top-level shape and the complete example
 			now list <code>promo_codes</code>, and section 23.1 states the manager editors exist. v3.2 changes: the website
 			now honors the deal <code>active</code> flag and implements all
@@ -728,6 +734,30 @@
 			<li><code>ranges[]</code>: one or more <code>open</code>/<code>close</code> <code>HH:mm</code> windows per
 				day (multi-shift supported).</li>
 			<li><code>is_closed</code>: <code>true</code> = closed all day, ranges ignored.</li>
+		</ul>
+
+		<h3 id="svc-hours-exceptions">5.2.1 Opening-hour exceptions — <code>temporary_closure</code> and
+			<code>special_hours</code></h3>
+		<pre><code>"temporary_closure": { "date": "2026-12-25", "reason": "Holiday" },
+"special_hours": [
+  { "id": "sh-1", "date": "2026-12-24", "is_closed": false,
+    "open": "11:00", "close": "18:00", "note": "Christmas Eve" }
+]</code></pre>
+		<ul>
+			<li>Both keys live in <code>service_settings</code>, next to <code>opening_hours</code>, and both may be
+				absent in older documents - treat a missing value as "no exception".</li>
+			<li><code>temporary_closure</code>: <code>null</code> when there is no closure. Otherwise one
+				<code>date</code> in <code>YYYY-MM-DD</code> form (restaurant local date) and an optional internal
+				<code>reason</code>. While that date is today, the client must treat the restaurant as closed for
+				all ordering channels. <code>reason</code> is admin-facing and must not be rendered to customers.</li>
+			<li><code>special_hours[]</code>: dated overrides. A row whose <code>date</code> is today replaces the
+				weekday entry from <code>opening_hours</code>. <code>is_closed: true</code> means closed all day and
+				<code>open</code>/<code>close</code> are ignored. <code>note</code> is admin-facing free text.</li>
+			<li>Precedence when several apply on the same day: <code>temporary_closure</code> wins over a
+				<code>special_hours</code> row, which wins over <code>opening_hours</code>. Times are
+				<code>HH:mm</code> in the restaurant timezone (<code>general_info.timezone</code>).</li>
+			<li>Rows are independent of each other; the tool keeps them sorted by date for display but the client must
+				not rely on order.</li>
 		</ul>
 
 		<h3 id="svc-sched">5.3 Scheduled orders — <code>service_settings.scheduled_orders</code></h3>
@@ -1074,6 +1104,7 @@
 		<pre><code>{
   "id": "mg-toppings",
   "group_name": "Extra Toppings",
+  "parent_group_id": null,
   "selection_type": "multi",
   "allow_duplicates": true,
   "is_required": false,
@@ -1083,6 +1114,16 @@
   "photo_url": null,
   "options": [ … ]
 }</code></pre>
+		<div class="field">
+			<div class="fname">parent_group_id</div>
+			<div class="fdesc">Optional (<code>null</code> or absent for a top-level group). Names the group this one is a
+				<strong>subgroup</strong> of. A subgroup is a real group: it has its own options and its own
+				<code>selection_type</code>, <code>force_min</code> and <code>force_max</code>. Nesting is exactly one level -
+				a group that has a <code>parent_group_id</code> never has subgroups of its own. A parent's limits count the
+				selections made in its own options <em>plus</em> every selection inside its subgroups; a subgroup's limits
+				apply inside the subgroup only. Only a top-level group is assigned to an item or a size - assigning the
+				parent brings its subgroups with it.</div>
+		</div>
 		<div class="field">
 			<div class="fname">selection_type</div>
 			<div class="fdesc"><code>"single"</code> = pick exactly one option; <code>"multi"</code> = pick any number
@@ -1362,6 +1403,16 @@
 			<div class="fname">device_connections</div>
 			<div class="fdesc">Admin-only array of connected POS/tablet/KDS devices. Ignore on the client.</div>
 		</div>
+		<div class="field">
+			<div class="fname">additional_services</div>
+			<div class="fdesc">
+				<code>{ requests: [{ id, service_id, service_name, price, currency, status, contact, note, files: [{ name, url }], created_at, updated_at }] }</code>
+				— admin-only registry of paid services the restaurant requested (menu setup, menu update, promotion setup).
+				<code>status</code> is one of <code>requested</code>, <code>paid</code>, <code>in_progress</code>,
+				<code>completed</code> or <code>cancelled</code>. <code>price</code> is the price that was visible when the
+				request was sent, so a later catalog change never rewrites it. The public site must ignore this key.
+			</div>
+		</div>
 
 		<!-- ══════════════════════════════════════════════════════════════ -->
 		<h2 id="example">18. Complete Example Document</h2>
@@ -1385,7 +1436,12 @@
       "table_reservation_enabled": false
     },
     "opening_hours": [
-      { "day": 0, "ranges": [{ "open": "09:00", "close": "22:00" }], "is_closed": false }
+      { "day": 0, "ranges": [{ "open": "11:00", "close": "22:00" }], "is_closed": false }
+    ],
+    "temporary_closure": null,
+    "special_hours": [
+      { "id": "sh-1", "date": "2026-12-24", "is_closed": false,
+        "open": "11:00", "close": "18:00", "note": "Christmas Eve" }
     ],
     "scheduled_orders": { "enabled": true, "pickup_min_advance": 30,
       "pickup_max_advance": 1440, "delivery_min_advance": 45,

@@ -1,4 +1,4 @@
-/* js build 2026-11-06-1 */
+/* js build 2026-11-07-3 */
 /* ── Customer Profile ──────────────────────────────────────────────
    One customer per CMS record. Basic information always shows; the
 	   selected question sets plus focus areas decide which extra sections
@@ -9,7 +9,7 @@
 (function () {
 	'use strict';
 
-	var TOOL_BUILD = '2026-11-06-1';
+	var TOOL_BUILD = '2026-11-07-3';
 
 	/* ── SDK handle + fallback shim ── */
 	var tool = (typeof window !== 'undefined' && window.tool) ? window.tool : null;
@@ -796,6 +796,7 @@
 	var customerRecord = {
 		version: 2,
 		customerType: 'person',
+		segmentKey: '',
 		profileKey: '',
 		profileKeys: [],
 		focus: [],
@@ -810,6 +811,62 @@
 
 	var builtInProfiles = [];
 	var settingsProfiles = [];
+	var profileConfig = null;
+	var applicationContext = null;
+
+	/* Named application catalogs. applicationType is the simple external
+	   shortcut; profileConfig remains the full app-level configuration and
+	   takes precedence when it defines segments. */
+	var APPLICATION_PRESETS = {
+		'software-sales': {
+			name: 'Software sales',
+			appTitle: 'Software Sales Profile',
+			labels: { record: 'Customer', questionSets: 'Request profiles', profileType: 'Customer type', sections: 'Sections', form: 'Form' },
+			allowedProfileKeys: ['customer-basics', 'software-discovery', 'software-implementation', 'saas-subscription', 'support-sla', 'procurement-onboarding', 'renewal-expansion', 'stakeholders-relationship'],
+			defaultProfileKeys: ['software-discovery'],
+			allowCombinations: true,
+			allowFocusSelection: true,
+			allowProfileEditing: true
+		},
+		'general-crm': {
+			name: 'General CRM',
+			appTitle: 'Customer Profile',
+			labels: { record: 'Customer', questionSets: 'Question sets', profileType: 'Customer type', sections: 'Sections', form: 'Form' },
+			allowedProfileKeys: [],
+			defaultProfileKeys: ['customer-basics'],
+			allowCombinations: true,
+			allowFocusSelection: true,
+			allowProfileEditing: true
+		},
+		'customer-profile-hub': {
+			name: 'Customer profile hub',
+			appTitle: 'Customer Profile Hub',
+			labels: { record: 'Customer', questionSets: 'Question sets', profileType: 'Customer type', sections: 'Sections', form: 'Form' },
+			allowedProfileKeys: [],
+			defaultProfileKeys: ['customer-basics'],
+			allowCombinations: true,
+			allowFocusSelection: true,
+			allowProfileEditing: true
+		}
+	};
+
+	/* Old built-in keys from the company-vertical era. If a record still
+	   references one and no custom profile with that key exists, redirect it
+	   to the closest question set; values are kept by field id. */
+	var LEGACY_PROFILE_ALIASES = {
+		'company-software': 'software-discovery',
+		'company-saas': 'saas-subscription',
+		'company-professional-services': 'software-implementation',
+		'company-retail': 'company-basic',
+		'company-manufacturing': 'company-basic',
+		'company-construction': 'company-basic',
+		'company-healthcare': 'company-basic',
+		'company-logistics': 'company-basic',
+		'person-technical': 'software-discovery',
+		'person-procurement': 'procurement-onboarding',
+		'person-executive': 'stakeholders-relationship'
+	};
+
 	var currentSections = [];
 	var currentSection = 'basic';
 	var editingArrayItem = {};
@@ -821,6 +878,279 @@
 	var lastStagedJson = '';
 	var lastCoreSignature = '';
 	var saveTimer = null;
+
+	/* ── App-level profile configuration ── */
+	function emptyProfileConfig() {
+		return {
+			appTitle: '',
+			labels: {},
+			segments: [],
+			defaultSegmentKey: '',
+			allowSegmentSelection: true,
+			definitions: []
+		};
+	}
+
+	function normalizeKeyList(rawKeys) {
+		var keys = [];
+		if (typeof rawKeys === 'string') rawKeys = rawKeys.split(',');
+		(Array.isArray(rawKeys) ? rawKeys : []).forEach(function (rawKey) {
+			var key = trimString(rawKey);
+			if (key && keys.indexOf(key) === -1) keys.push(key);
+		});
+		return keys;
+	}
+
+	function normalizeTextList(rawOptions) {
+		var options = [];
+		if (typeof rawOptions === 'string') rawOptions = rawOptions.split(',');
+		(Array.isArray(rawOptions) ? rawOptions : []).forEach(function (rawOption) {
+			var value = trimString(rawOption && typeof rawOption === 'object' ? rawOption.value : rawOption);
+			if (value && options.indexOf(value) === -1) options.push(value);
+		});
+		return options;
+	}
+
+	function normalizeSegmentDefinition(rawSegment) {
+		if (!isObject(rawSegment)) return null;
+		var key = slugify(rawSegment.key || rawSegment.name);
+		if (!key) return null;
+		var name = trimString(rawSegment.name) || key;
+		var profileKeys = normalizeKeyList(rawSegment.profileKeys);
+		var allowedKeys = normalizeKeyList(rawSegment.allowedProfileKeys || rawSegment.allowedKeys);
+		var allowSelection = rawSegment.allowProfileSelection === true;
+		if (!allowSelection && !profileKeys.length) profileKeys = allowedKeys.slice();
+		if (!allowedKeys.length) allowedKeys = profileKeys.slice();
+		var iconName = trimString(rawSegment.icon);
+		return {
+			key: key,
+			name: name.slice(0, 90),
+			description: trimString(rawSegment.description).slice(0, 240),
+			icon: ICON_PATHS[iconName] ? iconName : 'user',
+			baseType: rawSegment.baseType === 'company' ? 'company' : 'person',
+			profileKeys: profileKeys,
+			allowedProfileKeys: allowedKeys,
+			allowProfileSelection: allowSelection,
+			allowCombinations: rawSegment.allowCombinations === true,
+			allowFocusSelection: rawSegment.allowFocusSelection === true,
+			allowProfileEditing: rawSegment.allowProfileEditing === true,
+			labels: isObject(rawSegment.labels) ? rawSegment.labels : {},
+			identityHint: trimString(rawSegment.identityHint).slice(0, 240),
+			nameFieldIds: normalizeKeyList(rawSegment.nameFieldIds || rawSegment.nameFields),
+			adminFieldIds: normalizeKeyList(rawSegment.adminFieldIds || rawSegment.adminFields),
+			showAdminFields: rawSegment.showAdminFields !== false,
+			showTags: rawSegment.showTags !== false,
+			hiddenSectionIds: normalizeKeyList(rawSegment.hiddenSectionIds || rawSegment.hideSections),
+			statusOptions: normalizeTextList(rawSegment.statusOptions),
+			sourceOptions: normalizeTextList(rawSegment.sourceOptions)
+		};
+	}
+
+	function normalizeProfileConfig(rawConfig) {
+		var config = emptyProfileConfig();
+		if (!isObject(rawConfig)) return config;
+		config.appTitle = trimString(rawConfig.appTitle) || config.appTitle;
+		config.labels = isObject(rawConfig.labels) ? rawConfig.labels : {};
+		config.allowSegmentSelection = rawConfig.allowSegmentSelection !== false;
+		config.definitions = rawConfig.definitions || [];
+		var seen = {};
+		config.segments = (Array.isArray(rawConfig.segments) ? rawConfig.segments : []).map(normalizeSegmentDefinition).filter(function (segment) {
+			if (!segment || seen[segment.key]) return false;
+			seen[segment.key] = true;
+			return true;
+		});
+		var defaultKey = trimString(rawConfig.defaultSegmentKey);
+		if (defaultKey && segmentByKeyInConfig(config, defaultKey)) config.defaultSegmentKey = defaultKey;
+		else if (config.segments.length) config.defaultSegmentKey = config.segments[0].key;
+		return config;
+	}
+
+	function segmentByKeyInConfig(config, key) {
+		if (!config || !Array.isArray(config.segments)) return null;
+		for (var index = 0; index < config.segments.length; index++) {
+			if (config.segments[index].key === key) return config.segments[index];
+		}
+		return null;
+	}
+
+	function loadProfileConfig() {
+		profileConfig = emptyProfileConfig();
+		var rawValue = '';
+		try { rawValue = tool.param('profileConfig', ''); } catch (error) { rawValue = ''; }
+		if (!rawValue) return;
+		var parsed = rawValue;
+		if (typeof rawValue === 'string') {
+			try { parsed = JSON.parse(rawValue); } catch (error) {
+				console.warn('[CustomerProfile] profileConfig ignored: ' + error.message);
+				return;
+			}
+		}
+		if (!isObject(parsed)) {
+			console.warn('[CustomerProfile] profileConfig ignored: expected an object.');
+			return;
+		}
+		profileConfig = normalizeProfileConfig(parsed);
+	}
+
+	function loadApplicationContext() {
+		applicationContext = null;
+		var rawValue = '';
+		try { rawValue = tool.param('applicationType', ''); } catch (error) { rawValue = ''; }
+		var key = slugify(rawValue);
+		if (!key) return;
+		var preset = APPLICATION_PRESETS[key];
+		if (!preset) {
+			console.warn('[CustomerProfile] applicationType ignored: unknown value "' + rawValue + '".');
+			return;
+		}
+		applicationContext = {
+			key: key,
+			name: preset.name || key,
+			appTitle: preset.appTitle || '',
+			labels: isObject(preset.labels) ? preset.labels : {},
+			allowedProfileKeys: normalizeKeyList(preset.allowedProfileKeys || []),
+			defaultProfileKeys: normalizeKeyList(preset.defaultProfileKeys || []),
+			allowCombinations: preset.allowCombinations !== false,
+			allowFocusSelection: preset.allowFocusSelection !== false,
+			allowProfileEditing: preset.allowProfileEditing !== false
+		};
+	}
+
+	function applicationMode() {
+		return !!applicationContext && !segmentsMode();
+	}
+
+	function applicationAllowedKeys() {
+		if (!applicationContext) return allProfiles().map(function (profile) { return profile.key; });
+		var keys = [];
+		(applicationContext.allowedProfileKeys || []).forEach(function (key) {
+			if (keys.indexOf(key) === -1 && findProfile(key)) keys.push(key);
+		});
+		if (!keys.length) return allProfiles().map(function (profile) { return profile.key; });
+		return keys;
+	}
+
+	function applicationDefaultKeys() {
+		if (!applicationContext) return [];
+		var keys = [];
+		(applicationContext.defaultProfileKeys || []).forEach(function (key) {
+			if (keys.indexOf(key) === -1 && findProfile(key)) keys.push(key);
+		});
+		if (!keys.length) keys = applicationAllowedKeys().slice(0, 1);
+		if (applicationContext.allowCombinations === false && keys.length > 1) keys = keys.slice(0, 1);
+		return keys;
+	}
+
+	function configSegments() {
+		return profileConfig && Array.isArray(profileConfig.segments) ? profileConfig.segments : [];
+	}
+
+	function segmentsMode() {
+		return configSegments().length > 0;
+	}
+
+	function segmentByKey(segmentKey) {
+		return segmentByKeyInConfig(profileConfig, trimString(segmentKey));
+	}
+
+	function defaultSegment() {
+		if (!segmentsMode()) return null;
+		return segmentByKey(profileConfig.defaultSegmentKey) || configSegments()[0];
+	}
+
+	function currentSegment() {
+		if (!segmentsMode()) return null;
+		return segmentByKey(customerRecord.segmentKey) || defaultSegment();
+	}
+
+	function segmentAllowedKeys(segment) {
+		if (!segment) return [];
+		var keys = segment.allowedProfileKeys && segment.allowedProfileKeys.length ? segment.allowedProfileKeys : segment.profileKeys;
+		if (!keys.length && segment.allowProfileSelection) keys = allProfiles().map(function (profile) { return profile.key; });
+		var valid = [];
+		keys.forEach(function (key) {
+			if (valid.indexOf(key) === -1 && findProfile(key)) valid.push(key);
+		});
+		if (segment.allowProfileSelection && segment.allowProfileEditing && customerRecord && Array.isArray(customerRecord.customProfiles)) {
+			customerRecord.customProfiles.forEach(function (profile) {
+				if (profile && profile.key && valid.indexOf(profile.key) === -1 && findProfile(profile.key)) valid.push(profile.key);
+			});
+		}
+		return valid;
+	}
+
+	function segmentDefaultKeys(segment) {
+		if (!segment) return [];
+		var keys = segment.profileKeys && segment.profileKeys.length ? segment.profileKeys : (segment.allowProfileSelection ? segment.allowedProfileKeys.slice(0, 1) : segment.allowedProfileKeys);
+		if (segment.allowProfileSelection && !segment.allowCombinations && keys.length > 1) keys = keys.slice(0, 1);
+		var valid = [];
+		(keys || []).forEach(function (key) {
+			if (valid.indexOf(key) === -1 && findProfile(key)) valid.push(key);
+		});
+		return valid;
+	}
+
+	function segmentProfileKeys(segment) {
+		if (!segment) return [];
+		if (!segment.allowProfileSelection) return segmentDefaultKeys(segment);
+		var allowed = segmentAllowedKeys(segment);
+		var keys = [];
+		(customerRecord.profileKeys || []).forEach(function (key) {
+			if (allowed.indexOf(key) > -1 && keys.indexOf(key) === -1) keys.push(key);
+		});
+		if (!segment.allowCombinations && keys.length > 1) keys = keys.slice(0, 1);
+		return keys;
+	}
+
+	function segmentAllowsProfileSelection() {
+		if (!segmentsMode()) return true;
+		var segment = currentSegment();
+		return !!(segment && segment.allowProfileSelection);
+	}
+
+	function segmentAllowsFocusSelection() {
+		if (!segmentsMode()) return !applicationContext || applicationContext.allowFocusSelection !== false;
+		var segment = currentSegment();
+		return !!(segment && segment.allowFocusSelection);
+	}
+
+	function profileEditingEnabled() {
+		if (!segmentsMode()) return !applicationContext || applicationContext.allowProfileEditing !== false;
+		var segment = currentSegment();
+		return !!(segment && segment.allowProfileEditing);
+	}
+
+	function currentLabels() {
+		var labels = {
+			appTitle: 'Customer Profile',
+			record: 'Customer',
+			person: 'Person',
+			company: 'Company',
+			questionSets: 'Question sets',
+			profileType: 'Profile type',
+			sections: 'Sections',
+			form: 'Form'
+		};
+		if (applicationContext && !segmentsMode() && isObject(applicationContext.labels)) {
+			Object.keys(applicationContext.labels).forEach(function (key) { labels[key] = applicationContext.labels[key]; });
+		}
+		if (applicationContext && !segmentsMode() && applicationContext.appTitle) labels.appTitle = applicationContext.appTitle;
+		if (profileConfig && isObject(profileConfig.labels)) {
+			Object.keys(profileConfig.labels).forEach(function (key) { labels[key] = profileConfig.labels[key]; });
+		}
+		var segment = currentSegment();
+		if (segment && isObject(segment.labels)) {
+			Object.keys(segment.labels).forEach(function (key) { labels[key] = segment.labels[key]; });
+		}
+		if (profileConfig && profileConfig.appTitle) labels.appTitle = profileConfig.appTitle;
+		return labels;
+	}
+
+	function labelText(key, fallback) {
+		var labels = currentLabels();
+		return trimString(labels[key]) || fallback || key;
+	}
+
 
 	/* ── Profile normalisation ── */
 	function normalizeOptionList(rawOptions) {
@@ -962,15 +1292,25 @@
 
 	function loadSettingsProfiles() {
 		settingsProfiles = [];
+		var profiles = [];
+		if (profileConfig && profileConfig.definitions) {
+			var configResult = parseProfileDefinitionsInput(profileConfig.definitions);
+			if (configResult.error) console.warn('[CustomerProfile] profileConfig definitions ignored: ' + configResult.error);
+			else profiles = profiles.concat(configResult.profiles);
+		}
 		var rawSetting = '';
 		try { rawSetting = tool.param('profileDefinitions', ''); } catch (error) { rawSetting = ''; }
-		if (!rawSetting) return;
-		var result = parseProfileDefinitionsInput(rawSetting);
-		if (result.error) {
-			console.warn('[CustomerProfile] profileDefinitions setting ignored: ' + result.error);
-			return;
+		if (rawSetting) {
+			var result = parseProfileDefinitionsInput(rawSetting);
+			if (result.error) console.warn('[CustomerProfile] profileDefinitions setting ignored: ' + result.error);
+			else profiles = profiles.concat(result.profiles);
 		}
-		settingsProfiles = result.profiles;
+		var seen = {};
+		profiles.forEach(function (profile) {
+			if (!profile || seen[profile.key]) return;
+			seen[profile.key] = true;
+			settingsProfiles.push(profile);
+		});
 	}
 
 	function normalizeStoredCustomProfiles(rawProfiles) {
@@ -1014,20 +1354,32 @@
 		return null;
 	}
 
+	function resolveLegacyProfileKey(rawKey) {
+		var key = trimString(rawKey);
+		if (key && !findProfile(key) && LEGACY_PROFILE_ALIASES[key] && findProfile(LEGACY_PROFILE_ALIASES[key])) {
+			return LEGACY_PROFILE_ALIASES[key];
+		}
+		return key;
+	}
+
 	function normalizeProfileKeys(rawKeys, fallbackKey) {
 		var keys = [];
 		(Array.isArray(rawKeys) ? rawKeys : []).forEach(function (rawKey) {
-			var key = trimString(rawKey);
+			var key = resolveLegacyProfileKey(rawKey);
 			if (key && keys.indexOf(key) === -1 && findProfile(key)) keys.push(key);
 		});
 		if (!keys.length) {
-			var fallback = trimString(fallbackKey);
+			var fallback = resolveLegacyProfileKey(fallbackKey);
 			if (fallback && findProfile(fallback)) keys.push(fallback);
 		}
 		return keys;
 	}
 
 	function currentProfileKeys() {
+		if (segmentsMode()) {
+			var segment = currentSegment();
+			return segment ? segmentProfileKeys(segment) : [];
+		}
 		var valid = [];
 		var keys = Array.isArray(customerRecord.profileKeys) ? customerRecord.profileKeys : [];
 		keys.forEach(function (rawKey) {
@@ -1152,13 +1504,26 @@
 
 	function hydrateValue(value) {
 		hydrated = true;
-		customerRecord.customerType = value && value.customerType === 'company' ? 'company' : 'person';
 		customerRecord.values = sanitizeValues(value && value.values);
 		customerRecord.lists = sanitizeLists(value && value.lists);
 		customerRecord.customProfiles = normalizeStoredCustomProfiles(value && value.customProfiles);
-		customerRecord.profileKeys = normalizeProfileKeys(value && value.profileKeys, value && value.profileKey);
+		var segment = segmentsMode() ? (segmentByKey(trimString(value && value.segmentKey)) || defaultSegment()) : null;
+		customerRecord.segmentKey = segment ? segment.key : '';
+		customerRecord.customerType = segment ? segment.baseType : (value && value.customerType === 'company' ? 'company' : 'person');
+		var savedKeys = normalizeProfileKeys(value && value.profileKeys, value && value.profileKey);
+		if (segment) {
+			if (segment.allowProfileSelection) {
+				var allowed = segmentAllowedKeys(segment);
+				customerRecord.profileKeys = savedKeys.filter(function (key) { return allowed.indexOf(key) > -1; });
+				if (!customerRecord.profileKeys.length) customerRecord.profileKeys = segmentDefaultKeys(segment);
+			} else {
+				customerRecord.profileKeys = segmentDefaultKeys(segment);
+			}
+		} else {
+			customerRecord.profileKeys = savedKeys;
+		}
 		customerRecord.profileKey = customerRecord.profileKeys[0] || '';
-		customerRecord.showAllSections = value && value.showAllSections === true;
+		customerRecord.showAllSections = segment && !segment.allowFocusSelection ? false : (value && value.showAllSections === true);
 		var theme = value && value.ui && value.ui.theme;
 		customerRecord.ui.theme = theme === 'dark' ? 'dark' : 'light';
 
@@ -1171,8 +1536,12 @@
 
 		var profile = currentProfile();
 		var preset = profileFocusPreset(profile);
-		var savedFocus = value && Array.isArray(value.focus) ? value.focus.filter(function (areaId) { return typeof areaId === 'string'; }) : null;
-		customerRecord.focus = savedFocus ? savedFocus.slice() : preset.slice();
+		if (segment && !segment.allowFocusSelection) {
+			customerRecord.focus = preset.slice();
+		} else {
+			var savedFocus = value && Array.isArray(value.focus) ? value.focus.filter(function (areaId) { return typeof areaId === 'string'; }) : null;
+			customerRecord.focus = savedFocus ? savedFocus.slice() : preset.slice();
+		}
 		var savedPreset = value && Array.isArray(value.presetFocus) ? value.presetFocus.filter(function (areaId) { return typeof areaId === 'string'; }) : null;
 		customerRecord.presetFocus = savedPreset ? savedPreset.slice() : preset.slice();
 
@@ -1182,27 +1551,38 @@
 	}
 
 	function initializeNewRecord() {
-		customerRecord.customerType = defaultCustomerTypeFromParam();
-		customerRecord.profileKey = '';
-		customerRecord.profileKeys = [];
+		var segment = segmentsMode() ? defaultSegment() : null;
+		customerRecord.segmentKey = segment ? segment.key : '';
+		customerRecord.customerType = segment ? segment.baseType : defaultCustomerTypeFromParam();
+		customerRecord.showAllSections = false;
 		customerRecord.focus = [];
 		customerRecord.presetFocus = [];
-		customerRecord.showAllSections = false;
 		customerRecord.values = {};
 		customerRecord.lists = createEmptyLists();
 		customerRecord.customProfiles = [];
 		customerRecord.ui.theme = 'light';
 		customerRecord.meta = { createdAt: nowISO(), updatedAt: '', updatedByName: '' };
+		customerRecord.profileKeys = [];
+		customerRecord.profileKey = '';
 
-		var defaultKeys = [];
-		try { defaultKeys = readParamList('defaultProfileKey', []); } catch (error) { defaultKeys = []; }
-		var validDefaultKeys = normalizeProfileKeys(defaultKeys, '');
-		if (validDefaultKeys.length) {
-			customerRecord.profileKeys = validDefaultKeys;
-			customerRecord.profileKey = validDefaultKeys[0];
-			var defaultProfile = currentProfile();
-			customerRecord.focus = profileFocusPreset(defaultProfile);
+		if (segment) {
+			customerRecord.profileKeys = segmentDefaultKeys(segment);
+			customerRecord.profileKey = customerRecord.profileKeys[0] || '';
+			var segmentProfile = currentProfile();
+			customerRecord.focus = profileFocusPreset(segmentProfile);
 			customerRecord.presetFocus = customerRecord.focus.slice();
+		} else {
+			var defaultKeys = [];
+			try { defaultKeys = readParamList('defaultProfileKey', []); } catch (error) { defaultKeys = []; }
+			var validDefaultKeys = normalizeProfileKeys(defaultKeys, '');
+			if (!validDefaultKeys.length && applicationMode()) validDefaultKeys = applicationDefaultKeys();
+			if (validDefaultKeys.length) {
+				customerRecord.profileKeys = validDefaultKeys;
+				customerRecord.profileKey = validDefaultKeys[0];
+				var defaultProfile = currentProfile();
+				customerRecord.focus = profileFocusPreset(defaultProfile);
+				customerRecord.presetFocus = customerRecord.focus.slice();
+			}
 		}
 
 		var signatureSnapshot = snapshotForValue();
@@ -1211,11 +1591,13 @@
 	}
 
 	function snapshotForValue() {
+		var effectiveKeys = currentProfileKeys();
 		return {
 			version: 2,
 			customerType: customerRecord.customerType,
-			profileKey: customerRecord.profileKey,
-			profileKeys: customerRecord.profileKeys.slice(),
+			segmentKey: customerRecord.segmentKey,
+			profileKey: effectiveKeys[0] || '',
+			profileKeys: effectiveKeys.slice(),
 			focus: customerRecord.focus.slice(),
 			presetFocus: customerRecord.presetFocus.slice(),
 			showAllSections: customerRecord.showAllSections,
@@ -1235,6 +1617,7 @@
 		if (!isObject(value)) return '';
 		return JSON.stringify({
 			customerType: value.customerType,
+			segmentKey: value.segmentKey || '',
 			profileKey: value.profileKey,
 			profileKeys: value.profileKeys || [],
 			focus: value.focus || [],
@@ -1268,11 +1651,19 @@
 	}
 
 	function statusOptions() {
+		if (segmentsMode()) {
+			var segment = currentSegment();
+			if (segment && segment.statusOptions && segment.statusOptions.length) return segment.statusOptions.slice();
+		}
 		var configured = readParamList('statusOptions', DEFAULT_STATUS_OPTIONS);
 		return configured.length ? configured : DEFAULT_STATUS_OPTIONS;
 	}
 
 	function sourceOptions() {
+		if (segmentsMode()) {
+			var segment = currentSegment();
+			if (segment && segment.sourceOptions && segment.sourceOptions.length) return segment.sourceOptions.slice();
+		}
 		var configured = readParamList('sourceOptions', DEFAULT_SOURCE_OPTIONS);
 		return configured.length ? configured : DEFAULT_SOURCE_OPTIONS;
 	}
@@ -1286,15 +1677,20 @@
 	function customerDisplayName() {
 		var value = customerRecord.values;
 		if (customerRecord.customerType === 'company') {
-			return trimString(value.core_legalName) || trimString(value.core_tradeName) || 'New customer';
+			return trimString(value.core_legalName) || trimString(value.core_tradeName) || ('New ' + labelText('record', 'Customer').toLowerCase());
 		}
 		var fullName = [trimString(value.core_firstName), trimString(value.core_lastName)].filter(Boolean).join(' ');
-		return fullName || trimString(value.core_preferredName) || 'New customer';
+		return fullName || trimString(value.core_preferredName) || ('New ' + labelText('record', 'Customer').toLowerCase());
 	}
 
 	function typeAndProfileLabel() {
-		var typeLabel = customerRecord.customerType === 'company' ? 'Company' : 'Person';
 		var profile = currentProfile();
+		if (segmentsMode()) {
+			var segment = currentSegment();
+			var segmentName = segment ? segment.name : labelText('profileType');
+			return profile ? segmentName + ' - ' + profile.name : segmentName;
+		}
+		var typeLabel = customerRecord.customerType === 'company' ? labelText('company') : labelText('person');
 		if (!profile) return typeLabel;
 		if (profile.name.toLowerCase().indexOf(typeLabel.toLowerCase() + ' - ') === 0) return profile.name;
 		return typeLabel + ' - ' + profile.name;
@@ -1304,23 +1700,31 @@
 	function buildSections() {
 		var sections = [];
 		var isCompany = customerRecord.customerType === 'company';
+		var segment = currentSegment();
+		var hidden = segment && segment.hiddenSectionIds ? segment.hiddenSectionIds : [];
+		var recordLabel = labelText('record').toLowerCase();
+		function shows(sectionId) { return hidden.indexOf(sectionId) === -1; }
 
 		sections.push({
 			id: 'basic',
 			group: 'Foundation',
 			title: 'Basic Information',
 			icon: isCompany ? 'building' : 'user',
-			description: isCompany ? 'The company, how you classify it and how you work with it' : 'Who this customer is and how you work with them',
+			description: segment
+				? (segment.identityHint || ('The core ' + recordLabel + ' details your team uses'))
+				: (isCompany ? 'The company, how you classify it and how you work with it' : 'Who this customer is and how you work with them'),
 			kind: 'basic'
 		});
-		sections.push({
-			id: 'contact',
-			group: 'Foundation',
-			title: 'Contact & Links',
-			icon: 'mail',
-			description: 'Email addresses and phone numbers used to reach this customer',
-			kind: 'contact'
-		});
+		if (shows('contact')) {
+			sections.push({
+				id: 'contact',
+				group: 'Foundation',
+				title: 'Contact & Links',
+				icon: 'mail',
+				description: 'Email addresses and phone numbers used to reach this ' + recordLabel,
+				kind: 'contact'
+			});
+		}
 
 		var profile = currentProfile();
 		if (profile) {
@@ -1328,7 +1732,7 @@
 				var focusId = SECTION_FOCUS_MAP[profileSection.id];
 				sections.push({
 					id: 'profile-' + profile.key + '-' + profileSection.id,
-				group: 'Question sections',
+				group: labelText('sections'),
 					title: profileSection.title,
 					icon: profileSection.icon,
 					description: profileSection.description || ('Questions for ' + profile.name),
@@ -1339,28 +1743,34 @@
 			});
 		}
 
-		sections.push({
-			id: 'addresses', group: 'Records', title: 'Addresses', icon: 'pin',
-			description: 'Billing, shipping and site addresses', kind: 'lists',
-			lists: ['addresses'], needs: ['addresses']
-		});
-		sections.push({
-			id: 'people', group: 'Records', title: 'People', icon: 'users',
-			description: 'People you deal with at this customer', kind: 'lists',
-			lists: ['contacts'], needs: ['contacts']
-		});
-		if (showInteractions()) {
+		if (shows('addresses')) {
+			sections.push({
+				id: 'addresses', group: 'Records', title: 'Addresses', icon: 'pin',
+				description: 'Addresses for this ' + recordLabel, kind: 'lists',
+				lists: ['addresses'], needs: ['addresses']
+			});
+		}
+		if (shows('people')) {
+			sections.push({
+				id: 'people', group: 'Records', title: 'People', icon: 'users',
+				description: 'People connected to this ' + recordLabel, kind: 'lists',
+				lists: ['contacts'], needs: ['contacts']
+			});
+		}
+		if (shows('interactions') && showInteractions()) {
 			sections.push({
 				id: 'interactions', group: 'Records', title: 'Interactions', icon: 'activity',
 				description: 'Calls, emails and meetings you log', kind: 'lists',
 				lists: ['interactions'], needs: ['activity']
 			});
 		}
-		sections.push({
-			id: 'notes', group: 'Records', title: 'Notes', icon: 'note',
-			description: 'Anything the next person needs to know', kind: 'fields',
-			fields: [{ id: 'core_notes', label: 'Internal notes', type: 'textarea', width: 'full', rows: 5, placeholder: 'Context, preferences, reminders...' }]
-		});
+		if (shows('notes')) {
+			sections.push({
+				id: 'notes', group: 'Records', title: 'Notes', icon: 'note',
+				description: 'Anything the next person needs to know', kind: 'fields',
+				fields: [{ id: 'core_notes', label: 'Internal notes', type: 'textarea', width: 'full', rows: 5, placeholder: 'Context, preferences, reminders...' }]
+			});
+		}
 		return sections;
 	}
 
@@ -1613,12 +2023,27 @@
 
 	function typeSwitchHtml() {
 		var isCompany = customerRecord.customerType === 'company';
-		return '<div class="cp-type-switch" role="group" aria-label="Customer type">' +
+		return '<div class="cp-type-switch" role="group" aria-label="' + esc(labelText('profileType')) + '">' +
 			'<button type="button" class="cp-type-option" data-type="person" aria-pressed="' + (!isCompany ? 'true' : 'false') + '"' + (locked() ? ' disabled' : '') + '>' +
-				iconSvg('user') + '<span>Person</span></button>' +
+				iconSvg('user') + '<span>' + esc(labelText('person')) + '</span></button>' +
 			'<button type="button" class="cp-type-option" data-type="company" aria-pressed="' + (isCompany ? 'true' : 'false') + '"' + (locked() ? ' disabled' : '') + '>' +
-				iconSvg('building') + '<span>Company</span></button>' +
+				iconSvg('building') + '<span>' + esc(labelText('company')) + '</span></button>' +
 			'</div>';
+	}
+
+	function segmentSwitchHtml() {
+		var segments = configSegments();
+		if (!segmentsMode()) return typeSwitchHtml();
+		if (!profileConfig.allowSegmentSelection || segments.length < 2) return '';
+		var active = currentSegment();
+		return '<div class="cp-segment-switch" role="group" aria-label="' + esc(labelText('profileType')) + '">' + segments.map(function (segment) {
+			var isActive = !!active && active.key === segment.key;
+			return '<button type="button" class="cp-segment-option' + (isActive ? ' is-active' : '') + '" data-segment="' + esc(segment.key) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '"' + (locked() ? ' disabled' : '') + ' title="' + esc(segment.description || segment.name) + '">' +
+				'<span class="cp-segment-ico">' + iconSvg(segment.icon) + '</span>' +
+				'<span class="cp-segment-text"><span class="cp-segment-name">' + esc(segment.name) + '</span>' +
+				(segment.description ? '<span class="cp-segment-desc">' + esc(segment.description) + '</span>' : '') + '</span>' +
+			'</button>';
+		}).join('') + '</div>';
 	}
 
 	function profileSourceLabel(profile) {
@@ -1631,9 +2056,11 @@
 
 	function selectionHelpText() {
 		var profiles = currentProfiles();
-		if (!profiles.length) return 'Tick one or more question sets to add their questions.';
-		if (profiles.length === 1) return profiles[0].description || 'One question set selected.';
-		return profiles.length + ' question sets combined. Shared sections are only shown once.';
+		var segment = currentSegment();
+		if (segment && !segment.allowCombinations) return 'Choose one ' + labelText('questionSets').toLowerCase() + ' for this ' + labelText('record').toLowerCase() + '.';
+		if (!profiles.length) return 'Tick one or more ' + labelText('questionSets').toLowerCase() + ' to add their questions.';
+		if (profiles.length === 1) return profiles[0].description || 'One ' + labelText('questionSets').toLowerCase().replace(/s$/, '') + ' selected.';
+		return profiles.length + ' ' + labelText('questionSets').toLowerCase() + ' combined. Shared sections are only shown once.';
 	}
 
 	function dataPackOptionHtml(profile) {
@@ -1652,18 +2079,32 @@
 	}
 
 	function dataPackPickerHtml() {
-		var profiles = allProfiles();
-		var selectedCount = currentProfileKeys().length;
-		return '<div class="cp-pack-picker">' +
-			'<div class="cp-pack-head">' +
-				'<span class="cp-label">Question sets</span>' +
-				'<span class="cp-pack-count" id="cp-pack-count">' + selectedCount + ' of ' + profiles.length + ' selected</span>' +
-			'</div>' +
-			'<div class="cp-pack-list" role="group" aria-label="Choose question sets">' + profiles.map(dataPackOptionHtml).join('') + '</div>' +
+		var segment = currentSegment();
+		var profiles = segmentsMode()
+			? segmentAllowedKeys(segment).map(function (key) { return findProfile(key); }).filter(Boolean)
+			: (applicationMode() ? applicationAllowedKeys().map(function (key) { return findProfile(key); }).filter(Boolean) : allProfiles());
+		var selectedKeys = currentProfileKeys();
+		var selectedCount = profiles.filter(function (profile) { return selectedKeys.indexOf(profile.key) !== -1; }).length;
+		var outsideCount = selectedKeys.filter(function (key) {
+			return !profiles.some(function (profile) { return profile.key === key; });
+		}).length;
+		var countText = selectedCount + ' of ' + profiles.length + ' selected' + (outsideCount ? ' - ' + outsideCount + ' outside' : '');
+		var allowCombinations = segmentsMode() ? (!segment || segment.allowCombinations) : (!applicationContext || applicationContext.allowCombinations !== false);
+		var pickerLabel = labelText('questionSets') + (applicationMode() ? ' - ' + applicationContext.name : '');
+		var libraryLabel = applicationMode() ? 'All ' + labelText('questionSets').toLowerCase() : 'Manage ' + labelText('questionSets').toLowerCase();
+		var head = '<div class="cp-pack-head">' +
+			'<span class="cp-label">' + esc(pickerLabel) + '</span>' +
+			'<span class="cp-pack-count" id="cp-pack-count" title="' + esc(outsideCount ? outsideCount + ' selected ' + labelText('questionSets').toLowerCase() + ' are outside this catalog.' : '') + '">' + esc(countText) + '</span>' +
+		'</div>';
+		if (!profiles.length) {
+			return '<div class="cp-pack-picker">' + head + '<p class="cp-note">No ' + esc(labelText('questionSets').toLowerCase()) + ' are configured for this ' + esc(labelText('record').toLowerCase()) + '.</p></div>';
+		}
+		return '<div class="cp-pack-picker">' + head +
+			'<div class="cp-pack-list" role="group" aria-label="' + esc('Choose ' + labelText('questionSets').toLowerCase()) + '">' + profiles.map(dataPackOptionHtml).join('') + '</div>' +
 			'<div class="cp-pack-tools">' +
-				'<button type="button" class="cp-btn cp-btn-sm" data-pack-all' + (locked() ? ' disabled' : '') + '>Select all</button>' +
+				(allowCombinations ? '<button type="button" class="cp-btn cp-btn-sm" data-pack-all' + (locked() ? ' disabled' : '') + '>Select all</button>' : '') +
 				'<button type="button" class="cp-btn cp-btn-sm" data-pack-clear' + (locked() ? ' disabled' : '') + '>Clear</button>' +
-				'<button type="button" class="cp-linkbtn cp-pack-library" id="cp-pack-library">Manage question sets</button>' +
+				(profileEditingEnabled() ? '<button type="button" class="cp-linkbtn cp-pack-library" id="cp-pack-library">' + esc(libraryLabel) + '</button>' : '') +
 			'</div>' +
 		'</div>';
 	}
@@ -1694,49 +2135,90 @@
 
 	function basicSectionBodyHtml() {
 		var fields = coreIdentityFields();
+		var segment = currentSegment();
+		var nameFields = fields.names.slice();
+		if (segment && segment.nameFieldIds && segment.nameFieldIds.length) {
+			nameFields = nameFields.filter(function (field) { return segment.nameFieldIds.indexOf(field.id) > -1; });
+		}
+		var adminFields = fields.admin.slice();
+		if (segment) {
+			if (segment.adminFieldIds && segment.adminFieldIds.length) {
+				adminFields = adminFields.filter(function (field) { return segment.adminFieldIds.indexOf(field.id) > -1; });
+			}
+			if (segment.showAdminFields === false) adminFields = [];
+		}
 		var tagsField = { id: 'core_tags', label: 'Tags', type: 'tags', width: 'full', hint: 'Short labels used for filtering and campaigns.' };
-		var nameRows = '<div class="cp-field-row cp-field-row-2">' +
-			fields.names.slice(0, 2).map(function (field) { return '<div class="cp-field">' + fieldCellHtml(field) + '</div>'; }).join('') +
-			'</div>' +
-			'<div class="cp-field-row cp-field-row-2">' +
-			fields.names.slice(2, 4).map(function (field) { return '<div class="cp-field">' + fieldCellHtml(field) + '</div>'; }).join('') +
+		var showTags = !segment || segment.showTags !== false;
+
+		function fieldRowsHtml(list, columns) {
+			if (!list.length) return '';
+			var rows = [];
+			for (var index = 0; index < list.length; index += columns) rows.push(list.slice(index, index + columns));
+			return rows.map(function (rowFields) {
+				return '<div class="cp-field-row cp-field-row-' + columns + '">' + rowFields.map(function (field) {
+					return '<div class="cp-field">' + fieldCellHtml(field) + '</div>';
+				}).join('') + '</div>';
+			}).join('');
+		}
+
+		var identityTitle = segment ? segment.name + ' identity' : labelText('record') + ' identity';
+		var identityHint = segment && segment.identityHint
+			? segment.identityHint
+			: 'Start with the basics: the name and the details your team uses to recognise and manage this ' + labelText('record').toLowerCase() + '.';
+		var typeHtml = segmentsMode() ? segmentSwitchHtml() : typeSwitchHtml();
+		var profileSelection = segmentAllowsProfileSelection();
+		var focusSelection = segmentAllowsFocusSelection();
+
+		var selectionHtml = '';
+		if (profileSelection) {
+			var focusHtml = '';
+			if (focusSelection) {
+				focusHtml = '<div class="cp-focus-head"><span class="cp-label">Focus areas</span>' +
+					'<span class="cp-focus-hint" id="cp-focus-hint">' + customerRecord.focus.length + (customerRecord.focus.length === 1 ? ' area selected' : ' areas selected') + '</span>' +
+					'</div>' +
+					'<div class="cp-focus-grid" id="cp-focus-grid">' + focusChipsHtml() + '</div>';
+			}
+			selectionHtml = '<div class="cp-setup">' +
+				'<div class="cp-setup-head"><span class="cp-step">2</span><div class="cp-setup-head-text">' +
+					'<h3 class="cp-block-title">' + esc(labelText('questionSets')) + '</h3>' +
+					'<p class="cp-block-sub">' + esc('A ' + labelText('questionSets').toLowerCase().replace(/s$/, '') + ' is a group of sections. Tick one for a preset, or tick several to build your own combination. Every answer stays in the record.') + '</p>' +
+				'</div></div>' +
+				'<div class="cp-field-row"><div class="cp-field cp-field-full">' +
+					dataPackPickerHtml() +
+					'<span class="cp-field-help" id="cp-kind-hint">' + esc(selectionHelpText()) + '</span>' +
+				'</div></div>' +
+				focusHtml +
+				'<div class="cp-setup-actions">' +
+					(focusSelection ? '<button type="button" class="cp-btn cp-btn-sm" data-apply-preset' + (locked() ? ' disabled' : '') + '>Use suggested areas</button>' : '') +
+					'<span class="cp-setup-hint">Every answer stays saved.</span>' +
+				'</div>' +
+				'<p class="cp-note" id="cp-profile-note">' + esc(profileSetupNoteText()) + '</p>' +
 			'</div>';
-		var adminRows = '<div class="cp-field-row cp-field-row-3">' +
-			fields.admin.slice(0, 3).map(function (field) { return '<div class="cp-field">' + fieldCellHtml(field) + '</div>'; }).join('') +
-			'</div>' +
-			'<div class="cp-field-row cp-field-row-3">' +
-			fields.admin.slice(3, 6).map(function (field) { return '<div class="cp-field">' + fieldCellHtml(field) + '</div>'; }).join('') +
+		} else if (focusSelection) {
+			selectionHtml = '<div class="cp-setup">' +
+				'<div class="cp-setup-head"><span class="cp-step">2</span><div class="cp-setup-head-text">' +
+					'<h3 class="cp-block-title">' + esc(labelText('sections')) + '</h3>' +
+					'<p class="cp-block-sub">Choose which extra sections this ' + esc(labelText('record').toLowerCase()) + ' needs. Every answer stays in the record.</p>' +
+				'</div></div>' +
+				'<div class="cp-focus-head"><span class="cp-label">Focus areas</span>' +
+					'<span class="cp-focus-hint" id="cp-focus-hint">' + customerRecord.focus.length + (customerRecord.focus.length === 1 ? ' area selected' : ' areas selected') + '</span>' +
+				'</div>' +
+				'<div class="cp-focus-grid" id="cp-focus-grid">' + focusChipsHtml() + '</div>' +
+				'<div class="cp-setup-actions"><button type="button" class="cp-btn cp-btn-sm" data-apply-preset' + (locked() ? ' disabled' : '') + '>Use suggested areas</button></div>' +
 			'</div>';
+		}
 
 		return '<div class="cp-setup">' +
 			'<div class="cp-setup-head"><span class="cp-step">1</span><div class="cp-setup-head-text">' +
-				'<h3 class="cp-block-title">Customer identity</h3>' +
-				'<p class="cp-block-sub">Start with the basics: the name and the details your team uses to recognise and manage this customer.</p>' +
+				'<h3 class="cp-block-title">' + esc(identityTitle) + '</h3>' +
+				'<p class="cp-block-sub">' + esc(identityHint) + '</p>' +
 			'</div></div>' +
-			typeSwitchHtml() +
-			nameRows +
-			adminRows +
-			'<div class="cp-field-row"><div class="cp-field cp-field-full">' + fieldCellHtml(tagsField) + '</div></div>' +
+			typeHtml +
+			fieldRowsHtml(nameFields, 2) +
+			fieldRowsHtml(adminFields, 3) +
+			(showTags ? '<div class="cp-field-row"><div class="cp-field cp-field-full">' + fieldCellHtml(tagsField) + '</div></div>' : '') +
 		'</div>' +
-		'<div class="cp-setup">' +
-			'<div class="cp-setup-head"><span class="cp-step">2</span><div class="cp-setup-head-text">' +
-				'<h3 class="cp-block-title">Question sets</h3>' +
-				'<p class="cp-block-sub">A question set is a group of sections. Tick one for a preset, or tick several to build your own combination. Question sets are independent of the customer type and industry, and switching never removes saved data.</p>' +
-			'</div></div>' +
-			'<div class="cp-field-row"><div class="cp-field cp-field-full">' +
-				dataPackPickerHtml() +
-				'<span class="cp-field-help" id="cp-kind-hint">' + esc(selectionHelpText()) + '</span>' +
-			'</div></div>' +
-			'<div class="cp-focus-head"><span class="cp-label">Focus areas</span>' +
-				'<span class="cp-focus-hint" id="cp-focus-hint">' + customerRecord.focus.length + (customerRecord.focus.length === 1 ? ' area selected' : ' areas selected') + '</span>' +
-			'</div>' +
-			'<div class="cp-focus-grid" id="cp-focus-grid">' + focusChipsHtml() + '</div>' +
-			'<div class="cp-setup-actions">' +
-				'<button type="button" class="cp-btn cp-btn-sm" data-apply-preset' + (locked() ? ' disabled' : '') + '>Use suggested areas</button>' +
-				'<span class="cp-setup-hint">One set is a preset; several make a custom combination. Every answer stays saved.</span>' +
-			'</div>' +
-			'<p class="cp-note" id="cp-profile-note">' + esc(profileSetupNoteText()) + '</p>' +
-		'</div>';
+		selectionHtml;
 	}
 
 	/* ── Array lists ── */
@@ -1829,15 +2311,35 @@
 	function buildReadiness() {
 		var items = [];
 		function add(label, ok, hint) { items.push({ label: label, ok: !!ok, hint: hint || '' }); }
-		var name = customerDisplayName() !== 'New customer';
-		add('Customer name', name, 'Add the name in Basic Information');
-		add('A contact point', listHasContent('emails') || listHasContent('phones'), 'Add an email or phone in Contact & Links');
-		add('Status and owner', trimString(customerRecord.values.core_status) && trimString(customerRecord.values.core_owner), 'Set both in Basic Information');
-		add('At least one question set', hasProfileSelection(), 'Choose question sets in Basic Information');
-		if (focusSet().addresses || customerRecord.showAllSections) add('An address', listHasContent('addresses'), 'Add a billing or shipping address');
-		if (focusSet().contacts || customerRecord.showAllSections) add('A person', listHasContent('contacts'), 'Add the person you deal with');
-		if (focusSet().activity || customerRecord.showAllSections) add('An interaction', listHasContent('interactions'), 'Log the last conversation');
-		add('A note', trimString(customerRecord.values.core_notes) !== '', 'Add context for the next person');
+		var segment = currentSegment();
+		var values = customerRecord.values;
+		var recordLabel = labelText('record');
+		var hasName = customerRecord.customerType === 'company'
+			? !!(trimString(values.core_legalName) || trimString(values.core_tradeName))
+			: !!(trimString(values.core_firstName) || trimString(values.core_lastName) || trimString(values.core_preferredName));
+		function hasVisibleSection(sectionId) {
+			return visibleSections().some(function (section) { return section.id === sectionId; });
+		}
+		add(recordLabel + ' name', hasName, 'Add the name in Basic Information');
+		if (hasVisibleSection('contact')) add('A contact point', listHasContent('emails') || listHasContent('phones'), 'Add an email or phone in Contact & Links');
+
+		var showAdmin = !segment || segment.showAdminFields !== false;
+		var adminIds = segment && segment.adminFieldIds && segment.adminFieldIds.length
+			? segment.adminFieldIds
+			: ['core_status', 'core_priority', 'core_source', 'core_owner', 'core_since', 'core_nextFollowUp'];
+		if (showAdmin && adminIds.indexOf('core_status') > -1 && adminIds.indexOf('core_owner') > -1) {
+			add('Status and owner', trimString(values.core_status) && trimString(values.core_owner), 'Set both in Basic Information');
+		}
+
+		if (!segmentsMode() || segmentAllowsProfileSelection()) {
+			add('At least one ' + labelText('questionSets').toLowerCase().replace(/s$/, ''), hasProfileSelection(), 'Choose ' + labelText('questionSets').toLowerCase() + ' in Basic Information');
+		} else {
+			add(labelText('form') + ' assigned', hasProfileSelection(), 'No ' + labelText('form').toLowerCase() + ' is configured for this type');
+		}
+		if (hasVisibleSection('addresses')) add('An address', listHasContent('addresses'), 'Add a billing or shipping address');
+		if (hasVisibleSection('people')) add('A person', listHasContent('contacts'), 'Add the person you deal with');
+		if (hasVisibleSection('interactions')) add('An interaction', listHasContent('interactions'), 'Log the last conversation');
+		if (hasVisibleSection('notes')) add('A note', trimString(values.core_notes) !== '', 'Add context for the next person');
 		items.sort(function (left, right) { return left.ok === right.ok ? 0 : (left.ok ? 1 : -1); });
 		return items;
 	}
@@ -1866,7 +2368,7 @@
 		if (trimString(customerRecord.values.core_priority)) customerFacts.push('Priority: ' + customerRecord.values.core_priority);
 		if (trimString(customerRecord.values.core_owner)) customerFacts.push('Owner: ' + customerRecord.values.core_owner);
 		if (trimString(customerRecord.values.core_source)) customerFacts.push('Source: ' + customerRecord.values.core_source);
-		if (trimString(customerRecord.values.core_since)) customerFacts.push('Customer since: ' + customerRecord.values.core_since);
+		if (trimString(customerRecord.values.core_since)) customerFacts.push(labelText('record') + ' since: ' + customerRecord.values.core_since);
 		if (trimString(customerRecord.values.core_nextFollowUp)) customerFacts.push('Next follow-up: ' + customerRecord.values.core_nextFollowUp);
 		if (Array.isArray(customerRecord.values.core_tags) && customerRecord.values.core_tags.length) customerFacts.push('Tags: ' + customerRecord.values.core_tags.join(', '));
 		if (customerFacts.length) lines.push(customerFacts.join('  |  '));
@@ -1905,26 +2407,29 @@
 		});
 
 		lines.push('');
-		lines.push('Prepared from a customer profile record on ' + nowISO().slice(0, 10) + '.');
+		lines.push('Prepared from a ' + labelText('record').toLowerCase() + ' profile record on ' + nowISO().slice(0, 10) + '.');
 		return lines.join('\n');
 	}
 
 	/* ── Share drawer and header action menu ── */
 	function shareDrawerBodyHtml() {
-		var managementLabel = canWrite() ? 'Manage question sets' : 'View question sets';
+		var managementLabel = canWrite() ? 'Manage ' + labelText('questionSets').toLowerCase() : 'View ' + labelText('questionSets').toLowerCase();
+		var manageButton = profileEditingEnabled()
+			? '<button type="button" class="cp-btn" data-action="manage-profiles">' + iconSvg('layers') + ' ' + managementLabel + '</button>'
+			: '';
 		return '<div class="cp-share-card">' +
 				'<h3 class="cp-subsection-title">Record readiness</h3>' +
 				'<ul class="cp-readiness-list">' + readinessHtml() + '</ul>' +
 			'</div>' +
 			'<div class="cp-share-card">' +
 				'<h3 class="cp-subsection-title">Export</h3>' +
-				'<p class="cp-field-help">The readable summary follows the sections in the sidebar. The JSON keeps the whole record, including answers from other question sets.</p>' +
+				'<p class="cp-field-help">The readable summary follows the sections in the sidebar. The JSON keeps the whole record, including answers from other ' + esc(labelText('questionSets').toLowerCase()) + '.</p>' +
 				'<div class="cp-share-actions">' +
 					'<button type="button" class="cp-btn cp-btn-primary" data-action="download-json">' + iconSvg('download') + ' Download JSON</button>' +
 					'<button type="button" class="cp-btn" data-action="copy-json">' + iconSvg('copy') + ' Copy JSON</button>' +
 					'<button type="button" class="cp-btn" data-action="copy-summary">' + iconSvg('copy') + ' Copy summary</button>' +
 					'<button type="button" class="cp-btn" data-action="export-pdf">' + iconSvg('share') + ' Printable summary</button>' +
-					'<button type="button" class="cp-btn" data-action="manage-profiles">' + iconSvg('layers') + ' ' + managementLabel + '</button>' +
+					manageButton +
 				'</div>' +
 			'</div>' +
 			'<div class="cp-field">' +
@@ -2095,41 +2600,55 @@
 	function updateSidebarMeta() {
 		var profiles = currentProfiles();
 		var profile = currentProfile();
+		var segment = currentSegment();
+		var chipLabel = document.querySelector('.cp-profile-chip-label');
+		if (chipLabel) chipLabel.textContent = segmentsMode() ? labelText('profileType') : labelText('questionSets');
 		var chipValue = document.getElementById('cp-profile-chip-value');
 		var chipSub = document.getElementById('cp-profile-chip-sub');
 		if (chipValue) {
-			if (!profiles.length) chipValue.textContent = 'Not set';
+			if (segment && !segment.allowProfileSelection) chipValue.textContent = segment.name;
+			else if (!profiles.length) chipValue.textContent = 'Not set';
 			else if (profiles.length === 1) chipValue.textContent = profiles[0].name;
-			else chipValue.textContent = profiles.length + ' question sets';
+			else chipValue.textContent = profiles.length + ' ' + labelText('questionSets').toLowerCase();
 		}
 		if (chipSub) {
-			if (!profiles.length) chipSub.textContent = 'Choose question sets in Basic Information';
-			else if (profiles.length === 1) chipSub.textContent = customerRecord.focus.length + (customerRecord.focus.length === 1 ? ' area covered' : ' areas covered');
-			else chipSub.textContent = currentSections.length + ' sections in total';
+			if (segment && !segment.allowProfileSelection) {
+				chipSub.textContent = segment.description || currentSections.length + ' sections';
+			} else if (!profiles.length) {
+				chipSub.textContent = 'Choose ' + labelText('questionSets').toLowerCase() + ' in Basic Information';
+			} else if (profiles.length === 1) {
+				chipSub.textContent = customerRecord.focus.length + (customerRecord.focus.length === 1 ? ' area covered' : ' areas covered');
+			} else {
+				chipSub.textContent = currentSections.length + ' sections in total';
+			}
 		}
+		var manageEnabled = profileEditingEnabled();
+		var menuManage = document.getElementById('cp-menu-manage');
+		if (menuManage) menuManage.hidden = !manageEnabled;
 		var menuManageText = document.getElementById('cp-menu-manage-text');
-		if (menuManageText) menuManageText.textContent = canWrite() ? 'Manage question sets' : 'View question sets';
+		if (menuManageText) menuManageText.textContent = canWrite() ? 'Manage ' + labelText('questionSets').toLowerCase() : 'View ' + labelText('questionSets').toLowerCase();
 		var hidden = hiddenSectionCount();
 		var note = document.getElementById('cp-hidden-note');
 		if (note) {
 			if (!profiles.length) {
 				if (customerRecord.showAllSections) note.textContent = 'Showing all basic and extra sections';
 				else if (customerRecord.focus.length) note.textContent = 'Extra areas selected';
-				else note.textContent = 'Basic sections only - choose question sets to show more';
-			}
-			else if (!hidden) note.textContent = 'All sections are visible';
+				else note.textContent = 'Basic sections only';
+			} else if (!hidden) note.textContent = 'All sections are visible';
 			else if (customerRecord.showAllSections) note.textContent = hidden + ' hidden by this selection - showing all';
 			else note.textContent = hidden + (hidden === 1 ? ' section hidden' : ' sections hidden') + ' by this selection';
 		}
 		var toggle = document.getElementById('cp-scope-toggle');
 		if (toggle) {
+			toggle.hidden = !segmentAllowsFocusSelection();
 			toggle.textContent = customerRecord.showAllSections ? 'Hide sections not needed' : 'Show all sections';
 			toggle.disabled = !canWrite();
 		}
 		var manage = document.getElementById('cp-manage-profiles');
 		if (manage) {
+			manage.hidden = !manageEnabled;
 			manage.disabled = false;
-			manage.textContent = canWrite() ? '+ Manage question sets' : 'View question sets';
+			manage.textContent = canWrite() ? '+ Manage ' + labelText('questionSets').toLowerCase() : 'View ' + labelText('questionSets').toLowerCase();
 		}
 	}
 
@@ -2166,6 +2685,9 @@
 		var name = customerDisplayName();
 		var nameNode = document.getElementById('cp-person-name-display');
 		if (nameNode) nameNode.textContent = name;
+		var appTitle = document.querySelector('.cp-app-title');
+		if (appTitle) appTitle.textContent = labelText('appTitle', 'Customer Profile');
+		if (document.title !== labelText('appTitle', 'Customer Profile')) document.title = labelText('appTitle', 'Customer Profile');
 		var buildBadge = document.getElementById('cp-build-badge');
 		if (buildBadge) buildBadge.innerHTML = '<span class="cp-build-prefix">tool </span>build ' + TOOL_BUILD;
 		var logo = document.getElementById('cp-logo');
@@ -2173,7 +2695,11 @@
 		var menuName = document.getElementById('cp-menu-name');
 		if (menuName) menuName.textContent = name;
 		var menuSub = document.getElementById('cp-menu-sub');
-		if (menuSub) menuSub.textContent = hasProfileSelection() ? typeAndProfileLabel() : 'Choose question sets';
+		if (menuSub) {
+			if (hasProfileSelection()) menuSub.textContent = typeAndProfileLabel();
+			else if (segmentsMode() && !segmentAllowsProfileSelection()) menuSub.textContent = currentSegment() ? currentSegment().name : labelText('profileType');
+			else menuSub.textContent = 'Choose ' + labelText('questionSets').toLowerCase();
+		}
 		var menuHeadIcon = document.getElementById('cp-menu-head-ico');
 		if (menuHeadIcon) menuHeadIcon.innerHTML = iconSvg(customerRecord.customerType === 'company' ? 'building' : 'user');
 		var themeButton = document.getElementById('cp-theme-toggle');
@@ -2199,9 +2725,15 @@
 		var note = document.getElementById('cp-readonly-note');
 		if (note) note.hidden = !lockedNow;
 		var manage = document.getElementById('cp-manage-profiles');
-		if (manage) manage.disabled = false;
+		if (manage) {
+			manage.hidden = !profileEditingEnabled();
+			manage.disabled = false;
+		}
 		var toggle = document.getElementById('cp-scope-toggle');
-		if (toggle) toggle.disabled = !canWrite();
+		if (toggle) {
+			toggle.hidden = !segmentAllowsFocusSelection();
+			toggle.disabled = !canWrite();
+		}
 	}
 
 	function applyTheme() {
@@ -2282,14 +2814,23 @@
 	/* ── Profile / focus actions ── */
 	function applyProfileSelection(keys, options) {
 		if (!canWrite()) return;
+		if (segmentsMode() && !segmentAllowsProfileSelection()) return;
 		var nextKeys = normalizeProfileKeys(keys, '');
+		var segment = currentSegment();
+		if (segment) {
+			var allowed = segmentAllowedKeys(segment);
+			nextKeys = nextKeys.filter(function (key) { return allowed.indexOf(key) > -1; });
+			if (!segment.allowCombinations && nextKeys.length > 1) nextKeys = [nextKeys[0]];
+		}
 		var previousFocus = customerRecord.focus.slice();
 		customerRecord.profileKeys = nextKeys;
 		customerRecord.profileKey = nextKeys[0] || '';
 		var profile = currentProfile();
 		var preset = profileFocusPreset(profile);
 		customerRecord.presetFocus = preset.slice();
-		if (options && options.resetFocus) {
+		if (!segmentAllowsFocusSelection()) {
+			customerRecord.focus = preset.slice();
+		} else if (options && options.resetFocus) {
 			customerRecord.focus = preset.slice();
 		} else if (!nextKeys.length) {
 			customerRecord.focus = [];
@@ -2322,6 +2863,12 @@
 		if (!canWrite()) return;
 		var profile = findProfile(profileKey);
 		if (!profile) return;
+		var segment = currentSegment();
+		if (segment && !segment.allowCombinations) {
+			applyProfileSelection([profile.key], { resetFocus: true });
+			notify('Using ' + profile.name + '. Existing answers are kept.', 'info');
+			return;
+		}
 		var keys = currentProfileKeys();
 		var index = keys.indexOf(profile.key);
 		if (index > -1) keys.splice(index, 1);
@@ -2336,8 +2883,17 @@
 
 	function selectAllProfiles() {
 		if (!canWrite()) return;
-		applyProfileSelection(allProfiles().map(function (profile) { return profile.key; }));
-		notify('All question sets combined. Shared sections are only shown once.', 'info');
+		var segment = currentSegment();
+		if (segment && !segment.allowCombinations) {
+			var first = segmentDefaultKeys(segment)[0];
+			if (first) applyProfileSelection([first], { resetFocus: true });
+			return;
+		}
+		var keys = segment
+			? segmentAllowedKeys(segment)
+			: (applicationMode() ? applicationAllowedKeys() : allProfiles().map(function (profile) { return profile.key; }));
+		applyProfileSelection(keys);
+		notify('All ' + labelText('questionSets').toLowerCase() + ' combined. Shared sections are only shown once.', 'info');
 	}
 
 	function clearProfileSelection() {
@@ -2349,6 +2905,7 @@
 
 	function setCustomerType(customerType) {
 		if (!canWrite()) return;
+		if (segmentsMode()) return;
 		if (customerType !== 'person' && customerType !== 'company') return;
 		if (customerType === customerRecord.customerType) return;
 		customerRecord.customerType = customerType;
@@ -2358,8 +2915,28 @@
 		notify(customerType === 'company' ? 'Company selected. The question sets and answers stay in place; only the identity fields change.' : 'Person selected. The question sets and answers stay in place; only the identity fields change.', 'info');
 	}
 
+	function setSegment(segmentKey) {
+		if (!canWrite() || !segmentsMode()) return;
+		var segment = segmentByKey(segmentKey);
+		if (!segment || segment.key === customerRecord.segmentKey) return;
+		customerRecord.segmentKey = segment.key;
+		customerRecord.customerType = segment.baseType;
+		var keys = segmentDefaultKeys(segment);
+		customerRecord.profileKeys = keys;
+		customerRecord.profileKey = keys[0] || '';
+		var segmentProfile = currentProfile();
+		var preset = profileFocusPreset(segmentProfile);
+		customerRecord.presetFocus = preset.slice();
+		customerRecord.focus = preset.slice();
+		customerRecord.showAllSections = false;
+		saveNow();
+		renderAll();
+		switchToSection('basic');
+		notify(segment.name + ' selected. Answers are kept; the form now shows what this type needs.', 'info');
+	}
+
 	function toggleFocusArea(areaId) {
-		if (!canWrite() || !focusAreaById(areaId)) return;
+		if (!canWrite() || !segmentAllowsFocusSelection() || !focusAreaById(areaId)) return;
 		var focus = customerRecord.focus.slice();
 		var index = focus.indexOf(areaId);
 		if (index > -1) focus.splice(index, 1);
@@ -2370,14 +2947,14 @@
 	}
 
 	function toggleShowAllSections() {
-		if (!canWrite()) return;
+		if (!canWrite() || !segmentAllowsFocusSelection()) return;
 		customerRecord.showAllSections = !customerRecord.showAllSections;
 		saveNow();
 		renderAll();
 	}
 
 	function applySuggestedFocus() {
-		if (!canWrite()) return;
+		if (!canWrite() || !segmentAllowsFocusSelection()) return;
 		customerRecord.focus = customerRecord.presetFocus.slice();
 		saveNow();
 		renderAll();
@@ -2615,6 +3192,11 @@
 			switchToSection(list[nextIndex].id);
 			return;
 		}
+		var segmentOption = target.closest('[data-segment]');
+		if (segmentOption) {
+			setSegment(segmentOption.getAttribute('data-segment'));
+			return;
+		}
 		var typeOption = target.closest('[data-type]');
 		if (typeOption) {
 			setCustomerType(typeOption.getAttribute('data-type'));
@@ -2793,8 +3375,15 @@
 	}
 
 	function openProfilesModal() {
+		if (!profileEditingEnabled()) {
+			notify('This app uses a fixed form for this ' + labelText('record').toLowerCase() + '.', 'info');
+			return;
+		}
 		var selectedCount = currentProfileKeys().length;
-		var profiles = allProfiles().slice().sort(function (first, second) {
+		var allowedKeys = segmentsMode() ? segmentAllowedKeys(currentSegment()) : null;
+		var profiles = allProfiles().filter(function (profile) {
+			return !allowedKeys || allowedKeys.indexOf(profile.key) > -1;
+		}).slice().sort(function (first, second) {
 			var firstSelected = isProfileSelected(first.key);
 			var secondSelected = isProfileSelected(second.key);
 			if (firstSelected && !secondSelected) return -1;
@@ -2841,6 +3430,10 @@
 
 
 	function openProfilesJsonModal() {
+		if (!profileEditingEnabled()) {
+			notify('This app uses a fixed form for this ' + labelText('record').toLowerCase() + '.', 'info');
+			return;
+		}
 		var jsonText = '[]';
 		try {
 			jsonText = JSON.stringify(customerRecord.customProfiles.map(function (profile) {
@@ -3025,7 +3618,8 @@
 
 	function fileNameForCustomer() {
 		var nameSlug = slugify(customerDisplayName());
-		return 'customer-' + (nameSlug || 'profile');
+		var recordSlug = slugify(labelText('record').toLowerCase()) || 'customer';
+		return recordSlug + '-' + (nameSlug || 'profile');
 	}
 
 	function copyTextAsync(text, successMessage) {
@@ -3229,7 +3823,9 @@
 		try {
 			tool.declareParams([
 				{ name: 'defaultCustomerType', label: 'Default customer type', type: 'select', default: 'person', severity: 'optional', hint: 'Used when a new customer record is opened. Values: person or company.' },
-				{ name: 'defaultProfileKey', label: 'Default question set keys', type: 'text', default: '', severity: 'optional', hint: 'Pre-selects one or more question sets for a new record, for example company-account or company-account, support-sla. Use commas for a combination.' },
+				{ name: 'defaultProfileKey', label: 'Default question set keys', type: 'text', default: '', severity: 'optional', hint: 'Pre-selects one or more question sets for a new record, for example software-discovery or software-discovery, stakeholders-relationship. Use commas for a combination.' },
+				{ name: 'applicationType', label: 'Application type', type: 'text', default: '', severity: 'optional', hint: 'Simple catalog shortcut: software-sales, general-crm or customer-profile-hub. It only decides the default question-set catalog; any question set can still be selected from the library. profileConfig segments take precedence when both are set.' },
+				{ name: 'profileConfig', label: 'App profile config (JSON)', type: 'text', default: '', severity: 'goodToHave', hint: 'Optional app-level segments, labels and app-specific question sets. Paste a preset from the profiles folder. Keep profileDefinitions for shared question sets.' },
 				{ name: 'profileDefinitions', label: 'Question set definitions (JSON)', type: 'text', default: '', severity: 'goodToHave', hint: 'Array of additional question sets shared by every customer of this app. Open the question set library and use Load example to see the exact shape.' },
 				{ name: 'statusOptions', label: 'Status options', type: 'text', default: '', severity: 'optional', hint: 'Comma-separated status list. Default: Lead, Prospect, Active, Dormant, Inactive, Blocked.' },
 				{ name: 'sourceOptions', label: 'Source options', type: 'text', default: '', severity: 'optional', hint: 'Comma-separated list of how customers reach you. A default list is used when empty.' },
@@ -3247,6 +3843,7 @@
 				properties: {
 					version: { type: 'number' },
 					customerType: { type: 'string', description: 'person or company' },
+					segmentKey: { type: 'string', description: 'App-defined segment/profile type key, when the app uses segments' },
 					profileKey: { type: 'string' },
 					profileKeys: { type: 'array', description: 'Selected question set keys (one or more)' },
 					focus: { type: 'array', description: 'Focus area ids that decide which extra sections are visible' },
@@ -3270,6 +3867,8 @@
 		if (appNode) appNode.setAttribute('data-tool-build', TOOL_BUILD);
 
 		buildBuiltInProfiles();
+		loadProfileConfig();
+		loadApplicationContext();
 		loadSettingsProfiles();
 		declareParamsSafely();
 		declareOutputSafely();

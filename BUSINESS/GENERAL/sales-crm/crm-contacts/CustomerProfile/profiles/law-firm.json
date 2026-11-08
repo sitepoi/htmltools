@@ -1,0 +1,144 @@
+{
+  "appTitle": "Legal Client Profiles",
+  "labels": {
+    "record": "Client",
+    "person": "Client",
+    "company": "Organisation",
+    "questionSets": "Intake forms",
+    "profileType": "Client type",
+    "sections": "Sections",
+    "form": "Form"
+  },
+  "defaultSegmentKey": "individual-client",
+  "allowSegmentSelection": true,
+  "segments": [
+    {
+      "key": "individual-client",
+      "name": "Individual client",
+      "description": "Person seeking legal services",
+      "icon": "user",
+      "baseType": "person",
+      "profileKeys": ["individual-client"],
+      "allowedProfileKeys": ["individual-client"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Client", "questionSets": "Client intake form" },
+      "identityHint": "Administrative client intake. Legal advice and matter files stay in the matter system.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since", "core_nextFollowUp"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Enquiry", "Conflict check", "Engaged", "Active matter", "Closed", "Declined"],
+      "sourceOptions": ["Referral", "Website", "Existing client", "Event", "Other"]
+    },
+    {
+      "key": "organisation-client",
+      "name": "Organisation",
+      "description": "Company or organisational client",
+      "icon": "building",
+      "baseType": "company",
+      "profileKeys": ["organisation-client"],
+      "allowedProfileKeys": ["organisation-client"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Organisation", "questionSets": "Organisation intake form" },
+      "identityHint": "The client entity, its main contact and the intake checks.",
+      "nameFieldIds": ["core_legalName", "core_tradeName", "core_registrationNumber"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since", "core_nextFollowUp"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Prospect", "Conflict check", "Engaged", "Active matter", "Closed", "Declined"],
+      "sourceOptions": ["Referral", "Website", "Existing client", "Tender", "Other"]
+    },
+    {
+      "key": "referrer",
+      "name": "Referrer",
+      "description": "Person or organisation sending work",
+      "icon": "users",
+      "baseType": "person",
+      "profileKeys": ["referrer-contact"],
+      "allowedProfileKeys": ["referrer-contact"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Referrer", "questionSets": "Referrer form" },
+      "identityHint": "Who sends referrals and how to reach them.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "showAdminFields": false,
+      "showTags": false,
+      "sourceOptions": ["Referral", "Existing client", "Event", "Other"]
+    }
+  ],
+  "definitions": [
+    {
+      "key": "individual-client",
+      "name": "Individual client intake",
+      "description": "Administrative intake and conflict-check details",
+      "sections": [
+        {
+          "id": "individual-intake",
+          "title": "Client intake",
+          "icon": "note",
+          "description": "Administrative details needed to open and conflict-check a client record.",
+          "fields": [
+            { "id": "legalMatterType", "label": "Matter type", "type": "select", "width": "half", "required": true, "options": ["Family", "Employment", "Property", "Commercial", "Litigation", "Wills and estates", "Other"] },
+            { "id": "legalJurisdiction", "label": "Jurisdiction", "type": "text", "width": "half" },
+            { "id": "legalSummary", "label": "Intake summary", "type": "textarea", "width": "full", "rows": 4, "hint": "Administrative summary only. Legal analysis and advice belong in the matter file." },
+            { "id": "legalOpposingParty", "label": "Opposing party", "type": "text", "width": "full" },
+            { "id": "legalConflictChecked", "label": "Conflict check completed", "type": "checkbox", "width": "half" },
+            { "id": "legalEngagementSent", "label": "Engagement letter sent", "type": "checkbox", "width": "half" },
+            { "id": "legalPreferredContact", "label": "Preferred contact method", "type": "select", "width": "half", "options": ["Email", "Phone", "Post", "In person"] },
+            { "id": "legalBillingContact", "label": "Billing contact", "type": "text", "width": "half" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "organisation-client",
+      "name": "Organisation intake",
+      "description": "Entity details, main contact and intake checks",
+      "sections": [
+        {
+          "id": "organisation-intake",
+          "title": "Organisation intake",
+          "icon": "building",
+          "fields": [
+            { "id": "legalEntityType", "label": "Entity type", "type": "select", "width": "half", "options": ["Corporation", "Partnership", "Sole trader", "Non-profit", "Public body", "Other"] },
+            { "id": "legalIndustry", "label": "Industry", "type": "text", "width": "half" },
+            { "id": "legalMatterTypeOrg", "label": "Matter type", "type": "select", "width": "half", "required": true, "options": ["Commercial", "Employment", "Property", "Litigation", "Compliance", "Other"] },
+            { "id": "legalMainContact", "label": "Main contact email", "type": "email", "width": "half" },
+            { "id": "legalBillingEmailOrg", "label": "Billing email", "type": "email", "width": "half" },
+            { "id": "legalConflictCheckedOrg", "label": "Conflict check completed", "type": "checkbox", "width": "half" },
+            { "id": "legalEngagementSentOrg", "label": "Engagement letter sent", "type": "checkbox", "width": "half" },
+            { "id": "legalOrgNotes", "label": "Administrative notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "referrer-contact",
+      "name": "Referrer contact",
+      "description": "Referral source and contact details",
+      "sections": [
+        {
+          "id": "referrer-details",
+          "title": "Referrer details",
+          "icon": "users",
+          "fields": [
+            { "id": "legalReferrerOrganisation", "label": "Organisation", "type": "text", "width": "half" },
+            { "id": "legalReferrerRole", "label": "Role", "type": "text", "width": "half" },
+            { "id": "legalReferrerPhone", "label": "Phone", "type": "phone", "width": "half" },
+            { "id": "legalReferrerEmail", "label": "Email", "type": "email", "width": "half" },
+            { "id": "legalReferrerType", "label": "Referral type", "type": "select", "width": "half", "options": ["Client referral", "Professional referral", "Community referral", "Other"] },
+            { "id": "legalReferrerNotes", "label": "Administrative notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    }
+  ]
+}

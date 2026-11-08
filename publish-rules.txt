@@ -29,6 +29,9 @@ GOLDEN RULE (never broken)
   the push.
 
 DOCUMENTATION CADENCE (never broken)
+- Structural documentation rules live in _docs/DOCUMENTATION-RULES.md. The
+  SHIP protocol stays in this file; when they conflict, fix both in the same
+  change.
 - The SSOT (docs/ssot.html) is updated with EVERY code change - in the same
   change, immediately. It is the living source of truth.
 - ALL other documents are built ONLY on SHIP, never on routine updates: the
@@ -387,8 +390,10 @@ PHASE 5 - VERIFICATION GATE (every check MUST pass - fix failures, do not
 5.1 Docs completeness
       find BUSINESS PERSONAL -type d -name docs | wc -l
         → equals the number of tools (50 today)
-    Every docs folder contains all 7 files: index.html, ssot.html,
+    Every docs folder contains all 7 core files: index.html, ssot.html,
     webpage.html, help.html, presentation.html, updates.html, social.html.
+    When the tool has profiles/index.json, docs/profiles.html must also exist
+    (run npm run docs:profiles -- <Tool>).
 
 5.2 Risk gate (changed tools only)
     Read the SSOT of every changed tool: no OPEN risk with data-risk-level
@@ -397,8 +402,16 @@ PHASE 5 - VERIFICATION GATE (every check MUST pass - fix failures, do not
 
 5.3 Placeholder and style scan on touched documents
     No remaining [PLACEHOLDER] / [FEATURE NAME] / [ASSETS_RELATIVE] /
-    [CSS_CLASS] / [CODE] in the documents touched by this publish (except
-    intended template samples). No em dash, no emoji icons in headers/CSS.
+    [CSS_CLASS] / [CODE] / [PROFILES_PAYLOAD] / [PROFILES_ITEM] in the
+    documents touched by this publish (except intended template samples).
+    No em dash, no emoji icons in headers/CSS.
+
+5.3a Profile usage gate (changed tools with profileConfig or profiles/)
+    SSOT section 4.1 exists and lists every preset used by an application.
+    Every in-use row has an application/configuration and a decision id.
+    SSOT section 15 has a profile-usage release group with
+    data-task-type="profile-usage" tasks. docs/profiles.html and the harness
+    preset selector are current.
 
 5.4 Script syntax (only when a scripts/*.js file changed)
       node --check scripts/releaseContext.js
@@ -406,6 +419,7 @@ PHASE 5 - VERIFICATION GATE (every check MUST pass - fix failures, do not
       node --check scripts/generate-docs.js
       node --check scripts/release.js
       node --check scripts/build-ssot-index.js
+      node --check scripts/build-profile-docs.js
 
 5.5 Control tower index
     Run:

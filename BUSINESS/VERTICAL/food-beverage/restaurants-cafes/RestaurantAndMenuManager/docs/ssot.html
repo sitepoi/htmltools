@@ -92,7 +92,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.23</span>
+      <span>v0.38</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -141,15 +141,16 @@
     produces it.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.23</td></tr>
-    <tr><th>Last updated</th><td>2026-10-24</td></tr>
+    <tr><th>Document version</th><td>0.32</td></tr>
+    <tr><th>Last updated</th><td>2026-11-08</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (RestaurantAndMenuManager).</td></tr>
+    <tr><th>Restaurant scope</th><td><strong>This tool is the ONLY restaurant tool in the product</strong> (D-RAMM-44). It owns the restaurant profile, service settings and opening hours, taxes and payments, delivery zones, menu authoring, presentation sections, alerts and devices, and it now also carries every admin item from the 2026-11-08 meeting (section 15, tasks T-72 to T-85). The former companion tools <code>RestaurantSettings</code>, <code>RestaurantMenuManagement</code> and <code>RestaurantDeliveryZones</code> are <strong>retired</strong>: their folders were renamed to <code>OLD-RestaurantSettings</code>, <code>OLD-RestaurantMenuManagement</code> and <code>OLD-RestaurantDeliveryZones</code>, they are never updated again and they will be deleted by the owner.</td></tr>
     <tr><th>Primary code areas</th><td><code>app/gloria-migration-report-v2.html</code>, <code>app/gloria-migration-report.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/test-harness.html</code>, plus the sample data files under <code>app/sampleData/</code> (menu-demo.json, menu-rich.json, menu-rich-compact.json, deals-demo.json, deals-rich.json, gloria-sample.json)</td></tr>
     <tr><th>Explicitly out of scope</th><td>Website rendering and cart behavior, the order detail tool (<code>RestaurantOrderManager</code>), the platform write-back relay, styling decisions, and any field the customer contract does not define.</td></tr>
-    <tr><th>Companion documents</th><td><strong>Authoritative companion:</strong> <code>docs/client-data-contract.html</code> (customer-side contract, version 3.3, 2026-10-21). Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
+    <tr><th>Companion documents</th><td><strong>Authoritative companion:</strong> <code>docs/client-data-contract.html</code> (customer-side contract, version 3.4, 2026-11-08). Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
   </table>
 
   <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
@@ -231,7 +232,7 @@
     </tr>
     <tr>
       <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/docs/client-data-contract.html"><code>docs/client-data-contract.html</code></a></td>
-      <td>Customer-side contract, version 3.3: the exact document shape the website reads.</td>
+      <td>Customer-side contract, version 3.4: the exact document shape the website reads.</td>
       <td>Sections 20 to 23 - write-back, hero, promotions, campaigns, cache and deals. Authoritative for every key named in this SSOT.</td>
     </tr>
     <tr>
@@ -833,6 +834,132 @@
       <td>Owner decision on both points: the AI must not invent numbers, and a tax preset must not silently overwrite a rate the owner typed.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-RAMM-43</td><td>2026-11-08</td>
+      <td>Restaurant product meeting 2026-11-08, product and deal items: base price optional when sizes exist; quick bulk size entry; duplicate product and duplicate modifier group; drag a modifier group onto an item row; deal editor asks for the deal type first; clearer category/size wording in deal editors. Modifier subgroups stay a question (Q-16).</td>
+      <td>Meeting decisions from the owner session on 2026-11-08. Items implemented the same day are listed as T-64 to T-70; the unclear item stays a question instead of a task.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-44</td><td>2026-11-08</td>
+      <td>Restaurant admin consolidation: <code>RestaurantAndMenuManager</code> is the only restaurant tool. <code>RestaurantSettings</code>, <code>RestaurantMenuManagement</code> and <code>RestaurantDeliveryZones</code> are retired - their folders are renamed <code>OLD-RestaurantSettings</code>, <code>OLD-RestaurantMenuManagement</code> and <code>OLD-RestaurantDeliveryZones</code>, they are never updated again, and the owner deletes them later. Every requirement those tools carried is moved into this SSOT as tasks T-72 to T-85, next to the admin surfaces this tool already has (opening hours, delivery zones, taxes, services, alerts, devices).</td>
+      <td>Owner direction on 2026-11-08: "We use only RestaurantAndMenuManager and it contains everything for a restaurant settings." A single admin surface removes the split-document problem where a setting edited in one tool was invisible to the other, and it stops work from going into folders nobody ships.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-45</td><td>2026-11-08</td>
+      <td>Opening hours in this tool: the default week is 11:00-21:00 on all seven days; a bulk action writes one time range to several ticked days; a one-date closure is stored as <code>service_settings.temporary_closure = { date, reason }</code> (null when unused); dated overrides are stored as <code>service_settings.special_hours = [{ id, date, is_closed, open, close, note }]</code>. Precedence for a day is closure, then a special-hours row, then the weekday row. Both new keys are documented in <code>docs/client-data-contract.html</code> version 3.4, section 5.2.1. Reason is admin-facing and never rendered to customers.</td>
+      <td>Owner decisions from the 2026-11-08 meeting, carried over from the retired settings tool (T-72 to T-75). The two keys follow the existing <code>opening_hours</code> style so the website needs one small reading rule instead of a second hours model, and the date keys stay absent-safe for documents written before this change.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-46</td><td>2026-11-08</td>
+      <td>Delivery zone shapes are corrected in place: the edit action on a shape row puts that one shape into draw edit mode (vertex drag for a polygon, radius and centre drag for a circle), a snapshot of the geometry is taken first, Save shape writes the new geometry back into the SAME slot of <code>zone.shapes</code>, and Cancel restores the snapshot. Only one shape is edited at a time; drawing a new shape, leaving the zone, deleting the shape or the zone, or reloading the map ends the edit. Saving the zone commits an open edit instead of dropping it.</td>
+      <td>Owner decision from the 2026-11-08 meeting (T-84). Editing beats delete-and-redraw for small corrections, the snapshot makes Cancel trustworthy, and keeping the slot means no other shape's index moves, so the existing shape list, delete flow and map indexes stay valid.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-47</td><td>2026-11-08</td>
+      <td>Modifier subgroups are real nesting, not a visual grouping (answer to Q-16). A modifier group may carry an optional <code>parent_group_id</code>; a group with a parent is a subgroup of that group, keeps its own options and its own selection limits, and is authored, published and rendered as a child. Nesting is one level deep - a subgroup cannot have a subgroup of its own. A group without <code>parent_group_id</code> behaves exactly as today, so existing documents and the website keep working. The parent's <code>min_selections</code>/<code>max_selections</code> apply to the parent's own options plus everything selected in its subgroups; a subgroup's own limits apply inside itself. <code>parent_group_id</code> is added to the modifier-group section of <code>docs/client-data-contract.html</code>.</td>
+      <td>Owner answer on 2026-11-08: "true nesting with real subgroups and items, not only visual". Real nesting keeps the deal rules and the website honest - a subgroup is a real selectable unit with limits, so pricing, selection counting and the contract all reflect it; a display-only label would break as soon as a subgroup needs its own min/max.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-48</td><td>2026-11-08</td>
+      <td>PDF and spreadsheet menu work is the assisted flow (answer to Q-19). A PDF is read through its text layer with pdf.js, a draft menu is proposed (category headings, item lines, trailing prices, size columns) and the owner corrects it before anything is written; a scan without a text layer is rejected with a clear message instead of producing empty items. Spreadsheets are read and written with SheetJS - one column layout is used by the export, the PDF-to-spreadsheet file and the import, so a downloaded file can be edited offline and imported back without mapping. There is no CSV-only path. Every import ends in the conflict/approval screen; nothing is written before the owner approves. Both libraries load from the same CDN the tool already uses for Leaflet, Sortable and leaflet-draw.</td>
+      <td>Owner answer on 2026-11-08: "(a) assisted parsing". Honest about taste- and layout-heavy menus and scans, keeps the owner in control, and one spreadsheet format avoids a mapping step between export and import.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-49</td><td>2026-11-08</td>
+      <td>Paid services live inside this tool as an "Additional services" module (answer to Q-20). A catalog lists the services with their price and the inputs each one needs; the restaurant admin opens the module, picks a service, supplies the requirements (for example a menu file), pays, and the request moves to the provider side with a status the admin can follow in the same screen. The paid menu-update service from the meeting is the first catalog entry. A request stores the service id, the price at request time, the uploaded file references, the contact, the status and the timestamps. The payment mechanism itself is Q-22, so the first version records the request and its state and the paying step plugs in when Q-22 is answered.</td>
+      <td>Owner answer on 2026-11-08: the flow must be inside this tool, with payment support added for these additional services, and the admin selects a service, fulfils its requirements like uploading a file, pays the price, and our side completes the task. Keeping the catalog, the request and its status in one admin surface is what makes the service sellable without manual side channels.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-50</td><td>2026-11-08</td>
+      <td>The delivery map searches addresses and business names with Nominatim, the OpenStreetMap geocoder (answer to Q-21). It is free, needs no key, and matches the map stack this tool already runs (Leaflet with OpenStreetMap tiles). Usage rules the code must follow: one request per second at most (debounced and cancelled while typing), results cached in memory for the session, the required attribution shown, and the public instance used only for admin searches - never for autocomplete on a customer page. Google is not used: it needs a Cloud project with billing and an API key, and its terms require the results to be shown on a Google map, while this tool draws on OpenStreetMap.</td>
+      <td>Owner answer on 2026-11-08: use Google if it is free, otherwise Nominatim. Nominatim is the free option without a key and without changing the map provider, so it wins on both cost and consistency with the existing Leaflet/OSM setup.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-51</td><td>2026-11-08</td>
+      <td>The deal type is chosen from a <strong>visual grid of eleven cards</strong> on step 1 of the deal editor, not from a dropdown. Each card carries an icon, the type name, a one-line description and a concrete example. The dropdown is kept as a hidden input with the same id (<code>deal-rule-type</code>), so every existing reader and writer of the deal form - validation, save, open, promo codes - keeps working and no stored deal changes. Selecting a card rebuilds the rule editor for that type, refreshes the price-field state and the match preview, and an unknown stored type falls back to bundle.</td>
+      <td>Owner direction on 2026-11-08: "the deal type selection is a very big feature and only a dropdown does not show its importance and size". Eleven enforceable rule types are the core of the deals product, so they get a visual picker with a plain-language explanation each, while the data contract and the validation stay untouched.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-52</td><td>2026-11-08</td>
+      <td>The deal editor is <strong>four steps</strong>: 1 Deal type, 2 Offer setup, 3 Details, 4 Schedule. Step 1 is the picker only - grouped cards with an icon, a plain description, a concrete example and a "You set" line - and step 2 configures the chosen type and always names it in a header with a "Change type" action. The eleven types are read as three families: fixed price packages (bundle, minimum quantity, tiered), volume and free items (two for one, buy N get M, volume pricing, free item, free modifiers) and money off the order (percent off, spend and save, free delivery). Opening the editor lands on step 1; the hidden <code>deal-rule-type</code> input, the rule editor and every validation path are unchanged.</td>
+      <td>Owner direction on 2026-11-08: "make the deal type selection a separate tab and make them more visual and explanatory". Separating the choice from its configuration removes the long scroll in one tab, and grouping the types explains the product instead of listing eleven equal options.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-53</td><td>2026-11-08</td>
+      <td>Deal validation follows the four steps. Moving between steps never runs the full save validation and clears any stale error output. Leaving Details without a title is blocked inline (focus plus a toast that names the step). A failed save groups the errors by the step that owns the fix - title, active flag and the deal's own fields to Details; rule, items, categories, tiers, bands, modifiers, sizes, percent, threshold and zones to Offer setup; dates, weekdays and time windows to Schedule - each group carries a "Go to this step" action, and the editor jumps to the first failing step. The error panel renders above the step content so it is always visible. A new tiered deal opens with a labelled first tier ("Tier 1") so only its price is missing.</td>
+      <td>Owner report on 2026-11-08: after the flow was split into steps, the save validation listed errors for steps the owner had not reached yet, in one flat list with no way to find them. Timing the checks per step and pointing each error at its step is what keeps a four-step editor usable; the single full validation before saving stays as the gate.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-54</td><td>2026-11-08</td>
+      <td>The tool <strong>self-hosts Inter</strong> instead of relying on the Google Fonts CDN: <code>app/fonts/inter-latin.woff2</code> and <code>app/fonts/inter-latin-ext.woff2</code> are declared with two <code>@font-face</code> blocks (variable weight <code>400 700</code>, <code>font-display: swap</code>, correct <code>unicode-range</code> per subset) and referenced from the tool stylesheet by relative path. The family, weights and stack stay exactly what the SSOT already uses - <code>'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif</code> - so the tool reads in the same type as the documentation, and form controls explicitly inherit <code>var(--font)</code> because browsers do not inherit the font into <code>button</code>, <code>input</code>, <code>select</code> and <code>textarea</code> by default. The ship script copies the font folder into the bundle under <code>code/fonts/</code>, so a shipped tool never depends on a third-party font host.</td>
+      <td>Owner request on 2026-11-08: "use the same font in the application UI that we use in the SSOT - the SSOT text font looks good". The tool already named Inter first, but the CDN link was the only source and a shipped or offline bundle would fall back to Segoe UI. Shipping the two subset files makes the typography identical in the tool, in the SSOT and in every shipped copy, with no request to fonts.googleapis.com and no layout shift.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-55</td><td>2026-11-08</td>
+      <td>The General tab <strong>no longer renders the whole cuisine catalogue</strong>. The card shows only the chosen cuisines as chips, each with a remove action, plus one "Select cuisine types" button. That button opens a dialog with a search field, the full catalogue as a toggle grid, an "add a cuisine that is not listed" field and a Done action that names how many are selected. Edits are held in a draft array while the dialog is open, so Cancel changes nothing; Done is the only thing that writes <code>general_info.cuisine_types</code>. Custom names are turned into stable ids by folding accents and Turkish letters to ASCII first (<code>normalize('NFKD')</code>, then <code>&#305;-&gt;i</code>, <code>&#351;-&gt;s</code>, <code>&#287;-&gt;g</code>, <code>&#252;-&gt;u</code>, <code>&#246;-&gt;o</code>, <code>&#231;-&gt;c</code>), so "&#304;talyan" yields <code>italyan</code> and not an <code>i-</code> artefact.</td>
+      <td>Owner request on 2026-11-08: "in General Tab, do not show all cuisine types, only show selected, and add a select cuisine type functionality as popup; also add custom cuisine type in that popup as well - we need to simplify the UI". Twenty-plus always-on chips turned a three-field card into the longest block on the tab; a popup keeps the card scannable and still shows the full catalogue in one place.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-56</td><td>2026-11-08</td>
+      <td>Each General card (Restaurant Information, Address &amp; Location, Legal Information) is <strong>read-only by default and editable on demand</strong>. In view mode the card renders a designed summary - logo, name, brand and cuisine chips as a hero, then labelled values in a responsive grid, with links for phone, email and website, a badge for the account status and a muted "Not set" for anything empty. An <strong>Edit</strong> action in the card header swaps the summary for today's form; <strong>Cancel</strong> restores the snapshot taken when Edit was pressed and <strong>Done</strong> saves. Exactly one card is in edit mode by itself, the form markup and every existing <code>data-path</code> binding stay unchanged, and read-only mode hides the Edit action and forces the summary view.</td>
+      <td>Owner request on 2026-11-08: "we can show the UI as readonly with a very custom and great design and only show form when we want to edit". Owners read these three cards far more often than they write them, so the default state becomes a profile view worth looking at, while editing stays one click away and never loses work on Cancel.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-57</td><td>2026-11-08</td>
+      <td>The <strong>restaurant address can be found by name or by address on the Address card itself</strong>, the same place the address is stored, using the Nominatim service already used by the delivery map (D-RAMM-50). The search sits at the top of the card in edit mode, debounced at 700 ms, and shares one request-per-second limit and one cache with the map search. Picking a result writes street, city, state, ZIP and country <strong>and</strong> the coordinates in one action, then re-renders the form and the summary. State handling follows the tool's own storage: US states and Canadian provinces are stored as codes (resolved from the result's ISO 3166-2 code, falling back to the state name), every other country keeps free text.</td>
+      <td>Owner question on 2026-11-08: "I needed an address search with entering a restaurant name, it would find - did we add it somewhere that I was expecting in General &gt; Address &amp; Location part". The search existed only on the delivery map toolbar, which is a different job; searching where the address lives is what the owner expected, and filling the address fields from one pick removes five manual entries and the coordinate guessing that follows.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-58</td><td>2026-11-08</td>
+      <td>The read-only card engine of D-RAMM-56 is <strong>generalised to every card that holds settings</strong>, starting with Tax &amp; Pay: Taxation, Payment Methods and Currency render designed summaries in view mode and their existing form in edit mode. Cards are declared with <code>data-view-card</code> and a per-card data path, so Cancel restores exactly the slice a card owns - <code>taxation_currency</code> or <code>payment_methods</code> - instead of the whole document, and one card cannot undo another's work. Taxation reads as a lead row (tax name, how it is applied, delivery fee rate) plus a rate table where a fully zero-rated category collapses to one badge; Payment Methods reads as a channel matrix with a count of enabled combinations and the gateway state; Currency reads as the code, symbol and name. The engine names changed accordingly (<code>initViewCardModes</code>, <code>applyViewCardModes</code>, <code>handleViewCardAction</code>, <code>renderViewCardViews</code>).</td>
+      <td>Owner request on 2026-11-08: "make the same readonly perfect visual data and edit on needed for tax &amp; pay tab as well, that we did in General tab already". Tax and payment settings are read far more often than changed, and a matrix of twenty switches is the worst possible reading surface; the same pattern applied here makes both tabs scannable without inventing a second mechanism.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-59</td><td>2026-11-08</td>
+      <td>Restaurant Information is rendered as a <strong>page hero with no card header</strong>: a gradient cover band, the logo overlapping it, the name at display size, the brand underneath, cuisine chips and the account status badge, followed by three contact tiles (phone, email, website) that are real <code>tel:</code>, <code>mailto:</code> and web links, and a profile completeness bar driven by eight checks. Because the header is gone, the Edit, Cancel and Done actions move into a dedicated mount inside the card (<code>data-view-actions</code>), floating over the cover in view mode and turning into a normal toolbar row above the form in edit mode.</td>
+      <td>Owner request on 2026-11-08: "Restaurant Information section header can be removed, put edit somewhere else (we need that edit link) and make the restaurant information like a page hero component with a very high quality design". A title bar above a name that repeats the same title adds nothing; spending that space on a hero makes the first thing an owner sees the profile itself, and the contact tiles plus completeness bar turn a passive summary into something useful.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-60</td><td>2026-11-08</td>
+      <td>In the restaurant hero <strong>only the logo crosses the cover edge</strong>. The cover band ends above the text row, the logo alone is pulled up over it with a negative offset, and the name, brand, cuisine chips and account badge always sit fully on the white card area. No text is ever placed across two backgrounds, which also means the title keeps its dark colour and needs no second colour variant for the cover.</td>
+      <td>Owner report on 2026-11-08 with a screenshot: "the restaurant name text in the middle of dark and white blocks so visual is not good". The first hero pulled the whole text row up with the logo, so the cover edge cut the name in half - unreadable at the boundary and cheap-looking. Overlapping only the logo keeps the depth of the design and makes the name legible.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-61</td><td>2026-11-08</td>
+      <td>Every modifier group is <strong>one card</strong> on the Modifiers panel, and the card owns its options and its usage list. Before, the group row, the option rows and the "Used in N products" line were three sibling nodes in one flat list, so a usage line sat between two groups and read as part of the next one. The card now carries a header (expander, name, hover actions), a <strong>row of fact chips</strong> instead of a dotted micro line - option count, <code>pick 1</code> or <code>pick many</code>, <code>required</code>, min, max, duplicates, subgroup count, <code>used on N products</code> - and a body holding the option rows and a labelled usage block. Parent groups carry an indigo left rail on a white card; subgroups are indented on a dashed card with a connector stub and a <code>sub</code> badge, so nesting is visible without reading. Prices in options are real chips, defaults and hidden and out-of-stock states are badges, and a usage list of three or fewer products starts open while a longer one starts collapsed.</td>
+      <td>Owner request on 2026-11-08: "make the modifiers like and its sub item and option more distinctive - the items and colors are all similar and soft and there are internal texts like 'Used in 3 products' so it is a little difficult to understand group boundaries, make it more readable and more directly readable". Boundaries were implied by a hairline and metadata was a sentence, so the eye had to read everything to tell where one group ended. Cards make the boundary physical, chips make the facts scannable, and moving the usage list inside the card removes the false boundary it created.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-62</td><td>2026-11-08</td>
+      <td>The deal editor footer is <strong>step-aware and is the only way the flow moves forward</strong>. Step 1 to 3 show a primary <code>Next: &lt;step name&gt;</code> with a Back action from step 2 on, and the last step replaces Next with <code>Save Deal</code>, so Save cannot be reached before the deal has been configured step by step. The footer also carries a <code>Step n of 4</code> label. Every step change resets the scroll position of the shared editor body, because all four panels live in one scroll container and the next step otherwise opened at the offset the previous step was left at.</td>
+      <td>Owner report on 2026-11-08: "without the required items we see the Save Deal button statically at bottom, and while I do not scroll to bottom in the deal type tab I do not see the button for next step, so the user directly clicks Save Deal which is normal user behaviour but it is not what we expected", plus "when I scroll bottom of the first tab and go next I reach the very bottom of the second tab". A persistent Save next to a scrolled-away Next invites the wrong action, and a shared scroller leaking offsets makes each step open at its end.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-63</td><td>2026-11-08</td>
+      <td>The address search is <strong>scoped to the country and state already selected on the card</strong>, and it sits directly below those two fields so the order is the one the owner asked for: pick the country, pick the state, then search the name. The country is sent as Nominatim's <code>countrycodes</code> parameter, a hard filter; the state is sent as text in the query and then <strong>enforced on the answers</strong> (ISO 3166-2 code for the US and Canada, the state name elsewhere, answers without any state information kept). A scope line above the search names exactly where it will look, with a one-click action to widen to the whole country or narrow back to the state. Without a country the search refuses to run and points at the field, so a name like "Anatolia" can no longer return a place on another continent. This refines the placement in D-RAMM-57.</td>
+      <td>Owner request on 2026-11-08: "when I search from the find an address, it searches all over the world, it is better to select the country (and province/state if applicable) first and then search the restaurant by name with the selected country province filter, is it possible". A worldwide name search returns businesses with the same name in other countries and pushes the right one off the list; the country is already known on this card, so using it costs nothing and removes the noise.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -857,6 +984,13 @@
     <li>Global naming rule: any update - code or documentation - MUST use
     understandable, self-explanatory names. No cryptic abbreviations. Existing
     misleading names are renamed when their code is touched.</li>
+    <li><strong>One restaurant tool only (D-RAMM-44).</strong> Every restaurant
+    requirement is written here and implemented here. The folders
+    <code>OLD-RestaurantSettings</code>, <code>OLD-RestaurantMenuManagement</code>
+    and <code>OLD-RestaurantDeliveryZones</code> are archived: no code, task,
+    decision or documentation change may be made in them, not even to keep them
+    in sync. A requirement that surfaces in an archived document is copied into
+    this SSOT and built here.</li>
   </ol>
 
   <h2 id="sec-checklist">13. Implementation checklist</h2>
@@ -891,16 +1025,51 @@
     <tr><td>27</td><td>Item include/exclude inside a selected category, contract checked first</td><td><code>docs/client-data-contract.html</code>, <code>app/*</code> - PENDING (T-57, D-RAMM-29)</td></tr>
     <tr><td>28</td><td>Montreal pilot: full onboarding with 10+ scripted tests and a findings report</td><td><code>docs/ssot.html</code> section 17 - PENDING (T-58)</td></tr>
     <tr><td>29</td><td>AI suggestion panel with reasons and one-click create</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-60)</td></tr>
+    <tr><td>30</td><td>Meeting 2026-11-08 product/modifier/deal updates (base price optional, bulk sizes, duplicate product and group, drag-to-assign, deal type first, clearer deal wording)</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-64 to T-70, D-RAMM-43)</td></tr>
+    <tr><td>31</td><td>Modifier subgroups inside modifier groups</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-71, D-RAMM-47, contract 3.5)</td></tr>
     <tr><td>30</td><td>Monthly AI allowance: "n of 30" in the Deals toolbar and both dialogs, block at 30 of 30 with reset date and upgrade link</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DEFERRED (2026-10-24, T-61, D-RAMM-41, storage Q-15)</td></tr>
     <tr><td>31</td><td>Compact AI input payload plus the strict JSON output schema, with item cap and no private data</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-24, T-62)</td></tr>
+    <tr><td>32</td><td>Restaurant admin consolidation: three retired tools archived as OLD- folders, every requirement moved into this SSOT</td><td><code>docs/ssot.html</code> - DONE (2026-11-08, D-RAMM-44)</td></tr>
+    <tr><td>33</td><td>Opening hours default 11:00-21:00 on all seven days</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-11-08, T-72, D-RAMM-45)</td></tr>
+    <tr><td>34</td><td>Bulk opening-hours change for several days in one action</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-73, D-RAMM-45)</td></tr>
+    <tr><td>35</td><td>Temporary closure for one date, with reason, shown in the hours card</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>docs/client-data-contract.html</code> - DONE (2026-11-08, T-74, D-RAMM-45, contract 3.4)</td></tr>
+    <tr><td>36</td><td>Dated special hours (closed or different times on one date)</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>docs/client-data-contract.html</code> - DONE (2026-11-08, T-75, D-RAMM-45, contract 3.4)</td></tr>
+    <tr><td>37</td><td>Printer setup screen that chooses which fields are printed</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-76, Q-18)</td></tr>
+    <tr><td>38</td><td>Toggle for printing the category name on tickets</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-77, Q-18)</td></tr>
+    <tr><td>39</td><td>One-click printer connection</td><td><code>app/RestaurantAndMenuManager.js</code> - PENDING (T-78, Q-18)</td></tr>
+    <tr><td>40</td><td>PDF menu upload with assisted parsing into the menu grid</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-11-08, T-79, D-RAMM-48)</td></tr>
+    <tr><td>41</td><td>PDF menu converted to an Excel template</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-11-08, T-80, D-RAMM-48)</td></tr>
+    <tr><td>42</td><td>Excel menu import with conflict and difference screen, manual approval before writing</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-81, D-RAMM-48)</td></tr>
+    <tr><td>43</td><td>Excel export of the current menu</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-11-08, T-82, D-RAMM-48)</td></tr>
+    <tr><td>44</td><td>Paid menu-update service flow (request, upload, status)</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - PENDING (T-83, Q-20)</td></tr>
+    <tr><td>45</td><td>Delivery zone shapes: move and resize in place instead of delete and redraw</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-84, D-RAMM-46)</td></tr>
+    <tr><td>46</td><td>Delivery map address search by company name</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-85, D-RAMM-50 - Nominatim)</td></tr>
+    <tr><td>47</td><td>Additional services catalog tab</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-86, D-RAMM-49)</td></tr>
+    <tr><td>48</td><td>Additional service request with required uploads and status list</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-11-08, T-87, D-RAMM-49, contract 3.5)</td></tr>
+    <tr><td>49</td><td>Payment step for an additional service request</td><td><code>app/RestaurantAndMenuManager.js</code> - PENDING (T-88, Q-22)</td></tr>
+    <tr><td>50</td><td>Visual deal type picker: eleven cards with icon, description and example instead of a dropdown</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-89, D-RAMM-51)</td></tr>
+    <tr><td>51</td><td>Four-step deal editor: deal type on its own tab, grouped and explained cards, offer setup header with the chosen type</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-90, D-RAMM-52)</td></tr>
+    <tr><td>52</td><td>Step-aware deal validation: errors grouped by step with jump actions, title guarded on the Details step, stale errors cleared on navigation</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-91, D-RAMM-53)</td></tr>
+    <tr><td>53</td><td>Self-hosted Inter typeface matching the SSOT, with form controls inheriting the font and the ship script staging <code>code/fonts/</code></td><td><code>app/fonts/*.woff2</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>scripts/ship-cms.js</code> - DONE (2026-11-08, T-92, D-RAMM-54)</td></tr>
+    <tr><td>54</td><td>Cuisine types: chosen chips only on the card, full catalogue plus custom entry in a searchable popup with a draft-then-apply flow</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-93, D-RAMM-55)</td></tr>
+    <tr><td>55</td><td>General cards read-only by default with a designed summary and Edit / Cancel / Done actions, read-only mode hiding the edit affordance</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-94, D-RAMM-56)</td></tr>
+    <tr><td>56</td><td>Address search by restaurant name or street on the Address card, filling street, city, state, ZIP, country and the map point from one pick</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-95, D-RAMM-57)</td></tr>
+    <tr><td>57</td><td>Tax &amp; Pay tabs read-only with edit-on-demand: taxation lead row and rate table, payment channel matrix with gateway state, currency block</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-96, D-RAMM-58)</td></tr>
+    <tr><td>58</td><td>Restaurant Information as a page hero without a card header, with contact tiles, completeness bar and the edit actions moved into the card</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-97, D-RAMM-59)</td></tr>
+    <tr><td>59</td><td>Hero legibility fix: only the logo crosses the cover edge, the name and every other text stay on the white area</td><td><code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-97, D-RAMM-60)</td></tr>
+    <tr><td>60</td><td>Modifier groups as one card each: fact chips instead of a dotted line, options and the usage list inside the card, subgroup cards with a badge and a connector</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-98, D-RAMM-61)</td></tr>
+    <tr><td>61</td><td>Deal editor footer follows the step: Next on steps 1-3, Save Deal only on step 4, step label, and scroll reset on every step change</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code> - DONE (2026-11-08, T-99, D-RAMM-62)</td></tr>
+    <tr><td>62</td><td>Address search limited to the selected country and state, with a visible scope line and a widen/narrow action, placed below the country and state fields</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code> - DONE (2026-11-08, T-100, D-RAMM-63)</td></tr>
   </table>
 
         <h2 id="sec-questions">14. Open questions</h2>
   <p>Decision points we resolve together before or during implementation.
   Every answer becomes a dated row in section 11 and is removed from this
   list. Q-01 to Q-14 were answered by 2026-10-24 (D-RAMM-15 to D-RAMM-40).
-  One question remains, and it is deferred: where the AI counter is stored
-  (D-RAMM-41 keeps it open while the capability ships first).</p>
+  Q-15 (where the AI counter is stored) stays deferred while the AI capability
+  ships first (D-RAMM-41). On 2026-11-08 the owner answered Q-16, Q-19, Q-20 and
+  Q-21 (D-RAMM-47, D-RAMM-48, D-RAMM-49, D-RAMM-50). Q-17, Q-18 and the new
+  Q-22 stay open.</p>
   <ol>
     <li><strong>Q-15 - Where is the AI call counter stored?</strong>
     The tool is sandboxed: it cannot keep a trustworthy counter in the browser
@@ -917,6 +1086,50 @@
     <strong>Deferred on 2026-10-24:</strong> the AI capability ships first
     (user direction, D-RAMM-41), so the tool does not count or block calls yet.
     This question is answered when usage monitoring is built.</li>
+    <li><strong>Q-17 - Which default selection is missing on the Product Edit page?</strong>
+    Source note: the 2026-11-08 meeting list, section 4 "Yüksek öncelik - Ürün ve
+    modifier yönetimi", last bullet -
+    <em>"Product Edit sayfası: Varsayılan kategori/eyalet seçimi otomatik gelsin."</em>
+    The word is <em>eyalet</em> (state / province). The product form has no state
+    field: it holds a menu category, a tax category and an availability status.
+    The menu category already comes preselected (the selected category, otherwise
+    the first one), so the missing default is either the tax category or the
+    availability status. Needed: which of the three the note means; the address
+    state of the restaurant is the only other "state" in the document and it is
+    already stored on the General tab. Recommendation: preselect the restaurant's
+    first tax category for a new item.</li>
+    <li><strong>Q-18 - Which no-dialog print path do we build?</strong>
+    Owner requirement on 2026-11-08: "a very easy and no-printer-popup, direct
+    print setup"; the procedure is not decided yet. A browser cannot open a raw
+    printer port, so the realistic paths are:
+    <br />(a) <strong>WebUSB</strong> - the page talks to a USB thermal printer with
+    ESC/POS bytes. Chrome and Edge on desktop and Android Chrome. The device is
+    picked once per origin and later prints need no dialog. Requires HTTPS and a
+    printer the operating-system driver does not hold.
+    <br />(b) <strong>Web Bluetooth</strong> - BLE printers, same browsers plus
+    Android. A chooser per origin and usually a gesture per session; slower than USB.
+    <br />(c) <strong>WebSerial</strong> - serial (COM) printers; Chrome and Edge on
+    desktop only, no Android.
+    <br />(d) <strong>Local print agent</strong> - a small helper installed once on
+    the device which listens on localhost and forwards the ticket to a LAN or USB
+    printer. Works in every browser and with network printers, never shows a dialog,
+    but is an extra install.
+    <br />(e) <strong>Cloud or LAN printer service</strong> - the printer polls a
+    server (Star CloudPRNT, Epson Server Direct Print) or accepts HTTP jobs; needs a
+    capable printer and backend work.
+    <br />(f) <strong>Kiosk printing</strong> - the tool calls <code>window.print()</code>
+    in a browser started with the kiosk-printing flag, so the dialog is skipped;
+    no install but the device is tied to that browser configuration.
+    <br />Needed: the target devices (desktop POS, Android tablet, iPad) and the
+    printer models. Recommendation: (a) for USB printers on Chrome/Android plus (d)
+    as the general fallback; (b) only if the printers are Bluetooth-only.
+    Blocks T-76, T-77, T-78.</li>
+    <li><strong>Q-22 - How is an additional service paid?</strong>
+    The owner wants paid additional services inside this tool (D-RAMM-49). Needed:
+    the payment mechanism - the platform's own payment API, a hosted checkout, a
+    manual invoice, or "record the request and pay offline" for the first version -
+    who sets the price, and whether the price is shown before the request is sent.
+    Blocks T-88 and the paid part of T-83.</li>
   </ol>
 
 <h2 id="sec-tasklist">15. Development task list</h2>
@@ -2218,8 +2431,731 @@
     </div>
   </section>
 
-<h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
-  <p>Future ideas live here until they are decided. We discuss each idea and
+  <section class="task-group" data-release-group="meeting-2026-11-08" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Meeting 2026-11-08 - product, modifier and deal updates</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="meeting-2026-11-08">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="meeting-2026-11-08"></div></div>
+    <p class="task-group-note">Items from the restaurant product meeting of 2026-11-08 that belong to the menu manager. Decision record: D-RAMM-43.</p>
+
+    <div class="task-item" data-task-id="T-64" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-64</span>
+          <span class="task-title">Base price optional when the item has sizes</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-64 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A sized item could not be saved without typing a base price, even though the price row is hidden once sizes exist.</p>
+          <p><strong>How we will solve it:</strong> In <code>saveItem</code>, allow an empty price when the item (or the new-item draft) has at least one size; the stored price becomes null and the sizes carry the pricing.</p>
+          <p><strong>Benefit:</strong> Sized items save cleanly and the document matches the contract (price null when sized).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08: validation now accepts sizes without a base price and still requires a price for single-size items.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-65" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-65</span>
+          <span class="task-title">Quick bulk size entry on the item drawer</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-65 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Sizes were entered one dialog at a time, which is slow for pizzas with three or more sizes.</p>
+          <p><strong>How we will solve it:</strong> A "Quick add" input on the sizes section accepts one line like <code>Small=9.99, Medium=12.99, Large=15.99</code> and creates all sizes at once with fresh ids.</p>
+          <p><strong>Benefit:</strong> A whole size ladder is added in one action.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08: parser accepts comma, semicolon or newline separators and the label=price format; invalid lines are reported.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-66" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-66</span>
+          <span class="task-title">Duplicate product from the item row</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-66 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Similar items had to be re-created by hand item by item.</p>
+          <p><strong>How we will solve it:</strong> A duplicate button on every item row clones the item with a new id, a " (Copy)" name, a regenerated slug and fresh size ids, inserted right below the original.</p>
+          <p><strong>Benefit:</strong> Variations of an item take one click.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-67" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-67</span>
+          <span class="task-title">Drag a modifier group onto an item row</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-67 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Assigning a modifier group required opening each item and ticking checkboxes.</p>
+          <p><strong>How we will solve it:</strong> Modifier group rows carry a custom drag payload; item rows accept the drop and add the group to <code>modifier_group_ids</code>, with duplicate protection and a highlight while hovering.</p>
+          <p><strong>Benefit:</strong> Several items get a modifier group much faster.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08: item row dragstill reorders; only the modifier payload triggers the drop-assign path.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-68" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-68</span>
+          <span class="task-title">Duplicate modifier group</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-68 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Similar modifier groups (for example crust variants) had to be rebuilt option by option.</p>
+          <p><strong>How we will solve it:</strong> A duplicate button on the group row clones the group and all options with fresh ids, inserted right below the original.</p>
+          <p><strong>Benefit:</strong> Groups with many options are reused in one click.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-69" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-69</span>
+          <span class="task-title">Deal editor asks for the deal type first</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-69 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The meeting reported the order was reversed: details were asked before the deal type.</p>
+          <p><strong>How we will solve it:</strong> Tabs become 1 - Deal type, 2 - Details, 3 - Schedule; the editor opens on the deal type; the step buttons run type -> details -> schedule.</p>
+          <p><strong>Benefit:</strong> The flow matches how an owner thinks about an offer.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.html</code>, <code>app/test-harness.html</code>, <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08. This refines T-43's tab order by direct owner decision.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-70" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-70</span>
+          <span class="task-title">Clearer category and size wording, simpler two-for-one guidance</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-70 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Deal editors used ambiguous labels: "Option pool", "Size filter", "Items the customer picks".</p>
+          <p><strong>How we will solve it:</strong> Rewrite the labels and hints: "Customer picks from these categories", "Only items with this size", "Included items (optional, no picking)", and a two-for-one hint that states the cheapest pick is free.</p>
+          <p><strong>Benefit:</strong> Fewer trial-and-error edits when composing a deal.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08. Deeper layout changes can follow as separate tasks if the wording is not enough.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-71" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-71</span>
+          <span class="task-title">Modifier subgroups inside a modifier group</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-71 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Long groups (toppings with sections, milk alternatives) read as one flat list.</p>
+          <p><strong>How we will solve it:</strong> Real nesting (D-RAMM-47). Add an optional <code>parent_group_id</code> to modifier groups and author subgroups inside their parent: the Modifiers panel shows a subgroup indented under it, dragging an option or a group keeps the indentation, a subgroup keeps its own options and its own min/max, and a group can only be moved two levels deep. The item drawer groups the checkboxes by parent so the child groups appear under their parent. Deal rules that reference a modifier group still reference the id, and a parent limit counts its own options plus the selections made in its subgroups.</p>
+          <p><strong>Benefit:</strong> Cleaner option lists with real selection rules per subgroup, and the website can render and enforce the same structure.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>docs/client-data-contract.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-47): groups carry <code>parent_group_id</code>, the Modifiers panel lists a parent followed by its subgroups (badge, indented, <code>＋sub</code> action), the group modal has a Parent group select that only offers top-level groups and is disabled for a group that already has subgroups, deleting a parent removes its subgroups and their item references, and the item drawer assigns only top-level groups while showing the subgroup count. Contract 3.5 section 10.4.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="admin-consolidation-2026-11-08" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Restaurant admin consolidation 2026-11-08 - settings, printing, menu files, delivery zones</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">PRIORITY ORDER - independent items</span>
+      <span class="task-group-progress" data-group-progress="admin-consolidation-2026-11-08">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="admin-consolidation-2026-11-08"></div></div>
+    <p class="task-group-note">Everything the 2026-11-08 meeting asked for that used to live in the retired tools now lives here (D-RAMM-44). Each item is independent and ships in priority order; the blocked ones name their question.</p>
+
+    <div class="task-item" data-task-id="T-72" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-72</span>
+          <span class="task-title">Opening hours default 11:00-21:00 on all seven days</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-72 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A new restaurant starts with 09:00-17:00 office hours, so the owner corrects seven rows before the first publish.</p>
+          <p><strong>How we will solve it:</strong> Change the default opening hours and the legacy fallback in this tool to 11:00 open and 21:00 close on every day. Existing saved documents are not rewritten.</p>
+          <p><strong>Benefit:</strong> A restaurant document is publishable from the first save.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08: the defaults and every inline-editor fallback (empty day, added range, saved empty range) now use 11:00-21:00, and a saved document keeps its own hours.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-73" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-73</span>
+          <span class="task-title">Bulk opening-hours change for several days at once</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-73 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Changing the whole week means opening six or seven day editors one after another.</p>
+          <p><strong>How we will solve it:</strong> A "Change several days" block inside the Opening Hours card: seven day chips (all ticked by default), one open time, one close time and an Apply action that writes the range to the ticked days, clears their closed flag, and saves once.</p>
+          <p><strong>Benefit:</strong> A seasonal hour change takes one action instead of seven.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08: day chips toggle, Apply rejects an empty selection, a missing time or an identical open and close time, re-opens a closed day and reports how many days changed. Only the ticked days are written.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-74" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-74</span>
+          <span class="task-title">Temporary closure for one date</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-74 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Closing for a holiday or a repair meant editing a weekday row and remembering to undo it later.</p>
+          <p><strong>How we will solve it:</strong> Store <code>service_settings.temporary_closure = { date, reason }</code> and edit it in the Opening Hours card with a toggle, a date and a reason. The card shows a red status line while the closure is set and marks the matching row in the week table. The website must stop taking orders for that date, so the key is added to <code>docs/client-data-contract.html</code> in the same change.</p>
+          <p><strong>Benefit:</strong> A one-day closure no longer leaves the weekly schedule wrong.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>docs/client-data-contract.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08: toggle plus date plus reason, saved as <code>{ date, reason }</code> and cleared back to null when unticked; the card shows a red status line that names today when it applies, and today's row carries a "Temporarily closed today" badge. Contract 3.4 section 5.2.1.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-75" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-75</span>
+          <span class="task-title">Dated special hours</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-75 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A holiday or an event day has different hours than the weekday it falls on.</p>
+          <p><strong>How we will solve it:</strong> Store <code>service_settings.special_hours = [{ id, date, is_closed, open, close, note }]</code> and list the rows in the Opening Hours card with date, closed checkbox, times (disabled while closed), note and delete. A row for today overrides the weekday row in the card and the website reads the same list (contract addition).</p>
+          <p><strong>Benefit:</strong> Exceptional days are planned in advance instead of edited and forgotten.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>docs/client-data-contract.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08: rows are added, edited and deleted in place, sorted by date for display, a closed row disables its times and turns red, today's row is outlined and badged in the week table, and a new row starts as a one-day closure with 11:00-21:00 times. Contract 3.4 section 5.2.1.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-76" data-group="admin-consolidation-2026-11-08" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-76</span>
+          <span class="task-title">Printer setup screen that chooses which fields are printed</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-76 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The printed ticket is fixed; the owner cannot decide what appears on it.</p>
+          <p><strong>How we will solve it:</strong> Depends on Q-18. Planned: a dedicated printer screen next to Devices with the connection state, paper width, and a checklist of printed fields - restaurant name, address, phone, order number, date and time, order type or table, item name, size, modifiers, quantity, line price, subtotal, tax, delivery fee, total, note, payment method and category name. The list is saved in the restaurant document so every printing tool reads the same source.</p>
+          <p><strong>Benefit:</strong> One place decides the ticket layout, instead of a layout baked into the order app.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Blocked by Q-18. Carried over from the retired <code>OLD-RestaurantSettings</code> task T-06.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-77" data-group="admin-consolidation-2026-11-08" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-77</span>
+          <span class="task-title">Toggle for the category name on printed tickets</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-77 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The meeting asks for the category name to be printable or not, per restaurant.</p>
+          <p><strong>How we will solve it:</strong> A boolean in the printed-fields list from T-76, shown as a toggle on the printer screen, defaulting to off. The kitchen and customer tickets read it from the same document.</p>
+          <p><strong>Benefit:</strong> Kitchens that group by station can print the category; others keep the ticket short.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Blocked by Q-18, because it needs the same document key as T-76. Carried over from the retired <code>OLD-RestaurantSettings</code> task T-07.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-78" data-group="admin-consolidation-2026-11-08" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-78</span>
+          <span class="task-title">One-click printer connection</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-78 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Connecting a printer today needs several manual steps and no feedback when it fails.</p>
+          <p><strong>How we will solve it:</strong> Depends on Q-18. Planned: one action on the printer screen that starts the chosen connection path, waits for the printer, reports connected or the exact error, and stores the chosen printer so the next visits reconnect without asking.</p>
+          <p><strong>Benefit:</strong> A non-technical owner can set up printing alone.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Blocked by Q-18. Carried over from the retired <code>OLD-RestaurantSettings</code> task T-08.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-79" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-79</span>
+          <span class="task-title">PDF menu upload with assisted parsing</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-79 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Menus arrive as PDFs and typing them in is the slowest part of onboarding.</p>
+          <p><strong>How we will solve it:</strong> Depends on Q-19. Planned: the owner uploads a PDF, the text layer is read and a draft menu is proposed - category headings become categories, lines with a trailing price become items, size columns become sizes. The draft is shown for review and correction in the menu grid and is written only on approval. A scan without a text layer is rejected with a clear message instead of producing empty items.</p>
+          <p><strong>Benefit:</strong> A typical menu PDF saves most of the typing while the owner keeps control.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-48): Menu → Import file reads the PDF text layer with pdf.js and shows a draft table (category, item, size, price) the owner can correct; a PDF without a text layer is refused with a message that points at the menu-setup add-on. Nothing is written before approval.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-80" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-80</span>
+          <span class="task-title">PDF menu converted to a spreadsheet</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Small</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-80 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The owner or the provider wants the PDF menu as a spreadsheet to correct it comfortably.</p>
+          <p><strong>How we will solve it:</strong> Depends on Q-19. Reuse the extraction from T-79 and write a file with exactly the column layout that T-81 imports, so a downloaded file can be edited in Excel and imported back without mapping.</p>
+          <p><strong>Benefit:</strong> One file format for export, offline editing and import.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-48): the same draft downloads as an .xlsx with the shared column layout, so it can be corrected offline and imported back.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-81" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-81</span>
+          <span class="task-title">Spreadsheet menu import with a conflict screen and manual approval</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-81 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A bulk menu change arrives as a spreadsheet and applying it blind can wipe prices or duplicate items.</p>
+          <p><strong>How we will solve it:</strong> Depends on Q-19. Read the rows, match items by id when the file carries one, otherwise by category plus name plus size. Show a review screen that groups rows as new, changed, unchanged, missing from the file and invalid, with the old and new value side by side for every changed field. Nothing is written until the owner approves, the approved rows are applied in one save, and the summary stays on screen with the counts per group.</p>
+          <p><strong>Benefit:</strong> Spreadsheet updates become safe and reviewable instead of a risky paste.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-48): an .xlsx/.xls/.csv file is matched by id first and then by category plus name; the review table marks new, changed (with the change text), unchanged and skipped rows, only ticked rows are written, a sized row becomes a size on its item, and a sized item keeps a null base price.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-82" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-82</span>
+          <span class="task-title">Spreadsheet export of the current menu</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-82 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> There is no way to take the menu out of the tool for review, printing or bulk editing.</p>
+          <p><strong>How we will solve it:</strong> Export categories, items, sizes, prices, descriptions, availability and modifier groups with a fixed header row that T-81 imports back unchanged. The column set is documented on the help page.</p>
+          <p><strong>Benefit:</strong> The owner can work offline and return the file without a mapping step.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>docs/help.html</code>, <code>docs/ssot.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-48): Export writes the whole menu with one row per size and the shared header row, so the file imports back without mapping; items without a category still export.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-83" data-group="admin-consolidation-2026-11-08" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-83</span>
+          <span class="task-title">Paid menu-update service flow</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Small</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-83 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Some owners do not want to enter the menu themselves and no path exists to ask for that service.</p>
+          <p><strong>How we will solve it:</strong> Depends on Q-20. Planned: a "Request a menu update" action on the Menu tab with an upload, a contact field and a note, writing the request to the decided destination and showing its state in the tool.</p>
+          <p><strong>Benefit:</strong> A paid service becomes a product feature instead of a manual side channel.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Re-scoped on 2026-11-08 by D-RAMM-49: this is now the first entry in the additional-services catalog and is built on T-86 to T-88 instead of its own one-off dialog. The request part is ready; the paying step waits for Q-22. Carried over from the retired <code>OLD-RestaurantMenuManagement</code> task T-07.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-84" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-84</span>
+          <span class="task-title">Delivery zone shapes: move and resize in place</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-84 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Correcting a zone means deleting shapes and drawing them again, even for a small change.</p>
+          <p><strong>How we will solve it:</strong> Put an existing shape into draw edit mode - vertex drag for a polygon, corner drag for a rectangle, radius drag for a circle - on a working copy, then write back on Save and discard on Cancel. The stored geometry keeps its shape type and the unsaved marker behaviour of the current redraw path.</p>
+          <p><strong>Benefit:</strong> A boundary correction takes a few seconds instead of redrawing the whole shape.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (<code>D-RAMM-46</code>): every shape row has an edit action that opens leaflet-draw edit handles on that one shape and shows a Save shape / Cancel bar with the shape type and number. Save writes the geometry back into the same <code>zone.shapes</code> slot and saves; Cancel restores the snapshot taken at edit start. Only one shape is edited at a time, and drawing, switching zones, deleting, or reloading the map ends the edit; Save Zone commits an open edit. Rects and polygons share the polygon path, circles keep centre and radius.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-85" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-85</span>
+          <span class="task-title">Delivery map search by address or company name</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-85 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The owner finds a delivery area by name, not by coordinates on a map.</p>
+          <p><strong>How we will solve it:</strong> Depends on Q-21. Planned: a search box on the delivery map that queries the approved provider, lists matches with their full address, and recenters with a marker; a found place can seed the restaurant pin or the next zone.</p>
+          <p><strong>Benefit:</strong> Drawing a zone starts at the right spot instead of panning across the city.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-50): the delivery map toolbar has an address and business-name search backed by Nominatim, with a 700 ms debounce, at most one request per second, a session cache and the attribution line, and it needs no key. A result recenters the map with a marker; the 📍 action writes the coordinates into the restaurant profile.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-86" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-86</span>
+          <span class="task-title">Additional services catalog and selection screen</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-86 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Extra services are sold by hand today: the owner does not see what is offered, what it costs or what is needed to start.</p>
+          <p><strong>How we will solve it:</strong> A new main tab "Additional services" renders a catalog defined in code (<code>SERVICE_CATALOG</code>: id, name, short description, price, currency, required inputs, what the provider does, turnaround text) as cards. Each card opens the request panel from T-87. Prices ship with a release so no CMS edit is needed to change them, and the requests themselves live in the restaurant document.</p>
+          <p><strong>Benefit:</strong> The owner can see and choose a service without a phone call, and every service is described the same way.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-49): a new Add-ons tab renders the code-defined catalog (menu setup, menu update, promotion setup) as cards with price, deliverables, turnaround and the required input.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-87" data-group="admin-consolidation-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-87</span>
+          <span class="task-title">Additional service request with upload and status</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-87 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A request needs its inputs (for example a menu file) and a status the owner can follow, otherwise the work starts from an incomplete e-mail.</p>
+          <p><strong>How we will solve it:</strong> Store <code>additional_services.requests[] = { id, service_id, service_name, price, currency, status, contact, note, files[], created_at, updated_at }</code> with the statuses requested, paid, in_progress, completed and cancelled. The panel collects the contact, a note and every required input (a file picker, reusing the PDF or spreadsheet upload from T-79 to T-82 when the input is a menu), refuses to submit while an input is missing, appends the request and lists it with a status chip and its price. Nothing is sent anywhere yet; the provider side reads the requests.</p>
+          <p><strong>Benefit:</strong> Every request arrives complete and traceable, with the price that was visible when the owner asked for it.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-49): a request captures contact, note and the required upload, stores it in <code>additional_services.requests</code> with the price snapshot and status <code>requested</code>, lists it with a status chip and can be cancelled while it is requested or paid. Paying is T-88.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-88" data-group="admin-consolidation-2026-11-08" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-88</span>
+          <span class="task-title">Payment step for additional services</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-88 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The work must not start before the service is paid, and there is no payment path in the tool today.</p>
+          <p><strong>How we will solve it:</strong> Depends on Q-22. Planned: a Pay action on a request starts the chosen mechanism (platform payment API, hosted checkout or recorded offline payment), the request moves from requested to paid on confirmation, and the price stored at request time is the price charged. A failed or abandoned payment leaves the request as requested with the reason shown.</p>
+          <p><strong>Benefit:</strong> The paid service becomes a closed loop: choose, supply, pay, track.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Blocked by Q-22 (payment mechanism).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-89" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-89</span>
+          <span class="task-title">Visual deal type picker</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-89 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The deal type is the biggest decision in the editor, but it was an eleven-entry dropdown that hid the product's most important feature behind one line of text.</p>
+          <p><strong>How we will solve it:</strong> Replace the dropdown with a responsive grid of cards on step 1 - icon, name, one-line description and a concrete example per type - with the chosen card highlighted. Keep a hidden <code>deal-rule-type</code> input so validation, save, open and the promo-code code paths are untouched. Selecting a card rebuilds the rule editor and refreshes the price field and match preview.</p>
+          <p><strong>Benefit:</strong> The eleven enforceable deal types become visible and comparable at a glance, and a new owner can understand what each one does before choosing.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-51): <code>DEAL_TYPE_CARDS</code> + <code>renderDealTypeGrid()</code> + <code>chooseDealType()</code>; the grid renders on load, follows the opened deal's type, and falls back to bundle for an unknown stored type. Refined the same day by T-90 (own tab, grouped and more explanatory cards).</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-90" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-90</span>
+          <span class="task-title">Deal type on its own step, grouped and explained</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-90 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The picker and its configuration lived in the same tab, so step 1 was a long scroll, and eleven equal cards still read as a flat list without explaining how the families differ.</p>
+          <p><strong>How we will solve it:</strong> Split the editor into four steps - 1 Deal type, 2 Offer setup, 3 Details, 4 Schedule - with the picker alone on step 1. Group the eleven types into fixed price packages, volume and free items, and money off the order, and give every card a description, a concrete example and a "You set" line. Step 2 opens with a header that names the chosen type plus a "Change type" action.</p>
+          <p><strong>Benefit:</strong> The owner chooses in a calm, self-explanatory screen and only then sees the fields that matter, instead of scrolling past configuration to compare types.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-52): <code>DEAL_TYPE_GROUPS</code>, richer <code>DEAL_TYPE_CARDS</code> entries (example + fields), <code>renderDealRuleTypeSummary()</code>, panels <code>deal-tab-type</code> and <code>deal-tab-rule</code>; the editor opens on step 1 and the hidden input, rule editor and validation are unchanged.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-91" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-91</span>
+          <span class="task-title">Step-aware validation in the four-step deal editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-91 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> After the editor was split into steps, one save attempt listed every missing field at once - a title from step 3, items and tiers from step 2 - in a flat list, so the owner could not tell where to fix what.</p>
+          <p><strong>How we will solve it:</strong> Never validate while navigating; clear stale errors on every manual step change. Guard the Details step inline (title required before moving on). Group a failed save by the step that owns each error, give every group a "Go to this step" action, jump to the first failing step, and render the panel above the step content. Seed a labelled first tier for new tiered deals.</p>
+          <p><strong>Benefit:</strong> Every error points at the step that can fix it, and the owner is taken there instead of hunting through four steps.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-53): <code>dealStepOfErrorMessage()</code>, <code>showDealEditorErrors()</code> grouped with jump buttons, <code>canLeaveDealStep()</code>, <code>hideDealEditorErrors()</code> on navigation, <code>refreshDealStepIndicators()</code> marking completed steps, error panel moved above the step content.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-92" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-92</span>
+          <span class="task-title">Self-host Inter so the tool reads exactly like the SSOT</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-92 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The stylesheet already names Inter first, but the only source was a Google Fonts link tag, so a shipped or offline copy silently fell back to Segoe UI and did not match the documentation the owner reads.</p>
+          <p><strong>How we will solve it:</strong> Download the two Inter subsets (latin and latin-ext) as variable-weight WOFF2 files, declare them with <code>@font-face</code> and the correct <code>unicode-range</code>, make form controls inherit <code>var(--font)</code>, and teach the ship script to copy <code>app/fonts/</code> into the bundle.</p>
+          <p><strong>Benefit:</strong> Identical typography in the tool, in the SSOT and in every shipped copy, with no third-party font request.</p>
+          <p><strong>Files:</strong> <code>app/fonts/inter-latin.woff2</code>, <code>app/fonts/inter-latin-ext.woff2</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>scripts/ship-cms.js</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-54): two <code>@font-face</code> blocks (400-700 variable, <code>font-display: swap</code>), a control-inheritance rule before the <code>body</code> rule, and a font-staging step in <code>scripts/ship-cms.js</code> that copies the files to <code>code/fonts/</code>.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-93" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-93</span>
+          <span class="task-title">Cuisine types behind a popup, with custom entry inside it</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-93 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Every cuisine in the catalogue was printed on the Restaurant Information card, so the card was dominated by a chip wall the owner almost never changed.</p>
+          <p><strong>How we will solve it:</strong> Show only the chosen cuisines as chips with a remove action, and move the catalogue into a dialog with search, a toggle grid, a custom-name field and a Done action that names the count. Hold edits in a draft array so Cancel is always safe.</p>
+          <p><strong>Benefit:</strong> A short, scannable card, the full catalogue still one click away, and custom cuisines entered where they are chosen.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-55): <code>renderSelectedCuisines()</code>, <code>openCuisinePicker()</code>, <code>renderCuisinePickerGrid()</code>, <code>toggleDraftCuisine()</code>, <code>addCustomCuisineToDraft()</code>, <code>applyCuisinePicker()</code>, <code>cuisineIdFromName()</code>; <code>renderCuisineGrid()</code>, <code>toggleCuisine()</code> and <code>addCustomCuisine()</code> removed; <code>#gen-cuisine-modal</code> added to the production page and the harness.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-94" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-94</span>
+          <span class="task-title">General cards read-only by default with edit-on-demand</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-94 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The General tab opened as three dense forms, so reading the restaurant profile meant scanning inputs and placeholders, and the tab felt like data entry even when nothing needed changing.</p>
+          <p><strong>How we will solve it:</strong> Render a designed summary per card - hero with logo, name, brand and cuisine chips, then labelled values in a grid with links, a status badge and "Not set" for empties - and put Edit, Cancel and Done in the card header. Snapshot <code>general_info</code> on Edit so Cancel can restore it, and keep the form markup and <code>data-path</code> bindings untouched.</p>
+          <p><strong>Benefit:</strong> The tab reads like a profile, editing is one click away, and Cancel never loses work.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-56): <code>generalViewRow()</code>, <code>generalBasicViewHtml()</code>, <code>generalAddressViewHtml()</code>, <code>generalLegalViewHtml()</code>, <code>renderGeneralCardViews()</code>, <code>initGeneralCardModes()</code>, <code>applyGeneralCardModes()</code>, <code>handleGeneralCardAction()</code>, <code>data-general-card</code> markers on the three cards, and <code>lockUI()</code> hiding the edit affordance in read-only mode.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-95" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-95</span>
+          <span class="task-title">Find the restaurant address from the Address card</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-95 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The only place a business could be searched was the delivery map toolbar, so finding the restaurant profile address meant leaving the General tab, searching there and getting coordinates only - the street, city, state, ZIP and country still had to be typed by hand.</p>
+          <p><strong>How we will solve it:</strong> Put a search box at the top of the Address card in edit mode, backed by the same keyless Nominatim service, debounced and rate limited exactly like the map search. Picking a result fills every address field and the coordinates, then refreshes the form and the read-only summary.</p>
+          <p><strong>Benefit:</strong> One search fills six fields and the map point, and the address is entered where it is stored.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-57): <code>runAddressSearch()</code>, <code>renderAddressSearchResults()</code>, <code>addressStateValue()</code>, <code>applyAddressSearchResult()</code>, <code>closeAddressSearchResults()</code>; shared throttle with <code>zoneSearchLastAt</code>; <code>#gen-address-search</code>, <code>#gen-address-search-btn</code> and <code>#gen-address-search-panel</code> in both pages.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-96" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-96</span>
+          <span class="task-title">Tax &amp; Pay read-only with edit-on-demand</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-96 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Taxation, Payment Methods and Currency opened as forms, so checking a tax rate or which channels take cash meant reading inputs and a twenty-switch matrix that says nothing at a glance.</p>
+          <p><strong>How we will solve it:</strong> Generalise the view-card engine to any card that owns a slice of data, then build a summary for each Tax &amp; Pay card: a lead row plus rate table for taxation, a method and channel matrix with a count and gateway state for payments, and a code, symbol and name block for currency. Cancel restores only the slice the card owns.</p>
+          <p><strong>Benefit:</strong> Both tabs are scannable, the same Edit / Cancel / Done pattern applies everywhere, and one card can no longer undo another card's edits.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-58): <code>VIEW_CARD_KEYS</code>, <code>VIEW_CARD_DATA_PATHS</code>, <code>generalTaxationViewHtml()</code>, <code>generalPaymentViewHtml()</code>, <code>generalCurrencyViewHtml()</code>, <code>formatTaxRate()</code>, <code>CURRENCY_INFO</code>, <code>PAYMENT_METHOD_DEFS</code>, <code>PAYMENT_CHANNEL_DEFS</code>; <code>data-view-card</code> on all six cards and per-card snapshots in <code>_viewCardSnapshot</code>.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-97" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-97</span>
+          <span class="task-title">Restaurant Information becomes a page hero</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-97 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A card header reading "Restaurant Information" sat on top of a hero that already said the name, wasting the most valuable space on the tab and keeping the edit action away from where the owner looks.</p>
+          <p><strong>How we will solve it:</strong> Drop the header, render a gradient cover with the logo overlapping it, the name at display size, the brand, cuisine chips and the account badge, add contact tiles that really dial, mail and open the site, and add a profile completeness bar. Move Edit, Cancel and Done into a mount inside the card.</p>
+          <p><strong>Benefit:</strong> The first thing on the General tab is the restaurant itself, the edit action is where the eye lands, and the completeness bar tells an owner what is still missing.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-59): <code>generalProfileCompleteness()</code>, <code>generalContactTileHtml()</code>, hero markup in <code>generalBasicViewHtml()</code>, <code>data-view-actions</code> mount, <code>.card-hero</code>, <code>.gv-hero-cover</code>, <code>.gv-contact-row</code>, <code>.gv-complete-bar</code> and a mobile layout at 760 px. Refined the same day by D-RAMM-60: only the logo overlaps the cover, the text row sits fully on white.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-98" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-98</span>
+          <span class="task-title">Modifier groups you can tell apart at a glance</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-98 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The modifiers panel was one flat list of soft grey rows. A group, its options and a "Used in 3 product(s)" line were separate siblings, so the usage line looked like a header for the next group, and the only way to know how a group behaved was to read a dotted line of abbreviations.</p>
+          <p><strong>How we will solve it:</strong> Make each group a card that owns its header, its facts, its options and its usage list. Turn the dotted metadata into labelled chips, give options a marker, a price chip and state badges, indent subgroups onto a dashed card with a connector and a sub badge, and open short usage lists automatically.</p>
+          <p><strong>Benefit:</strong> Group boundaries are physical, the behaviour of a group is readable without opening it, and no line of text sits between two groups pretending to belong to one of them.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-61): <code>renderModGroups()</code> rewritten to build <code>.mg-head</code>, <code>.mg-chips</code>, <code>.mg-body</code>, <code>.mg-options</code>, <code>.mg-opt</code>, <code>.mg-usage</code> inside each <code>.modgroup-item</code>; the row click guard now ignores clicks inside <code>.mg-body</code>; <code>.modgroup-list</code> is a gapped flex column so cards never touch; the old <code>.mg-row-top</code>, <code>.mg-row-bottom</code>, <code>.mg-sub-list</code>, <code>.mg-sub-row</code> and <code>.mg-sub-badge</code> styles are removed.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-99" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-99</span>
+          <span class="task-title">Deal editor footer that leads the flow, and steps that open at the top</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-99 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Save Deal was pinned in the footer on every step while Next lived at the bottom of the step content, so the natural click was Save on an empty deal. And because all four steps share one scroll container, the next step opened at the previous step's scroll offset, landing the owner at the bottom of a form they had never seen.</p>
+          <p><strong>How we will solve it:</strong> Make the footer the single forward path: Next with the name of the next step on steps 1 to 3, Back from step 2, and Save Deal only on step 4, plus a Step n of 4 label. Reset the scroll container on every step change.</p>
+          <p><strong>Benefit:</strong> The owner cannot save a deal they have not configured, the next action is always visible without scrolling, and every step starts at its first field.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-62): <code>DEAL_STEP_ORDER</code>, <code>DEAL_STEP_LABELS</code>, <code>refreshDealFooter()</code>, <code>goToNextDealStep()</code>, <code>goToPreviousDealStep()</code>; <code>switchDealEditorTab()</code> now resets <code>#deal-editor-body</code> scroll and refreshes the footer; new footer buttons <code>#deal-footer-next</code>, <code>#deal-footer-back</code> and the <code>#deal-step-progress</code> label in both pages.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-100" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-100</span>
+          <span class="task-title">Address search that stays inside the chosen country and state</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-100 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Searching a restaurant name hit the whole planet, so businesses with the same name elsewhere filled the result list and the real one could be pushed out; the address fields were also above the country and state the search depends on.</p>
+          <p><strong>How we will solve it:</strong> Read the country and state from the card, send the country as Nominatim's <code>countrycodes</code> filter, add the state to the query text and then enforce it on the answers, and move the search block below the country and state fields. Show the scope above the input with a widen or narrow action, and refuse to search without a country.</p>
+          <p><strong>Benefit:</strong> Results are local by construction, the owner can see and change the scope without editing fields, and the form order matches the workflow.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-63): <code>addressSearchScope()</code>, <code>renderAddressSearchScope()</code>, <code>buildAddressSearchQuery()</code>, <code>addressPlaceMatchesScope()</code>, scope-aware cache keys, scoped empty-state messages, <code>#gen-address-search-scope</code> with widen and narrow actions, and the search block moved under the country and state row in both pages.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+<h2 id="sec-ideas">16. Ideas - discussion backlog</h2>  <p>Future ideas live here until they are decided. We discuss each idea and
   write the outcome inside its details. An agreed idea moves to the task list
   (section 15) with a priority; a rejected idea is marked Ignored with the
   reason. Tick the checkbox when an idea is done - progress is remembered by

@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const PORT = 9222;
-const BUILD = '2026-11-06-1';
+const BUILD = '2026-11-07-3';
 const SHOT_DIR = path.join(__dirname, 'qa-shots');
 fs.mkdirSync(SHOT_DIR, { recursive: true });
 
@@ -14,8 +14,8 @@ function q(value) { return JSON.stringify(value); }
 async function main() {
 	const response = await fetch('http://127.0.0.1:' + PORT + '/json');
 	const targets = await response.json();
-	const page = targets.find(function (target) { return target.type === 'page' && target.url.indexOf('test-harness.html') > -1; });
-	if (!page) throw new Error('No test-harness target.');
+	const page = targets.find(function (target) { return target.type === 'page' && target.url.indexOf('test-harness.html') > -1; }) || targets.find(function (target) { return target.type === 'page' && target.url.indexOf('http://127.0.0.1') === 0; });
+	if (!page) throw new Error('No local page target.');
 	const socket = new WebSocket(page.webSocketDebuggerUrl);
 	const pending = new Map();
 	const errors = [];

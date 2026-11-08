@@ -15,7 +15,7 @@
 // Usage:
 //   npm run ship:cms -- <ToolName>
 //   npm run ship:cms -- --all
-const { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, rmSync } = require('fs')
+const { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, rmSync, readdirSync } = require('fs')
 const { join } = require('path')
 const context = require('./releaseContext')
 
@@ -83,6 +83,26 @@ function bundleTool(tool, config) {
   })
   if (existsSync(join(appDirectory, 'test-harness.html'))) {
     copyFileSync(join(appDirectory, 'test-harness.html'), join(outputDirectory, 'code', 'test-harness.html'))
+  }
+
+  // self-hosted fonts (the SSOT typeface) travel with the tool code
+  const fontsDirectory = join(appDirectory, 'fonts')
+  if (existsSync(fontsDirectory)) {
+    const fontFiles = readdirSync(fontsDirectory).filter((name) => /\.(woff2|woff|ttf)$/i.test(name))
+    if (fontFiles.length > 0) {
+      mkdirSync(join(outputDirectory, 'code', 'fonts'), { recursive: true })
+      fontFiles.forEach((fontFile) => {
+        copyFileSync(join(fontsDirectory, fontFile), join(outputDirectory, 'code', 'fonts', fontFile))
+        targets.push({
+          file: 'code/fonts/' + fontFile,
+          cmsTarget: 'html tool library - tool asset (font)',
+          objectType: toolOverrides.toolLibraryObjectType || objectTypes.toolLibrary || '',
+          objectId: toolOverrides.toolLibraryObjectId || '',
+          field: '',
+          action: 'upsert',
+        })
+      })
+    }
   }
 
   let version = '0.0.0'

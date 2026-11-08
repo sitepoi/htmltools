@@ -92,7 +92,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.1</span>
+      <span>v0.4</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -128,25 +128,24 @@
   <div id="view-document" class="view">
   <h1>Customer Profile</h1>
   <p class="meta">
-    SINGLE SOURCE OF TRUTH for every decision about [short description of what
-    this tool owns - e.g. report rendering, AI chat memory, file upload
-    storage]. Every decision made for this tool is logged in section 11 and
-    this document is updated in the same change as the code. When this
-    document or the code disagree, this document is the tiebreaker - it is
-    updated to capture the final decision, never silently left divergent.
-    [Optional: Companion document: <code>other-document.html</code> - explain
-    the relationship and which sections are superseded here.]
+    SINGLE SOURCE OF TRUTH for the Customer Profile app: application-driven
+    question sets, app-level profile configuration, customer identity type,
+    customer segments, focus areas, the saved value shape and the tool
+    boundaries. Every decision made for this tool is
+    logged in section 11 and this document is updated in the same change as the
+    code. When this document or the code disagree, this document is the
+    tiebreaker - it is updated to capture the final decision, never silently
+    left divergent. Companion library: <a href="profiles.html">Profiles</a> -
+    copy presets, then record the selected preset in section 4.1.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.1</td></tr>
-    <tr><th>Last updated</th><td>2026-11-05</td></tr>
-    <!-- TEMPLATE: pick one class - status-active (work in progress),
-         status-implemented (shipped), status-proposal (plan not approved). -->
+    <tr><th>Document version</th><td>0.4</td></tr>
+    <tr><th>Last updated</th><td>2026-11-07</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
-    <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (CustomerProfile).</td></tr>
-    <tr><th>Primary code areas</th><td><code>app/CustomerProfile.css</code>, <code>app/CustomerProfile.html</code>, <code>app/CustomerProfile.js</code>, <code>app/test-harness.html</code></td></tr>
-    <tr><th>Explicitly out of scope</th><td>[what this document does NOT decide - UI styling, other features, etc.]</td></tr>
-    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
+    <tr><th>Applies to</th><td>The CustomerProfile app, its profile preset library, its docs copy page, its test harness and its QA runners.</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/CustomerProfile.css</code>, <code>app/CustomerProfile.html</code>, <code>app/CustomerProfile.js</code>, <code>app/test-harness.html</code>, <code>app/qa-cdp.js</code>, <code>app/qa-appcontext.js</code>, <code>app/qa-datapacks.js</code>, <code>app/qa-segments.js</code>, <code>app/qa-presets.js</code>, <code>profiles/</code>, <code>docs/profiles.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>CMS authentication and authorization, clinical notes, legal matter files, financial approvals and public website styling.</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel). Optional profile companion: <code>profiles.html</code> (copy presets; usage truth remains section 4.1).</td></tr>
   </table>
 
   <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
@@ -207,14 +206,14 @@
   <code>Primary code areas</code> row above.</p>
   <table>
     <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
-    <!-- TEMPLATE: one row per file. Link format:
-         vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path]  (append
-         #L123 to jump to a specific line). -->
-    <tr>
-      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path/to/file.js]"><code>[path/to/file.js]</code></a></td>
-      <td>[What this file does overall - one line]</td>
-      <td>[Which function or section belongs to this tool - "whole file" when everything applies]</td>
-    </tr>
+    <tr><td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/sales-crm/crm-contacts/CustomerProfile/app/CustomerProfile.js"><code>app/CustomerProfile.js</code></a></td><td>All app logic: settings, questions, segments, sections, persistence and rendering.</td><td>Whole file.</td></tr>
+    <tr><td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/sales-crm/crm-contacts/CustomerProfile/app/CustomerProfile.html"><code>app/CustomerProfile.html</code></a></td><td>Tool shell and static containers.</td><td>Whole file.</td></tr>
+    <tr><td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/sales-crm/crm-contacts/CustomerProfile/app/CustomerProfile.css"><code>app/CustomerProfile.css</code></a></td><td>Tool design system, including the segment switch.</td><td>Whole file.</td></tr>
+    <tr><td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/sales-crm/crm-contacts/CustomerProfile/app/test-harness.html"><code>app/test-harness.html</code></a></td><td>Mock CMS SDK, sample records and profile-preset selector.</td><td>Mock <code>tool.param('profileConfig')</code>, embedded preset map, toolbar selector.</td></tr>
+    <tr><td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/sales-crm/crm-contacts/CustomerProfile/profiles/index.json"><code>profiles/index.json</code></a></td><td>Preset catalog consumed by the docs page and harness builder.</td><td>Whole file.</td></tr>
+    <tr><td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/sales-crm/crm-contacts/CustomerProfile/profiles/profile-config.schema.json"><code>profiles/profile-config.schema.json</code></a></td><td>JSON Schema for app profile configuration.</td><td>Whole file.</td></tr>
+    <tr><td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/sales-crm/crm-contacts/CustomerProfile/profiles/"><code>profiles/*.json</code></a></td><td>Ready-to-paste vertical presets.</td><td>Whole files; field and segment keys are stable contracts.</td></tr>
+    <tr><td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/sales-crm/crm-contacts/CustomerProfile/docs/profiles.html"><code>docs/profiles.html</code></a></td><td>Copy page for presets plus browser-local usage reminder.</td><td>Generated; usage truth is section 4.1.</td></tr>
   </table>
 
   <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
@@ -232,13 +231,12 @@
          "Known from" = the evidence - decision ID (section 11), release-log
          row (section 19), or code verified on a date. When a capability
          ships, move its finished task here from section 15. -->
-    <tr>
-      <td>C-01</td>
-      <td>[What already works - a user-visible or system behavior]</td>
-      <td><code>[file-or-function that implements it]</code></td>
-      <td>[vX.Y.Z or YYYY-MM-DD]</td>
-      <td>D-CP-NN / release-log row / verified in code on YYYY-MM-DD]</td>
-    </tr>
+    <tr><td>C-01</td><td>One or more question sets can be selected; sections merge without duplicates.</td><td><code>currentProfileKeys()</code>, <code>combinedProfile()</code></td><td>2026-11-06</td><td>Verified in code on 2026-11-07</td></tr>
+    <tr><td>C-02</td><td><code>profileConfig</code> defines app segments, labels, identity fields and fixed or selectable question sets.</td><td><code>loadProfileConfig()</code>, <code>normalizeSegmentDefinition()</code></td><td>2026-11-07</td><td>D-CP-01 / D-CP-02</td></tr>
+    <tr><td>C-03</td><td>Fixed vertical segments hide the picker, focus chips, library and unrelated identity/admin blocks.</td><td><code>segmentAllowsProfileSelection()</code>, <code>basicSectionBodyHtml()</code></td><td>2026-11-07</td><td>D-CP-02</td></tr>
+    <tr><td>C-04</td><td>Nine preset configurations, a schema and a copy page are available in <code>profiles/</code> and <code>docs/profiles.html</code>.</td><td><code>profiles/index.json</code>, <code>scripts/build-profile-docs.js</code></td><td>2026-11-07</td><td>D-CP-03</td></tr>
+    <tr><td>C-05</td><td>The test harness can load any preset as the <code>profileConfig</code> parameter.</td><td><code>app/test-harness.html</code>, <code>app/build-harness-presets.js</code></td><td>2026-11-07</td><td>D-CP-04</td></tr>
+    <tr><td>C-06</td><td>Segment switching preserves values by field id; <code>segmentKey</code> is persisted and exported.</td><td><code>setSegment()</code>, <code>snapshotForValue()</code></td><td>2026-11-07</td><td>D-CP-06</td></tr>
   </table>
   <p class="note">When adopting this template for an existing tool, fill
   this section first: the current behavior is the baseline that the next
@@ -251,9 +249,43 @@
   reader and every AI sees the same definition.</p>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
-    <!-- TEMPLATE: one row per term. -->
-    <tr><td>[Term]</td><td>[Exact meaning used in this document]</td></tr>
+    <tr><td>Question set</td><td>A request or application pack: a named group of sections and fields selected for a record independently of the customer's identity type. Stored in <code>profileKeys</code>.</td></tr>
+    <tr><td>Profile configuration</td><td>The full app-level JSON stored in the CMS <code>profileConfig</code> parameter. When it defines segments, it takes precedence over <code>applicationType</code>.</td></tr>
+    <tr><td>Application type</td><td>A built-in shortcut stored in <code>applicationType</code> that selects a named question-set catalog, app title, labels and default keys. It never filters by customer type; the question-set library can still select any set.</td></tr>
+    <tr><td>Segment</td><td>An app-defined customer or profile type, such as Student, Guardian, Client or Supplier. Stored in <code>segmentKey</code>.</td></tr>
+    <tr><td>Base type</td><td>The core identity layout a segment uses: <code>person</code> or <code>company</code>.</td></tr>
+    <tr><td>Fixed form</td><td>A segment with <code>allowProfileSelection: false</code>; the app decides the form and hides selection controls.</td></tr>
+    <tr><td>Selectable profile</td><td>A segment with <code>allowProfileSelection: true</code>; the user selects from <code>allowedProfileKeys</code>.</td></tr>
+    <tr><td>Segment key</td><td>The stable identifier written to the record. It must not be renamed after records exist.</td></tr>
+    <tr><td>Preset</td><td>A complete <code>profileConfig</code> JSON file in <code>profiles/</code>, ready to copy into the CMS.</td></tr>
+    <tr><td>Profile usage register</td><td>Section 4.1: the authoritative record of which preset an application uses and its status.</td></tr>
   </table>
+
+  <h3 id="sec-profile-usage">4.1 Profile configuration usage</h3>
+  <p class="note"><strong>This register is mandatory because CustomerProfile
+  exposes <code>profileConfig</code>, <code>applicationType</code> and a preset
+  library.</strong> The <a href="profiles.html">Profiles copy page</a> is a
+  convenience; this table is the authoritative statement of which profile a
+  consuming application uses. Update it in the same change as the application
+  configuration.</p>
+  <table>
+    <tr><th>Profile / config</th><th>Mode</th><th>Segments</th><th>Usage status</th><th>Application / notes</th><th>Decision</th></tr>
+    <tr><td><code>No CMS profileConfig</code></td><td>standard</td><td>-</td><td><code>available</code></td><td>No app-level config: every question set is available, customer type only switches the identity fields, and the picker/library can select any request pack.</td><td>D-CP-08</td></tr>
+    <tr><td><code>applicationType</code>: <code>software-sales</code>, <code>general-crm</code>, <code>customer-profile-hub</code></td><td>catalog</td><td>-</td><td><code>available</code></td><td>Built-in application catalogs. <code>software-sales</code> defaults to <code>software-discovery</code>; the other two default to <code>customer-basics</code>. The catalog scopes the default picker only; the library can still select any question set and customer type stays identity-only.</td><td>D-CP-08</td></tr>
+    <tr><td><a href="../profiles/light-crm.json"><code>light-crm.json</code></a></td><td>selectable</td><td>person, company, partner</td><td><code>available</code></td><td>Generic CRM reference; not selected in a live CMS app.</td><td>D-CP-03</td></tr>
+    <tr><td><a href="../profiles/customer-profile-hub.json"><code>customer-profile-hub.json</code></a></td><td>selectable</td><td>person, company, partner, vendor</td><td><code>available</code></td><td>Broad profile hub; not selected in a live CMS app.</td><td>D-CP-03</td></tr>
+    <tr><td><a href="../profiles/tutor-business.json"><code>tutor-business.json</code></a></td><td>fixed</td><td>student, guardian, tutor, school</td><td><code>available</code></td><td>Reference preset; available through the harness selector, not selected in a live CMS app.</td><td>D-CP-04</td></tr>
+    <tr><td><a href="../profiles/school-training.json"><code>school-training.json</code></a></td><td>fixed</td><td>student, guardian, teacher, school</td><td><code>available</code></td><td>Reference preset; not selected in a live CMS app.</td><td>D-CP-03</td></tr>
+    <tr><td><a href="../profiles/therapy-practice.json"><code>therapy-practice.json</code></a></td><td>fixed</td><td>client, referrer, clinic</td><td><code>available</code></td><td>Administrative intake only; clinical records stay separate.</td><td>D-CP-03</td></tr>
+    <tr><td><a href="../profiles/law-firm.json"><code>law-firm.json</code></a></td><td>fixed</td><td>individual-client, organisation-client, referrer</td><td><code>available</code></td><td>Administrative intake only; matter files stay separate.</td><td>D-CP-03</td></tr>
+    <tr><td><a href="../profiles/agency-client.json"><code>agency-client.json</code></a></td><td>fixed</td><td>client, prospect, supplier</td><td><code>available</code></td><td>Reference preset; not selected in a live CMS app.</td><td>D-CP-03</td></tr>
+    <tr><td><a href="../profiles/vendor-procurement.json"><code>vendor-procurement.json</code></a></td><td>fixed</td><td>supplier, contractor, contact</td><td><code>available</code></td><td>Reference preset; purchase orders and payments stay separate.</td><td>D-CP-03</td></tr>
+    <tr><td><a href="../profiles/template-custom-vertical.json"><code>template-custom-vertical.json</code></a></td><td>fixed</td><td>primary</td><td><code>available</code></td><td>Starter template for a new vertical.</td><td>D-CP-03</td></tr>
+  </table>
+  <p><strong>Usage status vocabulary:</strong> <code>not-reviewed</code>,
+  <code>available</code>, <code>planned</code>, <code>in-use</code>,
+  <code>retired</code>. Only <code>in-use</code> means a real application
+  configuration depends on that profile.</p>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
   <h3>5.1 Verified evidence</h3>
@@ -361,14 +393,14 @@
        then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
   <table>
     <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
-    <!--
-    <tr>
-      <td>D-CP-01</td><td>YYYY-MM-DD</td>
-      <td>[The decision - what is decided and how it will be implemented]</td>
-      <td>[Why this choice; what risk it trades away]</td>
-      <td class="status-adopted">Adopted</td>
-    </tr>
-    -->
+    <tr><td>D-CP-01</td><td>2026-11-07</td><td>Use one base record with app-level <code>profileConfig.segments</code>; legacy Person/Company remains the fallback when no config is set.</td><td>Matches the record-type and layout pattern used by large CRM products. Avoids forking the tool per vertical; requires stable segment keys.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CP-02</td><td>2026-11-07</td><td>Each segment selects a <code>baseType</code>, fixed <code>profileKeys</code> or <code>allowedProfileKeys</code>, labels, identity fields, status/source options and hidden core sections.</td><td>Keeps vertical UI limited to what that customer type needs. Fixed segments hide the picker, focus chips and library.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CP-03</td><td>2026-11-07</td><td>Maintain presets in <code>profiles/</code> with <code>index.json</code>, a JSON Schema, README and a generated <code>docs/profiles.html</code> copy page.</td><td>Presets are reference metadata, not a runtime dependency. The usage register in section 4.1, not the copy page, is authoritative.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CP-04</td><td>2026-11-07</td><td>The test harness embeds the preset catalog and can load any preset through <code>?profilePreset=&lt;key&gt;</code> or the toolbar selector.</td><td>Makes every real preset testable without manually encoding JSON in the URL. The embedded copy must be rebuilt after preset changes.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CP-05</td><td>2026-11-07</td><td>Any tool with <code>profileConfig</code> or <code>profiles/</code> must keep a profile usage register in SSOT section 4.1 and use the <code>profile-usage</code> task type.</td><td>Prevents a preset from silently becoming an application dependency. The rule is added to the SSOT template and documentation rules.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CP-06</td><td>2026-11-07</td><td>Switching a segment changes the visible form but never deletes answers; values are keyed by stable field ids and <code>segmentKey</code> is persisted/exported.</td><td>Preserves history and makes configuration changes reversible. Renaming a field id still starts a new answer.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CP-07</td><td>2026-11-07</td><td>Create <code>_docs/DOCUMENTATION-RULES.md</code> as the canonical documentation rules document; templates and generators reference it.</td><td>The rules existed only in template comments and README fragments. A single rules document makes profile-aware tools consistent.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CP-08</td><td>2026-11-07</td><td>Question sets are application/request-driven and selectable for any customer. <code>applicationType</code> selects a named catalog, labels and defaults; explicit <code>profileConfig.segments</code> take precedence; customer type remains identity-only.</td><td>A software seller can profile any customer without tying the questions to the customer's company type or vertical. The library keeps every question set reachable, while a catalog keeps common app flows short.</td><td class="status-adopted">Adopted</td></tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -385,13 +417,23 @@
     <li>Global naming rule: any update - code or documentation - MUST use
     understandable, self-explanatory names. No cryptic abbreviations. Existing
     misleading names are renamed when their code is touched.</li>
+    <li><strong>Profile rule.</strong> When section 4.1 has an
+    <code>in-use</code> row, keep the CMS <code>profileConfig</code>, the
+    preset file, <code>docs/profiles.html</code> and the harness preset
+    selector in the same change. Never rename a segment key or field id while
+    records exist.</li>
   </ol>
 
   <h2 id="sec-checklist">13. Implementation checklist</h2>
   <table>
     <tr><th>#</th><th>Change</th><th>File</th></tr>
-    <tr><td>1</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
-    <tr><td>2</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
+    <tr><td>1</td><td>App-level profile config, segment normalization and fixed/selectable selection.</td><td><code>app/CustomerProfile.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Segment switch, segment-specific labels, identity fields and hidden core sections.</td><td><code>app/CustomerProfile.js</code>, <code>app/CustomerProfile.css</code> - DONE</td></tr>
+    <tr><td>3</td><td>Nine presets, schema, catalog and documentation.</td><td><code>profiles/</code> - DONE</td></tr>
+    <tr><td>4</td><td>Profiles copy page and docs-index menu item.</td><td><code>docs/profiles.html</code>, <code>docs/index.html</code> - DONE</td></tr>
+    <tr><td>5</td><td>Harness preset selector and embedded preset payload.</td><td><code>app/test-harness.html</code>, <code>app/build-harness-presets.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Profile usage register, decisions, task type, template and rules update.</td><td><code>docs/ssot.html</code>, <code>_docs/templates/</code> - DONE</td></tr>
+    <tr><td>7</td><td>Legacy, segment and preset regression suites.</td><td><code>app/qa-*.js</code> - DONE</td></tr>
   </table>
 
   <h2 id="sec-questions">14. Open questions</h2>
@@ -453,6 +495,213 @@
        broken across releases.
        data-group-status: planned | in-progress | testing | pushed.
        PUSH READY is computed automatically by ssot.js. -->
+  <section class="task-group" data-release-group="profile-usage" data-group-status="testing">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Profile usage management</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="profile-usage">5/5</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="profile-usage"></div></div>
+    <p class="task-group-note">Why these belong together: the app configuration, the preset library, the copy page, the harness selector and the usage register must tell the same story.</p>
+    <div class="task-item" data-task-id="T-PU-01" data-task-type="profile-usage" data-group="profile-usage" data-task-status="done">
+      <details><summary><span class="task-id">T-PU-01</span><span class="task-title">Register every profile and its usage status</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-PU-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> a preset can otherwise become an application dependency without anyone recording it.</p><p><strong>How we will solve it:</strong> maintain section 4.1 with mode, segments, status and decision id.</p><p><strong>Files:</strong> <code>docs/ssot.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-02" data-task-type="profile-usage" data-group="profile-usage" data-task-status="done">
+      <details><summary><span class="task-id">T-PU-02</span><span class="task-title">Keep the Profiles copy page current</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-PU-02 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run <code>npm run docs:profiles -- CustomerProfile</code> after any preset change; copy JSON from <code>docs/profiles.html</code>.</p><p><strong>Files:</strong> <code>profiles/</code>, <code>docs/profiles.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-03" data-task-type="profile-usage" data-group="profile-usage" data-task-status="done">
+      <details><summary><span class="task-id">T-PU-03</span><span class="task-title">Keep the harness preset selector current</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-PU-03 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run <code>node app/build-harness-presets.js</code> after changing <code>profiles/index.json</code> or any preset.</p><p><strong>Files:</strong> <code>app/test-harness.html</code>, <code>app/build-harness-presets.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-04" data-task-type="profile-usage" data-group="profile-usage" data-task-status="done">
+      <details><summary><span class="task-id">T-PU-04</span><span class="task-title">Test every segment and answer preservation</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-PU-04 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run <code>node app/qa-segments.js</code> and <code>node app/qa-presets.js</code>; switch all segments and verify saved values remain.</p><p><strong>Files:</strong> <code>app/qa-segments.js</code>, <code>app/qa-presets.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-05" data-task-type="profile-usage" data-group="profile-usage" data-task-status="done">
+      <details><summary><span class="task-id">T-PU-05</span><span class="task-title">Apply the documentation rules to the template</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-PU-05 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> keep the SSOT template, docs index template, profiles template and documentation rules aligned.</p><p><strong>Files:</strong> <code>_docs/DOCUMENTATION-RULES.md</code>, <code>_docs/templates/</code></p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="application-context-profile" data-group-status="testing">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Application-context profile selection</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="application-context-profile">5/5</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="application-context-profile"></div></div>
+    <p class="task-group-note">Why these belong together: <code>applicationType</code>, the catalog picker, legacy-key migration, QA and documentation form one application-context contract. Shipping them separately would leave records, the library or QA on a different profile model.</p>
+
+    <div class="task-item" data-task-id="T-ACP-01" data-task-type="application-context" data-group="application-context-profile" data-task-status="done">
+      <details><summary><span class="task-id">T-ACP-01</span><span class="task-title">Define the applicationType catalog contract</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-ACP-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> A consuming app could only paste the full <code>profileConfig</code> JSON or set a raw default key; there was no small, named way to declare "this is a software-sales profile".</p><p><strong>Approach:</strong> Add built-in <code>applicationType</code> presets for <code>software-sales</code>, <code>general-crm</code> and <code>customer-profile-hub</code>. Each supplies an app title, labels, catalog keys, default keys and focus/edit flags; explicit <code>profileConfig.segments</code> still take precedence.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code>, <code>docs/ssot.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-ACP-02" data-task-type="application-context" data-group="application-context-profile" data-task-status="done">
+      <details><summary><span class="task-id">T-ACP-02</span><span class="task-title">Remove customer-type filtering and make type identity-only</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-ACP-02 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> An <code>appliesTo</code> or vertical filter hides question sets that do not match the customer type, so a software seller cannot profile an arbitrary customer.</p><p><strong>Approach:</strong> The identity type now only chooses the person/company basic fields. Every question set is available to either type, selecting one never changes the type, and the library reports all 12 built-in sets without vertical tags. QA asserts the combination and type-switch behavior.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code>, <code>app/qa-cdp.js</code>, <code>app/qa-datapacks.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-ACP-03" data-task-type="application-context" data-group="application-context-profile" data-task-status="done">
+      <details><summary><span class="task-id">T-ACP-03</span><span class="task-title">Add the catalog picker with an all-question-sets library escape hatch</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-ACP-03 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> A small application catalog keeps the common flow short, but it can hide the question set the user actually needs.</p><p><strong>Approach:</strong> In application mode the picker uses the catalog keys, <em>Select all</em> is scoped to the catalog, and the count reports selections outside the catalog. <em>All question sets</em> opens the existing library with every profile; choosing an outside set keeps it and renders its sections.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code>, <code>app/qa-appcontext.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-ACP-04" data-task-type="application-context" data-group="application-context-profile" data-task-status="done">
+      <details><summary><span class="task-id">T-ACP-04</span><span class="task-title">Migrate legacy company-vertical profile keys</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-ACP-04 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Records saved under the old vertical catalog may reference keys such as <code>company-software</code>; dropping those keys would leave a record without a selected question set.</p><p><strong>Approach:</strong> Add <code>LEGACY_PROFILE_ALIASES</code> from old vertical keys to the nearest current question set. Resolution only happens when no custom profile owns the old key, and saved <code>values</code>, <code>focus</code> and <code>customProfiles</code> are preserved. QA migrates a company-software record and verifies its value and software sections.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code>, <code>app/qa-appcontext.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-ACP-05" data-task-type="application-context" data-group="application-context-profile" data-task-status="done">
+      <details><summary><span class="task-id">T-ACP-05</span><span class="task-title">Test the application context and update harness, build and docs</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-ACP-05 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> The new parameter, picker and migration can drift from the harness, build stamps, QA expectations and documentation.</p><p><strong>Approach:</strong> The harness forwards <code>applicationType</code>; the build is <code>2026-11-07-3</code>; <code>qa-appcontext.js</code> covers title, catalog, defaults, library, outside selection and legacy migration; the full QA suite and SSOT version 0.4 were updated in the same change.</p><p><strong>Files:</strong> <code>app/test-harness.html</code>, <code>app/qa-appcontext.js</code>, <code>app/qa-cdp.js</code>, <code>docs/ssot.html</code></p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="software-sales-packs" data-group-status="in-progress">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Software-sales request packs</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="software-sales-packs">0/8</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="software-sales-packs"></div></div>
+    <p class="task-group-note">Why these belong together: these are the content packs for the actual software-sales offer. Each pack must reuse the application-context profile model and the same value shape; they can ship incrementally after the model group.</p>
+
+    <div class="task-item" data-task-id="T-PACK-01" data-task-type="software-sales-pack" data-group="software-sales-packs" data-task-status="in-progress">
+      <details><summary><span class="task-id">T-PACK-01</span><span class="task-title">Software Infrastructure Assessment pack</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PACK-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> The current technical infrastructure and software stack sections only appear inside the company-software vertical profile, not as a reusable request for any customer.</p><p><strong>Approach:</strong> Build a type-neutral request pack with cloud/hosting, environments, databases, data residency, identity/SSO, backup/DR, uptime/SLA, compliance, used software, integrations, current spend, pain points, decision criteria and technical owner.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code>; reuse <code>technicalInfrastructureSection()</code> and <code>softwareStackSection()</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PACK-02" data-task-type="software-sales-pack" data-group="software-sales-packs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PACK-02</span><span class="task-title">Implementation &amp; onboarding pack</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PACK-02 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Sales handoff loses scope, migration, integration and go-live context.</p><p><strong>Approach:</strong> Capture implementation scope, environments, data migration, integrations, training, milestones, owners, go-live criteria, risks and dependencies.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PACK-03" data-task-type="software-sales-pack" data-group="software-sales-packs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PACK-03</span><span class="task-title">SaaS subscription &amp; renewal pack</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PACK-03 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Renewal risk, seats, usage, expansion and procurement context are scattered.</p><p><strong>Approach:</strong> Capture plan/tier, seats, MRR, usage/adoption, renewal date, churn risk, expansion signals, budget cycle, procurement process and success manager.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PACK-04" data-task-type="software-sales-pack" data-group="software-sales-packs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PACK-04</span><span class="task-title">Security &amp; compliance review pack</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PACK-04 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Security questionnaires and vendor reviews repeat the same missing information.</p><p><strong>Approach:</strong> Capture frameworks, data classification, residency, SSO/MFA, pen-test cadence, incident process, DPA status, vendor-risk owner and evidence links.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PACK-05" data-task-type="software-sales-pack" data-group="software-sales-packs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PACK-05</span><span class="task-title">Data migration &amp; integration pack</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PACK-05 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Migration and integration effort is discovered late and is rarely quantified consistently.</p><p><strong>Approach:</strong> Capture source systems, data volume, field mapping, APIs, ETL approach, cutover plan, validation, rollback and owners.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PACK-06" data-task-type="software-sales-pack" data-group="software-sales-packs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PACK-06</span><span class="task-title">Training &amp; enablement pack</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PACK-06 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Adoption plans are verbal and not tied to roles or success measures.</p><p><strong>Approach:</strong> Capture audience roles, training format, materials, schedule, completion tracking, certification and adoption metrics.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PACK-07" data-task-type="software-sales-pack" data-group="software-sales-packs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PACK-07</span><span class="task-title">Support &amp; SLA pack</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PACK-07 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Support expectations and escalation paths are not recorded with the customer.</p><p><strong>Approach:</strong> Capture support tier, hours, channels, response/resolution targets, escalation contacts, maintenance windows, uptime target and reporting cadence.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PACK-08" data-task-type="software-sales-pack" data-group="software-sales-packs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PACK-08</span><span class="task-title">Software license &amp; vendor audit pack</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PACK-08 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Used software, seats, spend, renewals and overlap are not captured in a structured way, which hides consolidation and upsell opportunities.</p><p><strong>Approach:</strong> Capture vendors, products, license type, seats, renewal dates, annual spend, utilization, overlapping tools and consolidation notes.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code></p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="related-applications" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Related applications to create</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="related-applications">0/9</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="related-applications"></div></div>
+    <p class="task-group-note">Why these belong together: every app below reuses the CustomerProfile value contract and the software-sales request packs. Build the application-context profile model first; then each app can ship as its own html-tool without changing the shared data contract.</p>
+
+    <div class="task-item" data-task-id="T-APP-01" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-01</span><span class="task-title">Request Pack Designer app</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Adding request profiles currently requires JSON editing or code changes.</p><p><strong>Approach:</strong> Build a visual designer for request packs, sections and fields with preview, validation, duplicate/import/export of <code>profileDefinitions</code> JSON and a sample-record preview. No code editing for tenant admins.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/RequestPackDesigner/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-APP-02" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-02</span><span class="task-title">Software Infrastructure Assessment workspace</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-02 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> The assessment pack collects data, but there is no focused place to analyze gaps, risks and recommendations.</p><p><strong>Approach:</strong> Build a wizard/report app that reads a CustomerProfile record, scores infrastructure and software-stack gaps, proposes recommendations and exports an assessment report.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/SoftwareInfrastructureAssessment/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-APP-03" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-03</span><span class="task-title">Software Proposal &amp; SOW Builder</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-03 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Proposals and statements of work are rebuilt manually from scattered request-pack answers.</p><p><strong>Approach:</strong> Generate scope, assumptions, timeline, pricing, terms and deliverables from the selected request packs; export branded PDF/JSON and keep a version history.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/SoftwareProposalBuilder/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-APP-04" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-04</span><span class="task-title">Renewal &amp; Upsell Manager</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-04 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Renewal dates, churn risk and expansion signals are not visible across customers.</p><p><strong>Approach:</strong> Dashboard over subscription/renewal fields with upcoming renewals, risk flags, expansion opportunities, tasks and notifications; link back to the request profile.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/RenewalUpsellManager/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-APP-05" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-05</span><span class="task-title">Implementation &amp; Onboarding Tracker</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-05 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Implementation milestones and go-live readiness are not tracked per customer.</p><p><strong>Approach:</strong> Checklist and milestone board driven by the implementation pack; owners, due dates, dependencies, go-live gate and handover notes.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/ImplementationTracker/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-APP-06" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-06</span><span class="task-title">Software License &amp; Vendor Inventory</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-06 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Used software and vendor spend live in spreadsheets, not in the customer record.</p><p><strong>Approach:</strong> Inventory vendors, products, license types, seats, renewals, spend, utilization and overlap; feed the assessment and renewal apps.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/SoftwareLicenseInventory/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-APP-07" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-07</span><span class="task-title">Security Review Workspace</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-07 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Security reviews repeat questions and evidence collection for every deal.</p><p><strong>Approach:</strong> Questionnaire, evidence checklist, risk register and export package driven by the security/compliance pack; track reviewer and remediation status.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/SecurityReviewWorkspace/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-APP-08" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-08</span><span class="task-title">CRM Import/Export &amp; Integration Hub</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-08 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Data enters and leaves the tool manually, with no mapping, dedupe or sync contract.</p><p><strong>Approach:</strong> CSV/JSON import and export, field mapping, dedupe, validation report, CMS relay/webhook integration and profile-aware export schemas.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/CrmIntegrationHub/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-APP-09" data-task-type="related-application" data-group="related-applications" data-task-status="not-started">
+      <details><summary><span class="task-id">T-APP-09</span><span class="task-title">Account Review &amp; Customer Health dashboard</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-optional">Optional - needs decision</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-APP-09 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> There is no single view of account completeness, interactions, renewal risk, support load and expansion potential.</p><p><strong>Approach:</strong> Define a transparent health score, show drivers and next actions, and link each signal back to the request profile. Decide first whether this belongs in this app or the Renewal Manager.</p><p><strong>Files:</strong> proposed <code>BUSINESS/GENERAL/sales-crm/crm-contacts/AccountHealthDashboard/</code>, <code>docs/ssot.html</code> section 14</p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="tool-hardening" data-group-status="in-progress">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Tool hardening and release</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="tool-hardening">0/10</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="tool-hardening"></div></div>
+    <p class="task-group-note">Why these belong together: these tasks make the tool safe to hand to real tenants and maintainable after release. They are not new product features, but they share the same release and documentation surface.</p>
+
+    <div class="task-item" data-task-id="T-HARD-01" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="in-progress">
+      <details><summary><span class="task-id">T-HARD-01</span><span class="task-title">Reconcile the SSOT with the current build</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Several sections still describe older app-level profile config, segments and nine presets, while the app now has application-context question sets and a drawer.</p><p><strong>Approach:</strong> Fill remaining sections 4, 6, 8, 10, 11, 14 and 18; remove template placeholders; record the application-context decision and the current 12-question-set catalog plus the <code>applicationType</code> presets.</p><p><strong>Files:</strong> <code>docs/ssot.html</code>, <code>_docs/templates/</code>, <code>_docs/DOCUMENTATION-RULES.md</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-02" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="not-started">
+      <details><summary><span class="task-id">T-HARD-02</span><span class="task-title">Register the tool in the catalog and publish state</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-02 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> The tool is not discoverable or tracked in the project catalog/publish state.</p><p><strong>Approach:</strong> Add the catalog entry and TOOL_IDEA_MAP mapping, verify ship-cms metadata, category and docs paths, and record the release status.</p><p><strong>Files:</strong> <code>UNICON-TOOLS/</code>, <code>scripts/ship-cms.js</code>, <code>ship-cms.config.json</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-03" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="not-started">
+      <details><summary><span class="task-id">T-HARD-03</span><span class="task-title">Adapt screenshot automation for the CustomerProfile harness</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-small">Very small thing</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-03 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> <code>scripts/capture-screenshots.js</code> expects <code>?sample=1</code> and <code>?page=</code>; the harness uses <code>sample=company|person</code> and section navigation.</p><p><strong>Approach:</strong> Add a tool-specific sample/section map or harness query support, then generate <code>docs/screenshots</code> and the manifest for the marketing/help satellites.</p><p><strong>Files:</strong> <code>scripts/capture-screenshots.js</code>, <code>app/test-harness.html</code>, <code>docs/screenshots/</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-04" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="not-started">
+      <details><summary><span class="task-id">T-HARD-04</span><span class="task-title">Profile library search, filters and archive state</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-04 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> With 15+ profiles, the library is long; legacy and tenant packs will grow it further.</p><p><strong>Approach:</strong> Add search by name/description, filters for active/legacy/custom, category tags, and archive/restore instead of delete-only. Keep the active profile first.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code>, <code>app/CustomerProfile.css</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-05" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="not-started">
+      <details><summary><span class="task-id">T-HARD-05</span><span class="task-title">Pack library import/export and versioning</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-05 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Request packs are edited per record or through a raw settings string; there is no safe way to share a versioned pack library.</p><p><strong>Approach:</strong> Export/import the whole library with a schema version, validation summary and conflict choices (skip/replace/duplicate); support tenant-level packs through <code>profileDefinitions</code>.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code>, <code>docs/ssot.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-06" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="in-progress">
+      <details><summary><span class="task-id">T-HARD-06</span><span class="task-title">Accessibility pass for menu, drawer, forms and modals</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-06 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> The header menu, share drawer, selectors and error states need keyboard, focus and screen-reader verification beyond basic aria attributes.</p><p><strong>Approach:</strong> Focus trap/return for drawer/modal/menu, visible focus, labels for every control, ARIA state checks, contrast review and keyboard-only walkthrough.</p><p><strong>Files:</strong> <code>app/CustomerProfile.html</code>, <code>app/CustomerProfile.css</code>, <code>app/CustomerProfile.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-07" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="not-started">
+      <details><summary><span class="task-id">T-HARD-07</span><span class="task-title">Performance and scale review</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-07 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Every keystroke rebuilds navigation and section state; large packs, tag lists and many records may become slow.</p><p><strong>Approach:</strong> Measure render/save time with large request packs and long lists; batch DOM updates, avoid unnecessary main/nav rebuilds and lazy-render inactive sections if needed.</p><p><strong>Files:</strong> <code>app/CustomerProfile.js</code>, <code>app/qa-cdp.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-08" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="in-progress">
+      <details><summary><span class="task-id">T-HARD-08</span><span class="task-title">Permission matrix and cross-browser/mobile QA</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-08 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> QA currently runs in Edge via CDP; viewer/editor/admin, read-only export, inline-JS and file:// need a documented matrix across browsers and widths.</p><p><strong>Approach:</strong> Run 390/489/768/1280 checks in Edge/Chrome/Firefox, verify profile editing/selection permissions and drawer export in read-only, and capture evidence.</p><p><strong>Files:</strong> <code>app/qa-cdp.js</code>, <code>docs/ssot.html</code>, <code>docs/updates.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-09" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="not-started">
+      <details><summary><span class="task-id">T-HARD-09</span><span class="task-title">Release notes, upgrade guide and re-upload checklist</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-09 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> Build stamps and changed files are tracked manually; stale CMS uploads are the most common failure.</p><p><strong>Approach:</strong> Maintain <code>docs/updates.html</code> and a release checklist with TOOL_BUILD, per-file stamps, changed files, migration notes and rollback steps.</p><p><strong>Files:</strong> <code>docs/updates.html</code>, <code>PUBLISH-CHECKLIST.md</code>, <code>docs/ssot.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-HARD-10" data-task-type="tool-hardening" data-group="tool-hardening" data-task-status="not-started">
+      <details><summary><span class="task-id">T-HARD-10</span><span class="task-title">Real tenant pilot with software-sales scenarios</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-optional">Optional - needs decision</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-HARD-10 as done" /></summary>
+      <div class="task-details"><p><strong>Problem:</strong> The tool has only been tested with harness samples and mock users.</p><p><strong>Approach:</strong> Pilot with 2-3 real scenarios (infrastructure assessment, implementation handoff, renewal review), observe how users choose request packs and which fields they actually fill, then prioritise fixes.</p><p><strong>Files:</strong> <code>docs/ssot.html</code> sections 14/16, <code>docs/updates.html</code></p></div></details>
+    </div>
+  </section>
+
   <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
        uncomment it, and edit).
   <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
@@ -612,7 +861,7 @@
 
   <div class="footer">
     Customer Profile - single source of truth for all decisions about this
-    tool. Version 0.1, 2026-11-05.
+    tool. Version 0.3, 2026-11-07.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

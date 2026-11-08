@@ -1,11 +1,12 @@
 // ── SHARED ASSETS CHECK (npm run ssot:check) ───────────────────────────────
 // Verifies that every tool's SSOT and satellite documents link the SHARED
 // design layer in _docs/assets/ (ssot.css, ssot.js, presentation.css,
-// presentation.js, webpage.css, webpage.js, index.css, index.js). The design
-// lives ONCE in _docs/assets - editing those files restyles every document
-// instantly, so no document may drift into its own copy. social.html is
-// intentionally self-contained (it is pasted into the CMS or shared
-// directly). index.html links index.css/index.js and carries only its data.
+// presentation.js, webpage.css, webpage.js, index.css, index.js and, for
+// profile-aware tools, profiles.css/profiles.js). The design lives ONCE in
+// _docs/assets - editing those files restyles every document instantly, so no
+// document may drift into its own copy. social.html is intentionally
+// self-contained (it is pasted into the CMS or shared directly). index.html
+// links index.css/index.js and carries only its data.
 // webpage.html links are reported as WARNINGS: a page still on the old
 // self-contained format works, and it moves to the shared webpage design
 // system when it is next rebuilt (npm run docs:init / docs:generate).
@@ -59,6 +60,22 @@ function main() {
         if (webpageContent.indexOf(assetPath) === -1) {
           console.log('! ' + tool.toolName + ': webpage.html still self-contained (no ' + assetPath + ') - rebuild it with npm run docs:init to adopt the shared webpage design system')
           warnings++
+        }
+      })
+    }
+    const profilesIndexPath = join(tool.toolDirectory, 'profiles', 'index.json')
+    const profilesDocPath = join(tool.docsDirectory, 'profiles.html')
+    if (existsSync(profilesIndexPath) && !existsSync(profilesDocPath)) {
+      console.log('✗ ' + tool.toolName + ': profiles/index.json exists but docs/profiles.html is missing (run npm run docs:profiles -- ' + tool.toolName + ')')
+      failures++
+    }
+    if (existsSync(profilesDocPath)) {
+      checkedFiles++
+      const profilesContent = readFileSync(profilesDocPath, 'utf8')
+      ;['assets/ssot.css', 'assets/profiles.css', 'assets/profiles.js'].forEach((assetPath) => {
+        if (profilesContent.indexOf(assetPath) === -1) {
+          console.log('✗ ' + tool.toolName + ': profiles.html does not link ' + assetPath)
+          failures++
         }
       })
     }

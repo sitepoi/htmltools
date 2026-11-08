@@ -1,0 +1,57 @@
+{
+  "appTitle": "My Vertical Profiles",
+  "labels": {
+    "record": "Client",
+    "person": "Client",
+    "company": "Organisation",
+    "questionSets": "Form",
+    "profileType": "Client type",
+    "sections": "Sections",
+    "form": "Form"
+  },
+  "defaultSegmentKey": "primary",
+  "allowSegmentSelection": false,
+  "segments": [
+    {
+      "key": "primary",
+      "name": "Client",
+      "description": "Primary customer type for this vertical",
+      "icon": "user",
+      "baseType": "person",
+      "profileKeys": ["primary-form"],
+      "allowedProfileKeys": ["primary-form"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Client", "questionSets": "Client form" },
+      "identityHint": "The few identity details this vertical actually needs.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "showAdminFields": false,
+      "showTags": false,
+      "statusOptions": ["Prospect", "Active", "Paused", "Closed"],
+      "sourceOptions": ["Referral", "Website", "Other"]
+    }
+  ],
+  "definitions": [
+    {
+      "key": "primary-form",
+      "name": "Client form",
+      "description": "Replace these example fields with the real questions for this vertical",
+      "sections": [
+        {
+          "id": "primary-details",
+          "title": "Client details",
+          "icon": "note",
+          "description": "Only ask what this vertical needs.",
+          "fields": [
+            { "id": "primaryCategory", "label": "Category", "type": "select", "width": "half", "options": ["Option A", "Option B", "Option C"] },
+            { "id": "primaryStartDate", "label": "Start date", "type": "date", "width": "half" },
+            { "id": "primaryGoal", "label": "What does the client need?", "type": "textarea", "width": "full", "rows": 4 },
+            { "id": "primaryReference", "label": "Reference", "type": "text", "width": "half" }
+          ]
+        }
+      ]
+    }
+  ]
+}

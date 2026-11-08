@@ -1,0 +1,138 @@
+{
+  "appTitle": "Vendor & Procurement Profiles",
+  "labels": {
+    "record": "Vendor",
+    "person": "Contact",
+    "company": "Vendor",
+    "questionSets": "Assessments",
+    "profileType": "Vendor type",
+    "sections": "Sections",
+    "form": "Form"
+  },
+  "defaultSegmentKey": "supplier",
+  "allowSegmentSelection": true,
+  "segments": [
+    {
+      "key": "supplier",
+      "name": "Supplier",
+      "description": "Goods or services supplier",
+      "icon": "truck",
+      "baseType": "company",
+      "profileKeys": ["supplier-profile"],
+      "allowedProfileKeys": ["supplier-profile"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Supplier", "questionSets": "Supplier assessment" },
+      "identityHint": "The supplier entity, what it provides and the commercial terms.",
+      "nameFieldIds": ["core_legalName", "core_tradeName", "core_registrationNumber"],
+      "adminFieldIds": ["core_status", "core_owner", "core_since"],
+      "showAdminFields": true,
+      "showTags": false,
+      "statusOptions": ["Prospect", "Under review", "Approved", "Preferred", "Paused", "Blocked"],
+      "sourceOptions": ["Procurement", "Referral", "Website", "Tender", "Outbound"]
+    },
+    {
+      "key": "contractor",
+      "name": "Contractor",
+      "description": "Trade or site contractor",
+      "icon": "hardHat",
+      "baseType": "company",
+      "profileKeys": ["contractor-profile"],
+      "allowedProfileKeys": ["contractor-profile"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Contractor", "questionSets": "Contractor assessment" },
+      "identityHint": "The contractor, its licence and the checks needed before site work.",
+      "nameFieldIds": ["core_legalName", "core_tradeName", "core_registrationNumber"],
+      "showAdminFields": false,
+      "showTags": false,
+      "sourceOptions": ["Procurement", "Referral", "Tender", "Outbound"]
+    },
+    {
+      "key": "contact",
+      "name": "Contact",
+      "description": "Main contact at a vendor",
+      "icon": "user",
+      "baseType": "person",
+      "profileKeys": ["vendor-contact"],
+      "allowedProfileKeys": ["vendor-contact"],
+      "allowProfileSelection": false,
+      "allowCombinations": false,
+      "allowFocusSelection": false,
+      "allowProfileEditing": false,
+      "labels": { "record": "Contact", "questionSets": "Contact form" },
+      "identityHint": "The person your team contacts for orders, accounts and escalations.",
+      "nameFieldIds": ["core_firstName", "core_lastName", "core_preferredName"],
+      "showAdminFields": false,
+      "showTags": false,
+      "sourceOptions": ["Procurement", "Referral", "Website"]
+    }
+  ],
+  "definitions": [
+    {
+      "key": "supplier-profile",
+      "name": "Supplier assessment",
+      "description": "Categories, terms and compliance details",
+      "sections": [
+        {
+          "id": "supplier-assessment",
+          "title": "Supplier assessment",
+          "icon": "truck",
+          "description": "Administrative and commercial vendor details. Do not store bank credentials here.",
+          "fields": [
+            { "id": "vendorCategory", "label": "Category", "type": "multiselect", "width": "full", "required": true, "options": ["Materials", "Equipment", "Software", "Services", "Logistics", "Facilities", "Other"] },
+            { "id": "vendorLeadTime", "label": "Typical lead time (days)", "type": "number", "width": "half" },
+            { "id": "vendorPaymentTerms", "label": "Payment terms", "type": "select", "width": "half", "options": ["Prepaid", "Net 15", "Net 30", "Net 45", "Net 60", "Other"] },
+            { "id": "vendorInsuranceExpiry", "label": "Insurance expiry", "type": "date", "width": "half" },
+            { "id": "vendorCertifications", "label": "Certifications", "type": "multiselect", "width": "full", "options": ["ISO 9001", "ISO 27001", "Safety certification", "Quality certification", "Other"] },
+            { "id": "vendorQualityRating", "label": "Quality rating (1-5)", "type": "number", "width": "half" },
+            { "id": "vendorAssessmentNotes", "label": "Assessment notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "contractor-profile",
+      "name": "Contractor assessment",
+      "description": "Licence, insurance and site checks",
+      "sections": [
+        {
+          "id": "contractor-assessment",
+          "title": "Contractor assessment",
+          "icon": "hardHat",
+          "fields": [
+            { "id": "vendorTrade", "label": "Trade", "type": "select", "width": "half", "options": ["Electrical", "Plumbing", "HVAC", "Construction", "Cleaning", "Security", "Other"] },
+            { "id": "vendorLicence", "label": "Licence number", "type": "text", "width": "half" },
+            { "id": "vendorContractorInsurance", "label": "Insurance expiry", "type": "date", "width": "half" },
+            { "id": "vendorSafetyInduction", "label": "Safety induction date", "type": "date", "width": "half" },
+            { "id": "vendorAvailability", "label": "Availability", "type": "select", "width": "half", "options": ["Available", "Limited", "Booked", "Unavailable"] },
+            { "id": "vendorContractorNotes", "label": "Site notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "vendor-contact",
+      "name": "Vendor contact",
+      "description": "Role and contact preferences",
+      "sections": [
+        {
+          "id": "vendor-contact-details",
+          "title": "Contact details",
+          "icon": "user",
+          "fields": [
+            { "id": "vendorContactRole", "label": "Role", "type": "text", "width": "half" },
+            { "id": "vendorContactPhone", "label": "Phone", "type": "phone", "width": "half" },
+            { "id": "vendorContactEmail", "label": "Email", "type": "email", "width": "half" },
+            { "id": "vendorContactMethod", "label": "Preferred contact", "type": "select", "width": "half", "options": ["Email", "Phone", "Portal", "Other"] },
+            { "id": "vendorContactNotes", "label": "Contact notes", "type": "textarea", "width": "full", "rows": 3 }
+          ]
+        }
+      ]
+    }
+  ]
+}

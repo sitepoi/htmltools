@@ -1,4 +1,4 @@
-/* CDP QA runner for CustomerProfile build 2026-11-06-1 */
+/* CDP QA runner for CustomerProfile build 2026-11-07-3 */
 'use strict';
 
 const fs = require('fs');
@@ -6,7 +6,7 @@ const path = require('path');
 
 const PORT = 9222;
 const SHOT_DIR = path.join(__dirname, 'qa-shots');
-	const BUILD = '2026-11-06-1';
+	const BUILD = '2026-11-07-3';
 const EXPECTED_COMPANY_NAV = [
 	'basic',
 	'contact',
@@ -28,8 +28,8 @@ function q(value) { return JSON.stringify(value); }
 async function main() {
 	const targetsResponse = await fetch('http://127.0.0.1:' + PORT + '/json');
 	const targets = await targetsResponse.json();
-	const page = targets.find(function (target) { return target.type === 'page' && target.url.indexOf('test-harness.html') > -1; });
-	if (!page) throw new Error('No test-harness page target found.');
+	const page = targets.find(function (target) { return target.type === 'page' && target.url.indexOf('test-harness.html') > -1; }) || targets.find(function (target) { return target.type === 'page' && target.url.indexOf('http://127.0.0.1') === 0; });
+	if (!page) throw new Error('No local page target found.');
 
 	const socket = new WebSocket(page.webSocketDebuggerUrl);
 	const pending = new Map();

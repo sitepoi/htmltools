@@ -5,8 +5,11 @@
   - One parent <div class="pb-footer">; no document tags, no libraries
   - All CSS is scoped under .pb-footer so it cannot leak into page content
   - No <footer> / <nav> / <header> element tags (plain divs + ARIA roles)
-  - Brand = the Polaris logo loaded from its storage URL; the dark artwork
-    is inverted with a CSS filter so it reads on the dark footer
+  - Brand = the Polaris logo loaded from its storage URL; the same asset is
+    used on the dark footer and auto-rendered white in CSS: invert(1) flips
+    the black artwork to white and its white background to black, and
+    mix-blend-mode: lighten lets that black background disappear into the
+    dark footer (no second image file needed)
   =========================================================================
 -->
 <div class="pb-footer" data-pb-footer>
@@ -35,8 +38,8 @@
 				<div class="pb-ft-brand">
 					<a class="pb-ft-logo" data-ic-nav-href="/" href="/" aria-label="Polaris Blinds - home">
 						<img class="pb-ft-logo-img"
-							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2FCORPORATE%2Fpolaris-blinds-logo.png?alt=media&amp;token=2195bf8a-e3bb-4bab-b254-5b9fee64defe"
-							alt="Polaris Blinds - Window Coverings" width="400" height="100"
+							src="https://firebasestorage.googleapis.com/v0/b/bugose-f6bb4.appspot.com/o/POLAR_BLINDS%2F2026%2F10%2Fc%2Fwebsite%2Fpolaris-logo-74RNZK.webp?alt=media&amp;token=cf6a8386-080a-49b2-a08c-3afd9dbccfe6"
+							alt="Polaris Blinds - Window Coverings" width="1280" height="320"
 							loading="lazy" decoding="async">
 					</a>
 					<p class="pb-ft-mission">
@@ -270,7 +273,8 @@
 			height: 44px;
 			width: auto;
 			display: block;
-			filter: brightness(0) invert(1);
+			filter: invert(1);
+			mix-blend-mode: lighten;
 		}
 
 		.pb-ft-mission {

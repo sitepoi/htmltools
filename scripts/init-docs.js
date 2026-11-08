@@ -1,10 +1,12 @@
 // ── DOCS SCAFFOLD (npm run docs:init) ──────────────────────────────────────
 // Creates the docs/ folder for every tool that does not have it yet, with
-// the seven documents born from _docs/templates/:
+// the seven core documents born from _docs/templates/:
 //   index.html (one-page shell with a thin left menu that loads all of the
 //   documents and the test harness into a full-page iframe),
 //   ssot.html, webpage.html, help.html, presentation.html, updates.html,
 //   social.html
+// Tools with a profiles/index.json also get the optional eighth document,
+// profiles.html, from _profiles-template.html.
 // Only creates MISSING files - existing documents are never overwritten, so
 // re-running is always safe. No AI is used here; the AI regeneration happens
 // with scripts/generate-docs.js (npm run docs:generate / npm run rel).
@@ -14,6 +16,7 @@
 const { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } = require('fs')
 const { join } = require('path')
 const context = require('./releaseContext')
+const { buildProfilesPayload, buildProfilesDocument } = require('./build-profile-docs')
 
 const TOOL_PARTS = context.TOOL_PARTS
 const SATELLITE_FILES = context.SATELLITE_FILES
@@ -274,6 +277,12 @@ function buildDocsIndexDocument(templateContent, tool, replacements) {
     ? '<button class="docs-nav-item docs-nav-harness" data-doc="harness" data-src="../app/test-harness.html">Test harness<span class="docs-nav-sub">live tool with mock SDK</span></button>'
     : '<!-- no app/test-harness.html for this tool -->'
   content = content.replace('[HARNESS_ITEM]', harnessItem)
+  // Optional Profiles document for tools that expose profileConfig presets.
+  const profilesIndexPath = join(tool.toolDirectory, 'profiles', 'index.json')
+  const profilesItem = existsSync(profilesIndexPath)
+    ? '<button class="docs-nav-item" data-doc="profiles" data-src="profiles.html">Profiles<span class="docs-nav-sub">copy presets and check usage</span></button>'
+    : '<!-- no profiles/index.json for this tool -->'
+  content = content.replace('[PROFILES_ITEM]', profilesItem)
   // The HTML/CSS/JS code of the tool, embedded so the index can show + copy it.
   // split/join (NOT replace) - the payload contains $ sequences that
   // String.replace would interpret as special patterns.
@@ -369,6 +378,17 @@ function buildToolDocuments(tool, onlyMissing, log) {
     writeFileSync(outputPath, filesToBuild[documentType](templateContent), 'utf8')
     createdCount++
   })
+
+  // Optional eighth document: only tools that publish profile presets.
+  const profilesIndexPath = join(tool.toolDirectory, 'profiles', 'index.json')
+  const profilesOutputPath = join(docsDirectory, 'profiles.html')
+  if (existsSync(profilesIndexPath) && !existsSync(profilesOutputPath)) {
+    const profilesPayload = buildProfilesPayload(tool)
+    if (profilesPayload.length) {
+      writeFileSync(profilesOutputPath, buildProfilesDocument(tool, profilesPayload), 'utf8')
+      createdCount++
+    }
+  }
 
   if (log) {
     console.log(

@@ -1,10 +1,11 @@
 // ── DOCS INDEX CODE REFRESH (npm run docs:index-code) ──────────────────────
 // Rewrites ONLY the embedded code payload of docs/index.html (between the
 // CODE-PAYLOAD markers) so the HTML / CSS / JS panes always match the
-// tool's current app code. Run this after any code change - or let the
-// publish flow do it automatically for changed tools.
-// With --shots it refreshes the SCREENSHOTS-PAYLOAD instead (the index
-// viewer data) - run it after npm run screenshots.
+// tool's current app code. Tools with profiles/index.json also get their
+// docs/profiles.html copy page rebuilt and their Profiles menu item checked.
+// Run this after any code change - or let the publish flow do it automatically
+// for changed tools. With --shots it refreshes the SCREENSHOTS-PAYLOAD instead
+// (the index viewer data) - run it after npm run screenshots.
 //
 // Usage:
 //   npm run docs:index-code -- <ToolName>      refresh one tool's code panes
@@ -15,14 +16,26 @@ const { readFileSync, writeFileSync, existsSync } = require('fs')
 const { join } = require('path')
 const context = require('./releaseContext')
 const { buildToolDocuments, buildCodePayload, buildScreenshotsPayload } = require('./init-docs')
+const { buildProfilesPayload, buildProfilesDocument, ensureProfilesMenuItem } = require('./build-profile-docs')
 
 const PAYLOAD_START = '<!-- CODE-PAYLOAD-START'
 const PAYLOAD_END = '<!-- CODE-PAYLOAD-END -->'
 const SHOTS_PAYLOAD_START = '<!-- SCREENSHOTS-PAYLOAD-START'
 const SHOTS_PAYLOAD_END = '<!-- SCREENSHOTS-PAYLOAD-END -->'
 
+function refreshToolProfilesDoc(tool) {
+  const profilesIndexPath = join(tool.toolDirectory, 'profiles', 'index.json')
+  if (!existsSync(profilesIndexPath)) return false
+  const payload = buildProfilesPayload(tool)
+  if (!payload.length) return false
+  writeFileSync(join(tool.docsDirectory, 'profiles.html'), buildProfilesDocument(tool, payload), 'utf8')
+  ensureProfilesMenuItem(tool)
+  return true
+}
+
 function refreshToolIndexCode(tool) {
   buildToolDocuments(tool, true, false)   // ensure docs/index.html exists
+  refreshToolProfilesDoc(tool)
   const indexPath = join(tool.docsDirectory, 'index.html')
   let content
   try { content = readFileSync(indexPath, 'utf8') } catch (_e) { return false }
