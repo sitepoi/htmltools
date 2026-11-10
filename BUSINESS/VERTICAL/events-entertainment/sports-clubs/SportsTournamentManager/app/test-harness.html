@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SportsTournamentManager - Test Harness</title>
+<link rel="stylesheet" href="SportsTournamentManager.css">
+<style>
+	html, body { margin: 0; padding: 0; background: #eef2f7; }
+	body { padding-top: 44px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+	#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 6px 14px; background: #0f172a; color: #e6edf5; font-size: 11px; }
+	#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+	#th-bar .sep { color: #475569; }
+	#th-bar .hint { color: #94a3b8; font-size: 10px; }
+	#th-bar select { font-size: 11px; padding: 3px 5px; border: 1px solid #334155; border-radius: 4px; background: #1e293b; color: #e6edf5; }
+	#th-bar button { border: none; border-radius: 4px; padding: 4px 10px; font-size: 10px; font-weight: 600; cursor: pointer; }
+	#th-bar button.th-btn-a { background: #0d9488; color: #fff; }
+	#th-bar button.th-btn-b { background: #334155; color: #e6edf5; }
+	#th-status { color: #2dd4bf; font-size: 10px; }
+	#th-log { position: fixed; right: 12px; bottom: 12px; z-index: 9999; width: 320px; max-height: 200px; overflow: auto; padding: 8px 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.94); color: #e2e8f0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; line-height: 1.5; }
+	#th-log p { margin: 0 0 2px; }
+	@media (max-width: 760px) {
+		body { padding-top: 132px; }
+	}
+</style>
+</head>
+<body>
+<div id="th-bar">
+	<strong>HARNESS - SportsTournamentManager</strong><span class="sep">|</span>
+	<span class="hint">User:</span>
+	<select id="th-user">
+		<option value="u-admin">Admin</option>
+		<option value="u-editor">Editor</option>
+		<option value="u-viewer">Viewer</option>
+		<option value="u-none">None (no session)</option>
+	</select>
+	<span class="hint">Sample:</span>
+	<button class="th-btn-a" id="th-sample-soccer">Load soccer sample</button>
+	<button class="th-btn-a" id="th-sample-hockey">Load hockey sample</button>
+	<button class="th-btn-b" id="th-clear">Clear data</button>
+	<label><input type="checkbox" id="th-readonly"> read-only</label>
+	<span class="sep">|</span>
+	<span id="th-status">Loading...</span>
+</div>
+
+<div id="app-container"></div>
+<div id="th-log"></div>
+
+<script>
+/* ---------------------------------------------------------------
+   Mock window.tool SDK - installed BEFORE the tool script loads.
+   --------------------------------------------------------------- */
+(function () {
+	var STORAGE_KEY = 'stm_harness_value';
+	var query = new URLSearchParams(window.location.search);
+	var users = {
+		'u-admin': { id: 'u-admin', name: 'Ada Admin', email: 'ada@example.org', roles: ['viewer', 'editor', 'admin'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+		'u-editor': { id: 'u-editor', name: 'Eddie Editor', email: 'eddie@example.org', roles: ['viewer', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+		'u-viewer': { id: 'u-viewer', name: 'Vera Viewer', email: 'vera@example.org', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } },
+		'u-none': null
+	};
+	var params = {
+		allowRequestSave: 'yes'
+	};
+	var state = {
+		userId: query.get('role') || (localStorage.getItem(STORAGE_KEY + '_user') || 'u-admin'),
+		value: null,
+		readyCallback: null,
+		valueChangeListeners: [],
+		userChangeListeners: [],
+		readonlyListeners: [],
+		readOnly: false
+	};
+
+	try {
+		var storedValue = localStorage.getItem(STORAGE_KEY);
+		state.value = storedValue ? JSON.parse(storedValue) : null;
+	} catch (error) { state.value = null; }
+
+	function logLine(message) {
+		var log = document.getElementById('th-log');
+		if (!log) { return; }
+		var line = document.createElement('p');
+		line.textContent = new Date().toISOString().slice(11, 19) + '  ' + message;
+		log.appendChild(line);
+		log.scrollTop = log.scrollHeight;
+	}
+
+	window.thLog = logLine;
+	window.thSetValue = function (value) {
+		state.value = value;
+		try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch (error) { }
+		state.valueChangeListeners.forEach(function (listener) { try { listener(value); } catch (error) { } });
+	};
+
+	window.tool = {
+		onReady: function (callback) {
+			state.readyCallback = callback;
+			window.setTimeout(function () { callback(state.value); }, 0);
+		},
+		getValue: function () { return state.value; },
+		setValue: function (nextValue) {
+			state.value = nextValue;
+			try { localStorage.setItem(STORAGE_KEY, JSON.stringify(nextValue)); } catch (error) { }
+			state.valueChangeListeners.forEach(function (listener) { try { listener(nextValue); } catch (error) { } });
+		},
+		onValueChange: function (listener) { state.valueChangeListeners.push(listener); },
+		param: function (name, fallback) {
+			if (params[name] !== undefined && params[name] !== null) { return params[name]; }
+			return fallback;
+		},
+		isReadOnly: function () { return state.readOnly; },
+		onReadonlyChange: function (listener) { state.readonlyListeners.push(listener); },
+		getUser: function () { return users[state.userId] || null; },
+		onUserChange: function (listener) { state.userChangeListeners.push(listener); },
+		reportValid: function () { },
+		notify: function (message, severity) { logLine('notify(' + (severity || 'info') + '): ' + message); },
+		resize: function () { },
+		requestSave: function () { logLine('requestSave - record saved by the CMS'); },
+		declareOutput: function () { },
+		declareParams: function (list) { logLine('declareParams: ' + (Array.isArray(list) ? list.length : 0) + ' parameter(s)'); },
+		reportMissingParams: function () { },
+		_tools: {
+			selectUser: function (userId) {
+				state.userId = userId;
+				try { localStorage.setItem(STORAGE_KEY + '_user', userId); } catch (error) { }
+				state.userChangeListeners.forEach(function (listener) { try { listener(users[userId]); } catch (error) { } });
+			},
+			setReadOnly: function (readOnly) {
+				state.readOnly = readOnly;
+				state.readonlyListeners.forEach(function (listener) { try { listener(readOnly); } catch (error) { } });
+			},
+			loadSample: function (sampleData) {
+				window.thSetValue(sampleData);
+			},
+			runReadyAgain: function () {
+				if (state.readyCallback) { state.readyCallback(state.value); }
+			}
+		}
+	};
+})();
+</script>
+
+<script>
+/* ---------------------------------------------------------------
+   Sample tournament data - dates are relative to today so the
+   "upcoming matches" always show future games.
+   --------------------------------------------------------------- */
+(function () {
+	function isoOffset(daysAhead) {
+		var date = new Date();
+		date.setDate(date.getDate() + daysAhead);
+		var month = String(date.getMonth() + 1).padStart(2, '0');
+		var day = String(date.getDate()).padStart(2, '0');
+		return date.getFullYear() + '-' + month + '-' + day;
+	}
+
+	window.buildSoccerSample = function () {
+		var teams = [
+			{ id: 't-riverside', name: 'Riverside FC', shortName: 'RIV', color: '#16a34a', coach: 'Coach Green', contact: 'riverside@example.org' },
+			{ id: 't-northshore', name: 'North Shore United', shortName: 'NSU', color: '#2563eb', coach: 'Coach Blue', contact: 'northshore@example.org' },
+			{ id: 't-fraservalley', name: 'Fraser Valley Athletic', shortName: 'FVA', color: '#dc2626', coach: 'Coach Red', contact: 'fraser@example.org' },
+			{ id: 't-pacificwolves', name: 'Pacific Wolves', shortName: 'PAW', color: '#7c3aed', coach: 'Coach Violet', contact: 'wolves@example.org' }
+		];
+		var players = [
+			{ id: 'p-01', teamId: 't-riverside', name: 'Alex Reid', number: 1, position: 'Goalkeeper', notes: '' },
+			{ id: 'p-02', teamId: 't-riverside', name: 'Sam Turner', number: 9, position: 'Forward', notes: 'Captain' },
+			{ id: 'p-03', teamId: 't-riverside', name: 'Jordan Lee', number: 6, position: 'Midfielder', notes: '' },
+			{ id: 'p-04', teamId: 't-northshore', name: 'Mika Rossi', number: 10, position: 'Midfielder', notes: 'Playmaker' },
+			{ id: 'p-05', teamId: 't-northshore', name: 'Dani Fox', number: 7, position: 'Forward', notes: '' },
+			{ id: 'p-06', teamId: 't-northshore', name: 'Chris Bond', number: 1, position: 'Goalkeeper', notes: '' },
+			{ id: 'p-07', teamId: 't-fraservalley', name: 'Pat Hunter', number: 4, position: 'Defender', notes: '' },
+			{ id: 'p-08', teamId: 't-fraservalley', name: 'Lee Grant', number: 11, position: 'Forward', notes: '' },
+			{ id: 'p-09', teamId: 't-pacificwolves', name: 'Noor Khan', number: 8, position: 'Midfielder', notes: 'Captain' },
+			{ id: 'p-10', teamId: 't-pacificwolves', name: 'Owen Park', number: 2, position: 'Defender', notes: '' }
+		];
+		var matches = [
+			{ id: 'g-01', homeTeamId: 't-riverside', awayTeamId: 't-northshore', date: isoOffset(-14), time: '15:00', venue: 'Central Field', round: 'Round 1', status: 'finished', homeScore: 3, awayScore: 1, decided: 'reg' },
+			{ id: 'g-02', homeTeamId: 't-fraservalley', awayTeamId: 't-pacificwolves', date: isoOffset(-14), time: '17:00', venue: 'Central Field', round: 'Round 1', status: 'finished', homeScore: 2, awayScore: 2, decided: 'reg' },
+			{ id: 'g-03', homeTeamId: 't-northshore', awayTeamId: 't-fraservalley', date: isoOffset(-7), time: '15:00', venue: 'North Arena', round: 'Round 2', status: 'finished', homeScore: 0, awayScore: 2, decided: 'reg' },
+			{ id: 'g-04', homeTeamId: 't-pacificwolves', awayTeamId: 't-riverside', date: isoOffset(-7), time: '17:00', venue: 'North Arena', round: 'Round 2', status: 'finished', homeScore: 1, awayScore: 1, decided: 'reg' },
+			{ id: 'g-05', homeTeamId: 't-riverside', awayTeamId: 't-fraservalley', date: isoOffset(2), time: '15:00', venue: 'Central Field', round: 'Round 3', status: 'scheduled', homeScore: null, awayScore: null, decided: 'reg' },
+			{ id: 'g-06', homeTeamId: 't-northshore', awayTeamId: 't-pacificwolves', date: isoOffset(2), time: '17:00', venue: 'Central Field', round: 'Round 3', status: 'scheduled', homeScore: null, awayScore: null, decided: 'reg' },
+			{ id: 'g-07', homeTeamId: 't-pacificwolves', awayTeamId: 't-northshore', date: isoOffset(9), time: '15:00', venue: 'West Ground', round: 'Round 4', status: 'scheduled', homeScore: null, awayScore: null, decided: 'reg' },
+			{ id: 'g-08', homeTeamId: 't-fraservalley', awayTeamId: 't-riverside', date: isoOffset(9), time: '17:00', venue: 'West Ground', round: 'Round 4', status: 'scheduled', homeScore: null, awayScore: null, decided: 'reg' }
+		];
+		return {
+			version: 2,
+			tournament: {
+				name: 'Community Cup', season: '2026 Fall', sport: 'soccer', format: 'league',
+				venues: ['Central Field', 'North Arena', 'West Ground'],
+				points: { win: 3, draw: 1, loss: 0 },
+				hockeyPoints: { win: 3, otWin: 2, otLoss: 1, loss: 0 }
+			},
+			teams: teams, players: players, matches: matches, bracket: null,
+			ui: { tab: 'overview' }
+		};
+	};
+
+	window.buildHockeySample = function () {
+		var teams = [
+			{ id: 'th-glaciers', name: 'Glacier Bay Ice', shortName: 'GBI', color: '#0e7490', coach: 'Coach Frost', contact: 'glaciers@example.org' },
+			{ id: 'th-timber', name: 'Timberline Wolves', shortName: 'TWO', color: '#b45309', coach: 'Coach Pine', contact: 'timber@example.org' },
+			{ id: 'th-summit', name: 'Summit Strikers', shortName: 'SST', color: '#be123c', coach: 'Coach Peak', contact: 'summit@example.org' },
+			{ id: 'th-harbor', name: 'Harbor City Chargers', shortName: 'HCC', color: '#4338ca', coach: 'Coach Tide', contact: 'harbor@example.org' }
+		];
+		var players = [
+			{ id: 'ph-01', teamId: 'th-glaciers', name: 'Nick Frost', number: 30, position: 'Goaltender', notes: '' },
+			{ id: 'ph-02', teamId: 'th-glaciers', name: 'Ilya Snow', number: 9, position: 'Forward', notes: 'Top scorer' },
+			{ id: 'ph-03', teamId: 'th-glaciers', name: 'Dan Cliff', number: 4, position: 'Defense', notes: '' },
+			{ id: 'ph-04', teamId: 'th-timber', name: 'Max Pine', number: 19, position: 'Forward', notes: 'Captain' },
+			{ id: 'ph-05', teamId: 'th-timber', name: 'Rob Oak', number: 31, position: 'Goaltender', notes: '' },
+			{ id: 'ph-06', teamId: 'th-summit', name: 'Eve Rock', number: 22, position: 'Defense', notes: '' },
+			{ id: 'ph-07', teamId: 'th-summit', name: 'Kai Slope', number: 11, position: 'Forward', notes: '' },
+			{ id: 'ph-08', teamId: 'th-harbor', name: 'Ana Wave', number: 8, position: 'Defense', notes: '' },
+			{ id: 'ph-09', teamId: 'th-harbor', name: 'Tom Shore', number: 27, position: 'Forward', notes: '' }
+		];
+		var matches = [
+			{ id: 'gh-01', homeTeamId: 'th-glaciers', awayTeamId: 'th-timber', date: isoOffset(-10), time: '19:00', venue: 'Ice Palace', round: 'Game 1', status: 'finished', homeScore: 4, awayScore: 3, decided: 'ot' },
+			{ id: 'gh-02', homeTeamId: 'th-summit', awayTeamId: 'th-harbor', date: isoOffset(-10), time: '20:30', venue: 'Ice Palace', round: 'Game 1', status: 'finished', homeScore: 2, awayScore: 1, decided: 'reg' },
+			{ id: 'gh-03', homeTeamId: 'th-timber', awayTeamId: 'th-summit', date: isoOffset(-3), time: '19:00', venue: 'Frozen Forum', round: 'Game 2', status: 'finished', homeScore: 5, awayScore: 4, decided: 'so' },
+			{ id: 'gh-04', homeTeamId: 'th-harbor', awayTeamId: 'th-glaciers', date: isoOffset(-3), time: '20:30', venue: 'Frozen Forum', round: 'Game 2', status: 'finished', homeScore: 2, awayScore: 4, decided: 'reg' },
+			{ id: 'gh-05', homeTeamId: 'th-glaciers', awayTeamId: 'th-summit', date: isoOffset(4), time: '19:00', venue: 'Ice Palace', round: 'Game 3', status: 'scheduled', homeScore: null, awayScore: null, decided: 'reg' },
+			{ id: 'gh-06', homeTeamId: 'th-timber', awayTeamId: 'th-harbor', date: isoOffset(4), time: '20:30', venue: 'Ice Palace', round: 'Game 3', status: 'scheduled', homeScore: null, awayScore: null, decided: 'reg' }
+		];
+		return {
+			version: 2,
+			tournament: {
+				name: 'Winter Classic', season: '2026 Winter', sport: 'hockey', format: 'league',
+				venues: ['Ice Palace', 'Frozen Forum'],
+				points: { win: 3, draw: 1, loss: 0 },
+				hockeyPoints: { win: 3, otWin: 2, otLoss: 1, loss: 0 }
+			},
+			teams: teams, players: players, matches: matches, bracket: null,
+			ui: { tab: 'overview' }
+		};
+	};
+})();
+</script>
+
+<script>
+/* ---------------------------------------------------------------
+   Loader: live HTML when served, embedded copy for file://, and an
+   inline-JS mode (?inlinejs=1) that reproduces CMS tokenisation.
+   --------------------------------------------------------------- */
+(function () {
+	var status = document.getElementById('th-status');
+	var container = document.getElementById('app-container');
+	var inlineMode = /[?&]inlinejs=1/.test(window.location.search);
+var EMBEDDED_HTML = '\u003c!-- html build 2026-11-08-1 -->\r\n\u003cdiv class=\"stm-app\" id=\"stm-app\">\r\n\t\u003cdiv class=\"stm-header\">\r\n\t\t\u003cdiv class=\"stm-head-left\">\r\n\t\t\t\u003ch1 class=\"stm-title\" id=\"stm-title\">Sports Tournament Manager\u003c/h1>\r\n\t\t\t\u003cspan class=\"stm-sport-badge\" id=\"stm-sport-badge\">Soccer\u003c/span>\r\n\t\t\t\u003cp class=\"stm-subtitle\" id=\"stm-subtitle\">League standings - 2026 Season\u003c/p>\r\n\t\t\u003c/div>\r\n\t\t\u003cdiv class=\"stm-head-right\">\r\n\t\t\t\u003cspan class=\"stm-save-chip\" id=\"stm-save-chip\" title=\"When this instance was last saved to the CMS record\">Not saved yet\u003c/span>\r\n\t\t\t\u003cspan class=\"stm-build-badge\" id=\"stm-build-badge\">tool build\u003c/span>\r\n\t\t\u003c/div>\r\n\t\u003c/div>\r\n\r\n\t\u003cdiv class=\"stm-readonly-banner\" id=\"stm-readonly-banner\" hidden>\r\n\t\tThis tournament is open in read-only mode. Ask an editor or admin to grant you edit access.\r\n\t\u003c/div>\r\n\r\n\t\u003cnav class=\"stm-tabs\" id=\"stm-tabs\" aria-label=\"Tournament sections\">\r\n\t\t\u003cbutton type=\"button\" class=\"stm-tab\" data-tab=\"overview\">Overview\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"stm-tab\" data-tab=\"teams\">Teams\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"stm-tab\" data-tab=\"players\">Players\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"stm-tab\" data-tab=\"matches\">Matches\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"stm-tab\" data-tab=\"standings\">Standings\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"stm-tab\" data-tab=\"bracket\">Bracket\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"stm-tab\" data-tab=\"settings\">Settings\u003c/button>\r\n\t\u003c/nav>\r\n\r\n\t\u003cmain class=\"stm-body\">\r\n\t\t\u003csection class=\"stm-pane\" id=\"pane-overview\">\u003c/section>\r\n\t\t\u003csection class=\"stm-pane\" id=\"pane-teams\">\u003c/section>\r\n\t\t\u003csection class=\"stm-pane\" id=\"pane-players\">\u003c/section>\r\n\t\t\u003csection class=\"stm-pane\" id=\"pane-matches\">\u003c/section>\r\n\t\t\u003csection class=\"stm-pane\" id=\"pane-standings\">\u003c/section>\r\n\t\t\u003csection class=\"stm-pane\" id=\"pane-bracket\">\u003c/section>\r\n\t\t\u003csection class=\"stm-pane\" id=\"pane-settings\">\u003c/section>\r\n\t\u003c/main>\r\n\r\n\t\u003cdiv class=\"stm-modal-overlay\" id=\"stm-modal-overlay\" hidden>\r\n\t\t\u003cdiv class=\"stm-modal\" id=\"stm-modal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"stm-modal-title\">\r\n\t\t\t\u003cdiv class=\"stm-modal-head\">\r\n\t\t\t\t\u003ch2 class=\"stm-modal-title\" id=\"stm-modal-title\">Title\u003c/h2>\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"stm-modal-close\" id=\"stm-modal-close\" aria-label=\"Close dialog\">&#215;\u003c/button>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cdiv class=\"stm-modal-body\" id=\"stm-modal-body\">\u003c/div>\r\n\t\t\t\u003cdiv class=\"stm-modal-foot\" id=\"stm-modal-foot\">\u003c/div>\r\n\t\t\u003c/div>\r\n\t\u003c/div>\r\n\r\n\t\u003cdiv class=\"stm-toast\" id=\"stm-toast\" role=\"status\" hidden>\u003c/div>\r\n\r\n\t\u003cnoscript>\r\n\t\t\u003cp class=\"stm-noscript\">This tournament manager needs JavaScript to run. Enable JavaScript in your browser.\u003c/p>\r\n\t\u003c/noscript>\r\n\u003c/div>\r\n';
+
+	function loadExternalJS() {
+		var script = document.createElement('script');
+		script.src = 'SportsTournamentManager.js';
+		script.onload = function () { status.textContent = 'ready (external js)'; };
+		script.onerror = function () { status.textContent = 'JS FAILED - check the console'; };
+		document.body.appendChild(script);
+	}
+
+	function loadInlineJS() {
+		window.fetch('SportsTournamentManager.js')
+			.then(function (response) {
+				if (!response.ok) { throw new Error('HTTP ' + response.status); }
+				return response.text();
+			})
+			.then(function (code) {
+				var script = document.createElement('script');
+				script.textContent = code;
+				document.body.appendChild(script);
+				status.textContent = 'ready (inline js)';
+			})
+			.catch(function () {
+				status.textContent = 'inline fetch failed - external js';
+				loadExternalJS();
+			});
+	}
+
+	function inject(html) {
+		container.innerHTML = html;
+		if (inlineMode) { loadInlineJS(); } else { loadExternalJS(); }
+	}
+
+	var fallbackTimer = window.setTimeout(function () {
+		inject(EMBEDDED_HTML);
+	}, 1200);
+
+	window.fetch('SportsTournamentManager.html')
+		.then(function (response) {
+			if (!response.ok) { throw new Error('HTTP ' + response.status); }
+			return response.text();
+		})
+		.then(function (html) {
+			window.clearTimeout(fallbackTimer);
+			inject(html);
+		})
+		.catch(function () { /* the fallback timer injects the embedded copy */ });
+})();
+</script>
+
+<script>
+/* ---------------------------------------------------------------
+   Harness controls.
+   --------------------------------------------------------------- */
+(function () {
+	function ready(fn) {
+		if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', fn); }
+		else { fn(); }
+	}
+
+	ready(function () {
+		var query = new URLSearchParams(window.location.search);
+		var userSelect = document.getElementById('th-user');
+		userSelect.value = query.get('role') || (localStorage.getItem('stm_harness_value_user') || 'u-admin');
+		tool._tools.selectUser(userSelect.value);
+
+		userSelect.addEventListener('change', function () {
+			tool._tools.selectUser(userSelect.value);
+		});
+
+		document.getElementById('th-readonly').addEventListener('change', function (event) {
+			tool._tools.setReadOnly(event.target.checked);
+		});
+
+		document.getElementById('th-sample-soccer').addEventListener('click', function () {
+			tool._tools.loadSample(window.buildSoccerSample());
+		});
+
+		document.getElementById('th-sample-hockey').addEventListener('click', function () {
+			tool._tools.loadSample(window.buildHockeySample());
+		});
+
+		document.getElementById('th-clear').addEventListener('click', function () {
+			tool._tools.loadSample(null);
+			tool._tools.runReadyAgain();
+		});
+
+		if (query.get('sample') === 'soccer') { tool._tools.loadSample(window.buildSoccerSample()); }
+		if (query.get('sample') === 'hockey') { tool._tools.loadSample(window.buildHockeySample()); }
+		if (query.get('sample') === '1') { tool._tools.loadSample(window.buildSoccerSample()); }
+
+		var desiredTab = query.get('tab');
+		if (desiredTab) {
+			var tabAttempts = 0;
+			var tabTimer = window.setInterval(function () {
+				tabAttempts += 1;
+				var tabButton = document.querySelector('.stm-tab[data-tab="' + desiredTab + '"]');
+				if (tabButton) {
+					tabButton.click();
+					window.clearInterval(tabTimer);
+				} else if (tabAttempts > 40) {
+					window.clearInterval(tabTimer);
+				}
+			}, 150);
+		}
+
+		function waitFor(selector, callback, attemptLimit) {
+			var attempts = 0;
+			var timer = window.setInterval(function () {
+				attempts += 1;
+				var found = document.querySelector(selector);
+				if (found) {
+					window.clearInterval(timer);
+					callback(found);
+				} else if (attempts > (attemptLimit || 40)) {
+					window.clearInterval(timer);
+				}
+			}, 150);
+		}
+
+		if (query.get('bracket') === '1') {
+			waitFor('.stm-tab[data-tab="bracket"]', function (tabButton) {
+				tabButton.click();
+				waitFor('[data-act="rebuild-bracket"]', function (generateButton) {
+					generateButton.click();
+					waitFor('[data-act="pick-bracket-winner"]', function (teamButton) {
+						teamButton.click();
+						window.thLog('QA: bracket generated and first winner picked');
+					});
+				});
+			});
+		}
+
+		if (query.get('matchmodal') === '1') {
+			waitFor('.stm-tab[data-tab="matches"]', function (tabButton) {
+				tabButton.click();
+				waitFor('[data-act="open-match-modal"]', function (editButton) {
+					editButton.click();
+					window.thLog('QA: match edit modal opened');
+				});
+			});
+		}
+
+		if (query.get('playermodal') === '1') {
+			waitFor('.stm-tab[data-tab="players"]', function (tabButton) {
+				tabButton.click();
+				waitFor('[data-act="open-player-modal"]', function (addButton) {
+					addButton.click();
+					window.thLog('QA: player add modal opened');
+				});
+			});
+		}
+	});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2100 @@
+<!--
+  =========================================================================
+  HOME PAGE - fragment for the BC Muslim Sports website (route /)
+  - Everything lives inside ONE parent div (class bc-page bc-home) - CMS embed
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .bc-home so nothing leaks into the CMS
+  - Exactly one h1 heading, semantic sections, mobile-first responsive layout
+  - Signature animation: a kickoff curtain of green panels lifts away from the
+    hero on load, and the scoreboard stats count up when scrolled into view
+  - SEO for the CMS page object (slug "home-page"): title "BC Muslim Sports
+    Association - Soccer, Hockey and Community Tournaments in Surrey BC",
+    description "BC Muslim Sports Association brings the ummah together one
+    game at a time. Soccer leagues across five divisions, hockey, and
+    community tournaments in Surrey, British Columbia."
+  =========================================================================
+-->
+<div class="bc-page bc-home">
+
+	<!-- =============================== HERO =============================== -->
+	<section class="bc-hm-hero">
+		<div class="bc-hm-hero-bg" aria-hidden="true">
+			<span class="bc-hm-hero-flood bc-hm-hero-flood-a" aria-hidden="true"></span>
+			<span class="bc-hm-hero-flood bc-hm-hero-flood-b" aria-hidden="true"></span>
+		</div>
+
+		<div class="bc-hm-wrap bc-hm-hero-grid">
+			<div class="bc-hm-hero-copy">
+				<p class="bc-hm-kicker bc-hm-kicker-light">
+					<span class="bc-hm-kicker-rule" aria-hidden="true"></span>
+					BC Muslim Sports Association &middot; Surrey, British Columbia
+				</p>
+				<h1 class="bc-hm-hero-title">
+					Bringing the ummah together,<br>
+					<span class="bc-hm-hero-title-accent">one game at a time</span>
+				</h1>
+				<p class="bc-hm-hero-lede">
+					British Columbia's Muslim sports organization. Soccer leagues across five divisions,
+					a hockey program, and community tournaments that welcome players of every age, from
+					U18 to Masters, and the families who cheer for them.
+				</p>
+				<div class="bc-hm-hero-actions">
+					<a class="bc-hm-btn bc-hm-btn-gold" data-ic-nav-href="/membership" href="/membership">
+						Join a league
+						<span class="bc-hm-btn-arrow" aria-hidden="true">&rarr;</span>
+					</a>
+					<a class="bc-hm-btn bc-hm-btn-ghost" data-ic-nav-href="/soccer" href="/soccer">
+						Meet the champions
+					</a>
+				</div>
+				<ul class="bc-hm-hero-trust">
+					<li><span class="bc-hm-check" aria-hidden="true"></span> Five soccer divisions</li>
+					<li><span class="bc-hm-check" aria-hidden="true"></span> U18 to Masters</li>
+					<li><span class="bc-hm-check" aria-hidden="true"></span> Family-friendly</li>
+				</ul>
+			</div>
+
+			<div class="bc-hm-hero-visual">
+				<div class="bc-hm-scoreboard" aria-label="Season at a glance">
+					<div class="bc-hm-scoreboard-head">
+						<span class="bc-hm-scoreboard-dot" aria-hidden="true"></span>
+						Season at a glance
+					</div>
+					<div class="bc-hm-scoreboard-rows">
+						<div class="bc-hm-stat">
+							<span class="bc-hm-stat-num" data-bc-count="5" data-bc-suffix="">5</span>
+							<span class="bc-hm-stat-label">Soccer divisions</span>
+						</div>
+						<div class="bc-hm-stat">
+							<span class="bc-hm-stat-num" data-bc-count="2" data-bc-suffix="">2</span>
+							<span class="bc-hm-stat-label">Sports under one roof</span>
+						</div>
+						<div class="bc-hm-stat">
+							<span class="bc-hm-stat-num" data-bc-count="15" data-bc-suffix="+">15+</span>
+							<span class="bc-hm-stat-label">Clubs on the pitch</span>
+						</div>
+						<div class="bc-hm-stat">
+							<span class="bc-hm-stat-num" data-bc-count="4" data-bc-suffix="">4</span>
+							<span class="bc-hm-stat-label">League honours per season</span>
+						</div>
+					</div>
+					<div class="bc-hm-scoreboard-foot">
+						<span>Prem 1 &middot; Prem 2 &middot; Prem 3</span>
+						<span>Masters &middot; U18 &middot; Hockey</span>
+					</div>
+				</div>
+
+				<div class="bc-hm-hero-badge bc-hm-hero-badge-top">
+					<strong>FANCA Over 42</strong>
+					<span>Back-to-back gold champions</span>
+				</div>
+				<div class="bc-hm-hero-badge bc-hm-hero-badge-bottom">
+					<strong>Mosque Cup</strong>
+					<span>Next tournament up</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="bc-hm-hero-curtain" aria-hidden="true">
+			<span></span><span></span><span></span>
+			<span></span><span></span><span></span>
+		</div>
+	</section>
+
+	<!-- ============================= MARQUEE ============================== -->
+	<div class="bc-hm-marquee" aria-hidden="true">
+		<div class="bc-hm-marquee-track">
+			<span>Premier Division 1</span><em></em>
+			<span>Premier Division 2</span><em></em>
+			<span>Premier Division 3</span><em></em>
+			<span>Masters Division</span><em></em>
+			<span>U18 Division</span><em></em>
+			<span>Hockey League</span><em></em>
+			<span>Mosque Cup</span><em></em>
+			<span>FANCA Over 42</span><em></em>
+			<span>Premier Division 1</span><em></em>
+			<span>Premier Division 2</span><em></em>
+			<span>Premier Division 3</span><em></em>
+			<span>Masters Division</span><em></em>
+			<span>U18 Division</span><em></em>
+			<span>Hockey League</span><em></em>
+			<span>Mosque Cup</span><em></em>
+			<span>FANCA Over 42</span><em></em>
+		</div>
+	</div>
+
+	<!-- ========================= PICK YOUR PITCH ========================= -->
+	<section class="bc-hm-pitches" id="bc-hm-pitches">
+		<div class="bc-hm-wrap">
+			<div class="bc-hm-sec-head bc-hm-reveal">
+				<p class="bc-hm-kicker"><span class="bc-hm-sec-num">01</span> Choose your pitch</p>
+				<h2 class="bc-hm-sec-title">Three ways to play with the association</h2>
+				<p class="bc-hm-sec-sub">Whether you are chasing a league title, lacing up skates, or playing for
+					a cup one weekend at a time, there is a place for you here.</p>
+			</div>
+
+			<div class="bc-hm-pitch-grid">
+				<a class="bc-hm-pitch bc-hm-pitch-soccer bc-hm-reveal" data-ic-nav-href="/soccer" href="/soccer">
+					<span class="bc-hm-pitch-top">
+						<span class="bc-hm-pitch-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m12 8.4 3.2 2.3-1.2 3.7H10l-1.2-3.7z" /></svg>
+						</span>
+						<span class="bc-hm-pitch-chip">Flagship</span>
+					</span>
+					<strong class="bc-hm-pitch-name">Soccer leagues</strong>
+					<span class="bc-hm-pitch-desc">Five divisions, regular season and playoffs, league honours
+						for outstanding players, and promotion for champions.</span>
+					<span class="bc-hm-pitch-tags">
+						<em>Prem 1</em><em>Prem 2</em><em>Prem 3</em><em>Masters</em><em>U18</em>
+					</span>
+					<span class="bc-hm-pitch-go">Explore the leagues <span aria-hidden="true">&rarr;</span></span>
+				</a>
+
+				<a class="bc-hm-pitch bc-hm-pitch-hockey bc-hm-reveal" data-ic-nav-href="/hockey" href="/hockey">
+					<span class="bc-hm-pitch-top">
+						<span class="bc-hm-pitch-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><path d="M4 12h16" /><circle cx="9" cy="12" r="2.6" /><circle cx="15" cy="12" r="2.6" /><path d="m7 12-3.4-3M7 12 3.6 15M17 12l3.4-3M17 12l3.4 3" /></svg>
+						</span>
+						<span class="bc-hm-pitch-chip bc-hm-pitch-chip-cool">On the ice</span>
+					</span>
+					<strong class="bc-hm-pitch-name">Hockey league</strong>
+					<span class="bc-hm-pitch-desc">A hockey program running alongside our soccer leagues. All
+						skill levels welcome, from first-timers to rink veterans.</span>
+					<span class="bc-hm-pitch-tags">
+						<em>All skill levels</em><em>Team and solo registration</em>
+					</span>
+					<span class="bc-hm-pitch-go">Lace up with us <span aria-hidden="true">&rarr;</span></span>
+				</a>
+
+				<a class="bc-hm-pitch bc-hm-pitch-cups bc-hm-reveal" data-ic-nav-href="/tournaments" href="/tournaments">
+					<span class="bc-hm-pitch-top">
+						<span class="bc-hm-pitch-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><path d="M7 3.5h10v4a5 5 0 0 1-10 0z" /><path d="M12 12.5v3" /><path d="M8 18.5h8M9.6 15.5 7.4 18M14.4 15.5l2.2 2.5" /><path d="M7.6 6H5.2a2.4 2.4 0 0 0 2.6 3.4M16.4 6h2.4a2.4 2.4 0 0 1-2.6 3.4" /></svg>
+						</span>
+						<span class="bc-hm-pitch-chip bc-hm-pitch-chip-gold">Cup events</span>
+					</span>
+					<strong class="bc-hm-pitch-name">Tournaments</strong>
+					<span class="bc-hm-pitch-desc">Mosque Cup, FANCA Over 42 and more - the community events
+						that mark our seasons and bring families together.</span>
+					<span class="bc-hm-pitch-tags">
+						<em>Mosque Cup</em><em>FANCA Over 42</em>
+					</span>
+					<span class="bc-hm-pitch-go">See the cups <span aria-hidden="true">&rarr;</span></span>
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ======================= LAST SEASON'S FINALS ======================= -->
+	<section class="bc-hm-champions" id="bc-hm-champions">
+		<div class="bc-hm-wrap">
+			<div class="bc-hm-sec-head bc-hm-reveal">
+				<p class="bc-hm-kicker"><span class="bc-hm-sec-num">02</span> Champions wall</p>
+				<h2 class="bc-hm-sec-title">Last season's finals</h2>
+				<p class="bc-hm-sec-sub">An incredible season across every division, decided at Hjorth Road Park
+					in Surrey. Congratulations to every champion, runner-up and award winner.</p>
+			</div>
+
+			<div class="bc-hm-final-grid">
+				<article class="bc-hm-final bc-hm-reveal">
+					<div class="bc-hm-final-head">
+						<span class="bc-hm-final-div">Premier Division 1</span>
+						<span class="bc-hm-final-kind">Playoff final</span>
+					</div>
+					<div class="bc-hm-final-match">
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-green" aria-hidden="true">SF</span>
+							<span class="bc-hm-final-team-name">Sabeto FC</span>
+							<strong class="bc-hm-final-result">Champions</strong>
+						</div>
+						<span class="bc-hm-final-vs">vs</span>
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-plain" aria-hidden="true">LA</span>
+							<span class="bc-hm-final-team-name">LAFC</span>
+							<strong class="bc-hm-final-result bc-hm-final-result-lost">Runners-up</strong>
+						</div>
+					</div>
+					<ul class="bc-hm-final-notes">
+						<li>Regular season: Eagles FC</li>
+						<li>Golden Glove: Jayden Mahraj (Sabeto FC)</li>
+						<li>Best Coach/Manager: Zoheb Nasim (Sabeto FC)</li>
+						<li>Best Young Player: Rafi (LAFC)</li>
+					</ul>
+				</article>
+
+				<article class="bc-hm-final bc-hm-reveal">
+					<div class="bc-hm-final-head">
+						<span class="bc-hm-final-div">Premier Division 2</span>
+						<span class="bc-hm-final-kind">Playoff final</span>
+					</div>
+					<div class="bc-hm-final-match">
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-green" aria-hidden="true">RS</span>
+							<span class="bc-hm-final-team-name">Rain or Shine All Stars</span>
+							<strong class="bc-hm-final-result">Champions</strong>
+						</div>
+						<span class="bc-hm-final-vs">vs</span>
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-plain" aria-hidden="true">WF</span>
+							<span class="bc-hm-final-team-name">White Falcons</span>
+							<strong class="bc-hm-final-result bc-hm-final-result-lost">Runners-up</strong>
+						</div>
+					</div>
+					<ul class="bc-hm-final-notes">
+						<li>Rain or Shine also won the Prem 3 regular season before promotion</li>
+						<li>Golden Glove: Angad Gill (Rain or Shine All Stars)</li>
+						<li>Best Coach/Manager: Ismail Kandawala (Rain or Shine All Stars)</li>
+						<li>Best Young Player: Asim Mahmoud (White Falcons)</li>
+					</ul>
+				</article>
+
+				<article class="bc-hm-final bc-hm-reveal">
+					<div class="bc-hm-final-head">
+						<span class="bc-hm-final-div">Division 1b</span>
+						<span class="bc-hm-final-kind">Playoff final</span>
+					</div>
+					<div class="bc-hm-final-match">
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-green" aria-hidden="true">SY</span>
+							<span class="bc-hm-final-team-name">Syria FC</span>
+							<strong class="bc-hm-final-result">Champions</strong>
+						</div>
+						<span class="bc-hm-final-vs">vs</span>
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-plain" aria-hidden="true">MF</span>
+							<span class="bc-hm-final-team-name">Muslim Food Bank FC</span>
+							<strong class="bc-hm-final-result bc-hm-final-result-lost">Runners-up</strong>
+						</div>
+					</div>
+					<ul class="bc-hm-final-notes">
+						<li>Syria FC also won the Prem 2 regular season - a double</li>
+						<li>Golden Glove: Omran Haji (Syria FC)</li>
+						<li>Best Coach/Manager: Othman</li>
+						<li>Best Young Player: Jay (Muslim Food Bank FC)</li>
+					</ul>
+				</article>
+
+				<article class="bc-hm-final bc-hm-reveal">
+					<div class="bc-hm-final-head">
+						<span class="bc-hm-final-div">Premier Division 3A</span>
+						<span class="bc-hm-final-kind">Playoff final</span>
+					</div>
+					<div class="bc-hm-final-match">
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-green" aria-hidden="true">SJ</span>
+							<span class="bc-hm-final-team-name">Surrey Jamea FC</span>
+							<strong class="bc-hm-final-result">Champions</strong>
+						</div>
+						<span class="bc-hm-final-vs">vs</span>
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-plain" aria-hidden="true">BD</span>
+							<span class="bc-hm-final-team-name">BFDM FC</span>
+							<strong class="bc-hm-final-result bc-hm-final-result-lost">Runners-up</strong>
+						</div>
+					</div>
+					<ul class="bc-hm-final-notes">
+						<li>Surrey Jamea FC promoted to Prem 2</li>
+						<li>Golden Glove: Kentin (Surrey Jamea FC)</li>
+						<li>Best Coach/Manager: Omer Salih</li>
+						<li>Best Young Player: Adnan (BFDM FC)</li>
+					</ul>
+				</article>
+
+				<article class="bc-hm-final bc-hm-reveal">
+					<div class="bc-hm-final-head">
+						<span class="bc-hm-final-div">Premier Division 3B</span>
+						<span class="bc-hm-final-kind">Playoff final</span>
+					</div>
+					<div class="bc-hm-final-match">
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-green" aria-hidden="true">DK</span>
+							<span class="bc-hm-final-team-name">Dark Knights</span>
+							<strong class="bc-hm-final-result">Champions</strong>
+						</div>
+						<span class="bc-hm-final-vs">vs</span>
+						<div class="bc-hm-final-team">
+							<span class="bc-hm-crest-mini bc-hm-crest-plain" aria-hidden="true">CC</span>
+							<span class="bc-hm-final-team-name">Centre Canada</span>
+							<strong class="bc-hm-final-result bc-hm-final-result-lost">Runners-up</strong>
+						</div>
+					</div>
+					<ul class="bc-hm-final-notes">
+						<li>Golden Glove: Shalfraz (Dark Knights)</li>
+						<li>Best Coach/Manager: Aqeel Khan (Dark Knights)</li>
+						<li>Best Young Player: Furkan Albayraktar (Centre Canada)</li>
+						<li>Team MVPs: Faheem Dean and Maxine Nereyabagabo</li>
+					</ul>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================= LEAGUE HONOURS ========================= -->
+	<section class="bc-hm-honours">
+		<div class="bc-hm-wrap">
+			<div class="bc-hm-sec-head bc-hm-reveal">
+				<p class="bc-hm-kicker"><span class="bc-hm-sec-num">03</span> League honours</p>
+				<h2 class="bc-hm-sec-title">Every season, the league honours its best</h2>
+				<p class="bc-hm-sec-sub">Titles are won by teams, but these awards celebrate the players and
+					leaders who make the league special.</p>
+			</div>
+
+			<div class="bc-hm-honour-grid">
+				<article class="bc-hm-honour bc-hm-reveal">
+					<span class="bc-hm-honour-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M4 12V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6" /><path d="M2.8 12h18.4v2.2a8 8 0 0 1-4.9 7.3l-1.7.7-2.6-3.4-2.6 3.4-1.7-.7A8 8 0 0 1 2.8 14.2z" /></svg>
+					</span>
+					<h3 class="bc-hm-honour-title">Golden Glove</h3>
+					<p class="bc-hm-honour-text">The season's outstanding goalkeeper - the last line that wins
+						finals.</p>
+				</article>
+
+				<article class="bc-hm-honour bc-hm-reveal">
+					<span class="bc-hm-honour-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M3 11.4a3.6 3.6 0 0 1 6.2-2.5A5 5 0 0 1 17.6 10a3.6 3.6 0 0 1 .4 7.2H5.4A2.4 2.4 0 0 1 3 14.8z" /></svg>
+					</span>
+					<h3 class="bc-hm-honour-title">Best Coach / Manager</h3>
+					<p class="bc-hm-honour-text">The leader who built the squad, kept the spirit, and got the
+						best out of the team all season.</p>
+				</article>
+
+				<article class="bc-hm-honour bc-hm-reveal">
+					<span class="bc-hm-honour-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 3.2v14.4" /><path d="m8.8 6.4-1.6 5.2 6.4 1-2.4 4" /><path d="m15.2 6.4 1.6 5.2-6.4 1 2.4 4" /></svg>
+					</span>
+					<h3 class="bc-hm-honour-title">Best Young Player</h3>
+					<p class="bc-hm-honour-text">The rising star of the season - the next generation keeping the
+						league growing.</p>
+				</article>
+
+				<article class="bc-hm-honour bc-hm-reveal">
+					<span class="bc-hm-honour-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 15.4a5.4 5.4 0 1 0 0-10.8 5.4 5.4 0 0 0 0 10.8Z" /><path d="m8.2 13.6-3.4 6.6 7.2-3.4 7.2 3.4-3.4-6.6" /></svg>
+					</span>
+					<h3 class="bc-hm-honour-title">Team MVP</h3>
+					<p class="bc-hm-honour-text">Voted by each side as its most valuable player - one name from
+						each team every final.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= OUR PITCH ============================= -->
+	<section class="bc-hm-pitch-spot">
+		<div class="bc-hm-wrap bc-hm-pitch-spot-grid">
+			<div class="bc-hm-pitch-spot-copy bc-hm-reveal">
+				<p class="bc-hm-kicker"><span class="bc-hm-sec-num">04</span> Our pitch</p>
+				<h2 class="bc-hm-sec-title">Finals day at Hjorth Road Park</h2>
+				<p class="bc-hm-pitch-spot-text">
+					Our seasons are decided at Hjorth Road Park in Surrey, British Columbia - an incredible day
+					of action and a wonderful atmosphere when every division plays for its cup.
+				</p>
+				<ul class="bc-hm-pitch-spot-list">
+					<li><span class="bc-hm-check" aria-hidden="true"></span> Home of the playoff finals</li>
+					<li><span class="bc-hm-check" aria-hidden="true"></span> Turf pitch in Surrey, BC</li>
+					<li><span class="bc-hm-check" aria-hidden="true"></span> Fans, families and final-day vibes</li>
+				</ul>
+				<a class="bc-hm-btn bc-hm-btn-dark" data-ic-nav-href="/contact-us" href="/contact-us">
+					Ask about match days
+					<span class="bc-hm-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+			</div>
+
+			<div class="bc-hm-pitch-spot-visual bc-hm-reveal" aria-hidden="true">
+				<div class="bc-hm-mini-pitch">
+					<span class="bc-hm-mini-pitch-line bc-hm-mini-pitch-mid"></span>
+					<span class="bc-hm-mini-pitch-line bc-hm-mini-pitch-circle"></span>
+					<span class="bc-hm-mini-pitch-line bc-hm-mini-pitch-box-a"></span>
+					<span class="bc-hm-mini-pitch-line bc-hm-mini-pitch-box-b"></span>
+					<span class="bc-hm-mini-pitch-spot"></span>
+				</div>
+				<div class="bc-hm-pitch-spot-card">
+					<strong>Hjorth Road Park</strong>
+					<span>Surrey, British Columbia</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ WHY BCMS ============================ -->
+	<section class="bc-hm-why">
+		<div class="bc-hm-wrap">
+			<div class="bc-hm-sec-head bc-hm-reveal">
+				<p class="bc-hm-kicker"><span class="bc-hm-sec-num">05</span> Why play with us</p>
+				<h2 class="bc-hm-sec-title">More than a league, a community</h2>
+				<p class="bc-hm-sec-sub">The league gets more competitive each year, but it stays true to what
+					brought it together in the first place.</p>
+			</div>
+
+			<div class="bc-hm-why-grid">
+				<article class="bc-hm-why-card bc-hm-reveal">
+					<span class="bc-hm-why-num">01</span>
+					<h3 class="bc-hm-why-title">One ummah</h3>
+					<p class="bc-hm-why-text">Teams compete hard on the pitch and stand together off it. The
+						brotherhood between clubs is the league's real trophy.</p>
+				</article>
+
+				<article class="bc-hm-why-card bc-hm-reveal">
+					<span class="bc-hm-why-num">02</span>
+					<h3 class="bc-hm-why-title">Every age group</h3>
+					<p class="bc-hm-why-text">From the U18 rising stars to the Masters who still have game,
+						there is a division for every stage of life.</p>
+				</article>
+
+				<article class="bc-hm-why-card bc-hm-reveal">
+					<span class="bc-hm-why-num">03</span>
+					<h3 class="bc-hm-why-title">Family atmosphere</h3>
+					<p class="bc-hm-why-text">Match days are for everyone - players, parents, kids and fans.
+						Finals day feels like a community gathering.</p>
+				</article>
+
+				<article class="bc-hm-why-card bc-hm-reveal">
+					<span class="bc-hm-why-num">04</span>
+					<h3 class="bc-hm-why-title">Compete with respect</h3>
+					<p class="bc-hm-why-text">Tough football, fair play, and recognition for the season's best
+						through our league honours.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= FANCA BAND ============================= -->
+	<section class="bc-hm-fanca">
+		<div class="bc-hm-wrap bc-hm-fanca-inner bc-hm-reveal">
+			<div class="bc-hm-fanca-copy">
+				<p class="bc-hm-kicker bc-hm-kicker-light">Proud moment</p>
+				<h2 class="bc-hm-fanca-title">FANCA Over 42 Champions - Team Canada</h2>
+				<p class="bc-hm-fanca-text">
+					Congratulations to our over 42 division team for bringing home the gold by clinching their
+					second back-to-back championship.
+				</p>
+			</div>
+			<div class="bc-hm-fanca-medal" aria-hidden="true">
+				<svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7" /><path d="M9 6.5 12 2l3 4.5" /><path d="m9 6.5 2.3 2.2L12 8l.7.7L15 6.5" /><path d="M12 11.4v2.6l2 1.2" /></svg>
+				<span>Gold &times;2</span>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ MOSQUE CUP ============================ -->
+	<section class="bc-hm-mosque">
+		<div class="bc-hm-wrap bc-hm-mosque-grid">
+			<div class="bc-hm-mosque-visual bc-hm-reveal" aria-hidden="true">
+				<div class="bc-hm-cup-card">
+					<svg viewBox="0 0 24 24"><path d="M7 3.5h10v4a5 5 0 0 1-10 0z" /><path d="M12 12.5v3" /><path d="M8 18.5h8M9.6 15.5 7.4 18M14.4 15.5l2.2 2.5" /><path d="M7.6 6H5.2a2.4 2.4 0 0 0 2.6 3.4M16.4 6h2.4a2.4 2.4 0 0 1-2.6 3.4" /></svg>
+					<span class="bc-hm-cup-card-glint"></span>
+				</div>
+			</div>
+			<div class="bc-hm-mosque-copy bc-hm-reveal">
+				<p class="bc-hm-kicker"><span class="bc-hm-sec-num">06</span> Next up</p>
+				<h2 class="bc-hm-sec-title">The Mosque Cup is coming</h2>
+				<p class="bc-hm-mosque-text">
+					Our league keeps getting more competitive each year, and more tournaments are always on the
+					way - with the next one being the Mosque Cup. Teams, managers and fans, watch this space.
+				</p>
+				<div class="bc-hm-mosque-actions">
+					<a class="bc-hm-btn bc-hm-btn-gold" data-ic-nav-href="/tournaments" href="/tournaments">
+						See the tournaments
+						<span class="bc-hm-btn-arrow" aria-hidden="true">&rarr;</span>
+					</a>
+					<a class="bc-hm-text-link" data-ic-nav-href="/membership" href="/membership">Register your team &rarr;</a>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== CTA BAND ============================== -->
+	<section class="bc-hm-cta">
+		<div class="bc-hm-wrap bc-hm-cta-inner bc-hm-reveal">
+			<h2 class="bc-hm-cta-title">Ready for kickoff?</h2>
+			<p class="bc-hm-cta-text">Join a league, register a team, or come support the ummah from the
+				stands. The next season starts with you.</p>
+			<div class="bc-hm-cta-actions">
+				<a class="bc-hm-btn bc-hm-btn-gold" data-ic-nav-href="/membership" href="/membership">
+					Join a league
+					<span class="bc-hm-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+				<a class="bc-hm-btn bc-hm-btn-ghost" data-ic-nav-href="/contact-us" href="/contact-us">
+					Contact the association
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- =============================== FAQ =============================== -->
+	<section class="bc-hm-faq">
+		<div class="bc-hm-wrap bc-hm-faq-wrap">
+			<div class="bc-hm-sec-head bc-hm-reveal">
+				<p class="bc-hm-kicker">Questions, answered</p>
+				<h2 class="bc-hm-sec-title">Before you ask us</h2>
+			</div>
+
+			<div class="bc-hm-faq-list bc-hm-reveal">
+				<details class="bc-hm-faq-item">
+					<summary class="bc-hm-faq-question">Who can join the association?</summary>
+					<p class="bc-hm-faq-answer">Players of all ages, from our U18 division up to the Masters.
+						Teams and individual players are both welcome to register.</p>
+				</details>
+				<details class="bc-hm-faq-item">
+					<summary class="bc-hm-faq-question">Where do the leagues play?</summary>
+					<p class="bc-hm-faq-answer">Our seasons and finals are played at Hjorth Road Park in
+						Surrey, British Columbia.</p>
+				</details>
+				<details class="bc-hm-faq-item">
+					<summary class="bc-hm-faq-question">How do I register for a season?</summary>
+					<p class="bc-hm-faq-answer">Fill in the membership form and the association will get back
+						to you with division placement and season details.</p>
+				</details>
+				<details class="bc-hm-faq-item">
+					<summary class="bc-hm-faq-question">Is there hockey too?</summary>
+					<p class="bc-hm-faq-answer">Yes. Our hockey program runs alongside the soccer leagues and
+						welcomes every skill level. See the hockey page for more.</p>
+				</details>
+				<details class="bc-hm-faq-item">
+					<summary class="bc-hm-faq-question">Can I volunteer, coach or manage a team?</summary>
+					<p class="bc-hm-faq-answer">Absolutely - our coaches and managers are the heart of the
+						league. Reach out through the contact page and we will put you in touch with a team.</p>
+				</details>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ DONATE BAND ============================ -->
+	<section class="bc-hm-donate">
+		<div class="bc-hm-wrap bc-hm-donate-inner bc-hm-reveal">
+			<div class="bc-hm-donate-copy">
+				<p class="bc-hm-kicker bc-hm-kicker-light">Support the ummah</p>
+				<h2 class="bc-hm-donate-title">Donate to BC's Muslim sports organization</h2>
+				<p class="bc-hm-donate-text">Your support keeps leagues running, pitches booked, and cups
+					lifted. Every contribution helps the next generation play.</p>
+			</div>
+			<a class="bc-hm-btn bc-hm-btn-gold"
+				href="https://checkout.square.site/merchant/MLFDDG71DY34E/checkout/YOE7QRQ6O7F5YJDEXM67O2YE?src=embed"
+				target="_blank" rel="noopener">
+				Donate now
+				<span class="bc-hm-btn-arrow" aria-hidden="true">&rarr;</span>
+			</a>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.bc-home {
+			--bc-green: #0e3a2c;
+			--bc-green-deep: #08231a;
+			--bc-green-2: #124a38;
+			--bc-emerald: #1e9e6a;
+			--bc-gold: #d9a441;
+			--bc-gold-deep: #b07d1e;
+			--bc-gold-soft: #f0d69a;
+			--bc-cream: #f6f3ea;
+			--bc-paper: #fdfbf5;
+			--bc-ink: #15211c;
+			--bc-muted: #5c6b63;
+			--bc-line: #e4decd;
+			position: relative;
+			width: 100%;
+			background: var(--bc-paper);
+			color: var(--bc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.bc-home,
+		.bc-home *,
+		.bc-home *::before,
+		.bc-home *::after {
+			box-sizing: border-box;
+		}
+
+		.bc-home img {
+			max-width: 100%;
+		}
+
+		.bc-hm-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.bc-hm-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.bc-hm-kicker-rule {
+			display: inline-block;
+			width: 34px;
+			height: 2px;
+			background: var(--bc-gold);
+			flex: 0 0 auto;
+		}
+
+		.bc-hm-kicker-light {
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-hm-sec-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 30px;
+			height: 22px;
+			padding: 0 8px;
+			background: var(--bc-green);
+			color: var(--bc-gold-soft);
+			border-radius: 6px;
+			font-size: 11.5px;
+			letter-spacing: 0.1em;
+		}
+
+		.bc-hm-sec-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			line-height: 1.12;
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: var(--bc-ink);
+		}
+
+		.bc-hm-sec-sub {
+			margin: 12px 0 0;
+			max-width: 660px;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+		}
+
+		.bc-hm-sec-head {
+			margin-bottom: 36px;
+		}
+
+		.bc-hm-check {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			background: var(--bc-emerald);
+			flex: 0 0 auto;
+			position: relative;
+		}
+
+		.bc-hm-check::after {
+			content: '';
+			width: 8px;
+			height: 4px;
+			border-left: 2px solid #fff;
+			border-bottom: 2px solid #fff;
+			transform: rotate(-45deg) translate(1px, -1px);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.bc-hm-hero {
+			position: relative;
+			padding: 84px 0 96px;
+			color: #e9f2ec;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.bc-hm-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			background:
+				radial-gradient(120% 110% at 18% 0%, rgba(30, 158, 106, 0.22), transparent 52%),
+				radial-gradient(80% 80% at 100% 100%, rgba(217, 164, 65, 0.14), transparent 55%),
+				linear-gradient(155deg, #0e3a2c 0%, #08231a 62%, #061b14 100%);
+		}
+
+		.bc-hm-hero-bg::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background:
+				repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 64px, transparent 64px 128px),
+				repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.014) 0 2px, transparent 2px 44px);
+		}
+
+		.bc-hm-hero-flood {
+			position: absolute;
+			top: -140px;
+			width: 360px;
+			height: 320px;
+			background: conic-gradient(from 180deg at 50% 0%, rgba(240, 214, 154, 0.16), transparent 60%);
+			filter: blur(2px);
+			pointer-events: none;
+		}
+
+		.bc-hm-hero-flood-a {
+			left: -60px;
+			transform: rotate(-14deg);
+		}
+
+		.bc-hm-hero-flood-b {
+			right: -60px;
+			transform: rotate(14deg);
+		}
+
+		.bc-hm-hero-grid {
+			display: grid;
+			grid-template-columns: 1.05fr 0.95fr;
+			align-items: center;
+			gap: 48px;
+		}
+
+		.bc-hm-hero-title {
+			margin: 0;
+			font-weight: 800;
+			font-size: clamp(34px, 4.6vw, 58px);
+			line-height: 1.06;
+			letter-spacing: -0.02em;
+			color: #fff;
+			text-wrap: balance;
+		}
+
+		.bc-hm-hero-title-accent {
+			color: var(--bc-gold-soft);
+			font-family: Georgia, 'Times New Roman', serif;
+			font-style: italic;
+			font-weight: 700;
+		}
+
+		.bc-hm-hero-lede {
+			margin: 20px 0 0;
+			max-width: 550px;
+			font-size: 17px;
+			color: #cfe0d5;
+		}
+
+		.bc-hm-hero-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 14px;
+			margin-top: 30px;
+		}
+
+		.bc-hm-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 26px;
+			border-radius: 10px;
+			font-weight: 800;
+			font-size: 14px;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+		}
+
+		.bc-hm-btn-gold {
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			box-shadow: 0 14px 26px -14px rgba(217, 164, 65, 0.85);
+		}
+
+		.bc-hm-btn-gold:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 18px 30px -14px rgba(217, 164, 65, 0.95);
+		}
+
+		.bc-hm-btn-ghost {
+			border: 1.5px solid rgba(240, 214, 154, 0.55);
+			color: #f0d69a;
+		}
+
+		.bc-hm-btn-ghost:hover {
+			border-color: var(--bc-gold-soft);
+			background: rgba(240, 214, 154, 0.08);
+			transform: translateY(-2px);
+		}
+
+		.bc-hm-btn-dark {
+			background: var(--bc-green-deep);
+			color: #fff;
+		}
+
+		.bc-hm-btn-dark:hover {
+			transform: translateY(-2px);
+			background: #061b14;
+		}
+
+		.bc-hm-btn-arrow {
+			transition: transform 0.2s ease;
+		}
+
+		.bc-hm-btn:hover .bc-hm-btn-arrow {
+			transform: translateX(4px);
+		}
+
+		.bc-hm-text-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			font-weight: 800;
+			font-size: 14.5px;
+			letter-spacing: 0.04em;
+			color: var(--bc-gold-deep);
+			text-decoration: none;
+		}
+
+		.bc-hm-text-link:hover {
+			color: var(--bc-green);
+		}
+
+		.bc-hm-hero-trust {
+			list-style: none;
+			margin: 30px 0 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px 22px;
+			font-size: 14.5px;
+			color: #cfe0d5;
+		}
+
+		.bc-hm-hero-trust li {
+			display: inline-flex;
+			align-items: center;
+			gap: 9px;
+		}
+
+		/* -------- scoreboard -------- */
+		.bc-hm-hero-visual {
+			position: relative;
+		}
+
+		.bc-hm-scoreboard {
+			position: relative;
+			background: #102c22;
+			border: 1px solid rgba(240, 214, 154, 0.35);
+			border-radius: 16px;
+			overflow: hidden;
+			box-shadow: 0 40px 70px -30px rgba(0, 0, 0, 0.65);
+		}
+
+		.bc-hm-scoreboard::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 3px;
+			background: linear-gradient(90deg, var(--bc-gold), var(--bc-gold-soft), var(--bc-gold));
+		}
+
+		.bc-hm-scoreboard-head {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 20px;
+			font-size: 13px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--bc-gold-soft);
+			background: rgba(0, 0, 0, 0.25);
+		}
+
+		.bc-hm-scoreboard-dot {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: var(--bc-emerald);
+			box-shadow: 0 0 10px var(--bc-emerald);
+		}
+
+		.bc-hm-scoreboard-rows {
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 1px;
+			background: rgba(240, 214, 154, 0.14);
+		}
+
+		.bc-hm-stat {
+			display: flex;
+			flex-direction: column;
+			gap: 2px;
+			padding: 20px 20px 18px;
+			background: #102c22;
+		}
+
+		.bc-hm-stat-num {
+			font-size: 38px;
+			font-weight: 800;
+			line-height: 1;
+			letter-spacing: -0.02em;
+			color: var(--bc-gold-soft);
+			font-variant-numeric: tabular-nums;
+		}
+
+		.bc-hm-stat-label {
+			font-size: 12.5px;
+			letter-spacing: 0.05em;
+			color: #a9c2b4;
+		}
+
+		.bc-hm-scoreboard-foot {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: space-between;
+			gap: 6px 14px;
+			padding: 12px 20px;
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: #7fa390;
+		}
+
+		.bc-hm-hero-badge {
+			position: absolute;
+			display: flex;
+			flex-direction: column;
+			background: var(--bc-paper);
+			color: var(--bc-ink);
+			padding: 12px 18px;
+			border-radius: 12px;
+			box-shadow: 0 20px 40px -18px rgba(0, 0, 0, 0.6);
+			border-left: 3px solid var(--bc-gold);
+		}
+
+		.bc-hm-hero-badge strong {
+			font-size: 16px;
+			line-height: 1.2;
+			font-weight: 800;
+		}
+
+		.bc-hm-hero-badge span {
+			font-size: 12.5px;
+			color: var(--bc-muted);
+		}
+
+		.bc-hm-hero-badge-top {
+			top: 22px;
+			left: -16px;
+			animation: bc-hm-badge-float 5.5s ease-in-out infinite;
+		}
+
+		.bc-hm-hero-badge-bottom {
+			bottom: 26px;
+			right: -12px;
+			animation: bc-hm-badge-float 6.5s ease-in-out 0.8s infinite;
+		}
+
+		@keyframes bc-hm-badge-float {
+			0%, 100% { transform: translateY(0); }
+			50% { transform: translateY(-8px); }
+		}
+
+		/* ------- kickoff curtain that lifts away on load ------- */
+		.bc-hm-hero-curtain {
+			position: absolute;
+			inset: 0;
+			z-index: 2;
+			display: flex;
+			pointer-events: none;
+		}
+
+		.bc-hm-hero-curtain span {
+			flex: 1 1 0;
+			background: linear-gradient(180deg, #14513b, var(--bc-green-deep));
+			border-right: 1px solid rgba(240, 214, 154, 0.16);
+			transform-origin: top;
+			animation: bc-hm-curtain-lift 0.6s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+			animation-delay: calc(0.06s * var(--bc-panel-index, 0));
+		}
+
+		.bc-hm-hero-curtain span:nth-child(1) { --bc-panel-index: 5; }
+		.bc-hm-hero-curtain span:nth-child(2) { --bc-panel-index: 4; }
+		.bc-hm-hero-curtain span:nth-child(3) { --bc-panel-index: 3; }
+		.bc-hm-hero-curtain span:nth-child(4) { --bc-panel-index: 2; }
+		.bc-hm-hero-curtain span:nth-child(5) { --bc-panel-index: 1; }
+		.bc-hm-hero-curtain span:nth-child(6) { --bc-panel-index: 0; }
+
+		@keyframes bc-hm-curtain-lift {
+			to { transform: scaleY(0); opacity: 0; }
+		}
+
+		/* ----------------------------- marquee ----------------------------- */
+		.bc-hm-marquee {
+			position: relative;
+			background: linear-gradient(90deg, #f4efdf 0%, #fbf8ee 50%, #f1ead6 100%);
+			border-top: 1px solid var(--bc-line);
+			border-bottom: 1px solid var(--bc-line);
+			overflow: hidden;
+			padding: 14px 0;
+		}
+
+		.bc-hm-marquee-track {
+			display: flex;
+			align-items: center;
+			gap: 26px;
+			width: max-content;
+			animation: bc-hm-marquee-scroll 30s linear infinite;
+		}
+
+		.bc-hm-marquee-track span {
+			font-size: 17px;
+			font-weight: 800;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: var(--bc-green);
+			white-space: nowrap;
+		}
+
+		.bc-hm-marquee-track em {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: var(--bc-gold);
+			flex: 0 0 auto;
+		}
+
+		@keyframes bc-hm-marquee-scroll {
+			from { transform: translateX(0); }
+			to { transform: translateX(-50%); }
+		}
+
+		/* ---------------------------- pitches ---------------------------- */
+		.bc-hm-pitches {
+			padding: 88px 0 70px;
+		}
+
+		.bc-hm-pitch-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 22px;
+		}
+
+		.bc-hm-pitch {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			text-decoration: none;
+			color: var(--bc-ink);
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 26px;
+			position: relative;
+			overflow: hidden;
+			transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+		}
+
+		.bc-hm-pitch::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 4px;
+			background: var(--bc-emerald);
+			opacity: 0;
+			transition: opacity 0.25s ease;
+		}
+
+		.bc-hm-pitch-soccer::before { background: var(--bc-emerald); }
+		.bc-hm-pitch-hockey::before { background: #4f8fc9; }
+		.bc-hm-pitch-cups::before { background: var(--bc-gold); }
+
+		.bc-hm-pitch:hover {
+			transform: translateY(-6px);
+			border-color: #d8cfb6;
+			box-shadow: 0 26px 44px -24px rgba(8, 35, 26, 0.5);
+		}
+
+		.bc-hm-pitch:hover::before {
+			opacity: 1;
+		}
+
+		.bc-hm-pitch-top {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+		}
+
+		.bc-hm-pitch-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 52px;
+			height: 52px;
+			border-radius: 14px;
+			background: linear-gradient(145deg, var(--bc-green), var(--bc-green-2));
+			color: var(--bc-gold-soft);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+		}
+
+		.bc-hm-pitch-hockey .bc-hm-pitch-icon {
+			background: linear-gradient(145deg, #1c4060, #0f2a42);
+			color: #bcd9f2;
+		}
+
+		.bc-hm-pitch-cups .bc-hm-pitch-icon {
+			background: linear-gradient(145deg, #7a5514, #57400f);
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-hm-pitch-icon svg {
+			width: 26px;
+			height: 26px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.bc-hm-pitch-chip {
+			display: inline-flex;
+			align-items: center;
+			padding: 5px 12px;
+			border-radius: 999px;
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			background: rgba(30, 158, 106, 0.12);
+			color: #15734d;
+		}
+
+		.bc-hm-pitch-chip-cool {
+			background: rgba(79, 143, 201, 0.14);
+			color: #2f6591;
+		}
+
+		.bc-hm-pitch-chip-gold {
+			background: rgba(217, 164, 65, 0.16);
+			color: #8f6416;
+		}
+
+		.bc-hm-pitch-name {
+			font-size: 23px;
+			font-weight: 800;
+			line-height: 1.2;
+			letter-spacing: -0.01em;
+		}
+
+		.bc-hm-pitch-desc {
+			font-size: 14.5px;
+			color: var(--bc-muted);
+		}
+
+		.bc-hm-pitch-tags {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-top: auto;
+		}
+
+		.bc-hm-pitch-tags em {
+			font-style: normal;
+			padding: 5px 11px;
+			border: 1px solid var(--bc-line);
+			border-radius: 999px;
+			font-size: 12px;
+			font-weight: 700;
+			color: var(--bc-green);
+			background: var(--bc-cream);
+		}
+
+		.bc-hm-pitch-go {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-top: 4px;
+			font-weight: 800;
+			font-size: 14px;
+			letter-spacing: 0.04em;
+			color: var(--bc-gold-deep);
+		}
+
+		.bc-hm-pitch:hover .bc-hm-pitch-go {
+			color: var(--bc-green);
+		}
+
+		/* --------------------------- champions --------------------------- */
+		.bc-hm-champions {
+			padding: 0 0 90px;
+		}
+
+		.bc-hm-final-grid {
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 22px;
+		}
+
+		.bc-hm-final {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			overflow: hidden;
+			transition: box-shadow 0.25s ease, border-color 0.25s ease;
+		}
+
+		.bc-hm-final:hover {
+			border-color: #d8cfb6;
+			box-shadow: 0 22px 38px -24px rgba(8, 35, 26, 0.45);
+		}
+
+		.bc-hm-final:last-child {
+			grid-column: span 2;
+		}
+
+		.bc-hm-final-head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			padding: 13px 20px;
+			background: var(--bc-green);
+			color: #e9f2ec;
+		}
+
+		.bc-hm-final-div {
+			font-size: 13.5px;
+			font-weight: 800;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+		}
+
+		.bc-hm-final-kind {
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-hm-final-match {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+			padding: 20px;
+		}
+
+		.bc-hm-final-team {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 7px;
+			flex: 1 1 0;
+			text-align: center;
+		}
+
+		.bc-hm-crest-mini {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 56px;
+			height: 62px;
+			font-size: 16px;
+			font-weight: 800;
+			letter-spacing: 0.04em;
+			color: #fff;
+			clip-path: polygon(0 0, 100% 0, 100% 74%, 50% 100%, 0 74%);
+		}
+
+		.bc-hm-crest-green {
+			background: linear-gradient(180deg, #1e9e6a, #0e3a2c);
+		}
+
+		.bc-hm-crest-plain {
+			background: linear-gradient(180deg, #8a8f8b, #555b57);
+		}
+
+		.bc-hm-final-team-name {
+			font-size: 14.5px;
+			font-weight: 700;
+			line-height: 1.25;
+		}
+
+		.bc-hm-final-result {
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			padding: 4px 10px;
+			border-radius: 999px;
+			background: rgba(30, 158, 106, 0.13);
+			color: #15734d;
+		}
+
+		.bc-hm-final-result-lost {
+			background: rgba(92, 107, 99, 0.12);
+			color: var(--bc-muted);
+		}
+
+		.bc-hm-final-vs {
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.1em;
+			color: #a8a396;
+			flex: 0 0 auto;
+		}
+
+		.bc-hm-final-notes {
+			list-style: none;
+			margin: 0;
+			padding: 14px 20px 18px;
+			border-top: 1px dashed var(--bc-line);
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.bc-hm-final-notes li {
+			font-size: 13.5px;
+			color: var(--bc-muted);
+			padding-left: 18px;
+			position: relative;
+		}
+
+		.bc-hm-final-notes li::before {
+			content: '';
+			position: absolute;
+			left: 2px;
+			top: 7px;
+			width: 7px;
+			height: 7px;
+			border-radius: 50%;
+			background: var(--bc-gold);
+		}
+
+		/* --------------------------- honours --------------------------- */
+		.bc-hm-honours {
+			padding: 0 0 90px;
+		}
+
+		.bc-hm-honour-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 20px;
+		}
+
+		.bc-hm-honour {
+			background: var(--bc-cream);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 24px 22px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-hm-honour:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-hm-honour-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 50px;
+			height: 50px;
+			border-radius: 50%;
+			background: linear-gradient(145deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+		}
+
+		.bc-hm-honour-icon svg {
+			width: 25px;
+			height: 25px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.bc-hm-honour-title {
+			margin: 16px 0 8px;
+			font-size: 17.5px;
+			font-weight: 800;
+			line-height: 1.25;
+		}
+
+		.bc-hm-honour-text {
+			margin: 0;
+			font-size: 14px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------- pitch spotlight ------------------------- */
+		.bc-hm-pitch-spot {
+			padding: 90px 0;
+			background:
+				radial-gradient(80% 120% at 100% 0%, rgba(30, 158, 106, 0.1), transparent 55%),
+				var(--bc-cream);
+			border-top: 1px solid var(--bc-line);
+			border-bottom: 1px solid var(--bc-line);
+		}
+
+		.bc-hm-pitch-spot-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			align-items: center;
+			gap: 60px;
+		}
+
+		.bc-hm-pitch-spot-text {
+			margin: 16px 0 0;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+			max-width: 520px;
+		}
+
+		.bc-hm-pitch-spot-list {
+			list-style: none;
+			margin: 20px 0 28px;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 11px;
+		}
+
+		.bc-hm-pitch-spot-list li {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 15px;
+			font-weight: 600;
+		}
+
+		.bc-hm-pitch-spot-visual {
+			position: relative;
+			display: flex;
+			justify-content: center;
+		}
+
+		.bc-hm-mini-pitch {
+			position: relative;
+			width: min(460px, 100%);
+			aspect-ratio: 16 / 10;
+			border-radius: 16px;
+			background:
+				repeating-linear-gradient(90deg, #1c7a4e 0 64px, #197044 64px 128px);
+			border: 3px solid #0e5c39;
+			box-shadow: 0 34px 60px -28px rgba(8, 35, 26, 0.55);
+			overflow: hidden;
+		}
+
+		.bc-hm-mini-pitch::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.14), transparent 55%);
+		}
+
+		.bc-hm-mini-pitch-line {
+			position: absolute;
+			border: 2px solid rgba(255, 255, 255, 0.82);
+		}
+
+		.bc-hm-mini-pitch-mid {
+			left: 50%;
+			top: 0;
+			bottom: 0;
+			transform: translateX(-1px);
+			border-top: 0;
+			border-bottom: 0;
+		}
+
+		.bc-hm-mini-pitch-circle {
+			left: 50%;
+			top: 50%;
+			width: 26%;
+			aspect-ratio: 1;
+			border-radius: 50%;
+			transform: translate(-50%, -50%);
+		}
+
+		.bc-hm-mini-pitch-box-a {
+			left: 0;
+			top: 50%;
+			width: 18%;
+			height: 52%;
+			transform: translateY(-50%);
+			border-left: 0;
+		}
+
+		.bc-hm-mini-pitch-box-b {
+			right: 0;
+			top: 50%;
+			width: 18%;
+			height: 52%;
+			transform: translateY(-50%);
+			border-right: 0;
+		}
+
+		.bc-hm-mini-pitch-spot {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			background: #fff;
+			transform: translate(-50%, -50%);
+			box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
+		}
+
+		.bc-hm-pitch-spot-card {
+			position: absolute;
+			left: 50%;
+			bottom: -18px;
+			transform: translateX(-50%);
+			display: flex;
+			flex-direction: column;
+			gap: 1px;
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-left: 3px solid var(--bc-gold);
+			border-radius: 10px;
+			padding: 10px 18px;
+			box-shadow: 0 16px 30px -16px rgba(8, 35, 26, 0.4);
+			white-space: nowrap;
+		}
+
+		.bc-hm-pitch-spot-card strong {
+			font-size: 14px;
+			font-weight: 800;
+		}
+
+		.bc-hm-pitch-spot-card span {
+			font-size: 12px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------------- why ------------------------------- */
+		.bc-hm-why {
+			padding: 90px 0;
+		}
+
+		.bc-hm-why-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 20px;
+		}
+
+		.bc-hm-why-card {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-top: 3px solid var(--bc-emerald);
+			border-radius: 16px;
+			padding: 24px 22px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-hm-why-card:nth-child(2) { border-top-color: var(--bc-gold); }
+		.bc-hm-why-card:nth-child(3) { border-top-color: #4f8fc9; }
+		.bc-hm-why-card:nth-child(4) { border-top-color: var(--bc-gold-deep); }
+
+		.bc-hm-why-card:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-hm-why-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
+			background: var(--bc-green);
+			color: var(--bc-gold-soft);
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.05em;
+		}
+
+		.bc-hm-why-title {
+			margin: 16px 0 8px;
+			font-size: 18px;
+			font-weight: 800;
+		}
+
+		.bc-hm-why-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------------ fanca ------------------------------ */
+		.bc-hm-fanca {
+			position: relative;
+			background:
+				radial-gradient(110% 130% at 85% 10%, rgba(217, 164, 65, 0.2), transparent 55%),
+				linear-gradient(140deg, #1b553d 0%, var(--bc-green) 60%, #0a2e21 100%);
+			color: #e9f2ec;
+		}
+
+		.bc-hm-fanca-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 40px;
+			padding-top: 54px;
+			padding-bottom: 54px;
+		}
+
+		.bc-hm-fanca-title {
+			margin: 0;
+			font-size: clamp(24px, 3vw, 34px);
+			line-height: 1.15;
+			font-weight: 800;
+			color: #fff;
+		}
+
+		.bc-hm-fanca-text {
+			margin: 12px 0 0;
+			max-width: 640px;
+			color: #cfe0d5;
+			font-size: 16px;
+		}
+
+		.bc-hm-fanca-medal {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 6px;
+			flex: 0 0 auto;
+		}
+
+		.bc-hm-fanca-medal svg {
+			width: 72px;
+			height: 72px;
+			fill: none;
+			stroke: var(--bc-gold);
+			stroke-width: 1.5;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			filter: drop-shadow(0 10px 18px rgba(217, 164, 65, 0.4));
+		}
+
+		.bc-hm-fanca-medal span {
+			font-size: 12.5px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--bc-gold-soft);
+		}
+
+		/* ----------------------------- mosque ----------------------------- */
+		.bc-hm-mosque {
+			padding: 90px 0;
+		}
+
+		.bc-hm-mosque-grid {
+			display: grid;
+			grid-template-columns: 0.9fr 1.1fr;
+			align-items: center;
+			gap: 60px;
+		}
+
+		.bc-hm-mosque-visual {
+			display: flex;
+			justify-content: center;
+		}
+
+		.bc-hm-cup-card {
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: min(360px, 100%);
+			aspect-ratio: 1;
+			border-radius: 24px;
+			background:
+				radial-gradient(90% 90% at 50% 0%, rgba(217, 164, 65, 0.25), transparent 60%),
+				linear-gradient(160deg, var(--bc-green-2), var(--bc-green-deep));
+			border: 1px solid rgba(240, 214, 154, 0.35);
+			box-shadow: 0 34px 60px -28px rgba(8, 35, 26, 0.6);
+			overflow: hidden;
+		}
+
+		.bc-hm-cup-card svg {
+			width: 110px;
+			height: 110px;
+			fill: none;
+			stroke: var(--bc-gold);
+			stroke-width: 1.4;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			filter: drop-shadow(0 12px 20px rgba(217, 164, 65, 0.45));
+			animation: bc-hm-cup-float 5s ease-in-out infinite;
+		}
+
+		.bc-hm-cup-card-glint {
+			position: absolute;
+			top: -40%;
+			left: -60%;
+			width: 60%;
+			height: 180%;
+			background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+			transform: rotate(18deg);
+			animation: bc-hm-cup-glint 4.5s ease-in-out infinite;
+		}
+
+		@keyframes bc-hm-cup-float {
+			0%, 100% { transform: translateY(0); }
+			50% { transform: translateY(-10px); }
+		}
+
+		@keyframes bc-hm-cup-glint {
+			0% { left: -70%; }
+			55%, 100% { left: 130%; }
+		}
+
+		.bc-hm-mosque-text {
+			margin: 16px 0 0;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+			max-width: 560px;
+		}
+
+		.bc-hm-mosque-actions {
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 20px;
+			margin-top: 28px;
+		}
+
+		/* ------------------------------- cta ------------------------------- */
+		.bc-hm-cta {
+			position: relative;
+			background:
+				repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.03) 0 70px, transparent 70px 140px),
+				linear-gradient(150deg, var(--bc-green) 0%, var(--bc-green-deep) 70%);
+			border-top: 1px solid rgba(240, 214, 154, 0.2);
+			border-bottom: 1px solid rgba(240, 214, 154, 0.2);
+			color: #e9f2ec;
+		}
+
+		.bc-hm-cta-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+			gap: 12px;
+			padding-top: 64px;
+			padding-bottom: 64px;
+		}
+
+		.bc-hm-cta-title {
+			margin: 0;
+			font-size: clamp(28px, 3.6vw, 42px);
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: #fff;
+		}
+
+		.bc-hm-cta-text {
+			margin: 0;
+			max-width: 560px;
+			color: #cfe0d5;
+			font-size: 16.5px;
+		}
+
+		.bc-hm-cta-actions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 14px;
+			margin-top: 16px;
+		}
+
+		/* ------------------------------- faq ------------------------------- */
+		.bc-hm-faq {
+			padding: 0 0 90px;
+		}
+
+		.bc-hm-faq-wrap {
+			max-width: 860px;
+		}
+
+		.bc-hm-faq-list {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.bc-hm-faq-item {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-radius: 14px;
+			overflow: hidden;
+			transition: border-color 0.2s ease;
+		}
+
+		.bc-hm-faq-item[open] {
+			border-color: var(--bc-gold-soft);
+		}
+
+		.bc-hm-faq-question {
+			padding: 18px 22px;
+			font-weight: 700;
+			font-size: 16px;
+			cursor: pointer;
+			list-style: none;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+		}
+
+		.bc-hm-faq-question::-webkit-details-marker {
+			display: none;
+		}
+
+		.bc-hm-faq-question::after {
+			content: '+';
+			font-size: 22px;
+			color: var(--bc-gold-deep);
+			transition: transform 0.25s ease;
+			flex: 0 0 auto;
+		}
+
+		.bc-hm-faq-item[open] .bc-hm-faq-question::after {
+			transform: rotate(45deg);
+		}
+
+		.bc-hm-faq-answer {
+			margin: 0;
+			padding: 0 22px 20px;
+			color: var(--bc-muted);
+			font-size: 15px;
+		}
+
+		/* ------------------------------ donate ------------------------------ */
+		.bc-hm-donate {
+			background:
+				radial-gradient(80% 120% at 12% 0%, rgba(217, 164, 65, 0.16), transparent 55%),
+				var(--bc-cream);
+			border-top: 1px solid var(--bc-line);
+		}
+
+		.bc-hm-donate-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 32px;
+			padding-top: 54px;
+			padding-bottom: 54px;
+		}
+
+		.bc-hm-donate-title {
+			margin: 0;
+			font-size: clamp(22px, 2.8vw, 32px);
+			font-weight: 800;
+			line-height: 1.15;
+			color: var(--bc-ink);
+		}
+
+		.bc-hm-donate-text {
+			margin: 10px 0 0;
+			max-width: 620px;
+			color: var(--bc-muted);
+			font-size: 15.5px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.bc-hm-reveal {
+			opacity: 0;
+			transform: translateY(26px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.bc-hm-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.bc-home.is-reduced-motion .bc-hm-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		.bc-home.is-reduced-motion .bc-hm-hero-curtain {
+			display: none;
+		}
+
+		.bc-home.is-reduced-motion .bc-hm-marquee-track,
+		.bc-home.is-reduced-motion .bc-hm-hero-badge,
+		.bc-home.is-reduced-motion .bc-hm-cup-card svg,
+		.bc-home.is-reduced-motion .bc-hm-cup-card-glint {
+			animation: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.bc-hm-hero-grid,
+			.bc-hm-pitch-spot-grid,
+			.bc-hm-mosque-grid {
+				grid-template-columns: 1fr;
+				gap: 44px;
+			}
+
+			.bc-hm-hero {
+				padding: 64px 0 80px;
+			}
+
+			.bc-hm-pitch-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-hm-honour-grid,
+			.bc-hm-why-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.bc-hm-fanca-inner,
+			.bc-hm-donate-inner {
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 24px;
+			}
+		}
+
+		@media (max-width: 680px) {
+			.bc-hm-final-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-hm-final:last-child {
+				grid-column: span 1;
+			}
+
+			.bc-hm-honour-grid,
+			.bc-hm-why-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-hm-scoreboard-rows {
+				grid-template-columns: 1fr 1fr;
+			}
+
+			.bc-hm-stat-num {
+				font-size: 30px;
+			}
+
+			.bc-hm-hero-badge-top {
+				left: 6px;
+			}
+
+			.bc-hm-hero-badge-bottom {
+				right: 6px;
+			}
+
+			.bc-hm-hero-trust {
+				flex-direction: column;
+				gap: 9px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.bc-home');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-bc-home-ready') === '1') { return; }
+			pageRoot.setAttribute('data-bc-home-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- scoreboard count-up ---------------- */
+			function animateCount(element) {
+				var target = Number(element.getAttribute('data-bc-count'));
+				var suffix = element.getAttribute('data-bc-suffix') || '';
+				if (!isFinite(target)) { return; }
+
+				var startTime = null;
+				var durationMs = 1100;
+
+				function stepFrame(timestamp) {
+					if (startTime === null) { startTime = timestamp; }
+					var progress = Math.min((timestamp - startTime) / durationMs, 1);
+					/* ease-out cubic */
+					var eased = 1 - Math.pow(1 - progress, 3);
+					var value = Math.round(target * eased);
+					element.textContent = String(value) + suffix;
+					if (progress < 1) {
+						window.requestAnimationFrame(stepFrame);
+					} else {
+						element.textContent = String(target) + suffix;
+					}
+				}
+
+				window.requestAnimationFrame(stepFrame);
+			}
+
+			var statNumbers = Array.prototype.slice.call(pageRoot.querySelectorAll('[data-bc-count]'));
+
+			if (reduceMotion || !('IntersectionObserver' in window)) {
+				statNumbers.forEach(function (element) {
+					var target = Number(element.getAttribute('data-bc-count'));
+					var suffix = element.getAttribute('data-bc-suffix') || '';
+					if (isFinite(target)) { element.textContent = String(target) + suffix; }
+				});
+			} else {
+				var countObserver = new IntersectionObserver(function (entries) {
+					entries.forEach(function (entry) {
+						if (!entry.isIntersecting) { return; }
+						animateCount(entry.target);
+						countObserver.unobserve(entry.target);
+					});
+				}, { threshold: 0.5 });
+
+				statNumbers.forEach(function (element) { countObserver.observe(element); });
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.bc-hm-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

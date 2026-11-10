@@ -11,47 +11,659 @@
 <h1>Restaurant And Menu Manager - Help</h1>
 <p class="meta">
   User help for Restaurant And Menu Manager. The single source of truth for how this
-  tool works is its SSOT document (<a href="ssot.html">SSOT</a>) -
-  this file explains the same behavior for end users, in plain words.
-  Generated from the tool code + SSOT + AI chat by
-  scripts/generate-docs.js. Updated: 2026-09-21.
+  tool works is its SSOT document (<a href="ssot.html">SSOT</a>) - this file explains
+  the same behavior for end users, in plain words, and adds where every field appears
+  on the customer website. Written by hand on 2026-11-08 for this tool.
+  The figures are drawn UI maps, not photographs; run npm run screenshots --
+  RestaurantAndMenuManager to capture real ones (the shot list lives in
+  docs/screenshots/shots.json).
 </p>
 
 <!-- GENERATED-START - generate-docs.js replaces the content between the two markers -->
 <h2 id="overview">1. Overview</h2>
-<p>[What the tool is, in one plain sentence.]</p>
-<p>[Who it is for and why they use it.]</p>
+
+<p>Restaurant And Menu Manager is the admin surface for one restaurant. You use it to
+describe the business, decide how it sells, build the menu, and create the offers the
+customer sees on the ordering website. Everything you enter here is stored as one
+document and read by the website food ordering widget, so the tool is the only place
+that has to be edited: nothing is typed twice.</p>
+
+<p>It is written for the person who runs the restaurant, not for a developer. There is
+no publish button and no separate save dialog: the tool saves by itself a fraction of a
+second after you stop typing, and the website picks the change up on its next refresh.
+A field is either obvious (the restaurant name) or explained below with the sentence
+that matters: what it changes for the customer, and where the customer sees it.</p>
+
+<figure class="ssot-shot">
+  <svg viewBox="0 0 1000 150" width="100%" role="img" aria-label="The nine tabs of the tool">
+    <rect x="0" y="0" width="1000" height="150" fill="#ffffff"/>
+    <text x="24" y="30" font-family="Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#0f172a">The tool has nine tabs</text>
+    <g font-family="Segoe UI, sans-serif" font-size="13" fill="#3730a3">
+      <rect x="24" y="48" width="98" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="44" y="70">General</text>
+      <rect x="132" y="48" width="98" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="152" y="70">Services</text>
+      <rect x="240" y="48" width="104" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="258" y="70">Tax &amp; Pay</text>
+      <rect x="354" y="48" width="98" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="374" y="70">Delivery</text>
+      <rect x="462" y="48" width="86" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="486" y="70">Menu</text>
+      <rect x="558" y="48" width="86" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="582" y="70">Deals</text>
+      <rect x="654" y="48" width="86" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="676" y="70">Alerts</text>
+      <rect x="750" y="48" width="94" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="768" y="70">Devices</text>
+      <rect x="854" y="48" width="104" height="34" rx="17" fill="#eef2ff" stroke="#c7d2fe"/><text x="872" y="70">Add-ons</text>
+    </g>
+    <text x="24" y="112" font-family="Segoe UI, sans-serif" font-size="12.5" fill="#64748b">General and Tax &amp; Pay read as a profile and turn into a form only when you press Edit.</text>
+    <text x="24" y="132" font-family="Segoe UI, sans-serif" font-size="12.5" fill="#64748b">Menu, Deals and Delivery are working screens with a list on the left and an editor on the right.</text>
+  </svg>
+  <figcaption>Figure 1 - the nine tabs and how each one is meant to be read.</figcaption>
+</figure>
 
 <h2 id="before">2. Before you start</h2>
+
 <ul>
-  <li>[Permission or setup the user needs]</li>
-  <li>[Where to find the tool in the UI]</li>
+  <li><strong>Where to find it.</strong> The tool runs inside the platform as an
+  object-level editor for one restaurant. Open it from the restaurant record; the
+  address bar and the nine tabs are the whole navigation.</li>
+  <li><strong>Saving.</strong> There is no Save button. Changes are written about half
+  a second after you stop typing. The small notice at the bottom confirms the save. If
+  the notice says the save was blocked, a validation problem is listed in the same
+  place: fix it and the save repeats by itself.</li>
+  <li><strong>Read-only mode.</strong> When the platform opens the tool without write
+  permission, every control is disabled, the Edit actions disappear and the summary
+  cards stay visible. Nothing you see is lost; you simply cannot change it.</li>
+  <li><strong>Try it safely.</strong> The bundled test harness
+  (<code>app/test-harness.html</code>) has "Load Sample Data" and "Deal fixtures"
+  buttons. They fill the tool with a demo restaurant, a demo menu and demo deals so
+  every screen can be explored without touching a real record.</li>
+  <li><strong>Read-only cards.</strong> On General and Tax &amp; Pay the cards show a
+  designed summary. Press Edit on a card to change it, Cancel to throw the change away,
+  Done to keep it.</li>
 </ul>
 
-<h2 id="howto">3. Step by step</h2>
-<ol>
-  <li>[Step 1 - exact click or action]</li>
-  <li>[Step 2]</li>
-  <li>[Step 3]</li>
-</ol>
+<h2 id="website-map">3. What the customer website shows, and from where</h2>
 
-<h2 id="faq">4. Common questions</h2>
+<p>Almost every field in this tool ends up somewhere on the ordering website. This table
+is the short version; the sections after it go tab by tab.</p>
+
 <table>
-  <tr><th>Question</th><th>Answer</th></tr>
-  <tr><td>[Question]</td><td>[Short answer]</td></tr>
+  <tr><th>What the customer sees</th><th>Where it comes from in this tool</th></tr>
+  <tr><td>Hero image above the restaurant name</td><td>Deals tab, Hero sub-tab</td></tr>
+  <tr><td>Restaurant name, logo, brand line, cuisine labels</td><td>General tab, restaurant profile (hero card)</td></tr>
+  <tr><td>Phone, email, website links</td><td>General tab, restaurant profile contact tiles</td></tr>
+  <tr><td>Two to four promotion tiles under the hero</td><td>Deals tab, Promotions sub-tab</td></tr>
+  <tr><td>Deal cards grouped in sections (Family, Weekend, Lunch)</td><td>Deals tab, Deals sub-tab, including the Section field and the Active switch</td></tr>
+  <tr><td>The offer rules inside a deal popup</td><td>Deals tab, the deal type and its rule settings</td></tr>
+  <tr><td>Menu categories and items with prices, photos, sizes</td><td>Menu tab</td></tr>
+  <tr><td>Modifier groups and their options when an item is opened</td><td>Menu tab, Modifiers panel, attached to items</td></tr>
+  <tr><td>Tax added to the order or included in the price</td><td>Tax &amp; Pay tab, Taxation card</td></tr>
+  <tr><td>Which payment methods are offered per channel</td><td>Tax &amp; Pay tab, Payment methods card</td></tr>
+  <tr><td>Currency symbol on every price</td><td>Tax &amp; Pay tab, Currency card</td></tr>
+  <tr><td>Pickup, delivery, dine-in or reservation as available choices</td><td>Services tab, service toggles</td></tr>
+  <tr><td>Opening hours and "closed now" behaviour</td><td>Services tab, opening hours, special hours, temporary closure</td></tr>
+  <tr><td>Delivery fee and minimum order per area</td><td>Delivery tab, coverage zones</td></tr>
+  <tr><td>Which address fields the delivery form asks for</td><td>Delivery tab, address form fields and custom fields</td></tr>
+  <tr><td>Promo code box at checkout</td><td>Deals tab, Promo Codes sub-tab</td></tr>
+  <tr><td>Order scheduling window</td><td>Services tab, scheduled orders</td></tr>
 </table>
 
-<h2 id="troubleshooting">5. Troubleshooting</h2>
+<figure class="ssot-shot">
+  <svg viewBox="0 0 1000 470" width="100%" role="img" aria-label="Where each part of the tool appears on the website">
+    <rect x="0" y="0" width="1000" height="470" fill="#ffffff"/>
+    <rect x="140" y="10" width="720" height="450" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>
+    <rect x="140" y="10" width="720" height="96" rx="14" fill="#4f46e5"/>
+    <text x="160" y="52" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#e0e7ff">HERO IMAGE  -  Deals tab, Hero sub-tab</text>
+    <text x="160" y="82" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700" fill="#ffffff">The Golden Fork</text>
+    <circle cx="162" cy="122" r="26" fill="#ffffff" stroke="#c7d2fe"/>
+    <text x="200" y="118" font-family="Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Name, brand and cuisine labels  -  General, profile hero</text>
+    <text x="200" y="136" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#64748b">Golden Fork Group  ·  Mediterranean  ·  Turkish</text>
+    <g>
+      <rect x="160" y="158" width="164" height="46" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <rect x="332" y="158" width="164" height="46" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <rect x="504" y="158" width="164" height="46" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <rect x="676" y="158" width="164" height="46" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="160" y="220" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#3730a3">PROMOTIONS  -  at most four  -  Deals, Promotions sub-tab</text>
+    </g>
+    <g>
+      <rect x="160" y="232" width="240" height="118" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="176" y="254" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#0f172a">2 Pizzas + 4 Dips</text>
+      <text x="176" y="272" font-family="Segoe UI, sans-serif" font-size="11" fill="#64748b">Section: Family</text>
+      <text x="176" y="296" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700" fill="#4f46e5">29.99</text>
+      <rect x="176" y="308" width="88" height="26" rx="13" fill="#4f46e5"/>
+      <text x="188" y="325" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Order</text>
+      <rect x="416" y="232" width="240" height="118" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="432" y="254" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#0f172a">Two for one pizza</text>
+      <text x="432" y="272" font-family="Segoe UI, sans-serif" font-size="11" fill="#64748b">Section: Weekend</text>
+      <text x="432" y="296" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700" fill="#4f46e5">2 for 1</text>
+      <text x="160" y="368" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#3730a3">DEAL CARDS  -  Deals sub-tab  -  the Section field groups them</text>
+    </g>
+    <g>
+      <rect x="160" y="380" width="120" height="28" rx="14" fill="#eef2ff" stroke="#c7d2fe"/>
+      <text x="180" y="399" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#3730a3">Appetizers</text>
+      <rect x="288" y="380" width="120" height="28" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="308" y="399" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#475569">Main courses</text>
+      <rect x="160" y="420" width="520" height="26" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="174" y="438" font-family="Segoe UI, sans-serif" font-size="11" fill="#0f172a">Hummus Plate ......... 12.99</text>
+      <text x="700" y="399" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#3730a3" text-anchor="end">MENU  -  Menu tab</text>
+    </g>
+  </svg>
+  <figcaption>Figure 2 - the ordering page from top to bottom, with the tab that feeds each band.</figcaption>
+</figure>
+
+<h2 id="general">4. General - who the restaurant is</h2>
+
+<h3>4.1 The restaurant profile (the hero card)</h3>
+<p>The top card is a hero, not a form. It shows the logo, the restaurant name, the brand
+line, the cuisine labels, the account status and three contact tiles that really dial,
+mail and open the website, plus a profile completeness bar. This is the block the
+customer recognises as the restaurant.</p>
+<ul>
+  <li><strong>Restaurant name</strong> - the title on the website header and the name
+  used in search results and receipts.</li>
+  <li><strong>Brand name</strong> - the group or trading name, shown under the restaurant
+  name and used when one owner runs several outlets.</li>
+  <li><strong>Logo</strong> - upload or paste a link. It is the round avatar overlapping
+  the hero cover, and the small mark next to the name on the website. A square image
+  with a transparent background works best.</li>
+  <li><strong>Cuisine labels</strong> - these are the filters and badges on the website
+  and in the marketplace listing, not internal notes. Only the chosen ones are shown on
+  the card; press "Select cuisine types" to open the picker, pick as many as apply, add
+  a cuisine that is not in the list, and press Done. Cancelling the picker changes
+  nothing.</li>
+  <li><strong>Phone and additional phones</strong> - the first number is the tap-to-call
+  number on the website and the number the kitchen is called on. Extra numbers are
+  listed on the contact page.</li>
+  <li><strong>Email</strong> - the address the order confirmations and replies go to,
+  and the mail link on the website.</li>
+  <li><strong>Website</strong> - the restaurant's own site, linked from the ordering
+  page header.</li>
+  <li><strong>Profile completeness</strong> - a hint for the owner, not shown to the
+  customer. It counts the eight fields that make a profile usable: name, logo, at least
+  one cuisine, phone, email, website, street address and legal entity.</li>
+</ul>
+
+<h3>4.2 Address and location</h3>
+<p>This card decides where the restaurant is, which fixes the delivery drawing area, the
+time zone used for opening hours, and the map point the customer taps for directions.</p>
+<ul>
+  <li><strong>Street, city, ZIP, country, state</strong> - shown on the website contact
+  block, in the order confirmation and on the printed ticket. The country also decides
+  which state list is offered and which tax template can be applied later.</li>
+  <li><strong>Find the address</strong> - type the restaurant name or the street and
+  press Find. The search is limited to the country already selected, and to the state
+  while "only this state" is on, so a name search cannot return a restaurant on another
+  continent. Picking a result fills the street, city, state, ZIP, country and the map
+  point in one action.</li>
+  <li><strong>Time zone</strong> - the clock the whole tool uses. Opening hours,
+  scheduled orders and special hours are read in this zone, so a wrong time zone shifts
+  every time the customer sees.</li>
+  <li><strong>Coordinates</strong> - the pin on the delivery map and the starting point
+  for "directions". Pick on map, click the map or drag the pin, or paste a Google Maps
+  link.</li>
+</ul>
+
+<h3>4.3 Legal information</h3>
+<p>Not shown to the customer, but printed on invoices and used by the platform for
+compliance. Legal entity name and VAT/tax number must match the tax registration;
+entity type and account status drive platform checks; the registered legal address is
+used when it differs from the restaurant address. Advanced fields add the company
+registration number, the data protection officer (worth filling for EU and UK
+restaurants, where the card warns you) and the legal address block.</p>
+
+<figure class="ssot-shot">
+  <svg viewBox="0 0 1000 300" width="100%" role="img" aria-label="Anatomy of the General tab">
+    <rect x="0" y="0" width="1000" height="300" fill="#ffffff"/>
+    <rect x="24" y="18" width="600" height="264" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="24" y="18" width="600" height="70" rx="14" fill="#4f46e5"/>
+    <circle cx="86" cy="76" r="34" fill="#ffffff" stroke="#c7d2fe" stroke-width="3"/>
+    <text x="136" y="66" font-family="Segoe UI, sans-serif" font-size="19" font-weight="700" fill="#0f172a">The Golden Fork</text>
+    <text x="136" y="86" font-family="Segoe UI, sans-serif" font-size="12" fill="#64748b">Golden Fork Group</text>
+    <rect x="136" y="94" width="70" height="20" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text x="146" y="108" font-family="Segoe UI, sans-serif" font-size="10.5" fill="#3730a3">Turkish</text>
+    <rect x="214" y="94" width="86" height="20" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text x="224" y="108" font-family="Segoe UI, sans-serif" font-size="10.5" fill="#3730a3">Mediterranean</text>
+    <text x="470" y="40" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#e0e7ff">EDIT  ·  CANCEL  ·  DONE</text>
+    <g>
+      <rect x="40" y="118" width="176" height="52" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+      <rect x="232" y="118" width="176" height="52" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+      <rect x="424" y="118" width="176" height="52" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+      <text x="52" y="140" font-family="Segoe UI, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">PHONE</text>
+      <text x="52" y="158" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#0f172a">+1 (555) 123-4567</text>
+      <text x="244" y="140" font-family="Segoe UI, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">EMAIL</text>
+      <text x="244" y="158" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#0f172a">hello@goldenfork.com</text>
+      <text x="436" y="140" font-family="Segoe UI, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">WEBSITE</text>
+      <text x="436" y="158" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#0f172a">goldenfork.com</text>
+    </g>
+    <text x="40" y="196" font-family="Segoe UI, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">PROFILE COMPLETENESS</text>
+    <rect x="40" y="206" width="560" height="9" rx="5" fill="#e2e8f0"/>
+    <rect x="40" y="206" width="430" height="9" rx="5" fill="#4f46e5"/>
+    <rect x="40" y="230" width="272" height="38" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="54" y="254" font-family="Segoe UI, sans-serif" font-size="11" fill="#475569">Address &amp; Location card (read-only)</text>
+    <rect x="328" y="230" width="272" height="38" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="342" y="254" font-family="Segoe UI, sans-serif" font-size="11" fill="#475569">Legal Information card (read-only)</text>
+    <g font-family="Segoe UI, sans-serif" font-size="12" fill="#475569">
+      <text x="646" y="46" font-weight="700" fill="#0f172a">What the numbers mean</text>
+      <text x="646" y="74">1  Logo: upload or link, shown as the avatar.</text>
+      <text x="646" y="98">2  Name: the website title and receipt name.</text>
+      <text x="646" y="122">3  Brand: the group under the name.</text>
+      <text x="646" y="146">4  Cuisine chips: website filters and badges.</text>
+      <text x="646" y="170">5  Contact tiles: tap to call, mail, open site.</text>
+      <text x="646" y="194">6  Completeness: owner hint, not public.</text>
+      <text x="646" y="230" font-weight="700" fill="#0f172a">Editing rule</text>
+      <text x="646" y="254">A card is a summary until you press Edit.</text>
+      <text x="646" y="274">Cancel restores it exactly, Done saves it.</text>
+    </g>
+  </svg>
+  <figcaption>Figure 3 - the General tab: the hero carries the identity, the cards carry the detail.</figcaption>
+</figure>
+
+<h2 id="services">5. Services - how the restaurant sells</h2>
+
+<h3>5.1 Service toggles</h3>
+<p>These four switches decide which choices the customer is offered at the start of the
+order. Switching off delivery also hides the Delivery tab in this tool, because there is
+nothing to configure.</p>
+<table>
+  <tr><th>Toggle</th><th>What the customer gets</th><th>What also changes here</th></tr>
+  <tr><td>Pickup</td><td>A "pick up" option with a ready-in time instead of an address</td><td>Scheduled pickup window</td></tr>
+  <tr><td>Delivery</td><td>An address step, the delivery fee and the coverage check</td><td>Delivery tab, scheduled delivery window</td></tr>
+  <tr><td>On-premise dining</td><td>Dine-in ordering with a table number</td><td>On-premise advance settings and payment channels</td></tr>
+  <tr><td>Table reservation</td><td>A booking form with date, time and party size</td><td>Reservation card below</td></tr>
+  <tr><td>Anonymous ordering</td><td>Checkout without creating an account</td><td>Only available when on-premise or pickup is on</td></tr>
+</table>
+
+<h3>5.2 Opening hours</h3>
+<p>Seven day rows, each with one or more time ranges, so a lunch break is two ranges in
+the same day. Hours are read in the time zone set on the General tab. The tools on the
+card save typing: copy the first day to all days, set the same range for a group of
+days, and see today highlighted with a badge when a special hour or a temporary closure
+is active.</p>
+<ul>
+  <li><strong>Temporary closure</strong> - one date plus a reason. The website shows the
+  restaurant as closed for that day, which is what a holiday or a private event needs.</li>
+  <li><strong>Special hours</strong> - a dated override of the weekday hours, for
+  example a shorter Christmas Eve. It beats the weekday row for that date only.</li>
+</ul>
+
+<h3>5.3 Scheduled orders, reservations and on-premise</h3>
+<ul>
+  <li><strong>Scheduled orders</strong> - the minimum and maximum advance for pickup and
+  delivery, and the slot interval. This is the list of times the customer can choose, so
+  a 30 minute interval with a 30 minute minimum produces the next half hour onwards.</li>
+  <li><strong>Reservations</strong> - party size range, how far ahead a booking can be
+  made, how long a late party is held, whether a pre-order is allowed and whether a
+  deposit is required plus its amount.</li>
+  <li><strong>On-premise</strong> - the advance notice a dine-in order needs, in minutes,
+  hours or days, and how many days ahead it can be placed.</li>
+</ul>
+
+<h2 id="tax-pay">6. Tax and Pay</h2>
+
+<h3>6.1 Taxation</h3>
+<p>Three values decide the whole tax behaviour, and the summary card shows exactly
+them:</p>
+<ul>
+  <li><strong>Tax name</strong> - the word printed on the receipt and shown in the totals
+  row: VAT, Sales Tax, GST.</li>
+  <li><strong>Tax mode</strong> - "added at checkout" means menu prices are net and the
+  tax is added in the totals; "included in the price" means the menu price already
+  contains it and the totals show the tax portion. Getting this wrong changes every
+  price the customer sees, so it is worth checking once.</li>
+  <li><strong>Delivery fee tax rate</strong> - the rate applied to the delivery fee
+  itself, which can differ from the food rate.</li>
+</ul>
+<p><strong>Tax categories</strong> carry three rates each: pickup, delivery and
+in-restaurant. Use them when a category is taxed differently, for example alcohol. A
+category with all three rates at zero is shown as "0% everywhere". "Apply state or
+province template" fills a sensible set of categories for the selected state, and
+"Add category" adds an empty row. The category is then chosen per menu item on the Menu
+tab.</p>
+
+<h3>6.2 Payment methods</h3>
+<p>A matrix of four methods (cash, card, call for card, Interac e-transfer) against four
+channels (delivery, pickup, on-premise, reservation). A green combination is offered to
+the customer on that channel; a ghost one is not. The online gateway switch is separate:
+off means the customer pays on delivery or at pickup, on means card payments are
+processed at checkout.</p>
+
+<h3>6.3 Currency</h3>
+<p>The currency code used by every price in the tool, the menu, the deals and the
+website. It changes the symbol, not the numbers, so switch it before entering prices.</p>
+
+<h2 id="delivery">7. Delivery</h2>
+
+<h3>7.1 Coverage zones</h3>
+<p>A zone is a named area drawn on the map, with its own minimum order and delivery fee.
+Draw a polygon, a rectangle or a circle, name it, set the fee and the minimum, and save.
+The map starts at the restaurant pin. The order is only accepted inside a zone, so the
+first thing to do on this tab is to draw at least one zone. A zone can be edited later
+without redrawing: press the shape, drag the points, save.</p>
+
+<h3>7.2 Address form fields</h3>
+<p>Each field of the delivery address (street, city, postal code, block, intercom,
+parking information, additional information) can be switched on and marked required.
+This is the form the customer fills, so only ask for what the driver really needs.</p>
+
+<h3>7.3 Custom fields</h3>
+<p>Extra questions with a label and a type, for example "Gate code" or "Leave at door".
+They appear at the end of the delivery form and on the printed ticket.</p>
+
+<h3>7.4 Searching the map</h3>
+<p>The toolbar searches addresses and business names and recentres the map. The pin
+button on a result writes the coordinates into the restaurant profile. The search is
+free and keyless (OpenStreetMap), limited to one request per second, and never used on
+the customer side.</p>
+
+<h2 id="menu">8. Menu - what can be ordered</h2>
+
+<p>The Menu tab is three columns: categories and modifier groups on the left, the items
+of the selected category in the middle, and the item editor in the right drawer. Drag
+an item onto another category to move it, and drag a modifier group onto an item (or
+onto one of its sizes) to attach it.</p>
+
+<figure class="ssot-shot">
+  <svg viewBox="0 0 1000 340" width="100%" role="img" aria-label="The three-column menu editor">
+    <rect x="0" y="0" width="1000" height="340" fill="#ffffff"/>
+    <rect x="20" y="16" width="230" height="308" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+    <rect x="264" y="16" width="420" height="308" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="698" y="16" width="282" height="308" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="36" y="42" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#0f172a">CATEGORIES</text>
+    <rect x="32" y="54" width="206" height="26" rx="6" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text x="44" y="72" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#3730a3">Appetizers  7</text>
+    <text x="44" y="98" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#475569">Main courses  5</text>
+    <text x="44" y="122" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#475569">Desserts  3</text>
+    <text x="44" y="146" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#475569">Beverages  4</text>
+    <text x="36" y="182" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#0f172a">MODIFIER GROUPS</text>
+    <rect x="32" y="194" width="206" height="56" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="44" y="214" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#0f172a">Toppings</text>
+    <rect x="44" y="222" width="60" height="16" rx="8" fill="#f1f5f9"/>
+    <text x="50" y="234" font-family="Segoe UI, sans-serif" font-size="9.5" fill="#475569">2 options</text>
+    <rect x="110" y="222" width="58" height="16" rx="8" fill="#f1f5f9"/>
+    <text x="116" y="234" font-family="Segoe UI, sans-serif" font-size="9.5" fill="#475569">pick many</text>
+    <rect x="174" y="222" width="54" height="16" rx="8" fill="#eff6ff"/>
+    <text x="180" y="234" font-family="Segoe UI, sans-serif" font-size="9.5" fill="#2563eb">used on 3</text>
+    <text x="280" y="42" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#0f172a">ITEMS IN "APPETIZERS"</text>
+    <g>
+      <rect x="276" y="54" width="396" height="52" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="290" y="74" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#0f172a">Hummus Plate</text>
+      <text x="290" y="92" font-family="Segoe UI, sans-serif" font-size="10.5" fill="#64748b">Vegetarian · Vegan · 320 cal</text>
+      <text x="640" y="86" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="end">12.99</text>
+      <rect x="276" y="114" width="396" height="52" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="290" y="134" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#0f172a">Crispy Calamari</text>
+      <text x="290" y="152" font-family="Segoe UI, sans-serif" font-size="10.5" fill="#64748b">Gluten · Shellfish · Bestseller</text>
+      <text x="640" y="146" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="end">14.99</text>
+      <rect x="276" y="174" width="396" height="52" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="290" y="194" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700" fill="#0f172a">Grilled Sea Bass</text>
+      <text x="290" y="212" font-family="Segoe UI, sans-serif" font-size="10.5" fill="#64748b">Gluten free · Chef special</text>
+      <text x="640" y="206" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="end">28.99</text>
+    </g>
+    <text x="714" y="42" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#0f172a">ITEM EDITOR (DRAWER)</text>
+    <g font-family="Segoe UI, sans-serif" font-size="11" fill="#475569">
+      <text x="714" y="66">Name, description, price, sale price</text>
+      <text x="714" y="88">Category and tax category</text>
+      <text x="714" y="110">Sizes with their own prices</text>
+      <text x="714" y="132">Photos, primary photo</text>
+      <text x="714" y="154">Allergens, dietary marks, tags</text>
+      <text x="714" y="176">Spice level, calories, prep time</text>
+      <text x="714" y="198">Availability and per-channel visibility</text>
+      <text x="714" y="220">Modifier groups attached to the item</text>
+      <text x="714" y="242">Nutrition rows, ingredients, additives</text>
+      <text x="714" y="264">Internal name, hide instructions</text>
+    </g>
+    <rect x="714" y="284" width="250" height="28" rx="8" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text x="726" y="302" font-family="Segoe UI, sans-serif" font-size="10.5" fill="#3730a3">Drag a modifier group onto an item or a size</text>
+  </svg>
+  <figcaption>Figure 4 - the Menu tab: categories and groups on the left, items in the middle, the editor on the right.</figcaption>
+</figure>
+
+<h3>8.1 Categories</h3>
+<p>Categories are the tabs or headings the customer scrolls through, in the order shown
+here. Each one has a name, an optional photo, a visibility mode (show, scheduled, hide)
+and a schedule when it is scheduled. A category with no items is not rendered, so it is
+safe to prepare one in advance.</p>
+
+<h3>8.2 Items</h3>
+<p>An item is one orderable product. The fields that change what the customer can do:</p>
+<table>
+  <tr><th>Field</th><th>Effect on the customer</th></tr>
+  <tr><td>Name, description</td><td>The card title and the short text under it</td></tr>
+  <tr><td>Price, sale price</td><td>The charge; a sale price is shown struck through next to the normal price</td></tr>
+  <tr><td>Sizes</td><td>Replaces the single price with a size choice, each size with its own price and its own modifier groups</td></tr>
+  <tr><td>Photos</td><td>The item image, with one primary photo used in lists and cards</td></tr>
+  <tr><td>Allergens</td><td>Allergen badges and filter hits</td></tr>
+  <tr><td>Dietary marks, tags</td><td>Vegetarian, vegan and gluten free marks, plus badges such as Popular or New</td></tr>
+  <tr><td>Spice level</td><td>Chilli marks on the card</td></tr>
+  <tr><td>Calories, prep time</td><td>The energy line and the ready-in estimate</td></tr>
+  <tr><td>Availability</td><td>Available, out of stock (shown but not orderable) or hidden</td></tr>
+  <tr><td>Visibility mode</td><td>Always shown, shown only inside a date window, or hidden</td></tr>
+  <tr><td>Channels</td><td>Whether the item is offered for pickup, delivery or both</td></tr>
+  <tr><td>Tax category</td><td>Which tax rate from the Tax and Pay tab applies to this item</td></tr>
+  <tr><td>Modifier groups</td><td>Which choices the customer must or may make when the item is opened</td></tr>
+  <tr><td>Ingredients, additives, nutrition</td><td>The detail table shown on the item page</td></tr>
+  <tr><td>Internal name, hide instructions</td><td>Kitchen-only helpers; never shown to the customer</td></tr>
+</table>
+
+<h3>8.3 Modifier groups and options</h3>
+<p>A modifier group is a question the customer answers when ordering an item, and it can
+be attached to many items. Each group reads as one card in the panel:</p>
+<ul>
+  <li><strong>Chips</strong> tell you at a glance how many options it has, whether the
+  customer picks one or many, whether it is required, the minimum and maximum choices,
+  whether duplicates are allowed, how many subgroups it holds and how many products use
+  it.</li>
+  <li><strong>Options</strong> carry the name, a price adjustment (plus or minus), a
+  default mark, a hidden state and an out-of-stock state.</li>
+  <li><strong>Subgroups</strong> are real groups nested one level deep, so "Choose a
+  pizza" can contain "Extra toppings". They keep their own options and their own limits,
+  and they are visibly indented under their parent with a sub badge.</li>
+  <li><strong>Used in</strong> lists the products that offer the group. Expanding it is
+  the fastest way to know whether a group is safe to edit or delete.</li>
+</ul>
+
+<h3>8.4 Importing and exporting</h3>
+<p>"Samples" imports a menu from a pasted JSON, a JSON file, an Excel sheet or a PDF
+menu. The importer reads the rows, shows a preview where each row is marked new, changed,
+unchanged or invalid, and only then writes. Append keeps the existing ids, replace
+overwrites the menu. Export writes the current menu to a spreadsheet so it can be edited
+outside the tool and imported back.</p>
+
+<h2 id="deals">9. Deals - what the offer does to the price</h2>
+
+<p>A deal is the only thing in this tool that changes what the customer pays. It is a
+card on the website Deals page; opening it starts a guided flow where the customer picks
+the products the rule needs, and the discount is computed inside the cart. Deals are
+grouped by their Section, and the Active switch hides a deal from the customer without
+deleting it.</p>
+
+<h3>9.1 The eleven deal types, and when to use each</h3>
+<table>
+  <tr><th>Type</th><th>What it does</th><th>Use it when</th></tr>
+  <tr><td>Bundle</td><td>The customer picks from a set of groups and pays one fixed price</td><td>A meal for two or four with a known total</td></tr>
+  <tr><td>Minimum quantity</td><td>The order must contain at least N items, charged per unit</td><td>Any 3 sides at a set unit price</td></tr>
+  <tr><td>Tiered pricing</td><td>A fixed item list where the unit price depends on the quantity</td><td>2 pizzas 20, 4 pizzas 36</td></tr>
+  <tr><td>Two for one</td><td>The customer picks two and pays for the cheaper one</td><td>Classic 2 for 1, in any category</td></tr>
+  <tr><td>Buy N get M</td><td>Buy N of the same offer and M are free</td><td>Buy 3 get 1 free</td></tr>
+  <tr><td>Volume pricing</td><td>The unit price drops per quantity band</td><td>1-5 at 5.00, 6 or more at 4.20</td></tr>
+  <tr><td>Free item</td><td>A free item is added when the order qualifies</td><td>Free drink with any meal</td></tr>
+  <tr><td>Free modifiers</td><td>Selected extras cost nothing</td><td>Free extra cheese on any pizza</td></tr>
+  <tr><td>Percent off</td><td>A percentage off the line or the whole order</td><td>A seasonal -10% on the menu</td></tr>
+  <tr><td>Spend and save</td><td>A fixed amount off once the subtotal passes a limit</td><td>Spend 50, save 5</td></tr>
+  <tr><td>Free delivery</td><td>The delivery fee is waived above a subtotal</td><td>Free delivery over 30 in chosen zones</td></tr>
+</table>
+
+<h3>9.2 The four-step editor</h3>
+<ol>
+  <li><strong>Deal type</strong> - pick one of the eleven cards. Each card names the type,
+  describes it in one line and gives a concrete example, so the choice does not need
+  memory.</li>
+  <li><strong>Offer setup</strong> - only the fields that type needs: the groups, the
+  items or categories, the tiers or bands, the percentage. A match preview below shows
+  how many menu items currently qualify, which is the fastest way to catch a filter that
+  matches nothing.</li>
+  <li><strong>Details</strong> - title, description, section, price where the type uses
+  one, image and the Active switch. The title is required before the flow lets you
+  continue.</li>
+  <li><strong>Schedule</strong> - an optional date window, weekdays and time window. An
+  empty schedule means always.</li>
+</ol>
+<p>The footer drives the flow: steps one to three show "Next: &lt;step&gt;" and the last
+step shows Save Deal, so an offer cannot be saved before it has been configured. A
+failed save groups the problems by the step that owns each fix and takes you there.</p>
+
+<figure class="ssot-shot">
+  <svg viewBox="0 0 1000 270" width="100%" role="img" aria-label="The four steps of the deal editor">
+    <rect x="0" y="0" width="1000" height="270" fill="#ffffff"/>
+    <rect x="24" y="20" width="952" height="230" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="48" y="52" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Edit Deal</text>
+    <g font-family="Segoe UI, sans-serif" font-size="11.5">
+      <rect x="48" y="68" width="150" height="30" rx="8" fill="#4f46e5"/><text x="64" y="88" fill="#ffffff">1 · Deal type</text>
+      <rect x="208" y="68" width="150" height="30" rx="8" fill="#f1f5f9"/><text x="224" y="88" fill="#475569">2 · Offer setup</text>
+      <rect x="368" y="68" width="130" height="30" rx="8" fill="#f1f5f9"/><text x="384" y="88" fill="#475569">3 · Details</text>
+      <rect x="508" y="68" width="130" height="30" rx="8" fill="#f1f5f9"/><text x="524" y="88" fill="#475569">4 · Schedule</text>
+    </g>
+    <g>
+      <rect x="48" y="112" width="180" height="60" rx="8" fill="#ffffff" stroke="#c7d2fe" stroke-width="2"/>
+      <text x="60" y="134" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#3730a3">Bundle</text>
+      <text x="60" y="152" font-family="Segoe UI, sans-serif" font-size="10" fill="#64748b">one fixed price</text>
+      <rect x="238" y="112" width="180" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="250" y="134" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Two for one</text>
+      <text x="250" y="152" font-family="Segoe UI, sans-serif" font-size="10" fill="#64748b">cheaper one free</text>
+      <rect x="428" y="112" width="180" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="440" y="134" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Percent off</text>
+      <text x="440" y="152" font-family="Segoe UI, sans-serif" font-size="10" fill="#64748b">-10% on a line</text>
+      <rect x="618" y="112" width="180" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="630" y="134" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Free delivery</text>
+      <text x="630" y="152" font-family="Segoe UI, sans-serif" font-size="10" fill="#64748b">above a subtotal</text>
+    </g>
+    <rect x="48" y="192" width="900" height="42" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="64" y="218" font-family="Segoe UI, sans-serif" font-size="11" fill="#64748b">STEP 1 OF 4 · DEAL TYPE</text>
+    <rect x="640" y="200" width="86" height="26" rx="6" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="664" y="217" font-family="Segoe UI, sans-serif" font-size="11" fill="#475569">Cancel</text>
+    <rect x="736" y="200" width="196" height="26" rx="6" fill="#4f46e5"/>
+    <text x="756" y="217" font-family="Segoe UI, sans-serif" font-size="11" fill="#ffffff">Next: Offer setup</text>
+    <text x="48" y="252" font-family="Segoe UI, sans-serif" font-size="10.5" fill="#94a3b8">Save Deal appears only on step 4, so an unconfigured offer cannot be saved by mistake.</text>
+  </svg>
+  <figcaption>Figure 5 - the four steps, the step label in the footer, and the single forward action.</figcaption>
+</figure>
+
+<h3>9.3 Sections, scheduling and promo codes</h3>
+<ul>
+  <li><strong>Section</strong> - the heading a deal is listed under on the website, for
+  example Family or Weekend. The field shows the chosen section and offers the ones
+  already in use when you press Change section; a new name can be typed there. Leaving it
+  empty puts the deal in the ungrouped area. Dragging a deal onto another section moves
+  it; dragging inside a section reorders it.</li>
+  <li><strong>Schedule</strong> - a deal with a weekday and time window only appears
+  during that window, which is how a lunch offer stops at 16:00.</li>
+  <li><strong>Promo codes</strong> - codes the customer types at checkout. Supported
+  offers are percent off, a subtotal discount and free delivery, each with its own limit
+  and validity.</li>
+  <li><strong>Generate with AI</strong> - describes an offer in words and fills the
+  editor. Each submitted request counts once against the monthly allowance shown in the
+  toolbar; when the allowance is used up the actions disable until the first of the next
+  month.</li>
+</ul>
+
+<h2 id="deal-vs-campaign">10. Deals and Promotions: which one?</h2>
+
+<p class="note"><strong>Short answer.</strong> Use a <strong>Deal</strong> for anything
+that changes what the customer pays. Use a <strong>Promotion</strong> for a picture and a
+sentence under the hero, with no effect on the price. There is no third option: an older
+"campaign" record is simply a two-for-one deal, and the tool converts it automatically.</p>
+
+<table>
+  <tr><th></th><th>Deal</th><th>Promotion</th></tr>
+  <tr><td>Changes the price</td><td>Yes, by rule</td><td>No</td></tr>
+  <tr><td>Customer picks products</td><td>Yes, inside the deal popup</td><td>No, it is an advertisement</td></tr>
+  <tr><td>How many can exist</td><td>No practical limit</td><td>At most four are shown</td></tr>
+  <tr><td>Where it appears</td><td>Deals page, grouped by section</td><td>Under the hero image</td></tr>
+  <tr><td>Can be scheduled</td><td>Yes, dates, weekdays and times</td><td>No</td></tr>
+  <tr><td>Works with a promo code</td><td>Yes</td><td>No</td></tr>
+  <tr><td>Use it to</td><td>Sell more or reward a bigger basket</td><td>Announce the deal you already made</td></tr>
+</table>
+
+<p><strong>Why only two?</strong> An earlier version of this product also had a
+"campaign" record type, but it could only express one offer: pick two products and pay
+for the cheaper one. That is exactly the "Two for one" deal, with fewer options, so the
+type was removed instead of being kept alongside deals. If a document still contains a
+campaign, opening it here turns it into a two-for-one deal with the same title,
+description, categories and size rule - nothing is lost and nothing has to be re-entered.</p>
+
+<p><strong>Rule of thumb in one line:</strong> if money changes hands differently, it is
+a Deal; if it only announces something, it is a Promotion.</p>
+
+<h2 id="hero-promotions">11. Hero image and Promotions</h2>
+
+<ul>
+  <li><strong>Hero</strong> - the wide image behind and above the restaurant name. Upload
+  a file or paste a link; a preset gallery is offered when the platform supplies one. One
+  hero per restaurant, so it is the place for the signature dish or the room, not for a
+  temporary offer.</li>
+  <li><strong>Promotions</strong> - short advertising cards under the hero: a title, one
+  line of text and an image. At most four are stored and shown, in the order listed, and
+  the strip disappears when the list is empty. Drag to reorder.</li>
+</ul>
+
+<h2 id="other-tabs">12. Alerts, Devices and Add-ons</h2>
+
+<table>
+  <tr><th>Tab</th><th>What it is for</th></tr>
+  <tr><td>Alerts</td><td>What happens when an order fails to reach the kitchen: the failure alert switch, the sound, the supervisor phone that is called, plus the social and link settings (Facebook page, the smart menu link, the website domain, iOS and Android app toggles) that the website and the apps read.</td></tr>
+  <tr><td>Devices</td><td>The devices connected to the restaurant: platform, operating system, device id, app version and the last check-in. A device that stops checking in shows it here, which is the first thing to look at when orders stop arriving.</td></tr>
+  <tr><td>Add-ons</td><td>Paid services you can order from inside the tool: menu setup by our team (149), menu update (49) and promotion setup (79). Choose a service, attach what it needs (a PDF, a spreadsheet or a photo), add a contact and a note, and send it. Each request keeps the price it was created with and shows its status in "Your requests".</td></tr>
+</table>
+
+<h2 id="faq">13. Common questions</h2>
+
+<table>
+  <tr><th>Question</th><th>Answer</th></tr>
+  <tr><td>Is there a publish button?</td><td>No. The tool saves by itself about half a second after you stop typing, and the website reads the saved document. Watch the notice at the bottom for the save confirmation.</td></tr>
+  <tr><td>Why is a card showing a summary instead of fields?</td><td>That is the read-only view. Press Edit on the card header (or the floating Edit on the profile hero) to change it, Done to save, Cancel to discard.</td></tr>
+  <tr><td>Why does the address search not find my restaurant?</td><td>The search only looks inside the selected country and state. Check those two fields first, then search the restaurant name or the street address. Use "search the whole country" to widen it.</td></tr>
+  <tr><td>Why do my menu prices look wrong?</td><td>Check the tax mode on Tax and Pay. "Included in the price" means the menu price already contains the tax, "added at checkout" means it is added in the totals.</td></tr>
+  <tr><td>Why is a deal not on the website?</td><td>Three usual causes: the Active switch is off, the schedule window is not now, or the deal rule matches no item. The match preview on step 2 shows how many items qualify.</td></tr>
+  <tr><td>Can I reuse a modifier group on many items?</td><td>Yes. Modifier groups are shared; attach the same group to as many items or sizes as you like, and the "used on N products" chip counts them.</td></tr>
+  <tr><td>How deep can modifier groups nest?</td><td>One level. A subgroup cannot contain another subgroup, which keeps the customer flow predictable.</td></tr>
+  <tr><td>Why can I not add a fifth promotion?</td><td>The website shows at most four, so the tool stops at four. Delete or replace one first.</td></tr>
+  <tr><td>What is the difference between a deal and a promotion?</td><td>See section 10. A deal changes the price by rule, a promotion only advertises. An older campaign record is converted into a two-for-one deal automatically.</td></tr>
+  <tr><td>Why did my save get blocked?</td><td>A validation rule failed, for example a deal pointing at a category that no longer exists. The message names the record and the field; fix it and the save repeats.</td></tr>
+  <tr><td>Does deleting an item break a deal?</td><td>A deal that references a missing item is reported by the validator. Remove the reference on the deal before deleting the item, or keep the item hidden instead.</td></tr>
+  <tr><td>How many AI generations do I get?</td><td>Thirty submitted requests per month, counted in the Deals toolbar and in both AI dialogs. The allowance resets on the first of the next month.</td></tr>
+</table>
+
+<h2 id="troubleshooting">14. Troubleshooting</h2>
+
 <table>
   <tr><th>Problem</th><th>What to do</th></tr>
-  <tr><td>[Problem]</td><td>[Fix]</td></tr>
+  <tr><td>The bottom notice says the save was blocked</td><td>Read the message: it names the record and the field. Fix that field, then wait a second; the tool retries on its own.</td></tr>
+  <tr><td>Customers cannot order, they see "closed"</td><td>Check today's opening range on Services, then check for a temporary closure for today and for a special hour that overrides it. Also confirm the time zone on General.</td></tr>
+  <tr><td>Delivery is not offered</td><td>Check the Delivery toggle on Services, that at least one zone is drawn on the Delivery map, and that the customer address falls inside it.</td></tr>
+  <tr><td>The delivery fee or minimum looks wrong</td><td>Zones carry their own fee and minimum. The zone that matches the address wins, so check the zone that contains the pin.</td></tr>
+  <tr><td>An item is visible but cannot be ordered</td><td>Its availability is "out of stock" or its visibility window has passed. Open the item and check availability and visibility mode.</td></tr>
+  <tr><td>Modifier choices do not appear on the website</td><td>The group must be attached to the item (or to each size). Open the item, find the modifier group checkboxes and tick it, or drag the group card onto the item.</td></tr>
+  <tr><td>A deal card shows but the discount does not apply</td><td>The rule matched nothing, the schedule window is closed, or the cart did not contain the products the rule needs. Check the match preview and the schedule.</td></tr>
+  <tr><td>Prices lost their decimals after importing a menu</td><td>The importer reads numbers as typed. Re-import with prices as plain numbers (12.99, not 12,99) or correct the affected items.</td></tr>
+  <tr><td>The address search returns nothing for a name</td><td>Some businesses are not in OpenStreetMap. Search the street address instead, then adjust the pin on the map.</td></tr>
+  <tr><td>Everything is greyed out</td><td>The tool was opened read-only. Nothing is lost; ask for write permission on the restaurant record.</td></tr>
+  <tr><td>Orders stop arriving at the kitchen</td><td>Open Devices and check the last check-in of the POS or kitchen display. A device that stopped reporting is usually a network or app problem on that device.</td></tr>
+</table>
+
+<h2 id="limits">15. Limits worth knowing</h2>
+
+<table>
+  <tr><th>Topic</th><th>Limit</th></tr>
+  <tr><td>Promotions</td><td>At most four stored and shown; the website renders the first four.</td></tr>
+  <tr><td>Modifier nesting</td><td>One level of subgroups.</td></tr>
+  <tr><td>AI generation</td><td>30 submitted requests per month, reset on the first of the next month.</td></tr>
+  <tr><td>Address and map search</td><td>OpenStreetMap Nominatim, one request per second, results cached for the session, limited to the selected country and state.</td></tr>
+  <tr><td>Deal schedule</td><td>Optional; an empty schedule means the deal is always available.</td></tr>
+  <tr><td>Read-only mode</td><td>Disables every control, hides the Edit actions and keeps the summaries readable.</td></tr>
 </table>
 <!-- GENERATED-END -->
 
-<div class="footer">
-  Restaurant And Menu Manager - help document. Satellite of the SSOT system - not a
-  source of truth; when it disagrees with the SSOT, the SSOT wins.
-</div>
+<p class="footer">
+  Restaurant And Menu Manager - user help. The authoritative description of every rule,
+  decision and limitation is the <a href="ssot.html">SSOT</a>; the exact data shapes the
+  website reads are in the <a href="client-data-contract.html">client data contract</a>.
+  Marketing material for the deal types lives in the <a href="deals-guide.html">deals
+  guide</a>.
+</p>
 </div>
 </body>
 </html>

@@ -1,0 +1,1179 @@
+<!--
+  =========================================================================
+  SOCCER PAGE - fragment for the BC Muslim Sports website (route /soccer)
+  - Everything lives inside ONE parent div (class bc-page bc-soccer) - CMS embed
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .bc-soccer so nothing leaks into the CMS
+  - Exactly one h1 heading, semantic sections, mobile-first responsive layout
+  - Signature animation: the hero pitch lines draw themselves on load, and
+    the division cards stagger in on scroll
+  - SEO for the CMS page object (slug "soccer"): title "Soccer Leagues - BC
+    Muslim Sports Association", description "Five soccer divisions from U18
+    to Masters, regular season and playoffs, league honours and promotion.
+    Home of the finals at Hjorth Road Park, Surrey BC."
+  =========================================================================
+-->
+<div class="bc-page bc-soccer">
+
+	<!-- =============================== HERO =============================== -->
+	<section class="bc-sc-hero">
+		<div class="bc-sc-hero-bg" aria-hidden="true"></div>
+
+		<div class="bc-sc-wrap bc-sc-hero-inner">
+			<div class="bc-sc-hero-copy">
+				<p class="bc-sc-kicker bc-sc-kicker-light">
+					<span class="bc-sc-kicker-rule" aria-hidden="true"></span>
+					Soccer &middot; The flagship league
+				</p>
+				<h1 class="bc-sc-hero-title">Five divisions.<br>
+					<span class="bc-sc-hero-title-accent">One family of football.</span></h1>
+				<p class="bc-sc-hero-lede">
+					From the U18 rising stars to the Masters who never lost it, our soccer leagues run a full
+					season of football every year - regular season, playoffs, finals day and league honours.
+				</p>
+				<div class="bc-sc-hero-actions">
+					<a class="bc-sc-btn bc-sc-btn-gold" data-ic-nav-href="/membership" href="/membership">
+						Register to play
+						<span class="bc-sc-btn-arrow" aria-hidden="true">&rarr;</span>
+					</a>
+					<a class="bc-sc-btn bc-sc-btn-ghost" href="#bc-sc-divisions">Explore the divisions</a>
+				</div>
+			</div>
+
+			<div class="bc-sc-hero-visual" aria-hidden="true">
+				<div class="bc-sc-pitch">
+					<svg viewBox="0 0 320 200" preserveAspectRatio="none">
+						<rect class="bc-sc-pitch-draw" x="2" y="2" width="316" height="196" rx="10" />
+						<line class="bc-sc-pitch-draw" x1="160" y1="2" x2="160" y2="198" />
+						<circle class="bc-sc-pitch-draw" cx="160" cy="100" r="38" />
+						<rect class="bc-sc-pitch-draw" x="2" y="52" width="52" height="96" />
+						<rect class="bc-sc-pitch-draw" x="266" y="52" width="52" height="96" />
+					</svg>
+					<span class="bc-sc-ball" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m12 8.4 3.2 2.3-1.2 3.7H10l-1.2-3.7z" /></svg>
+					</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ DIVISIONS ============================ -->
+	<section class="bc-sc-divisions" id="bc-sc-divisions">
+		<div class="bc-sc-wrap">
+			<div class="bc-sc-sec-head bc-sc-reveal">
+				<p class="bc-sc-kicker"><span class="bc-sc-sec-num">01</span> The divisions</p>
+				<h2 class="bc-sc-sec-title">A division for every stage of the game</h2>
+				<p class="bc-sc-sec-sub">Every division plays a regular season followed by playoffs. Champions
+					are promoted and honoured on finals day.</p>
+			</div>
+
+			<div class="bc-sc-div-grid">
+				<article class="bc-sc-div bc-sc-reveal">
+					<div class="bc-sc-div-head">
+						<span class="bc-sc-div-crest bc-sc-div-crest-gold" aria-hidden="true">P1</span>
+						<span class="bc-sc-div-badge">Top flight</span>
+					</div>
+					<h3 class="bc-sc-div-title">Premier Division 1</h3>
+					<p class="bc-sc-div-text">The highest level in the league. The fastest football, the
+						toughest finals, and the trophy every team wants.</p>
+					<ul class="bc-sc-div-facts">
+						<li>Regular season + playoff final</li>
+						<li>League honours for every final</li>
+						<li>Champions hold the Prem 1 title</li>
+					</ul>
+				</article>
+
+				<article class="bc-sc-div bc-sc-reveal">
+					<div class="bc-sc-div-head">
+						<span class="bc-sc-div-crest" aria-hidden="true">P2</span>
+						<span class="bc-sc-div-badge bc-sc-div-badge-cool">Competitive</span>
+					</div>
+					<h3 class="bc-sc-div-title">Premier Division 2</h3>
+					<p class="bc-sc-div-text">Strong, organized football one step below the top flight, and
+						the direct promotion route for teams chasing the double.</p>
+					<ul class="bc-sc-div-facts">
+						<li>Regular season + playoff final</li>
+						<li>Promotion to Prem 1</li>
+						<li>Division 1b final pathway</li>
+					</ul>
+				</article>
+
+				<article class="bc-sc-div bc-sc-reveal">
+					<div class="bc-sc-div-head">
+						<span class="bc-sc-div-crest" aria-hidden="true">P3</span>
+						<span class="bc-sc-div-badge bc-sc-div-badge-cool">Biggest field</span>
+					</div>
+					<h3 class="bc-sc-div-title">Premier Division 3</h3>
+					<p class="bc-sc-div-text">Our biggest division, split into 3A and 3B groups. New teams
+						start here, and champions earn promotion to Prem 2.</p>
+					<ul class="bc-sc-div-facts">
+						<li>3A and 3B playoff finals</li>
+						<li>Promotion to Prem 2</li>
+						<li>Perfect entry point for new clubs</li>
+					</ul>
+				</article>
+
+				<article class="bc-sc-div bc-sc-reveal">
+					<div class="bc-sc-div-head">
+						<span class="bc-sc-div-crest" aria-hidden="true">M</span>
+						<span class="bc-sc-div-badge bc-sc-div-badge-gold">Veterans</span>
+					</div>
+					<h3 class="bc-sc-div-title">Masters Division</h3>
+					<p class="bc-sc-div-text">The 35+ league for players who still have game. Smart football,
+						great rivalries, and a finals day of its own.</p>
+					<ul class="bc-sc-div-facts">
+						<li>Players 35 and over</li>
+						<li>Regular season + final</li>
+						<li>Season champions every year</li>
+					</ul>
+				</article>
+
+				<article class="bc-sc-div bc-sc-reveal">
+					<div class="bc-sc-div-head">
+						<span class="bc-sc-div-crest" aria-hidden="true">U18</span>
+						<span class="bc-sc-div-badge bc-sc-div-badge-gold">Rising stars</span>
+					</div>
+					<h3 class="bc-sc-div-title">U18 Division</h3>
+					<p class="bc-sc-div-text">The next generation of the league. Young players develop, compete
+						for their own final, and grow into the open divisions.</p>
+					<ul class="bc-sc-div-facts">
+						<li>Players under 18</li>
+						<li>Development and competition</li>
+						<li>Best Young Player honours</li>
+					</ul>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================= SEASON STRUCTURE ========================= -->
+	<section class="bc-sc-season">
+		<div class="bc-sc-wrap">
+			<div class="bc-sc-sec-head bc-sc-reveal">
+				<p class="bc-sc-kicker"><span class="bc-sc-sec-num">02</span> How a season works</p>
+				<h2 class="bc-sc-sec-title">From kickoff to the cup</h2>
+			</div>
+
+			<div class="bc-sc-season-grid">
+				<article class="bc-sc-step bc-sc-reveal">
+					<span class="bc-sc-step-num">1</span>
+					<h3 class="bc-sc-step-title">Regular season</h3>
+					<p class="bc-sc-step-text">Every team plays a full fixture list across its division. The
+						regular season title is its own trophy.</p>
+				</article>
+
+				<article class="bc-sc-step bc-sc-reveal">
+					<span class="bc-sc-step-num">2</span>
+					<h3 class="bc-sc-step-title">Playoffs and finals</h3>
+					<p class="bc-sc-step-text">The season ends at Hjorth Road Park with playoff finals across
+						every division, from Prem 1 down to 3B.</p>
+				</article>
+
+				<article class="bc-sc-step bc-sc-reveal">
+					<span class="bc-sc-step-num">3</span>
+					<h3 class="bc-sc-step-title">Honours and promotion</h3>
+					<p class="bc-sc-step-text">Champions lift the cup and earn promotion. The league honours its
+						best players, coaches and managers.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================= CHAMPIONS + HONOURS ========================= -->
+	<section class="bc-sc-champs">
+		<div class="bc-sc-wrap">
+			<div class="bc-sc-sec-head bc-sc-reveal">
+				<p class="bc-sc-kicker"><span class="bc-sc-sec-num">03</span> Champions and honours</p>
+				<h2 class="bc-sc-sec-title">Who lifted the cups</h2>
+				<p class="bc-sc-sec-sub">The most recent finals, decided at Hjorth Road Park in Surrey, BC.</p>
+			</div>
+
+			<div class="bc-sc-champs-grid">
+				<div class="bc-sc-table-card bc-sc-reveal">
+					<p class="bc-sc-table-title">Last season's finals</p>
+					<div class="bc-sc-table">
+						<div class="bc-sc-table-row bc-sc-table-head-row">
+							<span>Division</span><span>Champions</span><span>Runners-up</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>Premier Division 1</span><strong>Sabeto FC</strong><span>LAFC</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>Premier Division 2</span><strong>Rain or Shine All Stars</strong><span>White Falcons</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>Division 1b</span><strong>Syria FC</strong><span>Muslim Food Bank FC</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>Premier Division 3A</span><strong>Surrey Jamea FC</strong><span>BFDM FC</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>Premier Division 3B</span><strong>Dark Knights</strong><span>Centre Canada</span>
+						</div>
+					</div>
+					<p class="bc-sc-table-note">Regular season titles: Eagles FC (Prem 1), Syria FC (Prem 2),
+						Rain or Shine All Stars (Prem 3).</p>
+				</div>
+
+				<div class="bc-sc-table-card bc-sc-reveal">
+					<p class="bc-sc-table-title">2021 season winners</p>
+					<div class="bc-sc-table">
+						<div class="bc-sc-table-row bc-sc-table-head-row">
+							<span>Division</span><span>Champions</span><span>Runners-up</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>Premier Division 1</span><strong>Sabeto FC</strong><span>Syria FC</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>Premier Division 2</span><strong>Etihad FC</strong><span>Chameleons FC</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>Masters</span><strong>Syria 35</strong><span>Morocco 35</span>
+						</div>
+						<div class="bc-sc-table-row">
+							<span>U18</span><strong>LAFC</strong><span>Eagles</span>
+						</div>
+					</div>
+					<p class="bc-sc-table-note">A big thank you to everyone involved, from coaches and players
+						to our fans.</p>
+				</div>
+			</div>
+
+			<div class="bc-sc-honours-strip bc-sc-reveal">
+				<p class="bc-sc-honours-label">League honours every season</p>
+				<ul class="bc-sc-honours-list">
+					<li><span class="bc-sc-honour-dot" aria-hidden="true"></span> Golden Glove</li>
+					<li><span class="bc-sc-honour-dot" aria-hidden="true"></span> Best Coach / Manager</li>
+					<li><span class="bc-sc-honour-dot" aria-hidden="true"></span> Best Young Player</li>
+					<li><span class="bc-sc-honour-dot" aria-hidden="true"></span> Team MVP</li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== VENUE ============================== -->
+	<section class="bc-sc-venue">
+		<div class="bc-sc-wrap bc-sc-venue-inner bc-sc-reveal">
+			<div class="bc-sc-venue-copy">
+				<p class="bc-sc-kicker bc-sc-kicker-light">Matchday home</p>
+				<h2 class="bc-sc-venue-title">Hjorth Road Park, Surrey BC</h2>
+				<p class="bc-sc-venue-text">An incredible day of action and a wonderful atmosphere - that is
+					finals day at the Hjorth turf park in Surrey, British Columbia. Fans, families and every
+					final across the divisions.</p>
+				<a class="bc-sc-btn bc-sc-btn-gold" data-ic-nav-href="/contact-us" href="/contact-us">
+					Ask about match days
+					<span class="bc-sc-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+			</div>
+			<div class="bc-sc-venue-visual" aria-hidden="true">
+				<div class="bc-sc-venue-pin">
+					<svg viewBox="0 0 24 24"><path d="M12 21.5s-6.6-5.4-6.6-11a6.6 6.6 0 0 1 13.2 0c0 5.6-6.6 11-6.6 11Z" /><circle cx="12" cy="10.4" r="2.6" /></svg>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== CTA ============================== -->
+	<section class="bc-sc-cta">
+		<div class="bc-sc-wrap bc-sc-cta-inner bc-sc-reveal">
+			<h2 class="bc-sc-cta-title">Your club's name on that cup?</h2>
+			<p class="bc-sc-cta-text">Register as a player or bring a whole team. The next season starts with
+				you.</p>
+			<div class="bc-sc-cta-actions">
+				<a class="bc-sc-btn bc-sc-btn-gold" data-ic-nav-href="/membership" href="/membership">
+					Join a league
+					<span class="bc-sc-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+				<a class="bc-sc-btn bc-sc-btn-ghost" data-ic-nav-href="/contact-us" href="/contact-us">
+					Talk to the association
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FAQ ============================== -->
+	<section class="bc-sc-faq">
+		<div class="bc-sc-wrap bc-sc-faq-wrap">
+			<div class="bc-sc-sec-head bc-sc-reveal">
+				<p class="bc-sc-kicker">Questions, answered</p>
+				<h2 class="bc-sc-sec-title">Soccer, quickly explained</h2>
+			</div>
+
+			<div class="bc-sc-faq-list bc-sc-reveal">
+				<details class="bc-sc-faq-item">
+					<summary class="bc-sc-faq-question">Which division should I join?</summary>
+					<p class="bc-sc-faq-answer">New clubs usually start in Premier Division 3, and new players
+						are placed by the association after registration. If you already have a team, tell us
+						in the membership form.</p>
+				</details>
+				<details class="bc-sc-faq-item">
+					<summary class="bc-sc-faq-question">How long is a season?</summary>
+					<p class="bc-sc-faq-answer">Every season runs a full fixture list, playoffs, and finals
+						day. The exact calendar is announced by the association before each season.</p>
+				</details>
+				<details class="bc-sc-faq-item">
+					<summary class="bc-sc-faq-question">Can my whole team join together?</summary>
+					<p class="bc-sc-faq-answer">Yes. Team managers can register a full squad through the
+						membership form or by contacting the association directly.</p>
+				</details>
+				<details class="bc-sc-faq-item">
+					<summary class="bc-sc-faq-question">Are there awards beyond the titles?</summary>
+					<p class="bc-sc-faq-answer">Yes - every season the league honours the Golden Glove, Best
+						Coach/Manager, Best Young Player and Team MVPs from the finals.</p>
+				</details>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.bc-soccer {
+			--bc-green: #0e3a2c;
+			--bc-green-deep: #08231a;
+			--bc-green-2: #124a38;
+			--bc-emerald: #1e9e6a;
+			--bc-gold: #d9a441;
+			--bc-gold-deep: #b07d1e;
+			--bc-gold-soft: #f0d69a;
+			--bc-cream: #f6f3ea;
+			--bc-paper: #fdfbf5;
+			--bc-ink: #15211c;
+			--bc-muted: #5c6b63;
+			--bc-line: #e4decd;
+			position: relative;
+			width: 100%;
+			background: var(--bc-paper);
+			color: var(--bc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.bc-soccer,
+		.bc-soccer *,
+		.bc-soccer *::before,
+		.bc-soccer *::after {
+			box-sizing: border-box;
+		}
+
+		.bc-sc-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.bc-sc-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.bc-sc-kicker-rule {
+			display: inline-block;
+			width: 34px;
+			height: 2px;
+			background: var(--bc-gold);
+			flex: 0 0 auto;
+		}
+
+		.bc-sc-kicker-light {
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-sc-sec-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 30px;
+			height: 22px;
+			padding: 0 8px;
+			background: var(--bc-green);
+			color: var(--bc-gold-soft);
+			border-radius: 6px;
+			font-size: 11.5px;
+			letter-spacing: 0.1em;
+		}
+
+		.bc-sc-sec-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			line-height: 1.12;
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: var(--bc-ink);
+		}
+
+		.bc-sc-sec-sub {
+			margin: 12px 0 0;
+			max-width: 660px;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+		}
+
+		.bc-sc-sec-head {
+			margin-bottom: 36px;
+		}
+
+		.bc-sc-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 26px;
+			border-radius: 10px;
+			font-weight: 800;
+			font-size: 14px;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+		}
+
+		.bc-sc-btn-gold {
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			box-shadow: 0 14px 26px -14px rgba(217, 164, 65, 0.85);
+		}
+
+		.bc-sc-btn-gold:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 18px 30px -14px rgba(217, 164, 65, 0.95);
+		}
+
+		.bc-sc-btn-ghost {
+			border: 1.5px solid rgba(240, 214, 154, 0.55);
+			color: #f0d69a;
+		}
+
+		.bc-sc-btn-ghost:hover {
+			border-color: var(--bc-gold-soft);
+			background: rgba(240, 214, 154, 0.08);
+			transform: translateY(-2px);
+		}
+
+		.bc-sc-btn-arrow {
+			transition: transform 0.2s ease;
+		}
+
+		.bc-sc-btn:hover .bc-sc-btn-arrow {
+			transform: translateX(4px);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.bc-sc-hero {
+			position: relative;
+			padding: 72px 0 84px;
+			color: #e9f2ec;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.bc-sc-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			background:
+				radial-gradient(120% 110% at 18% 0%, rgba(30, 158, 106, 0.24), transparent 52%),
+				radial-gradient(80% 80% at 100% 100%, rgba(217, 164, 65, 0.14), transparent 55%),
+				linear-gradient(155deg, #0e3a2c 0%, #08231a 62%, #061b14 100%);
+		}
+
+		.bc-sc-hero-bg::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 64px, transparent 64px 128px);
+		}
+
+		.bc-sc-hero-inner {
+			display: grid;
+			grid-template-columns: 1.1fr 0.9fr;
+			align-items: center;
+			gap: 48px;
+		}
+
+		.bc-sc-hero-title {
+			margin: 0;
+			font-weight: 800;
+			font-size: clamp(32px, 4.2vw, 52px);
+			line-height: 1.07;
+			letter-spacing: -0.02em;
+			color: #fff;
+			text-wrap: balance;
+		}
+
+		.bc-sc-hero-title-accent {
+			color: var(--bc-gold-soft);
+			font-family: Georgia, 'Times New Roman', serif;
+			font-style: italic;
+			font-weight: 700;
+		}
+
+		.bc-sc-hero-lede {
+			margin: 18px 0 0;
+			max-width: 540px;
+			font-size: 16.5px;
+			color: #cfe0d5;
+		}
+
+		.bc-sc-hero-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 14px;
+			margin-top: 28px;
+		}
+
+		.bc-sc-hero-visual {
+			display: flex;
+			justify-content: center;
+		}
+
+		.bc-sc-pitch {
+			position: relative;
+			width: min(440px, 100%);
+			aspect-ratio: 320 / 200;
+			border-radius: 16px;
+			background:
+				repeating-linear-gradient(90deg, rgba(30, 158, 106, 0.32) 0 58px, rgba(20, 110, 74, 0.32) 58px 116px);
+			border: 1px solid rgba(240, 214, 154, 0.3);
+			box-shadow: 0 30px 54px -26px rgba(0, 0, 0, 0.55);
+			overflow: hidden;
+		}
+
+		.bc-sc-pitch svg {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.bc-sc-pitch-draw {
+			fill: none;
+			stroke: rgba(240, 214, 154, 0.75);
+			stroke-width: 1.6;
+			stroke-dasharray: 1100;
+			stroke-dashoffset: 1100;
+			animation: bc-sc-draw 2.2s ease-out forwards;
+		}
+
+		.bc-sc-pitch-draw:nth-child(2) { animation-delay: 0.15s; }
+		.bc-sc-pitch-draw:nth-child(3) { animation-delay: 0.3s; }
+		.bc-sc-pitch-draw:nth-child(4) { animation-delay: 0.45s; }
+		.bc-sc-pitch-draw:nth-child(5) { animation-delay: 0.6s; }
+
+		@keyframes bc-sc-draw {
+			to { stroke-dashoffset: 0; }
+		}
+
+		.bc-sc-ball {
+			position: absolute;
+			left: 12%;
+			top: 62%;
+			width: 34px;
+			height: 34px;
+			color: #fff;
+			animation: bc-sc-ball-roll 7s ease-in-out infinite;
+		}
+
+		.bc-sc-ball svg {
+			width: 100%;
+			height: 100%;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.5;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		@keyframes bc-sc-ball-roll {
+			0% { transform: translate(0, 0) rotate(0deg); }
+			30% { transform: translate(220px, -90px) rotate(340deg); }
+			62% { transform: translate(160px, 40px) rotate(700deg); }
+			100% { transform: translate(0, 0) rotate(1080deg); }
+		}
+
+		/* --------------------------- divisions --------------------------- */
+		.bc-sc-divisions {
+			padding: 88px 0 70px;
+		}
+
+		.bc-sc-div-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 22px;
+		}
+
+		.bc-sc-div {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-top: 4px solid var(--bc-emerald);
+			border-radius: 16px;
+			padding: 24px 22px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-sc-div:nth-child(2) { border-top-color: var(--bc-gold); }
+		.bc-sc-div:nth-child(3) { border-top-color: #4f8fc9; }
+		.bc-sc-div:nth-child(4) { border-top-color: var(--bc-gold-deep); }
+		.bc-sc-div:nth-child(5) { border-top-color: var(--bc-emerald); }
+
+		.bc-sc-div:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 22px 36px -24px rgba(8, 35, 26, 0.45);
+		}
+
+		.bc-sc-div-head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+		}
+
+		.bc-sc-div-crest {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 52px;
+			height: 58px;
+			font-size: 15px;
+			font-weight: 800;
+			letter-spacing: 0.04em;
+			color: #fff;
+			background: linear-gradient(180deg, #1e9e6a, var(--bc-green));
+			clip-path: polygon(0 0, 100% 0, 100% 74%, 50% 100%, 0 74%);
+		}
+
+		.bc-sc-div-crest-gold {
+			background: linear-gradient(180deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+		}
+
+		.bc-sc-div-badge {
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			padding: 5px 12px;
+			border-radius: 999px;
+			background: rgba(30, 158, 106, 0.12);
+			color: #15734d;
+		}
+
+		.bc-sc-div-badge-cool {
+			background: rgba(79, 143, 201, 0.14);
+			color: #2f6591;
+		}
+
+		.bc-sc-div-badge-gold {
+			background: rgba(217, 164, 65, 0.16);
+			color: #8f6416;
+		}
+
+		.bc-sc-div-title {
+			margin: 2px 0 0;
+			font-size: 20px;
+			font-weight: 800;
+			line-height: 1.25;
+		}
+
+		.bc-sc-div-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: var(--bc-muted);
+		}
+
+		.bc-sc-div-facts {
+			list-style: none;
+			margin: 4px 0 0;
+			padding: 14px 0 0;
+			border-top: 1px dashed var(--bc-line);
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+		}
+
+		.bc-sc-div-facts li {
+			font-size: 13.5px;
+			font-weight: 600;
+			color: var(--bc-green);
+			padding-left: 18px;
+			position: relative;
+		}
+
+		.bc-sc-div-facts li::before {
+			content: '';
+			position: absolute;
+			left: 2px;
+			top: 7px;
+			width: 7px;
+			height: 7px;
+			border-radius: 50%;
+			background: var(--bc-gold);
+		}
+
+		/* ---------------------------- season ---------------------------- */
+		.bc-sc-season {
+			padding: 0 0 90px;
+		}
+
+		.bc-sc-season-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 22px;
+		}
+
+		.bc-sc-step {
+			position: relative;
+			background: var(--bc-cream);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 26px 24px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-sc-step:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-sc-step-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			border-radius: 50%;
+			background: linear-gradient(145deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			font-size: 16px;
+			font-weight: 800;
+		}
+
+		.bc-sc-step-title {
+			margin: 18px 0 8px;
+			font-size: 18.5px;
+			font-weight: 800;
+		}
+
+		.bc-sc-step-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: var(--bc-muted);
+		}
+
+		/* ---------------------------- champs ---------------------------- */
+		.bc-sc-champs {
+			padding: 0 0 90px;
+		}
+
+		.bc-sc-champs-grid {
+			display: grid;
+			grid-template-columns: 1.15fr 0.85fr;
+			gap: 22px;
+			align-items: start;
+		}
+
+		.bc-sc-table-card {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 22px;
+		}
+
+		.bc-sc-table-title {
+			margin: 0 0 14px;
+			font-size: 16px;
+			font-weight: 800;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			color: var(--bc-green);
+		}
+
+		.bc-sc-table {
+			display: flex;
+			flex-direction: column;
+			gap: 1px;
+			background: var(--bc-line);
+			border: 1px solid var(--bc-line);
+			border-radius: 10px;
+			overflow: hidden;
+		}
+
+		.bc-sc-table-row {
+			display: grid;
+			grid-template-columns: 1.2fr 1.4fr 1.2fr;
+			gap: 12px;
+			background: var(--bc-paper);
+			padding: 11px 14px;
+			font-size: 14px;
+			align-items: center;
+		}
+
+		.bc-sc-table-row strong {
+			color: #15734d;
+			font-weight: 800;
+		}
+
+		.bc-sc-table-head-row {
+			background: var(--bc-green);
+			color: var(--bc-gold-soft);
+			font-size: 11.5px;
+			font-weight: 800;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+		}
+
+		.bc-sc-table-note {
+			margin: 12px 0 0;
+			font-size: 13px;
+			color: var(--bc-muted);
+		}
+
+		.bc-sc-honours-strip {
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 14px 24px;
+			margin-top: 22px;
+			padding: 18px 22px;
+			background: var(--bc-green);
+			border-radius: 14px;
+			color: #e9f2ec;
+		}
+
+		.bc-sc-honours-label {
+			margin: 0;
+			font-size: 12.5px;
+			font-weight: 800;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-sc-honours-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px 22px;
+		}
+
+		.bc-sc-honours-list li {
+			display: inline-flex;
+			align-items: center;
+			gap: 9px;
+			font-size: 14.5px;
+			font-weight: 700;
+		}
+
+		.bc-sc-honour-dot {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: var(--bc-gold);
+		}
+
+		/* ----------------------------- venue ----------------------------- */
+		.bc-sc-venue {
+			position: relative;
+			background:
+				radial-gradient(110% 130% at 85% 10%, rgba(217, 164, 65, 0.16), transparent 55%),
+				linear-gradient(140deg, #1b553d 0%, var(--bc-green) 60%, #0a2e21 100%);
+			color: #e9f2ec;
+		}
+
+		.bc-sc-venue-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 40px;
+			padding-top: 54px;
+			padding-bottom: 54px;
+		}
+
+		.bc-sc-venue-title {
+			margin: 0;
+			font-size: clamp(24px, 3vw, 34px);
+			font-weight: 800;
+			line-height: 1.15;
+			color: #fff;
+		}
+
+		.bc-sc-venue-text {
+			margin: 12px 0 24px;
+			max-width: 600px;
+			color: #cfe0d5;
+			font-size: 16px;
+		}
+
+		.bc-sc-venue-pin {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 110px;
+			height: 110px;
+			border-radius: 50%;
+			border: 1.5px solid rgba(240, 214, 154, 0.45);
+			background: rgba(240, 214, 154, 0.08);
+		}
+
+		.bc-sc-venue-pin svg {
+			width: 52px;
+			height: 52px;
+			fill: none;
+			stroke: var(--bc-gold);
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			animation: bc-sc-pin-float 5s ease-in-out infinite;
+		}
+
+		@keyframes bc-sc-pin-float {
+			0%, 100% { transform: translateY(0); }
+			50% { transform: translateY(-8px); }
+		}
+
+		/* ------------------------------- cta ------------------------------- */
+		.bc-sc-cta {
+			padding: 88px 0;
+		}
+
+		.bc-sc-cta-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+			gap: 12px;
+		}
+
+		.bc-sc-cta-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			font-weight: 800;
+			letter-spacing: -0.015em;
+		}
+
+		.bc-sc-cta-text {
+			margin: 0;
+			max-width: 520px;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+		}
+
+		.bc-sc-cta-actions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 14px;
+			margin-top: 16px;
+		}
+
+		.bc-sc-cta .bc-sc-btn-ghost {
+			border-color: rgba(14, 58, 44, 0.4);
+			color: var(--bc-green);
+		}
+
+		.bc-sc-cta .bc-sc-btn-ghost:hover {
+			background: rgba(14, 58, 44, 0.06);
+			border-color: var(--bc-green);
+		}
+
+		/* ------------------------------- faq ------------------------------- */
+		.bc-sc-faq {
+			padding: 0 0 96px;
+		}
+
+		.bc-sc-faq-wrap {
+			max-width: 860px;
+		}
+
+		.bc-sc-faq-list {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.bc-sc-faq-item {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-radius: 14px;
+			overflow: hidden;
+			transition: border-color 0.2s ease;
+		}
+
+		.bc-sc-faq-item[open] {
+			border-color: var(--bc-gold-soft);
+		}
+
+		.bc-sc-faq-question {
+			padding: 18px 22px;
+			font-weight: 700;
+			font-size: 16px;
+			cursor: pointer;
+			list-style: none;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+		}
+
+		.bc-sc-faq-question::-webkit-details-marker {
+			display: none;
+		}
+
+		.bc-sc-faq-question::after {
+			content: '+';
+			font-size: 22px;
+			color: var(--bc-gold-deep);
+			transition: transform 0.25s ease;
+			flex: 0 0 auto;
+		}
+
+		.bc-sc-faq-item[open] .bc-sc-faq-question::after {
+			transform: rotate(45deg);
+		}
+
+		.bc-sc-faq-answer {
+			margin: 0;
+			padding: 0 22px 20px;
+			color: var(--bc-muted);
+			font-size: 15px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.bc-sc-reveal {
+			opacity: 0;
+			transform: translateY(26px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.bc-sc-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.bc-soccer.is-reduced-motion .bc-sc-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		.bc-soccer.is-reduced-motion .bc-sc-pitch-draw {
+			animation: none;
+			stroke-dashoffset: 0;
+		}
+
+		.bc-soccer.is-reduced-motion .bc-sc-ball,
+		.bc-soccer.is-reduced-motion .bc-sc-venue-pin svg {
+			animation: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.bc-sc-hero-inner {
+				grid-template-columns: 1fr;
+				gap: 44px;
+			}
+
+			.bc-sc-div-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.bc-sc-champs-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-sc-venue-inner {
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 24px;
+			}
+		}
+
+		@media (max-width: 680px) {
+			.bc-sc-div-grid,
+			.bc-sc-season-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-sc-table-row {
+				grid-template-columns: 1fr 1fr 1fr;
+				gap: 8px;
+				font-size: 13px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.bc-soccer');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-bc-soccer-ready') === '1') { return; }
+			pageRoot.setAttribute('data-bc-soccer-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- smooth in-page anchor scroll ---------------- */
+			var heroAnchors = Array.prototype.slice.call(
+				pageRoot.querySelectorAll('a[href^="#bc-sc-"]')
+			);
+
+			heroAnchors.forEach(function (anchor) {
+				anchor.addEventListener('click', function (event) {
+					var targetId = anchor.getAttribute('href').slice(1);
+					var target = document.getElementById(targetId);
+					if (!target) { return; }
+					event.preventDefault();
+					try {
+						target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+					} catch (scrollError) {
+						target.scrollIntoView();
+					}
+				});
+			});
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.bc-sc-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

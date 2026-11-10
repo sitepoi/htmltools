@@ -1,0 +1,710 @@
+<!--
+  =========================================================================
+  SITE HEADER - central chrome component for the BC Muslim Sports website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent div (class bc-header); no document tags, no libraries
+  - All CSS is scoped under .bc-header so it cannot leak into page content
+  - No header / nav / footer element tags (plain divs + ARIA roles)
+  - Brand = inline SVG crest + wordmark (no image files, no external requests)
+  - Design tokens (--bc-*) are repeated in every page file so each page is
+    self-contained; keep them in sync when the palette changes
+  - Nav targets (CMS route form, never .html): / (home), /soccer, /hockey,
+    /tournaments, /board, /membership, /contact-us. The CTA points at
+    /membership (join a league)
+  - Contact data is configurable on the root element:
+    data-bc-phone=""  (the strip link hides itself until a real number is set)
+    data-bc-email="info@bcmuslimsports.com"  (VERIFY this address before live)
+  - SPA-safe: the stylesheet is copied into the document head once under
+    #bc-header-css, every .bc-header mount initialises itself, global
+    listeners are bound once per window, and the active page link re-syncs
+    on gw:content-ready and gw.onRouteChange
+  =========================================================================
+-->
+<div class="bc-header" data-bc-header data-bc-phone=""
+	data-bc-email="info@bcmuslimsports.com">
+
+	<!-- ---------- inline icon sprite (no external requests, no library) ---------- -->
+	<svg class="bc-hd-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+		<symbol id="bc-i-instagram" viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></symbol>
+		<symbol id="bc-i-mail" viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></symbol>
+		<symbol id="bc-i-phone" viewBox="0 0 24 24"><path d="M6.8 4h3l1.4 4.2-2 1.5a12.6 12.6 0 0 0 5.1 5.1l1.5-2L20 14.2v3a2 2 0 0 1-2.2 2A15.8 15.8 0 0 1 4 6.2 2 2 0 0 1 6.8 4z" /></symbol>
+		<symbol id="bc-i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m12 8 3.4 2.5-1.3 4H9.9l-1.3-4z" /></symbol>
+	</svg>
+
+	<!-- ---------------------- top information strip ---------------------- -->
+	<div class="bc-hd-top">
+		<div class="bc-hd-wrap bc-hd-top-inner">
+			<p class="bc-hd-top-note">Bringing the ummah together one game at a time</p>
+			<div class="bc-hd-top-links">
+				<a class="bc-hd-top-link bc-hd-top-phone" href="tel:">
+					<svg class="bc-hd-ico" aria-hidden="true"><use href="#bc-i-phone"></use></svg>
+					<span class="bc-hd-phone-text"></span>
+				</a>
+				<a class="bc-hd-top-link bc-hd-top-mail" href="mailto:info@bcmuslimsports.com">
+					<svg class="bc-hd-ico" aria-hidden="true"><use href="#bc-i-mail"></use></svg>
+					info@bcmuslimsports.com
+				</a>
+				<a class="bc-hd-top-link bc-hd-top-instagram" href="https://www.instagram.com/bcmuslimsports/"
+					target="_blank" rel="noopener" aria-label="BC Muslim Sports on Instagram">
+					<svg class="bc-hd-ico" aria-hidden="true"><use href="#bc-i-instagram"></use></svg>
+					Instagram
+				</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- ------------------------------ main bar ------------------------------ -->
+	<div class="bc-hd-bar">
+		<div class="bc-hd-wrap bc-hd-bar-inner">
+
+			<a class="bc-hd-brand" data-ic-nav-href="/" href="/" aria-label="BC Muslim Sports Association - home">
+				<span class="bc-hd-crest" aria-hidden="true">
+					<svg viewBox="0 0 48 52" width="42" height="46" fill="none">
+						<path d="M24 2 43 8v17c0 12.5-8.2 20.4-19 25C13.2 45.4 5 37.5 5 25V8Z"
+							fill="#0e3a2c" stroke="#d9a441" stroke-width="2.2" stroke-linejoin="round" />
+						<path fill-rule="evenodd" fill="#d9a441"
+							d="M24 16.5a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm4.2 1.4a7 7 0 1 1 0 14.2 7 7 0 0 1 0-14.2Z" />
+						<path fill="#f0d69a"
+							d="m24 34.6 1.9 3.8 4.2.6-3 2.9.7 4.2-3.8-2-3.8 2 .7-4.2-3-2.9 4.2-.6Z" />
+					</svg>
+				</span>
+				<span class="bc-hd-word">
+					<strong>BC Muslim Sports</strong>
+					<em>Association</em>
+				</span>
+			</a>
+
+			<div class="bc-hd-nav" id="bc-hd-menu" role="navigation" aria-label="Main menu">
+				<ul class="bc-hd-list">
+					<li class="bc-hd-item">
+						<a class="bc-hd-link" data-ic-nav-href="/" href="/" data-page="home">Home</a>
+					</li>
+					<li class="bc-hd-item">
+						<a class="bc-hd-link" data-ic-nav-href="/soccer" href="/soccer" data-page="soccer">Soccer</a>
+					</li>
+					<li class="bc-hd-item">
+						<a class="bc-hd-link" data-ic-nav-href="/hockey" href="/hockey" data-page="hockey">Hockey</a>
+					</li>
+					<li class="bc-hd-item">
+						<a class="bc-hd-link" data-ic-nav-href="/tournaments" href="/tournaments" data-page="tournaments">Tournaments</a>
+					</li>
+					<li class="bc-hd-item">
+						<a class="bc-hd-link" data-ic-nav-href="/board" href="/board" data-page="board">About Us</a>
+					</li>
+					<li class="bc-hd-item">
+						<a class="bc-hd-link" data-ic-nav-href="/membership" href="/membership" data-page="membership">Membership</a>
+					</li>
+					<li class="bc-hd-item">
+						<a class="bc-hd-link" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">Contact Us</a>
+					</li>
+				</ul>
+
+				<a class="bc-hd-cta" data-ic-nav-href="/membership" href="/membership" data-page="membership">
+					<svg class="bc-hd-ico" aria-hidden="true"><use href="#bc-i-ball"></use></svg>
+					Join a league
+				</a>
+			</div>
+
+			<button type="button" class="bc-hd-burger" aria-expanded="false" aria-controls="bc-hd-menu"
+				aria-label="Open menu">
+				<span class="bc-hd-burger-box" aria-hidden="true">
+					<span></span><span></span><span></span>
+				</span>
+			</button>
+		</div>
+	</div>
+
+	<!-- mobile drawer scrim: closes the drawer, never touches page content -->
+	<div class="bc-hd-scrim" aria-hidden="true"></div>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.bc-header {
+			--bc-green: #0e3a2c;
+			--bc-green-deep: #08231a;
+			--bc-green-2: #124a38;
+			--bc-emerald: #1e9e6a;
+			--bc-gold: #d9a441;
+			--bc-gold-deep: #b07d1e;
+			--bc-gold-soft: #f0d69a;
+			--bc-cream: #f6f3ea;
+			--bc-paper: #fdfbf5;
+			--bc-ink: #15211c;
+			--bc-muted: #5c6b63;
+			--bc-line: #e4decd;
+			position: relative;
+			z-index: 60;
+			width: 100%;
+			background: var(--bc-paper);
+			color: var(--bc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+			box-shadow: 0 10px 30px -18px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-header,
+		.bc-header *,
+		.bc-header *::before,
+		.bc-header *::after {
+			box-sizing: border-box;
+		}
+
+		.bc-hd-sprite {
+			position: absolute;
+			width: 0;
+			height: 0;
+			overflow: hidden;
+		}
+
+		.bc-hd-ico {
+			width: 1em;
+			height: 1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		.bc-hd-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		/* ---------- top strip ---------- */
+		.bc-hd-top {
+			background: linear-gradient(90deg, var(--bc-green-deep), var(--bc-green) 55%, #1b553d);
+			color: #e9f2ec;
+			font-size: 13.5px;
+		}
+
+		.bc-hd-top-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			min-height: 36px;
+		}
+
+		.bc-hd-top-note {
+			margin: 0;
+			letter-spacing: 0.04em;
+		}
+
+		.bc-hd-top-links {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+
+		.bc-hd-top-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			color: #e9f2ec;
+			text-decoration: none;
+			letter-spacing: 0.02em;
+		}
+
+		.bc-hd-top-link:hover {
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-hd-top-link.is-hidden {
+			display: none;
+		}
+
+		/* ---------- main bar ---------- */
+		.bc-hd-bar {
+			position: relative;
+			background: var(--bc-paper);
+			border-bottom: 1px solid var(--bc-line);
+		}
+
+		.bc-hd-bar::after {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: -1px;
+			height: 3px;
+			background: linear-gradient(90deg, var(--bc-green), var(--bc-emerald) 45%, var(--bc-gold));
+		}
+
+		.bc-hd-bar-inner {
+			display: flex;
+			align-items: center;
+			gap: 24px;
+			min-height: 82px;
+			position: relative;
+		}
+
+		.bc-hd-brand {
+			display: inline-flex;
+			align-items: center;
+			gap: 12px;
+			flex: 0 0 auto;
+			text-decoration: none;
+			color: var(--bc-ink);
+		}
+
+		.bc-hd-crest {
+			display: inline-flex;
+			align-items: center;
+			flex: 0 0 auto;
+			transition: transform 0.25s ease;
+		}
+
+		.bc-hd-brand:hover .bc-hd-crest {
+			transform: translateY(-2px);
+		}
+
+		.bc-hd-word {
+			display: flex;
+			flex-direction: column;
+			line-height: 1.12;
+		}
+
+		.bc-hd-word strong {
+			font-size: 17.5px;
+			font-weight: 800;
+			letter-spacing: 0.02em;
+			text-transform: uppercase;
+		}
+
+		.bc-hd-word em {
+			font-style: normal;
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.34em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+		}
+
+		.bc-header.is-compact .bc-hd-bar-inner {
+			min-height: 66px;
+		}
+
+		.bc-header.is-compact .bc-hd-crest svg {
+			width: 36px;
+			height: 39px;
+		}
+
+		.bc-header.is-compact .bc-hd-word strong {
+			font-size: 16px;
+		}
+
+		.bc-hd-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 20px;
+			flex: 1 1 auto;
+			margin-left: auto;
+		}
+
+		.bc-hd-list {
+			display: flex;
+			align-items: center;
+			gap: 2px;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.bc-hd-link {
+			display: inline-flex;
+			align-items: center;
+			padding: 10px 12px;
+			color: var(--bc-ink);
+			text-decoration: none;
+			font-size: 14.5px;
+			font-weight: 700;
+			letter-spacing: 0.03em;
+			background: none;
+			border: 0;
+			cursor: pointer;
+			font-family: inherit;
+			position: relative;
+		}
+
+		.bc-hd-link::after {
+			content: '';
+			position: absolute;
+			left: 12px;
+			right: 12px;
+			bottom: 4px;
+			height: 3px;
+			border-radius: 2px;
+			background: linear-gradient(90deg, var(--bc-gold), var(--bc-gold-deep));
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform 0.25s ease;
+		}
+
+		.bc-hd-link:hover::after,
+		.bc-hd-link.is-active::after {
+			transform: scaleX(1);
+		}
+
+		.bc-hd-link.is-active {
+			color: var(--bc-gold-deep);
+		}
+
+		.bc-hd-cta {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 12px 20px;
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			font-weight: 800;
+			font-size: 13.5px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			text-decoration: none;
+			border-radius: 10px;
+			box-shadow: 0 8px 18px -10px rgba(176, 125, 30, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			flex: 0 0 auto;
+		}
+
+		.bc-hd-cta:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 12px 22px -10px rgba(176, 125, 30, 0.95);
+		}
+
+		/* ---------- burger ---------- */
+		.bc-hd-burger {
+			display: none;
+			margin-left: auto;
+			padding: 10px;
+			background: none;
+			border: 1px solid var(--bc-line);
+			border-radius: 10px;
+			cursor: pointer;
+			position: relative;
+			z-index: 4;
+		}
+
+		.bc-hd-burger-box {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+			width: 22px;
+		}
+
+		.bc-hd-burger-box span {
+			height: 2.5px;
+			background: var(--bc-ink);
+			border-radius: 2px;
+			transition: transform 0.25s ease, opacity 0.25s ease;
+		}
+
+		.bc-header.is-menu-open .bc-hd-burger-box span:nth-child(1) {
+			transform: translateY(7.5px) rotate(45deg);
+		}
+
+		.bc-header.is-menu-open .bc-hd-burger-box span:nth-child(2) {
+			opacity: 0;
+		}
+
+		.bc-header.is-menu-open .bc-hd-burger-box span:nth-child(3) {
+			transform: translateY(-7.5px) rotate(-45deg);
+		}
+
+		/* ---------- scrim ---------- */
+		.bc-hd-scrim {
+			position: fixed;
+			inset: 0;
+			background: rgba(8, 35, 26, 0.55);
+			opacity: 0;
+			visibility: hidden;
+			transition: opacity 0.25s ease, visibility 0.25s;
+			z-index: 1;
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1080px) {
+			.bc-hd-link {
+				padding: 10px 9px;
+				font-size: 13.5px;
+			}
+
+			.bc-hd-link::after {
+				left: 9px;
+				right: 9px;
+			}
+		}
+
+		@media (max-width: 920px) {
+			.bc-header.is-menu-open .bc-hd-scrim {
+				opacity: 1;
+				visibility: visible;
+			}
+
+			.bc-hd-burger {
+				display: inline-flex;
+			}
+
+			.bc-hd-bar-inner {
+				z-index: 2;
+			}
+
+			.bc-hd-nav {
+				position: fixed;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				width: min(360px, 88vw);
+				margin: 0;
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				gap: 10px;
+				background: var(--bc-paper);
+				box-shadow: -24px 0 60px rgba(8, 35, 26, 0.4);
+				padding: 74px 22px 26px;
+				overflow-y: auto;
+				transform: translateX(105%);
+				transition: transform 0.3s ease;
+				z-index: 3;
+			}
+
+			.bc-header.is-menu-open .bc-hd-nav {
+				transform: translateX(0);
+			}
+
+			.bc-hd-list {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 2px;
+			}
+
+			.bc-hd-link {
+				width: 100%;
+				justify-content: space-between;
+				padding: 13px 12px;
+				border-bottom: 1px solid var(--bc-line);
+				font-size: 16px;
+			}
+
+			.bc-hd-link::after {
+				display: none;
+			}
+
+			.bc-hd-cta {
+				justify-content: center;
+				margin-top: 8px;
+				font-size: 14px;
+			}
+
+			.bc-hd-top-note {
+				display: none;
+			}
+
+			.bc-hd-top-inner {
+				justify-content: center;
+			}
+
+			.bc-hd-top-mail {
+				display: none;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var HEADER_CSS_ID = 'bc-header-css';
+			var headerRoots = Array.prototype.slice.call(
+				document.querySelectorAll('.bc-header[data-bc-header]')
+			);
+
+			/* -------- stylesheet survives SPA re-mounts (copied once) -------- */
+			function copyHeaderStyleOnce(root) {
+				var head = document.head || document.getElementsByTagName('head')[0];
+				if (!head || document.getElementById(HEADER_CSS_ID)) { return; }
+				var styleEl = root.querySelector('style');
+				if (!styleEl) { return; }
+				var clone = document.createElement('style');
+				clone.id = HEADER_CSS_ID;
+				clone.textContent = styleEl.textContent;
+				head.appendChild(clone);
+			}
+
+			/* -------- scroll reset on route changes (bound once) -------- */
+			function resetPageScroll() {
+				if (window.location.hash) { return; }
+				try { window.scrollTo(0, 0); } catch (scrollError) { /* ignore */ }
+				var scroller = document.scrollingElement || document.documentElement;
+				if (scroller) { scroller.scrollTop = 0; }
+				headerRoots.forEach(function (root) {
+					var node = root.parentElement;
+					while (node) {
+						if (node.scrollTop > 0) { node.scrollTop = 0; }
+						node = node.parentElement;
+					}
+				});
+			}
+
+			function schedulePageScrollReset() {
+				resetPageScroll();
+				window.setTimeout(resetPageScroll, 0);
+				if (window.requestAnimationFrame) { window.requestAnimationFrame(resetPageScroll); }
+				window.setTimeout(resetPageScroll, 180);
+				window.setTimeout(resetPageScroll, 600);
+			}
+
+			/* -------- per-window globals (bound once) -------- */
+			if (!window.__bcHeaderGlobalsBound) {
+				window.__bcHeaderGlobalsBound = true;
+
+				var compactTicking = false;
+
+				function updateAllBars() {
+					compactTicking = false;
+					var isCompact = window.scrollY > 24;
+					headerRoots.forEach(function (root) {
+						root.classList.toggle('is-compact', isCompact);
+					});
+				}
+
+				function requestBarUpdate() {
+					if (compactTicking) { return; }
+					compactTicking = true;
+					window.requestAnimationFrame(updateAllBars);
+				}
+
+				window.addEventListener('scroll', requestBarUpdate, { passive: true });
+				updateAllBars();
+
+				/* delegated click on internal links resets the scroll position */
+				document.addEventListener('click', function (event) {
+					var anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+					if (!anchor) { return; }
+					var href = anchor.getAttribute('href') || '';
+					if (href.charAt(0) !== '/' || href.indexOf('//') === 0 || href.indexOf('#') !== -1) { return; }
+					var target = anchor.getAttribute('target');
+					if (target === '_blank') { return; }
+					schedulePageScrollReset();
+				});
+
+				/* route-change events from the platform */
+				window.addEventListener('gw:content-ready', function () {
+					syncActivePages();
+					schedulePageScrollReset();
+				});
+				window.addEventListener('gw.onRouteChange', function () {
+					syncActivePages();
+					schedulePageScrollReset();
+				});
+
+				/* Escape closes every open drawer (live roots only) */
+				document.addEventListener('keydown', function (event) {
+					if (event.key !== 'Escape') { return; }
+					headerRoots.forEach(closeRootMenu);
+				});
+			}
+
+			/* -------- active page highlight -------- */
+			function syncActivePages() {
+				var currentPath = window.location.pathname || '/';
+				headerRoots.forEach(function (root) {
+					var pageLinks = Array.prototype.slice.call(
+						root.querySelectorAll('a[data-page]')
+					);
+					pageLinks.forEach(function (pageLink) {
+						var pageKey = pageLink.getAttribute('data-page');
+						var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+						pageLink.classList.toggle('is-active', currentPath === pagePath);
+					});
+				});
+			}
+
+			/* -------- mobile drawer -------- */
+			function closeRootMenu(root) {
+				if (!root.classList.contains('is-menu-open')) { return; }
+				root.classList.remove('is-menu-open');
+				var burger = root.querySelector('.bc-hd-burger');
+				if (burger) { burger.setAttribute('aria-expanded', 'false'); }
+			}
+
+			function openRootMenu(root) {
+				root.classList.add('is-menu-open');
+				var burger = root.querySelector('.bc-hd-burger');
+				if (burger) { burger.setAttribute('aria-expanded', 'true'); }
+			}
+
+			/* -------- contact configuration (strip hides until configured) -------- */
+			function applyContactConfig(root) {
+				var phoneValue = root.getAttribute('data-bc-phone') || '';
+				var emailValue = root.getAttribute('data-bc-email') || '';
+
+				var phoneLink = root.querySelector('.bc-hd-top-phone');
+				if (phoneLink) {
+					if (phoneValue && phoneValue.indexOf('<') === -1) {
+						phoneLink.setAttribute('href', 'tel:' + phoneValue.replace(/[^+0-9]/g, ''));
+						var phoneText = phoneLink.querySelector('.bc-hd-phone-text');
+						if (phoneText) { phoneText.textContent = phoneValue; }
+						phoneLink.classList.remove('is-hidden');
+					} else {
+						phoneLink.classList.add('is-hidden');
+					}
+				}
+
+				var mailLink = root.querySelector('.bc-hd-top-mail');
+				if (mailLink) {
+					if (emailValue && emailValue.indexOf('<') === -1) {
+						mailLink.setAttribute('href', 'mailto:' + emailValue);
+						mailLink.textContent = emailValue;
+						mailLink.classList.remove('is-hidden');
+					} else {
+						mailLink.classList.add('is-hidden');
+					}
+				}
+			}
+
+			/* -------- per-mount initialisation (safe on every SPA navigation) -------- */
+			function initHeader(root) {
+				copyHeaderStyleOnce(root);
+				applyContactConfig(root);
+
+				var burger = root.querySelector('.bc-hd-burger');
+				var scrim = root.querySelector('.bc-hd-scrim');
+
+				if (burger) {
+					burger.addEventListener('click', function () {
+						if (root.classList.contains('is-menu-open')) { closeRootMenu(root); }
+						else { openRootMenu(root); }
+					});
+				}
+
+				if (scrim) {
+					scrim.addEventListener('click', function () { closeRootMenu(root); });
+				}
+
+				root.addEventListener('keydown', function (event) {
+					if (event.key === 'Escape') { closeRootMenu(root); }
+				});
+			}
+
+			headerRoots.forEach(function (root) {
+				if (root.getAttribute('data-bc-header-ready') === '1') { return; }
+				root.setAttribute('data-bc-header-ready', '1');
+				initHeader(root);
+			});
+
+			syncActivePages();
+		})();
+	</script>
+
+</div>

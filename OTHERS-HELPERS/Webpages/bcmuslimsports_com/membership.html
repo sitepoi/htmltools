@@ -1,0 +1,961 @@
+<!--
+  =========================================================================
+  MEMBERSHIP PAGE - fragment for the BC Muslim Sports website
+  (route /membership)
+  - Everything lives inside ONE parent div (class bc-page bc-membership) -
+    CMS embed
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .bc-membership so nothing leaks
+    into the CMS
+  - Exactly one h1 heading, semantic sections, mobile-first responsive layout
+  - The registration form follows the platform contract:
+    form data-gw-form, hidden honeypot named "gw_hp",
+    [data-gw-form-status] live region, and a submit handler that POSTs once
+    to the CMS public form endpoint
+  - SEO for the CMS page object (slug "membership"): title "Membership -
+    Join a League - BC Muslim Sports Association", description "Join BC
+    Muslim Sports Association. Register as a player or a full team for the
+    soccer leagues, the hockey program, or the next tournament."
+  - CMS CONFIG NEEDED: allow the origin https://www.bcmuslimsports.com on
+    the CMS form allowlist and VERIFY the endpoint
+    https://bcmuslimsportscom.uniconhub.com/api/public/forms/submit before
+    go-live. The cmsObjectType is the standard "form-submissions-uniconbaseapps".
+  =========================================================================
+-->
+<div class="bc-page bc-membership">
+
+	<!-- =============================== HERO =============================== -->
+	<section class="bc-mb-hero">
+		<div class="bc-mb-hero-bg" aria-hidden="true"></div>
+
+		<div class="bc-mb-wrap bc-mb-hero-inner">
+			<p class="bc-mb-kicker bc-mb-kicker-light">
+				<span class="bc-mb-kicker-rule" aria-hidden="true"></span>
+				Membership &middot; Join the association
+			</p>
+			<h1 class="bc-mb-hero-title">The season starts with you.</h1>
+			<p class="bc-mb-hero-lede">
+				Register as a player or bring a whole team. Soccer, hockey, tournaments - tell us who you are
+				and where you want to play, and the association takes it from there.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================ BENEFITS ============================ -->
+	<section class="bc-mb-benefits">
+		<div class="bc-mb-wrap">
+			<div class="bc-mb-benefit-grid">
+				<article class="bc-mb-benefit bc-mb-reveal">
+					<span class="bc-mb-benefit-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m12 8.4 3.2 2.3-1.2 3.7H10l-1.2-3.7z" /></svg>
+					</span>
+					<h3 class="bc-mb-benefit-title">League play</h3>
+					<p class="bc-mb-benefit-text">A full season of football or hockey, from regular season to
+						playoff finals.</p>
+				</article>
+
+				<article class="bc-mb-benefit bc-mb-reveal">
+					<span class="bc-mb-benefit-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M7 3.5h10v4a5 5 0 0 1-10 0z" /><path d="M12 12.5v3" /><path d="M8 18.5h8M9.6 15.5 7.4 18M14.4 15.5l2.2 2.5" /></svg>
+					</span>
+					<h3 class="bc-mb-benefit-title">Tournaments</h3>
+					<p class="bc-mb-benefit-text">Entry to community cup events like the Mosque Cup as they
+						are announced.</p>
+				</article>
+
+				<article class="bc-mb-benefit bc-mb-reveal">
+					<span class="bc-mb-benefit-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 20.4S4.4 15.7 4.4 9.9a4.4 4.4 0 0 1 7.6-3 4.4 4.4 0 0 1 7.6 3c0 5.8-7.6 10.5-7.6 10.5Z" /></svg>
+					</span>
+					<h3 class="bc-mb-benefit-title">The community</h3>
+					<p class="bc-mb-benefit-text">Brotherhood across clubs, family match days, and an ummah
+						that plays together.</p>
+				</article>
+
+				<article class="bc-mb-benefit bc-mb-reveal">
+					<span class="bc-mb-benefit-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7" /><path d="M9 6.5 12 2l3 4.5" /><path d="m9 6.5 2.3 2.2L12 8l.7.7L15 6.5" /><path d="M12 11.4v2.6l2 1.2" /></svg>
+					</span>
+					<h3 class="bc-mb-benefit-title">Honours</h3>
+					<p class="bc-mb-benefit-text">Golden Glove, Best Young Player, Team MVP - the league
+						celebrates its best every season.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ REGISTRATION ============================ -->
+	<section class="bc-mb-register" id="bc-mb-register">
+		<div class="bc-mb-wrap bc-mb-register-grid">
+			<div class="bc-mb-register-copy bc-mb-reveal">
+				<p class="bc-mb-kicker">Registration</p>
+				<h2 class="bc-mb-sec-title">Tell us where you want to play</h2>
+				<p class="bc-mb-register-text">
+					Fill in the form and the association will get back to you with placement, season details
+					and next steps. Registering a whole team? Tell us in the message.
+				</p>
+				<div class="bc-mb-note">
+					<strong>Good to know</strong>
+					<p>Registration details and fees are confirmed by the team managers and the association
+						when they contact you.</p>
+				</div>
+			</div>
+
+			<div class="bc-mb-form-card bc-mb-reveal">
+				<form class="bc-mb-form" data-gw-form data-gw-form-type="membership-registration"
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
+					<div class="bc-mb-form-fields">
+						<label class="bc-mb-field">
+							<span class="bc-mb-field-label">Full name <em>required</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="bc-mb-field">
+							<span class="bc-mb-field-label">Email <em>required</em></span>
+							<input type="email" name="email" autocomplete="email" required>
+						</label>
+						<label class="bc-mb-field">
+							<span class="bc-mb-field-label">Phone <em>required</em></span>
+							<input type="tel" name="phone" autocomplete="tel" required>
+						</label>
+						<label class="bc-mb-field">
+							<span class="bc-mb-field-label">Which sport? <em>required</em></span>
+							<select name="sport" required>
+								<option value="">Choose a sport</option>
+								<option value="soccer">Soccer</option>
+								<option value="hockey">Hockey</option>
+								<option value="both">Both</option>
+								<option value="tournament-only">Tournaments only</option>
+							</select>
+						</label>
+						<label class="bc-mb-field">
+							<span class="bc-mb-field-label">Age group / division</span>
+							<select name="division">
+								<option value="">Not sure - place me</option>
+								<option value="u18">U18</option>
+								<option value="open">Open divisions (Prem 1-3)</option>
+								<option value="masters">Masters (35+)</option>
+								<option value="full-team">Registering a full team</option>
+							</select>
+						</label>
+						<label class="bc-mb-field">
+							<span class="bc-mb-field-label">Experience level</span>
+							<select name="experience">
+								<option value="new">New to the game</option>
+								<option value="recreational">Recreational</option>
+								<option value="competitive">Competitive</option>
+							</select>
+						</label>
+					</div>
+
+					<label class="bc-mb-field bc-mb-field-wide">
+						<span class="bc-mb-field-label">Anything else? <em>optional</em></span>
+						<textarea name="message" rows="4"
+							placeholder="Team name, friends you want to play with, questions..."></textarea>
+					</label>
+
+					<!-- honeypot: hidden from view and from screen readers, never a real field -->
+					<input class="bc-mb-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+						aria-hidden="true">
+
+					<div class="bc-mb-form-actions">
+						<button class="bc-mb-submit" type="submit">Send my registration</button>
+						<div class="bc-mb-form-status" data-gw-form-status role="status"></div>
+					</div>
+					<p class="bc-mb-form-consent">We use these details only to place you in a division and
+						answer your registration. We do not pass them to anyone else.</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- =========================== WHAT HAPPENS NEXT =========================== -->
+	<section class="bc-mb-next">
+		<div class="bc-mb-wrap">
+			<div class="bc-mb-sec-head bc-mb-reveal">
+				<p class="bc-mb-kicker">What happens next</p>
+				<h2 class="bc-mb-sec-title">From the form to the first kickoff</h2>
+			</div>
+
+			<div class="bc-mb-next-grid">
+				<article class="bc-mb-next-step bc-mb-reveal">
+					<span class="bc-mb-next-num">1</span>
+					<h3 class="bc-mb-next-title">We reply</h3>
+					<p class="bc-mb-next-text">The association contacts you to confirm your registration and
+						answer your questions.</p>
+				</article>
+
+				<article class="bc-mb-next-step bc-mb-reveal">
+					<span class="bc-mb-next-num">2</span>
+					<h3 class="bc-mb-next-title">You get placed</h3>
+					<p class="bc-mb-next-text">We place you at the right level - or connect your team to the
+						right division.</p>
+				</article>
+
+				<article class="bc-mb-next-step bc-mb-reveal">
+					<span class="bc-mb-next-num">3</span>
+					<h3 class="bc-mb-next-title">Season starts</h3>
+					<p class="bc-mb-next-text">Schedules, fields and jerseys sorted. All you bring is your
+						game.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== CTA ============================== -->
+	<section class="bc-mb-cta">
+		<div class="bc-mb-wrap bc-mb-cta-inner bc-mb-reveal">
+			<h2 class="bc-mb-cta-title">Prefer to talk to a human?</h2>
+			<p class="bc-mb-cta-text">Questions about teams, fees or divisions - the association is one
+				message away.</p>
+			<div class="bc-mb-cta-actions">
+				<a class="bc-mb-btn bc-mb-btn-gold" data-ic-nav-href="/contact-us" href="/contact-us">
+					Contact the association
+					<span class="bc-mb-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.bc-membership {
+			--bc-green: #0e3a2c;
+			--bc-green-deep: #08231a;
+			--bc-green-2: #124a38;
+			--bc-emerald: #1e9e6a;
+			--bc-gold: #d9a441;
+			--bc-gold-deep: #b07d1e;
+			--bc-gold-soft: #f0d69a;
+			--bc-cream: #f6f3ea;
+			--bc-paper: #fdfbf5;
+			--bc-ink: #15211c;
+			--bc-muted: #5c6b63;
+			--bc-line: #e4decd;
+			position: relative;
+			width: 100%;
+			background: var(--bc-paper);
+			color: var(--bc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.bc-membership,
+		.bc-membership *,
+		.bc-membership *::before,
+		.bc-membership *::after {
+			box-sizing: border-box;
+		}
+
+		.bc-mb-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.bc-mb-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.bc-mb-kicker-rule {
+			display: inline-block;
+			width: 34px;
+			height: 2px;
+			background: var(--bc-gold);
+			flex: 0 0 auto;
+		}
+
+		.bc-mb-kicker-light {
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-mb-sec-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			line-height: 1.12;
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: var(--bc-ink);
+		}
+
+		.bc-mb-sec-head {
+			margin-bottom: 36px;
+		}
+
+		.bc-mb-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 26px;
+			border-radius: 10px;
+			font-weight: 800;
+			font-size: 14px;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.bc-mb-btn-gold {
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			box-shadow: 0 14px 26px -14px rgba(217, 164, 65, 0.85);
+		}
+
+		.bc-mb-btn-gold:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 18px 30px -14px rgba(217, 164, 65, 0.95);
+		}
+
+		.bc-mb-btn-arrow {
+			transition: transform 0.2s ease;
+		}
+
+		.bc-mb-btn:hover .bc-mb-btn-arrow {
+			transform: translateX(4px);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.bc-mb-hero {
+			position: relative;
+			padding: 72px 0 78px;
+			color: #e9f2ec;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.bc-mb-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			background:
+				radial-gradient(120% 110% at 18% 0%, rgba(30, 158, 106, 0.24), transparent 52%),
+				radial-gradient(80% 80% at 100% 100%, rgba(217, 164, 65, 0.14), transparent 55%),
+				linear-gradient(155deg, #0e3a2c 0%, #08231a 62%, #061b14 100%);
+		}
+
+		.bc-mb-hero-bg::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 64px, transparent 64px 128px);
+		}
+
+		.bc-mb-hero-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+		}
+
+		.bc-mb-hero-title {
+			margin: 0;
+			font-weight: 800;
+			font-size: clamp(32px, 4.4vw, 54px);
+			line-height: 1.06;
+			letter-spacing: -0.02em;
+			color: #fff;
+			text-wrap: balance;
+		}
+
+		.bc-mb-hero-lede {
+			margin: 18px 0 0;
+			max-width: 640px;
+			font-size: 17px;
+			color: #cfe0d5;
+		}
+
+		/* ---------------------------- benefits ---------------------------- */
+		.bc-mb-benefits {
+			padding: 64px 0 0;
+		}
+
+		.bc-mb-benefit-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 20px;
+		}
+
+		.bc-mb-benefit {
+			background: var(--bc-cream);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 24px 22px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-mb-benefit:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-mb-benefit-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 50px;
+			height: 50px;
+			border-radius: 14px;
+			background: linear-gradient(145deg, var(--bc-green), var(--bc-green-2));
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-mb-benefit:nth-child(2) .bc-mb-benefit-icon {
+			background: linear-gradient(145deg, #7a5514, #57400f);
+		}
+
+		.bc-mb-benefit:nth-child(4) .bc-mb-benefit-icon {
+			background: linear-gradient(145deg, #1c4060, #0f2a42);
+			color: #cfe4f7;
+		}
+
+		.bc-mb-benefit-icon svg {
+			width: 25px;
+			height: 25px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.bc-mb-benefit-title {
+			margin: 16px 0 8px;
+			font-size: 17.5px;
+			font-weight: 800;
+		}
+
+		.bc-mb-benefit-text {
+			margin: 0;
+			font-size: 14px;
+			color: var(--bc-muted);
+		}
+
+		/* --------------------------- register --------------------------- */
+		.bc-mb-register {
+			padding: 88px 0;
+		}
+
+		.bc-mb-register-grid {
+			display: grid;
+			grid-template-columns: 1fr 1.15fr;
+			align-items: start;
+			gap: 56px;
+		}
+
+		.bc-mb-register-text {
+			margin: 16px 0 0;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+			max-width: 500px;
+		}
+
+		.bc-mb-note {
+			margin-top: 24px;
+			padding: 18px 20px;
+			border-left: 3px solid var(--bc-gold);
+			background: var(--bc-cream);
+			border-radius: 10px;
+		}
+
+		.bc-mb-note strong {
+			display: block;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+		}
+
+		.bc-mb-note p {
+			margin: 6px 0 0;
+			font-size: 14px;
+			color: var(--bc-muted);
+		}
+
+		.bc-mb-form-card {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-top: 4px solid var(--bc-emerald);
+			border-radius: 16px;
+			padding: 28px;
+			box-shadow: 0 30px 50px -34px rgba(8, 35, 26, 0.5);
+		}
+
+		.bc-mb-form {
+			display: flex;
+			flex-direction: column;
+			gap: 18px;
+		}
+
+		.bc-mb-form-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 16px;
+		}
+
+		.bc-mb-field {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+		}
+
+		.bc-mb-field-wide {
+			grid-column: span 2;
+		}
+
+		.bc-mb-field-label {
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			color: var(--bc-ink);
+		}
+
+		.bc-mb-field-label em {
+			font-style: normal;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: #a1977f;
+		}
+
+		.bc-mb-field input,
+		.bc-mb-field select,
+		.bc-mb-field textarea {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--bc-line);
+			border-radius: 10px;
+			background: #fff;
+			color: var(--bc-ink);
+			font-family: inherit;
+			font-size: 15px;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.bc-mb-field input:focus,
+		.bc-mb-field select:focus,
+		.bc-mb-field textarea:focus {
+			outline: none;
+			border-color: var(--bc-emerald);
+			box-shadow: 0 0 0 3px rgba(30, 158, 106, 0.15);
+		}
+
+		.bc-mb-field textarea {
+			resize: vertical;
+			min-height: 96px;
+		}
+
+		.bc-mb-hp {
+			position: absolute !important;
+			left: -9999px !important;
+			width: 1px;
+			height: 1px;
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		.bc-mb-form-actions {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.bc-mb-submit {
+			width: 100%;
+			padding: 15px 26px;
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			border: 0;
+			border-radius: 10px;
+			font-family: inherit;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			cursor: pointer;
+			box-shadow: 0 14px 26px -14px rgba(217, 164, 65, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.bc-mb-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.bc-mb-form.gw-busy .bc-mb-submit {
+			opacity: 0.65;
+			cursor: wait;
+		}
+
+		.bc-mb-form-status:empty {
+			display: none;
+		}
+
+		.bc-mb-form-status {
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.bc-mb-form-status.is-ok {
+			color: #2f7d4f;
+		}
+
+		.bc-mb-form-status.is-error {
+			color: #b3422e;
+		}
+
+		.bc-mb-form-consent {
+			margin: 0;
+			font-size: 12.5px;
+			color: #9a8f7c;
+		}
+
+		/* ----------------------------- next ----------------------------- */
+		.bc-mb-next {
+			padding: 0 0 90px;
+		}
+
+		.bc-mb-next-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 22px;
+		}
+
+		.bc-mb-next-step {
+			background: var(--bc-cream);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 26px 24px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-mb-next-step:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-mb-next-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			border-radius: 50%;
+			background: linear-gradient(145deg, var(--bc-emerald), #15734d);
+			color: #fff;
+			font-size: 16px;
+			font-weight: 800;
+		}
+
+		.bc-mb-next-title {
+			margin: 18px 0 8px;
+			font-size: 18.5px;
+			font-weight: 800;
+		}
+
+		.bc-mb-next-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------------- cta ------------------------------- */
+		.bc-mb-cta {
+			background:
+				repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.03) 0 70px, transparent 70px 140px),
+				linear-gradient(150deg, var(--bc-green) 0%, var(--bc-green-deep) 70%);
+			border-top: 1px solid rgba(240, 214, 154, 0.2);
+			border-bottom: 1px solid rgba(240, 214, 154, 0.2);
+			color: #e9f2ec;
+		}
+
+		.bc-mb-cta-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+			gap: 12px;
+			padding-top: 64px;
+			padding-bottom: 64px;
+		}
+
+		.bc-mb-cta-title {
+			margin: 0;
+			font-size: clamp(28px, 3.6vw, 42px);
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: #fff;
+		}
+
+		.bc-mb-cta-text {
+			margin: 0;
+			max-width: 540px;
+			color: #cfe0d5;
+			font-size: 16.5px;
+		}
+
+		.bc-mb-cta-actions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 14px;
+			margin-top: 16px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.bc-mb-reveal {
+			opacity: 0;
+			transform: translateY(26px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.bc-mb-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.bc-membership.is-reduced-motion .bc-mb-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.bc-mb-benefit-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.bc-mb-register-grid {
+				grid-template-columns: 1fr;
+				gap: 40px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.bc-mb-benefit-grid,
+			.bc-mb-next-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-mb-form-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-mb-field-wide {
+				grid-column: span 1;
+			}
+
+			.bc-mb-form-card {
+				padding: 22px 18px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.bc-membership');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-bc-membership-ready') === '1') { return; }
+			pageRoot.setAttribute('data-bc-membership-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- registration form (public form contract) ----------------
+			   One POST of JSON to the CMS public form endpoint, then read the
+			   status and show a message. There is no second call and no read
+			   access. While the endpoint is still a placeholder the page falls
+			   back to the platform bind, and in a local preview it says the
+			   service is not connected instead of losing what the visitor typed. */
+			var formApiEndpoint = 'https://bcmuslimsportscom.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					var fieldType = field.type;
+					if (!field.name || field.disabled) { return; }
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+					if (fieldType === 'checkbox') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+						return;
+					}
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm(form) {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				/* an empty value or an unreplaced placeholder means "not configured" */
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm(form) {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this registration. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@bcmuslimsports.com.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@bcmuslimsports.com.';
+			}
+
+			function sendFormToApi(form, endpoint) {
+				var values = collectFormValues(form);
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm(form);
+				var submitButton = form.querySelector('[type="submit"]');
+
+				/* the honeypot travels at the root of the payload, never inside values */
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (parseError) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(form, formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					setFormStatus(form, 'Thank you. Your registration is with us and we will be in touch soon.', 'ok');
+				}).catch(function () {
+					setFormStatus(form, formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (forms.length) {
+				var platform = window.gw;
+				var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+				if (usesApi) {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							var endpoint = endpointForForm(form);
+							if (!endpoint || form.classList.contains('gw-busy')) { return; }
+							sendFormToApi(form, endpoint);
+						});
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(pageRoot);
+				} else {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							setFormStatus(form, 'The form service is not connected in this preview.');
+						});
+					});
+				}
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.bc-mb-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

@@ -1,0 +1,860 @@
+<!--
+  =========================================================================
+  CONTACT PAGE - fragment for the BC Muslim Sports website (route /contact-us)
+  - Everything lives inside ONE parent div (class bc-page bc-contact) - CMS embed
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .bc-contact so nothing leaks into the CMS
+  - Exactly one h1 heading, semantic sections, mobile-first responsive layout
+  - The contact form follows the platform contract: form data-gw-form,
+    hidden honeypot named "gw_hp", [data-gw-form-status] live region, and a
+    submit handler that POSTs once to the CMS public form endpoint
+  - SEO for the CMS page object (slug "contact-us"): title "Contact Us - BC
+    Muslim Sports Association", description "Contact BC Muslim Sports
+    Association. Reach us by email or Instagram, visit match days at Hjorth
+    Road Park in Surrey BC, or send a message through the contact form."
+  - CMS CONFIG NEEDED: allow the origin https://www.bcmuslimsports.com on
+    the CMS form allowlist and VERIFY the endpoint
+    https://bcmuslimsportscom.uniconhub.com/api/public/forms/submit before
+    go-live. The cmsObjectType is the standard "form-submissions-uniconbaseapps".
+  =========================================================================
+-->
+<div class="bc-page bc-contact">
+
+	<!-- =============================== HERO =============================== -->
+	<section class="bc-ct-hero">
+		<div class="bc-ct-hero-bg" aria-hidden="true"></div>
+
+		<div class="bc-ct-wrap bc-ct-hero-inner">
+			<p class="bc-ct-kicker bc-ct-kicker-light">
+				<span class="bc-ct-kicker-rule" aria-hidden="true"></span>
+				Contact us &middot; Talk to the association
+			</p>
+			<h1 class="bc-ct-hero-title">We would love to hear from you.</h1>
+			<p class="bc-ct-hero-lede">
+				Questions about leagues, teams, tournaments or volunteering - send a message and the
+				association will get back to you.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================ CONTACT CARDS ============================ -->
+	<section class="bc-ct-cards">
+		<div class="bc-ct-wrap bc-ct-card-grid">
+			<a class="bc-ct-card bc-ct-reveal" href="mailto:info@bcmuslimsports.com">
+				<span class="bc-ct-card-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></svg>
+				</span>
+				<strong class="bc-ct-card-title">Email</strong>
+				<span class="bc-ct-card-value">info@bcmuslimsports.com</span>
+				<span class="bc-ct-card-note">Best for registrations and questions</span>
+			</a>
+
+			<a class="bc-ct-card bc-ct-reveal" href="https://www.instagram.com/bcmuslimsports/"
+				target="_blank" rel="noopener">
+				<span class="bc-ct-card-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></svg>
+				</span>
+				<strong class="bc-ct-card-title">Instagram</strong>
+				<span class="bc-ct-card-value">@bcmuslimsports</span>
+				<span class="bc-ct-card-note">Matchday photos and the latest news</span>
+			</a>
+
+			<div class="bc-ct-card bc-ct-reveal">
+				<span class="bc-ct-card-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M12 21.5s-6.6-5.4-6.6-11a6.6 6.6 0 0 1 13.2 0c0 5.6-6.6 11-6.6 11Z" /><circle cx="12" cy="10.4" r="2.6" /></svg>
+				</span>
+				<strong class="bc-ct-card-title">Match days</strong>
+				<span class="bc-ct-card-value">Hjorth Road Park, Surrey BC</span>
+				<span class="bc-ct-card-note">Home of the playoff finals</span>
+			</div>
+
+			<a class="bc-ct-card bc-ct-reveal" data-ic-nav-href="/membership" href="/membership">
+				<span class="bc-ct-card-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m12 8.4 3.2 2.3-1.2 3.7H10l-1.2-3.7z" /></svg>
+				</span>
+				<strong class="bc-ct-card-title">Join a league</strong>
+				<span class="bc-ct-card-value">Membership form</span>
+				<span class="bc-ct-card-note">Register as a player or a team</span>
+			</a>
+		</div>
+	</section>
+
+	<!-- ============================== FORM ============================== -->
+	<section class="bc-ct-form-sec">
+		<div class="bc-ct-wrap bc-ct-form-grid">
+			<div class="bc-ct-form-copy bc-ct-reveal">
+				<p class="bc-ct-kicker">Send a message</p>
+				<h2 class="bc-ct-sec-title">How can we help?</h2>
+				<p class="bc-ct-form-text">
+					Tell us what you need and the right person in the association will reply. For urgent
+					season questions, email works fastest.
+				</p>
+				<div class="bc-ct-donate-note">
+					<strong>Want to support the association?</strong>
+					<p>Donations keep leagues running and cups lifted.
+						<a href="https://checkout.square.site/merchant/MLFDDG71DY34E/checkout/YOE7QRQ6O7F5YJDEXM67O2YE?src=embed"
+							target="_blank" rel="noopener">Donate here &rarr;</a>
+					</p>
+				</div>
+			</div>
+
+			<div class="bc-ct-form-card bc-ct-reveal">
+				<form class="bc-ct-form" data-gw-form data-gw-form-type="contact"
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
+					<div class="bc-ct-form-fields">
+						<label class="bc-ct-field">
+							<span class="bc-ct-field-label">Full name <em>required</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="bc-ct-field">
+							<span class="bc-ct-field-label">Email <em>required</em></span>
+							<input type="email" name="email" autocomplete="email" required>
+						</label>
+						<label class="bc-ct-field">
+							<span class="bc-ct-field-label">Phone <em>optional</em></span>
+							<input type="tel" name="phone" autocomplete="tel">
+						</label>
+						<label class="bc-ct-field">
+							<span class="bc-ct-field-label">Subject <em>required</em></span>
+							<select name="subject" required>
+								<option value="">Choose a subject</option>
+								<option value="registration">Registration / membership</option>
+								<option value="teams">Registering a team</option>
+								<option value="tournaments">Tournaments</option>
+								<option value="volunteering">Volunteering / coaching</option>
+								<option value="donations">Donations</option>
+								<option value="other">Something else</option>
+							</select>
+						</label>
+					</div>
+
+					<label class="bc-ct-field">
+						<span class="bc-ct-field-label">Your message <em>required</em></span>
+						<textarea name="message" rows="5" required
+							placeholder="Write your message here..."></textarea>
+					</label>
+
+					<!-- honeypot: hidden from view and from screen readers, never a real field -->
+					<input class="bc-ct-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+						aria-hidden="true">
+
+					<div class="bc-ct-form-actions">
+						<button class="bc-ct-submit" type="submit">Send the message</button>
+						<div class="bc-ct-form-status" data-gw-form-status role="status"></div>
+					</div>
+					<p class="bc-ct-form-consent">We use these details only to answer your message. We do not
+						pass them to anyone else.</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== CTA ============================== -->
+	<section class="bc-ct-cta">
+		<div class="bc-ct-wrap bc-ct-cta-inner bc-ct-reveal">
+			<h2 class="bc-ct-cta-title">See you at the pitch</h2>
+			<p class="bc-ct-cta-text">The best way to know us is a match day. Come for the football, stay
+				for the community.</p>
+			<div class="bc-ct-cta-actions">
+				<a class="bc-ct-btn bc-ct-btn-gold" data-ic-nav-href="/soccer" href="/soccer">
+					See the leagues
+					<span class="bc-ct-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.bc-contact {
+			--bc-green: #0e3a2c;
+			--bc-green-deep: #08231a;
+			--bc-green-2: #124a38;
+			--bc-emerald: #1e9e6a;
+			--bc-gold: #d9a441;
+			--bc-gold-deep: #b07d1e;
+			--bc-gold-soft: #f0d69a;
+			--bc-cream: #f6f3ea;
+			--bc-paper: #fdfbf5;
+			--bc-ink: #15211c;
+			--bc-muted: #5c6b63;
+			--bc-line: #e4decd;
+			position: relative;
+			width: 100%;
+			background: var(--bc-paper);
+			color: var(--bc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.bc-contact,
+		.bc-contact *,
+		.bc-contact *::before,
+		.bc-contact *::after {
+			box-sizing: border-box;
+		}
+
+		.bc-ct-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.bc-ct-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.bc-ct-kicker-rule {
+			display: inline-block;
+			width: 34px;
+			height: 2px;
+			background: var(--bc-gold);
+			flex: 0 0 auto;
+		}
+
+		.bc-ct-kicker-light {
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-ct-sec-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			line-height: 1.12;
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: var(--bc-ink);
+		}
+
+		.bc-ct-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 26px;
+			border-radius: 10px;
+			font-weight: 800;
+			font-size: 14px;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.bc-ct-btn-gold {
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			box-shadow: 0 14px 26px -14px rgba(217, 164, 65, 0.85);
+		}
+
+		.bc-ct-btn-gold:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 18px 30px -14px rgba(217, 164, 65, 0.95);
+		}
+
+		.bc-ct-btn-arrow {
+			transition: transform 0.2s ease;
+		}
+
+		.bc-ct-btn:hover .bc-ct-btn-arrow {
+			transform: translateX(4px);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.bc-ct-hero {
+			position: relative;
+			padding: 72px 0 78px;
+			color: #e9f2ec;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.bc-ct-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			background:
+				radial-gradient(120% 110% at 18% 0%, rgba(30, 158, 106, 0.24), transparent 52%),
+				radial-gradient(80% 80% at 100% 100%, rgba(217, 164, 65, 0.14), transparent 55%),
+				linear-gradient(155deg, #0e3a2c 0%, #08231a 62%, #061b14 100%);
+		}
+
+		.bc-ct-hero-bg::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 64px, transparent 64px 128px);
+		}
+
+		.bc-ct-hero-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+		}
+
+		.bc-ct-hero-title {
+			margin: 0;
+			font-weight: 800;
+			font-size: clamp(32px, 4.4vw, 54px);
+			line-height: 1.06;
+			letter-spacing: -0.02em;
+			color: #fff;
+			text-wrap: balance;
+		}
+
+		.bc-ct-hero-lede {
+			margin: 18px 0 0;
+			max-width: 620px;
+			font-size: 17px;
+			color: #cfe0d5;
+		}
+
+		/* ------------------------------ cards ------------------------------ */
+		.bc-ct-cards {
+			padding: 64px 0 0;
+		}
+
+		.bc-ct-card-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 20px;
+		}
+
+		.bc-ct-card {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			background: var(--bc-cream);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 24px 22px;
+			text-decoration: none;
+			color: var(--bc-ink);
+			transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+		}
+
+		a.bc-ct-card:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+			border-color: #d8cfb6;
+		}
+
+		.bc-ct-card-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 50px;
+			height: 50px;
+			border-radius: 14px;
+			background: linear-gradient(145deg, var(--bc-green), var(--bc-green-2));
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-ct-card:nth-child(2) .bc-ct-card-icon {
+			background: linear-gradient(145deg, #7a5514, #57400f);
+		}
+
+		.bc-ct-card:nth-child(3) .bc-ct-card-icon {
+			background: linear-gradient(145deg, #1c4060, #0f2a42);
+			color: #cfe4f7;
+		}
+
+		.bc-ct-card-icon svg {
+			width: 25px;
+			height: 25px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.bc-ct-card-title {
+			margin-top: 10px;
+			font-size: 17.5px;
+			font-weight: 800;
+		}
+
+		.bc-ct-card-value {
+			font-size: 14.5px;
+			font-weight: 700;
+			color: var(--bc-green);
+		}
+
+		.bc-ct-card-note {
+			font-size: 13px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------------ form ------------------------------ */
+		.bc-ct-form-sec {
+			padding: 88px 0;
+		}
+
+		.bc-ct-form-grid {
+			display: grid;
+			grid-template-columns: 1fr 1.15fr;
+			align-items: start;
+			gap: 56px;
+		}
+
+		.bc-ct-form-text {
+			margin: 16px 0 0;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+			max-width: 500px;
+		}
+
+		.bc-ct-donate-note {
+			margin-top: 24px;
+			padding: 18px 20px;
+			border-left: 3px solid var(--bc-gold);
+			background: var(--bc-cream);
+			border-radius: 10px;
+		}
+
+		.bc-ct-donate-note strong {
+			display: block;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+		}
+
+		.bc-ct-donate-note p {
+			margin: 6px 0 0;
+			font-size: 14px;
+			color: var(--bc-muted);
+		}
+
+		.bc-ct-donate-note a {
+			font-weight: 700;
+			color: var(--bc-gold-deep);
+			text-decoration: none;
+		}
+
+		.bc-ct-donate-note a:hover {
+			color: var(--bc-green);
+		}
+
+		.bc-ct-form-card {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-top: 4px solid var(--bc-emerald);
+			border-radius: 16px;
+			padding: 28px;
+			box-shadow: 0 30px 50px -34px rgba(8, 35, 26, 0.5);
+		}
+
+		.bc-ct-form {
+			display: flex;
+			flex-direction: column;
+			gap: 18px;
+		}
+
+		.bc-ct-form-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 16px;
+		}
+
+		.bc-ct-field {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+		}
+
+		.bc-ct-field-label {
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			color: var(--bc-ink);
+		}
+
+		.bc-ct-field-label em {
+			font-style: normal;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: #a1977f;
+		}
+
+		.bc-ct-field input,
+		.bc-ct-field select,
+		.bc-ct-field textarea {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--bc-line);
+			border-radius: 10px;
+			background: #fff;
+			color: var(--bc-ink);
+			font-family: inherit;
+			font-size: 15px;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.bc-ct-field input:focus,
+		.bc-ct-field select:focus,
+		.bc-ct-field textarea:focus {
+			outline: none;
+			border-color: var(--bc-emerald);
+			box-shadow: 0 0 0 3px rgba(30, 158, 106, 0.15);
+		}
+
+		.bc-ct-field textarea {
+			resize: vertical;
+			min-height: 120px;
+		}
+
+		.bc-ct-hp {
+			position: absolute !important;
+			left: -9999px !important;
+			width: 1px;
+			height: 1px;
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		.bc-ct-form-actions {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.bc-ct-submit {
+			width: 100%;
+			padding: 15px 26px;
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			border: 0;
+			border-radius: 10px;
+			font-family: inherit;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			cursor: pointer;
+			box-shadow: 0 14px 26px -14px rgba(217, 164, 65, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.bc-ct-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.bc-ct-form.gw-busy .bc-ct-submit {
+			opacity: 0.65;
+			cursor: wait;
+		}
+
+		.bc-ct-form-status:empty {
+			display: none;
+		}
+
+		.bc-ct-form-status {
+			font-size: 14.5px;
+			font-weight: 600;
+		}
+
+		.bc-ct-form-status.is-ok {
+			color: #2f7d4f;
+		}
+
+		.bc-ct-form-status.is-error {
+			color: #b3422e;
+		}
+
+		.bc-ct-form-consent {
+			margin: 0;
+			font-size: 12.5px;
+			color: #9a8f7c;
+		}
+
+		/* ------------------------------- cta ------------------------------- */
+		.bc-ct-cta {
+			padding: 0 0 96px;
+		}
+
+		.bc-ct-cta-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+			gap: 12px;
+		}
+
+		.bc-ct-cta-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			font-weight: 800;
+			letter-spacing: -0.015em;
+		}
+
+		.bc-ct-cta-text {
+			margin: 0;
+			max-width: 520px;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+		}
+
+		.bc-ct-cta-actions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 14px;
+			margin-top: 16px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.bc-ct-reveal {
+			opacity: 0;
+			transform: translateY(26px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.bc-ct-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.bc-contact.is-reduced-motion .bc-ct-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.bc-ct-card-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.bc-ct-form-grid {
+				grid-template-columns: 1fr;
+				gap: 40px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.bc-ct-card-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-ct-form-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.bc-ct-form-card {
+				padding: 22px 18px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.bc-contact');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-bc-contact-ready') === '1') { return; }
+			pageRoot.setAttribute('data-bc-contact-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- contact form (public form contract) ----------------
+			   One POST of JSON to the CMS public form endpoint, then read the
+			   status and show a message. There is no second call and no read
+			   access. While the endpoint is still a placeholder the page falls
+			   back to the platform bind, and in a local preview it says the
+			   service is not connected instead of losing what the visitor typed. */
+			var formApiEndpoint = 'https://bcmuslimsportscom.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					var fieldType = field.type;
+					if (!field.name || field.disabled) { return; }
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+					if (fieldType === 'checkbox') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+						return;
+					}
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm(form) {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				/* an empty value or an unreplaced placeholder means "not configured" */
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm(form) {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this message. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@bcmuslimsports.com.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@bcmuslimsports.com.';
+			}
+
+			function sendFormToApi(form, endpoint) {
+				var values = collectFormValues(form);
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm(form);
+				var submitButton = form.querySelector('[type="submit"]');
+
+				/* the honeypot travels at the root of the payload, never inside values */
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (parseError) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(form, formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					setFormStatus(form, 'Thank you. Your message is with us and we will reply soon.', 'ok');
+				}).catch(function () {
+					setFormStatus(form, formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (forms.length) {
+				var platform = window.gw;
+				var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+				if (usesApi) {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							var endpoint = endpointForForm(form);
+							if (!endpoint || form.classList.contains('gw-busy')) { return; }
+							sendFormToApi(form, endpoint);
+						});
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(pageRoot);
+				} else {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							setFormStatus(form, 'The form service is not connected in this preview.');
+						});
+					});
+				}
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.bc-ct-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

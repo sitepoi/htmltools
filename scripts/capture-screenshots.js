@@ -62,10 +62,28 @@ function screenshotTool(tool) {
   mkdirSync(screenshotsDirectory, { recursive: true })
   const harnessUrl = 'file:///' + harnessPath.replace(/\\/g, '/')
 
+  // A tool whose screens are not called dashboard/documents/... can describe
+  // its own shots in docs/screenshots/shots.json: an array of
+  // { name, label, page, size, query }. Without that file the default specs
+  // below are used, so every existing tool keeps working unchanged.
+  let shotSpecs = SHOT_SPECS
+  const shotSpecsPath = join(screenshotsDirectory, 'shots.json')
+  if (existsSync(shotSpecsPath)) {
+    try {
+      const customSpecs = JSON.parse(readFileSync(shotSpecsPath, 'utf8'))
+      if (Array.isArray(customSpecs) && customSpecs.length > 0) {
+        shotSpecs = customSpecs.filter((spec) => spec && spec.name && spec.size)
+        console.log('→ ' + tool.toolName + ': ' + shotSpecs.length + ' custom shot(s) from docs/screenshots/shots.json')
+      }
+    } catch (_e) {
+      console.log('→ ' + tool.toolName + ': shots.json is not valid JSON - using the default shots')
+    }
+  }
+
   const manifest = { generatedAt: new Date().toISOString(), shots: [] }
   const seenHashes = new Map()   // hash -> file that produced it first
 
-  SHOT_SPECS.forEach((shot) => {
+  shotSpecs.forEach((shot) => {
     const outputPath = join(screenshotsDirectory, shot.name)
     try {
       execSync(

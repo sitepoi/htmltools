@@ -80,7 +80,6 @@ var DEFAULTS = {
   deals: [],
   hero: { image_url: '', preset_images: [] },
   promotions: [],
-  campaigns: [],
   promo_codes: [],
   alert_settings: { failed_push_alert: false, sound: 'default', supervisor_phone: '' },
   social_links: {
@@ -125,7 +124,7 @@ var SERVICE_CATALOG = [
     name: 'Promotion setup',
     price: 79,
     currency: 'USD',
-    summary: 'We design and enter a promotion or deal campaign for you, schedule included.',
+    summary: 'We design and enter a promotion or deal for you, schedule included.',
     needs_file: false,
     file_hint: '',
     turnaround: '2 business days',
@@ -625,7 +624,7 @@ function closeGloriaImportModal() {
 }
 
 /* ===================================================================== */
-/* PRESENTATION SECTIONS: DEALS, CAMPAIGNS, HERO AND PROMOTIONS */
+/* PRESENTATION SECTIONS: DEALS, HERO AND PROMOTIONS */
 /* ===================================================================== */
 /* Shape source: docs/client-data-contract.html version 3.1, sections 21 and 23
    (extended rule types from 23.1, D-RAMM-18). Every key written here must
@@ -636,13 +635,11 @@ var DEAL_RULE_TYPES = ['bundle', 'min_quantity', 'tiered', 'two_for_one',
   'percentage_discount', 'subtotal_threshold', 'free_delivery',
   'free_item_with_purchase', 'buy_n_get_m', 'volume_pricing', 'free_modifier'];
 var PROMO_CODE_RULE_TYPES = ['percentage_discount', 'subtotal_threshold', 'free_delivery'];
-var CAMPAIGN_PRICING_VALUE = 'most_expensive';
 var PROMOTION_LIMIT = 4;
 
 /* Stored ids whose value this tool cannot edit. Their problems are reported as
    warnings, not errors, so an old hand-edited record can still be saved. */
 var unsupportedDealRuleIds = {};
-var unsupportedCampaignPricingIds = {};
 var lastSaveBlockedReport = null;
 
 function isPlainObject(value) {
@@ -844,26 +841,58 @@ function normalizeDealEntry(rawDeal, usedIds) {
   return deal;
 }
 
-function normalizeCampaignEntry(rawCampaign, usedIds) {
-  var campaign = isPlainObject(rawCampaign) ? rawCampaign : {};
-  if (!campaign.id || usedIds[campaign.id]) campaign.id = uid();
-  usedIds[campaign.id] = true;
-
-  campaign.title = readString(campaign.title);
-  campaign.description = readString(campaign.description);
-  campaign.required_item_count = isPositiveInteger(campaign.required_item_count)
-    ? campaign.required_item_count
-    : (parseInt(campaign.required_item_count, 10) || 2);
-  campaign.same_size = campaign.same_size !== false;
-  campaign.category_ids = readStringArray(campaign.category_ids);
-  campaign.item_ids = readStringArray(campaign.item_ids);
-
-  if (campaign.pricing === undefined || campaign.pricing === null || campaign.pricing === '') {
-    campaign.pricing = CAMPAIGN_PRICING_VALUE;
-  } else if (campaign.pricing !== CAMPAIGN_PRICING_VALUE) {
-    unsupportedCampaignPricingIds[campaign.id] = campaign.pricing;
+/* Campaigns no longer exist in this tool. A document that still carries one
+   is not rejected: each record is turned into the deal it always was (a
+   two-for-one over the same categories and items) and the key disappears. */
+function migrateCampaignsToDeals(documentData) {
+  var campaigns = Array.isArray(documentData.campaigns) ? documentData.campaigns : [];
+  if (campaigns.length === 0) {
+    delete documentData.campaigns;
+    return;
   }
-  return campaign;
+  if (!Array.isArray(documentData.deals)) documentData.deals = [];
+
+  var menu = isPlainObject(documentData.menu) ? documentData.menu : {};
+  var items = Array.isArray(menu.items) ? menu.items : [];
+
+  campaigns.forEach(function (campaign) {
+    if (!isPlainObject(campaign)) return;
+
+    var itemIds = readStringArray(campaign.item_ids);
+    var categoryIds = readStringArray(campaign.category_ids);
+    /* Two-for-one needs categories, so an item-only campaign borrows the
+       categories of its own items instead of becoming invalid. */
+    if (categoryIds.length === 0) {
+      itemIds.forEach(function (itemId) {
+        items.forEach(function (item) {
+          if (item && item.id === itemId && item.category_id && categoryIds.indexOf(item.category_id) === -1) {
+            categoryIds.push(item.category_id);
+          }
+        });
+      });
+      if (categoryIds.length === 0) return; /* nothing to migrate safely */
+    }
+
+    var deal = {
+      id: campaign.id || uid(),
+      title: readString(campaign.title) || 'Two for one',
+      description: readString(campaign.description),
+      price: null,
+      image_url: '',
+      active: true,
+      rule_type: 'two_for_one',
+      rule: {
+        required_item_count: isPositiveInteger(campaign.required_item_count)
+          ? campaign.required_item_count
+          : (parseInt(campaign.required_item_count, 10) || 2),
+        same_size: campaign.same_size !== false,
+        category_ids: categoryIds
+      }
+    };
+    documentData.deals.push(deal);
+  });
+
+  delete documentData.campaigns;
 }
 
 function normalizePromotionEntry(rawPromotion, usedIds) {
@@ -923,14 +952,15 @@ function normalizePromoCodeEntry(rawPromoCode, usedIds) {
 
 function normalizePresentationSections(documentData) {
   unsupportedDealRuleIds = {};
-  unsupportedCampaignPricingIds = {};
 
   if (!isPlainObject(documentData.hero)) documentData.hero = { image_url: '', preset_images: [] };
   documentData.hero.image_url = readString(documentData.hero.image_url);
   documentData.hero.preset_images = readStringArray(documentData.hero.preset_images);
 
+  /* Campaigns are gone: an old record is converted into a two-for-one deal so
+     nothing is lost, and the key is dropped from the document. */
+  migrateCampaignsToDeals(documentData);
   documentData.deals = normalizeEntryList(documentData.deals, normalizeDealEntry);
-  documentData.campaigns = normalizeEntryList(documentData.campaigns, normalizeCampaignEntry);
   documentData.promotions = normalizeEntryList(documentData.promotions, normalizePromotionEntry);
   documentData.promo_codes = normalizeEntryList(documentData.promo_codes, normalizePromoCodeEntry);
 }
@@ -1264,32 +1294,6 @@ function validateDeal(deal, referenceIndex) {
   return { errors: errors, warnings: warnings };
 }
 
-function validateCampaign(campaign, referenceIndex) {
-  var errors = [];
-  var warnings = [];
-  var campaignLabel = 'Campaign "' + (campaign.title || campaign.id || 'untitled') + '"';
-
-  if (!campaign.id) errors.push(campaignLabel + ': id is missing.');
-  if (!campaign.title) errors.push(campaignLabel + ': title is required.');
-  if (!(campaign.required_item_count >= 2)) errors.push(campaignLabel + ': the required item count must be 2 or more.');
-  if (typeof campaign.same_size !== 'boolean') errors.push(campaignLabel + ': same size must be true or false.');
-
-  var categoryIds = campaign.category_ids || [];
-  var itemIds = campaign.item_ids || [];
-  if (categoryIds.length === 0 && itemIds.length === 0) {
-    errors.push(campaignLabel + ': choose at least one category or item.');
-  } else {
-    var matches = collectMatchingItems({ categoryIds: categoryIds, itemIds: itemIds }, referenceIndex);
-    if (matches.length === 0) errors.push(campaignLabel + ': the filters match no menu items.');
-  }
-
-  if (campaign.pricing !== CAMPAIGN_PRICING_VALUE) {
-    warnings.push(campaignLabel + ': pricing "' + (campaign.pricing || '') + '" is not supported; the website only understands "' + CAMPAIGN_PRICING_VALUE + '".');
-  }
-
-  return { errors: errors, warnings: warnings };
-}
-
 function validatePromotions(promotions) {
   var errors = [];
   var warnings = [];
@@ -1379,9 +1383,6 @@ function validatePresentationDocument(documentData) {
   (documentData.deals || []).forEach(function (deal) {
     appendValidationReport(report, validateDeal(deal, referenceIndex));
   });
-  (documentData.campaigns || []).forEach(function (campaign) {
-    appendValidationReport(report, validateCampaign(campaign, referenceIndex));
-  });
   appendValidationReport(report, validatePromotions(documentData.promotions));
   appendValidationReport(report, validatePromoCodes(documentData.promo_codes));
 
@@ -1395,7 +1396,6 @@ window.rammDeals = {
   buildMenuReferenceIndex: buildMenuReferenceIndex,
   normalizePresentationSections: normalizePresentationSections,
   validateDeal: validateDeal,
-  validateCampaign: validateCampaign,
   validatePromoCodes: validatePromoCodes,
   validatePresentationDocument: validatePresentationDocument,
   getLastSaveBlockedReport: function () { return lastSaveBlockedReport; }
@@ -7859,7 +7859,7 @@ function initAllEvents() {
   wireDealEditor();
   wireDealAiDialog();
 
-  /* Campaigns, hero and promotions editors (T-17 to T-20) */
+  /* Hero and promotions editors (T-19, T-20) */
   wirePresentationEditors();
 
   /* Promo codes section (T-40) */
@@ -8078,6 +8078,7 @@ function renderDealCardHtml(deal) {
    editing session, so a freshly added chip does not vanish when the owner
    changes their mind and picks another one. */
 var _dealSectionDrafts = [];
+var _dealSectionPickerOpen = false;
 
 function dealSectionNames() {
   var seen = {};
@@ -8093,9 +8094,9 @@ function dealSectionNames() {
   });
 }
 
-/* The section is a free text field in the data, but a plain input with a
-   datalist reads as an unknown dropdown. Existing sections are offered as
-   chips, the current value is selected, and a name can still be typed. */
+/* The section is a free text field in the data. Only the chosen section is
+   shown; the full list appears when the owner asks to change it, so the field
+   cannot turn into a wall of chips. */
 function renderDealSectionControl() {
   var control = document.getElementById('deal-section-control');
   var hiddenInput = document.getElementById('deal-section');
@@ -8105,22 +8106,41 @@ function renderDealSectionControl() {
   var names = dealSectionNames();
   if (current && names.indexOf(current) === -1) names.push(current);
 
-  var html = '<div class="deal-section-chips">' +
-    '<button type="button" class="deal-section-chip' + (current ? '' : ' is-selected') + '" data-deal-section-pick="">No section</button>';
-  names.forEach(function (name) {
-    html += '<button type="button" class="deal-section-chip' + (name === current ? ' is-selected' : '') +
-      '" data-deal-section-pick="' + esc(name) + '">' + esc(name) + '</button>';
-  });
-  html += '</div>';
-  html += '<div class="deal-section-add">' +
-    '<input type="text" class="form-input form-input-sm" id="deal-section-new" placeholder="New section name" autocomplete="off">' +
-    '<button type="button" class="btn btn-sm btn-outline" id="deal-section-add-btn">Add</button>' +
+  var html = '<div class="deal-section-current-row">' +
+    (current
+      ? '<span class="deal-section-current">' + esc(current) + '</span>'
+      : '<span class="deal-section-current is-empty">No section</span>') +
+    '<button type="button" class="btn btn-sm btn-ghost" id="deal-section-change-btn">' +
+      (_dealSectionPickerOpen ? 'Close' : 'Change section') + '</button>' +
     '</div>';
+
+  if (_dealSectionPickerOpen) {
+    html += '<div class="deal-section-picker">' +
+      '<div class="deal-section-chips">' +
+        '<button type="button" class="deal-section-chip' + (current ? '' : ' is-selected') + '" data-deal-section-pick="">No section</button>';
+    names.forEach(function (name) {
+      html += '<button type="button" class="deal-section-chip' + (name === current ? ' is-selected' : '') +
+        '" data-deal-section-pick="' + esc(name) + '">' + esc(name) + '</button>';
+    });
+    html += '</div>' +
+      '<div class="deal-section-add">' +
+        '<input type="text" class="form-input form-input-sm" id="deal-section-new" placeholder="New section name" autocomplete="off">' +
+        '<button type="button" class="btn btn-sm btn-outline" id="deal-section-add-btn">Add</button>' +
+      '</div>' +
+      '</div>';
+  }
   control.innerHTML = html;
+
+  var changeButton = document.getElementById('deal-section-change-btn');
+  if (changeButton) changeButton.addEventListener('click', function () {
+    _dealSectionPickerOpen = !_dealSectionPickerOpen;
+    renderDealSectionControl();
+  });
 
   control.querySelectorAll('[data-deal-section-pick]').forEach(function (chip) {
     chip.addEventListener('click', function () {
-      hiddenInput.value = chip.getAttribute('data-deal-section-pick') || '';
+      hiddenInput.value = chip.dataset.dealSectionPick || '';
+      _dealSectionPickerOpen = false;
       renderDealSectionControl();
     });
   });
@@ -8135,9 +8155,8 @@ function renderDealSectionControl() {
     if (_dealSectionDrafts.indexOf(name) === -1) _dealSectionDrafts.push(name);
     hiddenInput.value = name;
     newInput.value = '';
+    _dealSectionPickerOpen = false;
     renderDealSectionControl();
-    var focusTarget = document.getElementById('deal-section-new');
-    if (focusTarget && focusTarget.focus) focusTarget.focus();
   }
 
   if (addButton) addButton.addEventListener('click', addSectionFromInput);
@@ -8804,6 +8823,7 @@ function openDealEditor(dealId) {
   document.getElementById('deal-title').value = deal ? (deal.title || '') : '';
   document.getElementById('deal-description').value = deal ? (deal.description || '') : '';
   _dealSectionDrafts = [];
+  _dealSectionPickerOpen = false;
   document.getElementById('deal-section').value = deal ? (deal.section || '') : '';
   renderDealSectionControl();
   document.getElementById('deal-image-url').value = deal ? (deal.image_url || '') : '';
@@ -10014,255 +10034,11 @@ function wireDealEditor() {
 }
 
 /* ===================================================================== */
-/* PRESENTATION EDITORS - campaigns, hero and promotions (T-17 to T-20) */
+/* PRESENTATION EDITORS - hero and promotions (T-19, T-20) */
 /* ===================================================================== */
-var editingCampaignId = null;
-var pendingCampaignDeleteId = null;
 var editingPromotionId = null;
 var pendingPromotionDeleteId = null;
 var draggedPromotionId = null;
-
-/* ---------- Campaigns (T-17) ---------- */
-function describeCampaign(campaign) {
-  return 'Campaign "' + (campaign.title || campaign.id || 'untitled') + '"';
-}
-
-function renderCampaignCardHtml(campaign) {
-  var referenceIndex = buildMenuReferenceIndex(data);
-  var report = validateCampaign(campaign, referenceIndex);
-  var badges = '';
-  if (unsupportedCampaignPricingIds[campaign.id]) {
-    badges += '<span class="deal-badge deal-badge-warning" title="pricing ' + esc(unsupportedCampaignPricingIds[campaign.id]) + ' is not supported">Check</span>';
-  }
-  if (report.errors.length > 0) {
-    badges += '<span class="deal-badge deal-badge-error" title="' + esc(report.errors[0]) + '">Needs a fix</span>';
-  }
-
-  return '<div class="deal-card campaign-card" data-campaign-id="' + esc(campaign.id) + '">' +
-    '<div class="deal-card-thumb deal-card-thumb-empty">📣</div>' +
-    '<div class="deal-card-body">' +
-      '<div class="deal-card-title">' + esc(campaign.title || 'Untitled campaign') + badges + '</div>' +
-      '<div class="deal-card-meta"><span>Two-for-one · pick ' + (campaign.required_item_count || 2) +
-        (campaign.same_size ? ' · same size' : '') + '</span></div>' +
-      (campaign.description ? '<div class="deal-card-desc">' + esc(campaign.description) + '</div>' : '') +
-    '</div>' +
-    '<div class="deal-card-actions">' +
-      '<button type="button" class="deal-card-btn" data-campaign-action="edit" title="Edit">✎</button>' +
-      '<button type="button" class="deal-card-btn" data-campaign-action="to-deal" title="Copy as a two-for-one deal">📋</button>' +
-      '<button type="button" class="deal-card-btn deal-card-btn-danger" data-campaign-action="delete" title="Delete">🗑</button>' +
-    '</div>' +
-  '</div>';
-}
-
-function renderCampaigns() {
-  var listContainer = document.getElementById('campaigns-list');
-  if (!listContainer) return;
-
-  var campaigns = data.campaigns || [];
-  if (campaigns.length === 0) {
-    listContainer.innerHTML = '<div class="empty-state"><strong>No legacy campaigns.</strong><br>Campaigns are shown on the website as two-for-one deals. Create new offers as Deals instead.</div>';
-    return;
-  }
-
-  listContainer.innerHTML = '<div class="deals-section"><div class="deals-section-cards">' +
-    campaigns.map(renderCampaignCardHtml).join('') + '</div></div>';
-
-  wireCampaignCardEvents();
-}
-
-function wireCampaignCardEvents() {
-  var listContainer = document.getElementById('campaigns-list');
-  if (!listContainer) return;
-
-  listContainer.querySelectorAll('.campaign-card').forEach(function (card) {
-    var campaignId = card.dataset.campaignId;
-    card.addEventListener('click', function (event) {
-      var actionButton = event.target.closest('[data-campaign-action]');
-      if (!actionButton) {
-        openCampaignEditor(campaignId);
-        return;
-      }
-      event.stopPropagation();
-      var action = actionButton.dataset.campaignAction;
-      if (action === 'edit') openCampaignEditor(campaignId);
-      if (action === 'to-deal') duplicateCampaignAsDeal(campaignId);
-      if (action === 'delete') openCampaignDeleteConfirm(campaignId);
-    });
-  });
-}
-
-function openCampaignEditor(campaignId) {
-  if (isDealEditingBlocked()) {
-    tool.notify('This record is read-only.', 'warning');
-    return;
-  }
-
-  var campaign = campaignId ? (data.campaigns || []).find(function (entry) { return entry.id === campaignId; }) : null;
-  editingCampaignId = campaign ? campaign.id : null;
-
-  document.getElementById('campaign-editor-title').textContent = campaign ? 'Edit Campaign' : 'New Campaign';
-  document.getElementById('campaign-title').value = campaign ? (campaign.title || '') : '';
-  document.getElementById('campaign-description').value = campaign ? (campaign.description || '') : '';
-  document.getElementById('campaign-required-count').value = campaign ? (campaign.required_item_count || 2) : 2;
-  document.getElementById('campaign-same-size').checked = campaign ? campaign.same_size !== false : true;
-  document.getElementById('campaign-pricing').value = CAMPAIGN_PRICING_VALUE;
-  document.getElementById('campaign-delete-btn').style.display = campaign ? '' : 'none';
-  document.getElementById('campaign-editor-errors').style.display = 'none';
-
-  document.getElementById('campaign-categories').innerHTML =
-    renderDealCategoryChips(campaign ? (campaign.category_ids || []) : []);
-  document.getElementById('campaign-items').innerHTML =
-    renderDealItemPicker(campaign ? (campaign.item_ids || []) : [], 'campaign-item');
-
-  renderCampaignMatchPreview();
-
-  document.getElementById('campaign-editor-modal').style.display = 'flex';
-  tool.resize();
-}
-
-function closeCampaignEditor() {
-  var modal = document.getElementById('campaign-editor-modal');
-  if (modal) modal.style.display = 'none';
-  editingCampaignId = null;
-}
-
-function collectCampaignDraftFromForm() {
-  return {
-    id: editingCampaignId,
-    title: readString(document.getElementById('campaign-title').value),
-    description: readString(document.getElementById('campaign-description').value),
-    required_item_count: parseInt(document.getElementById('campaign-required-count').value, 10) || 2,
-    same_size: document.getElementById('campaign-same-size').checked,
-    category_ids: Array.prototype.map.call(
-      document.querySelectorAll('#campaign-categories .deal-category-chip.active'),
-      function (chip) { return chip.dataset.dealCategory; }
-    ).filter(Boolean),
-    item_ids: collectCheckedDealItems('#campaign-items .campaign-item')
-  };
-}
-
-function serializeCampaignDraft(draft) {
-  return {
-    id: draft.id || uid(),
-    title: readString(draft.title),
-    description: readString(draft.description),
-    required_item_count: parseInt(draft.required_item_count, 10) || 2,
-    same_size: draft.same_size !== false,
-    category_ids: (draft.category_ids || []).slice(),
-    item_ids: (draft.item_ids || []).slice(),
-    pricing: CAMPAIGN_PRICING_VALUE
-  };
-}
-
-function renderCampaignMatchPreview() {
-  var preview = document.getElementById('campaign-match-preview');
-  if (!preview) return;
-  var draft = collectCampaignDraftFromForm();
-  if (!draft) return;
-
-  var referenceIndex = buildMenuReferenceIndex(data);
-  var matches = collectMatchingItems({
-    categoryIds: draft.category_ids || [],
-    itemIds: draft.item_ids || []
-  }, referenceIndex);
-  preview.innerHTML = '<span class="deal-match-line">Eligible items: ' + describeDealMatch(matches) + '</span>';
-}
-
-function showCampaignEditorErrors(errors) {
-  var errorContainer = document.getElementById('campaign-editor-errors');
-  if (!errorContainer) return;
-  errorContainer.innerHTML = errors.map(esc).join('<br>');
-  errorContainer.style.display = '';
-}
-
-function saveCampaignFromEditor() {
-  if (isDealEditingBlocked()) {
-    tool.notify('This record is read-only.', 'warning');
-    return;
-  }
-
-  var draft = collectCampaignDraftFromForm();
-  if (!draft) return;
-
-  var serializedCampaign = serializeCampaignDraft(draft);
-  var validation = validateCampaign(serializedCampaign, buildMenuReferenceIndex(data));
-  if (validation.errors.length > 0) {
-    showCampaignEditorErrors(validation.errors);
-    tool.notify(validation.errors[0], 'error');
-    return;
-  }
-
-  if (editingCampaignId) {
-    var existingIndex = data.campaigns.findIndex(function (campaign) { return campaign.id === editingCampaignId; });
-    if (existingIndex >= 0) data.campaigns[existingIndex] = serializedCampaign;
-    else data.campaigns.push(serializedCampaign);
-  } else {
-    data.campaigns.push(serializedCampaign);
-  }
-
-  closeCampaignEditor();
-  renderCampaigns();
-  scheduleSave();
-  tool.notify('Campaign saved', 'success');
-}
-
-function openCampaignDeleteConfirm(campaignId) {
-  if (isDealEditingBlocked()) {
-    tool.notify('This record is read-only.', 'warning');
-    return;
-  }
-  var campaign = (data.campaigns || []).find(function (entry) { return entry.id === campaignId; });
-  if (!campaign) return;
-  pendingCampaignDeleteId = campaignId;
-  document.getElementById('campaign-delete-modal-name').textContent = '"' + (campaign.title || 'Untitled campaign') + '"';
-  document.getElementById('campaign-delete-modal').style.display = 'flex';
-}
-
-function confirmDeleteCampaign() {
-  document.getElementById('campaign-delete-modal').style.display = 'none';
-  if (!pendingCampaignDeleteId) return;
-  data.campaigns = (data.campaigns || []).filter(function (campaign) { return campaign.id !== pendingCampaignDeleteId; });
-  pendingCampaignDeleteId = null;
-  renderCampaigns();
-  scheduleSave();
-  tool.notify('Campaign deleted', 'info');
-}
-
-function cancelDeleteCampaign() {
-  document.getElementById('campaign-delete-modal').style.display = 'none';
-  pendingCampaignDeleteId = null;
-}
-
-/* ---------- Duplicate campaign as deal (T-18) ---------- */
-function duplicateCampaignAsDeal(campaignId) {
-  if (isDealEditingBlocked()) {
-    tool.notify('This record is read-only.', 'warning');
-    return;
-  }
-  var campaign = (data.campaigns || []).find(function (entry) { return entry.id === campaignId; });
-  if (!campaign) return;
-
-  var newDeal = {
-    id: uid(),
-    title: campaign.title || 'Untitled campaign',
-    description: campaign.description || '',
-    price: null,
-    image_url: '',
-    active: true,
-    rule_type: 'two_for_one',
-    rule: {
-      required_item_count: campaign.required_item_count || 2,
-      category_ids: (campaign.category_ids || []).slice(),
-      same_size: campaign.same_size !== false
-    }
-  };
-
-  data.deals.push(newDeal);
-  renderDeals();
-  scheduleSave();
-  openDealEditor(newDeal.id);
-  tool.notify('Campaign copied as a two-for-one deal', 'success');
-}
 
 /* ---------- Hero (T-19) ---------- */
 function setHeroImagePreview(url) {
@@ -10548,41 +10324,8 @@ function cancelDeletePromotion() {
   pendingPromotionDeleteId = null;
 }
 
-/* ---------- Wiring for campaigns, hero and promotions (T-17 to T-20) ---------- */
+/* ---------- Wiring for hero and promotions (T-19, T-20) ---------- */
 function wirePresentationEditors() {
-  /* Campaigns */
-  var addCampaignButton = document.getElementById('campaigns-add-btn');
-  if (addCampaignButton) addCampaignButton.addEventListener('click', function () { openCampaignEditor(null); });
-
-  var campaignCloseButton = document.getElementById('campaign-editor-close');
-  if (campaignCloseButton) campaignCloseButton.addEventListener('click', closeCampaignEditor);
-  var campaignCancelButton = document.getElementById('campaign-cancel-btn');
-  if (campaignCancelButton) campaignCancelButton.addEventListener('click', closeCampaignEditor);
-  var campaignSaveButton = document.getElementById('campaign-save-btn');
-  if (campaignSaveButton) campaignSaveButton.addEventListener('click', saveCampaignFromEditor);
-  var campaignDeleteButton = document.getElementById('campaign-delete-btn');
-  if (campaignDeleteButton) {
-    campaignDeleteButton.addEventListener('click', function () {
-      if (editingCampaignId) openCampaignDeleteConfirm(editingCampaignId);
-    });
-  }
-  var campaignDeleteConfirmButton = document.getElementById('campaign-delete-confirm-btn');
-  if (campaignDeleteConfirmButton) campaignDeleteConfirmButton.addEventListener('click', confirmDeleteCampaign);
-  var campaignDeleteCancelButton = document.getElementById('campaign-delete-cancel-btn');
-  if (campaignDeleteCancelButton) campaignDeleteCancelButton.addEventListener('click', cancelDeleteCampaign);
-
-  var campaignBody = document.getElementById('campaign-editor-body');
-  if (campaignBody) {
-    campaignBody.addEventListener('input', renderCampaignMatchPreview);
-    campaignBody.addEventListener('change', renderCampaignMatchPreview);
-    campaignBody.addEventListener('click', function (event) {
-      if (event.target.closest('.deal-category-chip')) {
-        event.target.closest('.deal-category-chip').classList.toggle('active');
-        renderCampaignMatchPreview();
-      }
-    });
-  }
-
   /* Hero */
   var heroUploadButton = document.getElementById('hero-image-upload');
   if (heroUploadButton) {
@@ -10962,7 +10705,7 @@ function wirePromoCodeEditor() {
 }
 
 /* ===================================================================== */
-/* SAMPLE DATA IMPORT (deals, campaigns, promotions, hero, promo codes)  */
+/* SAMPLE DATA IMPORT (deals, promotions, hero, promo codes)              */
 /* ===================================================================== */
 /* Loads a chosen .json file into the import textarea via FileReader. */
 function wireJsonFilePicker(fileInputId, buttonId, fileNameId, textareaId) {
@@ -11002,7 +10745,6 @@ function openDealsImportModal() {
   var fileName = document.getElementById('deals-import-file-name');
   if (fileName) fileName.textContent = 'No file chosen';
   document.getElementById('deals-import-deals').checked = true;
-  document.getElementById('deals-import-campaigns').checked = true;
   document.getElementById('deals-import-promotions').checked = true;
   document.getElementById('deals-import-hero').checked = true;
   document.getElementById('deals-import-promo-codes').checked = true;
@@ -11051,14 +10793,13 @@ function runDealsImport() {
 
   var isReplace = !document.getElementById('deals-import-append').checked;
   var importDeals = document.getElementById('deals-import-deals').checked;
-  var importCampaigns = document.getElementById('deals-import-campaigns').checked;
   var importPromotions = document.getElementById('deals-import-promotions').checked;
   var importHero = document.getElementById('deals-import-hero').checked;
   var importPromoCodes = document.getElementById('deals-import-promo-codes').checked;
 
   function applyImport(incoming) {
     if (!isPlainObject(incoming)) {
-      showDealsImportErrors(['The imported JSON must be an object with at least one of: deals, campaigns, promotions, hero, promo_codes.']);
+      showDealsImportErrors(['The imported JSON must be an object with at least one of: deals, promotions, hero, promo_codes.']);
       return;
     }
 
@@ -11078,8 +10819,6 @@ function runDealsImport() {
 
     applySection('deals', function () { return !importDeals || !Array.isArray(incoming.deals); },
       function () { return cloneEntriesWithFreshIds(incoming.deals); });
-    applySection('campaigns', function () { return !importCampaigns || !Array.isArray(incoming.campaigns); },
-      function () { return cloneEntriesWithFreshIds(incoming.campaigns); });
     applySection('promotions', function () { return !importPromotions || !Array.isArray(incoming.promotions); },
       function () { return cloneEntriesWithFreshIds(incoming.promotions); });
     applySection('promo_codes', function () { return !importPromoCodes || !Array.isArray(incoming.promo_codes); },
@@ -11100,7 +10839,6 @@ function runDealsImport() {
 
     data = candidate;
     renderDeals();
-    renderCampaigns();
     renderHero();
     renderPromotions();
     renderPromoCodes();
@@ -11120,7 +10858,7 @@ function runDealsImport() {
 
   var pastedText = document.getElementById('deals-import-json').value.trim();
   if (!pastedText) {
-    showDealsImportErrors(['Paste a JSON object with at least one of: deals, campaigns, promotions, hero, promo_codes, or choose a JSON file first.']);
+    showDealsImportErrors(['Paste a JSON object with at least one of: deals, promotions, hero, promo_codes, or choose a JSON file first.']);
     return;
   }
   var parsed;
@@ -12166,7 +11904,7 @@ function render(value) {
   if (data.delivery_form_settings.accept_orders_outside_zone === undefined) data.delivery_form_settings.accept_orders_outside_zone = false;
   if (!data.device_connections) data.device_connections = [];
 
-  /* Normalize the optional presentation sections: deals, hero, promotions, campaigns. */
+  /* Normalize the optional presentation sections: deals, hero and promotions. */
   normalizePresentationSections(data);
 
   /* Render all sections */
@@ -12180,7 +11918,6 @@ function render(value) {
   if (zoneMap && zoneDrawnItems) loadZonesOnMap();
   renderDeliveryFormSettings();
   renderDeals();
-  renderCampaigns();
   renderHero();
   renderPromotions();
   renderPromoCodes();

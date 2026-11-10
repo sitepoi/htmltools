@@ -92,7 +92,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.38</span>
+      <span>v0.41</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -270,7 +270,7 @@
     <tr><td>C-10</td><td>Gloria menu import</td><td><code>app/RestaurantAndMenuManager.js</code> - import modal and mapping logic</td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
     <tr><td>C-11</td><td>Persistence through the tool SDK only: 500 ms debounced <code>tool.setValue</code>, merge with <code>DEFAULTS</code>, re-render on <code>tool.onValueChange</code></td><td><code>app/RestaurantAndMenuManager.js</code> - <code>scheduleSave</code> (line 565), <code>deepMerge</code> (line 248)</td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
     <tr><td>C-12</td><td>Deals admin tab: list grouped by section with drag-and-drop ordering, deal editor dialog, four rule editors with live match preview, duplicate and delete</td><td><code>app/RestaurantAndMenuManager.js</code> - deals tab section (T-01 to T-16)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
-    <tr><td>C-13</td><td>Campaign editor: list, editor with read-only <code>most_expensive</code> pricing, and the duplicate-as-deal action</td><td><code>app/RestaurantAndMenuManager.js</code> - campaigns section (T-17, T-18)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-13</td><td>Campaign editor: list, editor with read-only <code>most_expensive</code> pricing, and the duplicate-as-deal action</td><td><code>app/RestaurantAndMenuManager.js</code> - campaigns section (T-17, T-18)</td><td>2026-10-21</td><td>REMOVED 2026-11-08 (D-RAMM-68)</td></tr>
     <tr><td>C-14</td><td>Hero editor: direct image upload or URL with preview and clear; preset gallery shown only when the platform supplies presets</td><td><code>app/RestaurantAndMenuManager.js</code> - hero section (T-19)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
     <tr><td>C-15</td><td>Promotions editor: list with drag-to-reorder, image per promotion, and the four-entry storage limit</td><td><code>app/RestaurantAndMenuManager.js</code> - promotions section (T-20)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
     <tr><td>C-16</td><td>Extended deal rule types: <code>percentage_discount</code>, <code>subtotal_threshold</code>, <code>free_delivery</code>, <code>free_item_with_purchase</code>, <code>buy_n_get_m</code>, <code>volume_pricing</code> and <code>free_modifier</code>, with validation and save gate</td><td><code>app/RestaurantAndMenuManager.js</code> - extended rule editors (T-30 to T-42)</td><td>2026-10-21</td><td>D-RAMM-18, contract 3.3</td></tr>
@@ -299,7 +299,7 @@
     <tr><td>Min quantity deal</td><td>Deal with a per-unit price that requires at least <code>min_quantity</code> matching items.</td></tr>
     <tr><td>Tiered deal</td><td>Deal over a fixed <code>item_ids</code> list with quantity and price tiers. The deal itself carries <code>price: null</code>.</td></tr>
     <tr><td>Two-for-one deal</td><td>Deal where the customer picks a required number of items and the cheapest is free. The deal carries <code>price: null</code>.</td></tr>
-    <tr><td>Campaign</td><td>Legacy entry in the top-level <code>campaigns</code> array. It is rendered as a two-for-one card, and new offers should be authored as deals.</td></tr>
+    <tr><td>Campaign</td><td>REMOVED 2026-11-08 (D-RAMM-68). It was a legacy record that the website rendered as a two-for-one card; the type could express nothing that a two-for-one deal cannot, so it was deleted from the tool and old records are migrated to deals.</td></tr>
     <tr><td>Hero</td><td>The top-level <code>hero</code> object: one <code>image_url</code> plus the preset list it was chosen from.</td></tr>
     <tr><td>Promotion</td><td>One entry in the top-level <code>promotions</code> array. The website renders at most the first four.</td></tr>
     <tr><td>Deal description groups</td><td>The label and quantity recap sent with an order line in <code>dealDescriptionGroups</code>.</td></tr>
@@ -399,10 +399,10 @@
     <tr><td>May a bundle option group pick the same product twice?</td><td>Yes. The contract order example lists the same dip twice in one four-pick group, so validation only requires at least one match - D-RAMM-05.</td></tr>
     <tr><td>Does <code>item_ids</code> win over the category filters?</td><td>Yes. A non-empty <code>item_ids</code> makes the group a fixed extra and the filters are ignored - D-RAMM-06.</td></tr>
     <tr><td>What price does a two-for-one deal store?</td><td><code>null</code>. The website charges the paid price computed from the picks - D-RAMM-07.</td></tr>
-    <tr><td>What values can campaign <code>pricing</code> take?</td><td>Only <code>"most_expensive"</code>. It is read-only in the editor - D-RAMM-08.</td></tr>
+    <tr><td>What values can campaign <code>pricing</code> take?</td><td>Not applicable since 2026-11-08: campaigns were removed - D-RAMM-68.</td></tr>
     <tr><td>Which order app or type id is authoritative?</td><td><code>restaurant-order-manager-easyorder</code>, named in contract sections 20 and 23 - D-RAMM-11.</td></tr>
     <tr><td>Do deals have channel or tax fields?</td><td>No. Tax appears only in the order totals; there is no channel field on a deal - D-RAMM-10.</td></tr>
-    <tr><td>Should new promotions be campaigns or deals?</td><td>Deals. Campaigns are legacy and are rendered as two-for-one cards - D-RAMM-09.</td></tr>
+    <tr><td>Should new promotions be campaigns or deals?</td><td>Deals. Campaigns were removed on 2026-11-08 because they were a two-for-one deal with fewer options - D-RAMM-68.</td></tr>
     <tr><td>Where are deal lines displayed?</td><td>In the separate <code>RestaurantOrderManager</code> tool, from the order payload fields - D-RAMM-12.</td></tr>
     <tr><td>Is a show or hide flag needed on a deal?</td><td>Yes, as an extension: store a boolean <code>active</code> (default true). The website honors it since 2026-10-21, so the editor label now states the deal is hidden when the flag is off - D-RAMM-15, D-RAMM-19.</td></tr>
     <tr><td>How does the owner order deals?</td><td>Drag and drop, inside a section and across sections; the resulting array order is the published order - D-RAMM-16.</td></tr>
@@ -547,7 +547,7 @@
     <tr><td>L-03</td><td>The <code>active</code> flag is stored and the website honors it since 2026-10-21</td><td>A deal marked inactive is hidden from the Deals page and the editor label states it.</td><td>Solved - T-41 (2026-10-21)</td></tr>
     <tr><td>L-04</td><td>No per-deal analytics</td><td>The owner cannot see how often a deal was ordered from this tool.</td><td>Idea I-03</td></tr>
     <tr><td>L-05</td><td>No visual preview of the customer Deals page</td><td>Only a textual match preview exists; the real card layout is seen on the website.</td><td>Idea I-05</td></tr>
-    <tr><td>L-06</td><td>Campaign editing is intentionally minimal</td><td>Legacy entries can be edited, but new offers should be created as deals.</td><td>Accepted - D-RAMM-09</td></tr>
+    <tr><td>L-06</td><td>Campaign editing is intentionally minimal</td><td>Legacy entries can be edited, but new offers should be created as deals.</td><td>Solved - campaigns removed (D-RAMM-68)</td></tr>
     <tr><td>L-07</td><td>The item-level delete guard was missing</td><td>Deleting an item listed in a tiered deal or a fixed extra could break that deal.</td><td>Solved - T-29 (D-RAMM-17)</td></tr>
     <tr><td>L-08</td><td>No platform write-back relay</td><td>Publishing relies on the existing tool.setValue path only.</td><td>Out of scope - platform task T-43</td></tr>
     <tr><td>L-09</td><td>The delivery map opens on a hardcoded New York point (<code>[40.7128, -74.006]</code>)</td><td>Every restaurant starts in New York and can draw zones far from its own address.</td><td>Planned - T-50, with the picker from T-59 (D-RAMM-26)</td></tr>
@@ -628,13 +628,13 @@
       <td>D-RAMM-08</td><td>2026-10-21</td>
       <td>Campaign <code>pricing</code> is displayed read-only with the value <code>most_expensive</code>.</td>
       <td>It is the only value the contract defines and describes; a free-text field would let the owner write an unsupported rule.</td>
-      <td class="status-adopted">Adopted</td>
+      <td class="status-rejected">Reversed 2026-11-08 (D-RAMM-68): the campaign record itself was removed, so there is no pricing field to protect.</td>
     </tr>
     <tr>
       <td>D-RAMM-09</td><td>2026-10-21</td>
       <td>Campaigns are treated as legacy; new offers are authored as two-for-one deals, and the campaign editor offers a duplicate-as-deal action.</td>
       <td>Contract section 21.3 states campaigns are surfaced as two-for-one deal cards and that new campaign-style promotions should be deals.</td>
-      <td class="status-adopted">Adopted</td>
+      <td class="status-rejected">Reversed 2026-11-08 (D-RAMM-68): marking a record type legacy while still shipping an editor for it split one job across two screens, so the type was removed instead.</td>
     </tr>
     <tr>
       <td>D-RAMM-10</td><td>2026-10-21</td>
@@ -960,6 +960,36 @@
       <td>Owner request on 2026-11-08: "when I search from the find an address, it searches all over the world, it is better to select the country (and province/state if applicable) first and then search the restaurant by name with the selected country province filter, is it possible". A worldwide name search returns businesses with the same name in other countries and pushes the right one off the list; the country is already known on this card, so using it costs nothing and removes the noise.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-RAMM-64</td><td>2026-11-08</td>
+      <td>The deal <strong>section</strong> is chosen from chips instead of a text input with a <code>datalist</code>. The control lists every section already used by a deal, plus any name typed during the current editing session, sorted and de-duplicated, with a <code>No section</code> chip that clears the value. The chosen section is filled and marked with a tick, and a separate field adds a new name (button or Enter). The stored field stays a hidden <code>#deal-section</code> input, so <code>collectDealDraftFromForm()</code> and <code>openDealEditor()</code> are untouched and no stored deal changes.</td>
+      <td>Owner report on 2026-11-08: "the section selection in Edit Deal &gt; details is a weird option list for a select like field, make that type of fields better, the existing items view (as options) is not very readable and usable". A browser <code>datalist</code> looks like a dropdown but is not one: it only appears while typing, cannot be opened on click, and cannot show which value is currently set, so the owner cannot tell what sections exist or what is selected.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-65</td><td>2026-11-08</td>
+      <td>The deal section control shows <strong>only the chosen section</strong>. The full list of sections does not sit on the card any more; a single <code>Change section</code> action opens a panel with every section already in use, a <code>No section</code> chip and an add field, and picking a chip closes the panel again. A section typed during the session stays in the list while the editor is open, and a stored section that is not used by any other deal is still shown and selected. This refines D-RAMM-64.</td>
+      <td>Owner request on 2026-11-08: "dont show all sections (selected + non selected), show only selected and use other only when selecting (Edit Deal &lt; Details)". Dumping every section as chips turned one field into a wall the owner had to read on every deal, while the value that matters is only the one in use.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-66</td><td>2026-11-08</td>
+      <td>Deals, campaigns and promotions are documented as three different jobs instead of three similar lists. <strong>Deals</strong> change what the customer pays and are the only place to create an offer. <strong>Campaigns</strong> are legacy records that the website already renders as two-for-one deal cards, so the sub-tab is labeled <code>Campaigns (legacy)</code> and existing records are kept or converted with duplicate-as-deal. <strong>Promotions</strong> are advertising only: a picture and one line under the hero, at most four, no price. The Deals tab opens with a three-line guide stating this, and the user help document explains it with a comparison table.</td>
+      <td>Owner question on 2026-11-08: "what is the difference between deals and campaigns? are they duplicate? and also promotions? we need to know when to use which. if they are duplicate, we need to simplify". A campaign and a two-for-one deal produce the same customer result, which is exactly why campaigns are legacy; the overlap is now stated in the tool and in the help rather than left to be discovered.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-67</td><td>2026-11-08</td>
+      <td><code>docs/help.html</code> becomes a <strong>long-form user guide written for this tool</strong>, not a five-line generated shell: fifteen sections covering every tab, a table mapping each part of the website to the field that feeds it, the eleven deal types with when to use each, the deals versus campaigns versus promotions comparison, an FAQ and a troubleshooting table, with five drawn UI figures. The generated-region markers are kept and the five required section ids stay in order, so a future regeneration still finds its anchors. To make real captures possible, the test harness accepts <code>?bare</code>, <code>?sample</code>, <code>?fixtures</code>, <code>?page</code>, <code>?left</code>, <code>?subtab</code> and <code>?deal</code>, and the screenshot script reads an optional per-tool <code>docs/screenshots/shots.json</code> instead of the generic dashboard shots.</td>
+      <td>Owner request on 2026-11-08: "write a very comprehensive help document that explains this tool in docs&gt;help.html. add screenshots and explain all details - especially where do I use it and where will it be visible, the menu capabilities and deals and when to use". The generated shell answered none of the questions an owner actually asks, and the flat shot list could only photograph the first tab of any tool.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-68</td><td>2026-11-08</td>
+      <td><strong>Campaigns are removed from the tool</strong>, not kept as a legacy surface. A campaign could only express "pick N products and pay for the most expensive one", which is a two-for-one deal with fewer options, so the record type, its editor, its delete dialog, its validation and its import option are deleted. The tool no longer writes a <code>campaigns</code> array. A document that still contains one is not rejected: <code>migrateCampaignsToDeals()</code> turns each record into an equivalent two-for-one deal (same title, description, item count, size rule and categories, with categories borrowed from the campaign's items when only items were chosen) and drops the key. A campaign with no usable targets is dropped rather than turned into an invalid deal.</td>
+      <td>Owner direction on 2026-11-08: "if campaigns only a subset of deals, then remove, no need for legacy, there is no legacy, this is a new tool". Two sub-tabs that offered the same outcome forced the owner to learn which one to use and kept a second validator, a second editor and a second delete flow alive for no product value.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -1060,6 +1090,11 @@
     <tr><td>60</td><td>Modifier groups as one card each: fact chips instead of a dotted line, options and the usage list inside the card, subgroup cards with a badge and a connector</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-98, D-RAMM-61)</td></tr>
     <tr><td>61</td><td>Deal editor footer follows the step: Next on steps 1-3, Save Deal only on step 4, step label, and scroll reset on every step change</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code> - DONE (2026-11-08, T-99, D-RAMM-62)</td></tr>
     <tr><td>62</td><td>Address search limited to the selected country and state, with a visible scope line and a widen/narrow action, placed below the country and state fields</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code> - DONE (2026-11-08, T-100, D-RAMM-63)</td></tr>
+    <tr><td>63</td><td>Deal section chosen from chips of the sections already in use, plus an add field, instead of a datalist text input</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code> - DONE (2026-11-08, T-101, D-RAMM-64)</td></tr>
+    <tr><td>64</td><td>Deal section shows only the chosen value, with a Change section panel for the rest</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.css</code> - DONE (2026-11-08, T-102, D-RAMM-65)</td></tr>
+    <tr><td>65</td><td>Deals, campaigns and promotions explained in the tool, with the Campaigns sub-tab marked legacy</td><td><code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code> - DONE (2026-11-08, T-103, D-RAMM-66)</td></tr>
+    <tr><td>66</td><td>Comprehensive user guide in <code>docs/help.html</code> with drawn figures, plus harness capture parameters and per-tool screenshot specs</td><td><code>docs/help.html</code>, <code>docs/screenshots/shots.json</code>, <code>app/test-harness.html</code>, <code>scripts/capture-screenshots.js</code> - DONE (2026-11-08, T-104, D-RAMM-67)</td></tr>
+    <tr><td>67</td><td>Campaigns removed entirely: sub-tab, panel, editor, delete dialog, validation and import option deleted, old records migrated to two-for-one deals</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code>, <code>docs/help.html</code>, <code>docs/deals-guide.html</code> - DONE (2026-11-08, T-105, D-RAMM-68)</td></tr>
   </table>
 
         <h2 id="sec-questions">14. Open questions</h2>
@@ -3150,6 +3185,101 @@
           <p><strong>Benefit:</strong> Results are local by construction, the owner can see and change the scope without editing fields, and the form order matches the workflow.</p>
           <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
           <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-63): <code>addressSearchScope()</code>, <code>renderAddressSearchScope()</code>, <code>buildAddressSearchQuery()</code>, <code>addressPlaceMatchesScope()</code>, scope-aware cache keys, scoped empty-state messages, <code>#gen-address-search-scope</code> with widen and narrow actions, and the search block moved under the country and state row in both pages.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-101" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-101</span>
+          <span class="task-title">Readable deal section chooser</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-101 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The section was a text input with a <code>datalist</code>, which only appears while typing, cannot be opened by click, and never shows which section is currently set, so the owner could neither see the existing sections nor tell what was selected.</p>
+          <p><strong>How we will solve it:</strong> Render the sections already in use as chips with the current one selected and ticked, keep a <code>No section</code> chip to clear it, and put a separate add field next to them for a new name. Keep the stored field hidden so reading and saving stay unchanged.</p>
+          <p><strong>Benefit:</strong> The owner sees every section at once, picks one with a single click, and can still invent a new one without fighting a native dropdown.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-64): <code>dealSectionNames()</code>, <code>renderDealSectionControl()</code>, <code>_dealSectionDrafts</code>, <code>refreshDealSectionOptions()</code> delegating to the control, <code>openDealEditor()</code> re-rendering it, hidden <code>#deal-section</code> plus <code>#deal-section-control</code> in both pages, and the <code>.deal-section-chip</code> styles.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-102" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-102</span>
+          <span class="task-title">Deal section shows the value, not the whole list</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-102 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> After the section became chips, every section the restaurant used sat on the Details step, so the owner had to read a wall of chips on every deal just to confirm one value.</p>
+          <p><strong>How we will solve it:</strong> Show only the chosen section, with one Change section action that opens the full list plus the add field. Picking a chip or adding a name closes the panel again.</p>
+          <p><strong>Benefit:</strong> The field is one line in the normal case and still fully editable, including new section names.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-65): <code>_dealSectionPickerOpen</code>, the <code>.deal-section-current</code> chip, the <code>#deal-section-change-btn</code> toggle and the <code>.deal-section-picker</code> panel; picking or adding closes it, and <code>openDealEditor()</code> resets it to collapsed.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-103" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-103</span>
+          <span class="task-title">Say plainly what a deal, a campaign and a promotion are</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-103 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Three sub-tabs looked like three ways to do the same thing, so the owner could not tell which one to use or whether the other two were duplicates.</p>
+          <p><strong>How we will solve it:</strong> Put a three-line guide at the top of the Deals tab (deal changes the price, promotion advertises, campaign is legacy), label the Campaigns sub-tab as legacy, and explain the overlap in the help document.</p>
+          <p><strong>Benefit:</strong> New offers go to the right place, and old campaigns are understood as records to convert instead of a second option.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-66): the <code>.deals-guide</code> block at the top of the Deals panel, the <code>Campaigns (legacy)</code> sub-tab label, and section 10 of <code>docs/help.html</code> with the full comparison table.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-104" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-104</span>
+          <span class="task-title">A user guide that explains where everything appears</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-104 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The generated help page listed five generic sections and never answered the questions an owner asks: where does this field show up, what can the menu do, which offer type do I pick.</p>
+          <p><strong>How we will solve it:</strong> Write a fifteen-section guide with a website-to-field mapping table, every tab explained, the eleven deal types with when to use each, the deals versus campaigns versus promotions comparison, an FAQ and troubleshooting, plus UI figures. Add harness query parameters and per-tool screenshot specs so real captures can replace the figures later.</p>
+          <p><strong>Benefit:</strong> One document answers an owner without them having to read the SSOT or ask.</p>
+          <p><strong>Files:</strong> <code>docs/help.html</code>, <code>docs/screenshots/shots.json</code>, <code>app/test-harness.html</code>, <code>scripts/capture-screenshots.js</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-67): <code>docs/help.html</code> rewritten with 15 sections, 5 drawn figures and the generated-region markers kept; the harness now honours <code>?bare</code>, <code>?sample</code>, <code>?fixtures</code>, <code>?page</code>, <code>?left</code>, <code>?subtab</code> and <code>?deal</code>; <code>capture-screenshots.js</code> reads <code>docs/screenshots/shots.json</code> when a tool provides it.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-105" data-group="meeting-2026-11-08" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-105</span>
+          <span class="task-title">Delete the campaign record type</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-105 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Campaigns could only express one offer, which a two-for-one deal already covers, so the tool carried a second sub-tab, editor, validator, delete dialog and import path for no extra outcome.</p>
+          <p><strong>How we will solve it:</strong> Remove the record type and every surface it owned, stop writing the <code>campaigns</code> key, and convert any stored campaign into an equivalent two-for-one deal on load so no data is lost.</p>
+          <p><strong>Benefit:</strong> One place to create offers, one validator, one delete flow, and a Deals tab that means exactly one thing.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/test-harness.html</code>, <code>docs/help.html</code>, <code>docs/deals-guide.html</code></p>
+          <p><strong>Status:</strong> Done 2026-11-08 (D-RAMM-68): the Campaigns sub-tab, panel, editor modal, delete dialog, guide entry, import checkbox and fixture data are gone; <code>validateCampaign</code>, <code>CAMPAIGN_PRICING_VALUE</code>, <code>normalizeCampaignEntry</code>, <code>unsupportedCampaignPricingIds</code> and the campaign editor functions are deleted; <code>migrateCampaignsToDeals()</code> converts stored records and drops the key. 24 headless assertions cover the removal and the migration.</p>
         </div>
       </details>
     </div>

@@ -1,0 +1,790 @@
+<!--
+  =========================================================================
+  BOARD / ABOUT PAGE - fragment for the BC Muslim Sports website
+  (route /board)
+  - Everything lives inside ONE parent div (class bc-page bc-board) - CMS embed
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .bc-board so nothing leaks into the CMS
+  - Exactly one h1 heading, semantic sections, mobile-first responsive layout
+  - Board member names are NOT invented: each role card describes what the
+    role does. When the association confirms names, fill them into the cards
+    marked with data-bd-role-name.
+  - SEO for the CMS page object (slug "board"): title "About Us - BC Muslim
+    Sports Association", description "About BC Muslim Sports Association:
+    our mission, the board behind the leagues, our values, and the FANCA
+    Over 42 championship run."
+  =========================================================================
+-->
+<div class="bc-page bc-board">
+
+	<!-- =============================== HERO =============================== -->
+	<section class="bc-bd-hero">
+		<div class="bc-bd-hero-bg" aria-hidden="true"></div>
+
+		<div class="bc-bd-wrap bc-bd-hero-inner">
+			<p class="bc-bd-kicker bc-bd-kicker-light">
+				<span class="bc-bd-kicker-rule" aria-hidden="true"></span>
+				About us &middot; The people behind the pitch
+			</p>
+			<h1 class="bc-bd-hero-title">One community.<br>
+				<span class="bc-bd-hero-title-accent">One game at a time.</span></h1>
+			<p class="bc-bd-hero-lede">
+				BC Muslim Sports Association runs soccer leagues, a hockey program and community tournaments
+				for Muslim families across British Columbia - organized by volunteers who love the game and
+				the community it builds.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================== MISSION ============================== -->
+	<section class="bc-bd-mission">
+		<div class="bc-bd-wrap bc-bd-mission-grid">
+			<div class="bc-bd-mission-copy bc-bd-reveal">
+				<p class="bc-bd-kicker">Our mission</p>
+				<h2 class="bc-bd-sec-title">Bringing the ummah together one game at a time</h2>
+				<p class="bc-bd-mission-text">
+					That line is not just our tagline - it is the whole idea. The league grows more
+					competitive each year, but it stays built on brotherhood between clubs, family match
+					days, and a place for every age group, from U18 to Masters.
+				</p>
+				<p class="bc-bd-mission-text">
+					From regular seasons to playoff finals at Hjorth Road Park, from the Mosque Cup to the
+					FANCA Over 42 gold medals, everything we run serves one goal: a stronger community
+					through sport.
+				</p>
+			</div>
+			<div class="bc-bd-mission-visual bc-bd-reveal" aria-hidden="true">
+				<div class="bc-bd-crest-big">
+					<svg viewBox="0 0 48 52" width="132" height="143" fill="none">
+						<path d="M24 2 43 8v17c0 12.5-8.2 20.4-19 25C13.2 45.4 5 37.5 5 25V8Z"
+							fill="#0e3a2c" stroke="#d9a441" stroke-width="2.2" stroke-linejoin="round" />
+						<path fill-rule="evenodd" fill="#d9a441"
+							d="M24 16.5a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm4.2 1.4a7 7 0 1 1 0 14.2 7 7 0 0 1 0-14.2Z" />
+						<path fill="#f0d69a"
+							d="m24 34.6 1.9 3.8 4.2.6-3 2.9.7 4.2-3.8-2-3.8 2 .7-4.2-3-2.9 4.2-.6Z" />
+					</svg>
+					<span class="bc-bd-crest-glow" aria-hidden="true"></span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== THE BOARD ============================== -->
+	<section class="bc-bd-board">
+		<div class="bc-bd-wrap">
+			<div class="bc-bd-sec-head bc-bd-reveal">
+				<p class="bc-bd-kicker">The board</p>
+				<h2 class="bc-bd-sec-title">Volunteers who keep the league running</h2>
+				<p class="bc-bd-sec-sub">The association is run by volunteers from the community. These are
+					the roles that carry the seasons - from fixtures to finals day.</p>
+			</div>
+
+			<div class="bc-bd-role-grid">
+				<article class="bc-bd-role bc-bd-reveal">
+					<span class="bc-bd-role-initials" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" /><path d="M4.8 20c.8-3.6 3.8-5.6 7.2-5.6s6.4 2 7.2 5.6" /></svg>
+					</span>
+					<h3 class="bc-bd-role-title" data-bd-role-name>President</h3>
+					<p class="bc-bd-role-text">Leads the association, chairs the board, and keeps the vision
+						of the league moving forward season after season.</p>
+				</article>
+
+				<article class="bc-bd-role bc-bd-reveal">
+					<span class="bc-bd-role-initials" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" /><path d="M4.8 20c.8-3.6 3.8-5.6 7.2-5.6s6.4 2 7.2 5.6" /></svg>
+					</span>
+					<h3 class="bc-bd-role-title" data-bd-role-name>Vice President</h3>
+					<p class="bc-bd-role-text">Supports the president, steps in when needed, and helps the
+						association run smoothly across its sports.</p>
+				</article>
+
+				<article class="bc-bd-role bc-bd-reveal">
+					<span class="bc-bd-role-initials" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" /><path d="M4.8 20c.8-3.6 3.8-5.6 7.2-5.6s6.4 2 7.2 5.6" /></svg>
+					</span>
+					<h3 class="bc-bd-role-title" data-bd-role-name>Secretary</h3>
+					<p class="bc-bd-role-text">Keeps the records, the communication and the paperwork that
+						hold the association together.</p>
+				</article>
+
+				<article class="bc-bd-role bc-bd-reveal">
+					<span class="bc-bd-role-initials" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" /><path d="M4.8 20c.8-3.6 3.8-5.6 7.2-5.6s6.4 2 7.2 5.6" /></svg>
+					</span>
+					<h3 class="bc-bd-role-title" data-bd-role-name>Treasurer</h3>
+					<p class="bc-bd-role-text">Looks after the association's finances - registrations,
+						donations and the budget that books the pitches.</p>
+				</article>
+
+				<article class="bc-bd-role bc-bd-reveal">
+					<span class="bc-bd-role-initials" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" /><path d="M4.8 20c.8-3.6 3.8-5.6 7.2-5.6s6.4 2 7.2 5.6" /></svg>
+					</span>
+					<h3 class="bc-bd-role-title" data-bd-role-name>Directors at Large</h3>
+					<p class="bc-bd-role-text">The hands-on volunteers who run divisions, coordinate team
+						managers, and make match days happen.</p>
+				</article>
+
+				<article class="bc-bd-role bc-bd-role-join bc-bd-reveal">
+					<span class="bc-bd-role-initials" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+					</span>
+					<h3 class="bc-bd-role-title">Want to help?</h3>
+					<p class="bc-bd-role-text">The association always welcomes coaches, managers and
+						volunteers. Reach out and we will find the right place for you.</p>
+					<a class="bc-bd-text-link" data-ic-nav-href="/contact-us" href="/contact-us">Get involved &rarr;</a>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== VALUES ============================== -->
+	<section class="bc-bd-values">
+		<div class="bc-bd-wrap">
+			<div class="bc-bd-sec-head bc-bd-reveal">
+				<p class="bc-bd-kicker">Our values</p>
+				<h2 class="bc-bd-sec-title">What we stand for</h2>
+			</div>
+
+			<div class="bc-bd-value-grid">
+				<article class="bc-bd-value bc-bd-reveal">
+					<span class="bc-bd-value-num">01</span>
+					<h3 class="bc-bd-value-title">One ummah</h3>
+					<p class="bc-bd-value-text">Clubs compete hard on the pitch and stand together off it.
+						Brotherhood across teams is the league's real trophy.</p>
+				</article>
+
+				<article class="bc-bd-value bc-bd-reveal">
+					<span class="bc-bd-value-num">02</span>
+					<h3 class="bc-bd-value-title">Every age group</h3>
+					<p class="bc-bd-value-text">From U18 rising stars to the Masters, there is a division for
+						every stage of life.</p>
+				</article>
+
+				<article class="bc-bd-value bc-bd-reveal">
+					<span class="bc-bd-value-num">03</span>
+					<h3 class="bc-bd-value-title">Family atmosphere</h3>
+					<p class="bc-bd-value-text">Match days belong to everyone - players, parents, kids and
+						fans together.</p>
+				</article>
+
+				<article class="bc-bd-value bc-bd-reveal">
+					<span class="bc-bd-value-num">04</span>
+					<h3 class="bc-bd-value-title">Compete with respect</h3>
+					<p class="bc-bd-value-text">Tough games, fair play, and recognition for the season's best
+						through our league honours.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FANCA ============================== -->
+	<section class="bc-bd-fanca">
+		<div class="bc-bd-wrap bc-bd-fanca-inner bc-bd-reveal">
+			<div class="bc-bd-fanca-copy">
+				<p class="bc-bd-kicker bc-bd-kicker-light">On the bigger stage</p>
+				<h2 class="bc-bd-fanca-title">FANCA Over 42 Champions - Team Canada</h2>
+				<p class="bc-bd-fanca-text">Our over 42 division team brought home the gold by clinching
+					their second back-to-back championship. A proud moment for the whole association.</p>
+			</div>
+			<div class="bc-bd-fanca-medal" aria-hidden="true">
+				<svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7" /><path d="M9 6.5 12 2l3 4.5" /><path d="m9 6.5 2.3 2.2L12 8l.7.7L15 6.5" /><path d="M12 11.4v2.6l2 1.2" /></svg>
+				<span>Gold &times;2</span>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== CTA ============================== -->
+	<section class="bc-bd-cta">
+		<div class="bc-bd-wrap bc-bd-cta-inner bc-bd-reveal">
+			<h2 class="bc-bd-cta-title">Join the community</h2>
+			<p class="bc-bd-cta-text">Play, coach, manage, volunteer or cheer from the stands. There is a
+				place for you.</p>
+			<div class="bc-bd-cta-actions">
+				<a class="bc-bd-btn bc-bd-btn-gold" data-ic-nav-href="/membership" href="/membership">
+					Join a league
+					<span class="bc-bd-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+				<a class="bc-bd-btn bc-bd-btn-ghost" data-ic-nav-href="/contact-us" href="/contact-us">
+					Volunteer with us
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.bc-board {
+			--bc-green: #0e3a2c;
+			--bc-green-deep: #08231a;
+			--bc-green-2: #124a38;
+			--bc-emerald: #1e9e6a;
+			--bc-gold: #d9a441;
+			--bc-gold-deep: #b07d1e;
+			--bc-gold-soft: #f0d69a;
+			--bc-cream: #f6f3ea;
+			--bc-paper: #fdfbf5;
+			--bc-ink: #15211c;
+			--bc-muted: #5c6b63;
+			--bc-line: #e4decd;
+			position: relative;
+			width: 100%;
+			background: var(--bc-paper);
+			color: var(--bc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.bc-board,
+		.bc-board *,
+		.bc-board *::before,
+		.bc-board *::after {
+			box-sizing: border-box;
+		}
+
+		.bc-bd-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.bc-bd-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.bc-bd-kicker-rule {
+			display: inline-block;
+			width: 34px;
+			height: 2px;
+			background: var(--bc-gold);
+			flex: 0 0 auto;
+		}
+
+		.bc-bd-kicker-light {
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-bd-sec-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			line-height: 1.12;
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: var(--bc-ink);
+		}
+
+		.bc-bd-sec-sub {
+			margin: 12px 0 0;
+			max-width: 660px;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+		}
+
+		.bc-bd-sec-head {
+			margin-bottom: 36px;
+		}
+
+		.bc-bd-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 26px;
+			border-radius: 10px;
+			font-weight: 800;
+			font-size: 14px;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+		}
+
+		.bc-bd-btn-gold {
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			box-shadow: 0 14px 26px -14px rgba(217, 164, 65, 0.85);
+		}
+
+		.bc-bd-btn-gold:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 18px 30px -14px rgba(217, 164, 65, 0.95);
+		}
+
+		.bc-bd-btn-ghost {
+			border: 1.5px solid rgba(240, 214, 154, 0.55);
+			color: #f0d69a;
+		}
+
+		.bc-bd-btn-ghost:hover {
+			border-color: var(--bc-gold-soft);
+			background: rgba(240, 214, 154, 0.08);
+			transform: translateY(-2px);
+		}
+
+		.bc-bd-btn-arrow {
+			transition: transform 0.2s ease;
+		}
+
+		.bc-bd-btn:hover .bc-bd-btn-arrow {
+			transform: translateX(4px);
+		}
+
+		.bc-bd-text-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			font-weight: 800;
+			font-size: 14.5px;
+			letter-spacing: 0.04em;
+			color: var(--bc-gold-deep);
+			text-decoration: none;
+		}
+
+		.bc-bd-text-link:hover {
+			color: var(--bc-green);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.bc-bd-hero {
+			position: relative;
+			padding: 72px 0 78px;
+			color: #e9f2ec;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.bc-bd-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			background:
+				radial-gradient(120% 110% at 18% 0%, rgba(30, 158, 106, 0.24), transparent 52%),
+				radial-gradient(80% 80% at 100% 100%, rgba(217, 164, 65, 0.14), transparent 55%),
+				linear-gradient(155deg, #0e3a2c 0%, #08231a 62%, #061b14 100%);
+		}
+
+		.bc-bd-hero-bg::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 64px, transparent 64px 128px);
+		}
+
+		.bc-bd-hero-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+		}
+
+		.bc-bd-hero-title {
+			margin: 0;
+			font-weight: 800;
+			font-size: clamp(32px, 4.4vw, 54px);
+			line-height: 1.06;
+			letter-spacing: -0.02em;
+			color: #fff;
+			text-wrap: balance;
+		}
+
+		.bc-bd-hero-title-accent {
+			color: var(--bc-gold-soft);
+			font-family: Georgia, 'Times New Roman', serif;
+			font-style: italic;
+			font-weight: 700;
+		}
+
+		.bc-bd-hero-lede {
+			margin: 18px 0 0;
+			max-width: 660px;
+			font-size: 17px;
+			color: #cfe0d5;
+		}
+
+		/* ----------------------------- mission ----------------------------- */
+		.bc-bd-mission {
+			padding: 88px 0;
+		}
+
+		.bc-bd-mission-grid {
+			display: grid;
+			grid-template-columns: 1.1fr 0.9fr;
+			align-items: center;
+			gap: 60px;
+		}
+
+		.bc-bd-mission-text {
+			margin: 16px 0 0;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+			max-width: 560px;
+		}
+
+		.bc-bd-mission-visual {
+			display: flex;
+			justify-content: center;
+		}
+
+		.bc-bd-crest-big {
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: min(320px, 100%);
+			aspect-ratio: 1;
+			border-radius: 24px;
+			background:
+				radial-gradient(90% 90% at 50% 0%, rgba(217, 164, 65, 0.18), transparent 60%),
+				var(--bc-cream);
+			border: 1px solid var(--bc-line);
+		}
+
+		.bc-bd-crest-big svg {
+			filter: drop-shadow(0 18px 26px rgba(8, 35, 26, 0.35));
+			animation: bc-bd-crest-float 5.5s ease-in-out infinite;
+		}
+
+		.bc-bd-crest-glow {
+			position: absolute;
+			bottom: 12%;
+			width: 46%;
+			height: 14px;
+			border-radius: 50%;
+			background: rgba(8, 35, 26, 0.22);
+			filter: blur(8px);
+		}
+
+		@keyframes bc-bd-crest-float {
+			0%, 100% { transform: translateY(0); }
+			50% { transform: translateY(-10px); }
+		}
+
+		/* ----------------------------- the board ----------------------------- */
+		.bc-bd-board {
+			padding: 0 0 90px;
+		}
+
+		.bc-bd-role-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 20px;
+		}
+
+		.bc-bd-role {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-top: 4px solid var(--bc-emerald);
+			border-radius: 16px;
+			padding: 24px 22px;
+			display: flex;
+			flex-direction: column;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-bd-role:nth-child(2) { border-top-color: var(--bc-gold); }
+		.bc-bd-role:nth-child(3) { border-top-color: #4f8fc9; }
+		.bc-bd-role:nth-child(4) { border-top-color: var(--bc-gold-deep); }
+		.bc-bd-role:nth-child(5) { border-top-color: var(--bc-emerald); }
+
+		.bc-bd-role:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-bd-role-join {
+			border-top-color: var(--bc-gold) !important;
+			background: var(--bc-cream);
+		}
+
+		.bc-bd-role-initials {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 52px;
+			height: 52px;
+			border-radius: 50%;
+			background: linear-gradient(145deg, var(--bc-green), var(--bc-green-2));
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-bd-role-initials svg {
+			width: 25px;
+			height: 25px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.bc-bd-role-title {
+			margin: 16px 0 8px;
+			font-size: 17.5px;
+			font-weight: 800;
+		}
+
+		.bc-bd-role-text {
+			margin: 0;
+			font-size: 14px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------------ values ------------------------------ */
+		.bc-bd-values {
+			padding: 0 0 90px;
+		}
+
+		.bc-bd-value-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 20px;
+		}
+
+		.bc-bd-value {
+			background: var(--bc-cream);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 24px 22px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-bd-value:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-bd-value-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
+			background: var(--bc-green);
+			color: var(--bc-gold-soft);
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.05em;
+		}
+
+		.bc-bd-value-title {
+			margin: 16px 0 8px;
+			font-size: 18px;
+			font-weight: 800;
+		}
+
+		.bc-bd-value-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------------ fanca ------------------------------ */
+		.bc-bd-fanca {
+			background:
+				radial-gradient(110% 130% at 85% 10%, rgba(217, 164, 65, 0.2), transparent 55%),
+				linear-gradient(140deg, #1b553d 0%, var(--bc-green) 60%, #0a2e21 100%);
+			color: #e9f2ec;
+		}
+
+		.bc-bd-fanca-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 40px;
+			padding-top: 54px;
+			padding-bottom: 54px;
+		}
+
+		.bc-bd-fanca-title {
+			margin: 0;
+			font-size: clamp(24px, 3vw, 34px);
+			font-weight: 800;
+			line-height: 1.15;
+			color: #fff;
+		}
+
+		.bc-bd-fanca-text {
+			margin: 12px 0 0;
+			max-width: 640px;
+			color: #cfe0d5;
+			font-size: 16px;
+		}
+
+		.bc-bd-fanca-medal {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 6px;
+			flex: 0 0 auto;
+		}
+
+		.bc-bd-fanca-medal svg {
+			width: 72px;
+			height: 72px;
+			fill: none;
+			stroke: var(--bc-gold);
+			stroke-width: 1.5;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			filter: drop-shadow(0 10px 18px rgba(217, 164, 65, 0.4));
+		}
+
+		.bc-bd-fanca-medal span {
+			font-size: 12.5px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--bc-gold-soft);
+		}
+
+		/* ------------------------------- cta ------------------------------- */
+		.bc-bd-cta {
+			padding: 88px 0;
+		}
+
+		.bc-bd-cta-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+			gap: 12px;
+		}
+
+		.bc-bd-cta-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			font-weight: 800;
+			letter-spacing: -0.015em;
+		}
+
+		.bc-bd-cta-text {
+			margin: 0;
+			max-width: 520px;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+		}
+
+		.bc-bd-cta-actions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 14px;
+			margin-top: 16px;
+		}
+
+		.bc-bd-cta .bc-bd-btn-ghost {
+			border-color: rgba(14, 58, 44, 0.4);
+			color: var(--bc-green);
+		}
+
+		.bc-bd-cta .bc-bd-btn-ghost:hover {
+			background: rgba(14, 58, 44, 0.06);
+			border-color: var(--bc-green);
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.bc-bd-reveal {
+			opacity: 0;
+			transform: translateY(26px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.bc-bd-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.bc-board.is-reduced-motion .bc-bd-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		.bc-board.is-reduced-motion .bc-bd-crest-big svg {
+			animation: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.bc-bd-mission-grid {
+				grid-template-columns: 1fr;
+				gap: 44px;
+			}
+
+			.bc-bd-role-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.bc-bd-value-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.bc-bd-fanca-inner {
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 24px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.bc-bd-role-grid,
+			.bc-bd-value-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.bc-board');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-bc-board-ready') === '1') { return; }
+			pageRoot.setAttribute('data-bc-board-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.bc-bd-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

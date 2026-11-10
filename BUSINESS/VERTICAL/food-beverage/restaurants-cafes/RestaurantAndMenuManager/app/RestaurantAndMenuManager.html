@@ -1133,13 +1133,22 @@
 <section class="tab-panel" data-tab="deals">
   <nav class="sub-tabs" id="deals-subtabs">
     <button type="button" class="sub-tab active" data-subtab="deals-list">🏷️ Deals</button>
-    <button type="button" class="sub-tab" data-subtab="deals-campaigns">📣 Campaigns</button>
     <button type="button" class="sub-tab" data-subtab="deals-hero">🖼️ Hero</button>
     <button type="button" class="sub-tab" data-subtab="deals-promotions">📌 Promotions</button>
     <button type="button" class="sub-tab" data-subtab="deals-promo-codes">🎟️ Promo Codes</button>
   </nav>
 
   <div class="subtab-panel active" data-subtab="deals-list">
+    <div class="deals-guide">
+      <div class="deals-guide-item">
+        <span class="deals-guide-icon">🏷️</span>
+        <div><strong>Deal</strong><span>Changes what the customer pays: bundle, 2 for 1, percent off, free delivery. Use this for every new offer.</span></div>
+      </div>
+      <div class="deals-guide-item">
+        <span class="deals-guide-icon">📌</span>
+        <div><strong>Promotion</strong><span>A picture and one line under the hero image. Advertising only, no price change, at most four.</span></div>
+      </div>
+    </div>
     <div class="deals-toolbar">
       <div class="deals-toolbar-info">
         <span class="panel-label">Customer deals</span>
@@ -1154,19 +1163,6 @@
     <div class="deals-scroll">
       <div id="deals-list"></div>
       <p class="deals-active-notice"><strong>Active</strong> is honored by the website: a deal switched off here is hidden from the customer Deals page.</p>
-    </div>
-  </div>
-
-  <div class="subtab-panel" data-subtab="deals-campaigns">
-    <div class="deals-toolbar">
-      <div class="deals-toolbar-info">
-        <span class="panel-label">Legacy campaigns</span>
-        <span class="deals-toolbar-hint">Campaigns appear on the website as two-for-one deals. Create new offers as Deals instead.</span>
-      </div>
-      <button type="button" class="btn btn-sm btn-primary" id="campaigns-add-btn">+ Add Campaign</button>
-    </div>
-    <div class="deals-scroll">
-      <div id="campaigns-list"></div>
     </div>
   </div>
 
@@ -1236,53 +1232,6 @@
     </div>
   </div>
 </section>
-
-<!-- ===== CAMPAIGN EDITOR MODAL ===== -->
-<div class="modal-overlay" id="campaign-editor-modal" style="display:none;">
-  <div class="modal-dialog modal-dialog-deal">
-    <div class="deal-editor-header">
-      <div class="modal-title" id="campaign-editor-title">New Campaign</div>
-      <button type="button" class="btn btn-sm btn-ghost" id="campaign-editor-close">✕</button>
-    </div>
-    <div class="deal-editor-body" id="campaign-editor-body">
-      <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="campaign-title" placeholder="e.g. 2x Pizza"></div>
-      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input form-textarea" id="campaign-description" rows="2" placeholder="Pick two pizzas - pay only for the more expensive one."></textarea></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Required item count</label><input type="number" class="form-input" id="campaign-required-count" min="2" step="1" value="2"></div>
-        <div class="form-group"><label class="form-label">Same size only</label><label class="switch" style="margin-top:6px;"><input type="checkbox" id="campaign-same-size" checked><span class="slider"></span></label></div>
-      </div>
-      <div class="form-group"><label class="form-label">Categories</label><div id="campaign-categories"></div></div>
-      <div class="form-group"><label class="form-label">Items</label><div id="campaign-items"></div></div>
-      <div class="form-group">
-        <label class="form-label">Pricing</label>
-        <input type="text" class="form-input" id="campaign-pricing" value="most_expensive" disabled>
-        <span class="field-hint">Read-only - the website charges the most expensive pick and the cheapest pick is free.</span>
-      </div>
-      <div id="campaign-match-preview" class="deal-match-preview"></div>
-      <div id="campaign-editor-errors" class="deal-editor-errors" style="display:none;"></div>
-    </div>
-    <div class="deal-editor-actions">
-      <button type="button" class="btn btn-sm btn-danger-outline" id="campaign-delete-btn" style="display:none;">🗑 Delete</button>
-      <div class="deal-editor-actions-right">
-        <button type="button" class="btn btn-sm btn-ghost" id="campaign-cancel-btn">Cancel</button>
-        <button type="button" class="btn btn-sm btn-primary" id="campaign-save-btn">Save Campaign</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== CAMPAIGN DELETE CONFIRMATION ===== -->
-<div class="modal-overlay" id="campaign-delete-modal" style="display:none;">
-  <div class="modal-dialog modal-dialog-sm">
-    <div class="modal-icon">🗑️</div>
-    <div class="modal-title">Delete Campaign?</div>
-    <div class="modal-body">This will permanently delete <strong id="campaign-delete-modal-name">this campaign</strong>. This action cannot be undone.</div>
-    <div class="modal-actions">
-      <button type="button" class="btn btn-ghost btn-sm" id="campaign-delete-cancel-btn">Cancel</button>
-      <button type="button" class="btn btn-danger btn-sm" id="campaign-delete-confirm-btn">Delete Campaign</button>
-    </div>
-  </div>
-</div>
 
 <!-- ===== PROMOTION EDITOR MODAL ===== -->
 <div class="modal-overlay" id="promotion-editor-modal" style="display:none;">
@@ -1391,7 +1340,7 @@
             <button type="button" class="btn btn-sm btn-outline" id="deals-import-file-btn">📂 Choose JSON file</button>
             <span class="field-hint" id="deals-import-file-name">No file chosen</span>
           </div>
-          <textarea class="form-input form-textarea" id="deals-import-json" rows="8" placeholder='Paste a JSON object with any of: "deals", "campaigns", "promotions", "hero", "promo_codes" (or choose a file)'></textarea>
+          <textarea class="form-input form-textarea" id="deals-import-json" rows="8" placeholder='Paste a JSON object with any of: "deals", "promotions", "hero", "promo_codes" (or choose a file)'></textarea>
         </div>
         <span class="field-hint">Sample files live in the <code>sampleData</code> folder next to the tool. Pairings: <code>deals-demo.json</code> needs <code>menu-demo.json</code>; <code>deals-rich.json</code> needs <code>menu-rich.json</code> or <code>menu-rich-compact.json</code>. Import the matching menu first (Menu tab → 📥 Samples), otherwise the import is blocked.</span>
       </fieldset>
@@ -1399,7 +1348,6 @@
         <legend>Sections to import</legend>
         <div class="deal-import-checks">
           <label class="radio-label"><input type="checkbox" id="deals-import-deals" checked> Deals</label>
-          <label class="radio-label"><input type="checkbox" id="deals-import-campaigns" checked> Campaigns</label>
           <label class="radio-label"><input type="checkbox" id="deals-import-promotions" checked> Promotions</label>
           <label class="radio-label"><input type="checkbox" id="deals-import-hero" checked> Hero</label>
           <label class="radio-label"><input type="checkbox" id="deals-import-promo-codes" checked> Promo codes</label>
@@ -1454,7 +1402,7 @@
           <label class="form-label">Section</label>
           <input type="hidden" id="deal-section" value="">
           <div class="deal-section-control" id="deal-section-control"></div>
-          <span class="field-hint">Sections group deals on the website, for example Weekend or Lunch. Pick one, or add a name.</span>
+          <span class="field-hint">Sections group deals on the website. Only the chosen section is shown here; use Change section to pick another or add a name.</span>
         </div>
         <div class="form-group">
           <label class="form-label">Price</label>

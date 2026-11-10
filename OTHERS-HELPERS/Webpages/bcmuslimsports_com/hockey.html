@@ -1,0 +1,754 @@
+<!--
+  =========================================================================
+  HOCKEY PAGE - fragment for the BC Muslim Sports website (route /hockey)
+  - Everything lives inside ONE parent div (class bc-page bc-hockey) - CMS embed
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are prefixed with .bc-hockey so nothing leaks into the CMS
+  - Exactly one h1 heading, semantic sections, mobile-first responsive layout
+  - Signature animation: a puck glides across the hero rink on load, and the
+    program cards stagger in on scroll
+  - SEO for the CMS page object (slug "hockey"): title "Hockey League - BC
+    Muslim Sports Association", description "The hockey program of BC Muslim
+    Sports Association. All skill levels welcome, from first-timers to rink
+    veterans. Register as a player or a full team."
+  =========================================================================
+-->
+<div class="bc-page bc-hockey">
+
+	<!-- =============================== HERO =============================== -->
+	<section class="bc-hk-hero">
+		<div class="bc-hk-hero-bg" aria-hidden="true"></div>
+
+		<div class="bc-hk-wrap bc-hk-hero-inner">
+			<div class="bc-hk-hero-copy">
+				<p class="bc-hk-kicker bc-hk-kicker-light">
+					<span class="bc-hk-kicker-rule" aria-hidden="true"></span>
+					Hockey &middot; On the ice
+				</p>
+				<h1 class="bc-hk-hero-title">Lace up.<br>
+					<span class="bc-hk-hero-title-accent">The ummah plays hockey too.</span></h1>
+				<p class="bc-hk-hero-lede">
+					Our hockey program runs alongside the soccer leagues and welcomes every skill level - from
+					first-timers learning to skate to rink veterans looking for competitive games.
+				</p>
+				<div class="bc-hk-hero-actions">
+					<a class="bc-hk-btn bc-hk-btn-gold" data-ic-nav-href="/membership" href="/membership">
+						Register to play
+						<span class="bc-hk-btn-arrow" aria-hidden="true">&rarr;</span>
+					</a>
+					<a class="bc-hk-btn bc-hk-btn-ghost" data-ic-nav-href="/contact-us" href="/contact-us">
+						Ask about the program
+					</a>
+				</div>
+			</div>
+
+			<div class="bc-hk-hero-visual" aria-hidden="true">
+				<div class="bc-hk-rink">
+					<span class="bc-hk-rink-line" aria-hidden="true"></span>
+					<span class="bc-hk-rink-circle" aria-hidden="true"></span>
+					<span class="bc-hk-puck" aria-hidden="true"></span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ WHAT TO EXPECT ============================ -->
+	<section class="bc-hk-expect">
+		<div class="bc-hk-wrap">
+			<div class="bc-hk-sec-head bc-hk-reveal">
+				<p class="bc-hk-kicker"><span class="bc-hk-sec-num">01</span> What to expect</p>
+				<h2 class="bc-hk-sec-title">A hockey program built like our leagues</h2>
+				<p class="bc-hk-sec-sub">Same spirit as the soccer side of the association - organized, fair,
+					and open to the whole community.</p>
+			</div>
+
+			<div class="bc-hk-expect-grid">
+				<article class="bc-hk-card bc-hk-reveal">
+					<span class="bc-hk-card-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 3.4 13.8 7l3.9.6-2.8 2.7.7 3.9-3.6-1.9-3.6 1.9.7-3.9-2.8-2.7L10.2 7z" /></svg>
+					</span>
+					<h3 class="bc-hk-card-title">Every skill level</h3>
+					<p class="bc-hk-card-text">Never played before? Played for years? There is a place for
+						you on the ice, and you will find your level quickly.</p>
+				</article>
+
+				<article class="bc-hk-card bc-hk-reveal">
+					<span class="bc-hk-card-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="4.4" /><circle cx="15" cy="12" r="4.4" /></svg>
+					</span>
+					<h3 class="bc-hk-card-title">Players and teams</h3>
+					<p class="bc-hk-card-text">Register on your own and we will place you, or bring a full team
+						- both are welcome in the program.</p>
+				</article>
+
+				<article class="bc-hk-card bc-hk-reveal">
+					<span class="bc-hk-card-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="M8.5 9.4v5.2M15.5 9.4v5.2M4 16.4h16" /></svg>
+					</span>
+					<h3 class="bc-hk-card-title">Organized schedule</h3>
+					<p class="bc-hk-card-text">The season calendar, rinks and game nights are announced by the
+						association before each season starts.</p>
+				</article>
+
+				<article class="bc-hk-card bc-hk-reveal">
+					<span class="bc-hk-card-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 20.4S4.4 15.7 4.4 9.9a4.4 4.4 0 0 1 7.6-3 4.4 4.4 0 0 1 7.6 3c0 5.8-7.6 10.5-7.6 10.5Z" /></svg>
+					</span>
+					<h3 class="bc-hk-card-title">Community first</h3>
+					<p class="bc-hk-card-text">Same family-friendly atmosphere as match days at the park -
+						players, parents and fans together.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= HOW IT WORKS ============================= -->
+	<section class="bc-hk-how">
+		<div class="bc-hk-wrap">
+			<div class="bc-hk-sec-head bc-hk-reveal">
+				<p class="bc-hk-kicker"><span class="bc-hk-sec-num">02</span> How it works</p>
+				<h2 class="bc-hk-sec-title">From signup to faceoff</h2>
+			</div>
+
+			<div class="bc-hk-how-grid">
+				<article class="bc-hk-step bc-hk-reveal">
+					<span class="bc-hk-step-num">1</span>
+					<h3 class="bc-hk-step-title">Register your interest</h3>
+					<p class="bc-hk-step-text">Fill in the membership form and pick hockey as your sport. Tell
+						us your experience level and whether you are solo or a team.</p>
+				</article>
+
+				<article class="bc-hk-step bc-hk-reveal">
+					<span class="bc-hk-step-num">2</span>
+					<h3 class="bc-hk-step-title">Get placed</h3>
+					<p class="bc-hk-step-text">The association places you at the right level and confirms the
+						season details - rinks, nights and what to bring.</p>
+				</article>
+
+				<article class="bc-hk-step bc-hk-reveal">
+					<span class="bc-hk-step-num">3</span>
+					<h3 class="bc-hk-step-title">Hit the ice</h3>
+					<p class="bc-hk-step-text">Season starts, puck drops. You play the season with your team
+						and the association handles the rest.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FAQ ============================== -->
+	<section class="bc-hk-faq">
+		<div class="bc-hk-wrap bc-hk-faq-wrap">
+			<div class="bc-hk-sec-head bc-hk-reveal">
+				<p class="bc-hk-kicker">Questions, answered</p>
+				<h2 class="bc-hk-sec-title">Hockey, quickly explained</h2>
+			</div>
+
+			<div class="bc-hk-faq-list bc-hk-reveal">
+				<details class="bc-hk-faq-item">
+					<summary class="bc-hk-faq-question">When does the hockey season run?</summary>
+					<p class="bc-hk-faq-answer">The hockey calendar is announced by the association before
+						each season. Register your interest and you will hear the details first.</p>
+				</details>
+				<details class="bc-hk-faq-item">
+					<summary class="bc-hk-faq-question">Do I need experience to join?</summary>
+					<p class="bc-hk-faq-answer">No. The program welcomes every skill level, including players
+						who are new to the ice. Placement makes sure games stay fun and fair.</p>
+				</details>
+				<details class="bc-hk-faq-item">
+					<summary class="bc-hk-faq-question">Can I register a full hockey team?</summary>
+					<p class="bc-hk-faq-answer">Yes. Team registration works the same way as our soccer
+						leagues - register through the membership form or contact the association.</p>
+				</details>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== CTA ============================== -->
+	<section class="bc-hk-cta">
+		<div class="bc-hk-wrap bc-hk-cta-inner bc-hk-reveal">
+			<h2 class="bc-hk-cta-title">The puck drops with you</h2>
+			<p class="bc-hk-cta-text">Join the hockey program as a player or a team, and bring the ummah to
+				the rink.</p>
+			<div class="bc-hk-cta-actions">
+				<a class="bc-hk-btn bc-hk-btn-gold" data-ic-nav-href="/membership" href="/membership">
+					Register to play
+					<span class="bc-hk-btn-arrow" aria-hidden="true">&rarr;</span>
+				</a>
+				<a class="bc-hk-btn bc-hk-btn-ghost" data-ic-nav-href="/contact-us" href="/contact-us">
+					Contact the association
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.bc-hockey {
+			--bc-green: #0e3a2c;
+			--bc-green-deep: #08231a;
+			--bc-green-2: #124a38;
+			--bc-emerald: #1e9e6a;
+			--bc-gold: #d9a441;
+			--bc-gold-deep: #b07d1e;
+			--bc-gold-soft: #f0d69a;
+			--bc-cream: #f6f3ea;
+			--bc-paper: #fdfbf5;
+			--bc-ink: #15211c;
+			--bc-muted: #5c6b63;
+			--bc-line: #e4decd;
+			--bc-ice: #4f8fc9;
+			--bc-ice-deep: #1c4060;
+			position: relative;
+			width: 100%;
+			background: var(--bc-paper);
+			color: var(--bc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+		}
+
+		.bc-hockey,
+		.bc-hockey *,
+		.bc-hockey *::before,
+		.bc-hockey *::after {
+			box-sizing: border-box;
+		}
+
+		.bc-hk-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+			position: relative;
+		}
+
+		.bc-hk-kicker {
+			margin: 0 0 12px;
+			font-size: 13px;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--bc-gold-deep);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.bc-hk-kicker-rule {
+			display: inline-block;
+			width: 34px;
+			height: 2px;
+			background: var(--bc-gold);
+			flex: 0 0 auto;
+		}
+
+		.bc-hk-kicker-light {
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-hk-sec-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 30px;
+			height: 22px;
+			padding: 0 8px;
+			background: var(--bc-ice-deep);
+			color: #cfe4f7;
+			border-radius: 6px;
+			font-size: 11.5px;
+			letter-spacing: 0.1em;
+		}
+
+		.bc-hk-sec-title {
+			margin: 0;
+			font-size: clamp(26px, 3.4vw, 40px);
+			line-height: 1.12;
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: var(--bc-ink);
+		}
+
+		.bc-hk-sec-sub {
+			margin: 12px 0 0;
+			max-width: 660px;
+			color: var(--bc-muted);
+			font-size: 16.5px;
+		}
+
+		.bc-hk-sec-head {
+			margin-bottom: 36px;
+		}
+
+		.bc-hk-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 26px;
+			border-radius: 10px;
+			font-weight: 800;
+			font-size: 14px;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
+			text-decoration: none;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+		}
+
+		.bc-hk-btn-gold {
+			background: linear-gradient(135deg, var(--bc-gold), var(--bc-gold-deep));
+			color: #241a06;
+			box-shadow: 0 14px 26px -14px rgba(217, 164, 65, 0.85);
+		}
+
+		.bc-hk-btn-gold:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 18px 30px -14px rgba(217, 164, 65, 0.95);
+		}
+
+		.bc-hk-btn-ghost {
+			border: 1.5px solid rgba(207, 228, 247, 0.55);
+			color: #cfe4f7;
+		}
+
+		.bc-hk-btn-ghost:hover {
+			border-color: #cfe4f7;
+			background: rgba(207, 228, 247, 0.08);
+			transform: translateY(-2px);
+		}
+
+		.bc-hk-btn-arrow {
+			transition: transform 0.2s ease;
+		}
+
+		.bc-hk-btn:hover .bc-hk-btn-arrow {
+			transform: translateX(4px);
+		}
+
+		/* ------------------------------ hero ------------------------------ */
+		.bc-hk-hero {
+			position: relative;
+			padding: 72px 0 84px;
+			color: #eaf2f9;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.bc-hk-hero-bg {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			background:
+				radial-gradient(120% 110% at 18% 0%, rgba(79, 143, 201, 0.3), transparent 52%),
+				radial-gradient(80% 80% at 100% 100%, rgba(217, 164, 65, 0.12), transparent 55%),
+				linear-gradient(155deg, #1c4060 0%, #0f2a42 62%, #0a1f32 100%);
+		}
+
+		.bc-hk-hero-bg::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 46px);
+		}
+
+		.bc-hk-hero-inner {
+			display: grid;
+			grid-template-columns: 1.1fr 0.9fr;
+			align-items: center;
+			gap: 48px;
+		}
+
+		.bc-hk-hero-title {
+			margin: 0;
+			font-weight: 800;
+			font-size: clamp(32px, 4.2vw, 52px);
+			line-height: 1.07;
+			letter-spacing: -0.02em;
+			color: #fff;
+			text-wrap: balance;
+		}
+
+		.bc-hk-hero-title-accent {
+			color: var(--bc-gold-soft);
+			font-family: Georgia, 'Times New Roman', serif;
+			font-style: italic;
+			font-weight: 700;
+		}
+
+		.bc-hk-hero-lede {
+			margin: 18px 0 0;
+			max-width: 540px;
+			font-size: 16.5px;
+			color: #cfe0ee;
+		}
+
+		.bc-hk-hero-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 14px;
+			margin-top: 28px;
+		}
+
+		/* -------- rink visual -------- */
+		.bc-hk-hero-visual {
+			display: flex;
+			justify-content: center;
+		}
+
+		.bc-hk-rink {
+			position: relative;
+			width: min(440px, 100%);
+			aspect-ratio: 16 / 10;
+			border-radius: 18px;
+			background:
+				linear-gradient(180deg, #dcecf8 0%, #c6dff1 45%, #b9d6eb 100%);
+			border: 8px solid #12314d;
+			box-shadow: 0 30px 54px -26px rgba(0, 0, 0, 0.55);
+			overflow: hidden;
+		}
+
+		.bc-hk-rink::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.65), transparent 55%);
+		}
+
+		.bc-hk-rink-line {
+			position: absolute;
+			left: 50%;
+			top: 10px;
+			bottom: 10px;
+			width: 2px;
+			background: #c33f35;
+			transform: translateX(-1px);
+			box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+		}
+
+		.bc-hk-rink-circle {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 34%;
+			aspect-ratio: 1;
+			border-radius: 50%;
+			border: 2px solid #2f6ea3;
+			transform: translate(-50%, -50%);
+		}
+
+		.bc-hk-puck {
+			position: absolute;
+			left: 8%;
+			top: 46%;
+			width: 26px;
+			height: 26px;
+			border-radius: 50%;
+			background: radial-gradient(circle at 35% 30%, #4b4f55, #171a1e 70%);
+			box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+			animation: bc-hk-puck-glide 6.5s ease-in-out infinite;
+		}
+
+		@keyframes bc-hk-puck-glide {
+			0% { transform: translate(0, 0); }
+			28% { transform: translate(280px, -60px); }
+			55% { transform: translate(210px, 46px); }
+			78% { transform: translate(60px, -20px); }
+			100% { transform: translate(0, 0); }
+		}
+
+		/* ----------------------------- cards ----------------------------- */
+		.bc-hk-expect {
+			padding: 88px 0 70px;
+		}
+
+		.bc-hk-expect-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 20px;
+		}
+
+		.bc-hk-card {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-top: 4px solid var(--bc-ice);
+			border-radius: 16px;
+			padding: 24px 22px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-hk-card:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-hk-card-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 50px;
+			height: 50px;
+			border-radius: 14px;
+			background: linear-gradient(145deg, var(--bc-ice-deep), #0f2a42);
+			color: #cfe4f7;
+		}
+
+		.bc-hk-card-icon svg {
+			width: 25px;
+			height: 25px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.6;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.bc-hk-card-title {
+			margin: 16px 0 8px;
+			font-size: 17.5px;
+			font-weight: 800;
+		}
+
+		.bc-hk-card-text {
+			margin: 0;
+			font-size: 14px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------------ how ------------------------------ */
+		.bc-hk-how {
+			padding: 0 0 90px;
+		}
+
+		.bc-hk-how-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 22px;
+		}
+
+		.bc-hk-step {
+			background: var(--bc-cream);
+			border: 1px solid var(--bc-line);
+			border-radius: 16px;
+			padding: 26px 24px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.bc-hk-step:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 20px 34px -24px rgba(8, 35, 26, 0.4);
+		}
+
+		.bc-hk-step-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			border-radius: 50%;
+			background: linear-gradient(145deg, var(--bc-ice), var(--bc-ice-deep));
+			color: #fff;
+			font-size: 16px;
+			font-weight: 800;
+		}
+
+		.bc-hk-step-title {
+			margin: 18px 0 8px;
+			font-size: 18.5px;
+			font-weight: 800;
+		}
+
+		.bc-hk-step-text {
+			margin: 0;
+			font-size: 14.5px;
+			color: var(--bc-muted);
+		}
+
+		/* ------------------------------- faq ------------------------------- */
+		.bc-hk-faq {
+			padding: 0 0 90px;
+		}
+
+		.bc-hk-faq-wrap {
+			max-width: 860px;
+		}
+
+		.bc-hk-faq-list {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.bc-hk-faq-item {
+			background: var(--bc-paper);
+			border: 1px solid var(--bc-line);
+			border-radius: 14px;
+			overflow: hidden;
+			transition: border-color 0.2s ease;
+		}
+
+		.bc-hk-faq-item[open] {
+			border-color: var(--bc-gold-soft);
+		}
+
+		.bc-hk-faq-question {
+			padding: 18px 22px;
+			font-weight: 700;
+			font-size: 16px;
+			cursor: pointer;
+			list-style: none;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+		}
+
+		.bc-hk-faq-question::-webkit-details-marker {
+			display: none;
+		}
+
+		.bc-hk-faq-question::after {
+			content: '+';
+			font-size: 22px;
+			color: var(--bc-gold-deep);
+			transition: transform 0.25s ease;
+			flex: 0 0 auto;
+		}
+
+		.bc-hk-faq-item[open] .bc-hk-faq-question::after {
+			transform: rotate(45deg);
+		}
+
+		.bc-hk-faq-answer {
+			margin: 0;
+			padding: 0 22px 20px;
+			color: var(--bc-muted);
+			font-size: 15px;
+		}
+
+		/* ------------------------------- cta ------------------------------- */
+		.bc-hk-cta {
+			background:
+				radial-gradient(110% 130% at 85% 10%, rgba(79, 143, 201, 0.22), transparent 55%),
+				linear-gradient(140deg, #1c4060 0%, #0f2a42 70%);
+			border-top: 1px solid rgba(207, 228, 247, 0.2);
+			border-bottom: 1px solid rgba(207, 228, 247, 0.2);
+			color: #eaf2f9;
+		}
+
+		.bc-hk-cta-inner {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+			gap: 12px;
+			padding-top: 64px;
+			padding-bottom: 64px;
+		}
+
+		.bc-hk-cta-title {
+			margin: 0;
+			font-size: clamp(28px, 3.6vw, 42px);
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: #fff;
+		}
+
+		.bc-hk-cta-text {
+			margin: 0;
+			max-width: 540px;
+			color: #cfe0ee;
+			font-size: 16.5px;
+		}
+
+		.bc-hk-cta-actions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 14px;
+			margin-top: 16px;
+		}
+
+		/* --------------------------- reveal on scroll --------------------------- */
+		.bc-hk-reveal {
+			opacity: 0;
+			transform: translateY(26px);
+			transition: opacity 0.7s ease, transform 0.7s ease;
+		}
+
+		.bc-hk-reveal.is-in {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.bc-hockey.is-reduced-motion .bc-hk-reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		.bc-hockey.is-reduced-motion .bc-hk-puck {
+			animation: none;
+		}
+
+		/* --------------------------- responsive --------------------------- */
+		@media (max-width: 1020px) {
+			.bc-hk-hero-inner {
+				grid-template-columns: 1fr;
+				gap: 44px;
+			}
+
+			.bc-hk-expect-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+		}
+
+		@media (max-width: 680px) {
+			.bc-hk-expect-grid,
+			.bc-hk-how-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.bc-hockey');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!pageRoot || pageRoot.getAttribute('data-bc-hockey-ready') === '1') { return; }
+			pageRoot.setAttribute('data-bc-hockey-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) {
+				pageRoot.classList.add('is-reduced-motion');
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.bc-hk-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

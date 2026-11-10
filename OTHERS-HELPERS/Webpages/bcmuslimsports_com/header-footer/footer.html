@@ -1,0 +1,420 @@
+<!--
+  =========================================================================
+  SITE FOOTER - central chrome component for the BC Muslim Sports website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent div (class bc-footer); no document tags, no libraries
+  - All CSS is scoped under .bc-footer so it cannot leak into page content
+  - No header / nav / footer element tags (plain divs + ARIA roles)
+  - SPA-safe: the stylesheet is copied into the document head once under
+    #bc-footer-css, every mount initialises itself, and the copyright year
+    auto-updates from the visitor's clock
+  - Donate link points at the association's checkout page
+    (VERIFY the Square checkout URL before go-live)
+  =========================================================================
+-->
+<div class="bc-footer" data-bc-footer>
+
+	<!-- ---------- inline icon sprite (no external requests, no library) ---------- -->
+	<svg class="bc-ft-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+		<symbol id="bc-ft-i-instagram" viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></symbol>
+		<symbol id="bc-ft-i-mail" viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></symbol>
+		<symbol id="bc-ft-i-heart" viewBox="0 0 24 24"><path d="M12 20.4S4.4 15.7 4.4 9.9a4.4 4.4 0 0 1 7.6-3 4.4 4.4 0 0 1 7.6 3c0 5.8-7.6 10.5-7.6 10.5Z" /></symbol>
+	</svg>
+
+	<!-- ------------------------------ main ------------------------------ -->
+	<div class="bc-ft-main">
+		<div class="bc-ft-wrap bc-ft-grid">
+
+			<div class="bc-ft-brand">
+				<a class="bc-ft-brand-link" data-ic-nav-href="/" href="/" aria-label="BC Muslim Sports Association - home">
+					<span class="bc-ft-crest" aria-hidden="true">
+						<svg viewBox="0 0 48 52" width="46" height="50" fill="none">
+							<path d="M24 2 43 8v17c0 12.5-8.2 20.4-19 25C13.2 45.4 5 37.5 5 25V8Z"
+								fill="#0e3a2c" stroke="#d9a441" stroke-width="2.2" stroke-linejoin="round" />
+							<path fill-rule="evenodd" fill="#d9a441"
+								d="M24 16.5a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm4.2 1.4a7 7 0 1 1 0 14.2 7 7 0 0 1 0-14.2Z" />
+							<path fill="#f0d69a"
+								d="m24 34.6 1.9 3.8 4.2.6-3 2.9.7 4.2-3.8-2-3.8 2 .7-4.2-3-2.9 4.2-.6Z" />
+						</svg>
+					</span>
+					<span class="bc-ft-word">
+						<strong>BC Muslim Sports</strong>
+						<em>Association</em>
+					</span>
+				</a>
+				<p class="bc-ft-tagline">Bringing the ummah together one game at a time.</p>
+				<p class="bc-ft-note">Soccer leagues, hockey and community tournaments for Muslim
+					families across British Columbia.</p>
+				<div class="bc-ft-socials">
+					<a class="bc-ft-social" href="https://www.instagram.com/bcmuslimsports/" target="_blank"
+						rel="noopener" aria-label="BC Muslim Sports on Instagram">
+						<svg class="bc-ft-ico" aria-hidden="true"><use href="#bc-ft-i-instagram"></use></svg>
+					</a>
+					<a class="bc-ft-social" href="mailto:info@bcmuslimsports.com"
+						aria-label="Email BC Muslim Sports Association">
+						<svg class="bc-ft-ico" aria-hidden="true"><use href="#bc-ft-i-mail"></use></svg>
+					</a>
+				</div>
+			</div>
+
+			<div class="bc-ft-col">
+				<p class="bc-ft-head">The Association</p>
+				<ul class="bc-ft-list">
+					<li><a data-ic-nav-href="/" href="/">Home</a></li>
+					<li><a data-ic-nav-href="/board" href="/board">About Us</a></li>
+					<li><a data-ic-nav-href="/membership" href="/membership">Membership</a></li>
+					<li><a data-ic-nav-href="/contact-us" href="/contact-us">Contact Us</a></li>
+				</ul>
+			</div>
+
+			<div class="bc-ft-col">
+				<p class="bc-ft-head">Our Sports</p>
+				<ul class="bc-ft-list">
+					<li><a data-ic-nav-href="/soccer" href="/soccer">Soccer Leagues</a></li>
+					<li><a data-ic-nav-href="/hockey" href="/hockey">Hockey</a></li>
+					<li><a data-ic-nav-href="/tournaments" href="/tournaments">Tournaments</a></li>
+				</ul>
+			</div>
+
+			<div class="bc-ft-col">
+				<p class="bc-ft-head">Get Involved</p>
+				<ul class="bc-ft-list">
+					<li><a data-ic-nav-href="/membership" href="/membership">Join a league</a></li>
+					<li><a data-ic-nav-href="/contact-us" href="/contact-us">Volunteer or coach</a></li>
+					<li><a class="bc-ft-donate-link"
+							href="https://checkout.square.site/merchant/MLFDDG71DY34E/checkout/YOE7QRQ6O7F5YJDEXM67O2YE?src=embed"
+							target="_blank" rel="noopener">
+							<svg class="bc-ft-ico" aria-hidden="true"><use href="#bc-ft-i-heart"></use></svg>
+							Donate
+						</a></li>
+				</ul>
+			</div>
+
+		</div>
+	</div>
+
+	<!-- ------------------------------ bottom ------------------------------ -->
+	<div class="bc-ft-bottom">
+		<div class="bc-ft-wrap bc-ft-bottom-inner">
+			<p class="bc-ft-copy">&copy; <span data-bc-year>2026</span> BC Muslim Sports Association. All rights reserved.</p>
+			<p class="bc-ft-pray">Bringing the ummah together one game at a time</p>
+		</div>
+	</div>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.bc-footer {
+			--bc-green: #0e3a2c;
+			--bc-green-deep: #08231a;
+			--bc-green-2: #124a38;
+			--bc-emerald: #1e9e6a;
+			--bc-gold: #d9a441;
+			--bc-gold-deep: #b07d1e;
+			--bc-gold-soft: #f0d69a;
+			--bc-cream: #f6f3ea;
+			--bc-paper: #fdfbf5;
+			--bc-ink: #15211c;
+			--bc-muted: #5c6b63;
+			--bc-line: #e4decd;
+			position: relative;
+			z-index: 40;
+			width: 100%;
+			background: var(--bc-green-deep);
+			color: #dce8e0;
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+		}
+
+		.bc-footer,
+		.bc-footer *,
+		.bc-footer *::before,
+		.bc-footer *::after {
+			box-sizing: border-box;
+		}
+
+		.bc-ft-sprite {
+			position: absolute;
+			width: 0;
+			height: 0;
+			overflow: hidden;
+		}
+
+		.bc-ft-ico {
+			width: 1em;
+			height: 1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		.bc-ft-wrap {
+			width: 100%;
+			max-width: 1240px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		/* ---------- main ---------- */
+		.bc-ft-main {
+			position: relative;
+			padding: 64px 0 48px;
+		}
+
+		.bc-ft-main::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			pointer-events: none;
+			background:
+				radial-gradient(90% 120% at 100% 0%, rgba(217, 164, 65, 0.1), transparent 55%),
+				repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.02) 0 70px, transparent 70px 140px);
+		}
+
+		.bc-ft-grid {
+			position: relative;
+			display: grid;
+			grid-template-columns: 1.6fr 1fr 1fr 1fr;
+			gap: 44px;
+		}
+
+		.bc-ft-brand-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 12px;
+			text-decoration: none;
+			color: #f4f8f5;
+		}
+
+		.bc-ft-word {
+			display: flex;
+			flex-direction: column;
+			line-height: 1.12;
+		}
+
+		.bc-ft-word strong {
+			font-size: 18px;
+			font-weight: 800;
+			letter-spacing: 0.02em;
+			text-transform: uppercase;
+		}
+
+		.bc-ft-word em {
+			font-style: normal;
+			font-size: 11.5px;
+			font-weight: 700;
+			letter-spacing: 0.34em;
+			text-transform: uppercase;
+			color: var(--bc-gold);
+		}
+
+		.bc-ft-tagline {
+			margin: 18px 0 0;
+			font-size: 17px;
+			font-weight: 700;
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-ft-note {
+			margin: 8px 0 0;
+			font-size: 14px;
+			color: #9fb3a8;
+			max-width: 320px;
+		}
+
+		.bc-ft-socials {
+			display: flex;
+			gap: 10px;
+			margin-top: 18px;
+		}
+
+		.bc-ft-social {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 42px;
+			height: 42px;
+			border: 1px solid rgba(240, 214, 154, 0.35);
+			border-radius: 10px;
+			color: var(--bc-gold-soft);
+			text-decoration: none;
+			font-size: 19px;
+			transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+		}
+
+		.bc-ft-social:hover {
+			background: rgba(217, 164, 65, 0.12);
+			border-color: var(--bc-gold);
+			transform: translateY(-2px);
+		}
+
+		.bc-ft-head {
+			margin: 0 0 16px;
+			font-size: 13px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--bc-gold);
+		}
+
+		.bc-ft-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.bc-ft-list a {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			color: #c3d2c9;
+			text-decoration: none;
+			font-size: 14.5px;
+			transition: color 0.2s ease;
+		}
+
+		.bc-ft-list a:hover {
+			color: var(--bc-gold-soft);
+		}
+
+		.bc-ft-list .bc-ft-donate-link {
+			color: var(--bc-gold-soft);
+			font-weight: 700;
+		}
+
+		/* ---------- bottom ---------- */
+		.bc-ft-bottom {
+			border-top: 1px solid rgba(240, 214, 154, 0.18);
+			background: rgba(0, 0, 0, 0.22);
+		}
+
+		.bc-ft-bottom-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			flex-wrap: wrap;
+			min-height: 60px;
+		}
+
+		.bc-ft-copy {
+			margin: 0;
+			font-size: 13.5px;
+			color: #9fb3a8;
+		}
+
+		.bc-ft-pray {
+			margin: 0;
+			font-size: 13.5px;
+			color: var(--bc-gold-soft);
+			letter-spacing: 0.04em;
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1020px) {
+			.bc-ft-grid {
+				grid-template-columns: 1fr 1fr;
+				gap: 36px;
+			}
+
+			.bc-ft-brand {
+				grid-column: span 2;
+			}
+		}
+
+		@media (max-width: 560px) {
+			.bc-ft-grid {
+				grid-template-columns: 1fr;
+				gap: 28px;
+			}
+
+			.bc-ft-brand {
+				grid-column: span 1;
+			}
+
+			.bc-ft-bottom-inner {
+				flex-direction: column;
+				align-items: flex-start;
+				justify-content: center;
+				padding-top: 14px;
+				padding-bottom: 14px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var FOOTER_CSS_ID = 'bc-footer-css';
+			var footerRoots = Array.prototype.slice.call(
+				document.querySelectorAll('.bc-footer[data-bc-footer]')
+			);
+
+			/* -------- stylesheet survives SPA re-mounts (copied once) -------- */
+			function copyFooterStyleOnce(root) {
+				var head = document.head || document.getElementsByTagName('head')[0];
+				if (!head || document.getElementById(FOOTER_CSS_ID)) { return; }
+				var styleEl = root.querySelector('style');
+				if (!styleEl) { return; }
+				var clone = document.createElement('style');
+				clone.id = FOOTER_CSS_ID;
+				clone.textContent = styleEl.textContent;
+				head.appendChild(clone);
+			}
+
+			/* -------- scroll reset fallback (header binds the same, this covers
+			   footer-only embeds such as a preview of a single page) -------- */
+			if (!window.__bcScrollResetBound) {
+				window.__bcScrollResetBound = true;
+
+				function resetFooterPageScroll() {
+					if (window.location.hash) { return; }
+					try { window.scrollTo(0, 0); } catch (scrollError) { /* ignore */ }
+					var scroller = document.scrollingElement || document.documentElement;
+					if (scroller) { scroller.scrollTop = 0; }
+					footerRoots.forEach(function (root) {
+						var node = root.parentElement;
+						while (node) {
+							if (node.scrollTop > 0) { node.scrollTop = 0; }
+							node = node.parentElement;
+						}
+					});
+				}
+
+				function scheduleFooterScrollReset() {
+					resetFooterPageScroll();
+					window.setTimeout(resetFooterPageScroll, 0);
+					if (window.requestAnimationFrame) { window.requestAnimationFrame(resetFooterPageScroll); }
+					window.setTimeout(resetFooterPageScroll, 180);
+					window.setTimeout(resetFooterPageScroll, 600);
+				}
+
+				window.addEventListener('gw:content-ready', scheduleFooterScrollReset);
+				window.addEventListener('gw.onRouteChange', scheduleFooterScrollReset);
+			}
+
+			footerRoots.forEach(function (root) {
+				if (root.getAttribute('data-bc-footer-ready') === '1') { return; }
+				root.setAttribute('data-bc-footer-ready', '1');
+				copyFooterStyleOnce(root);
+
+				var year = root.querySelector('[data-bc-year]');
+				if (year) {
+					var currentYear = new Date().getFullYear();
+					if (!isNaN(currentYear)) { year.textContent = String(currentYear); }
+				}
+			});
+		})();
+	</script>
+
+</div>
