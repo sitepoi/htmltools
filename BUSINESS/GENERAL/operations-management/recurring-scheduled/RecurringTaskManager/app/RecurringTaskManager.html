@@ -153,6 +153,7 @@
     <div class="bkt-pane" id="bktPaneDefs" style="display:none">
       <div class="bkt-def-actions">
         <button class="bkt-btn bkt-btn-primary" id="bktBtnNewDef">+ New Task</button>
+        <button class="bkt-btn bkt-btn-ghost" id="bktBtnManageCats" data-act="manage-categories">Categories</button>
         <button class="bkt-btn bkt-btn-ghost" id="bktBtnExportDefs" data-act="export-defs">Export Definitions</button>
         <button class="bkt-btn bkt-btn-ghost" id="bktBtnImportDefs" data-act="import-defs">Import Definitions</button>
         <span class="bkt-def-hint">Task definitions can only be edited by administrators. Tasks on the board are generated automatically from these definitions. Use import and export to start a new year or a new segment from a definition pack.</span>
@@ -202,17 +203,21 @@
             <label for="bktDefFreq">Frequency</label>
             <select id="bktDefFreq"></select>
           </div>
-          <div class="bkt-field bkt-field-half" id="bktDefWeekdayRow">
-            <label for="bktDefWeekday">Weekday</label>
-            <select id="bktDefWeekday"></select>
+          <div class="bkt-field bkt-field-full" id="bktDefWeekdaysRow">
+            <label>Weekdays <span class="bkt-field-hint">- select one or more (this is how many times per week)</span></label>
+            <div class="bkt-dow-toggle" id="bktDefWeekdays"></div>
           </div>
-          <div class="bkt-field bkt-field-half" id="bktDefDayRow">
-            <label for="bktDefDay">Day of Month</label>
-            <input type="number" id="bktDefDay" min="1" max="31" value="1">
+          <div class="bkt-field bkt-field-full" id="bktDefDaysRow">
+            <label for="bktDefDays">Days of Month <span class="bkt-field-hint">- comma-separated, e.g. 1, 15 (this is how many times per month)</span></label>
+            <input type="text" id="bktDefDays" inputmode="numeric" placeholder="e.g. 1, 15">
           </div>
           <div class="bkt-field bkt-field-half" id="bktDefMonthRow">
             <label for="bktDefMonth">Month</label>
             <select id="bktDefMonth"></select>
+          </div>
+          <div class="bkt-field bkt-field-half" id="bktDefYearDayRow">
+            <label for="bktDefDay">Day of Month</label>
+            <input type="number" id="bktDefDay" min="1" max="31" value="1">
           </div>
           <div class="bkt-field bkt-field-half" id="bktDefDueRow">
             <label for="bktDefDueDate">Date <span class="bkt-req">*</span></label>
@@ -229,6 +234,10 @@
           <div class="bkt-field bkt-field-full">
             <label for="bktDefSteps">Step-by-step Checklist (one step per line, optional)</label>
             <textarea id="bktDefSteps" rows="4" placeholder="1. Download the bank statement&#10;2. Match every transaction&#10;3. Save the reconciliation file"></textarea>
+          </div>
+          <div class="bkt-field bkt-field-full">
+            <label for="bktDefItems">Items / Payees (one per line, optional)</label>
+            <textarea id="bktDefItems" rows="3" placeholder="e.g.&#10;House 1&#10;House 2&#10;Ahmed Yilmaz"></textarea>
           </div>
           <div class="bkt-field bkt-field-half">
             <label for="bktDefTime">Estimated Time (optional)</label>
@@ -259,8 +268,12 @@
           <button class="bkt-icon-btn" id="bktDrawerClose" aria-label="Close">×</button>
         </div>
       </div>
+      <div class="bkt-drawer-tabs" id="bktDrawerTabs">
+        <button type="button" class="bkt-drawer-tab active" data-act="drawer-tab" data-dtab="details">Task Details</button>
+        <button type="button" class="bkt-drawer-tab" data-act="drawer-tab" data-dtab="chat">Chat <span class="bkt-drawer-tab-count" id="bktDrawerChatCount"></span></button>
+      </div>
       <div class="bkt-drawer-body">
-        <div class="bkt-drawer-col bkt-drawer-col-side">
+        <div class="bkt-drawer-col bkt-drawer-col-side" id="bktDrawerColDetails">
           <div class="bkt-drawer-section">
             <div class="bkt-drawer-section-title">Details</div>
             <div id="bktDrawerDetails"></div>
@@ -268,6 +281,10 @@
           <div class="bkt-drawer-section">
             <div class="bkt-drawer-section-title">Steps</div>
             <div id="bktDrawerSteps"></div>
+          </div>
+          <div class="bkt-drawer-section" id="bktDrawerItemsSection" style="display:none">
+            <div class="bkt-drawer-section-title">Items</div>
+            <div id="bktDrawerItems"></div>
           </div>
           <div class="bkt-drawer-section">
             <div class="bkt-drawer-section-title">Requests</div>
@@ -287,7 +304,7 @@
             <div class="bkt-log" id="bktDrawerHistory"></div>
           </div>
         </div>
-        <div class="bkt-drawer-col bkt-drawer-col-conv">
+        <div class="bkt-drawer-col bkt-drawer-col-conv" id="bktDrawerColChat">
           <div class="bkt-drawer-section bkt-drawer-section-conv">
             <div class="bkt-drawer-section-title">Chat</div>
             <div class="bkt-pin-note" id="bktPinNote"></div>
@@ -332,6 +349,26 @@
       <div class="bkt-modal-actions">
         <button class="bkt-btn bkt-btn-danger" id="bktConfirmYes">Yes</button>
         <button class="bkt-btn bkt-btn-ghost" id="bktConfirmNo">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bkt-modal-overlay" id="bktCatModal" style="display:none">
+    <div class="bkt-modal">
+      <div class="bkt-modal-head">
+        <h3>Manage Categories</h3>
+        <button class="bkt-icon-btn" id="bktCatClose" aria-label="Close">×</button>
+      </div>
+      <div class="bkt-modal-body">
+        <div class="bkt-cat-add">
+          <input type="text" id="bktCatNew" maxlength="60" placeholder="New category name...">
+          <button class="bkt-btn bkt-btn-primary bkt-btn-sm" id="bktCatAdd">Add</button>
+        </div>
+        <div class="bkt-cat-list" id="bktCatList"></div>
+        <p class="bkt-cat-hint">Renaming a category keeps its tasks. Deleting a category moves its tasks to Uncategorized.</p>
+      </div>
+      <div class="bkt-modal-actions">
+        <button class="bkt-btn bkt-btn-ghost" id="bktCatDone">Done</button>
       </div>
     </div>
   </div>

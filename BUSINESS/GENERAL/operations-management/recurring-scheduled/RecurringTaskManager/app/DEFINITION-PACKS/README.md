@@ -18,6 +18,10 @@ JSON starter packs for the recurring task manager. Import one to set up a segmen
 2. Copy the JSON or download the `.json` file.
 3. Import it into a fresh tool instance with the next year number - this is the supported flow for starting a new year, since each instance manages exactly one year.
 
+## Managing categories in the tool
+
+Categories are no longer JSON-only. As an administrator open **Task Definitions → Categories** to add, rename or delete categories right in the UI. Deleting a category moves its tasks to Uncategorized. Changes are saved with the tool data - no import needed.
+
 ## Pack schema (`bkt-pack-v1`)
 
 ```json
@@ -31,14 +35,16 @@ JSON starter packs for the recurring task manager. Import one to set up a segmen
   ],
   "definitions": [
     {
-      "title": "Daily walkthrough",
+      "title": "Weekly inspection",
       "category": "maintenance",
       "taskType": "regular",
-      "frequency": "daily",
+      "frequency": "weekly",
+      "daysOfWeek": [0, 3],
       "priority": "high",
       "note": "Optional guidance text.",
       "timeEstimate": "30 min",
-      "steps": ["First step", "Second step"]
+      "steps": ["First step", "Second step"],
+      "items": ["Building A", "Building B"]
     }
   ]
 }
@@ -50,13 +56,14 @@ JSON starter packs for the recurring task manager. Import one to set up a segmen
 - `category` - must match a category id in the pack (or leave empty for Uncategorized).
 - `taskType` - `regular` (recurring) or `adHoc` (one-off with `dueDate`).
 - `frequency` - `daily`, `weekly`, `biweekly`, `monthly`, `quarterly`, `yearly`.
-  - `weekly` and `biweekly` use `dayOfWeek`: 0 = Monday ... 6 = Sunday.
-  - `monthly` and `quarterly` use `dayOfMonth`: 1-31.
+  - `weekly` and `biweekly` use `daysOfWeek`: an array of weekdays, 0 = Monday ... 6 = Sunday. One entry = once per week; several entries = several times per week (e.g. `[0, 3]` = Monday and Thursday). The single `dayOfWeek` field is still accepted for older packs.
+  - `monthly` and `quarterly` use `daysOfMonth`: an array of days, 1-31 (e.g. `[1, 15]` = twice per month). The single `dayOfMonth` field is still accepted.
   - `yearly` uses `monthOfYear` (1-12) and `dayOfMonth` (1-31).
 - `priority` - `low`, `medium`, `high`, `urgent`.
 - `note` - guidance shown with the task.
 - `timeEstimate` - optional time hint.
 - `steps` - up to 12 checklist steps, checked per occurrence.
+- `items` - up to 60 named items or payees (e.g. houses, students, staff). Each occurrence gets its own item checklist, so one monthly task can track many payments without creating one task per person.
 - `dueDate` - for ad-hoc tasks, `YYYY-MM-DD`.
 
 `year` is optional in the pack - the import dialog always offers a year and the pack value is used only as a fallback.

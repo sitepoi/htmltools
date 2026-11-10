@@ -128,6 +128,7 @@
   var _warnedAutosave = false;
   var _editDefinitionId = null;
   var _drawerKey = null;
+  var _drawerTab = "details";
   var _chatStore = { chats: {} };
   var _chatStoreLoaded = false;
   var _chatStoreDirty = false;
@@ -163,6 +164,18 @@
     var number = parseInt(value, 10);
     if (isNaN(number)) number = minValue;
     return Math.max(minValue, Math.min(maxValue, number));
+  }
+
+  function uniqueSortedNumbers(numbers) {
+    var seen = {};
+    var result = [];
+    (numbers || []).forEach(function (number) {
+      number = parseInt(number, 10);
+      if (isNaN(number) || seen[number]) return;
+      seen[number] = true;
+      result.push(number);
+    });
+    return result.sort(function (a, b) { return a - b; });
   }
 
   function nowIsoDateTime() { return new Date().toISOString(); }
@@ -411,6 +424,14 @@
     } else {
       frequency = "";
     }
+    var daysOfWeek = Array.isArray(rawDefinition.daysOfWeek)
+      ? uniqueSortedNumbers(rawDefinition.daysOfWeek.map(function (d) { return clampInt(d, 0, 6); }))
+      : [clampInt(rawDefinition.dayOfWeek, 0, 6)];
+    if (!daysOfWeek.length) daysOfWeek = [0];
+    var daysOfMonth = Array.isArray(rawDefinition.daysOfMonth)
+      ? uniqueSortedNumbers(rawDefinition.daysOfMonth.map(function (d) { return clampInt(d, 1, 31); }))
+      : [clampInt(rawDefinition.dayOfMonth, 1, 31)];
+    if (!daysOfMonth.length) daysOfMonth = [1];
     return {
       id: String(rawDefinition.id || uniqueId()),
       title: title,
@@ -419,6 +440,8 @@
       frequency: frequency,
       dayOfWeek: clampInt(rawDefinition.dayOfWeek, 0, 6),
       dayOfMonth: clampInt(rawDefinition.dayOfMonth, 1, 31),
+      daysOfWeek: daysOfWeek,
+      daysOfMonth: daysOfMonth,
       monthOfYear: clampInt(rawDefinition.monthOfYear, 1, 12),
       dueDate: /^\d{4}-\d{2}-\d{2}$/.test(String(rawDefinition.dueDate || "")) ? rawDefinition.dueDate : "",
       priority: PRIORITY_IDS.indexOf(rawDefinition.priority) > -1 ? rawDefinition.priority : "medium",
@@ -426,6 +449,9 @@
       timeEstimate: String(rawDefinition.timeEstimate || ""),
       steps: Array.isArray(rawDefinition.steps)
         ? rawDefinition.steps.map(function (rawStep) { return String(rawStep || "").trim(); }).filter(function (step) { return !!step; }).slice(0, 12)
+        : [],
+      items: Array.isArray(rawDefinition.items)
+        ? rawDefinition.items.map(function (rawItem) { return String(rawItem || "").trim(); }).filter(function (item) { return !!item; }).slice(0, 60)
         : [],
       createdAt: rawDefinition.createdAt || nowIsoDateTime(),
       createdBy: String(rawDefinition.createdBy || "")
@@ -548,6 +574,12 @@
       return dates;
     }
     var frequency = definition.frequency || "daily";
+    var daysOfWeek = (Array.isArray(definition.daysOfWeek) && definition.daysOfWeek.length)
+      ? definition.daysOfWeek
+      : [clampInt(definition.dayOfWeek, 0, 6)];
+    var daysOfMonth = (Array.isArray(definition.daysOfMonth) && definition.daysOfMonth.length)
+      ? definition.daysOfMonth
+      : [clampInt(definition.dayOfMonth, 1, 31)];
     if (frequency === "daily") {
       var dayCursor = new Date(year, 0, 1);
       var lastDay = new Date(year, 11, 31);
@@ -557,25 +589,34 @@
       }
     } else if (frequency === "weekly" || frequency === "biweekly") {
       var stepDays = frequency === "biweekly" ? 14 : 7;
-      var weekCursor = new Date(year, 0, 1);
-      while (weekdayIndex(weekCursor) !== definition.dayOfWeek) weekCursor.setDate(weekCursor.getDate() + 1);
-      while (weekCursor.getFullYear() === year) {
-        dates.push(isoOfDate(weekCursor));
-        weekCursor.setDate(weekCursor.getDate() + stepDays);
-      }
+      daysOfWeek.forEach(function (dayOfWeek) {
+        var weekCursor = new Date(year, 0, 1);
+        while (weekdayIndex(weekCursor) !== dayOfWeek) weekCursor.setDate(weekCursor.getDate() + 1);
+        while (weekCursor.getFullYear() === year) {
+          dates.push(isoOfDate(weekCursor));
+          weekCursor.setDate(weekCursor.getDate() + stepDays);
+        }
+      });
     } else if (frequency === "monthly") {
       for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
-        dates.push(isoOfDate(new Date(year, monthIndex, clampDayNumber(definition.dayOfMonth, year, monthIndex))));
+        daysOfMonth.forEach(function (dayOfMonth) {
+          dates.push(isoOfDate(new Date(year, monthIndex, clampDayNumber(dayOfMonth, year, monthIndex))));
+        });
       }
     } else if (frequency === "quarterly") {
       [0, 3, 6, 9].forEach(function (quarterMonth) {
-        dates.push(isoOfDate(new Date(year, quarterMonth, clampDayNumber(definition.dayOfMonth, year, quarterMonth))));
+        daysOfMonth.forEach(function (dayOfMonth) {
+          dates.push(isoOfDate(new Date(year, quarterMonth, clampDayNumber(dayOfMonth, year, quarterMonth))));
+        });
       });
     } else if (frequency === "yearly") {
       var yearlyMonth = definition.monthOfYear - 1;
-      dates.push(isoOfDate(new Date(year, yearlyMonth, clampDayNumber(definition.dayOfMonth, year, yearlyMonth))));
+      daysOfMonth.forEach(function (dayOfMonth) {
+        dates.push(isoOfDate(new Date(year, yearlyMonth, clampDayNumber(dayOfMonth, year, yearlyMonth))));
+      });
     }
-    return dates;
+    dates.sort();
+    return dates.filter(function (dateIso, index) { return index === 0 || dates[index - 1] !== dateIso; });
   }
 
   /* ============================================================
@@ -738,14 +779,20 @@
   function scheduleTextOf(definition) {
     if (definition.taskType === "adHoc") return "Due: " + formatDateLong(definition.dueDate);
     var frequency = definition.frequency;
+    var daysOfWeek = (Array.isArray(definition.daysOfWeek) && definition.daysOfWeek.length)
+      ? definition.daysOfWeek
+      : [clampInt(definition.dayOfWeek, 0, 6)];
+    var daysOfMonth = (Array.isArray(definition.daysOfMonth) && definition.daysOfMonth.length)
+      ? definition.daysOfMonth
+      : [clampInt(definition.dayOfMonth, 1, 31)];
     if (frequency === "daily") return "Every day";
-    if (frequency === "weekly") return "Weekly · " + DAYS_FULL[definition.dayOfWeek];
-    if (frequency === "biweekly") return "Biweekly · " + DAYS_FULL[definition.dayOfWeek];
-    if (frequency === "monthly") return "Monthly · on day " + definition.dayOfMonth;
-    if (frequency === "quarterly") return "Quarterly · on day " + definition.dayOfMonth;
+    if (frequency === "weekly") return "Weekly · " + daysOfWeek.map(function (d) { return DAYS_SHORT[d]; }).join(", ");
+    if (frequency === "biweekly") return "Biweekly · " + daysOfWeek.map(function (d) { return DAYS_SHORT[d]; }).join(", ");
+    if (frequency === "monthly") return "Monthly · day " + daysOfMonth.join(", ");
+    if (frequency === "quarterly") return "Quarterly · day " + daysOfMonth.join(", ");
     if (frequency === "yearly") {
       var yearlyMonth = definition.monthOfYear - 1;
-      var yearlyDue = isoOfDate(new Date(DB.year, yearlyMonth, clampDayNumber(definition.dayOfMonth, DB.year, yearlyMonth)));
+      var yearlyDue = isoOfDate(new Date(DB.year, yearlyMonth, clampDayNumber(daysOfMonth[0], DB.year, yearlyMonth)));
       return "Yearly · " + formatDateShort(yearlyDue);
     }
     return "";
@@ -846,12 +893,15 @@
           frequency: definition.frequency,
           dayOfWeek: definition.dayOfWeek,
           dayOfMonth: definition.dayOfMonth,
+          daysOfWeek: (definition.daysOfWeek || []).slice(),
+          daysOfMonth: (definition.daysOfMonth || []).slice(),
           monthOfYear: definition.monthOfYear,
           dueDate: definition.dueDate,
           priority: definition.priority,
           note: definition.note,
           timeEstimate: definition.timeEstimate || "",
-          steps: (definition.steps || []).slice()
+          steps: (definition.steps || []).slice(),
+          items: (definition.items || []).slice()
         };
       })
     };
@@ -1043,13 +1093,26 @@
     byId("bktDefTypeRegular").checked = !isAdhoc;
     byId("bktDefTypeAdhoc").checked = isAdhoc;
     byId("bktDefFreq").value = (definition && definition.frequency) ? definition.frequency : "monthly";
-    byId("bktDefWeekday").value = String(definition ? definition.dayOfWeek : 0);
+    var selectedWeekdays = (definition && Array.isArray(definition.daysOfWeek) && definition.daysOfWeek.length)
+      ? definition.daysOfWeek
+      : [(definition ? definition.dayOfWeek : 0)];
+    var weekdaysHtml = "";
+    for (var weekday = 0; weekday < 7; weekday++) {
+      var isActive = selectedWeekdays.indexOf(weekday) > -1;
+      weekdaysHtml += '<button type="button" class="bkt-dow' + (isActive ? " active" : "") + '" data-act="dow-toggle" data-dow="' + weekday + '">' + escapeHtml(DAYS_SHORT[weekday]) + "</button>";
+    }
+    byId("bktDefWeekdays").innerHTML = weekdaysHtml;
+    var daysOfMonth = (definition && Array.isArray(definition.daysOfMonth) && definition.daysOfMonth.length)
+      ? definition.daysOfMonth
+      : [(definition ? definition.dayOfMonth : 1)];
+    byId("bktDefDays").value = daysOfMonth.join(", ");
     byId("bktDefDay").value = String(definition ? definition.dayOfMonth : 1);
     byId("bktDefMonth").value = String(definition ? definition.monthOfYear : 12);
     byId("bktDefDueDate").value = definition ? definition.dueDate : todayIsoString();
     byId("bktDefPriority").value = definition ? definition.priority : "medium";
     byId("bktDefNote").value = definition ? definition.note : "";
     byId("bktDefSteps").value = (definition && Array.isArray(definition.steps)) ? definition.steps.join("\n") : "";
+    byId("bktDefItems").value = (definition && Array.isArray(definition.items)) ? definition.items.join("\n") : "";
     byId("bktDefTime").value = definition ? (definition.timeEstimate || "") : "";
     byId("bktDefError").style.display = "none";
     byId("bktDefDelete").style.display = definition ? "" : "none";
@@ -1066,9 +1129,10 @@
     var isAdhoc = byId("bktDefTypeAdhoc").checked;
     var frequency = byId("bktDefFreq").value;
     byId("bktDefFreqRow").style.display = isAdhoc ? "none" : "";
-    byId("bktDefWeekdayRow").style.display = (!isAdhoc && (frequency === "weekly" || frequency === "biweekly")) ? "" : "none";
-    byId("bktDefDayRow").style.display = (!isAdhoc && (frequency === "monthly" || frequency === "quarterly" || frequency === "yearly")) ? "" : "none";
+    byId("bktDefWeekdaysRow").style.display = (!isAdhoc && (frequency === "weekly" || frequency === "biweekly")) ? "" : "none";
+    byId("bktDefDaysRow").style.display = (!isAdhoc && (frequency === "monthly" || frequency === "quarterly")) ? "" : "none";
     byId("bktDefMonthRow").style.display = (!isAdhoc && frequency === "yearly") ? "" : "none";
+    byId("bktDefYearDayRow").style.display = (!isAdhoc && frequency === "yearly") ? "" : "none";
     byId("bktDefDueRow").style.display = isAdhoc ? "" : "none";
   }
 
@@ -1083,19 +1147,30 @@
     }
     if (!title) { showFormError("Task name cannot be empty."); return; }
     if (isAdhoc && !dueDate) { showFormError("Please choose a date for the ad-hoc task."); return; }
+    var selectedWeekdays = uniqueSortedNumbers(queryAll("#bktDefWeekdays .active").map(function (button) {
+      return parseInt(button.getAttribute("data-dow"), 10);
+    }));
+    if (!selectedWeekdays.length) selectedWeekdays = [0];
+    var daysOfMonth = uniqueSortedNumbers(String(byId("bktDefDays").value || "").split(/[,\s]+/).map(function (part) {
+      return parseInt(part, 10);
+    }).filter(function (number) { return number >= 1 && number <= 31; }));
+    if (!daysOfMonth.length) daysOfMonth = [1];
     var definitionData = {
       title: title,
       category: byId("bktDefCategory").value,
       taskType: isAdhoc ? "adHoc" : "regular",
       frequency: isAdhoc ? "" : byId("bktDefFreq").value,
-      dayOfWeek: parseInt(byId("bktDefWeekday").value, 10) || 0,
-      dayOfMonth: clampInt(parseInt(byId("bktDefDay").value, 10) || 1, 1, 31),
+      dayOfWeek: selectedWeekdays[0],
+      dayOfMonth: daysOfMonth[0],
+      daysOfWeek: selectedWeekdays,
+      daysOfMonth: daysOfMonth,
       monthOfYear: clampInt(parseInt(byId("bktDefMonth").value, 10) || 12, 1, 12),
       dueDate: isAdhoc ? dueDate : "",
       priority: byId("bktDefPriority").value,
       note: byId("bktDefNote").value.trim(),
       timeEstimate: byId("bktDefTime").value.trim(),
-      steps: byId("bktDefSteps").value.split("\n").map(function (stepLine) { return stepLine.trim(); }).filter(function (stepLine) { return !!stepLine; }).slice(0, 12)
+      steps: byId("bktDefSteps").value.split("\n").map(function (stepLine) { return stepLine.trim(); }).filter(function (stepLine) { return !!stepLine; }).slice(0, 12),
+      items: byId("bktDefItems").value.split("\n").map(function (itemLine) { return itemLine.trim(); }).filter(function (itemLine) { return !!itemLine; }).slice(0, 60)
     };
     var wasEditing = !!_editDefinitionId;
     var editedDefinition = wasEditing ? findDefinitionById(_editDefinitionId) : null;
@@ -1112,6 +1187,92 @@
     persistDatabase();
     renderAll();
     tryNotify(wasEditing ? "Task updated" : "Task added", "success");
+  }
+
+  /* ============================================================
+     CATEGORY MANAGEMENT
+     ============================================================ */
+
+  function openCategoriesModal() {
+    if (!canAdminister()) return;
+    renderCategoriesModal();
+    byId("bktCatModal").style.display = "flex";
+  }
+
+  function closeCategoriesModal() {
+    byId("bktCatModal").style.display = "none";
+  }
+
+  function renderCategoriesModal() {
+    var html = "";
+    (DB.categories || []).forEach(function (category) {
+      html += '<div class="bkt-cat-row">' +
+        '<input type="text" class="bkt-cat-input" maxlength="60" value="' + escapeHtml(category.label) + '" data-id="' + escapeHtml(category.id) + '">' +
+        '<button type="button" class="bkt-mini-btn" data-act="cat-rename-save" data-id="' + escapeHtml(category.id) + '">Save</button>' +
+        '<button type="button" class="bkt-mini-btn bkt-mb-danger" data-act="cat-delete" data-id="' + escapeHtml(category.id) + '">Delete</button>' +
+        "</div>";
+    });
+    byId("bktCatList").innerHTML = html || '<div class="bkt-empty" style="padding:14px">No categories yet - add one below.</div>';
+    byId("bktCatNew").value = "";
+  }
+
+  function slugifyCategoryId(label) {
+    return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  function addCategoryFromModal() {
+    if (!canAdminister()) return;
+    var label = byId("bktCatNew").value.trim();
+    if (!label) return;
+    var id = slugifyCategoryId(label);
+    var baseId = id;
+    var suffix = 2;
+    while (DB.categories.some(function (category) { return category.id === id; })) {
+      id = baseId + "-" + suffix;
+      suffix++;
+    }
+    DB.categories.push({ id: id, label: label });
+    persistDatabase();
+    renderCategoriesModal();
+    renderAll();
+    tryNotify("Category added", "success");
+  }
+
+  function renameCategoryFromModal(categoryId, newLabel) {
+    if (!canAdminister()) return;
+    var label = String(newLabel || "").trim();
+    if (!label) return;
+    for (var i = 0; i < DB.categories.length; i++) {
+      if (DB.categories[i].id === categoryId) {
+        DB.categories[i].label = label;
+        persistDatabase();
+        renderCategoriesModal();
+        renderAll();
+        tryNotify("Category renamed", "success");
+        return;
+      }
+    }
+  }
+
+  function deleteCategoryFromModal(categoryId) {
+    if (!canAdminister()) return;
+    var category = null;
+    for (var i = 0; i < DB.categories.length; i++) {
+      if (DB.categories[i].id === categoryId) { category = DB.categories[i]; break; }
+    }
+    if (!category) return;
+    var usedBy = DB.definitions.filter(function (definition) { return definition.category === categoryId; }).length;
+    openConfirmModal(usedBy
+      ? '"' + category.label + '" is used by ' + usedBy + ' task(s). Deleting it will move those tasks to Uncategorized. Continue?'
+      : 'Delete category "' + category.label + '"?',
+      function () {
+        DB.categories = DB.categories.filter(function (item) { return item.id !== categoryId; });
+        DB.definitions.forEach(function (definition) { if (definition.category === categoryId) definition.category = ""; });
+        persistDatabase();
+        renderCategoriesModal();
+        renderAll();
+        tryNotify("Category deleted", "success");
+      });
   }
 
   /* ============================================================
@@ -1361,6 +1522,26 @@
       '<div class="bkt-steps">' + stepRows + "</div>";
   }
 
+  function buildItemsHtml(definition, entry) {
+    var items = definition.items || [];
+    if (!items.length) return "";
+    var itemsDone = (entry && Array.isArray(entry.itemsDone)) ? entry.itemsDone : [];
+    var doneCount = 0;
+    var itemRows = "";
+    items.forEach(function (item, itemIndex) {
+      var isDone = !!itemsDone[itemIndex];
+      if (isDone) doneCount++;
+      itemRows += '<button type="button" class="bkt-step' + (isDone ? " bkt-step-done" : "") + '"' +
+        (canWork() ? ' data-act="item-toggle" data-step="' + itemIndex + '"' : "") +
+        ' title="' + (canWork() ? "Click to mark done" : "") + '">' +
+        '<span class="bkt-step-check">' + (isDone ? "✓" : "") + "</span>" +
+        '<span class="bkt-step-text">' + escapeHtml(item) + "</span>" +
+        "</button>";
+    });
+    return '<div class="bkt-steps-progress">' + doneCount + " of " + items.length + " items done</div>" +
+      '<div class="bkt-steps">' + itemRows + "</div>";
+  }
+
   function renderTaskDrawerContent(taskKey) {
     var parts = taskKey.split("|");
     var definition = findDefinitionById(parts[0]);
@@ -1381,6 +1562,9 @@
     byId("bktDrawerNav").innerHTML = buildDrawerNavButtonsHtml(taskKey);
     byId("bktDrawerDetails").innerHTML = buildDrawerDetailsHtml(definition, dueDate);
     byId("bktDrawerSteps").innerHTML = buildStepsHtml(definition, entry);
+    var itemsHtml = buildItemsHtml(definition, entry);
+    byId("bktDrawerItems").innerHTML = itemsHtml;
+    byId("bktDrawerItemsSection").style.display = itemsHtml ? "" : "none";
     byId("bktPinNote").innerHTML = buildPinnedNoteHtml(entry, taskKey);
     if (_pinEditing === taskKey) {
       byId("bktPinEditText").value = (entry && entry.note) ? entry.note : "";
@@ -1395,10 +1579,20 @@
       : '<div class="bkt-conv-empty">No requests for this task.</div>';
     byId("bktReqInlineForm").style.display = canWork() ? "" : "none";
     byId("bktDrawerHistory").innerHTML = buildLogHtml(entry);
+
+    var drawerTab = _drawerTab || "details";
+    queryAll(".bkt-drawer-tab").forEach(function (tabButton) {
+      tabButton.classList.toggle("active", tabButton.getAttribute("data-dtab") === drawerTab);
+    });
+    byId("bktDrawerColDetails").style.display = drawerTab === "details" ? "" : "none";
+    byId("bktDrawerColChat").style.display = drawerTab === "chat" ? "" : "none";
+    var chatCount = chatMessagesFor(taskKey).length;
+    byId("bktDrawerChatCount").textContent = chatCount ? String(chatCount) : "";
   }
 
   function openTaskDrawer(taskKey) {
     _drawerKey = taskKey;
+    _drawerTab = "details";
     renderTaskDrawerContent(taskKey);
     byId("bktTaskDrawer").style.display = "flex";
   }
@@ -1606,6 +1800,13 @@
     html += '<span class="bkt-type-chip ' + (isAdhoc ? "type-adhoc" : "type-regular") + '">' + (isAdhoc ? "Ad-hoc" : "Routine") + "</span>";
     html += '<span class="bkt-chip">' + escapeHtml(categoryLabelOf(definition.category)) + "</span>";
     if (!isAdhoc) html += '<span class="bkt-chip">' + escapeHtml(frequencyLabelOf(definition.frequency)) + "</span>";
+    if (!isAdhoc && definition.items && definition.items.length) {
+      var itemsDoneCount = 0;
+      if (entry && Array.isArray(entry.itemsDone)) {
+        definition.items.forEach(function (item, itemIndex) { if (entry.itemsDone[itemIndex]) itemsDoneCount++; });
+      }
+      html += '<span class="bkt-chip bkt-items-chip">' + itemsDoneCount + "/" + definition.items.length + " items</span>";
+    }
     if (openRequestCount) {
       html += '<button type="button" class="bkt-req-chip" data-act="open-task" data-key="' + escapeHtml(key) + '">' +
         openRequestCount + " open request" + (openRequestCount > 1 ? "s" : "") + "</button>";
@@ -1723,7 +1924,8 @@
   function buildYearCalendarStripHtml(definition, year) {
     var occurrences = occurrenceDatesForDefinition(definition, year, true);
     var today = todayIsoString();
-    var unitWord = definition.frequency === "monthly" ? "month" : "week";
+    var monthlyDays = (Array.isArray(definition.daysOfMonth) && definition.daysOfMonth.length) ? definition.daysOfMonth.length : 1;
+    var unitWord = definition.frequency === "monthly" ? (monthlyDays > 1 ? "day" : "month") : "week";
     var finishedCount = 0;
     occurrences.forEach(function (dueDate) {
       if (isFinishedStatus(currentStatusOf(occurrenceKey(definition.id, dueDate)))) finishedCount++;
@@ -1773,7 +1975,8 @@
   function buildMonthAccordionHtml(definition, year) {
     var occurrences = occurrenceDatesForDefinition(definition, year, true);
     var isDaily = definition.frequency === "daily";
-    var unitWord = isDaily ? "day" : "week";
+    var weeklyDays = (Array.isArray(definition.daysOfWeek) && definition.daysOfWeek.length) ? definition.daysOfWeek.length : 1;
+    var unitWord = isDaily || weeklyDays > 1 ? "day" : "week";
     var today = todayIsoString();
     var todayYear = parseInt(today.slice(0, 4), 10);
     var currentMonthIndex = parseInt(today.slice(5, 7), 10) - 1;
@@ -1915,6 +2118,9 @@
     html += '<span class="bkt-type-chip ' + (isAdhoc ? "type-adhoc" : "type-regular") + '">' + (isAdhoc ? "Ad-hoc" : "Routine") + "</span>";
     html += '<span class="bkt-chip">' + escapeHtml(categoryLabelOf(definition.category)) + "</span>";
     html += '<span class="bkt-schedule-chip">' + escapeHtml(scheduleTextOf(definition)) + "</span>";
+    if (!isAdhoc && definition.items && definition.items.length) {
+      html += '<span class="bkt-chip">' + definition.items.length + " items</span>";
+    }
     if (isOverdue) html += '<span class="bkt-chip" style="color:#dc2626;background:#fef2f2">Overdue</span>';
     html += "</div>";
     if (definition.note) html += '<div class="bkt-def-note">' + escapeHtml(definition.note) + "</div>";
@@ -2202,6 +2408,7 @@
     byId("bktPaneDefs").style.display = tab === "defs" ? "" : "none";
     var adminVisible = canAdminister() ? "" : "none";
     byId("bktBtnNewDef").style.display = adminVisible;
+    byId("bktBtnManageCats").style.display = adminVisible;
     byId("bktBtnExportDefs").style.display = adminVisible;
     byId("bktBtnImportDefs").style.display = adminVisible;
   }
@@ -2214,6 +2421,12 @@
     });
     categorySelect.innerHTML = categoryOptions;
     categorySelect.value = DB.ui.category || "all";
+    var defCategorySelect = byId("bktDefCategory");
+    var defCategoryOptions = '<option value="">Uncategorized</option>';
+    (DB.categories || []).forEach(function (category) {
+      defCategoryOptions += '<option value="' + escapeHtml(category.id) + '">' + escapeHtml(category.label) + "</option>";
+    });
+    defCategorySelect.innerHTML = defCategoryOptions;
     var statusSelect = byId("bktStatusFilter");
     var statusOptions = "";
     STATUS_FILTER_OPTIONS.forEach(function (option) {
@@ -3128,6 +3341,15 @@
         _expandedGroups[expandDefinition.id] = true;
       });
       renderAll();
+    } else if (action === "manage-categories") {
+      openCategoriesModal();
+    } else if (action === "cat-rename-save") {
+      var catInput = actionElement.parentElement ? actionElement.parentElement.querySelector("input.bkt-cat-input") : null;
+      if (catInput) renameCategoryFromModal(catInput.getAttribute("data-id"), catInput.value);
+    } else if (action === "cat-delete") {
+      deleteCategoryFromModal(actionElement.getAttribute("data-id"));
+    } else if (action === "dow-toggle") {
+      actionElement.classList.toggle("active");
     } else if (action === "export-defs") {
       openExportModal();
     } else if (action === "import-defs") {
@@ -3149,6 +3371,15 @@
       var stepEntry = ensureStatusEntry(_drawerKey);
       if (!Array.isArray(stepEntry.checklistDone)) stepEntry.checklistDone = [];
       stepEntry.checklistDone[stepIndex] = !stepEntry.checklistDone[stepIndex];
+      persistDatabase();
+      renderAll();
+    } else if (action === "item-toggle") {
+      if (!_drawerKey || !canWork()) return;
+      var itemIndex = parseInt(actionElement.getAttribute("data-step"), 10);
+      if (isNaN(itemIndex)) return;
+      var itemEntry = ensureStatusEntry(_drawerKey);
+      if (!Array.isArray(itemEntry.itemsDone)) itemEntry.itemsDone = [];
+      itemEntry.itemsDone[itemIndex] = !itemEntry.itemsDone[itemIndex];
       persistDatabase();
       renderAll();
     } else if (action === "pin-edit") {
@@ -3225,6 +3456,13 @@
     byId("bktDefTypeAdhoc").addEventListener("change", refreshDefinitionModalFields);
     byId("bktDefFreq").addEventListener("change", refreshDefinitionModalFields);
 
+    byId("bktCatClose").addEventListener("click", closeCategoriesModal);
+    byId("bktCatDone").addEventListener("click", closeCategoriesModal);
+    byId("bktCatAdd").addEventListener("click", addCategoryFromModal);
+    byId("bktCatNew").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") addCategoryFromModal();
+    });
+
     byId("bktDrawerClose").addEventListener("click", closeTaskDrawer);
     byId("bktConvSend").addEventListener("click", sendConversationFromInput);
     byId("bktConvInput").addEventListener("keydown", function (event) {
@@ -3259,11 +3497,6 @@
       frequencyOptions += '<option value="' + escapeHtml(frequency.id) + '">' + escapeHtml(frequency.label) + "</option>";
     });
     byId("bktDefFreq").innerHTML = frequencyOptions;
-    var weekdayOptions = "";
-    for (var weekday = 0; weekday < 7; weekday++) {
-      weekdayOptions += '<option value="' + weekday + '">' + escapeHtml(DAYS_FULL[weekday]) + "</option>";
-    }
-    byId("bktDefWeekday").innerHTML = weekdayOptions;
     var monthOptions = "";
     for (var monthNumber = 1; monthNumber <= 12; monthNumber++) {
       monthOptions += '<option value="' + monthNumber + '">' + escapeHtml(MONTHS_FULL[monthNumber - 1]) + "</option>";
