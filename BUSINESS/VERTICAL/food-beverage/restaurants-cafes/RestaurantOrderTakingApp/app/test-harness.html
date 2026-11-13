@@ -187,7 +187,18 @@
           target.productData = target.productData || {};
           target.productData.data_categoriesBased = target.productData.data_categoriesBased || {};
           var patch = params.productData && params.productData.data_categoriesBased ? params.productData.data_categoriesBased : {};
-          Object.keys(patch).forEach(function (key) { target.productData.data_categoriesBased[key] = patch[key]; });
+          /* A category-wrapped patch merges INTO that category, a flat patch
+             merges at the top - exactly what the live CMS must do. */
+          Object.keys(patch).forEach(function (key) {
+            var incoming = patch[key];
+            var existing = target.productData.data_categoriesBased[key];
+            var isPlainObject = incoming && typeof incoming === 'object' && !Array.isArray(incoming);
+            if (isPlainObject && existing && typeof existing === 'object' && !Array.isArray(existing)) {
+              Object.keys(incoming).forEach(function (innerKey) { existing[innerKey] = incoming[innerKey]; });
+              return;
+            }
+            target.productData.data_categoriesBased[key] = incoming;
+          });
           target.updated = new Date().toISOString();
           saveStore(list);
           cb(null, { ok: true });
@@ -303,26 +314,31 @@
       typeId: 'restaurant-orders-easyorder',
       created: placedAtIso,
       updated: placedAtIso,
+      /* Production shape (D-ROTA-50): the order fields sit in the orderData
+         category and the restaurant is stored as restaurantSlug. */
       productData: {
         data_categoriesBased: {
-          restaurantId: (extra && extra.restaurantId !== undefined) ? extra.restaurantId : HARNESS_RESTAURANT_SLUG,
-          orderNumber: orderNumber,
-          placedAt: placedAtIso,
-          channel: channel,
-          customer: customer,
-          address: extra && extra.address ? extra.address : null,
-          tableNumber: extra && extra.tableNumber ? extra.tableNumber : '',
-          deliveryZone: extra && extra.deliveryZone ? extra.deliveryZone : null,
-          scheduledFor: extra && extra.scheduledFor ? extra.scheduledFor : '',
-          paymentMethod: (extra && extra.paymentMethod) || 'card',
-          paymentDetails: extra && extra.paymentDetails ? extra.paymentDetails : {},
-          lines: lines,
-          totals: totals,
-          status: status,
-          statusChangedAt: (extra && extra.statusChangedAt) || placedAtIso,
-          internalNote: extra && extra.internalNote ? extra.internalNote : '',
-          acceptedAt: extra && extra.acceptedAt ? extra.acceptedAt : '',
-          estimatedReadyAt: extra && extra.estimatedReadyAt ? extra.estimatedReadyAt : ''
+          orderData: {
+            restaurantSlug: (extra && extra.restaurantSlug !== undefined) ? extra.restaurantSlug : HARNESS_RESTAURANT_SLUG,
+            orderNumber: orderNumber,
+            placedAt: placedAtIso,
+            channel: channel,
+            customer: customer,
+            address: extra && extra.address ? extra.address : null,
+            tableNumber: extra && extra.tableNumber ? extra.tableNumber : '',
+            deliveryZone: extra && extra.deliveryZone ? extra.deliveryZone : null,
+            scheduledFor: extra && extra.scheduledFor ? extra.scheduledFor : '',
+            paymentMethod: (extra && extra.paymentMethod) || 'card',
+            paymentDetails: extra && extra.paymentDetails ? extra.paymentDetails : {},
+            lines: lines,
+            totals: totals,
+            status: status,
+            statusChangedAt: (extra && extra.statusChangedAt) || placedAtIso,
+            internalNote: extra && extra.internalNote ? extra.internalNote : '',
+            acceptedAt: extra && extra.acceptedAt ? extra.acceptedAt : '',
+            estimatedReadyAt: extra && extra.estimatedReadyAt ? extra.estimatedReadyAt : ''
+          },
+          name: 'Order ' + orderNumber
         }
       }
     };

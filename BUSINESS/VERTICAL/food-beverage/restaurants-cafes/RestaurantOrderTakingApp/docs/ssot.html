@@ -257,9 +257,13 @@
   <ol>
     <li><strong>the board record</strong> the tool runs in - one
     <code>restaurant-order-taking-app-easyorder</code> record per restaurant.
-    When the CMS page is that record
-    (<code>/admin/objects/restaurant-order-taking-app-easyorder/&lt;id&gt;</code>)
-    the tool reads the record by id and takes its own <code>slug</code> (and
+    Two page shapes are read (D-ROTA-52): the record page
+    (<code>/objects/restaurant-order-taking-app-easyorder/&lt;id&gt;</code>),
+    where the tool reads the record by id, and the APPLICATION page
+    (<code>/objects/restaurant-order-taking-app-easyorder</code>, no id in the
+    address), where the tenant's board records are listed - exactly one record
+    is then used, several records make the board refuse to guess and name them.
+    The tool takes the record's own <code>slug</code> (and
     <code>restaurantSlug</code> / <code>restaurantId</code> when present).
     <strong>Give that record the same slug as the restaurant object</strong> -
     that single equality is the whole link. Reading the record needs that type
@@ -275,6 +279,24 @@
   </ol>
   <p>When none of these resolves, the board shows a banner naming the cause
   and stays closed; it never falls back to "the first restaurant".</p>
+  <p class="note"><strong>Reading the board record is a CMS permission.</strong>
+  The tool being the application's own tool does not grant access to that
+  application's objects: <code>restaurant-order-taking-app-easyorder</code> must
+  be listed in <code>settings.allowedObjectTypes</code> (read) or the host
+  refuses the request and shows its own "type is not in the allowed object
+  types list" warning. The parser reads that list from the
+  <code>allowedObjectTypes</code> setting when the host exposes it and then does
+  NOT send the request, so no warning appears (D-ROTA-53). A system admin who
+  does not want the board to read its own type at all sets
+  <code>readBoardRecords = no</code>; the board then relies on the record page
+  or the restaurant page.</p>
+  <p class="note"><strong>Console diagnostics.</strong> Every time the
+  restaurant cannot be resolved the console prints a
+  <code>[ROTA-DIAG]</code> block: page + parsed route, the parameters, and the
+  first records of the three types with their top-level keys, data categories,
+  <code>slug</code>, restaurant references and the order fields actually seen.
+  One block is enough to tell whether the tool can reach the ids, the slugs and
+  the order payload.</p>
   <h4>Where to put the restaurant slug on the board record</h4>
   <p>The board record is the only place, because it is per restaurant while
   the tool definition is not. There is no tool parameter for it (D-ROTA-49).
@@ -318,9 +340,10 @@
     <tr>
       <td>restaurant object -&gt; its orders</td>
       <td>one to many</td>
-      <td><code>order.restaurantId</code> = the restaurant slug</td>
+      <td><code>order.restaurantSlug</code> = the restaurant slug
+      (<code>restaurantId</code> accepted as an alias)</td>
       <td>the tool: only orders whose restaurant key matches the resolved
-      scope are shown (D-ROTA-42, D-ROTA-45)</td>
+      scope are shown (D-ROTA-42, D-ROTA-45, D-ROTA-50)</td>
     </tr>
     <tr>
       <td>board -&gt; order records</td>
@@ -332,22 +355,75 @@
   </table>
   <h4>Order contract - the field that carries the relation</h4>
   <pre>
-// restaurant-orders-easyorder object, data_categoriesBased payload
+// restaurant-orders-easyorder object - the PRODUCTION shape (D-ROTA-50):
+// the order fields live in the orderData category of data_categoriesBased
 {
-  "restaurantId": "downtown",   // REQUIRED - restaurant slug, lowercase, trimmed
-  "orderNumber": "EFOC-8101",
-  "placedAt": "2026-11-01T18:42:00.000Z",
-  "status": "new",
-  ...
+  "id": "2026-11-13-AQTGTKHLEG-easyorder",
+  "name": "Order EFOC-OX13LLP - sdfg adg dad",
+  "cmsObjectType": "restaurant-orders-easyorder",
+  "productData": { "data_categoriesBased": {
+    "orderData": {
+      "restaurantSlug": "pizza-st-michel",  // REQUIRED - restaurant slug
+      "orderNumber": "EFOC-OX13LLP",
+      "placedAt": "2026-11-13T08:03:43.185Z",
+      "channel": "pickup",
+      "customer": { "fullName": "...", "phone": "..." },
+      "lines": [ { "itemName": "...", "quantity": 1, "unitPrice": 32.5,
+                   "modifierEntries": [], "instructions": "" } ],
+      "totals": { "subtotal": 32.5, "tax": 0, "total": 30.87 },
+      "status": "new",
+      "statusChangedAt": "...",
+      "acceptedAt": "...",            // written by this board on accept
+      "estimatedReadyAt": "..."        // written by this board when an ETA is chosen
+    },
+    "name": "Order EFOC-OX13LLP - sdfg adg dad"
+  } }
 }
   </pre>
+  <p class="note">Two shapes are read and written correctly (D-ROTA-50):
+  the <strong>category shape</strong> above (<code>orderData</code> holding
+  the fields) and the <strong>flat shape</strong> described by the platform
+  reference (<code>data_categoriesBased = { fieldId: value }</code>). The
+  board detects which one an order uses and patches a status change back
+  into that same place - writing a flat patch onto a category order would
+  put <code>status</code> one level above the fields the order app reads.</p>
   <p class="note">The slug is the identifier a restaurant admin can choose and
   correct freely; the object id never changes. Every order therefore stores
-  the slug in <code>restaurantId</code>. The tool compares
-  case-insensitively and also accepts the settings object id or the
-  restaurant's own <code>restaurantId</code> / <code>siteId</code> field, so a
-  writer that already uses an id keeps working - but the slug is the
-  documented contract and the value every writer should store.</p>
+  the slug in <code>restaurantSlug</code>. The tool compares
+  case-insensitively and also accepts <code>restaurantId</code>,
+  <code>restaurantKey</code>, <code>restaurant</code>, <code>siteId</code> and
+  <code>cmsRestaurantId</code>, so an older writer keeps working - but
+  <code>restaurantSlug</code> is the documented contract and the value every
+  writer should store.</p>
+  <p class="note"><strong>Only ONE stored field is required: the kitchen
+  status.</strong> Everything else the board shows about the preparation is a
+  DEFAULT, not a demand on the order writer (D-ROTA-51). The board works with
+  the order exactly as the website creates it:</p>
+  <table>
+    <tr><th>Field</th><th>When the order has it</th><th>When it does not (default)</th></tr>
+    <tr><td><code>status</code></td><td>the board reads it and keeps it up to date</td><td>read as <code>new</code>; the board writes it with the
+    status alone, so the kitchen flow works as soon as this one field exists
+    inside <code>orderData</code></td></tr>
+    <tr><td><code>statusChangedAt</code></td><td>the timeline shows exact times
+    and a yesterday order finished today stays on the board after a reload</td>
+    <td>the board keeps the time for the session; otherwise the order counts as
+    changed today, which is right for everything placed today</td></tr>
+    <tr><td><code>acceptedAt</code></td><td>the timeline shows the accept time</td>
+    <td>the accepted stage falls back to the status time</td></tr>
+    <tr><td><code>estimatedReadyAt</code></td><td>the countdown, the ETA row and
+    the ticket show the promise</td><td>the board shows its own choice for the
+    session; after a reload the order has no estimate ("not set")</td></tr>
+    <tr><td><code>internalNote</code></td><td>shown on the card, the popup and the ticket</td>
+    <td>no note (the board never writes this field)</td></tr>
+  </table>
+  <p class="note">A write never fails because of a missing optional field: the
+  board asks for the fields it knows, drops the ones the CMS refuses, and
+  finally saves the status on its own. A refused value is kept for the session
+  so the board still shows the truth, and the console names the field once
+  instead of failing the action. If the customer website should show the
+  kitchen progress, it reads the same <code>orderData.status</code> (and
+  <code>acceptedAt</code> / <code>estimatedReadyAt</code> when the tenant
+  defines them).</p>
 
   <h4>Restaurant config object - the parts this tool reads</h4>
   <p>The restaurant object keeps the slug at the OBJECT level
@@ -1301,9 +1377,127 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
       the restaurant object's slug".</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-ROTA-50</td><td>2026-11-13</td>
+      <td>Production order shape accepted. A real <code>restaurant-orders-easyorder</code>
+      object stores its fields in the <code>orderData</code> category
+      (<code>productData.data_categoriesBased.orderData</code>) and carries the
+      restaurant in <code>orderData.restaurantSlug</code>. Three changes follow:
+      (1) <code>collectBags()</code> now also pushes every plain-object category
+      of a <code>data_categoriesBased</code> container, so both the category
+      shape and the flat shape named by the platform reference are read;
+      (2) <code>ORDER_RESTAURANT_FIELDS</code> starts with
+      <code>restaurantId</code> and then <code>restaurantSlug</code>,
+      <code>restaurant_slug</code>, <code>restaurantKey</code>,
+      <code>restaurant</code>, <code>siteId</code>, <code>cmsRestaurantId</code>
+      - an order that only has <code>restaurantSlug</code> is no longer counted
+      as "no restaurant"; (3) the write path mirrors the read path:
+      <code>orderUpdatePayload()</code> wraps the patch in the category the
+      order was read from (<code>{ orderData: { status, statusChangedAt } }</code>),
+      and QA creates use the same category, so a status change lands where the
+      order application reads it instead of one level above it. A flat order is
+      still patched flat. New optional parameter <code>ordersDataCategory</code>
+      (empty = auto-detect). Verified with a smoke suite that loads the reported
+      production object verbatim.</td>
+      <td>User: production board warned "3 orders carry no restaurant and are
+      hidden" and supplied the real order object.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-51</td><td>2026-11-13</td>
+      <td>Kitchen state works with defaults instead of requiring order fields.
+      Only <code>status</code> has to exist on
+      <code>restaurant-orders-easyorder</code>; <code>statusChangedAt</code>,
+      <code>acceptedAt</code>, <code>estimatedReadyAt</code> and
+      <code>internalNote</code> are optional and defaulted: a missing status
+      reads as <code>new</code>, a missing change time counts as changed today,
+      a missing accept time falls back to the status time, a missing estimate
+      shows as "not set", a missing note shows nothing. Every write now
+      degrades: it asks for the fields the type accepted before, drops a field
+      the CMS refuses, and finally saves <code>status</code> alone, so a field
+      the tenant never created can never block the kitchen. Refused values
+      (<code>acceptedAt</code>, <code>estimatedReadyAt</code>) are remembered
+      for the session and applied to the order view, so the timeline, the
+      countdown and the ticket stay correct until the page is reloaded, and the
+      console names the field once. Optional fields are also written one by one
+      when the combined patch fails, so a missing ETA never costs the accept
+      time.</td>
+      <td>User: "I think all these are related with the status and preparation
+      of the order, so we can work with defaults in restaurantordertaking
+      instead of expecting from the order data itself".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-52</td><td>2026-11-13</td>
+      <td>The APPLICATION page (<code>/objects/restaurant-order-taking-app-easyorder</code>,
+      no record id in the address) is a supported entry point. Production opened
+      the board there, so <code>readInstanceRestaurantReference()</code> used to
+      return early and the board reported "cannot tell which restaurant". Now the
+      page type is recognised without an id: the tool lists the
+      <code>restaurant-order-taking-app-easyorder</code> records and uses the
+      ONLY record when the tenant has exactly one (then it cannot be the wrong
+      restaurant). With several records the page is shared by all of them, so
+      the board refuses to guess, names the record slugs it found and tells the
+      admin to open the board from one record page
+      (<code>/objects/restaurant-order-taking-app-easyorder/&lt;record id&gt;</code>).
+      A failed read (type missing in
+      <code>settings.allowedObjectTypes</code>) gets its own message instead of
+      the generic slug advice. <code>boardContextHint()</code> is pure and
+      carries the wording for all four cases (0 records, 1 record, several
+      records, read error).</td>
+      <td>User: production showed "This board cannot tell which restaurant it
+      belongs to (page https://easyorder.uniconhub.com/objects/
+      restaurant-order-taking-app-easyorder)" although the board record and the
+      restaurant object carried the same slug.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-53</td><td>2026-11-13</td>
+      <td>The host warning "type … is not in the allowed object types list" is
+      not about the application identity: reading any type - including the
+      board's own <code>restaurant-order-taking-app-easyorder</code> - needs that
+      type in <code>settings.allowedObjectTypes</code>. The permission is real,
+      but the tool now avoids provoking it: <code>allowedTypeNamesFromParam()</code>
+      parses the configured list (both <code>{ mainObjectType: "x" }</code> and
+      the quoted-key JSON shape, which was the initial parsing bug) and skips
+      the request when the board type is absent. New toggle
+      <code>readBoardRecords</code> (default yes) turns the read off entirely
+      for admins who do not want the board to touch its own type. A new
+      console report - <code>[ROTA-DIAG]</code>, printed whenever the restaurant
+      cannot be resolved and available as
+      <code>__roaTest.collectReachability()</code> - dumps the page route, the
+      parameters and the first records of the board, restaurant and order types
+      with their top-level keys, <code>slug</code>, data categories, restaurant
+      references and the order fields actually present, so one pasted block
+      shows what the tool can reach. The diagnostics never query a type the
+      board was told not to read.</td>
+      <td>User: "Type restaurant-order-taking-app-easyorder is not in the
+      allowed object types list ... So this is a misleading warning" plus "do
+      you see that data in too, give me information in console".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-54</td><td>2026-11-13</td>
+      <td>A reachability dump from production showed
+      <code>boardRecords.count = 0</code> with the type already allowed: the
+      real blocker was that no <code>restaurant-order-taking-app-easyorder</code>
+      record existed, so nothing could name the restaurant. The no-restaurant
+      message now says that explicitly and names the restaurants that DO exist
+      - <code>loadRestaurantSlugSuggestions()</code> queries the restaurant type
+      only in this failure path and lists up to six slugs, so the admin sees
+      which values a board record must copy. The zero-record console line no
+      longer suggests adding the type to
+      <code>allowedObjectTypes</code> when the read succeeded and simply
+      returned nothing. The dump also reported every
+      <code>orderFieldsSeen</code> as false because it inspected the top level
+      only; it now reads through <code>orderedBags()</code>, the same reader the
+      board uses.</td>
+      <td>User sent the <code>[ROTA-DIAG]</code> block: 4 restaurants, 3 orders,
+      data category <code>orderData</code>, top-level slugs present, zero board
+      records.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
-
-  <h2 id="sec-maintenance">12. Maintenance rules</h2>
   <ol>
     <li><strong>This document is the single source of truth for every decision
     about this tool.</strong> Every decision is recorded in section 11 with
@@ -2374,7 +2568,44 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
   no-context banner says "give the board record the same slug as the restaurant";
   harness and smoke now run the board-record flow (page =
   `/admin/objects/restaurant-order-taking-app-easyorder/board-demo`, record
-  slug `demo`); smoke + checks green.</p>
+  slug `demo`); smoke + checks green.
+  2026-11-13 (build 2026-11-13-1) - production order shape matched (D-ROTA-50):
+  the order fields are read from the `orderData` category and the restaurant
+  from `orderData.restaurantSlug`, so the "orders carry no restaurant and are
+  hidden" warning no longer fires for real orders; status changes are patched
+  back INTO `orderData` (a flat patch would have written one level above the
+  fields the order app reads); flat objects keep working; QA creates mirror the
+  loaded category and stamp `restaurantSlug`; new optional parameter
+  `ordersDataCategory`; harness orders now use the production shape; smoke
+  suite green with the reported object loaded verbatim.
+  2026-11-13 (build 2026-11-13-2) - kitchen state works with DEFAULT values
+  (D-ROTA-51): only `status` is required on the order type, every other status
+  field is optional and defaulted; writes degrade (full patch -> patch without
+  refused fields -> status alone) and optional fields are tried one by one;
+  refused values are remembered for the session so the timeline, countdown and
+  ticket stay correct; console names the missing field once; smoke suite green
+  with a fake order type that rejects statusChangedAt / acceptedAt /
+  estimatedReadyAt (49 asserts).
+  2026-11-13 (build 2026-11-13-3) - the APPLICATION page (no record id in the
+  address) now resolves the restaurant: one board record is used as is, several
+  records refuse to guess, name their slugs and tell the admin which record
+  page to open; an unreadable record list gets its own message and points at
+  `settings.allowedObjectTypes`; `boardContextHint()` carries all four cases;
+  smoke green in both page shapes (55 asserts each).
+  2026-11-13 (build 2026-11-13-4) - the board no longer provokes the host's
+  "type is not in the allowed object types list" warning: the configured list is
+  parsed (quoted keys included) and the request is skipped when the board type is
+  absent; `readBoardRecords` can turn that read off; `[ROTA-DIAG]` prints a
+  copy-pasteable reachability report whenever the restaurant cannot be resolved;
+  smoke covers four combinations (app page, record page, list without the board
+  type, read switched off) with 63 + 63 + 13 + 13 asserts.
+  2026-11-13 (build 2026-11-13-5) - the no-restaurant path now names the
+  restaurants that exist and says plainly that no board record was found (the
+  production dump had `boardRecords.count = 0` while the type was allowed); the
+  zero-record console line no longer blames `allowedObjectTypes`; the
+  diagnostics `orderFieldsSeen` reads through the data category instead of the
+  top level; smoke covers a fifth case (no board record at all) with 64 + 64 +
+  13 + 13 + 14 asserts.</p>
 
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -2520,7 +2751,7 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
 
   <div class="footer">
     Restaurant Order Taking App - single source of truth for all decisions
-    about this tool. Version 3.5, 2026-11-01.
+    about this tool. Version 4.0, 2026-11-13.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

@@ -1,4 +1,4 @@
-/* build 2026-11-01-6 */
+/* build 2026-11-13-5 */
 
 /* =====================================================================
    RestaurantOrderTakingApp - application-level ACTIVE ORDERS BOARD
@@ -31,7 +31,7 @@
 
 /* Tool build stamp - MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    bump on EVERY code change so stale CMS uploads are detectable. */
-var TOOL_BUILD = '2026-11-01-6';
+var TOOL_BUILD = '2026-11-13-5';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp starting...');
 
 (function () {
@@ -140,6 +140,13 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   var _armed = { orderId: '', status: '', timer: null };
   var _busy = {};              /* orderId -> true while a write is in flight */
 
+  /* Kitchen state the order type may not define (D-ROTA-51). The board never
+     requires status timestamps or an ETA on the order: what the CMS refuses
+     is remembered here so the board keeps showing the truth for this session
+     and the next write stops asking for it. */
+  var _rejectedOrderFields = {};  /* field name -> true once the CMS refused it */
+  var _localOrderState = {};      /* orderId -> status values the board shows even when they are not stored */
+
   var _menuOpen = false;       /* three-dots action menu visibility */
   var _importBusy = false;     /* true while a sample import is running */
   var _clearArmed = false;     /* true while the remove-today confirm is armed */
@@ -154,6 +161,12 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   var _restaurantSettings = null;
   var _restaurantState = 'pending';  /* pending | ready | no-context | not-found | duplicate | error */
   var _instanceRestaurantReferences = []; /* restaurant ids read from the board record (one record per restaurant) */
+  var _boardRecordCount = 0;         /* board records found on the application page */
+  var _boardRecordSummaries = [];    /* their restaurant references, for the diagnostic message */
+  var _boardRecordError = '';        /* why the board-record list could not be read */
+  var _boardRecordNotice = '';       /* 'not-allowed' | 'disabled' - read skipped on purpose */
+  var _restaurantSlugSuggestions = []; /* restaurant slugs found when no board record exists */
+  var _diagDone = false;             /* the reachability dump is printed once per boot */
   var _allOrders = [];               /* every order of the last load, before scoping */
   var _hiddenOrderCount = 0;         /* orders that belong to another restaurant */
   var _unassignedOrderCount = 0;     /* orders that carry no restaurant at all */
@@ -172,7 +185,9 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   var _cfg = {
     ordersType: 'restaurant-orders-easyorder',
     settingsType: 'restaurants-easyorder',
+    ordersDataCategory: '',         /* empty = use the category the orders were read from (e.g. orderData) */
     toolAppType: 'restaurant-order-taking-app-easyorder', /* the per-restaurant record this board runs in */
+    readBoardRecords: true,        /* read this application's own records to find the restaurant (needs the type in allowedObjectTypes) */
     allowUnassignedOrders: false,  /* legacy escape hatch - off by default (cross-restaurant risk) */
     autoRefreshSeconds: 20,
     newOrderNotifications: true,
@@ -594,7 +609,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     assignDayNumbers(_orders);
     if (unassigned && !_warnedUnassignedOrders) {
       _warnedUnassignedOrders = true;
-      console.warn('[RestaurantOrderTakingApp] ' + unassigned + ' order(s) carry no restaurant id (restaurantId / restaurantKey / restaurant / siteId) and are hidden. The order writer must store the restaurant on every order.');
+      console.warn('[RestaurantOrderTakingApp] ' + unassigned + ' order(s) carry no restaurant reference (checked restaurantId / restaurantSlug / restaurantKey / restaurant / siteId) and are hidden. The order writer must store restaurantSlug on every order.');
     }
     return _orders;
   }
@@ -721,27 +736,231 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     return candidates;
   }
 
-  /* Reads the board record when the page address points at one. A tool
-     cannot see its own parent record any other way, and the record is where
-     the system admin pins the restaurant for this board. */
+  /* Reads the board record this board belongs to. A tool cannot see its own
+     parent record any other way, and the record is where the system admin
+     pins the restaurant. Two page shapes are handled (D-ROTA-52):
+       /objects/<boardType>/<recordId>  - the per-restaurant board page
+       /objects/<boardType>             - the APPLICATION page, whose address
+         carries no record; there the only board record of the tenant is used,
+         and with several records the board refuses to guess. */
   function readInstanceRestaurantReference(done) {
     var route = parentPageRoute();
     var toolAppType = normalizeSlug(_cfg.toolAppType);
-    if (!toolAppType || !route.objectId || route.objectType !== toolAppType) { done(); return; }
-    tool.requestObjects('get', { mainObjectType: _cfg.toolAppType, objectId: route.objectId }, function (err, result) {
-      var record = (!err && result)
-        ? (result.object || (Array.isArray(result.objects) ? result.objects[0] : null))
-        : null;
-      if (!record) {
-        console.warn('[RestaurantOrderTakingApp] the board record ' + route.objectId + ' could not be read - add ' + _cfg.toolAppType + ' to settings.allowedObjectTypes (role editor, scope shared) so the restaurant reference can be resolved from it. Falling back to the page address.');
-        done();
-        return;
-      }
+    if (!toolAppType || route.objectType !== toolAppType) { done(); return; }
+
+    function pushRecordReferences(record) {
       var references = restaurantReferenceOf(record);
       for (var i = 0; i < references.length; i++) {
         if (_instanceRestaurantReferences.indexOf(references[i]) === -1) _instanceRestaurantReferences.push(references[i]);
       }
+    }
+
+    if (route.objectId) {
+      tool.requestObjects('get', { mainObjectType: _cfg.toolAppType, objectId: route.objectId }, function (err, result) {
+        var record = (!err && result)
+          ? (result.object || (Array.isArray(result.objects) ? result.objects[0] : null))
+          : null;
+        if (!record) {
+          console.warn('[RestaurantOrderTakingApp] the board record ' + route.objectId + ' could not be read - add ' + _cfg.toolAppType + ' to settings.allowedObjectTypes (role editor, scope shared) so the restaurant reference can be resolved from it. Falling back to the page address.');
+          done();
+          return;
+        }
+        pushRecordReferences(record);
+        done();
+      });
+      return;
+    }
+
+    /* Application page without a record id: list the board records. This asks
+       the host for the board's OWN type, so it is skipped when that is turned
+       off or when the configured allowed list clearly does not contain it -
+       the host would only answer with an access warning (D-ROTA-53). */
+    if (!_cfg.readBoardRecords) {
+      _boardRecordNotice = 'disabled';
+      console.warn('[RestaurantOrderTakingApp] reading this application\'s own records is turned off for this tool (readBoardRecords = no). Open the board from its record page /objects/' + _cfg.toolAppType + '/<record id> or from the restaurant object page.');
       done();
+      return;
+    }
+    var allowedNames = allowedTypeNamesFromParam();
+    if (allowedNames && allowedNames.indexOf(normalizeSlug(_cfg.toolAppType)) === -1) {
+      _boardRecordNotice = 'not-allowed';
+      console.warn('[RestaurantOrderTakingApp] the board did not read its own ' + _cfg.toolAppType + ' records because settings.allowedObjectTypes does not list that type. Add it with read access if the board should find its restaurant from its record, or open the board from the record page.');
+      done();
+      return;
+    }
+    tool.requestObjects('query', { mainObjectType: _cfg.toolAppType }, function (err, result) {
+      _boardRecordError = err ? String(err) : '';
+      var list = (!err && result && Array.isArray(result.objects)) ? result.objects : [];
+      _boardRecordCount = list.length;
+      _boardRecordSummaries = [];
+      for (var i = 0; i < list.length && i < 8; i++) {
+        var summary = restaurantSlugOf(list[i]) || restaurantReferenceOf(list[i])[0] || list[i].slug || list[i].id || '';
+        if (summary) _boardRecordSummaries.push(summary);
+      }
+      if (list.length === 1) {
+        /* One board record for the whole tenant: it can only be this board. */
+        pushRecordReferences(list[0]);
+      } else if (!list.length) {
+        console.warn('[RestaurantOrderTakingApp] no ' + _cfg.toolAppType + ' record exists yet - create one record per restaurant with the same slug as the ' + _cfg.settingsType + ' object so this board can identify itself.');
+      } else {
+        console.warn('[RestaurantOrderTakingApp] this page is the application page of ' + _cfg.toolAppType + ', shared by ' + list.length + ' board records (' + _boardRecordSummaries.join(', ') + '). Open the board from the record page of one restaurant (/objects/' + _cfg.toolAppType + '/<record id>) so it knows which restaurant it serves.');
+      }
+      done();
+    });
+  }
+
+  /* Names listed in settings.allowedObjectTypes when the host exposes that
+     setting through tool.param. Null when it is not readable, so the tool
+     never guesses a restriction from an empty value. */
+  function allowedTypeNamesFromParam() {
+    var raw = String(paramRaw('allowedObjectTypes', '')).trim();
+    if (!raw) return null;
+    var names = [];
+    /* Both shapes appear in field settings: a JSON list of objects
+       ({ mainObjectType: "x" }) and the same with quoted keys. The key may
+       therefore be followed by a closing quote before the colon. */
+    var expression = /mainObjectType"?\s*:\s*['"]([^'"]+)['"]/g;
+    var match;
+    while ((match = expression.exec(raw)) !== null) names.push(normalizeSlug(match[1]));
+    return names.length ? names : null;
+  }
+
+  /* Slugs of the restaurants the tool can see. Used only when the board has
+     no restaurant at all, so the message can say which values a board record
+     has to copy instead of staying generic (D-ROTA-54). */
+  function loadRestaurantSlugSuggestions(done) {
+    _restaurantSlugSuggestions = [];
+    if (!_cfg.settingsType || typeof tool === 'undefined' || typeof tool.requestObjects !== 'function') { done(); return; }
+    tool.requestObjects('query', { mainObjectType: _cfg.settingsType }, function (err, result) {
+      var list = (!err && result && Array.isArray(result.objects)) ? result.objects : [];
+      for (var i = 0; i < list.length && _restaurantSlugSuggestions.length < 6; i++) {
+        var slug = restaurantSlugOf(list[i]) || restaurantReferenceOf(list[i])[0] || list[i].slug || '';
+        if (slug && _restaurantSlugSuggestions.indexOf(slug) === -1) _restaurantSlugSuggestions.push(slug);
+      }
+      done();
+    });
+  }
+
+  /* What to tell an admin when the page carries no usable restaurant. */
+  function boardContextHint(recordCount, summaries, route, recordError, notice) {
+    var boardType = _cfg.toolAppType;
+    if (notice === 'not-allowed') {
+      return 'The board did not read its own ' + boardType + ' records because settings.allowedObjectTypes does not list that type. Add it with read access if the board should find its restaurant from its record, or open the board from the record page /objects/' + boardType + '/<record id>.';
+    }
+    if (notice === 'disabled') {
+      return 'Reading the board records is turned off for this tool (readBoardRecords = no). Open the board from the record page /objects/' + boardType + '/<record id> or from the restaurant object page.';
+    }
+    if (recordCount > 1) {
+      return 'This page is the application page, shared by ' + recordCount + ' board records' +
+        (summaries && summaries.length ? ' (' + summaries.join(', ') + ')' : '') +
+        '. Open the board from the record page of one restaurant (/objects/' + boardType + '/<record id>) and give that record the same slug as the ' + _cfg.settingsType + ' object.';
+    }
+    if (recordCount === 1) {
+      return 'The only board record has no restaurant reference. Give it the same slug as the ' + _cfg.settingsType + ' object, or open the board from the restaurant object page.';
+    }
+    if (recordError) {
+      return 'The ' + boardType + ' records could not be read (' + recordError + '). Add ' + boardType + ' to settings.allowedObjectTypes (read) so the board can find its restaurant from its own record.';
+    }
+    var where = (route && route.objectType) ? ('/objects/' + route.objectType) : 'this page';
+    var known = (_restaurantSlugSuggestions && _restaurantSlugSuggestions.length)
+      ? '. Restaurants found: ' + _restaurantSlugSuggestions.join(', ') + '.'
+      : '.';
+    return 'This page (' + where + ') carries no ' + boardType + ' record, so nothing names the restaurant for this board. Create one board record per restaurant and give it the same slug as the ' + _cfg.settingsType + ' object' + known + ' Then open the board from that record\'s page (/objects/' + boardType + '/<record id>).';
+  }
+
+  /* ------------------------------------------------ console diagnostics */
+  /* A compact, copy-pasteable dump of what the tool can actually reach:
+     page route, parameters, and the first records of the three types with
+     their top-level keys, data categories and restaurant field. It answers
+     "can the tool see the id, the slug and the order payload at all?". */
+  function describeRecord(record) {
+    if (!record || typeof record !== 'object') return null;
+    var container = (record.productData && record.productData.data_categoriesBased)
+      ? record.productData.data_categoriesBased
+      : (record.data_categoriesBased || null);
+    var restaurantValue = '';
+    var fieldBags = orderedBags(record);
+    for (var i = 0; i < ORDER_RESTAURANT_FIELDS.length; i++) {
+      var candidate = readField(fieldBags, ORDER_RESTAURANT_FIELDS[i]);
+      if (candidate === undefined || candidate === null || candidate === '') continue;
+      restaurantValue = String(restaurantKeyOfValue(candidate));
+      break;
+    }
+    var bags = collectBags(record);
+    return {
+      id: String(record.id || record._id || ''),
+      slug: String(record.slug || ''),
+      hasTopLevelSlug: !!record.slug,
+      cmsObjectType: String(record.cmsObjectType || ''),
+      typeId: String(record.typeId || ''),
+      name: String(record.name || ''),
+      topLevelKeys: Object.keys(record).slice(0, 30),
+      dataCategories: container ? Object.keys(container).slice(0, 20) : [],
+      dataCategory: dataCategoryOf(record),
+      restaurantField: restaurantValue,
+      referenceCandidates: restaurantReferenceOf(record).slice(0, 4),
+      orderFieldsSeen: {
+        orderNumber: readField(fieldBags, 'orderNumber') !== undefined,
+        placedAt: readField(fieldBags, 'placedAt') !== undefined,
+        channel: readField(fieldBags, 'channel') !== undefined,
+        lines: readField(fieldBags, 'lines') !== undefined,
+        totals: readField(fieldBags, 'totals') !== undefined,
+        status: readField(fieldBags, 'status') !== undefined
+      }
+    };
+  }
+
+  function collectReachability(done) {
+    var report = {
+      build: TOOL_BUILD,
+      pageUrl: parentPageUrl(),
+      route: parentPageRoute(),
+      restaurantState: _restaurantState,
+      resolvedRestaurant: _restaurantSettings ? (restaurantSlugOf(_restaurantSettings) || String(_restaurantSettings.id || '')) : '',
+      boardRecordReferences: _instanceRestaurantReferences.slice(),
+      boardRecordNotice: _boardRecordNotice,
+      boardRecordError: _boardRecordError,
+      parameters: {
+        allowObjectCRUD: String(paramRaw('allowObjectCRUD', '')),
+        allowedObjectTypes: String(paramRaw('allowedObjectTypes', '')),
+        ordersObjectType: _cfg.ordersType,
+        restaurantSettingsType: _cfg.settingsType,
+        toolAppType: _cfg.toolAppType,
+        readBoardRecords: _cfg.readBoardRecords ? 'yes' : 'no'
+      }
+    };
+
+    function queryType(sectionName, typeName, sampleSize, next, skipReason) {
+      var section = { type: typeName, error: '', count: 0, sample: [], skipped: skipReason || '' };
+      report[sectionName] = section;
+      /* Never ask for a type the tool was told not to read - the host would
+         answer with the same access warning the board just avoided. */
+      if (skipReason) { next(); return; }
+      if (!typeName || typeof tool === 'undefined' || typeof tool.requestObjects !== 'function') { next(); return; }
+      tool.requestObjects('query', { mainObjectType: typeName }, function (err, result) {
+        if (err) section.error = String(err);
+        var list = (!err && result && Array.isArray(result.objects)) ? result.objects : [];
+        section.count = list.length;
+        for (var i = 0; i < list.length && i < sampleSize; i++) section.sample.push(describeRecord(list[i]));
+        next();
+      });
+    }
+
+    var boardSkipReason = !_cfg.readBoardRecords
+      ? 'readBoardRecords = no'
+      : (_boardRecordNotice === 'not-allowed' ? 'type not listed in settings.allowedObjectTypes' : '');
+    queryType('boardRecords', _cfg.toolAppType, 3, function () {
+      queryType('restaurants', _cfg.settingsType, 2, function () {
+        queryType('orders', _cfg.ordersType, 2, function () { done(report); });
+      });
+    }, boardSkipReason);
+  }
+
+  function logReachability() {
+    if (_diagDone) return;
+    _diagDone = true;
+    collectReachability(function (report) {
+      console.log('[ROTA-DIAG] what this board can reach (copy the block and send it back):\n----- ROTA DIAG START -----\n' + JSON.stringify(report, null, 2) + '\n----- ROTA DIAG END -----');
     });
   }
 
@@ -758,6 +977,10 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     /* Category the order fields live in ("orderData" on production), so the
        write path can patch the same place it read from. */
     order.dataCategory = dataCategoryOf(obj);
+    /* Whatever the order does not carry (because the type has no such field)
+       is filled from what this board already did in this session, so the
+       board works with defaults instead of demanding the fields (D-ROTA-51). */
+    applyLocalOrderState(order);
 
     var status = statusKeyOf(order.status);
     order.status = status || STATUS_NEW;           /* missing status = new (default per order app) */
@@ -927,7 +1150,9 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   function readConfig() {
     _cfg.ordersType = String(paramRaw('ordersObjectType', 'restaurant-orders-easyorder')).trim() || 'restaurant-orders-easyorder';
     _cfg.settingsType = String(paramRaw('restaurantSettingsType', 'restaurants-easyorder')).trim() || 'restaurants-easyorder';
+    _cfg.ordersDataCategory = String(paramRaw('ordersDataCategory', '')).trim();
     _cfg.toolAppType = String(paramRaw('toolAppType', 'restaurant-order-taking-app-easyorder')).trim() || 'restaurant-order-taking-app-easyorder';
+    _cfg.readBoardRecords = String(paramRaw('readBoardRecords', 'yes')).toLowerCase() !== 'no';
     _cfg.allowUnassignedOrders = String(paramRaw('allowUnassignedOrders', 'no')).toLowerCase() === 'yes';
     var refresh = parseInt(String(paramRaw('autoRefreshSeconds', '20')), 10);
     _cfg.autoRefreshSeconds = (isFinite(refresh) && refresh >= 0) ? refresh : 20;
@@ -965,9 +1190,19 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
           hint: 'CMS object type of the restaurants-easyorder application, one object per restaurant (profile, opening hours, closing time). Used to warn when the shop closes within two hours. Empty disables the check.'
         },
         {
+          name: 'ordersDataCategory', label: 'Orders data category (optional)',
+          type: 'text', default: '', severity: 'optional',
+          hint: 'Leave empty. The board reads the order fields from whichever category holds them (production orderData) and writes status changes back into that same category. Set it only when a tenant stores the fields flat and you want the writes placed under a category anyway.'
+        },
+        {
           name: 'toolAppType', label: 'Board application type',
           type: 'text', default: 'restaurant-order-taking-app-easyorder', severity: 'optional',
-          hint: 'CMS object type of this board application, one record per restaurant. The tool reads the record whose page the board is opened on and takes its restaurantSlug / restaurantId / own slug from it. Add this type to settings.allowedObjectTypes (read) or that read fails and only the page address is used.'
+          hint: 'CMS object type of this board application, one record per restaurant. The tool reads the record whose page the board is opened on and takes its restaurantSlug / restaurantId / own slug from it. Add this type to settings.allowedObjectTypes (read) or the host refuses that read.'
+        },
+        {
+          name: 'readBoardRecords', label: 'Read board records',
+          type: 'toggle', default: 'yes', severity: 'optional',
+          hint: 'yes = the board reads its own application records to find the restaurant, which needs restaurant-order-taking-app-easyorder in settings.allowedObjectTypes (read). no = the board never asks for its own type (no host access warning) and relies on the record page or the restaurant page instead.'
         },
         {
           name: 'allowUnassignedOrders', label: 'Show orders without a restaurant',
@@ -1204,6 +1439,11 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
     _restaurantSettings = null;
     _instanceRestaurantReferences = [];
+    _boardRecordCount = 0;
+    _boardRecordSummaries = [];
+    _boardRecordError = '';
+    _boardRecordNotice = '';
+    _restaurantSlugSuggestions = [];
     _restaurantState = 'pending';
 
     /* A multi-restaurant tenant cannot store the restaurant on the tool
@@ -1219,8 +1459,12 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
         ' | board record references: ' + (_instanceRestaurantReferences.length ? _instanceRestaurantReferences.join(', ') : 'none'));
       if (!candidates.length) {
         _restaurantState = 'no-context';
-        console.warn('[RestaurantOrderTakingApp] this board cannot tell which restaurant it belongs to. Page: ' + (pageRoute.url || '(unavailable)') + '. Give the board record the same slug as the restaurant (restaurant-order-taking-app-easyorder record slug = restaurants-easyorder object slug), or add a restaurantSlug field on it, or open the board from the restaurant object page.');
-        finishRestaurantLookup();
+        /* Name the restaurants that exist, so the message tells the admin
+           exactly which slugs a board record must copy (D-ROTA-54). */
+        loadRestaurantSlugSuggestions(function () {
+          console.warn('[RestaurantOrderTakingApp] this board cannot tell which restaurant it belongs to. Page: ' + (pageRoute.url || '(unavailable)') + '. ' + boardContextHint(_boardRecordCount, _boardRecordSummaries, pageRoute, _boardRecordError, _boardRecordNotice));
+          finishRestaurantLookup();
+        });
         return;
       }
 
@@ -1286,6 +1530,9 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   function finishRestaurantLookup() {
     applyRestaurantScope();
     renderAll();
+    /* When the restaurant could not be resolved, print what the tool reaches
+       so an admin can send one block instead of guessing (D-ROTA-53). */
+    if (_restaurantState !== 'ready') logReachability();
   }
 
   /* The restaurant config object nests everything under restaurantDetails
@@ -1485,13 +1732,148 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     refreshDerivedOrderFields(order);
   }
 
-  function writeCoreFields(orderId, corePatch, extraPatch, successMessage) {
-    setBusy(orderId, true);
-    tool.requestObjects('update', {
+  /* Update payload for one order. The patch is wrapped in the category the
+     order was actually read from (production: orderData), so a status change
+     lands where the order application reads it (D-ROTA-50). A flat order
+     stays flat. */
+  function orderUpdatePayload(orderId, patch) {
+    var order = findOrder(orderId);
+    var category = (order && order.dataCategory) || _cfg.ordersDataCategory;
+    return {
       mainObjectType: _cfg.ordersType,
       objectId: orderId,
-      productData: { data_categoriesBased: corePatch }
-    }, function (err) {
+      productData: { data_categoriesBased: wrapOrderPatch(category, patch) }
+    };
+  }
+
+  /* ------------------------------------------ order status with defaults */
+  /* The order type owns only what it owns. Production order writers send the
+     order without any kitchen field, and a tenant may never create
+     statusChangedAt / acceptedAt / estimatedReadyAt at all. The board
+     therefore treats them as OPTIONAL and supplies defaults (D-ROTA-51):
+       - status           missing = new
+       - statusChangedAt  missing = the order counts as changed today
+       - acceptedAt       missing = the timeline uses the status time
+       - estimatedReadyAt missing = no countdown, "not set"
+       - internalNote     missing = no note
+     A write still tries to store them, but a refused field can never block
+     the status change itself. */
+
+  function rememberOrderPatch(orderId, patch) {
+    if (!orderId || !patch || typeof patch !== 'object') return;
+    var local = _localOrderState[orderId] || (_localOrderState[orderId] = {});
+    if (patch[STATUS_FIELD]) local.status = patch[STATUS_FIELD];
+    if (patch[STATUS_TIME_FIELD]) local.statusChangedAt = patch[STATUS_TIME_FIELD];
+    if (patch[ACCEPTED_AT_FIELD]) local.acceptedAt = patch[ACCEPTED_AT_FIELD];
+    if (patch[ETA_FIELD]) local.estimatedReadyAt = patch[ETA_FIELD];
+  }
+
+  /* Fills a loaded order with the values this board already produced, but
+     only where the CMS has nothing - stored data always wins. */
+  function applyLocalOrderState(order) {
+    if (!order || !order.id) return;
+    var local = _localOrderState[order.id];
+    if (!local) return;
+    if (!order.status && local.status) order.status = local.status;
+    if (!order.statusChangedAt && local.statusChangedAt) order.statusChangedAt = local.statusChangedAt;
+    if (!order[ACCEPTED_AT_FIELD] && local.acceptedAt) order[ACCEPTED_AT_FIELD] = local.acceptedAt;
+    if (!order[ETA_FIELD] && local.estimatedReadyAt) order[ETA_FIELD] = local.estimatedReadyAt;
+  }
+
+  /* Attempts for one write: the full patch, then the patch without fields
+     the CMS already refused, then the status alone. Empty attempts and
+     duplicates are dropped. */
+  function buildWriteAttempts(patch) {
+    var attempts = [];
+    var seen = {};
+    function add(candidate) {
+      var keys = [];
+      for (var key in candidate) {
+        if (Object.prototype.hasOwnProperty.call(candidate, key)) keys.push(key);
+      }
+      if (!keys.length) return;
+      keys.sort();
+      var signature = keys.join('|');
+      if (seen[signature]) return;
+      seen[signature] = true;
+      attempts.push(candidate);
+    }
+
+    /* The first attempt asks only for fields this order type accepted before,
+       so a field it already refused is never sent again. */
+    var writable = {};
+    var statusOnly = {};
+    var hasStatus = false;
+    for (var key in patch) {
+      if (!Object.prototype.hasOwnProperty.call(patch, key)) continue;
+      if (key === STATUS_FIELD) {
+        hasStatus = true;
+        statusOnly[key] = patch[key];
+      }
+      if (!_rejectedOrderFields[key]) writable[key] = patch[key];
+    }
+    add(writable);
+    if (hasStatus) {
+      add(statusOnly);
+    } else if (Object.keys(writable).length > 1) {
+      /* Optional fields only (accept time + ETA): try them one by one so a
+         missing ETA never stops the accept time from being stored. */
+      for (var singleKey in writable) {
+        if (!Object.prototype.hasOwnProperty.call(writable, singleKey)) continue;
+        var singleField = {};
+        singleField[singleKey] = writable[singleKey];
+        add(singleField);
+      }
+    }
+    return attempts;
+  }
+
+  function markRejectedFields(patch, attempt) {
+    for (var key in patch) {
+      if (!Object.prototype.hasOwnProperty.call(patch, key)) continue;
+      if (Object.prototype.hasOwnProperty.call(attempt, key)) continue;
+      if (!_rejectedOrderFields[key]) {
+        console.warn('[RestaurantOrderTakingApp] the order type does not accept the "' + key + '" field - the board keeps that value for this session instead of requiring it on the order.');
+      }
+      _rejectedOrderFields[key] = true;
+    }
+  }
+
+  /* Writes one patch and degrades instead of failing: a field the order type
+     does not define is dropped, and the status (the one value the kitchen
+     cannot work without) is still saved alone. */
+  function writeOrderPatchWithFallback(orderId, patch, done) {
+    var attempts = buildWriteAttempts(patch);
+    if (!attempts.length) { done('there is nothing to save on this order'); return; }
+    var attemptIndex = 0;
+    function tryNextAttempt() {
+      if (attemptIndex >= attempts.length) {
+        if (patch[STATUS_FIELD]) {
+          console.error('[RestaurantOrderTakingApp] the order type refused the status field. The kitchen status cannot be stored until the order type has a status field inside its order data category.');
+        }
+        done('the order fields could not be saved');
+        return;
+      }
+      var attempt = attempts[attemptIndex];
+      attemptIndex += 1;
+      tool.requestObjects('update', orderUpdatePayload(orderId, attempt), function (err) {
+        if (!err) {
+          /* Saved with fewer fields than asked for: the omitted ones are not
+             part of this order type, so stop requesting them. */
+          markRejectedFields(patch, attempt);
+          done(null);
+          return;
+        }
+        markRejectedFields(patch, attempt);
+        tryNextAttempt();
+      });
+    }
+    tryNextAttempt();
+  }
+
+  function writeCoreFields(orderId, corePatch, extraPatch, successMessage) {
+    setBusy(orderId, true);
+    writeOrderPatchWithFallback(orderId, corePatch, function (err) {
       if (err) {
         setBusy(orderId, false);
         console.warn('[RestaurantOrderTakingApp] update failed: ' + err);
@@ -1499,17 +1881,16 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
         return;
       }
       applyPatchLocal(orderId, corePatch);
+      rememberOrderPatch(orderId, corePatch);
       if (extraPatch && Object.keys(extraPatch).length) {
-        tool.requestObjects('update', {
-          mainObjectType: _cfg.ordersType,
-          objectId: orderId,
-          productData: { data_categoriesBased: extraPatch }
-        }, function (extraErr) {
+        writeOrderPatchWithFallback(orderId, extraPatch, function (extraErr) {
           if (extraErr) {
-            console.warn('[RestaurantOrderTakingApp] optional fields not saved: ' + extraErr);
-          } else {
-            applyPatchLocal(orderId, extraPatch);
+            console.warn('[RestaurantOrderTakingApp] the optional order fields were not stored (' + extraErr + ') - the board keeps them in this session only.');
           }
+          /* Shown either way: the accept time and the ETA are the board's own
+             defaults when the order type has no field for them (D-ROTA-51). */
+          applyPatchLocal(orderId, extraPatch);
+          rememberOrderPatch(orderId, extraPatch);
           setBusy(orderId, false);
           afterStatusChange(orderId, successMessage);
         });
@@ -1645,7 +2026,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       return 'No orders for this restaurant right now. ' + _hiddenOrderCount + ' order' + (_hiddenOrderCount === 1 ? '' : 's') + ' from another restaurant stay hidden.';
     }
     if (_unassignedOrderCount) {
-      return _unassignedOrderCount + ' order' + (_unassignedOrderCount === 1 ? '' : 's') + ' carry no restaurant and are hidden. The order writer must store the restaurant on every order.';
+      return _unassignedOrderCount + ' order' + (_unassignedOrderCount === 1 ? '' : 's') + ' carry no restaurantSlug and are hidden. The order writer must store restaurantSlug = the restaurant slug on every order.';
     }
     return 'No orders yet. When a customer places an order, it appears here automatically.';
   }
@@ -1909,7 +2290,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       var pageRoute = parentPageRoute();
       messages.push('This board cannot tell which restaurant it belongs to' +
         (pageRoute.url ? ' (page ' + pageRoute.url + ')' : '') +
-        '. Give the board record the same slug as the ' + _cfg.settingsType + ' object (a restaurantSlug field on the record works too), or open the board from the restaurant object page.');
+        '. ' + boardContextHint(_boardRecordCount, _boardRecordSummaries, pageRoute, _boardRecordError, _boardRecordNotice));
     } else if (_restaurantState === 'not-found') {
       messages.push('This board has no restaurant yet. Give the board record the same slug as the ' + _cfg.settingsType + ' object, or open the board from the restaurant object page.');
     } else if (_restaurantState === 'duplicate') {
@@ -2973,21 +3354,35 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       if (convertedTime !== undefined && convertedTime !== null) prepared[timeField] = convertedTime;
     }
     /* A sample row without a restaurant would vanish from the scoped board,
-       so the resolved restaurant of THIS board is stamped on it (D-ROTA-42). */
+       so the resolved restaurant of THIS board is stamped on it (D-ROTA-42).
+       The field is restaurantSlug - the value production orders carry. */
     var scopedRestaurantKey = _restaurantSettings
       ? (restaurantSlugOf(_restaurantSettings) || restaurantKeyOfValue(_restaurantSettings.id))
       : '';
     if (scopedRestaurantKey) {
-      var alreadyScoped = prepared.restaurantId || prepared.restaurantKey || prepared.restaurant || prepared.siteId;
-      if (!alreadyScoped) prepared.restaurantId = scopedRestaurantKey;
+      var hasRestaurant = false;
+      for (var rf = 0; rf < ORDER_RESTAURANT_FIELDS.length; rf++) {
+        if (prepared[ORDER_RESTAURANT_FIELDS[rf]]) { hasRestaurant = true; break; }
+      }
+      if (!hasRestaurant) prepared.restaurantSlug = scopedRestaurantKey;
     }
     var recordNumber = dcb.orderNumber || '';
     return {
       action: 'create',
       mainObjectType: _cfg.ordersType,
       name: recordNumber ? ('Order ' + recordNumber) : 'Sample order',
-      productData: { data_categoriesBased: prepared }
+      productData: { data_categoriesBased: wrapOrderPatch(categoryForCreatedOrder(), prepared) }
     };
+  }
+
+  /* Category used for a new order: the configured one, else the category the
+     loaded orders use, else flat (D-ROTA-50). */
+  function categoryForCreatedOrder() {
+    if (_cfg.ordersDataCategory) return _cfg.ordersDataCategory;
+    for (var i = 0; i < _orders.length; i++) {
+      if (_orders[i].dataCategory) return _orders[i].dataCategory;
+    }
+    return '';
   }
 
   function runSequentialImports(ops, index, total, done) {
@@ -3410,6 +3805,13 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       fmtClockMinutes: fmtClockMinutes,
       restaurantSlugOf: restaurantSlugOf,
       restaurantIdentifiersOf: restaurantIdentifiersOf,
+      boardContextHint: boardContextHint,
+      collectReachability: collectReachability,
+      logReachability: logReachability,
+      dataCategoryOf: dataCategoryOf,
+      wrapOrderPatch: wrapOrderPatch,
+      buildWriteAttempts: buildWriteAttempts,
+      localOrderStateOf: function (orderId) { return _localOrderState[orderId] || null; },
       restaurantReferenceOf: restaurantReferenceOf,
       restaurantScopeKeys: restaurantScopeKeys,
       restaurantScopeReport: restaurantScopeReport,
@@ -3441,4 +3843,4 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   }
 })();
 
-/* RESTAURANTORDERTAKINGAPP-JS-END build 2026-11-01-6 - if this line is missing in the CMS Tool Builder JS field, the JS was truncated */
+/* RESTAURANTORDERTAKINGAPP-JS-END build 2026-11-13-5 - if this line is missing in the CMS Tool Builder JS field, the JS was truncated */
