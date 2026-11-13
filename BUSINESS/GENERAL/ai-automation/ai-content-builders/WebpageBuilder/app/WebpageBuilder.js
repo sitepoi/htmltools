@@ -1,4 +1,4 @@
-/* build 2026-10-10-5 */
+/* build 2026-10-10-7 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
@@ -8,7 +8,7 @@
 /* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    visible in the UI badge (#tool-build), logged on boot, and stamped as a
    comment at the top of all three files. INCREMENT on EVERY code change. */
-var TOOL_BUILD = '2026-10-10-5';
+var TOOL_BUILD = '2026-10-10-7';
 
 /* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
    element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
@@ -1797,6 +1797,480 @@ function useTemplatePrompt() {
   sendChatMessage();
 }
 
+/* ── L1: import ONE existing page and let the AI REDESIGN it ──
+   Flow: URL (fetched through the parent-CMS relay, tool.requestFetch) or
+   pasted HTML → deterministic content extraction (title / meta / headings /
+   body text / links / image alts) → ONE chat message that asks for a complete
+   page rebuilt from that content, designed for the inferred industry.
+   Nothing is written to the CMS here: the normal chat pipeline produces the
+   code, the user reviews it and saves. A full-site crawl + multi-page object
+   creation is a SEPARATE tool (L2) — this tool only ever owns its own page. ── */
+var _sendDisplayOverride = '';  // short chat bubble instead of the long prompt
+var _importAudit = null;        // claims on the last imported page NOT found in its source
+var _importSourceLabel = '';    // where the audited page came from
+
+function _relayFetchText(url, cb) {
+  var relay = null;
+  try { if (tool && typeof tool.requestFetch === 'function') relay = tool.requestFetch; } catch (e) { relay = null; }
+  if (!relay) {
+    cb('This tool cannot open websites directly. Ask the CMS admin to enable the fetch relay (tool.requestFetch) and allowlist this host — or paste the page HTML below.');
+    return;
+  }
+  try {
+    relay(url, { method: 'GET', timeoutMs: 15000, maxBytes: 900000 }, function(err, res) {
+      if (err) { cb(String(err && err.message ? err.message : err)); return; }
+      var body = '';
+      if (typeof res === 'string') body = res;
+      else if (res && typeof res.body === 'string') body = res.body;
+      else if (res && typeof res.text === 'string') body = res.text;
+      else if (res && res.json !== undefined) body = typeof res.json === 'string' ? res.json : JSON.stringify(res.json);
+      cb(null, body || '');
+    });
+  } catch (e) { cb(String(e && e.message ? e.message : e)); }
+}
+
+function _absUrl(u, base) {
+  var s = String(u || '').trim();
+  if (!s) return '';
+  try { return new URL(s, base || 'https://example.com/').href; } catch (e) { return s; }
+}
+
+/* Deterministic extraction — no AI, no network. Everything the redesign needs
+   as FACTS, with the noise (scripts, styles, nav, footer) removed. */
+function extractPageContent(rawHtml, sourceLabel, baseUrl) {
+  var out = {
+    ok: false, label: String(sourceLabel || ''), title: '', description: '', language: '',
+    canonical: '', h1: [], headings: [], text: '', images: [], links: [], counts: ''
+  };
+  var html = String(rawHtml || '');
+  if (!html.trim()) return out;
+  var doc = null;
+  try { doc = new DOMParser().parseFromString(html, 'text/html'); } catch (e) { doc = null; }
+  if (!doc || !doc.body) return out;
+
+  function metaContent(sel) {
+    var n = doc.querySelector(sel);
+    return n ? String(n.getAttribute('content') || '').trim() : '';
+  }
+  out.title = String((doc.title || '').trim() || metaContent('meta[property="og:title"]'));
+  out.description = metaContent('meta[name="description"]') || metaContent('meta[property="og:description"]');
+  out.canonical = _absUrl((function () { var n = doc.querySelector('link[rel="canonical"]'); return n ? n.getAttribute('href') : ''; })(), baseUrl);
+  try { out.language = String(doc.documentElement.getAttribute('lang') || '').trim(); } catch (e) {}
+
+  /* links BEFORE pruning nav/header/footer */
+  var seen = {};
+  var anchors = doc.querySelectorAll('a[href]');
+  for (var i = 0; i < anchors.length && out.links.length < 25; i++) {
+    var href = _absUrl(anchors[i].getAttribute('href'), baseUrl);
+    if (!/^https?:/i.test(href) || seen[href]) continue;
+    seen[href] = 1;
+    var label = String(anchors[i].textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    out.links.push(label ? (label + ' -> ' + href) : href);
+  }
+
+  /* images — keep URL + alt + size: the client's own photos are REUSED in the
+     redesign when the operator allows it (import-reuse-images checkbox). */
+  var imgs = doc.querySelectorAll('img[src]');
+  var seenImg = {};
+  for (var j = 0; j < imgs.length && out.images.length < 16; j++) {
+    var src = _absUrl(imgs[j].getAttribute('src'), baseUrl);
+    if (!/^https?:/i.test(src)) continue;
+    if (/\.svg(\?|$)/i.test(src)) continue;                 // icons/logos are not photos
+    if (/(?:pixel|tracking|spacer|blank)\./i.test(src)) continue;
+    if (seenImg[src]) continue;
+    var iw = parseInt(imgs[j].getAttribute('width') || '', 10) || 0;
+    var ih = parseInt(imgs[j].getAttribute('height') || '', 10) || 0;
+    if ((iw && iw < 120) || (ih && ih < 80)) continue;      // badges / spacers
+    seenImg[src] = 1;
+    var alt = String(imgs[j].getAttribute('alt') || '').replace(/\s+/g, ' ').trim();
+    out.images.push({ url: src, alt: alt.slice(0, 120), w: iw, h: ih });
+  }
+
+  var h1s = doc.querySelectorAll('h1');
+  for (var k = 0; k < h1s.length && out.h1.length < 3; k++) {
+    var t1 = String(h1s[k].textContent || '').replace(/\s+/g, ' ').trim();
+    if (t1) out.h1.push(t1.slice(0, 120));
+  }
+  var hs = doc.querySelectorAll('h2, h3');
+  for (var m = 0; m < hs.length && out.headings.length < 14; m++) {
+    var th = String(hs[m].textContent || '').replace(/\s+/g, ' ').trim();
+    if (th) out.headings.push(hs[m].tagName.toLowerCase() + ': ' + th.slice(0, 90));
+  }
+
+  /* schema.org JSON-LD — the most reliable grounding source (name, phone,
+     address, hours, price range, rating CLAIMED by the source). Read BEFORE
+     the <script> pruning below. */
+  out.jsonld = [];
+  var ldNodes = doc.querySelectorAll('script[type="application/ld+json"]');
+  for (var ld = 0; ld < ldNodes.length && out.jsonld.length < 6; ld++) {
+    var rawLd = String(ldNodes[ld].textContent || '').trim();
+    if (!rawLd) continue;
+    var parsedLd = null;
+    try { parsedLd = JSON.parse(rawLd); } catch (e) { parsedLd = null; }
+    if (!parsedLd) continue;
+    var pushLd = function (o) { if (o && typeof o === 'object' && out.jsonld.length < 6) out.jsonld.push(o); };
+    if (Object.prototype.toString.call(parsedLd) === '[object Array]') {
+      for (var ai = 0; ai < parsedLd.length; ai++) pushLd(parsedLd[ai]);
+    } else if (parsedLd['@graph'] && parsedLd['@graph'].length) {
+      for (var gi = 0; gi < parsedLd['@graph'].length; gi++) pushLd(parsedLd['@graph'][gi]);
+    } else pushLd(parsedLd);
+  }
+
+  /* prune chrome + noise, then take the readable text */
+  var prune = ['script', 'style', 'noscript', 'svg', 'iframe', 'template', 'nav', 'header', 'footer', 'aside'];
+  for (var p = 0; p < prune.length; p++) {
+    var nodes = doc.querySelectorAll(prune[p]);
+    for (var q = 0; q < nodes.length; q++) { try { nodes[q].parentNode.removeChild(nodes[q]); } catch (e) {} }
+  }
+  var text = String(doc.body.textContent || '')
+    .replace(/[ \t\u00a0]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  out.text = text.length > 9000 ? (text.slice(0, 9000) + '\n… (truncated)') : text;
+  out.facts = _factLedger(out);
+  out.ok = !!(out.title || out.text || out.h1.length);
+  out.counts = out.h1.length + ' h1 · ' + out.headings.length + ' h2/h3 · ' + out.images.length + ' images · ' + out.links.length + ' links · ' + (out.facts ? out.facts.length : 0) + ' facts · ' + out.text.length + ' chars';
+  return out;
+}
+
+/* The FACT LEDGER: every quotable fact the source actually exposes, so the
+   redesign has an allow-list instead of an instruction. JSON-LD (schema.org)
+   first, then deterministic regexes over the pruned body text. */
+function _factLedger(x) {
+  var lines = [];
+  function push(label, val) {
+    var v = String(val === undefined || val === null ? '' : val).replace(/\s+/g, ' ').trim();
+    if (v && v !== 'undefined' && v !== 'null') lines.push(label + ': ' + v);
+  }
+  var ld = x.jsonld || [];
+  for (var i = 0; i < ld.length; i++) {
+    var o = ld[i] || {};
+    push('JSON-LD type', o['@type']);
+    push('name', o.name);
+    push('telephone', o.telephone);
+    push('email', o.email);
+    push('priceRange', o.priceRange);
+    push('cuisine', o.servesCuisine);
+    var addr = o.address;
+    if (addr && typeof addr === 'object') {
+      var parts = [addr.streetAddress, addr.addressLocality, addr.addressRegion, addr.postalCode, addr.addressCountry];
+      var joined = '';
+      for (var ap = 0; ap < parts.length; ap++) { if (parts[ap]) joined += (joined ? ', ' : '') + parts[ap]; }
+      push('address', joined);
+    } else push('address', addr);
+    var oh = o.openingHoursSpecification;
+    if (oh) {
+      var ohArr = Object.prototype.toString.call(oh) === '[object Array]' ? oh : [oh];
+      for (var j = 0; j < ohArr.length && j < 8; j++) {
+        var spec = ohArr[j] || {};
+        var days = spec.dayOfWeek;
+        if (Object.prototype.toString.call(days) === '[object Array]') days = days.join('/');
+        if (spec.opens || spec.closes) push('hours', (days || '') + ' ' + (spec.opens || '') + '-' + (spec.closes || ''));
+      }
+    }
+    var oh2 = o.openingHours;
+    if (oh2) {
+      var ohArr2 = Object.prototype.toString.call(oh2) === '[object Array]' ? oh2 : [oh2];
+      for (var j2 = 0; j2 < ohArr2.length && j2 < 8; j2++) push('hours', ohArr2[j2]);
+    }
+    var rating = o.aggregateRating;
+    if (rating && typeof rating === 'object') {
+      push('SOURCE-CLAIMED rating', (rating.ratingValue || '?') + ' from ' + (rating.reviewCount || rating.ratingCount || '?') + ' reviews');
+    }
+  }
+  var text = String(x.text || '');
+  var seen = {};
+  var phoneRe = /(?:\+?\d[\d\s().-]{7,}\d)/g, m;
+  while ((m = phoneRe.exec(text)) !== null && lines.length < 70) {
+    var ph = String(m[0]).replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+    var digits = ph.replace(/\D/g, '');
+    if (digits.length < 9 || digits.length > 15 || seen['p' + digits]) continue;
+    seen['p' + digits] = 1;
+    push('phone', ph);
+  }
+  var emailRe = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+  while ((m = emailRe.exec(text)) !== null) {
+    var ek = String(m[0]).toLowerCase();
+    if (seen['e' + ek]) continue;
+    seen['e' + ek] = 1;
+    push('email', m[0]);
+  }
+  var yearRe = /\b(?:since|est\.?|established|serving since)\s*((?:19|20)\d{2})\b/gi;
+  while ((m = yearRe.exec(text)) !== null) push('SOURCE YEAR', m[0]);
+  var yearsRe = /\b\d{1,3}\+?\s*(?:years?|yrs?)\b/gi;
+  while ((m = yearsRe.exec(text)) !== null) {
+    var yk = String(m[0]).toLowerCase();
+    if (seen['y' + yk]) continue;
+    seen['y' + yk] = 1;
+    push('SOURCE YEARS CLAIM', m[0]);
+  }
+  var priceRe = /(?:[$\u20ac\u00a3\u20ba]\s?\d+(?:[.,]\d{2})?)/g;
+  while ((m = priceRe.exec(text)) !== null && lines.length < 110) {
+    if (seen['$' + m[0]]) continue;
+    seen['$' + m[0]] = 1;
+    push('price', m[0]);
+  }
+  var hourRe = /\b\d{1,2}(?::\d{2})?\s?(?:am|pm)\b/gi;
+  while ((m = hourRe.exec(text)) !== null) {
+    var hk = String(m[0]).toLowerCase();
+    if (seen['h' + hk]) continue;
+    seen['h' + hk] = 1;
+    push('hours', m[0]);
+  }
+  return lines;
+}
+
+/* Deterministic claim audit: every number/claim in the generated HTML must
+   exist in the source. No AI involved — this is the guardrail that catches
+   "45 years of pizza shop" when the source never said it. */
+function auditGeneratedClaims(html, x) {
+  var out = [];
+  if (!x) return out;
+  var text = String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ');
+  var imgAlts = [];
+  var imgs = x.images || [];
+  for (var ii = 0; ii < imgs.length; ii++) imgAlts.push(imgs[ii] && imgs[ii].alt ? imgs[ii].alt : '');
+  var source = ((x.text || '') + ' ' + (x.extraFacts || '') + ' ' + (x.facts || []).join(' ') + ' ' +
+    (x.title || '') + ' ' + (x.description || '') + ' ' + imgAlts.join(' ')).toLowerCase();
+  var patterns = [
+    /\b\d{1,3}\+?\s*(?:years?|yrs?)\b/gi,
+    /\b(?:since|established|est\.)\s*(?:19|20)\d{2}\b/gi,
+    /\b\d[\d,.]*\+?\s*(?:customers|clients|guests|reviews|orders|projects|awards|dishes|locations)\b/gi,
+    /\b\d(?:\.\d)?\s*(?:\/\s*5|stars?|rating|ratings)\b/gi,
+    /#\d+/g,
+    /\b(?:award[- ]winning|award winner|winner|best in|number one|top \d+|voted|rated|certified|accredited|100%)\b/gi,
+    /[$\u20ac\u00a3\u20ba]\s?\d+(?:[.,]\d{2})?/g
+  ];
+  var seen = {};
+  for (var p = 0; p < patterns.length; p++) {
+    var m;
+    patterns[p].lastIndex = 0;
+    while ((m = patterns[p].exec(text)) !== null && out.length < 14) {
+      var claim = String(m[0]).replace(/\s+/g, ' ').trim();
+      var key = claim.toLowerCase();
+      if (seen[key]) continue;
+      seen[key] = 1;
+      if (source.indexOf(key) === -1) out.push(claim);
+    }
+  }
+  return out;
+}
+
+/* STEP 1 — analyse the source into a structured brief (JSON only). */
+function _buildBriefPrompt(x, url) {
+  var L = [];
+  L.push('STEP 1 of 3 — ANALYSE an existing page BEFORE it is redesigned. Output ONLY a JSON object: no prose, no markdown, no code fences.');
+  L.push('Source: ' + (url || x.canonical || x.label || 'pasted HTML'));
+  L.push('');
+  L.push('RULES:');
+  L.push('- Use ONLY the source material below. Do not guess, embellish or add anything that is not there.');
+  L.push('- Everything you cannot confirm goes into "missing" (a question for the operator) — never into "facts".');
+  L.push('- "facts" = short, quotable statements copied from the source (name, address, phone, hours, offerings, signature dishes, prices, certifications).');
+  L.push('- "sections" = the section order a strong page for THIS industry needs (4-9 items).');
+  L.push('- "designDirection" = one sentence naming the visual language; "paletteHint"/"typographyHint" = short keywords.');
+  L.push('');
+  L.push('JSON SHAPE:');
+  L.push('{"business":"","industry":"","location":"","language":"","tone":"","designDirection":"","paletteHint":"","typographyHint":"","offerings":[""],"facts":[""],"missing":[""],"sections":[{"name":"","goal":""}]}');
+  L.push('');
+  L.push('=== SOURCE ===');
+  if (x.title) L.push('TITLE: ' + x.title);
+  if (x.description) L.push('META DESCRIPTION: ' + x.description);
+  if (x.language) L.push('LANG: ' + x.language);
+  if (x.facts && x.facts.length) { L.push('DETECTED FACTS (deterministic extraction):'); L.push(x.facts.join('\n')); }
+  if (x.extraFacts) { L.push('OPERATOR-SUPPLIED FACTS (authoritative):'); L.push(x.extraFacts); }
+  if (x.headings && x.headings.length) { L.push('HEADINGS:'); L.push(x.headings.join('\n')); }
+  L.push('BODY TEXT:');
+  L.push(x.text || '(none)');
+  L.push('=== END SOURCE ===');
+  return L.join('\n');
+}
+
+function _parseBriefJson(text) {
+  var t = String(text || '').replace(/```(?:json)?/gi, '');
+  var a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a === -1 || b <= a) return null;
+  try { return JSON.parse(t.substring(a, b + 1)); } catch (e) { return null; }
+}
+
+/* STEP 2 — build the page from the brief, with FACTS as the only allowed
+   source of numbers/claims and the client's own images offered for reuse. */
+function _buildPagePrompt(x, brief, url) {
+  var L = [];
+  L.push('STEP 2 of 3 — build the NEW page from the validated brief. GROUNDING IS A HARD REQUIREMENT.');
+  L.push('Source: ' + (url || x.canonical || x.label || 'pasted HTML'));
+  L.push('');
+  L.push('=== VALIDATED BRIEF (from step 1) ===');
+  try { L.push(JSON.stringify(brief, null, 2)); } catch (e) { L.push('(brief unavailable)'); }
+  L.push('');
+  L.push('=== FACTS THAT MAY APPEAR ON THE PAGE (nothing else numeric) ===');
+  L.push((x.facts && x.facts.length) ? x.facts.join('\n') : '(the source exposed no structured facts — keep all numbers out of the page)');
+  if (x.extraFacts) { L.push('OPERATOR-SUPPLIED FACTS (authoritative — use them):'); L.push(x.extraFacts); }
+  L.push('');
+  L.push('GROUNDING RULES (breaking one makes the page WRONG):');
+  L.push('- Every number, year, price, percentage, rating, award, certification, customer/review count, phone, address and opening hour MUST appear in the FACTS list or the SOURCE TEXT below. If it is not there, DO NOT write it.');
+  L.push('- NEVER invent "X years in business", "since 19xx", "award-winning", "#1", "best in town", "5-star", "100%", customer counts or review counts. If the design needs such a figure, output the placeholder {{YEARS_IN_BUSINESS}} (or {{CLAIM}}) and list it in === CMS CONFIG NEEDED === so the operator fills it in.');
+  L.push('- Keep real names, dish/service names, offers and the meaning of the copy. Rewrite wording for clarity and persuasion — never add new claims.');
+  L.push('- If the source is thin, design a strong page with the facts available and put the gaps in === CMS CONFIG NEEDED === instead of inventing content.');
+  L.push('');
+  L.push('=== IMAGES FROM THE SOURCE ===');
+  if (x.reuseImages && x.images && x.images.length) {
+    L.push('These are the client\'s own images (absolute URLs). REUSE them where they fit — hero, gallery, section backgrounds — with real descriptive alt text. Prefer the first (largest) as the hero.');
+    for (var i = 0; i < x.images.length && i < 14; i++) {
+      var im = x.images[i] || {};
+      L.push('- ' + im.url + (im.alt ? '  (alt: ' + im.alt + ')' : '') + ((im.w || im.h) ? '  [' + (im.w || '?') + 'x' + (im.h || '?') + ']' : ''));
+    }
+    L.push('If a photo does not fit, use https://loremflickr.com/{width}/{height}/{keywords} placeholders instead. Never invent other external URLs.');
+  } else {
+    L.push('Images may NOT be reused from the source. Use https://loremflickr.com/{width}/{height}/{keywords} placeholders whose keywords describe the photo.');
+  }
+  L.push('');
+  L.push('=== DESIGN RULES ===');
+  L.push('- Use the brief\'s industry + design direction. Ship what a top agency would ship: a strong hero with ONE value proposition and ONE primary CTA, the brief\'s section order, credible proof where facts allow, a consistent spacing rhythm and type scale, an industry-appropriate palette and imagery mood, mobile-first layout, WCAG AA contrast, visible focus states, 48px tap targets, tasteful motion only.');
+  L.push('- IGNORE any CURRENT PAGE CODE: this is a rebuild from the source, not an edit.');
+  L.push('');
+  L.push('=== OUTPUT CONTRACT ===');
+  L.push('- === HTML === one fragment (one root wrapper class, one scoped style block inside it, one script block as the last element). === SEO === JSON (metaTitle, metaDesc, schemaItems). === PAGE META === JSON (name, slug, meta.language, data.status "published").');
+  L.push('- Never emit document tags, never define gw-* classes, never load external script libraries, never add analytics or tracking.');
+  L.push('- No global header, nav bar or footer — the platform renders site chrome.');
+  L.push('- Forms via data-gw-form or widget islands; anything that must exist in the CMS goes into === CMS CONFIG NEEDED ===.');
+  L.push('- Start with 2 short sentences naming the industry and the design direction, then the sections.');
+  L.push('');
+  L.push('=== SOURCE TEXT (for grounding) ===');
+  L.push(x.text || '(none)');
+  L.push('=== END SOURCE TEXT ===');
+  return L.join('\n');
+}
+
+function _importStatus(msg, isErr) {
+  var st = el('import-status');
+  if (st) { st.textContent = msg || ''; st.className = 'import-status' + (isErr ? ' is-err' : ''); }
+}
+
+function openImportModal() {
+  var note = el('import-note');
+  if (note) note.hidden = !_hasPageCode();
+  _importStatus('', false);
+  var u = el('import-url');
+  if (u) u.value = '';
+  var h = el('import-html');
+  if (h) h.value = '';
+  var ex = el('import-extra');
+  if (ex) ex.value = '';
+  var ri = el('import-reuse-images');
+  if (ri) ri.checked = true;
+  openModal('modal-import-url');
+  setTimeout(function () { try { if (u) u.focus(); } catch (e) {} }, 60);
+}
+
+function doImportFetch() {
+  var u = el('import-url');
+  var url = u ? String(u.value || '').trim() : '';
+  if (!/^https?:\/\/[^\s]+$/i.test(url)) { _importStatus('Enter a full URL starting with http:// or https://', true); return; }
+  _importStatus('Fetching the page through the CMS relay…', false);
+  _relayFetchText(url, function (err, body) {
+    if (err) { _importStatus(err, true); return; }
+    _importFromHtml(body, url, url);
+  });
+}
+
+function doImportFromPaste() {
+  var h = el('import-html');
+  var html = h ? String(h.value || '') : '';
+  if (!html.trim()) { _importStatus('Paste the page HTML first (Ctrl+U → select all → copy).', true); return; }
+  var u = el('import-url');
+  var url = u ? String(u.value || '').trim() : '';
+  _importFromHtml(html, url || 'pasted HTML', url);
+}
+
+function _importFromHtml(html, label, url) {
+  _importStatus('Extracting the content…', false);
+  var x = extractPageContent(html, label, url);
+  if (!x.ok) { _importStatus('No readable content found — is that the page HTML itself, not a JS-only shell?', true); return; }
+  x.extraFacts = el('import-extra') ? String(el('import-extra').value || '').trim() : '';
+  x.reuseImages = el('import-reuse-images') ? !!el('import-reuse-images').checked : true;
+  _importStatus('Found ' + x.counts + ' — analysing, then building…', false);
+  _sendDisplayOverride = '📥 **Imported:** ' + label
+    + (x.reuseImages ? ' · reusing the site images' : ' · placeholder images')
+    + (x.extraFacts ? ' · +' + x.extraFacts.length + ' chars of extra facts' : '')
+    + '\n1) analysing the source → 2) building the page → 3) auditing every claim against the source.';
+  closeAllModals();
+  switchChatTab('chat');
+  _runImportPipeline(x, url, label);
+}
+
+/* The 3-step import pipeline. Steps 1-2 are AI calls; step 3 is a
+   deterministic audit (no model), so "45 years in business" cannot slip
+   through unnoticed when the source never said it. */
+function _runImportPipeline(x, url, label) {
+  if (_aiCallActive) { showToast('AI is busy — wait or press Stop.', 'warning'); return; }
+  var tok = { cancelled: false };
+  _reqToken = tok;
+  var hasCode = _hasPageCode();
+  var t0 = Date.now();
+  _aiCallActive = true;
+  _setAiUIActive(true);
+  updateConnStatus('busy');
+  addChatMessage('user', _sendDisplayOverride || ('📥 Imported ' + label));
+  _sendDisplayOverride = '';
+  _showDevPanel();
+  showThinkingBubble('Step 1/3 — analysing the source page…', true);
+
+  var briefPrompt = _buildBriefPrompt(x, url);
+  var pc = el('dev-prompt-content');
+  if (pc) pc.textContent = briefPrompt;
+  var ps = el('dev-prompt-status');
+  if (ps) ps.textContent = briefPrompt.length.toLocaleString() + ' chars';
+
+  _callAIOnce(briefPrompt, tok, function (ok1, briefText) {
+    if (tok.cancelled) { _reqToken = null; return; }
+    var brief = ok1 ? _parseBriefJson(briefText) : null;
+    if (!brief) {
+      brief = { business: x.title || '', industry: '', designDirection: 'industry-appropriate, professional', sections: [], facts: [], missing: [], note: 'analysis step unavailable — build directly from the source' };
+    }
+    hideThinkingBubble();
+    showThinkingBubble('Step 2/3 — building the redesigned page…', true);
+    var pagePrompt = _buildPagePrompt(x, brief, url);
+    if (pc) pc.textContent = pagePrompt;
+    if (ps) ps.textContent = pagePrompt.length.toLocaleString() + ' chars';
+    _callAIOnce(pagePrompt, tok, function (ok2, pageText) {
+      if (tok.cancelled) { _reqToken = null; return; }
+      var elapsed = Date.now() - t0;
+      _aiCallActive = false;
+      _reqToken = null;
+      clearAiTimeout();
+      _markThinkingComplete(elapsed);
+      if (!ok2 || !pageText || pageText.replace(/\s+/g, '').length < 40) {
+        updateConnStatus('error');
+        _setAiUIActive(false);
+        addChatMessage('ai', '⚠️ The build step returned nothing usable. Try the import again, or paste the page HTML in the import dialog.', { isError: true });
+        _resize();
+        return;
+      }
+      updateConnStatus('ok');
+      _setAiUIActive(false);
+      processAIResponse(pageText, hasCode);
+      // STEP 3 — deterministic claim audit (no AI, no network).
+      _importAudit = auditGeneratedClaims(DB.code.html, x);
+      _importSourceLabel = label || '';
+      runComplianceChecks();
+      if (_importAudit.length) {
+        addChatMessage('ai', '🔎 **Source check (step 3/3):** these claims on the new page were NOT found in the imported page — remove them or confirm they are true:\n'
+          + _importAudit.map(function (c) { return '• ' + c; }).join('\n')
+          + '\n\nEverything else came from the source. If the missing facts live inside a menu IMAGE, paste that text into the import dialog\'s “Extra facts” box and import again — the tool cannot read text inside images yet.');
+      } else {
+        addChatMessage('ai', '🔎 **Source check (step 3/3):** every number and claim on the page also appears in the imported source. ✅');
+      }
+      try { tool.notify('💾 Auto-saved — page v' + DB.version, 'success'); } catch (e) {}
+      _resize();
+    });
+  });
+}
+
 /* ── Guided / interview mode ── */
 function toggleInterviewMode() {
   interviewMode = !interviewMode;
@@ -3576,6 +4050,7 @@ function sendChatMessage() {
 
   var displayMsg = msg;
   if (attachedFile) displayMsg = '📎 **' + attachedFile.name + '** (' + formatFileSize(attachedFile.size) + ')\n' + msg;
+  if (_sendDisplayOverride) { displayMsg = _sendDisplayOverride; _sendDisplayOverride = ''; }
   addChatMessage('user', displayMsg);
   input.value = '';
   input.style.height = 'auto';
@@ -3592,6 +4067,7 @@ function sendChatMessage() {
   }
 
   var hasCode = !!(DB.code.html || DB.code.css || DB.code.js);
+  _importAudit = null; // a chat-driven rebuild is no longer tied to an imported source
   if (_shouldPlan(msg, hasCode)) {
     _runAgentPlan(msg, tok, hasCode);
   } else {
@@ -5423,6 +5899,14 @@ function gwChecks() {
       }
     },
     {
+      id: 'claims-grounded', section: 'L1', label: 'Numbers and claims come from the imported source',
+      run: function() {
+        if (!_importAudit) return { status: 'pass', detail: 'The page was not imported from an external source — nothing to audit.' };
+        if (!_importAudit.length) return { status: 'pass', detail: 'Every number/claim on the page also appears in the imported source.' };
+        return { status: 'warn', detail: _importAudit.length + ' claim(s) NOT found in the source page: ' + _importAudit.slice(0, 4).join(' · ') + (_importAudit.length > 4 ? ' …' : '') + ' — remove them or confirm they are true.' };
+      }
+    },
+    {
       id: 'budgets', section: '14', label: 'Size budgets (100 KB / 50 KB / 200 KB)',
       run: function(h, c, j) {
         var lh = h.length, lc = c.length, lj = j.length;
@@ -6294,6 +6778,10 @@ function bindEvents() {
   _bind('btn-history', openHistoryFromChat);
   _bind('btn-export', downloadFullPage);
   _bind('btn-theme', toggleTheme);
+  _bind('btn-import-url', openImportModal);
+  _bind('btn-import-fetch', doImportFetch);
+  _bind('btn-import-paste', doImportFromPaste);
+  _bind('btn-import-cancel', closeAllModals);
   _bind('btn-close-history', closeAllModals);
   _bind('modal-backdrop', closeAllModals);
   _bind('tool-version', _onVersionClick);
@@ -6556,4 +7044,4 @@ try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEB
 try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
 try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
 try { window.__wbJsEnd = true; } catch (e) {}
-/* WEBPAGEBUILDER-JS-END build 2026-10-10-5 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
+/* WEBPAGEBUILDER-JS-END build 2026-10-10-7 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */

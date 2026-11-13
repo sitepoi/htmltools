@@ -80,8 +80,18 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     'customAddressFields', 'tableNumber', 'deliveryZone', 'scheduledFor',
     'paymentMethod', 'paymentDetails', 'lines', 'totals',
     'status', 'statusChangedAt', 'internalNote',
-    'restaurantId', 'restaurantKey', 'restaurant', 'siteId',
+    'restaurantId', 'restaurantSlug', 'restaurant_slug', 'restaurantKey',
+    'restaurant', 'siteId', 'cmsRestaurantId',
     ACCEPTED_AT_FIELD, ETA_FIELD
+  ];
+
+  /* Where an order carries its restaurant. Production orders of the
+     restaurant-orders-easyorder type store the restaurant SLUG in
+     restaurantSlug (D-ROTA-50); the other names stay as aliases for older
+     writers, but the slug is the documented contract. */
+  var ORDER_RESTAURANT_FIELDS = [
+    'restaurantId', 'restaurantSlug', 'restaurant_slug', 'restaurantKey',
+    'restaurant', 'siteId', 'cmsRestaurantId'
   ];
 
   var CHANNEL_META = {
@@ -367,21 +377,85 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     return undefined;
   }
 
+  /* Category-based CMS data keeps the field values under a CATEGORY key on the
+     real tenant objects - data_categoriesBased.orderData = { orderNumber,
+     lines, totals, ... } - while the platform reference describes the flat
+     shape data_categoriesBased = { fieldId: value }. Both shapes are read, so
+     the board works on every tenant without a setting (D-ROTA-50). */
+  function pushCategoryBags(bags, container) {
+    if (!container || typeof container !== 'object' || Array.isArray(container)) return;
+    for (var key in container) {
+      if (!Object.prototype.hasOwnProperty.call(container, key)) continue;
+      var value = container[key];
+      if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+      if (bags.indexOf(value) !== -1) continue;
+      bags.push(value);
+    }
+  }
+
   function collectBags(source) {
     var bags = [];
     if (!source || typeof source !== 'object') return bags;
     bags.push(source);
-    if (source.data_categoriesBased) bags.push(source.data_categoriesBased);
+    if (source.data_categoriesBased && typeof source.data_categoriesBased === 'object') {
+      bags.push(source.data_categoriesBased);
+      pushCategoryBags(bags, source.data_categoriesBased);
+    }
     if (source.data && typeof source.data === 'object') bags.push(source.data);
     if (source.objectData && typeof source.objectData === 'object') {
       bags.push(source.objectData);
-      if (source.objectData.data_categoriesBased) bags.push(source.objectData.data_categoriesBased);
+      if (source.objectData.data_categoriesBased && typeof source.objectData.data_categoriesBased === 'object') {
+        bags.push(source.objectData.data_categoriesBased);
+        pushCategoryBags(bags, source.objectData.data_categoriesBased);
+      }
     }
     if (source.productData && typeof source.productData === 'object') {
       bags.push(source.productData);
-      if (source.productData.data_categoriesBased) bags.push(source.productData.data_categoriesBased);
+      if (source.productData.data_categoriesBased && typeof source.productData.data_categoriesBased === 'object') {
+        bags.push(source.productData.data_categoriesBased);
+        pushCategoryBags(bags, source.productData.data_categoriesBased);
+      }
     }
     return bags;
+  }
+
+  /* Key of the category that holds the order fields (e.g. "orderData"), or
+     empty when the tenant stores the fields flat under data_categoriesBased.
+     The write path mirrors whatever the read path found, so a status change
+     lands in the same place the order app reads it from. */
+  function dataCategoryOf(source) {
+    if (!source || typeof source !== 'object') return '';
+    var containers = [];
+    if (source.productData && source.productData.data_categoriesBased) containers.push(source.productData.data_categoriesBased);
+    if (source.data_categoriesBased) containers.push(source.data_categoriesBased);
+    if (source.objectData && source.objectData.data_categoriesBased) containers.push(source.objectData.data_categoriesBased);
+
+    for (var c = 0; c < containers.length; c++) {
+      var container = containers[c];
+      if (!container || typeof container !== 'object' || Array.isArray(container)) continue;
+      var flat = false;
+      for (var f = 0; f < ORDER_FIELDS.length; f++) {
+        if (Object.prototype.hasOwnProperty.call(container, ORDER_FIELDS[f])) { flat = true; break; }
+      }
+      if (flat) continue;
+      for (var key in container) {
+        if (!Object.prototype.hasOwnProperty.call(container, key)) continue;
+        var value = container[key];
+        if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+        for (var g = 0; g < ORDER_FIELDS.length; g++) {
+          if (Object.prototype.hasOwnProperty.call(value, ORDER_FIELDS[g])) return key;
+        }
+      }
+    }
+    return '';
+  }
+
+  /* Wraps a field patch in the category the order was read from. */
+  function wrapOrderPatch(category, patch) {
+    if (!category) return patch;
+    var bag = {};
+    bag[category] = patch;
+    return bag;
   }
 
   function bagScore(bag) {
@@ -681,6 +755,9 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     order.name = obj && obj.name ? String(obj.name) : '';
     order.created = obj && obj.created ? String(obj.created) : '';
     order.updated = obj && obj.updated ? String(obj.updated) : '';
+    /* Category the order fields live in ("orderData" on production), so the
+       write path can patch the same place it read from. */
+    order.dataCategory = dataCategoryOf(obj);
 
     var status = statusKeyOf(order.status);
     order.status = status || STATUS_NEW;           /* missing status = new (default per order app) */
@@ -693,10 +770,11 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     order.customAddressFields = asObject(order.customAddressFields);
     order.deliveryZone = asObject(order.deliveryZone);
     order.paymentDetails = asObject(order.paymentDetails) || {};
-    order.restaurantKey = restaurantKeyOfValue(order.restaurantId) ||
-      restaurantKeyOfValue(order.restaurant) ||
-      restaurantKeyOfValue(order.restaurantKey) ||
-      restaurantKeyOfValue(order.siteId);
+    order.restaurantKey = '';
+    for (var rf = 0; rf < ORDER_RESTAURANT_FIELDS.length; rf++) {
+      var orderRestaurantValue = normalizeSlug(restaurantKeyOfValue(order[ORDER_RESTAURANT_FIELDS[rf]]));
+      if (orderRestaurantValue) { order.restaurantKey = orderRestaurantValue; break; }
+    }
 
     order.totalNum = num(order.totals.total);
     order.placeTs = tsOf(order.placedAt);
