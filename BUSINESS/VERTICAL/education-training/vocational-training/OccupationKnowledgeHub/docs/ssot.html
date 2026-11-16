@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Occupation Knowledge Hub - Technical Source of Truth</title>
+  <!--
+  ────────────────────────────────────────────────────────────────────────────
+  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
+
+  HOW TO USE THIS TEMPLATE
+  0. The canonical rules entry point is _docs/DOCUMENTATION-RULES.md. This
+     template is the STRUCTURE; the rules document is the GOVERNANCE.
+  1. This template is copied into every tool folder as docs/ssot.html by
+     scripts/init-docs.js - never create a tool SSOT by hand.
+  2. Replace every [PLACEHOLDER] in the document.
+  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
+     Every decision row uses <prefix>-NN in order (01, 02, ...).
+  4. Remove all TEMPLATE comments (like this one) before the first publish.
+  5. Bump "Document version" on EVERY update, with "Last updated" date.
+  6. Never inline styles or scripts - the design lives in
+     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
+     linked below through ../../../../../../_docs/assets/.
+  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
+     marked ONE PUSH must ship in a single push and must never be split; a
+     RELATED group must not be broken across releases either. Each task
+     shows its main name collapsed and full details on click; the done
+     checkbox is remembered by the browser per document.
+  8. The right task panel (always visible on wide screens) is generated from
+     section 15 - never write tasks twice. Edit the board in section 15 and
+     the panel, progress bars, and sidebar counter follow automatically.
+  9. Task statuses: give a task `data-task-status` - `not-started` (default),
+     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
+     done checkbox switches the task to done; unticking returns it to the
+     previous status. Browser ticks stay in that browser only. PERMANENT
+     DONE is written into the file: set `data-task-status="done"` on the
+     task div (or `checked` on its checkbox) - `npm run rel` writes this
+     automatically for every pushed group.
+ 10. Ideas (section 16): future ideas are discussed there before they become
+     work. An agreed idea moves to the task list (section 15); a rejected one
+     is marked `data-idea-status="ignored"` with the reason in its details.
+     Done / waiting / ignored statistics update automatically.
+ 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
+     change is written in the risk register and linked to its release group
+     (`data-group`). Before every push, re-evaluate every OPEN risk of the
+     groups being pushed: solve them one by one (tick the checkbox), or mark
+     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
+     date, and update the `Last re-evaluation` line. Risk levels:
+     `critical` (mandatory - blocks every push until solved), `high` (blocks
+     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
+     A group shows PUSH READY in the task panel only when its tasks are done
+     AND it has no open risks.
+ 12. Push provenance: when running `npm run rel`, set
+     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
+     task in the shipped groups is stamped with the version, commit and
+     date-time of that push, and the groups move to "pushed".
+ 13. Satellite documents: docs/webpage.html, docs/help.html,
+     docs/presentation.html, docs/social.html are GENERATED from this file +
+     the code by scripts/generate-docs.js (run by npm run rel). They are
+     satellites - when they disagree with this SSOT, this SSOT wins.
+     docs/updates.html is maintained automatically by npm run rel.
+
+  GOVERNANCE RULES (apply to every tool SSOT in this repo)
+  - A tool SSOT is the REAL single source of truth for one tool (app,
+    listing, or reporting). There is exactly one SSOT per tool folder.
+  - No tool code change is made without updating the related document in
+    the SAME change. A decision that is not in section 11 did not happen.
+  - The decision register is APPEND-ONLY. Never delete rows; reverse a
+    decision by marking it "Reversed (date)" with a reason.
+  - When the code and the document disagree, the document is updated first to
+    capture the final decision, then the code follows. Never silently leave
+    them divergent.
+  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
+    always expanded next to their use.
+  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+    Status) - the automated change-documentation reads these rows.
+  - When a tool exposes a profileConfig parameter or a profiles/ preset
+    library, section 4.1 (Profile configuration usage) is MANDATORY and the
+    profile-usage task type in section 15 must be used. The Profiles copy
+    page (docs/profiles.html) is a convenience; section 4.1 is the
+    authoritative statement of which profile an application uses.
+  ────────────────────────────────────────────────────────────────────────────
+  -->
+  <!-- Optional: nicer webfont (Inter) when online; falls back to the system
+       font stack in ssot.css when offline. Remove this line to stay fully offline. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <!-- ── Table of contents - a CLOSED drawer opened with the ☰ button ── -->
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">Occupation Knowledge Hub</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v1.6</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <!-- ── Task list - ALWAYS visible on the right on wide screens; on narrow
+       screens it becomes a drawer opened with the Tasks button. The list is
+       generated by ssot.js from section 15 - edit tasks ONLY in section 15. ── -->
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>Occupation Knowledge Hub</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for every decision about the Occupation Knowledge
+    Hub: the occupation dossier model, the editor and AI content builder, the
+    Canadian study-program register, the AI study coach and the student
+    question board. Every decision made for this tool is logged in section 11
+    and this document is updated in the same change as the code. When this
+    document or the code disagree, this document is the tiebreaker - it is
+    updated to capture the final decision, never silently left divergent.
+    One tool instance = one occupation.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>1.1</td></tr>
+    <tr><th>Last updated</th><td>2026-11-14</td></tr>
+    <!-- TEMPLATE: pick one class - status-active (work in progress),
+         status-implemented (shipped), status-proposal (plan not approved). -->
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT - built, not yet shipped to the CMS</span></td></tr>
+    <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (OccupationKnowledgeHub).</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/OccupationKnowledgeHub.css</code>, <code>app/OccupationKnowledgeHub.html</code>, <code>app/OccupationKnowledgeHub.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>The occupation facts themselves (written by editors, checked by humans), CMS field configuration, and the marketing/help satellites generated from this document.</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel). Optional profile companion: <code>profiles.html</code> (copy presets; usage truth stays section 4.1).</td></tr>
+  </table>
+
+  <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one tool and one set of invariants around
+  <strong>a private, per-occupation knowledge base for students</strong> - and it is the
+  <strong>single source of truth for every decision we make</strong> about this tool, now and in the future.
+  No decision is considered made until it is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this tool, the decision is added to section 11 with
+    a date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the
+    code disagree, the discrepancy is resolved in this document first (with a
+    dated decision), then applied to the code - never the other way around,
+    and never silently left divergent.</li>
+    <li><strong>Check before changing.</strong> Before changing any behavior
+    covered here, read the relevant section and the register; after the
+    change, update this document in the same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function, and code snippet in any update uses understandable names. No
+    cryptic abbreviations. Short names are allowed only for loop indexes and
+    universally known abbreviations (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use - in
+    prose, tables, and headings. Literal identifiers stay as they are.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> One tool instance answers for
+  exactly one occupation: a student can read the whole dossier, follow the
+  Canadian study path to a real institution, and ask questions without ever
+  seeing another occupation's questions or an unpublished draft.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <p>Every file involved in this tool: what it is for, and exactly which
+  parts of it belong to this tool (write "whole file" when everything
+  applies). Links open the file in VS Code. Keep this block in sync with the
+  <code>Primary code areas</code> row above.</p>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/app/OccupationKnowledgeHub.js"><code>app/OccupationKnowledgeHub.js</code></a></td>
+      <td>All tool logic: dossier model, rendering, editors, AI prompts and parsing, question board, permissions, print.</td>
+      <td>Whole file.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/app/OccupationKnowledgeHub.html"><code>app/OccupationKnowledgeHub.html</code></a></td>
+      <td>Body markup only: header shell, tabs, main pane host, modal, print host, icon sprite.</td>
+      <td>Whole file.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/app/OccupationKnowledgeHub.css"><code>app/OccupationKnowledgeHub.css</code></a></td>
+      <td>All visual rules plus the print stylesheet.</td>
+      <td>Whole file.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Local QA harness: mock window.tool SDK, sample dossier, sample questions, role and read-only switching, canned AI replies.</td>
+      <td>Whole file (never uploaded to the CMS).</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/docs/occupations.html"><code>docs/occupations.html</code></a></td>
+      <td>Browsable occupation catalogue: 384 occupations in 20 industry folders, with a compact full-height filter rail on the left and a scrollable occupation list on the right, search, industry, faculty, department and education-route filters, a video filter, a resources column, and 239 video links from Career Trek and ALIS.</td>
+      <td>Whole file. The data block must stay identical to the import JSON. The video map is keyed by occupation name.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/docs/occupations-import.json"><code>docs/occupations-import.json</code></a></td>
+      <td>Import package for the CMS: <code>folders[]</code> = 20 industry folders, <code>objects[]</code> = 384 occupation records, plus the import contract. 237 objects carry <code>media.videos[]</code>, a top-level <code>resources</code> block carries the explainer links, <code>meta.videoSources</code> records the source evaluation, and <code>departments</code> maps every occupation to one of 45 graduation departments; all four are ignored by the importer.</td>
+      <td>Whole file. Consumed by the CMS importer.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/docs/folder-hierarchy-import.json"><code>docs/folder-hierarchy-import.json</code></a></td>
+      <td>Nested folder tree for the CMS: 5 groups and 20 leaf industry folders, using the same folder-taxonomy schema as the application idea library. Every folder carries a stable code, slug, order, categories and optional children; leaf slugs match <code>objects[].industry</code>.</td>
+      <td>Import before the occupation objects when the CMS needs the group hierarchy. The flat <code>folders[]</code> in the import package remains the single-file fallback.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/docs/occupation-knowledge-hub-folder-hierarchy.json"><code>docs/occupation-knowledge-hub-folder-hierarchy.json</code></a></td>
+      <td>Exported CMS folder hierarchy for the occupation app: <code>mainObjectType</code>, <code>exportedAt</code>, and 5 groups / 20 leaf folders with the real CMS folder ids. This is the authoritative id source for the object import.</td>
+      <td>Reference only. The object import chunks copy the leaf folder ids from this file.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/docs/occupation-objects-import-chunk-1.json"><code>docs/occupation-objects-import-chunk-1.json</code></a></td>
+      <td>CMS object import, chunk 1 of 2: 250 occupation objects. Each object carries a name, slug, <code>typeId</code> equal to a leaf industry folder id, and <code>productData.data_categoriesBased.occupationDossier</code> with the version 1 dossier seed.</td>
+      <td>Import after the folder tree and before chunk 2. Whole file.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/education-training/vocational-training/OccupationKnowledgeHub/docs/occupation-objects-import-chunk-2.json"><code>docs/occupation-objects-import-chunk-2.json</code></a></td>
+      <td>CMS object import, chunk 2 of 2: 134 occupation objects with the same shape as chunk 1.</td>
+      <td>Import after chunk 1. Whole file.</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <p>The starting picture of this tool: what is <strong>already
+  developed, shipped and in effect right now</strong>, before any new work.
+  This section is the factual baseline - when a planned change (sections
+  5-8) ships, its result moves here, and the release log (section 19) keeps
+  the full history. Planned work never appears in this table - planned work
+  belongs in the task list (section 15) and the ideas backlog (section 16).</p>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>One tool instance holds exactly one occupation dossier in the record value (no per-record configuration needed).</td><td><code>normalizeContent</code>, <code>persistNow</code></td><td>2026-11-14</td><td>D-OKH-01</td></tr>
+    <tr><td>C-02</td><td>Reading view: hero summary, tags, 16 dossier sections (text, line rows, FAQ), contacts and sources.</td><td><code>overviewPaneHtml</code>, <code>sectionCardHtml</code></td><td>2026-11-14</td><td>D-OKH-03</td></tr>
+    <tr><td>C-03</td><td>Study in Canada register: institution, faculty/department, program, level, city/province, credential, duration, tuition, admission, language, delivery, website, email, phone; search and province/level filters.</td><td><code>studyPaneHtml</code>, <code>programCardHtml</code></td><td>2026-11-14</td><td>D-OKH-05</td></tr>
+    <tr><td>C-04</td><td>Manual editing of every field, autosaved into the record; publish/draft status gate.</td><td><code>editPaneHtml</code>, <code>applyFieldEdit</code></td><td>2026-11-14</td><td>D-OKH-02</td></tr>
+    <tr><td>C-05</td><td>AI content builder: presets or free instruction plus optional source notes, strict JSON contract, change preview, apply on confirm; programs are additive and deduplicated.</td><td><code>runAiContentUpdate</code>, <code>parseAiContentPlan</code>, <code>applyAiPlan</code></td><td>2026-11-14</td><td>D-OKH-06</td></tr>
+    <tr><td>C-06</td><td>AI study coach: answers grounded in the dossier, marks anything beyond it, keeps a transcript per occupation.</td><td><code>buildCoachPrompt</code>, <code>sendChatQuestion</code></td><td>2026-11-14</td><td>D-OKH-07</td></tr>
+    <tr><td>C-07</td><td>Student question board: ask, answer, teacher badge, moderation status and delete, all scoped by occupation key.</td><td><code>questionsPaneHtml</code>, <code>createQuestionRecord</code>, <code>submitAnswer</code></td><td>2026-11-14</td><td>D-OKH-08</td></tr>
+    <tr><td>C-08</td><td>Permissions: admin/editor edit the dossier; anyone logged in can ask and answer; read-only mode blocks saving.</td><td><code>computePermissions</code>, <code>reportMissingConfig</code></td><td>2026-11-14</td><td>D-OKH-09</td></tr>
+    <tr><td>C-09</td><td>Print or save the whole dossier as PDF (print stylesheet with a clean document sheet).</td><td><code>printDossier</code>, <code>printSheetHtml</code></td><td>2026-11-14</td><td>D-OKH-10</td></tr>
+    <tr><td>C-10</td><td>Dossier JSON export and import for moving or backing up one occupation.</td><td><code>exportDossier</code>, <code>importDossierFromText</code></td><td>2026-11-14</td><td>D-OKH-11</td></tr>
+    <tr><td>C-11</td><td>A draft dossier is hidden from students, so an unfinished occupation is never published by accident.</td><td><code>renderPane</code> blocked branch</td><td>2026-11-14</td><td>D-OKH-04</td></tr>
+    <tr><td>C-12</td><td>Local harness with sample dossier, sample questions, role switching and canned AI replies; DOM-less smoke test of all pure logic.</td><td><code>app/test-harness.html</code>, Temp smoke test</td><td>2026-11-14</td><td>D-OKH-12</td></tr>
+    <tr><td>C-13</td><td>Occupation catalogue: 384 occupations grouped into 20 industry folders, with a compact full-height filter rail on the left and a scrollable list on the right, filterable by name, industry, faculty, department and education route, with the CMS import package.</td><td><code>docs/occupations.html</code>, <code>docs/occupations-import.json</code></td><td>2026-11-15</td><td>D-OKH-15, D-OKH-19</td></tr>
+    <tr><td>C-14</td><td>Career Trek and ALIS video enrichment: 237 occupations carry 239 verified Canadian occupation video links (176 from WorkBC's Career Trek, 63 from ALIS, the Alberta career information service), shown as Watch links with the source in the tooltip and findable by search and a With video filter; the same links live in the import JSON as <code>media.videos[]</code> metadata.</td><td><code>docs/occupations.html</code> video map, <code>objects[].media</code> in the import JSON</td><td>2026-11-14</td><td>D-OKH-16</td></tr>
+    <tr><td>C-15</td><td>Canada-wide explainer resources: every row shows Jobs (Job Bank search for that occupation), NOC and WorkBC links, and the page lists all seven resources (NOC, WorkBC, Job Bank, Red Seal, EduCanada, Career Trek, ALIS). Stored once in the import JSON as <code>resources</code>.</td><td><code>resources</code> in the import JSON, <code>resourcesCell</code> in the page script</td><td>2026-11-14</td><td>D-OKH-17</td></tr>
+    <tr><td>C-16</td><td>Graduation department map: every occupation carries exactly one department (45 departments grouped into 15 faculties), shown under the occupation name and filterable by faculty and then department; the map is catalogue-only metadata and is ignored by the importer.</td><td><code>departments</code> block in the import JSON and page data, <code>occupation.department</code> in the page script</td><td>2026-11-14</td><td>D-OKH-18</td></tr>
+  </table>
+  <p class="note">Capabilities listed here are in effect and must keep working
+  unless a decision in section 11 reverses them.</p>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <p>Terms used in this document, with the exact meaning used here. Add a row
+  whenever a discussion introduces a term - one meaning per term, so every
+  reader and every AI sees the same definition.</p>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Dossier</td><td>The complete content of ONE occupation in ONE tool instance: basics, sections, programs, contacts, sources.</td></tr>
+    <tr><td>Occupation key</td><td>A normalized string that groups question-board items and chat history. Taken from the occupation slug, then the configured key, then the CMS record id.</td></tr>
+    <tr><td>Section</td><td>One named part of the dossier (for example "What the work looks like"). Every section has a fixed key, a label and a format.</td></tr>
+    <tr><td>Lines format</td><td>One row per line, cells separated by <code>|</code>. The column meaning comes from the section definition.</td></tr>
+    <tr><td>Q/A format</td><td>FAQ text where each question starts with <code>Q:</code> and its answer with <code>A:</code>.</td></tr>
+    <tr><td>Program</td><td>One study route at one Canadian institution: faculty/department, program, level, location, admission, cost and contact.</td></tr>
+    <tr><td>AI plan</td><td>The JSON object the AI returns when asked to update the dossier: reply, occupation fields, sections, new programs, contacts and sources.</td></tr>
+    <tr><td>Grounded answer</td><td>A coach answer that comes from the dossier. Anything outside it must be marked "Beyond this dossier:".</td></tr>
+    <tr><td>Published</td><td>The dossier status that lets students read it. Draft dossiers are visible to editors only.</td></tr>
+  </table>
+
+  <h3 id="sec-profile-usage">4.1 Profile configuration usage</h3>
+  <p class="note"><strong>Required when this tool exposes a
+  <code>profileConfig</code> parameter or a <code>profiles/</code> preset
+  library.</strong> Remove this section only when neither exists. When
+  present, this table is the authoritative register of which profile a
+  consuming application uses. The generated <code>docs/profiles.html</code>
+  copy page and its browser-local usage reminder are convenience tools and
+  are not the source of truth.</p>
+  <table>
+    <tr><th>Profile / config</th><th>Mode</th><th>Segments</th><th>Usage status</th><th>Application / notes</th><th>Decision</th></tr>
+    <tr><td><code>[profile-file.json]</code></td><td>[fixed / selectable]</td><td>[segment keys]</td><td>[not-reviewed / available / planned / in-use / retired]</td><td>[which application or CMS configuration uses it, or "Available - not selected"]</td><td>[D-XX-NN]</td></tr>
+  </table>
+  <p><strong>Usage status vocabulary:</strong> <code>not-reviewed</code> means
+  no decision yet; <code>available</code> means the profile is usable but not
+  selected; <code>planned</code> means selected for a future application;
+  <code>in-use</code> means a real application configuration depends on it;
+  <code>retired</code> means kept for history but no longer selected. Change
+  a status only in the same change that updates the application
+  configuration.</p>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <ul>
+    <li>2026-11-14, requester: a student who wants to reach one occupation has to search many sites for what the work looks like, the benefits, the difficulties, which Canadian universities have a faculty or department for it, and how to reach them.</li>
+    <li>2026-11-14, requester: the same information is written once by an editor and then has to answer the same student questions again and again.</li>
+    <li>2026-11-14, requester: the content must stay private (visible only inside the CMS to the students who should see it), not published on the open web.</li>
+    <li>2026-11-14, requester: editors want to add content by hand OR ask the AI to add and update it.</li>
+  </ul>
+  <h3>5.2 Current implementation (verified in code)</h3>
+  <p>No tool existed for this need in this repository. The nearest alternatives were a shared document (one long file for every occupation) or a spreadsheet, both of which lose the structure, the per-occupation privacy and the question history.</p>
+  <h3>5.3 Structural flaws</h3>
+  <ol>
+    <li><strong>One document for every occupation.</strong> Sections cannot be enforced, so editors skip fields and students cannot filter or search per occupation.</li>
+    <li><strong>No single source per occupation.</strong> The AI cannot be grounded on a reliable dossier, so answers drift and contradict the written content.</li>
+    <li><strong>No question history.</strong> Repeated student questions are answered again by a person, and nothing is reused.</li>
+    <li><strong>No publish gate.</strong> Half-written content is shown as if it were finished.</li>
+  </ol>
+  <p class="risk"><strong>Root cause:</strong> the information had no structured, per-occupation home, so it could not be maintained, could not ground an AI answer, and could not collect questions in one place.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>One tool instance answers for exactly one occupation; two instances never share dossier content.</li>
+    <li>The dossier covers, at minimum: what the occupation is, what the work looks like, work environment, benefits, difficulties with preparation, skills, the education path in Canada, licences and exams, pay, job market, career progression, tools, related occupations, glossary, FAQ and further resources.</li>
+    <li>The study register stores Canadian institutions with faculty or department, program, level, location, credential, duration, tuition, admission, language, delivery and a way to reach the institution (website, email, phone).</li>
+    <li>An editor or admin can write every field by hand, and the value is saved into this CMS record without a separate Save button.</li>
+    <li>An editor or admin can ask the AI to draft or update content; the AI result is shown as a preview and is only written after explicit confirmation.</li>
+    <li>A student can ask the AI coach free-form questions; answers use the dossier first and clearly mark anything added from general knowledge.</li>
+    <li>A student can ask a question on a board, any user can answer it, and the answers stay visible with author and time.</li>
+    <li>A draft dossier is not readable by students; a published dossier is readable by students and visitors with view access.</li>
+    <li>All external data goes through <code>tool.requestAI</code> and <code>tool.requestObjects</code>; the tool never fetches the network directly and never writes the database outside the SDK.</li>
+    <li>The tool degrades with a clear message when AI or object access is not configured; the dossier itself still opens.</li>
+    <li>The tool works on desktop and on a 390 px wide screen with no horizontal scrolling.</li>
+    <li>Every tool build carries a visible build badge and a console boot line.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr>
+      <td><strong>A. One shared app for every occupation</strong></td>
+      <td>One CMS application stores every occupation as a record and one listing page navigates between them.</td>
+      <td>Partially - it gives a catalogue, but every instance loses its own scoped question board and the rich dossier has to fit one record schema.</td>
+      <td>High - needs a new application, a listing tool and a migration path.</td>
+      <td class="status-rejected">REJECTED (D-OKH-01) - the request is one instance per occupation.</td>
+    </tr>
+    <tr>
+      <td><strong>B. One instance per occupation, dossier in the record value</strong></td>
+      <td>Every occupation gets its own CMS record with this tool attached. The dossier lives in the tool value; the question board lives in CMS objects of one type, grouped by occupation key.</td>
+      <td>Yes - per-occupation content, per-occupation privacy, one question board per occupation, no extra schema to maintain.</td>
+      <td>Low - one tool, one optional CMS application for the question board.</td>
+      <td class="status-adopted">ADOPTED</td>
+    </tr>
+    <tr>
+      <td><strong>C. Question board kept inside the tool value</strong></td>
+      <td>Questions are stored in the same record value as the dossier.</td>
+      <td>No - a student who can read a record usually cannot write it, and every answer would rewrite the whole dossier.</td>
+      <td>Low, but wrong.</td>
+      <td class="status-rejected">REJECTED (D-OKH-08)</td>
+    </tr>
+    <tr>
+      <td><strong>D. AI chat kept only in browser memory</strong></td>
+      <td>No transcript persistence.</td>
+      <td>Partially - the coach works, but a reload loses the conversation.</td>
+      <td>Low.</td>
+      <td class="status-adopted">ADOPTED AS FALLBACK (D-OKH-07) - the transcript is stored in the platform chat type when object access is on, and memory is the fallback.</td>
+    </tr>
+  </table>
+  <p><strong>Decision: option B, with the question board in CMS objects and the chat transcript in the platform chat type.</strong> Option A stays an idea for a future catalogue tool; option C is rejected because readers cannot write records safely.</p>
+  <h3>7.1 Answers to open questions</h3>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Where does the dossier live?</td><td>In the tool value of this record (D-OKH-01). One instance = one occupation, and no admin parameter is needed to start.</td></tr>
+    <tr><td>How does the question board know which occupation a question belongs to?</td><td>Every question stores an occupation key. The key comes from the occupation slug, then the optional <code>occupationKey</code> parameter, then the record id (D-OKH-08).</td></tr>
+    <tr><td>What happens when AI is not enabled?</td><td>The dossier still opens and prints. The Ask AI tab and the AI builder show a clear notice, and the host reports the missing parameter (D-OKH-09).</td></tr>
+    <tr><td>Can a student see a draft?</td><td>No. Only editors and admins see an unpublished dossier (D-OKH-04).</td></tr>
+    <tr><td>Are AI-added programs merged or replace the list?</td><td>Merged. Programs are appended and deduplicated by institution + program name, so repeated AI calls never duplicate a route (D-OKH-06).</td></tr>
+  </table>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Core invariant</h3>
+  <p class="note"><strong>Invariant OKH-SCOPE.</strong> A rendered dossier, a coach answer, a question and a question answer can only ever touch the data of the occupation key this instance resolves to. Content of another occupation is never rendered, and a draft dossier is never rendered to a non-editor.</p>
+  <h3>8.2 Dossier model and write path</h3>
+  <pre>
+// app/OccupationKnowledgeHub.js - the saved value
+{
+  version: 1,
+  occupation: { title, slug, category, oneLiner, summary, tags[], status, updatedAt, updatedBy },
+  sections:   { whatItIs, dayInTheLife, workEnvironment, benefits, difficulties, skills,
+                educationPath, certification, salary, jobMarket, careerLadder, tools,
+                relatedOccupations, glossary, faq, resources },
+  programs:   [ { id, institution, faculty, program, level, city, province, credential,
+                  duration, tuition, admission, language, delivery, website, email, phone, notes } ],
+  contacts:   [ { id, label, name, role, email, phone, website, note } ],
+  sources:    [ { id, title, url, note } ],
+  chatSessionId: ""
+}
+  </pre>
+  <ul>
+    <li>Text sections are plain text (paragraphs on blank lines). Line sections use <code>Cell | Cell | Cell</code>. The FAQ uses <code>Q:</code> / <code>A:</code> lines.</li>
+    <li>The editor writes directly into the in-memory model and the tool debounces <code>tool.setValue()</code> by 500 ms. There is no Save button - the CMS record is the save.</li>
+    <li>The AI builder asks for ONE JSON object with optional keys, validates every key against the section allowlist, and shows a change preview before <code>applyAiPlan()</code> writes anything.</li>
+    <li>The coach receives the dossier digest inside the prompt. The prompt forbids invented institutions, tuition, deadlines, emails and phone numbers, and requires the prefix "Beyond this dossier:" for anything not in the dossier.</li>
+    <li>Question objects store the whole answer array, so one update adds or removes an answer atomically. The board filters by <code>occupationKey</code> on read.</li>
+  </ul>
+  <h3>8.3 Consumer contract table</h3>
+  <table>
+    <tr><th>Consumer</th><th>Required change</th></tr>
+    <tr><td>The CMS html-tool field</td>
+    <td><code>allowAi: yes</code> for the coach and the builder. <code>allowObjectCRUD: yes</code> plus an <code>allowedObjectTypes</code> entry for the question type (<code>role: editor</code>, <code>scope: shared</code>) and for <code>ai-chat-sessions-uniconbaseapps</code> (<code>role: editor</code>, <code>scope: instance</code>) for the board and the saved transcript.</td></tr>
+    <tr><td>The CMS question application</td>
+    <td>One object type (default <code>occupation-questions</code>) with fields for title, body, topic, status, occupationKey, occupationName, askedBy, askedByName, askedAt, answers, updatedAt. If the field values sit inside a data category, set <code>questionsDataCategory</code>.</td></tr>
+    <tr><td>The system admin</td>
+    <td>Creates one CMS record per occupation and attaches this tool. Sets the occupation slug so every instance of the same occupation shares one question board.</td></tr>
+  </table>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>AI parameter is off or the AI call fails</td><td>The coach bubble shows the error, the typed question stays in the input, the Edit tab keeps the instruction text, and the dossier still reads and prints.</td></tr>
+    <tr><td>Object access is off or the question type is refused</td><td>The Questions tab shows a setup card with the exact settings, the dossier is unaffected, and no host warning is triggered at boot because the tool never asks for a type it was not allowed to read.</td></tr>
+    <tr><td>The AI returns prose or broken JSON</td><td>The reply is rejected, the instruction text stays, and the user is told to try a more specific instruction. Nothing is written.</td></tr>
+    <tr><td>The AI returns unknown section keys or empty programs</td><td>Unknown keys are dropped; empty programs are dropped; valid items still apply.</td></tr>
+    <tr><td>The AI returns a program that already exists</td><td>The duplicate is skipped by institution + program key and the count does not change.</td></tr>
+    <tr><td>An editor changes a field</td><td>The value is saved after 500 ms through <code>tool.setValue()</code>; the save chip shows the time.</td></tr>
+    <tr><td>A viewer opens a draft dossier</td><td>The dossier body is replaced by a "Not published yet" notice and printing is refused with a warning; the question board remains reachable.</td></tr>
+    <tr><td>The host is read-only</td><td>A read-only banner is shown, the Edit tab is hidden, and every write action refuses with a message.</td></tr>
+    <tr><td>The occupation slug is empty</td><td>The key falls back to the configured key, then the record id, so the board still groups correctly.</td></tr>
+    <tr><td>The chat session cannot be created</td><td>The conversation continues in memory, and one console warning names the missing type. The dossier is unaffected.</td></tr>
+    <tr><td>The question object cannot be created</td><td>The modal stays open with the typed question and an error toast names the reason.</td></tr>
+    <tr><td>A question belongs to another occupation</td><td>It is filtered out before rendering.</td></tr>
+    <tr><td>A question object has no occupation key</td><td>It is hidden, unless this instance has no key at all (no slug, no configured key, no record id). Privacy wins over convenience.</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>The AI can still state an incorrect fact that it believes is true.</td><td>An editor must review AI content before publishing; the preview step exists for this.</td><td>Accepted - mitigation is the preview and the publish gate.</td></tr>
+    <tr><td>L-02</td><td>No image or logo upload for the occupation.</td><td>A dossier is text only; a visual identity has to come from CSS.</td><td>Deferred - see idea I-02 in section 16.</td></tr>
+    <tr><td>L-03</td><td>The question board needs one CMS application for its object type.</td><td>Without it the board shows a setup card instead of questions.</td><td>Accepted - the dossier does not depend on it.</td></tr>
+    <tr><td>L-04</td><td>Filters and search run on the loaded objects in the browser.</td><td>Very large question boards would load slowly.</td><td>Accepted for now - see idea I-05.</td></tr>
+    <tr><td>L-05</td><td>One record holds ONE occupation.</td><td>A catalogue of occupations needs one record each or a separate listing tool.</td><td>By design - D-OKH-01.</td></tr>
+    <tr><td>L-06</td><td>No notification when a question is answered.</td><td>A student has to come back to see the answer.</td><td>Deferred - see idea I-03.</td></tr>
+    <tr><td>L-07</td><td>The catalogue lists 384 broad occupations, not every NOC unit group (516).</td><td>A student looking for a very specific title may not find it; an advisor must add it.</td><td>Accepted - the official NOC and Job Bank remain the exhaustive source.</td></tr>
+    <tr><td>L-08</td><td>237 of the 384 occupations have a video from Career Trek or ALIS. Every Career Trek industry playlist and the first 100 entries of the ALIS Occupational Videos playlist have been read; the remaining 147 occupations have no verified episode yet.</td><td>Some occupations show a dash in the Watch column.</td><td>Accepted - no link is invented; ALIS has 255 playlist entries and further passes can cover more.</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <!-- TEMPLATE: replace D-OKH below with the tool's unique prefix once,
+       then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr><td>D-OKH-01</td><td>2026-11-14</td><td>One tool instance = one occupation. The dossier is stored in this record's tool value through <code>tool.setValue()</code>; there is no admin parameter that names the occupation and no shared dossier store.</td><td>Matches the request, needs zero configuration, keeps each occupation private, and keeps every instance independent.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-02</td><td>2026-11-14</td><td>Editors and admins write the dossier by hand with autosave (500 ms debounce). There is no Save button; the CMS record is the save. The 16 dossier sections are fixed in <code>SECTION_DEFS</code>.</td><td>A fixed section list keeps every occupation comparable and lets the AI contract and the reader share one definition. Autosave matches the rest of the repo.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-03</td><td>2026-11-14</td><td>The reader renders only sections that have content. An editor sees a dashed empty card with an "Add this section" action instead.</td><td>Students never see an empty shell; editors still see what to fill.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-04</td><td>2026-11-14</td><td>The dossier has a status of <code>draft</code> or <code>published</code>. A draft is replaced by a "Not published yet" notice for anyone who is not an editor or admin.</td><td>Privacy requirement: half-written content must never reach a student.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-05</td><td>2026-11-14</td><td>The study register is a list of programs with institution, faculty or department, program, level, city, province, credential, duration, tuition, admission, language, delivery, website, email and phone. Search and province/level filters run in the browser.</td><td>Answers "which universities in Canada have a faculty or department for that and how can I reach there" without a second CMS application.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-06</td><td>2026-11-14</td><td>The AI builder returns ONE JSON object with optional keys. Only <code>SECTION_KEYS</code> and the five occupation fields are accepted. The result is always previewed, and programs are appended with institution + program deduplication.</td><td>Protects the dossier from a malformed or over-broad AI reply and makes repeated "add programs" calls safe.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-07</td><td>2026-11-14</td><td>The coach prompt contains the dossier digest and requires "Beyond this dossier:" for anything not in it, and forbids invented institutions, fees, deadlines and contacts. The transcript is stored in <code>ai-chat-sessions-uniconbaseapps</code> when object access is on; memory is the fallback.</td><td>Answers stay grounded and verifiable; the chat never becomes a hard dependency on a CMS type.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-08</td><td>2026-11-14</td><td>The question board is a list of CMS objects of ONE configurable type. Every object carries an occupation key; the board filters on read and stores the whole answer array on write. Any logged-in user can ask and answer; a teacher answer carries a staff flag. A question without a key is hidden unless the instance has no key at all.</td><td>A forum needs shared storage, not the record value. The key keeps occupations apart while letting several instances of the same occupation share a board.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-09</td><td>2026-11-14</td><td>Admin/editor roles edit; every user can ask and answer; read-only mode disables every write. The identity fallback (<code>_noIdentity</code>) trusts the host and keeps the tool usable when <code>tool.getUser</code> is absent.</td><td>Matches the CMS permission model used by the other tools in the repo.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-10</td><td>2026-11-14</td><td>Print produces a self-contained sheet in <code>#okh-print</code> and calls <code>window.print()</code>; the print stylesheet hides the whole UI.</td><td>Students and advisors can take the dossier offline without an export service.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-11</td><td>2026-11-14</td><td>Dossier JSON export and import exist for backup and to copy one occupation to another record. Import requires a confirmation because it replaces the content.</td><td>Cheap recovery path and the fastest way to start a similar occupation.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-12</td><td>2026-11-14</td><td>QA is three layers: a local harness with a mock SDK and canned AI, a DOM-less Node smoke test of every pure function, and a browser probe that drives the real UI.</td><td>Catches both logic regressions and wiring regressions; the browser probe found the issues the smoke test cannot see.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-13</td><td>2026-11-14</td><td>Question writes go into the same data category the question was read from; when the board is empty the configured <code>questionsDataCategory</code> is used, else flat.</td><td>The CMS can store field values flat or inside a category; a write must land where the read looks.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-14</td><td>2026-11-14</td><td>The interface is English only. Occupation content is free text and may be written in any language the tenant needs.</td><td>No translation machinery in v1; the content language is an editorial choice.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-15</td><td>2026-11-14</td><td>The catalogue is a curated list of 384 occupations grouped into 20 industry folders, with six education routes (graduate, bachelor, college, apprenticeship, high school, no formal). The import JSON follows the tool-ideas folder-import pattern: <code>folders[]</code> then <code>objects[]</code>, objects matched by slug so re-import is idempotent. The page and the JSON carry the same list. The list grew from 297 to 384 through Career Trek and ALIS coverage and a final expansion pass of 45 occupations. A nested folder tree in the same folder-taxonomy schema as the application idea library is exported as <code>folder-hierarchy-import.json</code>, with 5 groups and 20 leaf industry folders; its leaf slugs match <code>objects[].industry</code>.</td><td>A full NOC unit-group dump (516 groups) would bury a student in near-duplicate titles; 384 broad occupations cover every industry and every education route while staying readable. Matching by slug makes the import safe to repeat.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-16</td><td>2026-11-14</td><td>Video links from WorkBC's Career Trek and ALIS are stored per occupation as <code>media.videos[]</code> (title, URL, source, channel) in the import JSON, while <code>meta.importIgnores</code> lists <code>media</code> and <code>videoSources</code>. The importer must ignore them completely: it must not create fields, objects or folders from them and must not fail when they are missing. The catalogue page carries the same links in a name-keyed video map and adds a Watch column, a With video filter and a video stat.</td><td>The user asked for the videos to be related to the occupations but not imported, and for valuable Canada-specific sources rather than random links. Keeping them out of the import contract means the CMS stays clean while editors and students can still see the right episode. Only links actually read from an official channel are used; occupations without a match get no media entry. The source register records why each candidate was used or rejected.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-17</td><td>2026-11-14</td><td>Explainer resources are stored once in the top-level <code>resources</code> block: seven Canada-wide links plus a Job Bank search template. The page builds a Jobs link from each occupation name and shows NOC and WorkBC in the same cell. <code>meta.importIgnores</code> lists <code>resources</code>, <code>media</code>, <code>videoSources</code> and <code>departments</code>, so the importer ignores all four.</td><td>Every occupation needs an authoritative place to read duties, wages and study options, including occupations with no video. One shared block avoids 317 duplicate copies while the Job Bank link still points at the exact occupation name. The import contract stays clean.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-18</td><td>2026-11-14</td><td>The catalogue adds a graduation department to every occupation. Departments are grouped into 15 faculties and stored as a compact index array aligned with <code>objects[]</code>, so the importer contract does not change. The department follows the most common entry credential, not the only route; the detailed programme and study path stay in the occupation dossier.</td><td>The user asked for one department per occupation so the list can be filtered by what to study, and specifically wanted to see that IT jobs come from several departments (computer science, software engineering, computer engineering, information systems, data/AI/cybersecurity) rather than one. One department per occupation keeps the filter simple; 45 departments are specific enough to be useful without turning into a programme catalogue.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-19</td><td>2026-11-15</td><td>The catalogue uses a compact full-height layout: a fixed-width filter rail on the left holds search, filters, route chips, totals and resources, while the occupation list scrolls independently on the right. The public explanatory lede, import how-to and footer copy were removed. Below 1000 px the layout collapses to one column and the widest table columns hide.</td><td>The catalogue is a working list, not a landing page; the user wants maximum list space and no instructional copy on the page. The left rail keeps every filter visible while the list uses the full remaining height on desktop.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-20</td><td>2026-11-15</td><td>The CMS folder list is exported as a nested folder tree in <code>folder-hierarchy-import.json</code>, using the application idea library folder-taxonomy schema: 5 groups and 20 leaf industry folders, with <code>code</code>, <code>slug</code>, <code>order</code>, <code>categories</code> and <code>children</code>. Leaf slugs match <code>objects[].industry</code>. The flat <code>folders[]</code> in <code>occupations-import.json</code> stays as the single-file fallback.</td><td>The user asked for the same folder-tree import structure as the application idea library. Keeping the tree separate means the object import contract and the existing flat folder import keep working while the CMS can be given the group hierarchy first.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-OKH-21</td><td>2026-11-15</td><td>The CMS object list is generated from the 384 occupation records in <code>occupations-import.json</code> and the exported folder hierarchy in <code>occupation-knowledge-hub-folder-hierarchy.json</code>. Each object uses the leaf folder id as <code>typeId</code> and seeds <code>productData.data_categoriesBased.occupationDossier</code> with <code>{ version: 1, occupation: { title, slug, category, oneLiner, status: 'draft' } }</code>. The list is split into 250 and 134 objects. The education route stays in the catalogue page data because the dossier schema has no education field; <code>media</code>, <code>resources</code> and <code>departments</code> are ignored per the import package.</td><td>The user asked for an importable object list that relates each occupation to the exported folder ids. Using the leaf folder id (never the group id) puts every occupation in the deepest matching folder. The dossier seed matches the package import contract. The education route is not a dossier field, so writing it would invent a field; it remains catalogue-only.</td><td class="status-adopted">Adopted</td></tr>
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li><strong>This document is the single source of truth for every decision
+    about this tool.</strong> Every decision is recorded in section 11 with
+    a date, and the affected section is updated in the same change as the
+    code. A decision that is not in the register did not happen.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
+    delete rows.</li>
+    <li>[Tool-specific rule: the invariant from section 8.1 - review every
+    new call site against it.]</li>
+    <li>Never introduce a path that bypasses [the tool's core mechanism].</li>
+    <li>Global naming rule: any update - code or documentation - MUST use
+    understandable, self-explanatory names. No cryptic abbreviations. Existing
+    misleading names are renamed when their code is touched.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Dossier model, normalization and autosave</td><td><code>app/OccupationKnowledgeHub.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Reading view with hero, 16 sections, contacts, sources</td><td><code>app/OccupationKnowledgeHub.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Study in Canada register with filters and contact actions</td><td><code>app/OccupationKnowledgeHub.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Manual editors for basics, sections, programs, contacts, sources</td><td><code>app/OccupationKnowledgeHub.js</code> - DONE</td></tr>
+    <tr><td>5</td><td>AI builder with presets, source notes, strict JSON parsing, preview and apply</td><td><code>app/OccupationKnowledgeHub.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>AI study coach with grounded prompt and stored transcript</td><td><code>app/OccupationKnowledgeHub.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Student question board with answers and moderation</td><td><code>app/OccupationKnowledgeHub.js</code> - DONE</td></tr>
+    <tr><td>8</td><td>Permissions, read-only mode and configuration banners</td><td><code>app/OccupationKnowledgeHub.js</code> - DONE</td></tr>
+    <tr><td>9</td><td>Print sheet, JSON export/import</td><td><code>app/OccupationKnowledgeHub.js</code>, <code>app/OccupationKnowledgeHub.css</code> - DONE</td></tr>
+    <tr><td>10</td><td>Markup shell, icon sprite, modal and print host</td><td><code>app/OccupationKnowledgeHub.html</code> - DONE</td></tr>
+    <tr><td>11</td><td>Harness with mock SDK, sample dossier and sample questions</td><td><code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>12</td><td>DOM-less smoke test (66 asserts) and browser probe</td><td>Temp helpers - DONE</td></tr>
+    <tr><td>13</td><td>Create the CMS question application and set the field parameters</td><td>CMS - PENDING</td></tr>
+    <tr><td>14</td><td>Fill the first real occupation and publish it</td><td>CMS - PENDING</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <p>Decision points we resolve together before or during implementation.
+  Every answer becomes a dated row in section 11.</p>
+  <ol>
+    <li><strong>Should the question board be shared per occupation or per record?</strong> Today the key comes from the occupation slug, so two instances of the same occupation share one board. A per-record board would use the record id only.</li>
+    <li><strong>Should students answer, or only teachers and admins?</strong> Today any logged-in user can answer and a teacher answer is labelled. Teacher-only answering would need a stricter gate.</li>
+    <li><strong>Should a question wait for approval before it appears?</strong> Today it appears immediately. Approval would add a pending status and a moderator view.</li>
+    <li><strong>Which object type should the board use in production?</strong> The default is <code>occupation-questions</code>. The tenant can point the parameter at any type.</li>
+    <li><strong>Do we need images or diagrams in the dossier?</strong> Not in v1. Adding them means a URL field per section plus an upload parameter.</li>
+    <li><strong>Do we need a catalogue page across occupations?</strong> One instance holds one occupation, so a list of occupations needs a separate listing tool or a shared index record.</li>
+    <li><strong>Should answers notify the student?</strong> No notification exists today. The CMS has no notification channel in this tool's SDK surface.</li>
+    <li><strong>Should the AI be able to answer on the public board?</strong> Today the AI drafts an answer for a teacher to review, and the Ask AI tab answers the student directly. Posting AI answers automatically would mix AI content with teacher content.</li>
+    <li><strong>Should a published dossier be visible on the public website?</strong> Today it lives inside the CMS only.</li>
+    <li><strong>Do we need a second-language version of the interface?</strong> The interface is English; dossier content may be written in any language.</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE push (the badge
+  says so) or is a related set that must not be broken across releases.
+  Click a task to expand its full details. Tick the checkbox when a task is
+  done - progress is remembered by the browser per document and shown in the
+  sidebar.</p>
+
+  <p class="note"><strong>Profile usage management task type.</strong> When
+  this tool exposes a <code>profileConfig</code> parameter or a
+  <code>profiles/</code> preset library, add a release group with
+  <code>data-release-group="profile-usage"</code> and put
+  <code>data-task-type="profile-usage"</code> on every task in that group.
+  The group covers: registering selected profiles in section 4.1, keeping
+  <code>docs/profiles.html</code> and the test-harness preset selector in
+  sync, and testing segment switching plus answer preservation. See the
+  commented sample below.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong> - a task starts only when:
+      <ul>
+        <li>Its requirement is written in section 6.</li>
+        <li>Options are evaluated and the decision is logged (section 11).</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong> - a group is done only when:
+      <ul>
+        <li>All its tasks are checked.</li>
+        <li>Its open risks are solved or accepted (section 18).</li>
+        <li>Tests you chose to track pass (if any).</li>
+        <li>The document version is bumped and PUSH READY shows.</li>
+      </ul>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the
+    core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong
+    benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap
+    cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> -
+    unclear benefit or a product decision is required; see section 14.</li>
+  </ul>
+
+  <!-- Auto-updated by ssot.js: done / waiting percentages of ALL tasks below. -->
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <!-- TEMPLATE: copy one .task-group block per release group. The group name,
+       the "ships together" reason, and the tasks inside form one unit.
+       Badge variants: "ONE PUSH - do not split" for groups that must ship in
+       a single push, or "RELATED - do not split" for groups that must not be
+       broken across releases.
+       data-group-status: planned | in-progress | testing | pushed.
+       PUSH READY is computed automatically by ssot.js. -->
+  <!-- PROFILE USAGE TASK TYPE SAMPLE (commented out - uncomment only when
+       this tool has profileConfig or profiles/). Keep the data-task-type
+       attribute on each task so reports can find profile-usage work.
+  <section class="task-group" data-release-group="profile-usage" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Profile usage management</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="profile-usage">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="profile-usage"></div></div>
+    <p class="task-group-note">Why these belong together: the profile register,
+    the copy page, the harness preset and the application configuration must
+    tell the same story.</p>
+    <div class="task-item" data-task-id="T-PU-01" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-01</span><span class="task-title">Register profile usage in section 4.1</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> nobody can tell which preset an application uses.</p><p><strong>How we will solve it:</strong> fill every row in section 4.1 with mode, segments, status and decision id.</p><p><strong>Files:</strong> <code>docs/ssot.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-02" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-02</span><span class="task-title">Keep profiles page and harness preset in sync</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-02 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run <code>npm run docs:profiles -- &lt;Tool&gt;</code> and <code>node app/build-harness-presets.js</code> after every preset change.</p><p><strong>Files:</strong> <code>profiles/index.json</code>, <code>docs/profiles.html</code>, <code>app/test-harness.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-03" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-03</span><span class="task-title">Test segment switching and answer preservation</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-03 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> load the preset in the harness, switch every segment, verify the visible form and that saved values remain in the record.</p><p><strong>Files:</strong> <code>app/qa-segments.js</code>, <code>app/qa-presets.js</code></p></div></details>
+    </div>
+  </section>
+  END PROFILE USAGE TASK TYPE SAMPLE -->
+
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
+       uncomment it, and edit).
+  <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: [Group name]</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="[GROUP-KEY]">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="[GROUP-KEY]"></div></div>
+    <p class="task-group-note">Why these belong together: [the shared dependency -
+    e.g. "T-01 changes the protocol; T-02 and T-03 adapt every caller.
+    Publishing T-01 alone breaks all writers."]</p>
+
+    TEMPLATE (inside the commented sample): one .task-item block per task.
+    data-task-id must be unique across the whole document; data-group matches
+    the group key above. data-task-status: not-started | in-progress | ignored.
+    Done is the checkbox. The status chip is rendered by ssot.js.
+    PERMANENT DONE: write data-task-status="done" on the task div (or
+    checked="checked" on the checkbox) to mark it done for every browser;
+    npm run rel does this for pushed groups.
+    <div class="task-item" data-task-id="T-01" data-group="[GROUP-KEY]" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">[Short task name - the main name]</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> [why this task exists]</p>
+          <p><strong>How we will solve it:</strong> [approach, files]</p>
+          <p><strong>Benefit:</strong> [what the user or system gains]</p>
+          <p><strong>Files:</strong> <code>[file paths]</code></p>
+          <p><strong>Status:</strong> [edit data-task-status above - the chip updates automatically]</p>
+        </div>
+      </details>
+    </div>
+
+    TEMPLATE (inside the commented sample): duplicate the .task-item block above for T-02, T-03, ...
+  </section>
+  END OF TEMPLATE SAMPLE -->
+
+  <section class="task-group" data-release-group="okh-core" data-group-status="testing">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Core build - dossier, editor, AI, question board</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="okh-core">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="okh-core"></div></div>
+    <p class="task-group-note">Why these belong together: the model, the reader, the editor, the AI contract and the question board share one value shape. Shipping one without the others leaves half a tool.</p>
+
+    <div class="task-item" data-task-id="T-OKH-01" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-01</span><span class="task-title">Dossier model, normalization and autosave</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-01 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> the tool needs a stable shape before anything renders.</p><p><strong>How we will solve it:</strong> <code>defaultContent</code>, <code>normalizeContent</code> and a 500 ms debounced <code>persistNow</code> with an echo guard.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-02" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-02</span><span class="task-title">Reading view with 16 sections, contacts and sources</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-02 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> one <code>SECTION_DEFS</code> list drives rendering, the editor and the AI contract; text, line rows and FAQ have their own renderers.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code>, <code>app/OccupationKnowledgeHub.css</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-03" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-03</span><span class="task-title">Study in Canada register with filters and contact actions</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-03 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> the student asks which faculties and departments teach this occupation and how to reach them.</p><p><strong>How we will solve it:</strong> program cards with level badge, admission details and website/email/phone actions; search plus province and level filters.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-04" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-04</span><span class="task-title">Manual editors for every part of the dossier</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-04 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> basics form, one collapsible editor per section with a word counter, plus modals for programs, contacts and sources.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-05" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-05</span><span class="task-title">AI content builder with strict JSON, preview and apply</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-05 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> an editor wants the AI to add or update content without trusting it blindly.</p><p><strong>How we will solve it:</strong> six presets, an optional source-notes box, <code>parseAiContentPlan</code> with allowlists, a change preview modal and <code>applyAiPlan</code> on confirm.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-06" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-06</span><span class="task-title">AI study coach grounded in the dossier</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-06 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> the dossier digest is embedded in the prompt with grounding rules, the answer renders through a safe mini formatter, and the transcript is stored per occupation key.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-07" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-07</span><span class="task-title">Student question board with answers and moderation</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-07 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> CMS objects of one configurable type, occupation-key scoping, answer arrays written whole, teacher badge, status select, delete with confirmation and an AI draft for teachers.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-08" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-08</span><span class="task-title">Publish gate, permissions and configuration banners</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-08 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> draft dossiers hidden from non-editors, read-only banner, editor-only Edit tab, and one banner that names the missing AI or object settings.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-09" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-09</span><span class="task-title">Print sheet and dossier JSON export/import</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-09 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> a dedicated print stylesheet and a clean print sheet; JSON export with schema and version, import behind a replace confirmation.</p><p><strong>Files:</strong> <code>app/OccupationKnowledgeHub.js</code>, <code>app/OccupationKnowledgeHub.css</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-10" data-group="okh-core" data-task-status="done">
+      <details><summary><span class="task-id">T-OKH-10</span><span class="task-title">Harness, smoke test and browser probe</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-10 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> a mock SDK with localStorage, sample dossier and questions, role and read-only switching, canned AI replies; 66 DOM-less asserts and a browser probe that drives the real UI.</p><p><strong>Files:</strong> <code>app/test-harness.html</code>, Temp helpers</p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="okh-cms-connect" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: CMS connection - question app and field settings</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="okh-cms-connect">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="okh-cms-connect"></div></div>
+    <p class="task-group-note">Why these belong together: the board and the saved transcript only work when the field allows object access and lists both types.</p>
+    <div class="task-item" data-task-id="T-OKH-11" data-group="okh-cms-connect" data-task-status="not-started">
+      <details><summary><span class="task-id">T-OKH-11</span><span class="task-title">Create the question application in the CMS</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-11 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> create the type (default <code>occupation-questions</code>) with the question fields listed in section 8.3, then set <code>questionsObjectType</code> and, if needed, <code>questionsDataCategory</code>.</p><p><strong>Files:</strong> CMS App Designer</p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-12" data-group="okh-cms-connect" data-task-status="not-started">
+      <details><summary><span class="task-id">T-OKH-12</span><span class="task-title">Set the field parameters and allowed types</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-12 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> <code>allowAi: yes</code>, <code>allowObjectCRUD: yes</code>, and allowedObjectTypes entries for the question type (editor, shared) and the chat type (editor, instance).</p><p><strong>Files:</strong> CMS field settings</p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-13" data-group="okh-cms-connect" data-task-status="not-started">
+      <details><summary><span class="task-id">T-OKH-13</span><span class="task-title">Verify the whole loop in a real tenant</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-13 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> ask a question as a student, answer as a teacher, open the same dossier in a second instance with the same slug and confirm the question appears there too.</p><p><strong>Files:</strong> CMS</p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-14" data-group="okh-cms-connect" data-task-status="not-started">
+      <details><summary><span class="task-id">T-OKH-14</span><span class="task-title">Verify the chat transcript survives a reload</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-14 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> ask two questions, reload, confirm the transcript is restored from the chat session object.</p><p><strong>Files:</strong> CMS</p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="okh-content" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: First real content and visual QA</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="okh-content">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="okh-content"></div></div>
+    <p class="task-group-note">Why these belong together: a dossier is only proven when one real occupation was written, reviewed and published with real programs.</p>
+    <div class="task-item" data-task-id="T-OKH-15" data-group="okh-content" data-task-status="not-started">
+      <details><summary><span class="task-id">T-OKH-15</span><span class="task-title">Write the first occupation with the real AI gateway</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-15 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run "Fill every empty section" and "Add Canadian programs", then check every institution and fee by hand before publishing.</p><p><strong>Files:</strong> CMS</p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-16" data-group="okh-content" data-task-status="not-started">
+      <details><summary><span class="task-id">T-OKH-16</span><span class="task-title">Student review of one dossier</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-16 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> a student reads without help and writes down every question the dossier did not answer; those gaps become content.</p><p><strong>Files:</strong> CMS</p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-OKH-17" data-group="okh-content" data-task-status="not-started">
+      <details><summary><span class="task-id">T-OKH-17</span><span class="task-title">Screenshots and satellite documents</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-small">Very small thing</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-OKH-17 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run <code>npm run screenshots -- OccupationKnowledgeHub</code> and regenerate the satellites after the first real dossier exists.</p><p><strong>Files:</strong> <code>docs/</code></p></div></details>
+    </div>
+  </section>
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. We discuss each idea and
+  write the outcome inside its details. An agreed idea moves to the task list
+  (section 15) with a priority; a rejected idea is marked Ignored with the
+  reason. Tick the checkbox when an idea is done - progress is remembered by
+  the browser per document.</p>
+
+  <!-- Auto-updated by ssot.js: done / waiting / ignored percentages. -->
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
+       data-idea-status: new | discussing | ignored. Done = the checkbox. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">[Short idea name]</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> [what the idea is]</p>
+        <p><strong>Why:</strong> [what it would improve]</p>
+        <p><strong>Discussion / outcome:</strong> [notes and decisions; or "Ignored - reason"]</p>
+      </div>
+    </details>
+  </div>
+  END OF TEMPLATE SAMPLE -->
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details><summary><span class="idea-id">I-01</span><span class="idea-title">Occupation catalogue across instances</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> one listing page that shows every occupation record with its key facts and a link to its dossier.</p><p><strong>Why:</strong> a student often starts without a chosen occupation.</p><p><strong>Discussion / outcome:</strong> needs either a listing tool or a shared index object; all instances already write the same shape, so the index is cheap.</p></div></details>
+  </div>
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details><summary><span class="idea-id">I-02</span><span class="idea-title">Images and diagrams in the dossier</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> optional images for the work environment and the career ladder.</p><p><strong>Why:</strong> "how it looks like" is the first thing a student asks.</p><p><strong>Discussion / outcome:</strong> requires <code>allowUpload</code>, a URL field per image and a caption with credit.</p></div></details>
+  </div>
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details><summary><span class="idea-id">I-03</span><span class="idea-title">Answer notification</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> tell the student when their question is answered.</p><p><strong>Why:</strong> today they have to come back and look.</p><p><strong>Discussion / outcome:</strong> the SDK has no notification channel; would need <code>requestSendEmail</code> or a CMS notification feature.</p></div></details>
+  </div>
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details><summary><span class="idea-id">I-04</span><span class="idea-title">Gap report for editors</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> a short checklist that says which sections and which program fields are still empty.</p><p><strong>Why:</strong> editing 16 sections hides what is missing.</p><p><strong>Discussion / outcome:</strong> cheap to compute from the model; would sit at the top of the Edit tab.</p></div></details>
+  </div>
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details><summary><span class="idea-id">I-05</span><span class="idea-title">Server-side search on the question board</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> filter questions in the CMS query instead of the browser.</p><p><strong>Why:</strong> large boards would load slowly.</p><p><strong>Discussion / outcome:</strong> blocked by the SDK, which only supports a type query today.</p></div></details>
+  </div>
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details><summary><span class="idea-id">I-06</span><span class="idea-title">Student progress bookmark</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> a student can mark sections they have read and come back to where they stopped.</p><p><strong>Why:</strong> a long dossier is easy to lose track of.</p><p><strong>Discussion / outcome:</strong> could live in the record value for editors, but a student cannot write the record, so it needs a per-user store.</p></div></details>
+  </div>
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>Preparation: open <code>app/test-harness.html</code> from disk (embedded markup) or over a local HTTP server (live markup), press "Load sample dossier", and keep the browser console open. The harness writes the value to <code>okh_test_value</code> and objects to <code>okh_test_objects</code> in localStorage, so "Reset store" returns a clean state. Role is switched with the top bar button; the URL accepts <code>?role=</code>, <code>?ro=1</code>, <code>?tab=</code>, <code>?crud=no</code> and <code>?noai=1</code>.</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>OKH-01 - Boot.</strong> Load the harness with <code>?sample=1</code>. PASS if the title is the sample occupation, the tabs render, the status chip says Published and the console shows the boot line with the build number.</li>
+    <li><strong>OKH-02 - Reading view.</strong> Open the Dossier tab. PASS if the hero, tags, all filled sections, FAQ accordions, contacts with contact actions and sources render; empty sections are not shown.</li>
+    <li><strong>OKH-03 - Study register.</strong> Open Study in Canada, type "mcgill" in the search, then clear it and filter by province and level. PASS if the card count follows each filter and every card shows institution, faculty, location, level and the reach actions.</li>
+    <li><strong>OKH-04 - AI coach.</strong> Open Ask AI, send "How long does it take to qualify?". PASS if the user bubble and the coach answer both render, and anything outside the dossier starts with "Beyond this dossier:".</li>
+    <li><strong>OKH-05 - Question board.</strong> Open Questions, open a thread, write an answer and post it. PASS if the answer appears with author and time, the status becomes Answered, and the object store holds the answer.</li>
+    <li><strong>OKH-06 - New question.</strong> Press "Ask a question", fill title and details, post. PASS if the modal closes, the board refreshes and one new object exists with the occupation key.</li>
+    <li><strong>OKH-07 - AI builder.</strong> In Edit, click the "Add Canadian programs" preset, then "Ask AI for an update". PASS if the preview lists the changes and nothing is saved until "Apply changes" is pressed; after applying, the section text and the new program are in the record and no program is duplicated.</li>
+    <li><strong>OKH-08 - Manual program.</strong> Add a program by hand. PASS if the card appears in the Study tab and the value grows by one.</li>
+    <li><strong>OKH-09 - Viewer.</strong> Reload with <code>?role=viewer</code>. PASS if the Edit tab is absent, the print action remains and the question board is still usable.</li>
+    <li><strong>OKH-10 - Draft privacy.</strong> Set the status to Draft as an editor, then reload as a viewer. PASS if the dossier body shows "Not published yet".</li>
+    <li><strong>OKH-11 - Read-only.</strong> Reload with <code>?ro=1</code>. PASS if the read-only banner appears and no write action succeeds.</li>
+    <li><strong>OKH-12 - Missing configuration.</strong> Reload with <code>?crud=no&amp;noai=1</code>. PASS if the banner names the missing AI and object settings and the dossier still opens.</li>
+    <li><strong>OKH-13 - Print.</strong> Press Print in the harness. PASS if the print sheet contains the title, the sections, the program table and the sources, and the UI is hidden.</li>
+    <li><strong>OKH-14 - Narrow width.</strong> Set the iframe to 390 px. PASS if <code>documentElement.scrollWidth</code> equals <code>clientWidth</code>.</li>
+    <li><strong>OKH-15 - AI failure.</strong> Make the AI call fail. PASS if the typed instruction stays, an error toast appears and nothing is written.</li>
+    <li><strong>OKH-16 - Occupation catalogue.</strong> Open <code>docs/occupations.html</code>. PASS if 20 industry sections render, the total reads 384, search for "nurse" returns 5 (Nursery and greenhouse worker also matches), the apprenticeship filter returns 35, health care returns 46, health care + college returns 21, and the department line shows 15 faculties and 45 departments.</li>
+    <li><strong>OKH-17 - Occupation videos.</strong> Open <code>docs/occupations.html</code>. PASS if the With video stat reads 237, the With video only filter returns 237, every Watch link opens <code>https://www.youtube.com/watch?v=</code>, the tooltip names Career Trek or ALIS, and searching a video title (for example "Roofer") still finds its occupation.</li>
+    <li><strong>OKH-18 - Explainer resources.</strong> Open <code>docs/occupations.html</code>. PASS if every row shows Jobs, NOC and WorkBC, a Jobs link opens a Job Bank search carrying the occupation name, and the page line lists all seven resources.</li>
+    <li><strong>OKH-19 - Graduation departments.</strong> Open <code>docs/occupations.html</code>. PASS if every row shows one department under its name, the faculty filter lists 15 faculties, the department filter lists 45 departments, choosing a faculty narrows the department list, and searching "nursing" returns the nursing occupations.</li>
+    <li><strong>OKH-20 - Compact layout.</strong> Open <code>docs/occupations.html</code> at 1440 px, 1024 px and a narrow width. PASS if the desktop view shows a left filter rail with a scrollable list on the right, no explanatory lede or how-to section, the list scrolls to the last industry, the 1024 view hides the Resources and What it is columns, and the narrow view collapses to one column.</li>
+    <li><strong>OKH-21 - Folder tree import.</strong> Open <code>docs/folder-hierarchy-import.json</code>. PASS if it has 5 top-level groups, 20 leaf folders, unique codes and slugs, <code>categories: ["occupations"]</code> on every folder, and every leaf slug matches an <code>objects[].industry</code> value.</li>
+    <li><strong>OKH-22 - Occupation object import.</strong> Open both chunk files. PASS if chunk 1 has 250 objects, chunk 2 has 134, every <code>typeId</code> exists as a leaf folder id in the exported hierarchy, no <code>typeId</code> is a top-level group id, every object has a name, slug and <code>occupationDossier</code>, and there are 0 duplicate slugs.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>OKH-01 to OKH-10 (harness probe)</td><td>PASS</td><td>Automated browser probe over HTTP, 2026-11-14: boot, coach answer, 3 threads, answer persisted, question created, AI preview + apply, manual program, study filter, viewer Edit hidden, draft hidden, 390 px no overflow.</td></tr>
+    <tr><td>OKH-11 to OKH-15 (configuration and print)</td><td>PASS</td><td>Configuration banner verified in the probe; read-only, print and AI failure verified in code and in the DOM-less smoke test (66 asserts).</td></tr>
+    <tr><td>Node syntax + inline-script safety</td><td>PASS</td><td><code>node --check</code> green; 0 raw <code>&lt;/script</code> and 0 raw comment openers in the JS; no external link in the CSS.</td></tr>
+    <tr><td>OKH-16 (catalogue page)</td><td>PASS</td><td>Browser probe 2026-11-14: 20 sections, 384 total, search nurse = 5, apprenticeship = 35, health care = 46, health care + college = 21, department line 15 faculties and 45 departments, filters reset. The page data block equals the import JSON (object comparison, 0 differences).</td></tr>
+    <tr><td>OKH-17 (occupation videos)</td><td>PASS</td><td>2026-11-14: the JSON holds 237 occupations with 239 videos (176 Career Trek, 63 ALIS); the page video map matches every <code>media.videos</code> entry (0 issues), the data block is still identical to the JSON, the inline script compiles, and a headless Edge render produced 239 YouTube links. The ALIS roofer and concrete finisher pages were verified against alis.alberta.ca; runtime video filter and title search use the same map.</td></tr>
+    <tr><td>OKH-18 (explainer resources)</td><td>PASS</td><td>2026-11-14: 384 rows render 1152 row resource links (Jobs, NOC, WorkBC) plus 7 page-level resource links; 384 Job Bank search URLs carry the occupation name; the page and JSON <code>resources</code> blocks both hold 7 links.</td></tr>
+    <tr><td>OKH-19 (graduation departments)</td><td>PASS</td><td>2026-11-14: 384 rows show one department label each; the page renders 15 faculty options and 45 department options; the department index is 384 entries with 0 out-of-range values; the page and JSON department blocks are identical.</td></tr>
+    <tr><td>OKH-20 (compact layout)</td><td>PASS</td><td>2026-11-15: 1440 px screenshot shows the 280 px left filter rail and the independently scrolling list; 1024 px hides Resources and What it is; the page contains no <code>occ-lede</code>, <code>occ-how</code> or <code>occ-foot</code> element; the list renders 384 rows and the sidebar shows 384 total and 237 with video.</td></tr>
+    <tr><td>OKH-21 (folder tree)</td><td>PASS</td><td>2026-11-15: 5 groups, 25 total folders, 20 leaves, 20 distinct industry slugs, 0 missing, 0 extra, 0 duplicate codes, 0 duplicate leaf slugs, categories ["occupations"] on every folder.</td></tr>
+    <tr><td>OKH-22 (occupation object import)</td><td>PASS</td><td>2026-11-15: chunk 1 has 250 objects, chunk 2 has 134, total 384; 0 invalid typeIds, 0 group ids, 0 duplicate slugs, 0 missing names or dossiers. Folder counts: Management 18, Business 23, Office 12, IT 21, Engineering 28, Manufacturing 15, Health 46, Social 15, Education 16, Legal 17, Arts 28, Sports 9, Sales 14, Hospitality 10, Food 10, Personal 11, Trades 34, Transport 19, Agriculture 22, Environment 16.</td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when OKH-01 to OKH-10 PASS in the harness, the build badge matches the workspace files, and the CMS field settings from section 8.3 are in place for the tenant.</p>
+  <p><strong>Progress log:</strong> 2026-11-14 - initial build complete; DOM-less smoke test 66/66 PASS; browser probe 15/15 PASS; docs scaffolded. 2026-11-14 - occupation catalogue added (297 occupations, 20 industry folders, import JSON) and verified in the browser. 2026-11-14 - Career Trek video enrichment added (116 occupations, 117 videos, import-ignored <code>media</code>, four industry playlists read) and verified. 2026-11-14 - second video pass: seven industry playlists read, catalogue extended to 317 occupations, 146 with video (148 links), and a <code>resources</code> block added with a Job Bank search plus NOC and WorkBC links on every row. 2026-11-14 - third video pass: accommodation and food, repair and personal services, manufacturing and public administration read; catalogue extended to 327 occupations, 162 with video (164 links). 2026-11-14 - final pass: agriculture, utilities, professional services, mining, forestry, wholesale and business support read; catalogue extended to 339 occupations, 174 with video (176 links). Every Career Trek industry playlist has now been read. 2026-11-14 - ALIS pass: the Alberta Learning Information Service official Occupational Videos playlist was evaluated and added as a second source; the playlist and a targeted search yielded 21 exact matches for occupations that had no video, taking the catalogue to 195 with video (197 links). Job Talks, WorkBC, ECO Canada, go2HR, Job Bank and Health Careers BC were evaluated and recorded in <code>meta.videoSources</code> with the reason each was used or rejected. 2026-11-14 - expansion and department pass: 45 occupations added (powerline technician, arborist, wildland firefighter, public health inspector, statistician, curator, archivist, forester, court reporter, bylaw enforcement, marriage and family counsellor, operations research, geomatics, hazardous waste, hydrometric, land titles, broadcast maintenance, optical lab, audiometric, prosthetics and orthotics, podiatry, turfgrass, vending, banquet, casting, costume, cinematography, art instructor, investigator, ecologist, entomologist, advertising account executive, auto detailer, floral designer, makeup artist, occupational hygienist, ergonomist, cardiology technologist, database analyst, mental health aide, unit clerk, health information manager, dental lab technician and wind turbine technician), taking the catalogue to 384 occupations with 237 videos (239 links). Added 45 graduation departments in 15 faculties, a faculty-then-department filter and one department label per row; the importer ignores the departments block. 2026-11-15 - compact catalogue layout: removed the public explanatory lede, import how-to and footer copy; moved search, filters, route chips, totals and resources into a 280 px left rail; made the occupation list scroll independently at full height; hid the widest table columns at 1200 px and collapsed to one column below 1000 px. 2026-11-15 - folder tree export: added <code>folder-hierarchy-import.json</code> with 5 groups and 20 leaf industry folders in the application idea library folder-taxonomy schema; every leaf slug matches <code>objects[].industry</code>. 2026-11-15 - CMS object import: generated two import chunks (250 + 134) for all 384 occupations, each filed by the exported leaf folder id and seeded with the <code>occupationDossier</code> html-tool field.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is NOT pushed yet lives here,
+  linked to its release group (section 15). <strong>Before every push</strong>
+  re-evaluate every OPEN risk of the groups being pushed: solve them one by
+  one (tick the checkbox), or mark the risk Accepted
+  (<code>data-risk-status="accepted"</code>) with a reason and the date, and
+  update the <code>Last re-evaluation</code> line inside the risk. A group is
+  push-ready when its tasks are done AND it has no OPEN risks - the task
+  panel shows a PUSH READY badge per group and the open-risk count.</p>
+
+  <!-- Auto-updated by ssot.js: open / solved / accepted counts. -->
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-01" data-group="okh-core" data-risk-level="high" data-risk-status="open">
+    <details><summary><span class="risk-id">R-01</span><span class="risk-title">AI content can be wrong</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-OKH-05</p><p><strong>What can go wrong:</strong> the AI invents a program, a fee or a deadline and an editor applies it without checking.</p><p><strong>Likelihood / impact:</strong> medium likelihood, high impact on student trust.</p><p><strong>Mitigation:</strong> the prompt forbids invented facts and empty URLs; every change is previewed; the dossier stays a draft until an editor publishes it.</p><p><strong>Last re-evaluation:</strong> 2026-11-14 - open; accepted only with an editorial review step before publishing.</p></div></details>
+  </div>
+  <div class="risk-item" data-risk-id="R-02" data-group="okh-core" data-risk-level="medium" data-risk-status="open">
+    <details><summary><span class="risk-id">R-02</span><span class="risk-title">Question board reads another occupation's questions</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-OKH-07</p><p><strong>What can go wrong:</strong> a missing or misspelled occupation key mixes two occupations on one board.</p><p><strong>Likelihood / impact:</strong> medium likelihood, medium impact (information disclosure between occupations).</p><p><strong>Mitigation:</strong> the key is derived automatically from the slug, then the parameter, then the record id; objects without a key are legacy only; the board filters before rendering.</p><p><strong>Last re-evaluation:</strong> 2026-11-14 - open; verify with two occupations in the same tenant.</p></div></details>
+  </div>
+  <div class="risk-item" data-risk-id="R-03" data-group="okh-cms-connect" data-risk-level="medium" data-risk-status="open">
+    <details><summary><span class="risk-id">R-03</span><span class="risk-title">Question writes land in the wrong data category</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-OKH-11, T-OKH-13</p><p><strong>What can go wrong:</strong> the tenant stores question fields inside a category and a flat write is never read back.</p><p><strong>Likelihood / impact:</strong> medium likelihood, medium impact (answers appear to vanish).</p><p><strong>Mitigation:</strong> the tool writes into the category it read from, or into <code>questionsDataCategory</code> when the board is empty; the setting is documented in the Edit tab.</p><p><strong>Last re-evaluation:</strong> 2026-11-14 - open until a real tenant board is verified.</p></div></details>
+  </div>
+  <div class="risk-item" data-risk-id="R-04" data-group="okh-core" data-risk-level="low" data-risk-status="open">
+    <details><summary><span class="risk-id">R-04</span><span class="risk-title">A very large dossier approaches the 1 MB record limit</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> whole group</p><p><strong>What can go wrong:</strong> hundreds of programs plus long sections make the record too large.</p><p><strong>Likelihood / impact:</strong> low likelihood, medium impact (save fails).</p><p><strong>Mitigation:</strong> every section is capped at 20,000 characters, programs at 200, contacts at 60 and sources at 120.</p><p><strong>Last re-evaluation:</strong> 2026-11-14 - caps in place; a size warning is an idea for v2.</p></div></details>
+  </div>
+  <div class="risk-item" data-risk-id="R-05" data-group="okh-core" data-risk-level="medium" data-risk-status="open">
+    <details><summary><span class="risk-id">R-05</span><span class="risk-title">Draft dossier leaking to students</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-OKH-08</p><p><strong>What can go wrong:</strong> a half-written dossier is readable, or an editor loses access to their own draft.</p><p><strong>Likelihood / impact:</strong> low likelihood, high impact (privacy).</p><p><strong>Mitigation:</strong> the block is decided in <code>renderPane</code> from the role and the status, and the smoke test covers both sides.</p><p><strong>Last re-evaluation:</strong> 2026-11-14 - verified in the browser probe (viewer blocked, editor not blocked).</p></div></details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to demo locally in the harness
+  and safe to publish to a tenant once the field settings in section 8.3 are
+  in place. The only open editorial risk is R-01: an editor must read AI output
+  before publishing it.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. The <code>npm run rel</code> script appends
+  a row here automatically after every successful push - do not edit or remove
+  the marker comment below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Occupation Knowledge Hub - single source of truth for all decisions about this
+    tool. Version 1.1, 2026-11-14.
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync. Tasks stamped by <code>npm run rel</code> show the push version
+    they shipped in.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks. Critical risks block every push until solved; high
+    risks block unless accepted; medium risks warn; low risks are reported
+    only.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved
+    state. Tick the checkbox here or in section 18 - both stay in sync.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>

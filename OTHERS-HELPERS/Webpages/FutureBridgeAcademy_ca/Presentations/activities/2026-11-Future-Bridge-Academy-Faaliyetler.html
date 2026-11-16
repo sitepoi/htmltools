@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Future Bridge Academy - Yaptığımız işler ve sırada olanlar</title>
+<meta name="description" content="Future Bridge Academy'nin yürüyen çalışmaları, 2026 etkinlikleri, kısa faydaları ve başladığımız programlar." />
+<style>
+  :root {
+    --navy: #00325A;
+    --navy-deep: #00202F;
+    --navy-mid: #0A4573;
+    --blue: #004E89;
+    --orange: #FF6B35;
+    --gold: #FFD23F;
+    --ink: #12233A;
+    --ink-soft: #3C5169;
+    --muted: #64788E;
+    --line: #E1E8F0;
+    --soft: #F4F7FB;
+    --paper: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    overflow: hidden;
+    color: var(--ink);
+    font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: radial-gradient(120% 120% at 50% 0%, #0b3a5e 0%, #061a2b 100%);
+  }
+
+  .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+  .icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+  }
+
+  /* ---------- Stage ---------- */
+  .deck-stage {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 1280px;
+    height: 720px;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 34px 80px rgba(0, 0, 0, .5);
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 46px 60px 56px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .slide.is-active { display: flex; }
+
+  /* ---------- Furniture ---------- */
+  .slide-head { flex: none; margin-bottom: 16px; }
+  .slide-kicker {
+    margin: 0 0 6px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--orange);
+  }
+  .slide h2 {
+    margin: 0;
+    font-size: 38px;
+    line-height: 1.08;
+    letter-spacing: -.018em;
+    color: var(--navy);
+  }
+  .slide-body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+  .slide-body:has(.facts) { justify-content: flex-start; padding-top: 6px; }
+  .slide.slide--balanced .slide-body { justify-content: flex-start; padding-top: 6px; }
+  .slide.slide--balanced .facts { margin-top: auto; }
+  .slide.slide--balanced .points li { font-size: 15.5px; }
+  .slide.slide--balanced .flow-step { padding: 13px 16px; }
+  .slide.slide--balanced .mock-row { padding: 11px 16px; }
+  .slide-foot {
+    position: absolute;
+    left: 60px;
+    right: 60px;
+    bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: #94A5B8;
+  }
+
+  .lead { margin: 0 0 16px; font-size: 18.5px; line-height: 1.5; color: var(--ink-soft); max-width: 64ch; }
+  .lead strong { color: var(--navy); }
+
+  /* ---------- Activity layout ---------- */
+  .act-grid { display: grid; grid-template-columns: 1fr 404px; gap: 32px; align-items: start; margin-bottom: 18px; }
+  .points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .points li { display: flex; gap: 11px; font-size: 15px; line-height: 1.45; color: var(--ink-soft); }
+  .points .dot { width: 7px; height: 7px; margin-top: 8px; border-radius: 50%; background: var(--orange); flex: none; }
+  .points strong { color: var(--navy); font-weight: 700; }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: auto;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .facts > div { padding: 12px 17px; border-left: 1px solid var(--line); }
+  .facts > div:first-child { border-left: 0; }
+  .facts b {
+    display: block;
+    font-size: 22px;
+    line-height: 1.12;
+    letter-spacing: -.01em;
+    color: var(--navy);
+  }
+  .facts span {
+    display: block;
+    margin-top: 3px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------- Photo slots ---------- */
+  .shot-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 9px;
+    height: 330px;
+  }
+  .shot-grid .photo-slot:first-child { grid-row: span 2; }
+
+  .photo-slot {
+    position: relative;
+    overflow: hidden;
+    margin: 0;
+    background: var(--soft);
+    border: 1px dashed #B9C9DC;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .photo-slot .slot-img { display: none; width: 100%; height: 100%; object-fit: cover; }
+  .photo-slot.has-photo { border: 1px solid var(--line); background: #E9EFF6; }
+  .photo-slot.has-photo .slot-img { display: block; }
+  .photo-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.3;
+    font-weight: 600;
+    color: #8296AB;
+  }
+  .photo-hint .icon { width: 20px; height: 20px; opacity: .8; }
+  .photo-slot.has-photo .photo-hint { display: none; }
+  .photo-slot.is-dragover { border-color: var(--orange); background: #FFF3ED; }
+  .photo-clear {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 32, 47, .72);
+    color: #ffffff;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease;
+    z-index: 3;
+  }
+  .photo-clear .icon { width: 11px; height: 11px; stroke-width: 2.3; }
+  .photo-slot.has-photo:hover .photo-clear,
+  .photo-slot.has-photo:focus-within .photo-clear { opacity: 1; }
+
+  /* ---------- Cover ---------- */
+  .slide-cover {
+    padding: 0;
+    color: #ffffff;
+    background: radial-gradient(120% 130% at 8% -12%, #0d5182 0%, #04304f 46%, var(--navy-deep) 100%);
+  }
+  .slide-cover::before {
+    content: "";
+    position: absolute;
+    right: -140px;
+    bottom: -180px;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 107, 53, .26), rgba(255, 107, 53, 0) 68%);
+  }
+  .slide-cover::after {
+    content: "";
+    position: absolute;
+    right: 54px;
+    top: -110px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 210, 63, .18);
+  }
+  .cover-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 44px;
+    align-items: center;
+    height: 100%;
+    padding: 50px 60px;
+  }
+  .cover-logo {
+    display: block;
+    height: 50px;
+    width: auto;
+    margin-bottom: 24px;
+    filter: brightness(0) invert(1);
+  }
+  .cover-eyebrow {
+    margin: 0 0 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: #9CC3DE;
+  }
+  .slide-cover h1 {
+    margin: 0 0 18px;
+    max-width: 17ch;
+    font-size: 53px;
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -.026em;
+    color: #ffffff;
+  }
+  .cover-lead {
+    max-width: 44ch;
+    margin: 0 0 28px;
+    font-size: 17.5px;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, .8);
+  }
+  .cover-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .cover-meta span {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .84);
+    border: 1px solid rgba(255, 255, 255, .24);
+    border-radius: 999px;
+    padding: 7px 14px;
+  }
+  .cover-frame { position: relative; }
+  .cover-frame::before {
+    content: "";
+    position: absolute;
+    inset: -13px -13px 13px 13px;
+    border: 1.5px solid rgba(255, 210, 63, .32);
+    border-radius: 18px;
+    pointer-events: none;
+  }
+  .cover-shot {
+    height: 408px;
+    background: rgba(255, 255, 255, .07);
+    border-color: rgba(255, 255, 255, .32);
+  }
+  .cover-shot .photo-hint { color: rgba(255, 255, 255, .7); }
+
+  /* ---------- Volunteer roles ---------- */
+  .role-grid-dense { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+  .role-line {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--soft);
+  }
+  .role-line .role-index {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+  }
+  .role-line .role-label { flex: 1; font-size: 12px; font-weight: 700; line-height: 1.25; color: var(--navy); }
+  .role-line .role-time { font-size: 8.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .role-line.is-hot { background: #FFF6E2; border-color: #F4E3B4; }
+  .role-line.is-hot .role-label { color: #8A5B12; }
+  .request-bar {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-top: 14px;
+    padding: 13px 18px;
+    border-radius: 12px;
+    background: linear-gradient(100deg, var(--navy-deep), var(--navy-mid));
+    color: #ffffff;
+  }
+  .request-bar strong { display: block; margin-bottom: 3px; font-size: 13.5px; color: #ffffff; }
+  .request-bar p { margin: 0; font-size: 12px; line-height: 1.45; color: rgba(255, 255, 255, .84); }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .role-item {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 13px 17px;
+  }
+  .role-item h3 { margin: 0 0 3px; font-size: 14.5px; line-height: 1.25; color: var(--navy); }
+  .role-item p { margin: 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
+  .foot-note {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+  .foot-note strong { color: var(--navy); }
+
+  /* ---------- Benefits ---------- */
+  .benefit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .benefit {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--orange);
+    border-radius: 4px 12px 12px 4px;
+    padding: 20px 24px;
+  }
+  .benefit h3 { margin: 0 0 6px; font-size: 17px; color: var(--blue); letter-spacing: .01em; }
+  .benefit p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-soft); }
+
+  /* ---------- Centre ---------- */
+  .centre-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px; }
+  .centre-item { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .centre-item .marker {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    margin-top: 1px;
+    border-radius: 7px;
+    background: var(--navy);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+  }
+  .centre-item h3 { margin: 0 0 2px; font-size: 15px; line-height: 1.25; color: var(--navy); }
+  .centre-item p { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+  .note-bar {
+    margin-top: 18px;
+    padding: 12px 18px;
+    border-radius: 11px;
+    background: #FFF8E6;
+    border: 1px solid #F4E3B4;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #7A5C1E;
+  }
+  .note-bar strong { color: #5E4614; }
+
+  /* ---------- Screenshot frames ---------- */
+  .act-grid--shots { grid-template-columns: 1fr 470px; }
+  .shot-big { height: 360px; }
+  .shot-stack { display: flex; flex-direction: column; gap: 9px; height: 360px; }
+  .shot-stack .photo-slot { flex: 1; }
+  .shot-big,
+  .shot-stack .photo-slot {
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 26px rgba(0, 32, 47, .12);
+    background: #ffffff;
+  }
+  .shot-big .slot-img,
+  .shot-stack .slot-img { object-position: left top; }
+  .shot-chip {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    z-index: 2;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(0, 32, 47, .84);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- App mock ---------- */ */
+  .mock-app {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 16px 34px rgba(0, 32, 47, .12);
+  }
+  .mock-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    background: var(--navy);
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .mock-head span:last-child { color: #9CC3DE; letter-spacing: .06em; }
+  .mock-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12.5px;
+    line-height: 1.3;
+    color: var(--ink-soft);
+  }
+  .mock-row:last-child { border-bottom: 0; }
+  .mock-row .mock-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); flex: none; }
+  .mock-row strong { color: var(--navy); font-weight: 700; }
+  .mock-foot {
+    padding: 10px 16px;
+    background: var(--soft);
+    border-top: 1px solid var(--line);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------- Flow ---------- */
+  .benefit-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .benefit-pair > div {
+    background: #FFF8E6;
+    border: 1px solid #F4E3B4;
+    border-radius: 11px;
+    padding: 11px 16px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #6B5320;
+  }
+  .benefit-pair strong { color: #4F3D14; }
+  .flow { display: flex; flex-direction: column; gap: 9px; }
+  .flow-step {
+    display: flex;
+    gap: 12px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 11px 15px;
+  }
+  .flow-num {
+    flex: none;
+    width: 23px;
+    height: 23px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+  }
+  .flow-step h3 { margin: 0 0 2px; font-size: 14px; line-height: 1.25; color: var(--navy); }
+  .flow-step p { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+
+  /* ---------- Closing ---------- */
+  .close-grid { display: grid; grid-template-columns: 1fr .82fr; gap: 30px; align-items: start; }
+  .next-list { list-style: none; margin: 0; padding: 0; }
+  .next-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 16.5px;
+    color: var(--ink);
+  }
+  .next-list .when {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--orange);
+    white-space: nowrap;
+  }
+  .thanks-box {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px;
+    background: var(--soft);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .thanks-box p { margin: 0 0 10px; }
+  .thanks-box p:last-child { margin-bottom: 0; }
+  .thanks-band {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 18px;
+    padding: 14px 20px;
+    border-radius: 13px;
+    background: linear-gradient(100deg, var(--navy-deep) 0%, var(--navy-mid) 100%);
+    color: #ffffff;
+  }
+  .thanks-band img { height: 38px; width: auto; filter: brightness(0) invert(1); flex: none; }
+  .thanks-band p { margin: 0; font-size: 12.5px; line-height: 1.45; color: rgba(255, 255, 255, .84); }
+  .thanks-band strong { color: #ffffff; }
+
+  /* ---------- Controls ---------- */
+  .deck-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .34);
+    z-index: 20;
+    max-width: calc(100vw - 24px);
+  }
+  .bar-group { display: flex; align-items: center; gap: 6px; }
+  .bar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--navy);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .bar-btn:hover { background: var(--soft); border-color: #C8D6E5; }
+  .bar-btn:disabled { opacity: .35; cursor: default; }
+  .bar-btn .icon { width: 14px; height: 14px; }
+  .bar-btn.is-nav { width: 32px; padding: 0; justify-content: center; font-size: 17px; line-height: 1; }
+  .bar-count { min-width: 58px; text-align: center; font-size: 12px; font-weight: 800; letter-spacing: .05em; color: var(--navy); }
+  .bar-dots { display: flex; align-items: center; gap: 5px; }
+  .bar-dot {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #CFDCE9;
+    cursor: pointer;
+  }
+  .bar-dot:hover { background: #A9BED4; }
+  .bar-dot.is-current { width: 20px; border-radius: 999px; background: var(--navy); }
+  .bar-hint { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  .deck-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: linear-gradient(90deg, var(--gold), var(--orange));
+    z-index: 30;
+    transition: width .25s ease;
+  }
+
+  .deck-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 74px;
+    transform: translate(-50%, 12px);
+    max-width: min(560px, calc(100vw - 40px));
+    padding: 12px 18px;
+    border-radius: 12px;
+    background: rgba(0, 32, 47, .96);
+    color: #ffffff;
+    font-size: 12.5px;
+    line-height: 1.45;
+    text-align: center;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 40;
+  }
+  .deck-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- Speaker notes ---------- */
+  .notes-panel {
+    position: fixed;
+    left: 50%;
+    bottom: 76px;
+    transform: translate(-50%, 16px);
+    width: min(980px, calc(100vw - 32px));
+    max-height: 38vh;
+    overflow-y: auto;
+    padding: 16px 22px 18px;
+    border-radius: 14px;
+    background: rgba(0, 32, 47, .97);
+    color: #E7EEF6;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .4);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease, visibility .2s;
+    z-index: 35;
+  }
+  .notes-panel.is-open {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .notes-panel .notes-title {
+    margin: 0 0 6px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .notes-panel p.notes-text { margin: 0; font-size: 14.5px; line-height: 1.55; }
+
+  .notes-print { display: none; }
+
+  @media (max-width: 900px) {
+    .bar-hint { display: none; }
+    .bar-dots { display: none; }
+    .deck-bar { gap: 10px; }
+  }
+
+  /* ---------- Print: one 16:9 page per slide ---------- */
+  @page { size: 1280px 720px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: #ffffff; }
+    .deck-stage {
+      position: static;
+      transform: none !important;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: visible;
+    }
+    .slide {
+      display: flex !important;
+      position: relative;
+      inset: auto;
+      width: 1280px;
+      height: 720px;
+      page-break-after: always;
+      break-after: page;
+      animation: none !important;
+    }
+    .slide:last-of-type { page-break-after: auto; break-after: auto; }
+    .deck-bar, .deck-progress, .deck-toast, .photo-clear, .notes-panel { display: none !important; }
+    .photo-hint { display: none !important; }
+    .photo-slot:not(.has-photo) { border-style: solid; border-color: var(--line); background: var(--soft); }
+    .slide-cover .photo-slot:not(.has-photo) { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .32); }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    .notes-print { display: block; }
+    .notes-sheet {
+      width: 1280px;
+      height: 720px;
+      padding: 54px 60px;
+      page-break-after: always;
+      break-after: page;
+      background: #ffffff;
+    }
+    .notes-sheet:last-child { page-break-after: auto; break-after: auto; }
+    .notes-sheet h2 {
+      margin: 0 0 22px;
+      font-size: 24px;
+      letter-spacing: -.01em;
+      color: var(--navy);
+    }
+    .notes-entry { padding: 14px 0; border-top: 1px solid var(--line); }
+    .notes-entry h3 { margin: 0 0 6px; font-size: 15px; color: var(--navy); }
+    .notes-entry p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+  }
+</style>
+</head>
+<body>
+
+<svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-camera" viewBox="0 0 24 24">
+    <path d="M4.2 8.6h2.9l1.5-2.6h6.8l1.5 2.6h2.9a1.6 1.6 0 0 1 1.6 1.6v7.6a1.6 1.6 0 0 1-1.6 1.6H4.2a1.6 1.6 0 0 1-1.6-1.6v-7.6a1.6 1.6 0 0 1 1.6-1.6z"/>
+    <circle cx="12.2" cy="13.6" r="3.4"/>
+  </symbol>
+  <symbol id="i-close" viewBox="0 0 24 24">
+    <path d="m6.4 6.4 11.2 11.2M17.6 6.4 6.4 17.6"/>
+  </symbol>
+  <symbol id="i-present" viewBox="0 0 24 24">
+    <path d="M8.2 5.6 18.4 12 8.2 18.4z"/>
+  </symbol>
+  <symbol id="i-print" viewBox="0 0 24 24">
+    <path d="M7 8.4V3.8h10v4.6"/>
+    <rect x="4" y="8.4" width="16" height="7.8" rx="2"/>
+    <path d="M7 13.6h10v6.6H7z"/>
+  </symbol>
+  <symbol id="i-note" viewBox="0 0 24 24">
+    <path d="M6 3.8h9.4L20 8.4v11.8H6z"/>
+    <path d="M9 12h7M9 15.6h7"/>
+  </symbol>
+</svg>
+
+<div class="deck-progress" id="deck-progress"></div>
+
+<main class="deck-stage" id="deck-stage">
+
+  <!-- 01 - Kapak -->
+  <section class="slide slide-cover is-active" data-slide-name="Kapak" data-notes="Bugün yaptığımız işi, kullandığımız kaynakları ve elde ettiğimiz sonuçları anlatacağım. Sırayla dersler, sınavlar, seminerler, iki etkinlik ve başladığımız yeni programlar var. Sayılar slaytlarda yazılı olduğu için konuşmada tekrar etmeyeceğim.">
+    <div class="cover-grid">
+      <div>
+        <img class="cover-logo" src="../../flyers/Future-Bridge-Academy%20-Full-Logo-transparent.png" alt="Future Bridge Academy" />
+        <p class="cover-eyebrow">Kasım 2026</p>
+        <h1>Yaptığımız işler ve sırada olanlar</h1>
+        <p class="cover-lead">
+          Ücretsiz online dersler, deneme sınavları, burs seminerleri, 2026'da yapılan iki etkinlik
+          ve başladığımız yeni programlar.
+        </p>
+        <div class="cover-meta">
+          <span>13 slayt</span>
+          <span>Yaklaşık 25 dakika</span>
+          <span>Sorular için 10 dakika</span>
+        </div>
+      </div>
+      <div class="cover-frame">
+        <figure class="photo-slot cover-shot" data-key="cover" tabindex="0" role="button" aria-label="Kapak fotoğrafını değiştir">
+          <img class="slot-img" alt="" />
+          <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Kapak fotoğrafı</span></div>
+          <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 - Online dersler -->
+  <section class="slide" data-slide-name="Haftada beş online ders" data-notes="Dersler haftada beş kez ve her ders tek bir sınıf düzeyine ayrılıyor. Öğrenciye kamera, özel bir program ya da ödeme gerekmiyor. En çok sorulan soru dersin seviyesi; cevabı, dersin o hafta okulda işlenen konuya denk gelmesi.">
+    <header class="slide-head">
+      <p class="slide-kicker">Yürüyen çalışma</p>
+      <h2>Haftada beş online ders</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Her ders tek bir sınıf düzeyine ayrılıyor. 4. sınıftan 12. sınıfa kadar, topluluğa açık ve ücretsiz.</p>
+      <div class="act-grid">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>Kim katılıyor:</strong> topluluktan öğrenciler, gönüllü öğretmenlerle aynı derste.</span></li>
+          <li><span class="dot"></span><span><strong>Ne yapılıyor:</strong> ders, öğrencinin okulda o hafta gördüğü konuyla aynı yerde duruyor.</span></li>
+          <li><span class="dot"></span><span><strong>Ne zaman:</strong> her hafta, beş ayrı ders.</span></li>
+          <li><span class="dot"></span><span><strong>Sonucu:</strong> cihaz, sakin bir yer, kâğıt ve kalem yeterli; kamera zorunlu değil.</span></li>
+          <li><span class="dot"></span><span>Kayıt bir listeyle yürüyor. Kontenjan açıldığında aileye e-posta ile haber veriliyor.</span></li>
+        </ul>
+        <div class="shot-grid">
+          <figure class="photo-slot" data-key="ders-a" tabindex="0" role="button" aria-label="Ders fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Ders fotoğrafı</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="ders-b" tabindex="0" role="button" aria-label="Ders fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="ders-c" tabindex="0" role="button" aria-label="Ders fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+        </div>
+      </div>
+      <div class="facts">
+        <div><b>5</b><span>Haftalık ders</span></div>
+        <div><b>1 ders = 1 sınıf düzeyi</b><span>Dersin kapsamı</span></div>
+        <div><b>4 - 12</b><span>Sınıf aralığı</span></div>
+        <div><b>Ücretsiz</b><span>Katılım bedeli</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>02 / 13</span></footer>
+  </section>
+
+  <!-- 03 - Deneme sınavı -->
+  <section class="slide" data-slide-name="Yılda dört deneme sınavı" data-notes="Deneme sınavı yılda dört kez, yüz yüze yapılıyor; online sürümü yok. Sınavı gönüllüler hazırlıyor ve okuyor, mekânı topluluk veriyor. Aileye dönen şey bir puan değil, hangi adımın eksik olduğunun yazılı açıklaması.">
+    <header class="slide-head">
+      <p class="slide-kicker">Yürüyen çalışma</p>
+      <h2>Yılda dört deneme sınavı</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Yüz yüze, gerçek sınav koşullarında: kâğıt, süre, gözetim ve puanlama.</p>
+      <div class="act-grid">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>Kim katılıyor:</strong> topluluktan öğrenciler. Gönüllüler kâğıdı hazırlıyor, sınavı yürütüyor ve okuyor.</span></li>
+          <li><span class="dot"></span><span><strong>Ne yapılıyor:</strong> sınav, öğrencinin o sırada okulda gördüğü konudan hazırlanıyor.</span></li>
+          <li><span class="dot"></span><span><strong>Ne zaman:</strong> yılda dört kez, topluluğun sağladığı bir mekânda.</span></li>
+          <li><span class="dot"></span><span><strong>Sonucu:</strong> puan ve soru soru açıklama. Sonuç, sonraki çalışmanın ne olacağını belirliyor.</span></li>
+          <li><span class="dot"></span><span>Online sürümü yok. Sınavın yapıldığı salon, işin bir parçası.</span></li>
+        </ul>
+        <div class="shot-grid">
+          <figure class="photo-slot" data-key="sinav-a" tabindex="0" role="button" aria-label="Sınav fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Sınav fotoğrafı</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="sinav-b" tabindex="0" role="button" aria-label="Sınav fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="sinav-c" tabindex="0" role="button" aria-label="Sınav fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+        </div>
+      </div>
+      <div class="facts">
+        <div><b>4</b><span>Yılda sınav</span></div>
+        <div><b>Yüz yüze</b><span>Biçim</span></div>
+        <div><b>Ücretsiz</b><span>Katılım bedeli</span></div>
+        <div><b>Yazılı geri bildirim</b><span>Sonrasında</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>03 / 13</span></footer>
+  </section>
+
+  <!-- 04 - Burs seminerleri -->
+  <section class="slide" data-slide-name="Burs seminerleri" data-notes="Seminerler ayda bir, yılda sekiz-dokuz kez yapılıyor ve online olduğu için bir oturumda yüzlerce kişiye ulaşabiliyor. Kasım 2026 oturumunda yaklaşık yirmi beş burs tanıtıldı, yaklaşık elli kişi katıldı. Her burs resmi kaynaktan doğrulanıp değeri, son tarihi ve istenen belgeleriyle kayda geçiyor.">
+    <header class="slide-head">
+      <p class="slide-kicker">Yürüyen çalışma</p>
+      <h2>Burs seminerleri: ayda bir</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Açık ve açılmak üzere olan burslar resmi kaynaklardan araştırılıp anlatılıyor.</p>
+      <div class="act-grid">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>Kim katılıyor:</strong> öğrenciler ve veliler. Sunumu üniversite gönüllüleri hazırlıyor.</span></li>
+          <li><span class="dot"></span><span><strong>Ne yapılıyor:</strong> her burs değeri, uygunluğu, istenen belgeleri, son tarihi ve resmi bağlantısıyla kayda geçiyor.</span></li>
+          <li><span class="dot"></span><span><strong>Ne zaman:</strong> ayda bir, yılda 8-9 oturum. Seminer online, video görüşmesiyle.</span></li>
+          <li><span class="dot"></span><span><strong>Sonucu (Kasım 2026):</strong> yaklaşık 25 burs tanıtıldı, yaklaşık 50 kişi katıldı.</span></li>
+          <li><span class="dot"></span><span>Online olduğu için bir oturum aynı anda yüzlerce kişiye ulaşabiliyor.</span></li>
+        </ul>
+        <div class="shot-grid">
+          <figure class="photo-slot" data-key="seminer-a" tabindex="0" role="button" aria-label="Seminer fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Seminer fotoğrafı</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="seminer-b" tabindex="0" role="button" aria-label="Seminer fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="seminer-c" tabindex="0" role="button" aria-label="Seminer fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+        </div>
+      </div>
+      <div class="facts">
+        <div><b>1</b><span>Ayda oturum</span></div>
+        <div><b>8 - 9</b><span>Yılda oturum</span></div>
+        <div><b>~50</b><span>Kasım 2026 katılımı</span></div>
+        <div><b>~25</b><span>Tanıtılan burs</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>04 / 13</span></footer>
+  </section>
+
+  <!-- 05 - Career Fair -->
+  <section class="slide" data-slide-name="Career Fair" data-notes="Career Fair her yıl yapılan bir etkinlik; bu yıl 17 Ekim'de yapıldı ve yaklaşık yüz kişi katıldı. Giriş ücretsizdi ve kayıt kapıda, tek bir formla alındı. E-posta iznini ayrı ve isteğe bağlı iki kutu olarak tuttuk; kimse kutu işaretlemek zorunda kalmadı.">
+    <header class="slide-head">
+      <p class="slide-kicker">Her yıl yapılan etkinlik</p>
+      <h2>Career Fair</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Her yıl yapılıyor. Giriş ücretsiz, kayıt kapıda.</p>
+      <div class="act-grid">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>Kim katıldı:</strong> topluluktan yaklaşık 100 kişi; gönüllü ekip girişte ve stantta durdu.</span></li>
+          <li><span class="dot"></span><span><strong>Ne yapıldı:</strong> katılımcı ad, soyad, telefon ve e-posta ile kayıt oldu.</span></li>
+          <li><span class="dot"></span><span><strong>Ne zaman:</strong> bu yıl 17 Ekim 2026'da; etkinlik her yıl tekrar ediyor.</span></li>
+          <li><span class="dot"></span><span><strong>Sonucu:</strong> kayıtlar aynı gün sistemde toplandı, onay ekranda göründü.</span></li>
+          <li><span class="dot"></span><span>E-posta izni iki ayrı ve isteğe bağlı kutuydu; işaretlenmezse kayıt tamamlandı.</span></li>
+        </ul>
+        <div class="shot-grid">
+          <figure class="photo-slot" data-key="career-a" tabindex="0" role="button" aria-label="Etkinlik fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Etkinlik fotoğrafı</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="career-b" tabindex="0" role="button" aria-label="Etkinlik fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="career-c" tabindex="0" role="button" aria-label="Etkinlik fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+        </div>
+      </div>
+      <div class="facts">
+        <div><b>17 Ekim 2026</b><span>Bu yılki tarih</span></div>
+        <div><b>~100</b><span>Katılım</span></div>
+        <div><b>Ücretsiz</b><span>Giriş</span></div>
+        <div><b>Her yıl</b><span>Etkinlik</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>05 / 13</span></footer>
+  </section>
+
+  <!-- 06 - CEMC -->
+  <section class="slide" data-slide-name="CEMC deneme sınavı" data-notes="CEMC deneme sınavı 7 Kasım 2026 Cumartesi günü dört şehirde yapıldı: Vancouver, Toronto, Calgary ve Edmonton. Öğrenciler bir saatlik gerçek kâğıdı sınav süresiyle çözdü ve kâğıtlar puanlandı. Katılım belgesi tarihli; öğrenci onu okul dosyasında ve başvurularda kullanabiliyor.">
+    <header class="slide-head">
+      <p class="slide-kicker">Yapılan etkinlik</p>
+      <h2>CEMC deneme sınavı, dört şehirde</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">1 saatlik gerçek CEMC kâğıdı, sınav süresiyle. Kâğıt puanlandı, katılım belgesi verildi.</p>
+      <div class="act-grid">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>Kim katıldı:</strong> 5. sınıftan 11. sınıfa kadar öğrenciler, gönüllü gözetmenlerle.</span></li>
+          <li><span class="dot"></span><span><strong>Ne yapıldı:</strong> öğrenci kendi sınıf düzeyine uyan kâğıdı bir saatte çözdü; kâğıt puanlandı.</span></li>
+          <li><span class="dot"></span><span><strong>Ne zaman ve nerede:</strong> 7 Kasım 2026 Cumartesi, Vancouver, Toronto, Calgary ve Edmonton.</span></li>
+          <li><span class="dot"></span><span><strong>Sonucu:</strong> öğrenci gerçek puanını ve hangi soruların puan kaybettirdiğini gördü.</span></li>
+          <li><span class="dot"></span><span>Katılım belgesi tarihli. Okul dosyasında, IB portfolyosunda ve başvurularda kullanılabiliyor.</span></li>
+          <li><span class="dot"></span><span>Bu sınav resmi CEMC yarışmasının yerine geçmiyor; ayrı bir deneme.</span></li>
+        </ul>
+        <div class="shot-grid">
+          <figure class="photo-slot" data-key="cemc-a" tabindex="0" role="button" aria-label="Sınav fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Sınav fotoğrafı</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="cemc-b" tabindex="0" role="button" aria-label="Sınav fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot" data-key="cemc-c" tabindex="0" role="button" aria-label="Sınav fotoğrafı ekle">
+            <img class="slot-img" alt="" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+        </div>
+      </div>
+      <div class="facts">
+        <div><b>7 Kasım 2026</b><span>Tarih</span></div>
+        <div><b>4</b><span>Şehir</span></div>
+        <div><b>1 saat</b><span>Sınav süresi</span></div>
+        <div><b>5 - 11</b><span>Sınıf aralığı</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>06 / 13</span></footer>
+  </section>
+
+  <!-- 07 - Gönüllüler -->
+  <section class="slide" data-slide-name="Gönüllü ağı" data-notes="Şu an yedi-sekiz genç gönüllü var ve bunların iki-üçü düzenli zaman ayırıyor. On rolün yazılı iş tanımı ve gerçek saat yükü var; gönüllü eğitim, belgelenmiş saat ve referans alıyor. Daha fazla gönüllüye ihtiyacımız var, on rolün tamamı açık.">
+    <header class="slide-head">
+      <p class="slide-kicker">İşi yürüten ekip</p>
+      <h2>Gönüllü ağı: on rolün tamamı açık</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Şu an 7-8 genç gönüllü çalışıyor, 2-3'ü düzenli zaman ayırıyor. On rolün her biri için gönüllüye ihtiyaç var.</p>
+      <div class="role-grid-dense">
+        <div class="role-line is-hot"><span class="role-index">01</span><span class="role-label">Müfredat geliştirici</span><span class="role-time">Haftada 1 saatten</span></div>
+        <div class="role-line is-hot"><span class="role-index">02</span><span class="role-label">Kariyer koçu</span><span class="role-time">Saatler anlaşmalı</span></div>
+        <div class="role-line is-hot"><span class="role-index">03</span><span class="role-label">Kendi hızında kurs asistanı</span><span class="role-time">Esnek</span></div>
+        <div class="role-line"><span class="role-index">04</span><span class="role-label">Online matematik öğretmeni</span><span class="role-time">Haftada 1 saat</span></div>
+        <div class="role-line"><span class="role-index">05</span><span class="role-label">Burs sunucusu (İngilizce)</span><span class="role-time">Esnek</span></div>
+        <div class="role-line"><span class="role-index">06</span><span class="role-label">Meslek tanıtımı sunucusu</span><span class="role-time">Saatler anlaşmalı</span></div>
+        <div class="role-line"><span class="role-index">07</span><span class="role-label">Akademik yazma rehberi</span><span class="role-time">Saatler anlaşmalı</span></div>
+        <div class="role-line"><span class="role-index">08</span><span class="role-label">Deneme sınavı organizatörü</span><span class="role-time">Sınav başına 6-8 saat</span></div>
+        <div class="role-line"><span class="role-index">09</span><span class="role-label">Ders yardımcısı</span><span class="role-time">1 ve daha fazla ders</span></div>
+        <div class="role-line"><span class="role-index">10</span><span class="role-label">Burs sunucusu (diğer diller)</span><span class="role-time">Esnek</span></div>
+      </div>
+      <div class="facts">
+        <div><b>7 - 8</b><span>Gönüllü</span></div>
+        <div><b>2 - 3</b><span>Düzenli zaman ayıran</span></div>
+        <div><b>10</b><span>Tanımlı rol</span></div>
+        <div><b>Tamamı açık</b><span>Rol durumu</span></div>
+      </div>
+      <div class="request-bar">
+        <div>
+          <strong>Her bir rol için gönüllüye ihtiyacımız var.</strong>
+          <p>Gönüllü bulma ve gönüllüleri yönetme konusunda destek istiyoruz. Çoğu rol haftada bir saatle başlıyor; Kanada'nın her yerinden katılım olabiliyor ve her rolün yazılı iş tanımı sitede duruyor.</p>
+        </div>
+      </div>
+      <p class="foot-note">
+        Gönüllüye <strong>eğitim, belgelenmiş saat, sertifika ve referans</strong> veriliyor.
+        Meslek tanıtımı rolü yalnızca o meslekte çalışanlara açık. Yürüyen diğer işler: topluluk WhatsApp grupları,
+        veli bülteni ve drone pilot sertifika kursu (RPAS hazırlığı, isteğe bağlı ücret).
+      </p>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>07 / 13</span></footer>
+  </section>
+
+  <!-- 08 - Faydalar -->
+  <section class="slide" data-slide-name="Kısa faydalar" data-notes="Aynı iş dört ayrı gruba dokunuyor: öğrenciye, veliye, gönüllüye ve derneğin diğer birimlerine. Bu slaytı tek tek okumayacağım, sadece hangi faydanın kime gittiğini göstereceğim. Sorular gelirse her satırı açabilirim.">
+    <header class="slide-head">
+      <p class="slide-kicker">Kısa faydalar</p>
+      <h2>Aynı iş, dört gruba ayrı ayrı dokunuyor</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Her satır bugün yürüyen bir işten geliyor.</p>
+      <div class="benefit-grid">
+        <article class="benefit">
+          <h3>Öğrenci</h3>
+          <p>Haftalık ders, yılda dört gerçek sınav, soru soru yazılı geri bildirim ve tarihli katılım belgesi. Katılım ücretsiz.</p>
+        </article>
+        <article class="benefit">
+          <h3>Veli</h3>
+          <p>Çocuğun hangi konuda olduğu sade dille yazılı geliyor. Başlangıç için ödeme yok; burs seminerleri online ve ücretsiz.</p>
+        </article>
+        <article class="benefit">
+          <h3>Gönüllü ve öğretmen</h3>
+          <p>Gerçek öğrenciyle çalışma, rol için eğitim, belgelenmiş saat ve referans. On rolün iş tanımı yazılı.</p>
+        </article>
+        <article class="benefit">
+          <h3>Diğer birimler ve dernek</h3>
+          <p>Site, kayıt formları ve sunum düzeni hazır; aynı düzen başka şehirlerde de kullanılıyor. Etkinlik ve seminer kayıtları tek yerde toplanıyor.</p>
+        </article>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>08 / 13</span></footer>
+  </section>
+
+  <!-- 09 - Uzaktan yürüyen başlıklar -->
+  <section class="slide" data-slide-name="Uzaktan yürüyen altı başlık" data-notes="Bu altı başlık fiziki merkezi beklemiyor; bugün uzaktan yürüyor. Yüz yüze olan tek çalışma deneme sınavları. Fiziki merkez bir yıl içinde hedefleniyor ama önce Curriculum Builder'daki müfredatların tamamlanması gerekiyor. Gruba giren herkes kabul ediliyor; ön değerlendirme yok.">
+    <header class="slide-head">
+      <p class="slide-kicker">Başladığımız işler</p>
+      <h2>Uzaktan yürüyen altı başlık</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Fiziki merkez gerekmiyor; bu çalışmalar bugün online yürüyor.</p>
+      <div class="centre-grid">
+        <div class="centre-item"><span class="marker">1</span><div><h3>Birebir mentorluk ve aylık gelişim raporu</h3><p>Her ay yazılı gelişim özeti.</p></div></div>
+        <div class="centre-item"><span class="marker">2</span><div><h3>Yol haritası danışmanlığı</h3><p>Üniversite, college, trades, IB ve AP seçenekleri.</p></div></div>
+        <div class="centre-item"><span class="marker">3</span><div><h3>Başvuru portfolyo takibi</h3><p>8. sınıftan itibaren büyüyen dosya.</p></div></div>
+        <div class="centre-item"><span class="marker">4</span><div><h3>CEMC contest club</h3><p>Yarışma matematiği ayrı bir hat olarak.</p></div></div>
+        <div class="centre-item"><span class="marker">5</span><div><h3>IB ve AP hazırlığı</h3><p>Programa özel hazırlık.</p></div></div>
+        <div class="centre-item"><span class="marker">6</span><div><h3>Trades hazırlığı</h3><p>Red Seal matematiği.</p></div></div>
+      </div>
+      <p class="note-bar">
+        <strong>Yüz yüze olan tek çalışma deneme sınavları.</strong> Bu altı başlık merkezi beklemiyor, uzaktan yürüyor.
+        Fiziki merkez bir yıl içinde hedefleniyor; koşulların oluşması, en önemlisi Curriculum Builder'da gerekli
+        müfredatların tamamlanması gerekiyor.
+      </p>
+      <div class="benefit-pair">
+        <div><strong>Katılım:</strong> gruba giren herkes kabul ediliyor; ön değerlendirme yok.</div>
+        <div><strong>Bugün:</strong> online dersler, deneme sınavları, burs seminerleri ve gönüllü ağı sürüyor.</div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>09 / 13</span></footer>
+  </section>
+
+  <!-- 10 - Öğrenci dosyası -->
+  <section class="slide slide--balanced" data-slide-name="Her öğrenci için tek dosya" data-notes="Dosya, mentorluk işinin merkezinde duruyor: hedefler, başvurular ve kanıt aynı yerde. Her öğrenci için açılan küçük WhatsApp grubunda sorular kişiye özel yanıtlanıyor. Dosya, mentor ve öğrencinin birlikte çalıştığı tek yer; hazırlık göstergesi eksik kalemi görünür kılıyor.">
+    <header class="slide-head">
+      <p class="slide-kicker">Yeni başlayanlar - sistemin temeli</p>
+      <h2>Her öğrenci için tek dosya</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Birebir mentorluk, öğrenci dosyası ve danışmanlık birlikte yürüyor. Hedefler dosyadan çıkıyor.</p>
+      <div class="act-grid act-grid--shots">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>WhatsApp grubu:</strong> her öğrenci için küçük bir grup açılıyor; her soruya orada kişiye özel cevap veriliyor.</span></li>
+          <li><span class="dot"></span><span><strong>Dosya birlikte açılıyor:</strong> mentor ve öğrenci profili, hedefleri ve başvuru planını aynı dosyada kuruyor.</span></li>
+          <li><span class="dot"></span><span><strong>Başvuru dosyaları:</strong> üniversite, college, trades, lise, IB ve diğer. Her yolun kendi gereklilik listesi var.</span></li>
+          <li><span class="dot"></span><span><strong>Kanıt aynı yerde:</strong> portfolyo, başarımlar, notlar, referanslar ve belgeler dosyaya bağlanıyor.</span></li>
+          <li><span class="dot"></span><span><strong>Hazırlık göstergesi:</strong> dosya, tamamlanan ve eksik kalemleri tek bakışta gösteriyor.</span></li>
+          <li><span class="dot"></span><span><strong>Veri talebi ve mentor notu:</strong> mentor eksik bilgiyi istiyor, öğrenci yanıtlıyor; konuşma dosyada kalıyor.</span></li>
+        </ul>
+        <figure class="photo-slot shot-big has-photo" data-key="student-file" tabindex="0" role="button" aria-label="Student File ekran görüntüsünü değiştir">
+          <img class="slot-img" src="screenshots/student-file.png" alt="Student File uygulamasında başvuru dosyaları, hazırlık yüzdeleri ve genel hazırlık oranı" />
+          <span class="shot-chip">Student File</span>
+          <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Ekran görüntüsü</span></div>
+          <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+        </figure>
+      </div>
+      <div class="facts">
+        <div><b>1</b><span>Öğrenci başına dosya</span></div>
+        <div><b>6</b><span>Başvuru yolu</span></div>
+        <div><b>1</b><span>Öğrenci başına WhatsApp grubu</span></div>
+        <div><b>2</b><span>Mentor ve öğrenci</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>10 / 13</span></footer>
+  </section>
+
+  <!-- 11 - Kendi hızında kurs -->
+  <section class="slide slide--balanced" data-slide-name="Kendi hızında kurs" data-notes="Müfredatı bir kez hazırlıyoruz, öğrenci kendi hızında ilerliyor. Supervisor aynı ekranda bölüm bölüm ilerlemeyi ve kurs notunu görüyor, onay bekleyen dersleri o onaylıyor. Rapor dokuz dilde, WhatsApp mesajı, görsel ya da e-posta olarak veliye ve öğrenciye ayrı ayrı gidebiliyor.">
+    <header class="slide-head">
+      <p class="slide-kicker">Yeni başlayanlar</p>
+      <h2>Kendi hızında kurs, supervisor takibi</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Müfredat Curriculum Builder ile hazırlanıyor; öğrenci uygulamada kendi hızında ilerliyor.</p>
+      <div class="act-grid act-grid--shots">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>Müfredat:</strong> Curriculum Builder'da bölümler ve dersler kuruluyor; her derse video, PDF, sunum, kart ve quiz eklenebiliyor.</span></li>
+          <li><span class="dot"></span><span><strong>Ders akışı:</strong> öğrenci videoyu izliyor, içeriği okuyor, kartlara bakıyor ve quizi çözüyor.</span></li>
+          <li><span class="dot"></span><span><strong>Sıralı açılma:</strong> dersler sırayla açılıyor; tamamlanan ders işaretleniyor.</span></li>
+          <li><span class="dot"></span><span><strong>Quiz:</strong> geçme puanı var; sonuç ve deneme sayısı kaydediliyor.</span></li>
+          <li><span class="dot"></span><span><strong>Supervisor:</strong> bölüm bölüm ilerleme, kurs notu ve faaliyet raporu tek ekranda; onay bekleyen dersleri onaylıyor.</span></li>
+          <li><span class="dot"></span><span><strong>Rapor:</strong> WhatsApp mesajı, görsel veya e-posta olarak 9 dilde; öğrenci ve veli için ayrı.</span></li>
+          <li><span class="dot"></span><span><strong>Tempo:</strong> başlangıç ve hedef bitiş tarihi girilirse hafta ve beklenen tempo hesaplanıyor; önde, planında veya geride bilgisi görünüyor.</span></li>
+        </ul>
+        <div class="shot-stack">
+          <figure class="photo-slot has-photo" data-key="self-paced" tabindex="0" role="button" aria-label="Self-Paced ekran görüntüsünü değiştir">
+            <img class="slot-img" src="screenshots/self-paced.png" alt="Kendi hızında kurs ekranı: bölümler, ders sayıları ve kilitli ikinci bölüm" />
+            <span class="shot-chip">Kendi hızında kurs</span>
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Ekran görüntüsü</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot has-photo" data-key="curriculum-builder" tabindex="0" role="button" aria-label="Curriculum Builder ekran görüntüsünü değiştir">
+            <img class="slot-img" src="screenshots/curriculum-builder.png" alt="Curriculum Builder ekranı: bölümler, dersler, video, doküman ve quiz sayıları" />
+            <span class="shot-chip">Curriculum Builder</span>
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Ekran görüntüsü</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+        </div>
+      </div>
+      <div class="facts">
+        <div><b>9</b><span>Rapor dili</span></div>
+        <div><b>4</b><span>Ders durumu</span></div>
+        <div><b>Quiz</b><span>Geçme puanı</span></div>
+        <div><b>1 ekran</b><span>Supervisor takibi</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>11 / 13</span></footer>
+  </section>
+
+  <!-- 12 - Essay yazma -->
+  <section class="slide slide--balanced" data-slide-name="Essay yazma çalışması" data-notes="Essay çalışması iki uygulamayla yürüyor: biri konuyu ve ölçütleri tanımlıyor, diğeri yazıyı değerlendiriyor. Öğrenci metnini kendisi yazıyor; uygulama metne dokunmuyor, yalnızca ölçüt ölçüt geri bildirim veriyor. Böylece aynı ölçütlerle karşılaştırılabilir bir gelişim kaydı oluşuyor.">
+    <header class="slide-head">
+      <p class="slide-kicker">Yeni başlayanlar</p>
+      <h2>Essay yazma çalışması başlıyor</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">İki uygulama: biri konuyu ve ölçütleri tanımlıyor, diğeri yazıyı değerlendiriyor.</p>
+      <div class="act-grid act-grid--shots">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>Essay Subject Builder:</strong> konu, talimatlar, dil ve kelime sınırı tanımlanıyor.</span></li>
+          <li><span class="dot"></span><span><strong>Ölçütler:</strong> değerlendirme ölçütleri ve ağırlıkları belirleniyor; ağırlıkların toplamı 100 olmak zorunda.</span></li>
+          <li><span class="dot"></span><span><strong>Essay Writing Educator:</strong> öğrenci metni burada yazıyor.</span></li>
+          <li><span class="dot"></span><span><strong>Değerlendirme:</strong> 100 üzerinden, ölçüt ölçüt puan ve yorum; güçlü yön, öneri ve sonraki adımlar.</span></li>
+          <li><span class="dot"></span><span><strong>Metin öğrencide kalıyor:</strong> uygulama metni değiştirmiyor, sadece değerlendiriyor.</span></li>
+          <li><span class="dot"></span><span><strong>Hazırlık kontrolü:</strong> boş veya anlamsız metin değerlendirmeye gönderilmiyor.</span></li>
+          <li><span class="dot"></span><span><strong>Geçmiş:</strong> değerlendirmeler ve gelişim grafikleri saklanıyor; kısa denemeler için hızlı mod var.</span></li>
+        </ul>
+        <div class="shot-stack">
+          <figure class="photo-slot has-photo" data-key="essay-writing" tabindex="0" role="button" aria-label="Essay Writing Educator ekran görüntüsünü değiştir">
+            <img class="slot-img" src="screenshots/essay-writing.png" alt="Essay Writing Educator ekranı: yazı alanı, konu ve 100 üzerinden puan" />
+            <span class="shot-chip">Essay Writing Educator</span>
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Ekran görüntüsü</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+          <figure class="photo-slot has-photo" data-key="essay-subject" tabindex="0" role="button" aria-label="Essay Subject Builder ekran görüntüsünü değiştir">
+            <img class="slot-img" src="screenshots/essay-subject.png" alt="Essay Subject Builder ekranı: konu, talimatlar, kelime sınırı ve ölçüt ağırlıkları" />
+            <span class="shot-chip">Essay Subject Builder</span>
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Ekran görüntüsü</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+        </div>
+      </div>
+      <div class="benefit-pair">
+        <div><strong>Öğrenciye:</strong> her yazıda aynı ölçütlerle karşılaştırılabilir geri bildirim.</div>
+        <div><strong>Öğretmene:</strong> konu ve ölçütler bir kez tanımlanıyor; her yazı aynı çerçevede değerlendiriliyor.</div>
+      </div>
+      <div class="facts">
+        <div><b>2</b><span>Uygulama</span></div>
+        <div><b>100</b><span>Puan üzerinden</span></div>
+        <div><b>Ölçüt ölçüt</b><span>Geri bildirim</span></div>
+        <div><b>Öğrencinin</b><span>Metnin sahibi</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy</span><span>12 / 13</span></footer>
+  </section>
+
+  <!-- 13 - Kariyer mentorluğu -->
+  <section class="slide slide--balanced" data-slide-name="Kariyer mentorluğu ve meslek seminerleri" data-notes="Meslekleri anlatan uygulama hazır; sıra içeriği doldurmakta. Her meslek için tek dosya var: ne yapıldığı, bir iş günü, çalışma koşulları, eğitim yolu, sertifikalar, gelir ve kariyer basamakları. Kariyer mentorluğu kapsamında tüm öğrencilere açmak istiyoruz; ayrıca her ay o meslekte çalışan bir uzmanın anlatacağı seminer yapılacak. Emeği geçen öğrencilere, velilere ve gönüllülere teşekkür ederim; sonrasında sorularınızı alabilirim.">
+    <header class="slide-head">
+      <p class="slide-kicker">Yeni başlayanlar</p>
+      <h2>Kariyer mentorluğu ve meslek seminerleri</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Meslekleri anlatan bir uygulama ve ayda bir uzman sunumu.</p>
+      <div class="act-grid act-grid--shots">
+        <ul class="points">
+          <li><span class="dot"></span><span><strong>Occupation Knowledge Hub:</strong> her meslek için tek dosya: ne yapıldığı, bir iş günü, çalışma ortamı, beceriler, eğitim yolu, sertifikalar, gelir, iş piyasası, kariyer basamakları, araçlar ve kaynaklar.</span></li>
+          <li><span class="dot"></span><span><strong>Katalog:</strong> 20 sektörde 297 meslek kaydı var; altı eğitim yolu (üniversite, college, apprenticeship, lise ve diğerleri).</span></li>
+          <li><span class="dot"></span><span><strong>Kanada'da okumak:</strong> her meslek için okul, bölüm, şehir, süre, ücret ve kabul koşulları tutuluyor.</span></li>
+          <li><span class="dot"></span><span><strong>Soru panosu:</strong> öğrenci meslek hakkında soru soruyor, eğitmen yanıtlıyor.</span></li>
+          <li><span class="dot"></span><span><strong>İçerik doldurulacak:</strong> dosyaların metinleri ekip tarafından tamamlanıyor.</span></li>
+          <li><span class="dot"></span><span><strong>Kariyer mentorluğu:</strong> kapsam tüm öğrencilere açılacak.</span></li>
+          <li><span class="dot"></span><span><strong>Aylık seminer:</strong> her ay bir meslek; o meslekte çalışan uzman anlatıyor.</span></li>
+        </ul>
+        <figure class="photo-slot shot-big has-photo" data-key="occupation-hub" tabindex="0" role="button" aria-label="Occupation Knowledge Hub ekran görüntüsünü değiştir">
+          <img class="slot-img" src="screenshots/occupation-hub.png" alt="Occupation Knowledge Hub ekranı: meslek dosyası, bölümler, program sayısı ve soru panosu" />
+          <span class="shot-chip">Occupation Knowledge Hub</span>
+          <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Ekran görüntüsü</span></div>
+          <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+        </figure>
+      </div>
+      <div class="facts">
+        <div><b>297</b><span>Meslek kaydı</span></div>
+        <div><b>20</b><span>Sektör</span></div>
+        <div><b>16</b><span>Dosya bölümü</span></div>
+        <div><b>Ayda 1</b><span>Uzman semineri</span></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>Future Bridge Academy - Kasım 2026 - Teşekkürler</span><span>13 / 13</span></footer>
+  </section>
+
+</main>
+
+<div class="deck-bar" id="deck-bar">
+  <div class="bar-group">
+    <button class="bar-btn is-nav" id="btn-prev" type="button" aria-label="Önceki slayt">&lsaquo;</button>
+    <span class="bar-count" id="bar-count">1 / 13</span>
+    <button class="bar-btn is-nav" id="btn-next" type="button" aria-label="Sonraki slayt">&rsaquo;</button>
+  </div>
+  <div class="bar-dots" id="bar-dots" aria-hidden="true"></div>
+  <div class="bar-group">
+    <button class="bar-btn" id="btn-notes" type="button" title="Konuşmacı notları (N)"><svg class="icon"><use href="#i-note"></use></svg><span>Notlar</span></button>
+    <button class="bar-btn" id="btn-present" type="button" title="Tam ekran (F)"><svg class="icon"><use href="#i-present"></use></svg><span>Sunum</span></button>
+    <button class="bar-btn" id="btn-print" type="button" title="Yazdır veya PDF olarak kaydet (P)"><svg class="icon"><use href="#i-print"></use></svg><span>Yazdır / PDF</span></button>
+  </div>
+  <span class="bar-hint">Ok tuşları &middot; N notlar &middot; F tam ekran &middot; P yazdır</span>
+</div>
+
+<div class="notes-panel" id="notes-panel">
+  <p class="notes-title" id="notes-title">Konuşmacı notu</p>
+  <p class="notes-text" id="notes-text"></p>
+</div>
+
+<div class="deck-toast" id="deck-toast" role="status" aria-live="polite"></div>
+<div class="notes-print" id="notes-print" aria-hidden="true"></div>
+<input id="photo-file-input" type="file" accept="image/*" hidden />
+
+<script>
+(function () {
+  "use strict";
+
+  var PHOTO_STORAGE_KEY = "fba-activities-deck-photos-v1";
+  var MAX_PHOTO_EDGE = 1600;
+  var PHOTO_JPEG_QUALITY = 0.86;
+
+  var stageElement = document.getElementById("deck-stage");
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var progressElement = document.getElementById("deck-progress");
+  var countElement = document.getElementById("bar-count");
+  var previousButton = document.getElementById("btn-prev");
+  var nextButton = document.getElementById("btn-next");
+  var dotsContainer = document.getElementById("bar-dots");
+  var notesButton = document.getElementById("btn-notes");
+  var presentButton = document.getElementById("btn-present");
+  var printButton = document.getElementById("btn-print");
+  var notesPanel = document.getElementById("notes-panel");
+  var notesTitle = document.getElementById("notes-title");
+  var notesText = document.getElementById("notes-text");
+  var notesPrint = document.getElementById("notes-print");
+  var toastElement = document.getElementById("deck-toast");
+  var fileInput = document.getElementById("photo-file-input");
+
+  var currentSlideIndex = 0;
+  var pendingPhotoKey = null;
+  var savedPhotos = {};
+  var toastTimer = null;
+
+  /* ---------- Navigation ---------- */
+  function clampSlideIndex(requestedIndex) {
+    if (requestedIndex < 0) { return 0; }
+    if (requestedIndex > slides.length - 1) { return slides.length - 1; }
+    return requestedIndex;
+  }
+
+  function showSlideAtIndex(requestedIndex) {
+    currentSlideIndex = clampSlideIndex(requestedIndex);
+    slides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle("is-active", slideIndex === currentSlideIndex);
+    });
+    countElement.textContent = (currentSlideIndex + 1) + " / " + slides.length;
+    previousButton.disabled = currentSlideIndex === 0;
+    nextButton.disabled = currentSlideIndex === slides.length - 1;
+    progressElement.style.width = (((currentSlideIndex + 1) / slides.length) * 100) + "%";
+    var allDots = dotsContainer.querySelectorAll(".bar-dot");
+    allDots.forEach(function (dot, dotIndex) {
+      dot.classList.toggle("is-current", dotIndex === currentSlideIndex);
+    });
+    notesTitle.textContent = "Konuşmacı notu - " + (currentSlideIndex + 1) + ". slayt";
+    notesText.textContent = slides[currentSlideIndex].getAttribute("data-notes") || "";
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", "#slide-" + (currentSlideIndex + 1));
+    }
+  }
+
+  function buildDotNavigation() {
+    slides.forEach(function (slide, slideIndex) {
+      var dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "bar-dot";
+      dot.setAttribute("aria-label", "Slayt " + (slideIndex + 1));
+      dot.addEventListener("click", function () { showSlideAtIndex(slideIndex); });
+      dotsContainer.appendChild(dot);
+    });
+  }
+
+  function goToNextSlide() { showSlideAtIndex(currentSlideIndex + 1); }
+  function goToPreviousSlide() { showSlideAtIndex(currentSlideIndex - 1); }
+
+  function readInitialSlideIndex() {
+    var hashMatch = /^#slide-(\d+)$/.exec(window.location.hash);
+    if (!hashMatch) { return 0; }
+    return parseInt(hashMatch[1], 10) - 1;
+  }
+
+  function toggleNotes() {
+    notesPanel.classList.toggle("is-open");
+  }
+
+  function handleKeyboardNavigation(event) {
+    var target = event.target;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) { return; }
+
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+      event.preventDefault();
+      goToNextSlide();
+    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      goToPreviousSlide();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      showSlideAtIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      showSlideAtIndex(slides.length - 1);
+    } else if (event.key === "n" || event.key === "N") {
+      toggleNotes();
+    } else if (event.key === "p" || event.key === "P") {
+      startPrinting();
+    } else if (event.key === "f" || event.key === "F") {
+      toggleFullscreen();
+    } else if (event.key === "Escape") {
+      notesPanel.classList.remove("is-open");
+    }
+  }
+
+  /* ---------- Stage scaling ---------- */
+  function updateStageScale() {
+    var horizontalPadding = window.innerWidth < 760 ? 16 : 48;
+    var verticalPadding = 106;
+    var availableWidth = window.innerWidth - horizontalPadding;
+    var availableHeight = window.innerHeight - verticalPadding;
+    var fitScale = Math.min(availableWidth / 1280, availableHeight / 720);
+    if (!isFinite(fitScale) || fitScale <= 0) { fitScale = 1; }
+    stageElement.style.transform = "translate(-50%, -50%) scale(" + fitScale + ")";
+  }
+
+  /* ---------- Full screen ---------- */
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(function () {});
+      }
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch(function () {});
+    }
+  }
+
+  function updatePresentButtonLabel() {
+    presentButton.querySelector("span").textContent = document.fullscreenElement ? "Çık" : "Sunum";
+  }
+
+  /* ---------- Photos ---------- */
+  function showToast(message) {
+    toastElement.textContent = message;
+    toastElement.classList.add("is-visible");
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () {
+      toastElement.classList.remove("is-visible");
+    }, 3800);
+  }
+
+  function applyPhoto(photoKey, dataUrl) {
+    document.querySelectorAll('.photo-slot[data-key="' + photoKey + '"]').forEach(function (slot) {
+      var image = slot.querySelector(".slot-img");
+      if (!image) { return; }
+      if (dataUrl) {
+        image.src = dataUrl;
+        image.style.display = "";
+        slot.classList.add("has-photo");
+      } else {
+        image.removeAttribute("src");
+        image.style.display = "";
+        slot.classList.remove("has-photo");
+      }
+    });
+  }
+
+  function persistPhotos() {
+    try {
+      window.localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(savedPhotos));
+    } catch (error) {
+      showToast("Fotoğraf eklendi, ancak tarayıcı depolaması dolu. Sayfayı kapatmadan önce PDF olarak kaydedin.");
+    }
+  }
+
+  function restoreSavedPhotos() {
+    var storedPhotos = null;
+    try {
+      storedPhotos = window.localStorage.getItem(PHOTO_STORAGE_KEY);
+    } catch (error) {
+      storedPhotos = null;
+    }
+    if (!storedPhotos) { return; }
+    try {
+      savedPhotos = JSON.parse(storedPhotos) || {};
+    } catch (error) {
+      savedPhotos = {};
+      return;
+    }
+    Object.keys(savedPhotos).forEach(function (photoKey) {
+      applyPhoto(photoKey, savedPhotos[photoKey]);
+    });
+  }
+
+  function importPhotoFile(file, photoKey) {
+    if (!file) { return; }
+    if (file.type.indexOf("image/") !== 0) {
+      showToast("Lütfen bir görsel dosyası seçin.");
+      return;
+    }
+    var fileReader = new FileReader();
+    fileReader.onload = function () {
+      var sourceImage = new Image();
+      sourceImage.onload = function () {
+        var downscaleRatio = Math.min(1, MAX_PHOTO_EDGE / Math.max(sourceImage.width, sourceImage.height));
+        var canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(sourceImage.width * downscaleRatio));
+        canvas.height = Math.max(1, Math.round(sourceImage.height * downscaleRatio));
+        var context = canvas.getContext("2d");
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+        var dataUrl = canvas.toDataURL("image/jpeg", PHOTO_JPEG_QUALITY);
+        applyPhoto(photoKey, dataUrl);
+        savedPhotos[photoKey] = dataUrl;
+        persistPhotos();
+      };
+      sourceImage.onerror = function () {
+        showToast("Bu görsel okunamadı. Lütfen başka bir dosya deneyin.");
+      };
+      sourceImage.src = fileReader.result;
+    };
+    fileReader.readAsDataURL(file);
+  }
+
+  function openPhotoPicker(photoKey) {
+    pendingPhotoKey = photoKey;
+    fileInput.value = "";
+    fileInput.click();
+  }
+
+  function clearPhoto(photoKey) {
+    delete savedPhotos[photoKey];
+    applyPhoto(photoKey, null);
+    persistPhotos();
+    showToast("Fotoğraf kaldırıldı.");
+  }
+
+  function wirePhotoSlots() {
+    document.querySelectorAll(".photo-slot").forEach(function (slot) {
+      var photoKey = slot.dataset.key;
+
+      slot.addEventListener("click", function (event) {
+        if (event.target.closest(".photo-clear")) { return; }
+        openPhotoPicker(photoKey);
+      });
+
+      slot.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openPhotoPicker(photoKey);
+        }
+      });
+
+      slot.addEventListener("dragover", function (event) {
+        event.preventDefault();
+        slot.classList.add("is-dragover");
+      });
+
+      slot.addEventListener("dragleave", function () {
+        slot.classList.remove("is-dragover");
+      });
+
+      slot.addEventListener("drop", function (event) {
+        event.preventDefault();
+        slot.classList.remove("is-dragover");
+        var droppedFile = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null;
+        importPhotoFile(droppedFile, photoKey);
+      });
+
+      var clearButton = slot.querySelector(".photo-clear");
+      if (clearButton) {
+        clearButton.addEventListener("click", function (event) {
+          event.stopPropagation();
+          clearPhoto(photoKey);
+        });
+      }
+    });
+
+    fileInput.addEventListener("change", function () {
+      var selectedFile = fileInput.files ? fileInput.files[0] : null;
+      if (selectedFile && pendingPhotoKey) {
+        importPhotoFile(selectedFile, pendingPhotoKey);
+      }
+      pendingPhotoKey = null;
+    });
+  }
+
+  /* ---------- Printed speaker notes ---------- */
+  function buildPrintNotes() {
+    var notesPerSheet = 5;
+    for (var startIndex = 0; startIndex < slides.length; startIndex += notesPerSheet) {
+      var sheet = document.createElement("div");
+      sheet.className = "notes-sheet";
+
+      var heading = document.createElement("h2");
+      heading.textContent = "Konuşmacı notları - " + (startIndex + 1) + ". slayttan itibaren";
+      sheet.appendChild(heading);
+
+      slides.slice(startIndex, startIndex + notesPerSheet).forEach(function (slide, offset) {
+        var entry = document.createElement("div");
+        entry.className = "notes-entry";
+
+        var entryHeading = document.createElement("h3");
+        entryHeading.textContent = (startIndex + offset + 1) + ". " + (slide.getAttribute("data-slide-name") || "Slayt");
+
+        var entryText = document.createElement("p");
+        entryText.textContent = slide.getAttribute("data-notes") || "";
+
+        entry.appendChild(entryHeading);
+        entry.appendChild(entryText);
+        sheet.appendChild(entry);
+      });
+
+      notesPrint.appendChild(sheet);
+    }
+  }
+
+  /* ---------- Print ---------- */
+  function startPrinting() {
+    showToast("Yazdırma penceresinde: PDF olarak kaydet, Kenar boşlukları: Yok, Arka plan grafikleri açık.");
+    window.setTimeout(function () { window.print(); }, 700);
+  }
+
+  /* ---------- Wiring ---------- */
+  previousButton.addEventListener("click", goToPreviousSlide);
+  nextButton.addEventListener("click", goToNextSlide);
+  notesButton.addEventListener("click", toggleNotes);
+  presentButton.addEventListener("click", toggleFullscreen);
+  printButton.addEventListener("click", startPrinting);
+  document.addEventListener("keydown", handleKeyboardNavigation);
+  document.addEventListener("fullscreenchange", function () {
+    updatePresentButtonLabel();
+    updateStageScale();
+  });
+  window.addEventListener("resize", updateStageScale);
+
+  /* Swipe */
+  var touchStartX = null;
+  var touchStartY = null;
+  stageElement.addEventListener("touchstart", function (event) {
+    if (event.touches.length !== 1) { return; }
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+  }, { passive: true });
+  stageElement.addEventListener("touchend", function (event) {
+    if (touchStartX === null) { return; }
+    var touchEndX = event.changedTouches[0].clientX;
+    var touchEndY = event.changedTouches[0].clientY;
+    var horizontalDistance = touchEndX - touchStartX;
+    var verticalDistance = touchEndY - touchStartY;
+    if (Math.abs(horizontalDistance) > 55 && Math.abs(horizontalDistance) > Math.abs(verticalDistance)) {
+      if (horizontalDistance < 0) { goToNextSlide(); } else { goToPreviousSlide(); }
+    }
+    touchStartX = null;
+    touchStartY = null;
+  }, { passive: true });
+
+  buildDotNavigation();
+  wirePhotoSlots();
+  restoreSavedPhotos();
+  buildPrintNotes();
+  updateStageScale();
+  showSlideAtIndex(readInitialSlideIndex());
+})();
+</script>
+</body>
+</html>

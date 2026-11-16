@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Occupation Knowledge Hub - Test Harness</title>
+<link rel="stylesheet" href="OccupationKnowledgeHub.css">
+<style>
+  body { padding: 0; margin: 0; background: #eef2f8; font-family: "Segoe UI", system-ui, sans-serif; }
+  #th-bar { position: fixed; top: 0; left: 0; right: 0; height: 30px; z-index: 9999; background: #0f172a; color: #e6edf5; font-size: 11px; padding: 0 12px; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; }
+  #th-bar strong { color: #f59e0b; letter-spacing: .5px; white-space: nowrap; }
+  #th-bar .sep { color: #475569; }
+  #th-bar button { border: none; padding: 3px 9px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: inherit; font-weight: 600; white-space: nowrap; background: #1e293b; color: #e2e8f0; }
+  #th-bar button:hover { background: #334155; }
+  #th-bar .btn-load { background: #d97706; color: #fff; }
+  #th-bar .btn-reset { background: #dc2626; color: #fff; }
+  #th-bar .btn-dump { background: #0d9488; color: #fff; }
+  #th-bar .btn-ro.on { background: #dc2626; color: #fff; }
+  #th-bar .hint { color: #94a3b8; white-space: nowrap; }
+  body { padding-top: 30px; }
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>TEST HARNESS - Occupation Knowledge Hub</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-sample">Load sample dossier</button>
+  <button class="btn-reset" id="th-reset">Reset store</button>
+  <button class="btn-dump" id="th-dump">Dump</button>
+  <span class="sep">|</span>
+  <button id="th-role">Role: admin</button>
+  <button class="btn-ro" id="th-ro">RO: OFF</button>
+  <span class="sep">|</span>
+  <button id="th-tab-overview">Dossier</button>
+  <button id="th-tab-study">Study</button>
+  <button id="th-tab-ask">Ask AI</button>
+  <button id="th-tab-questions">Questions</button>
+  <button id="th-tab-edit">Edit</button>
+  <span class="sep">|</span>
+  <span class="hint" id="th-status">Ready</span>
+</div>
+
+<div id="app-container"></div>
+
+<script>
+/* ===================================================================
+   Mock window.tool SDK
+   - value  -> localStorage (the dossier of this record)
+   - objects -> localStorage (question board + chat sessions)
+   - AI     -> canned answers routed by prompt markers
+   Query params: ?sample=1&role=editor&ro=1&tab=questions&crud=no&noai=1
+   =================================================================== */
+(function () {
+  var VALUE_KEY = 'okh_test_value';
+  var OBJECTS_KEY = 'okh_test_objects';
+  var ROLE_KEY = 'okh_test_role';
+  var RO_KEY = 'okh_test_ro';
+
+  var ROLES = ['admin', 'editor', 'viewer', 'none'];
+  var params = {};
+  window.location.search.replace(/^\?/, '').split('&').forEach(function (pair) {
+    if (!pair) return;
+    var bits = pair.split('=');
+    params[decodeURIComponent(bits[0])] = decodeURIComponent(bits[1] || '');
+  });
+
+  function status(message) {
+    var element = document.getElementById('th-status');
+    if (element) element.textContent = message;
+  }
+
+  function readJson(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (err) { return fallback; }
+  }
+
+  function writeJson(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); }
+    catch (err) { status('localStorage write failed'); }
+  }
+
+  function loadObjects() { return readJson(OBJECTS_KEY, []); }
+  function saveObjects(list) { writeJson(OBJECTS_KEY, list); }
+
+  var currentRole = localStorage.getItem(ROLE_KEY) || 'admin';
+  if (params.role && ROLES.indexOf(params.role) !== -1) {
+    currentRole = params.role;
+    localStorage.setItem(ROLE_KEY, currentRole);
+  }
+  var readOnly = localStorage.getItem(RO_KEY) === '1';
+  if (params.ro === '1') { readOnly = true; localStorage.setItem(RO_KEY, '1'); }
+  if (params.ro === '0') { readOnly = false; localStorage.setItem(RO_KEY, '0'); }
+
+  function currentUser() {
+    if (currentRole === 'none') return null;
+    var user = {
+      id: 'user-' + currentRole,
+      name: currentRole.charAt(0).toUpperCase() + currentRole.slice(1) + ' User',
+      email: currentRole + '@example.com',
+      roles: [currentRole],
+      locale: 'en'
+    };
+    if (currentRole === 'admin') user.effectiveAccess = { isViewer: true, isEditor: true, isManager: true };
+    if (currentRole === 'editor') user.effectiveAccess = { isViewer: true, isEditor: true, isManager: false };
+    if (currentRole === 'viewer') user.effectiveAccess = { isViewer: true, isEditor: false, isManager: false };
+    return user;
+  }
+
+  /* ------------------------------------------------------- sample data */
+
+  function sampleContent() {
+    return {
+      version: 1,
+      occupation: {
+        title: 'Registered Nurse',
+        slug: 'registered-nurse',
+        category: 'Health care',
+        oneLiner: 'Registered nurses assess patients, carry out care plans and coordinate care in hospitals, clinics and the community.',
+        summary: 'Registered nurses (RNs) are the largest group of health care professionals in Canada. They assess patients, give medication and treatment, watch for changes, teach patients and families, and coordinate care with doctors and other teams. The job is hands-on, team based and shift based, and it leads to many different paths later: intensive care, emergency, pediatrics, public health, education or management.',
+        tags: ['health care', 'hospital', 'licensing', 'shift work', 'people facing'],
+        status: 'published',
+        updatedAt: '2026-11-10T09:00:00.000Z',
+        updatedBy: 'Sample editor'
+      },
+      sections: {
+        whatItIs: 'A registered nurse is a licensed health professional who is responsible for the direct care of patients.\n\nRNs collect health information, decide what needs attention first, carry out medical orders, give medication, run IV lines, dress wounds, monitor vital signs and respond when a patient gets worse. They also teach patients and families how to manage at home.\n\nThey work with doctors, pharmacists, physiotherapists, social workers and support staff, and they are usually the person who notices a change first.',
+        dayInTheLife: 'A hospital shift usually starts with a handover: the outgoing nurse reports every patient, what changed and what needs watching.\n\nAfter that the nurse assesses each patient, gives scheduled medication, checks IV lines and wounds, documents everything, talks with families and answers calls. New admissions and emergencies arrive without warning, so the plan changes constantly.\n\nMost hospital nurses work 12 hour shifts, day or night, with a rotation that includes weekends and holidays.',
+        workEnvironment: 'Hospitals, clinics, long-term care homes, public health units, community agencies and patients\' homes. Work is indoors, physically active and often on your feet for the whole shift. Night shifts, weekend shifts and overtime are common in hospitals.',
+        benefits: 'Job security | Nursing is one of the most consistently in-demand professions in Canada.\nMeaning | You see the effect of your work on a person the same day.\nVariety | Emergency, intensive care, pediatrics, mental health, public health, education, management.\nPortable skills | A Canadian nursing licence opens doors in other provinces and in many other countries.\nFurther study | RNs can move into nurse practitioner, education, research or leadership roles.',
+        difficulties: 'Emotional load | Patients get worse and sometimes die. | Learn healthy debriefing habits, use your team and take your breaks.\nPhysical demand | Twelve hour shifts on your feet, lifting and moving patients. | Build strength and use safe patient handling equipment, every time.\nShift work | Nights, weekends and holidays. | Choose a unit and schedule you can live with, and protect your sleep.\nLicensing exams | The NCLEX-RN is a hard exam after an already hard degree. | Start practice questions in year three, not after graduation.',
+        skills: 'Clinical judgment | It decides what you notice and what you do first. | Practise scenarios and ask why a nurse chose one action over another.\nCommunication | You explain hard things to scared people. | Practise plain language and take every chance to explain a procedure.\nDocumentation | Clear records protect the patient and you. | Write complete notes during clinical placements and get feedback.\nTeamwork | Care is handed over several times a day. | Learn a structured handover format and use it every time.\nResilience | The work is emotionally heavy. | Build routines outside work and use the support your employer offers.',
+        educationPath: 'The main route is a four year Bachelor of Science in Nursing (BScN) at a university. Some colleges offer a practical nursing diploma that leads to the RPN licence instead; RPNs can later bridge into an RN degree.\n\nA second route is a compressed or after-degree program for people who already hold a university degree.\n\nHigh school students should take English, biology, chemistry and mathematics at the highest level they can handle, and check each university\'s exact prerequisites. Volunteer or work experience in a care setting helps an application.\n\nAfter graduation, every province requires registration with its nursing regulator and a passing result on the NCLEX-RN exam.',
+        certification: 'Registered Nurse licence | College of Nurses of Ontario (and the equivalent regulator in each province) | https://www.cno.org\nNCLEX-RN exam | National Council of State Boards of Nursing | https://www.ncsbn.org\nCPR and first aid | Recognized provider | ',
+        salary: 'Pay is set by province and by collective agreement, so it is very different across the country.\n\nAs a rough planning range, a new hospital RN in Canada earns about CAD 70,000 to 85,000 per year, and an experienced RN at the top of the scale earns about CAD 95,000 to 120,000 before overtime and premiums. Night, weekend and specialty premiums add to that.\n\nThese are estimates for planning only. Check the current collective agreement in the province where you want to work.',
+        jobMarket: 'Demand is strong and is expected to stay strong because the population is aging and many nurses are retiring. Hospitals, long-term care and community care all report shortages, and rural areas have the most open positions.\n\nHiring is not the hard part: getting into a nursing program and passing the licensing exam are. A second language, a specialty certification or willingness to work in a rural community improves a candidate.',
+        careerLadder: 'New graduate | Staff nurse | 0 to 2 years\nExperienced RN | Charge nurse or preceptor | 3 to 6 years\nSpecialty | Emergency, intensive care, pediatrics, public health | 5 to 10 years\nAdvanced | Nurse educator, clinical manager, nurse practitioner (extra degree) | 8 years or more',
+        tools: 'Electronic health record | Charting, medication orders and results\nIV pumps and monitors | Delivering medication and watching vital signs\nPatient lifting equipment | Safe movement of patients\nMedication dispensing systems | Controlled storage and tracking of drugs',
+        relatedOccupations: 'Licensed practical nurse | Shorter diploma, closely related bedside work\nParamedic | Emergency care outside the hospital\nNurse practitioner | RN role with advanced prescribing authority\nHealth care assistant | Entry level support work in long-term care',
+        glossary: 'NCLEX-RN | The licensing exam every Canadian RN must pass.\nRPN | Registered practical nurse, a college-level licence with a narrower scope.\nPreceptor | An experienced nurse who supervises a student on placement.\nScope of practice | What a licence legally allows you to do.',
+        faq: 'Q: How long does it take to become an RN?\nA: Four years for a BScN, plus the licensing exam. A second degree can shorten it.\n\nQ: Can I study nursing in college?\nA: Colleges offer practical nursing, which leads to the RPN licence. Some offer a bridge to the RN degree.\n\nQ: Is nursing only hospital work?\nA: No. Public health, community care, long-term care, schools and clinics all employ RNs.\n\nQ: Do I need to speak French?\nA: Not in most provinces. In Quebec, French is required for most nursing jobs.',
+        resources: 'Job Bank wage report | https://www.jobbank.gc.ca\nCollege of Nurses of Ontario | https://www.cno.org\nCanadian Nurses Association | https://www.cna-aiic.ca',
+        related: ''
+      },
+      programs: [
+        {
+          id: 'prog-utoronto',
+          institution: 'University of Toronto',
+          faculty: 'Lawrence S. Bloomberg Faculty of Nursing',
+          program: 'Bachelor of Science in Nursing (BScN)',
+          level: 'bachelor',
+          city: 'Toronto',
+          province: 'Ontario',
+          credential: 'BScN',
+          duration: '4 years',
+          tuition: 'About CAD 6,100 per year for domestic students - estimate, check the current fee page',
+          admission: 'Grade 12 English, biology, chemistry and mathematics. Admission is competitive; a strong average and care-related experience help.',
+          language: 'English',
+          delivery: 'On campus with clinical placements',
+          website: 'https://www.utoronto.ca',
+          email: '',
+          phone: '',
+          notes: 'One of the largest nursing faculties in Canada.'
+        },
+        {
+          id: 'prog-ubc',
+          institution: 'University of British Columbia',
+          faculty: 'School of Nursing',
+          program: 'Bachelor of Science in Nursing (BSN)',
+          level: 'bachelor',
+          city: 'Vancouver',
+          province: 'British Columbia',
+          credential: 'BSN',
+          duration: '4 years',
+          tuition: 'About CAD 6,000 per year for domestic students - estimate',
+          admission: 'Grade 12 English, biology, chemistry and mathematics, plus a competitive overall average.',
+          language: 'English',
+          delivery: 'On campus with clinical placements',
+          website: 'https://www.ubc.ca',
+          email: '',
+          phone: '',
+          notes: ''
+        },
+        {
+          id: 'prog-mcgill',
+          institution: 'McGill University',
+          faculty: 'Ingram School of Nursing',
+          program: 'Bachelor of Science in Nursing (BScN)',
+          level: 'bachelor',
+          city: 'Montreal',
+          province: 'Quebec',
+          credential: 'BScN',
+          duration: '3 years after CEGEP',
+          tuition: 'Different rates for Quebec, other Canadian provinces and international students - check the fee page',
+          admission: 'Quebec applicants normally enter after CEGEP. Out-of-province applicants need the equivalent science prerequisites.',
+          language: 'English',
+          delivery: 'On campus with clinical placements',
+          website: 'https://www.mcgill.ca',
+          email: '',
+          phone: '',
+          notes: 'French is needed for most nursing jobs in Quebec.'
+        },
+        {
+          id: 'prog-ualberta',
+          institution: 'University of Alberta',
+          faculty: 'Faculty of Nursing',
+          program: 'Bachelor of Science in Nursing (BScN)',
+          level: 'bachelor',
+          city: 'Edmonton',
+          province: 'Alberta',
+          credential: 'BScN',
+          duration: '4 years',
+          tuition: 'About CAD 6,500 per year for domestic students - estimate',
+          admission: 'English, biology, chemistry and mathematics, with a competitive average.',
+          language: 'English',
+          delivery: 'On campus with clinical placements',
+          website: 'https://www.ualberta.ca',
+          email: '',
+          phone: '',
+          notes: ''
+        },
+        {
+          id: 'prog-bcit',
+          institution: 'British Columbia Institute of Technology (BCIT)',
+          faculty: 'School of Health Sciences',
+          program: 'Bachelor of Science in Nursing (BSN)',
+          level: 'bachelor',
+          city: 'Burnaby',
+          province: 'British Columbia',
+          credential: 'BSN',
+          duration: '3 years, concentrated',
+          tuition: 'Check the current BCIT program fee page',
+          admission: 'Science prerequisites plus an interview and a competitive average. A demanding, fast-paced route.',
+          language: 'English',
+          delivery: 'On campus with clinical placements',
+          website: 'https://www.bcit.ca',
+          email: '',
+          phone: '',
+          notes: 'A faster, very intensive option for students who want to finish quickly.'
+        }
+      ],
+      contacts: [
+        { id: 'contact-cno', label: 'Nursing regulator - Ontario', name: '', role: 'Registration and licence information', email: '', phone: '', website: 'https://www.cno.org', note: 'Every province has its own regulator. Start here to check registration requirements and fees.' },
+        { id: 'contact-jobbank', label: 'Job Bank - wage and demand data', name: '', role: 'Government of Canada', email: '', phone: '', website: 'https://www.jobbank.gc.ca', note: 'Search this occupation by province to see current wages and job openings.' },
+        { id: 'contact-cna', label: 'Canadian Nurses Association', name: '', role: 'Professional association', email: '', phone: '', website: 'https://www.cna-aiic.ca', note: 'Information about the profession, specialties and national certification.' }
+      ],
+      sources: [
+        { id: 'source-jobbank', title: 'Job Bank - wage report', url: 'https://www.jobbank.gc.ca', note: 'Used for the pay range and demand description. Figures are estimates.' },
+        { id: 'source-cno', title: 'College of Nurses of Ontario', url: 'https://www.cno.org', note: 'Registration and licensing requirements.' }
+      ],
+      chatSessionId: ''
+    };
+  }
+
+  function sampleQuestions() {
+    return [
+      {
+        id: 'question-1',
+        name: 'How do I become a registered nurse if I studied abroad?',
+        cmsObjectType: 'occupation-questions',
+        productData: {
+          data_categoriesBased: {
+            occupationKey: 'registerednurse',
+            occupationName: 'Registered Nurse',
+            title: 'How do I become a registered nurse if I studied abroad?',
+            body: 'I finished a nursing degree in another country. What do I have to do before I can work in Canada?',
+            topic: 'International applicants',
+            status: 'answered',
+            askedBy: 'user-viewer',
+            askedByName: 'Student User',
+            askedAt: '2026-11-08T14:20:00.000Z',
+            answers: [
+              {
+                id: 'answer-1',
+                body: 'Each province assesses international qualifications separately. Start with the provincial nursing regulator, get your documents and language results ready, and expect a bridging program if your degree does not match the Canadian curriculum.',
+                answeredBy: 'user-editor',
+                answeredByName: 'Editor User',
+                answeredAt: '2026-11-09T08:10:00.000Z',
+                staff: true
+              }
+            ],
+            updatedAt: '2026-11-09T08:10:00.000Z',
+            answeredAt: '2026-11-09T08:10:00.000Z',
+            answeredByName: 'Editor User'
+          }
+        }
+      },
+      {
+        id: 'question-2',
+        name: 'Is the math in nursing hard?',
+        cmsObjectType: 'occupation-questions',
+        productData: {
+          data_categoriesBased: {
+            occupationKey: 'registerednurse',
+            occupationName: 'Registered Nurse',
+            title: 'Is the math in nursing hard?',
+            body: 'I am not strong in math. Does that stop me from becoming a nurse?',
+            topic: 'Study tips',
+            status: 'open',
+            askedBy: 'user-viewer',
+            askedByName: 'Student User',
+            askedAt: '2026-11-12T10:05:00.000Z',
+            answers: [],
+            updatedAt: '2026-11-12T10:05:00.000Z'
+          }
+        }
+      },
+      {
+        id: 'question-3',
+        name: 'Can I work part time while studying nursing?',
+        cmsObjectType: 'occupation-questions',
+        productData: {
+          data_categoriesBased: {
+            occupationKey: 'registerednurse',
+            occupationName: 'Registered Nurse',
+            title: 'Can I work part time while studying nursing?',
+            body: 'The program looks full time. Is a part time job realistic?',
+            topic: 'Study tips',
+            status: 'answered',
+            askedBy: 'user-viewer',
+            askedByName: 'Student User',
+            askedAt: '2026-11-05T18:40:00.000Z',
+            answers: [
+              {
+                id: 'answer-2',
+                body: 'Many students work 8 to 12 hours a week, often in a care-related job. Clinical placements are full time blocks, so plan around those weeks rather than the whole year.',
+                answeredBy: 'user-editor',
+                answeredByName: 'Editor User',
+                answeredAt: '2026-11-06T09:00:00.000Z',
+                staff: true
+              }
+            ],
+            updatedAt: '2026-11-06T09:00:00.000Z',
+            answeredAt: '2026-11-06T09:00:00.000Z',
+            answeredByName: 'Editor User'
+          }
+        }
+      }
+    ];
+  }
+
+  function seedSample() {
+    writeJson(VALUE_KEY, sampleContent());
+    saveObjects(sampleQuestions());
+  }
+
+  if (params.sample === '1' && !localStorage.getItem(VALUE_KEY)) seedSample();
+  if (params.reset === '1') {
+    localStorage.removeItem(VALUE_KEY);
+    localStorage.removeItem(OBJECTS_KEY);
+  }
+
+  /* --------------------------------------------------------- mock SDK */
+
+  function objectsOfType(type) {
+    return loadObjects().filter(function (record) { return !type || record.cmsObjectType === type; });
+  }
+
+  function nowIso() { return new Date().toISOString(); }
+
+  window.tool = {
+    getValue: function () { return readJson(VALUE_KEY, null); },
+    setValue: function (value) { writeJson(VALUE_KEY, value); },
+    onValueChange: function () {},
+    getFields: function () {
+      return { id: 'record-nurse-1', name: 'Registered Nurse', cmsObjectType: 'occupation-knowledge-hub', slug: 'registered-nurse' };
+    },
+    setField: function () {},
+    setFields: function () {},
+    watchField: function () {},
+    onFieldsChange: function () {},
+    param: function (name, fallback) {
+      var overrides = {
+        allowAi: params.noai === '1' ? 'no' : 'yes',
+        allowObjectCRUD: params.crud === 'no' ? 'no' : 'yes',
+        questionsObjectType: params.qtype || 'occupation-questions',
+        questionsDataCategory: params.qcategory || '',
+        occupationKey: params.key || '',
+        chatSessionObjectType: 'ai-chat-sessions-uniconbaseapps'
+      };
+      if (overrides[name] !== undefined && overrides[name] !== '') return overrides[name];
+      return fallback;
+    },
+    isReadOnly: function () { return readOnly; },
+    onReadonlyChange: function () {},
+    getUser: currentUser,
+    onUserChange: function () {},
+    getPermittedUsers: function () { return []; },
+    getParentPageUrl: function () { return 'https://demo.uniconhub.com/admin/objects/occupation-knowledge-hub/record-nurse-1'; },
+    reportValid: function () {},
+    reportMissingParams: function () {},
+    notify: function (message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#f59e0b', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:99999;background:' + (colors[severity] || '#333') +
+        ';color:#fff;padding:9px 16px;border-radius:8px;font-family:inherit;font-size:12px;box-shadow:0 8px 20px rgba(0,0,0,.25);max-width:420px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3200);
+      status(severity + ': ' + message);
+    },
+    resize: function () {},
+    declareOutput: function () {},
+    declareParams: function () {},
+    openUrl: function (url) { console.log('[harness] openUrl', url); status('openUrl: ' + url); },
+    openObjectDetail: function (type, id) { status('openObjectDetail: ' + type + '/' + id); },
+    requestSave: function (callback) { if (callback) callback(null, true); },
+    requestExportPdf: function (options, callback) { if (callback) callback(null, { name: 'export.html', url: 'about:blank' }); },
+    requestUpload: function (accept, callback) { if (callback) callback('upload is not mocked', null); },
+    requestFileContent: function (url, callback) { if (callback) callback('file content is not mocked', null); },
+
+    requestAI: function (prompt, context, callback) {
+      var text = String(prompt || '');
+      var reply;
+      if (text.indexOf('STUDENT QUESTION') !== -1) {
+        reply = 'From this dossier: registered nurses assess patients, carry out care plans and coordinate care. Most hospital nurses work 12 hour shifts, day or night.\n\n' +
+          'Beyond this dossier: check the current collective agreement in the province where you plan to work, because pay and shift rules differ.\n\n' +
+          'A practical first step is to compare the BScN programs in the Study in Canada tab and confirm their prerequisites.';
+      } else if (text.indexOf('Return ONLY a valid JSON object') !== -1) {
+        reply = JSON.stringify({
+          reply: 'Added a work environment note and one college route program.',
+          occupation: { category: 'Health care' },
+          sections: {
+            workEnvironment: 'Hospitals, clinics, long-term care homes, public health units, community agencies and patients homes. The work is indoors, physically active and often on your feet for the whole shift.'
+          },
+          programs: [
+            {
+              institution: 'George Brown College',
+              faculty: 'School of Nursing',
+              program: 'Practical Nursing Diploma',
+              level: 'diploma',
+              city: 'Toronto',
+              province: 'Ontario',
+              credential: 'Practical Nursing Diploma',
+              duration: '16 months',
+              tuition: 'Check the current college fee page',
+              admission: 'Grade 12 English, biology, chemistry and mathematics. This route leads to the RPN licence, then a bridge to the RN degree.',
+              language: 'English',
+              delivery: 'On campus with clinical placements',
+              website: 'https://www.georgebrown.ca',
+              email: '',
+              phone: '',
+              notes: ''
+            }
+          ],
+          contacts: [],
+          sources: []
+        });
+      } else if (text.indexOf('Write a short, clear answer the teacher') !== -1) {
+        reply = 'From this dossier: the program is full time and clinical placements run in full time blocks. Many students keep a small part time job in a care setting and plan around placement weeks.';
+      } else {
+        reply = 'I can answer questions about this occupation using the dossier.';
+      }
+      setTimeout(function () { callback(null, reply); }, 320);
+    },
+
+    requestObjects: function (action, request, callback) {
+      setTimeout(function () {
+        var list = loadObjects();
+        if (action === 'query') {
+          callback(null, { objects: objectsOfType(request.mainObjectType) });
+          return;
+        }
+        if (action === 'get') {
+          var found = null;
+          list.forEach(function (record) { if (record.id === request.objectId) found = record; });
+          callback(null, { object: found });
+          return;
+        }
+        if (action === 'create') {
+          var created = {
+            id: 'obj-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            name: request.name || 'Object',
+            cmsObjectType: request.mainObjectType,
+            productData: { data_categoriesBased: request.productData ? (request.productData.data_categoriesBased || {}) : {} },
+            created: nowIso(),
+            updated: nowIso()
+          };
+          list.push(created);
+          saveObjects(list);
+          callback(null, { object: created });
+          return;
+        }
+        if (action === 'update') {
+          var target = null;
+          list.forEach(function (record) { if (record.id === request.objectId) target = record; });
+          if (!target) { callback('object not found', null); return; }
+          target.productData = target.productData || {};
+          target.productData.data_categoriesBased = target.productData.data_categoriesBased || {};
+          var patch = request.productData && request.productData.data_categoriesBased ? request.productData.data_categoriesBased : {};
+          Object.keys(patch).forEach(function (key) {
+            var incoming = patch[key];
+            var existing = target.productData.data_categoriesBased[key];
+            var bothObjects = incoming && typeof incoming === 'object' && !Array.isArray(incoming) &&
+              existing && typeof existing === 'object' && !Array.isArray(existing);
+            if (bothObjects) {
+              Object.keys(incoming).forEach(function (innerKey) { existing[innerKey] = incoming[innerKey]; });
+              return;
+            }
+            target.productData.data_categoriesBased[key] = incoming;
+          });
+          if (request.name) target.name = request.name;
+          target.updated = nowIso();
+          saveObjects(list);
+          callback(null, { ok: true });
+          return;
+        }
+        if (action === 'delete') {
+          saveObjects(list.filter(function (record) { return record.id !== request.objectId; }));
+          callback(null, { ok: true });
+          return;
+        }
+        if (action === 'batch') {
+          callback('batch is not mocked', null);
+          return;
+        }
+        callback('unknown action ' + action, null);
+      }, 40);
+    },
+
+    onReady: function (callback) { callback(window.tool.getValue(), window.tool.getFields()); },
+
+    _setRole: function (role) {
+      localStorage.setItem(ROLE_KEY, role);
+      window.location.reload();
+    },
+    _dump: function () {
+      console.log('[harness] value', readJson(VALUE_KEY, null));
+      console.log('[harness] objects', loadObjects());
+      status('Dumped value + objects to console');
+    }
+  };
+
+  var roleButton = document.getElementById('th-role');
+  if (roleButton) roleButton.textContent = 'Role: ' + currentRole;
+  var roButton = document.getElementById('th-ro');
+  if (roButton) {
+    roButton.textContent = 'RO: ' + (readOnly ? 'ON' : 'OFF');
+    if (readOnly) roButton.classList.add('on');
+  }
+
+  document.getElementById('th-sample').addEventListener('click', function () {
+    seedSample();
+    window.location.reload();
+  });
+  document.getElementById('th-reset').addEventListener('click', function () {
+    localStorage.removeItem(VALUE_KEY);
+    localStorage.removeItem(OBJECTS_KEY);
+    window.location.reload();
+  });
+  document.getElementById('th-dump').addEventListener('click', function () { window.tool._dump(); });
+  document.getElementById('th-role').addEventListener('click', function () {
+    var nextIndex = (ROLES.indexOf(localStorage.getItem(ROLE_KEY) || 'admin') + 1) % ROLES.length;
+    window.tool._setRole(ROLES[nextIndex]);
+  });
+  document.getElementById('th-ro').addEventListener('click', function () {
+    localStorage.setItem(RO_KEY, readOnly ? '0' : '1');
+    window.location.reload();
+  });
+
+  ['overview', 'study', 'ask', 'questions', 'edit'].forEach(function (tabId) {
+    var button = document.getElementById('th-tab-' + tabId);
+    if (!button) return;
+    button.addEventListener('click', function () {
+      var tab = document.querySelector('[data-act="tab"][data-tab="' + tabId + '"]');
+      if (tab) tab.click();
+    });
+  });
+})();
+</script>
+
+<script>
+/* ===================================================================
+   Tool HTML injection (fetch for live edits, embedded copy for file://)
+   =================================================================== */
+var EMBEDDED_HTML = "\u003c!-- html build 2026-11-14-1 -->\r\n\u003cdiv class=\"okh\" id=\"okh-root\">\r\n\r\n  \u003csvg class=\"okh-sprite\" aria-hidden=\"true\" focusable=\"false\">\r\n    \u003csymbol id=\"okh-i-book\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5H6.5A2.5 2.5 0 0 0 4 21V5.5Z\">\u003c/path>\u003cpath d=\"M4 18.5A2.5 2.5 0 0 1 6.5 16H20\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-grad\" viewBox=\"0 0 24 24\">\u003cpath d=\"M3 9.5 12 4l9 5.5-9 5.5-9-5.5Z\">\u003c/path>\u003cpath d=\"M7 12.2V17c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4.8\">\u003c/path>\u003cpath d=\"M21 9.5V15\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-spark\" viewBox=\"0 0 24 24\">\u003cpath d=\"M11 3l1.7 4.4L17 9.1l-4.3 1.7L11 15l-1.7-4.2L5 9.1l4.3-1.7L11 3Z\">\u003c/path>\u003cpath d=\"M18 14.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-chat\" viewBox=\"0 0 24 24\">\u003cpath d=\"M20 15.5A2.5 2.5 0 0 1 17.5 18H8l-4 3V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v9Z\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-pen\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4 20h4L18 10a2.8 2.8 0 0 0-4-4L4 16v4Z\">\u003c/path>\u003cpath d=\"M13.5 6.5l4 4\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-print\" viewBox=\"0 0 24 24\">\u003cpath d=\"M6 9V4h12v5\">\u003c/path>\u003cpath d=\"M6 17H4v-6h16v6h-2\">\u003c/path>\u003cpath d=\"M6 13h12v7H6z\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-plus\" viewBox=\"0 0 24 24\">\u003cpath d=\"M12 5v14\">\u003c/path>\u003cpath d=\"M5 12h14\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-check\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4.5 12.5l5 5 10-11\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-link\" viewBox=\"0 0 24 24\">\u003cpath d=\"M10 13.5a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7L11.5 6.3\">\u003c/path>\u003cpath d=\"M14 10.5a4 4 0 0 0-5.7 0L5.5 13.3a4 4 0 0 0 5.7 5.7l1.3-1.3\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-mail\" viewBox=\"0 0 24 24\">\u003cpath d=\"M3 6h18v12H3z\">\u003c/path>\u003cpath d=\"M3 7.5 12 13l9-5.5\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-phone\" viewBox=\"0 0 24 24\">\u003cpath d=\"M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2 2A17 17 0 0 1 4.5 5.5a2 2 0 0 1 2-2Z\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-trash\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4 7h16\">\u003c/path>\u003cpath d=\"M9 7V4h6v3\">\u003c/path>\u003cpath d=\"M6.5 7l1 13h9l1-13\">\u003c/path>\u003cpath d=\"M10 11v5\">\u003c/path>\u003cpath d=\"M14 11v5\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-close\" viewBox=\"0 0 24 24\">\u003cpath d=\"M6 6l12 12\">\u003c/path>\u003cpath d=\"M18 6L6 18\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-send\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4 12l16-8-6 16-3-6-7-2Z\">\u003c/path>\u003c/symbol>\r\n    \u003csymbol id=\"okh-i-down\" viewBox=\"0 0 24 24\">\u003cpath d=\"M7 10l5 5 5-5\">\u003c/path>\u003c/symbol>\r\n  \u003c/svg>\r\n\r\n  \u003cdiv class=\"okh-shell\">\r\n\r\n    \u003cheader class=\"okh-head\">\r\n      \u003cdiv class=\"okh-head-main\">\r\n        \u003cdiv class=\"okh-logo\" aria-hidden=\"true\">\r\n          \u003csvg class=\"okh-ico\" viewBox=\"0 0 24 24\">\u003cuse href=\"#okh-i-book\">\u003c/use>\u003c/svg>\r\n        \u003c/div>\r\n        \u003cdiv class=\"okh-head-text\">\r\n          \u003cspan class=\"okh-kicker\" id=\"okh-kicker\">Occupation dossier\u003c/span>\r\n          \u003ch1 class=\"okh-title\" id=\"okh-title\">Occupation\u003c/h1>\r\n          \u003cp class=\"okh-sub\" id=\"okh-sub\">\u003c/p>\r\n        \u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"okh-head-actions\">\r\n        \u003cspan class=\"okh-chip\" id=\"okh-status-chip\" hidden>\u003c/span>\r\n        \u003cspan class=\"okh-chip okh-chip-role\" id=\"okh-role-chip\">\u003c/span>\r\n        \u003cbutton type=\"button\" class=\"okh-btn okh-btn-ghost okh-btn-sm\" data-act=\"print\" title=\"Print the dossier or save it as a PDF\">\r\n          \u003csvg class=\"okh-ico\" viewBox=\"0 0 24 24\">\u003cuse href=\"#okh-i-print\">\u003c/use>\u003c/svg>\r\n          \u003cspan>Print\u003c/span>\r\n        \u003c/button>\r\n      \u003c/div>\r\n    \u003c/header>\r\n\r\n    \u003cnav class=\"okh-tabs\" id=\"okh-tabs\" aria-label=\"Dossier sections\">\u003c/nav>\r\n\r\n    \u003cdiv class=\"okh-banners\">\r\n      \u003cdiv class=\"okh-banner okh-banner-warn\" id=\"okh-banner-ro\" hidden>\u003c/div>\r\n      \u003cdiv class=\"okh-banner okh-banner-warn\" id=\"okh-banner-config\" hidden>\u003c/div>\r\n      \u003cdiv class=\"okh-banner okh-banner-info\" id=\"okh-banner-draft\" hidden>\u003c/div>\r\n    \u003c/div>\r\n\r\n    \u003cmain class=\"okh-main\" id=\"okh-main\">\u003c/main>\r\n\r\n    \u003cfooter class=\"okh-foot\">\r\n      \u003cspan class=\"okh-foot-note\" id=\"okh-foot-note\">\u003c/span>\r\n      \u003cspan class=\"okh-build\" id=\"okh-build\">tool build\u003c/span>\r\n    \u003c/footer>\r\n\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"okh-modal\" id=\"okh-modal\" hidden>\r\n    \u003cdiv class=\"okh-modal-card\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"okh-modal-title\">\r\n      \u003cdiv class=\"okh-modal-head\">\r\n        \u003ch2 class=\"okh-modal-title\" id=\"okh-modal-title\">\u003c/h2>\r\n        \u003cbutton type=\"button\" class=\"okh-modal-x\" data-act=\"modal-close\" aria-label=\"Close\">\r\n          \u003csvg class=\"okh-ico\" viewBox=\"0 0 24 24\">\u003cuse href=\"#okh-i-close\">\u003c/use>\u003c/svg>\r\n        \u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"okh-modal-body\" id=\"okh-modal-body\">\u003c/div>\r\n      \u003cdiv class=\"okh-modal-foot\" id=\"okh-modal-foot\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cinput type=\"file\" id=\"okh-import-file\" accept=\".json,application/json\" hidden>\r\n\r\n  \u003cdiv class=\"okh-print\" id=\"okh-print\" aria-hidden=\"true\">\u003c/div>\r\n\r\n\u003c/div>\r\n";
+
+(function () {
+  var statusElement = document.getElementById('th-status');
+
+  function injectHtml(html) {
+    var container = document.getElementById('app-container');
+    if (!container) return;
+    container.innerHTML = html;
+
+    var toolScript = document.createElement('script');
+    toolScript.src = 'OccupationKnowledgeHub.js';
+    toolScript.onload = function () {
+      statusElement.textContent = 'Tool loaded';
+      var params = {};
+      window.location.search.replace(/^\?/, '').split('&').forEach(function (pair) {
+        if (!pair) return;
+        var bits = pair.split('=');
+        params[decodeURIComponent(bits[0])] = decodeURIComponent(bits[1] || '');
+      });
+      if (params.tab) {
+        setTimeout(function () {
+          var tab = document.querySelector('[data-act="tab"][data-tab="' + params.tab + '"]');
+          if (tab) tab.click();
+        }, 120);
+      }
+      if (params.preview === 'print') {
+        setTimeout(function () {
+          var printButton = document.querySelector('[data-act="print"]');
+          if (printButton) printButton.click();
+        }, 200);
+      }
+    };
+    toolScript.onerror = function () { statusElement.textContent = 'Tool script failed to load'; };
+    document.body.appendChild(toolScript);
+  }
+
+  if (!EMBEDDED_HTML) {
+    statusElement.textContent = 'No embedded HTML - serve this file over http';
+    return;
+  }
+
+  var fallbackTimer = setTimeout(function () {
+    statusElement.textContent = 'Using embedded HTML (file:// mode)';
+    injectHtml(EMBEDDED_HTML);
+  }, 2200);
+
+  fetch('OccupationKnowledgeHub.html')
+    .then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.text();
+    })
+    .then(function (html) {
+      clearTimeout(fallbackTimer);
+      statusElement.textContent = 'HTML loaded (live)';
+      injectHtml(html);
+    })
+    .catch(function () { /* the fallback timer handles file:// */ });
+})();
+</script>
+</body>
+</html>
