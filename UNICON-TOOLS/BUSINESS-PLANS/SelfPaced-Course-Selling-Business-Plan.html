@@ -30,7 +30,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v1.2</span>
+      <span>v1.3</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -70,13 +70,14 @@
   </p>
   <table>
     <tr><th>Document type</th><td>Business plan</td></tr>
-    <tr><th>Version</th><td>1.2</td></tr>
+    <tr><th>Version</th><td>1.3</td></tr>
     <tr><th>Last updated</th><td>2026-11-16</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE PLAN</span></td></tr>
     <tr><th>Owner</th><td>Founder</td></tr>
     <tr><th>Planning horizon</th><td>24 months detailed, 5 years directional</td></tr>
-    <tr><th>Scope</th><td>Course inventory, pricing, marketing, production and commercial targets for the course business line only.</td></tr>
-    <tr><th>Out of scope</th><td>Operator software subscriptions (restaurant, blinds, education operators), the CSJ compliance wedge and the carshare parcel marketplace.</td></tr>
+    <tr><th>Scope</th><td>Course inventory, pricing, marketing, production, the audience asset that makes them reachable, and commercial targets for the course business line only.</td></tr>
+    <tr><th>Out of scope</th><td>Operator software subscriptions (restaurant, blinds, education operators), the CSJ compliance software line and the carshare parcel marketplace. The CSJ line has its own vertical site and its own plan, and appears here only as a boundary.</td></tr>
+    <tr><th>Related plans</th><td>Self-serve software plan (to be written), covering the tool store and the CSJ compliance line. One plan per business model; product-level detail lives in the tool catalog, not in a document.</td></tr>
   </table>
 
   <!-- ── At-a-glance summary (task, idea and decision counters fill automatically) ── -->
@@ -103,6 +104,7 @@
   <p>We sell self-paced exam preparation directly to individuals. The first product family is driving licence knowledge tests in Canada and the United States, followed by national certifications such as the Canadian boat licence, then high-stakes exams including SAT, MCAT, LSAT and IB.</p>
   <p>The product is a mastery system, not a video library: lesson quizzes with five rotating sets of ten questions, section exams, a closed fifty-question readiness exam, weak-area drilling and a downloadable completion record. The commercial differentiator is a <strong>money-back guarantee that only the readiness exam can qualify</strong>, which turns the course into a verified readiness signal.</p>
   <p>Acquisition is search-led: one hub and 25 to 30 supporting pages per course, a free ten-question sample test that captures email, short video, and individual creator affiliates. Paid advertising starts only after organic conversion is proven.</p>
+  <p>The channel has a second layer that does not depend on search: one <strong>subject knowledge site</strong> per vertical. It is a deep reference core, updated in place when reality changes, plus a short recurring alert. It survives algorithm changes, it builds the only audience asset a solo operator can own, and it is the demand test that decides which course gets built next. The driving vertical serves this plan; the CSJ compliance vertical serves the software line and is documented separately.</p>
   <p>Production runs at <strong>one complete course per month</strong> for twelve months, then two per month, then three to four as templates, AI assistance and paid expert reviewers come online. The long-term inventory target is more than one hundred courses.</p>
 
   <div class="summary-grid">
@@ -124,6 +126,7 @@
     </div>
   </div>
   <p class="ok"><strong>Non-negotiable rule.</strong> Every published course is jurisdiction-accurate, gives the learner a closed readiness exam the learner has not practised, and only then qualifies for the guarantee. Marketing never promises more than the assessment ladder can prove.</p>
+  <p class="ok"><strong>Publishing gate.</strong> A reference page is published only if a reader can act differently after reading it. A course is produced only after its vertical shows demand, except course 1, which is already committed.</p>
 
   <h2 id="sec-market">2. Market opportunity</h2>
 
@@ -194,6 +197,57 @@
     <li>Assessment rules and thresholds are configurable per course, never hardcoded per jurisdiction.</li>
   </ol>
 
+  <h3>3.4 Adjacent options and why they are deferred</h3>
+  <p>Adjacent businesses appear every time this plan is discussed. Each is real, each is deferred or rejected for a stated reason, and each carries a trigger that reopens it. Recording them stops the same argument from being had every month.</p>
+  <table>
+    <tr><th>Option</th><th>Buyer</th><th>Why not now</th><th>Reopens when</th></tr>
+    <tr>
+      <td><strong>Creator edition of the delivery engine.</strong> Sell the learner-side tool to tutors who already have their own content, flat fee, they bring their own students.</td>
+      <td>Individual tutor or small training provider</td>
+      <td>Needs multi-tenant hosting, entitlements and billing before the first sale. Authoring requests turn into unpaid consulting, and selling delivery puts a competitor in the same channel with our support hours attached.</td>
+      <td>5,000 email subscribers and 20,000 monthly visits on a vertical, with a working self-serve checkout for tools</td>
+    </tr>
+    <tr>
+      <td><strong>Marketplace where others publish curricula</strong></td>
+      <td>Creators plus learners</td>
+      <td>Two-sided cold start, payouts, refund disputes, content moderation, marketplace tax rules, no staff. Marketplace creators mostly bring their own audience, so the platform adds little to them.</td>
+      <td>Never as a marketplace. The creator edition above is the better version of the same idea</td>
+    </tr>
+    <tr>
+      <td><strong>Selling to schools and districts</strong></td>
+      <td>Institutional buyer</td>
+      <td>Procurement, security review, single sign-on, custody of minors' data, accessibility documentation, months-long cycles and term-time support expectations.</td>
+      <td>Only with staff and a privacy owner. Not a solo business</td>
+    </tr>
+    <tr>
+      <td><strong>Corporate internal training</strong>, sold to companies</td>
+      <td>Learning and development department</td>
+      <td>Same institutional motion plus security review and data residency. The current storage model has no isolation, export or audit trail.</td>
+      <td>A bottom-up small-team edition, after data isolation, export and audit exist</td>
+    </tr>
+    <tr>
+      <td><strong>Ad-supported general news site</strong></td>
+      <td>Advertisers, indirectly</td>
+      <td>Display rates against the volume required, search-quality exposure, defamation risk from machine-written claims about real people, and no differentiation.</td>
+      <td>Never as a business. The vertical alert model in 6.7 is the version that works</td>
+    </tr>
+  </table>
+  <p class="note">The rule that separates them: sell to individuals, self-serve, flat price, audience owned by us, support answerable in writing. Anything that needs a procurement department, a payout system or an agreement covering someone else's student data is a staffing decision wearing a product costume.</p>
+
+  <h3>3.5 The engine stays internal</h3>
+  <p>The tools that run courses are machinery, not products. CurriculumBuilder handles authoring; SelfPacedEducationBySection handles delivery, assessment and progress. Neither is sold.</p>
+  <p>The usual reason given for protecting the engine is wrong. It is a client-side HTML tool; a competent developer can rebuild the delivery layer in weeks, so the code has low defensive value. The moat is content accuracy, brand, the email list and the per-question data that D-BP-09 collects. Protecting code protects nothing that matters.</p>
+  <p>The real reasons are the sales motion and the support load. Authoring support is consulting in disguise: every buyer arrives with their own curriculum and asks us to make it work for them, and that scales linearly with customers. Institutions do not buy without procurement, which D-BP-01 already rules out.</p>
+  <table>
+    <tr><th>Line</th><th>Own courses</th><th>Creator edition</th></tr>
+    <tr><td>Price</td><td>$49-149 one-off</td><td>$29-79 per month</td></tr>
+    <tr><td>Customers needed for $3,000 a month</td><td>20-60 purchases</td><td>40-100 subscribers</td></tr>
+    <tr><td>Support per customer</td><td>Documentation only</td><td>0.5-1 hour per month during authoring</td></tr>
+    <tr><td>Support at 60 customers</td><td>About 2 hours a month</td><td>30-60 hours a month</td></tr>
+    <tr><td>Time to first revenue</td><td>1-2 months</td><td>3-6 months, after multi-tenant work</td></tr>
+  </table>
+  <p class="note">Directional estimates. If the engine is ever sold, sell delivery to buyers who already have content, never authoring to buyers who do not. Decision D-BP-13.</p>
+
   <h2 id="sec-pricing">4. Pricing and unit economics</h2>
 
   <h3>4.1 Price architecture</h3>
@@ -263,6 +317,7 @@
   <table>
     <tr><th>Channel</th><th>When</th><th>Cost</th><th>Role</th></tr>
     <tr><td>SEO content clusters</td><td>Month 1 onward</td><td>Founder hours</td><td>Primary compounding engine</td></tr>
+    <tr><td>Subject knowledge site, reference core plus recurring alert</td><td>Month 1 onward</td><td>Founder hours</td><td>Owned audience, algorithm-independent reach and the demand test for the next course. See 6.7</td></tr>
     <tr><td>Free sample test, lead magnet</td><td>Month 1 onward</td><td>None</td><td>Capture email, prove value, rank for practice-test terms</td></tr>
     <tr><td>Short video, Shorts, Reels, TikTok</td><td>Month 1 onward</td><td>Founder hours</td><td>Cheap reach and recall among 16 to 25</td></tr>
     <tr><td>Individual creator affiliates</td><td>Month 3 onward</td><td>30% commission</td><td>Borrowed distribution with no upfront cost</td></tr>
@@ -324,6 +379,73 @@
     <li>Kill a channel after 100 clicks with zero sales.</li>
   </ul>
 
+  <h3>6.7 The audience asset: a subject knowledge site</h3>
+  <p>Search alone is a rented channel. The owned channel is one <strong>subject knowledge site</strong> per vertical: a deep reference core that is updated in place when reality changes, plus a short recurring alert. It is not content marketing in the old sense, because that form is dead. AI removed the scarcity of words, not the scarcity of being current, verified and accountable.</p>
+  <table>
+    <tr><th>Scarce before AI</th><th>Scarce now</th></tr>
+    <tr><td>Having the information at all</td><td>Being current, because a model's knowledge is frozen and next month's rule change is not in it</td></tr>
+    <tr><td>Explaining a concept</td><td>Verifying a claim, with a source link and a date</td></tr>
+    <tr><td>Writing at volume</td><td>Assembling data nobody else has in one place</td></tr>
+    <tr><td>Publishing an article</td><td>A named person who can be held to it</td></tr>
+  </table>
+  <p>The two layers do different jobs and neither works alone.</p>
+  <table>
+    <tr><th>Layer</th><th>Job</th><th>Cadence</th><th>Lifetime</th></tr>
+    <tr><td>Reference core</td><td>History to today: rules, stages, fees, what changed and what it means for the reader</td><td>Updated when reality changes</td><td>Years, appreciates</td></tr>
+    <tr><td>Alert</td><td>What changed since last time, three to six items, each linking into the core</td><td>Weekly, or event-driven when the change stream is irregular</td><td>Days, but it creates the habit</td></tr>
+  </table>
+  <p>Depth alone does not create repeat readers. A deep page is a reference, and nobody subscribes to a reference. The alert converts a reader into a subscriber, and depth is what makes the alert worth opening.</p>
+  <p class="ok"><strong>Consequence rule.</strong> A page is published only if a reader can act differently after reading it. Restating the official page is not publishing; adding consequence, comparison and history is. This rule is what stops the site from becoming AI content marketing with extra steps.</p>
+  <p>Explicitly not done in a vertical: no display advertising, no sponsored posts, no general regional news, no rewriting official pages, and no volume for its own sake. Ten verified pages beat forty thin ones, and the forty damage the trust asset.</p>
+
+  <h3>6.8 Choosing and sequencing a vertical</h3>
+  <p>A vertical is chosen from the course list, never from interest. It must pass all six tests.</p>
+  <table>
+    <tr><th>Test</th><th>Why it matters</th></tr>
+    <tr><td>Recurring change stream</td><td>Rules, fees, schedules or statistics that change without us, so the alert has something to report</td></tr>
+    <tr><td>Deadline with a cost of being wrong</td><td>The reader is not curious, the reader is late. That is what makes them pay for a course</td></tr>
+    <tr><td>Depth achievable from public documents</td><td>Handbooks, regulations, statistics. We can be the deepest source without a newsroom</td></tr>
+    <tr><td>Maps to a course we intend to sell</td><td>The funnel requirement</td></tr>
+    <tr><td>Regional or procedural uniqueness</td><td>A global publisher will not cover it properly, so we are not competing with the whole internet</td></tr>
+    <tr><td>Reachable without search</td><td>The audience already gathers somewhere: instructor networks, associations, forums, community groups</td></tr>
+  </table>
+  <table>
+    <tr><th>Candidate</th><th>Verdict</th></tr>
+    <tr><td>Driving licence knowledge tests, one province first, then one state at a time</td><td>Yes. Public handbooks, finite rule set, hard deadline, committed course, instructor networks for reach</td></tr>
+    <tr><td>Broad regional news, anything in the province</td><td>No. Too wide to be deepest in anything, no course fit, competes with established outlets</td></tr>
+    <tr><td>Stock market or general finance</td><td>No. No personal deadline, no unique data advantage, regulatory exposure, saturated coverage</td></tr>
+    <tr><td>CSJ compliance and grant rules</td><td>Yes, but for the software line, not this plan. See 3.4 and the scope note at the top of this document</td></tr>
+  </table>
+  <p><strong>Copy mechanism.</strong> The site is built once as a template plus a per-vertical data file. Layout, navigation, change log, alert capture, offer block, source citation and last-verified stamp are shared; only domain content, entity list, alert feed, offer, price and brand colour differ. The first vertical costs four to six weeks including the template; each additional vertical costs about one week of setup plus writing time. If a second vertical costs four weeks of layout again, the model does not scale and stops at two.</p>
+  <p><strong>Cadence and capacity.</strong> Reference cores may coexist, because they only change when reality changes. The alert is the expensive layer: one alert stream at a time, ever, until its list is large enough to justify a second. Two half-run verticals produce no habit in either.</p>
+
+  <h3>6.9 The demand gate between audience and course</h3>
+  <p>The vertical exists to de-risk production. Because a course is produced every month, the expensive mistake is a course nobody asked for. The vertical measures demand before the build starts.</p>
+  <table>
+    <tr><th>Gate</th><th>Measurement</th><th>Pass condition</th></tr>
+    <tr><td>Interest</td><td>Alert subscribers from the vertical</td><td>300 subscribers, or 50 course-interest clicks, within 45 days of the reference core going live</td></tr>
+    <tr><td>Intent</td><td>Clicks on "tell me when the course opens"</td><td>5% of subscribers, or 50 clicks, whichever comes first</td></tr>
+    <tr><td>Commitment</td><td>Pre-launch list with email consent</td><td>At least 100 names before production starts</td></tr>
+  </table>
+  <p>Course 1 is exempt because it is already committed. From course 2 onward, no course enters the production calendar without a passed gate, or a written override recorded in section 13.</p>
+  <p class="note">The gate is a filter, not a promise. Passing it lowers the risk of a zero-sale launch; it does not guarantee sales.</p>
+
+  <h3>6.10 Publishing gates and accountability markers</h3>
+  <p>Readers now assume generated text. Four visible markers separate an accountable site from slop, and all four are cheap.</p>
+  <ul>
+    <li>A named editor and a contact line on the site.</li>
+    <li>A last-verified date on every page that states a rule, a fee or a deadline.</li>
+    <li>A public correction log with dates, including our own errors.</li>
+    <li>A source link on every claim that names an official rule.</li>
+  </ul>
+  <p>Two hard rules protect the vertical:</p>
+  <ul>
+    <li><strong>No advice.</strong> Never answer an eligibility or compliance question with a judgement about the reader's situation. Point to the official rule text and the relevant page.</li>
+    <li><strong>No implied affiliation.</strong> Never use agency or program branding, never imply endorsement, and never put a government name in the brand or the domain.</li>
+  </ul>
+  <p>A wrong rule stated confidently destroys the trust asset faster than any competitor can. The correction log makes errors survivable, it does not make them acceptable.</p>
+  <p class="note"><strong>Label test.</strong> If a reader would pay for the alert alone, build the vertical fully. If not, keep it to five pages and one offer page, and stop before it consumes the course calendar. Do not average between the two.</p>
+
   <h2 id="sec-production">7. Content production plan</h2>
 
   <h3>7.1 Monthly rhythm</h3>
@@ -373,6 +495,19 @@
   </table>
   <p class="note"><strong>Velocity reality check.</strong> One course per month produces twelve courses a year, so one hundred courses takes more than eight years at that speed. Reaching hundreds requires deliberate increases: 12 in year 1, 24 in year 2, 40 in year 3. Every increase in speed is funded by revenue and supported by template maturity, or quality and the guarantee collapse.</p>
 
+  <h3>7.6 Reference core production</h3>
+  <p>The reference core ships before the course launch kit, because it is the demand test that justifies the course. The page set is finite and repeats for every vertical.</p>
+  <table>
+    <tr><th>Page type</th><th>Count per vertical</th><th>Hours each</th><th>Notes</th></tr>
+    <tr><td>Topic hub</td><td>1</td><td>4-6</td><td>Entry point, carries the alert signup and the offer</td></tr>
+    <tr><td>Reference pages</td><td>8-12</td><td>2-4</td><td>Rules, stages, fees, documents, common failure causes</td></tr>
+    <tr><td>Change log page</td><td>1</td><td>3-4</td><td>Dated changes with source links, newest first</td></tr>
+    <tr><td>Offer page</td><td>1</td><td>3-4</td><td>The course, framed against the failure it prevents</td></tr>
+    <tr><td>Alert template</td><td>1</td><td>2-3</td><td>Three to six items, each linking into the core</td></tr>
+  </table>
+  <p>Budget 35-60 hours for the first vertical including the template, and 12-20 hours per additional vertical excluding writing time. This competes directly with course production, so it is scheduled in a month slot, never in spare time.</p>
+  <p class="note"><strong>Maintenance.</strong> A reference page that is not re-verified is a liability. Each page carries a re-verification date; a page past that date shows a visible stale warning or is unpublished. Verification time is part of the maintenance hours already tracked in 11.2.</p>
+
   <h2 id="sec-roadmap">8. Roadmap and milestones</h2>
 
   <h3>8.1 Phase plan</h3>
@@ -403,6 +538,18 @@
     <tr><td>Oct 2027</td><td>SAT Math</td><td>11</td><td>390</td></tr>
     <tr><td>Nov 2027</td><td>SAT Reading and Writing</td><td>12</td><td>420</td></tr>
     <tr><th>Year 1 total</th><th>12 courses</th><th>12</th><th>2,480</th></tr>
+  </table>
+
+  <h3>8.3 Sequencing and calendar rules</h3>
+  <p>The calendar is the real constraint, not the idea list. These rules decide what gets a month slot.</p>
+  <table>
+    <tr><th>Rule</th><th>Reason</th></tr>
+    <tr><td>Course 1 and its vertical launch in the same month</td><td>The vertical is the demand test and the launch list; building one without the other wastes the month</td></tr>
+    <tr><td>One alert stream at a time</td><td>Two half-run alerts produce no habit in either and consume the production calendar</td></tr>
+    <tr><td>No second vertical before the first reaches 300 subscribers</td><td>Proves the template and the habit before paying the copy cost</td></tr>
+    <tr><td>A vertical with a fixed annual window outranks the course calendar</td><td>A missed window costs a full year; a late course costs one month</td></tr>
+    <tr><td>The CSJ compliance vertical is scheduled against its own plan</td><td>Different buyer, different cadence, different P&amp;L</td></tr>
+    <tr><td>A vertical that fails two demand gates is closed to reference-only</td><td>Keeps the audience asset for SEO without spending alert hours on it</td></tr>
   </table>
 
   <h2 id="sec-sales">9. Sales targets</h2>
@@ -500,6 +647,19 @@ if north star >= 30  -> invest more in that product family
 if north star 10-29  -> keep, improve conversion and internal links
 if north star < 10   -> stop investing in that jurisdiction or subject</pre>
 
+  <h3>11.4 Audience asset metrics</h3>
+  <p>Pageviews are not the scoreboard for a vertical, because the vertical does not depend on search for reach.</p>
+  <table>
+    <tr><th>Metric</th><th>What it answers</th><th>Directional target, year one</th></tr>
+    <tr><td>Alert subscribers</td><td>The only audience asset that survives an algorithm change</td><td>2,000-5,000 per established vertical</td></tr>
+    <tr><td>Alert open and click rate</td><td>Whether the habit formed</td><td>35-50% open</td></tr>
+    <tr><td>Returning readers per month</td><td>The standard readers this plan depends on</td><td>30-40% of the list</td></tr>
+    <tr><td>Course-interest clicks</td><td>Demand before production starts</td><td>50 or more per candidate course in 45 days</td></tr>
+    <tr><td>Course sales from the list</td><td>Whether the audience is the right audience</td><td>2-4% per launch</td></tr>
+    <tr><td>Corrections published</td><td>Self-check on accuracy discipline</td><td>Tracked, not targeted</td></tr>
+  </table>
+  <p class="note">Two diagnostics matter. A list that does not open is a cadence problem, which is fixable. A list that opens but never clicks the course is a vertical-selection problem, which is the expensive one and calls for section 6.8, not more content.</p>
+
   <h2 id="sec-assumptions">12. Assumptions to validate</h2>
   <table>
     <tr><th>ID</th><th>Assumption</th><th>Value used</th><th>How to verify</th><th>Verify by</th></tr>
@@ -511,6 +671,10 @@ if north star < 10   -> stop investing in that jurisdiction or subject</pre>
     <tr><td>A-06</td><td>Search ranking lag</td><td>4-8 months</td><td>Search Console position tracking per page</td><td>Ongoing</td></tr>
     <tr><td>A-07</td><td>Production hours per course plus launch kit</td><td>50-60 hours</td><td>Time log for the first three courses</td><td>2027-02-28</td></tr>
     <tr><td>A-08</td><td>Real exam pass rate among completers</td><td>85-90%</td><td>Completion-record follow-up survey</td><td>2027-06-30</td></tr>
+    <tr><td>A-09</td><td>Alert list converts to course buyers</td><td>2-4% per launch</td><td>Sales attributed to alert links and coupon codes</td><td>2027-06-30</td></tr>
+    <tr><td>A-10</td><td>Reference core cost per vertical</td><td>35-60 hours first, 12-20 after</td><td>Time log for the first two verticals</td><td>2027-03-31</td></tr>
+    <tr><td>A-11</td><td>Demand gate predicts sales</td><td>300 subscribers leads to at least 20 sales</td><td>Compare gate results with actual launch sales per course</td><td>2027-09-30</td></tr>
+    <tr><td>A-12</td><td>Cost of one inaccurate reference page</td><td>One correction is survivable, two per quarter are not</td><td>Correction log plus churn and refund review</td><td>Ongoing</td></tr>
   </table>
   <p class="note">When measured data contradicts an assumption, replace the value here and record the change in section 13. The plan follows the data, not the other way round.</p>
 
@@ -530,6 +694,12 @@ if north star < 10   -> stop investing in that jurisdiction or subject</pre>
     <tr><td>D-BP-10</td><td>2026-11-16</td><td>Common core plus jurisdiction delta content model.</td><td>Cuts each new pack to 30-40 hours after the first.</td></tr>
     <tr><td>D-BP-11</td><td>2026-11-16</td><td>Parcel marketplace stays software-only, capped and frozen until a carrier commits.</td><td>Protects focus and cash.</td></tr>
     <tr><td>D-BP-12</td><td>2026-11-16</td><td>This plan is a business plan and uses its own structure; shared design and shared execution tooling only.</td><td>Keeps planning documents readable as plans, not specifications.</td></tr>
+    <tr><td>D-BP-13</td><td>2026-11-16</td><td>The course engine (authoring and delivery tools) stays internal. We sell what it produces, not the engine.</td><td>Authoring support is consulting, institutions need procurement, and the code has low defensive value. Reopens only through the creator-edition trigger in 3.4.</td></tr>
+    <tr><td>D-BP-14</td><td>2026-11-16</td><td>Every vertical is its own site, list and brand. Never two audiences on one domain.</td><td>Zero audience overlap, and mixed topical signals weaken both.</td></tr>
+    <tr><td>D-BP-15</td><td>2026-11-16</td><td>One alert stream at a time. Reference cores may coexist.</td><td>The alert is the expensive layer and the habit; split attention kills both.</td></tr>
+    <tr><td>D-BP-16</td><td>2026-11-16</td><td>Vertical subjects are chosen from the course list and must pass the six tests in 6.8.</td><td>Interest-driven verticals produce readers who never buy.</td></tr>
+    <tr><td>D-BP-17</td><td>2026-11-16</td><td>From course 2 onward, no course is produced without a passed demand gate in 6.9.</td><td>The gate is cheaper than a zero-sale launch.</td></tr>
+    <tr><td>D-BP-18</td><td>2026-11-16</td><td>No advertising, no sponsored posts and no advice in the verticals.</td><td>Keeps trust undivided and removes the liability that comes with compliance judgements.</td></tr>
   </table>
 
   <h2 id="sec-questions">14. Open questions</h2>
@@ -542,6 +712,10 @@ if north star < 10   -> stop investing in that jurisdiction or subject</pre>
     <li><strong>Q-06 - US timing.</strong> Enter the US in April 2027 or after five Canadian courses. Decision due 2027-02-01.</li>
     <li><strong>Q-07 - High-ticket timing.</strong> SAT in October 2027 or a third national certification. Decision due 2027-07-01.</li>
     <li><strong>Q-08 - Expert reviewer terms.</strong> Flat fee or revenue share, and the review standard. Decision due 2028-01-15.</li>
+    <li><strong>Q-09 - Vertical brand.</strong> One brand covering the course and its vertical, or a separate publication brand with its own tone. Decision due 2026-11-25.</li>
+    <li><strong>Q-10 - Alert cadence.</strong> Weekly from day one, or event-driven only until the change stream is understood. Decision due 2026-12-05.</li>
+    <li><strong>Q-11 - First vertical scope.</strong> One province only, or one province plus a national reference page. Decision due 2026-12-10.</li>
+    <li><strong>Q-12 - Paid alert tier.</strong> Keep the alert free as the course funnel, or add a paid tier in year two. Decision due 2027-07-01.</li>
   </ol>
 
   <h2 id="sec-execution">15. Execution plan</h2>
@@ -1081,6 +1255,207 @@ if north star < 10   -> stop investing in that jurisdiction or subject</pre>
     </div>
   </section>
 
+  <section class="task-group" data-release-group="BPC-7" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Phase 6: Audience asset - reference core and alert</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="BPC-7">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="BPC-7"></div></div>
+    <p class="task-group-note">Why these belong together: a reference core with no alert capture and no offer page is a library nobody subscribes to, and an alert with no verified core has nothing to link to. The vertical ships as one unit so the demand gate can be read 45 days later.</p>
+
+    <div class="task-item" data-task-id="T-24" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-24</span>
+          <span class="task-title">Vertical template and per-vertical data file</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-24 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> without a template, every new vertical costs four weeks of layout again and the copy mechanism fails.</p>
+          <p><strong>How we will solve it:</strong> one shared layout, navigation, change log format, alert capture block, offer block, source citation block and last-verified stamp. Everything vertical-specific lives in a single data file: domain content, entity list, alert feed, offer, price and brand colour.</p>
+          <p><strong>Benefit:</strong> the second vertical becomes configuration plus writing, not construction. See 6.8.</p>
+          <p><strong>Files:</strong> vertical template, first data file</p>
+          <p><strong>Status:</strong> NOT STARTED</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-25" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-25</span>
+          <span class="task-title">Six-test scorecard and written verdict for the first vertical</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-25 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> verticals chosen from interest produce readers who never buy.</p>
+          <p><strong>How we will solve it:</strong> score the driving vertical against the six tests in 6.8, record the verdict and the evidence, and confirm in writing that the CSJ compliance vertical belongs to the software line, not to this plan.</p>
+          <p><strong>Benefit:</strong> the choice stops being re-argued monthly, and the boundary between the two plans stays clean.</p>
+          <p><strong>Files:</strong> this plan, sections 6.8 and 13</p>
+          <p><strong>Status:</strong> NOT STARTED - Q-11</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-26" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-26</span>
+          <span class="task-title">Reference core, 8 to 12 verified pages</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-26 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a thin site is indistinguishable from generated content and earns no trust.</p>
+          <p><strong>How we will solve it:</strong> rules, stages, fees, required documents, common failure causes and what changed, each page carrying a source link and a last-verified date.</p>
+          <p><strong>Benefit:</strong> becomes the deepest single-topic source in that jurisdiction, which is what the alert links into.</p>
+          <p><strong>Files:</strong> reference pages, source register</p>
+          <p><strong>Status:</strong> NOT STARTED</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-27" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-27</span>
+          <span class="task-title">Change log page and alert template</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-27 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> without a change log the site states rules with no history, and a reader cannot tell what is new.</p>
+          <p><strong>How we will solve it:</strong> a dated change log, newest first, with a source link per change; an alert template of three to six items, each linking into the core.</p>
+          <p><strong>Benefit:</strong> the alert can be produced in under an hour once the log exists.</p>
+          <p><strong>Files:</strong> change log page, alert template</p>
+          <p><strong>Status:</strong> NOT STARTED - Q-10</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-28" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-28</span>
+          <span class="task-title">Alert capture and welcome sequence</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-28 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> depth without a cadence artefact produces occasional visitors and no list.</p>
+          <p><strong>How we will solve it:</strong> one-field signup on the hub and on every reference page, explicit consent text, and a welcome email that delivers the most recent alert plus the three pages worth reading first.</p>
+          <p><strong>Benefit:</strong> the only audience asset that survives an algorithm change starts accumulating from page one.</p>
+          <p><strong>Files:</strong> signup component, welcome email</p>
+          <p><strong>Status:</strong> NOT STARTED</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-29" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-29</span>
+          <span class="task-title">Offer page tied to the failure the reference prevents</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-29 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a site that only informs sends readers nowhere, and the audience never pays back.</p>
+          <p><strong>How we will solve it:</strong> one offer page per vertical, framed as the failure the reader now understands, plus contextual links at the moment of intent on the relevant reference pages. Never a site-wide banner.</p>
+          <p><strong>Benefit:</strong> the funnel is contextual, so the reference page keeps its credibility.</p>
+          <p><strong>Files:</strong> offer page, in-page call to action</p>
+          <p><strong>Status:</strong> NOT STARTED</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-30" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-30</span>
+          <span class="task-title">Accountability markers and published policy</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-30 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> readers now assume generated text, so trust has to be shown, not claimed.</p>
+          <p><strong>How we will solve it:</strong> named editor and contact line, last-verified dates, a public correction log, a source policy, an explicit no-advice statement and an explicit no-affiliation statement.</p>
+          <p><strong>Benefit:</strong> separates an accountable site from slop at almost no cost. See 6.10.</p>
+          <p><strong>Files:</strong> policy page, correction log</p>
+          <p><strong>Status:</strong> NOT STARTED</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-31" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-31</span>
+          <span class="task-title">Re-verification schedule and stale warning</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-31 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a reference page that is not re-verified becomes a liability that outlives its accuracy.</p>
+          <p><strong>How we will solve it:</strong> a re-verification date per page, a quarterly review slot, and a visible stale warning or unpublish action when the date passes.</p>
+          <p><strong>Benefit:</strong> prevents the one failure that is unrecoverable, a reader acting on an outdated rule.</p>
+          <p><strong>Files:</strong> page metadata, review checklist</p>
+          <p><strong>Status:</strong> NOT STARTED</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-32" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-32</span>
+          <span class="task-title">Demand gate instrumented and reported</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-32 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> without measurement the gate is an opinion, and courses keep being built on instinct.</p>
+          <p><strong>How we will solve it:</strong> track subscribers, course-interest clicks and pre-launch names per vertical; record the gate result against the 6.9 thresholds and note the outcome next to each course decision.</p>
+          <p><strong>Benefit:</strong> makes the next course decision a reading, not an argument.</p>
+          <p><strong>Files:</strong> analytics, this plan</p>
+          <p><strong>Status:</strong> NOT STARTED</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-33" data-group="BPC-7" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-33</span>
+          <span class="task-title">Four consecutive alerts published</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-33 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a habit is claimed after one issue and abandoned by week six.</p>
+          <p><strong>How we will solve it:</strong> publish four alerts before claiming the vertical has a cadence; if the change stream is thinner than expected, switch that vertical to event-driven and record the decision.</p>
+          <p><strong>Benefit:</strong> proves the cadence is sustainable before a second vertical is even considered.</p>
+          <p><strong>Files:</strong> alert archive</p>
+          <p><strong>Status:</strong> NOT STARTED</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <h2 id="sec-ideas">16. Ideas backlog</h2>
   <p>Future ideas live here until they are decided. An agreed idea moves to the execution plan with a priority; a rejected idea is marked Ignored with the reason.</p>
   <div class="idea-stats-bar">
@@ -1244,6 +1619,102 @@ if north star < 10   -> stop investing in that jurisdiction or subject</pre>
         <p><strong>Idea:</strong> publish an aggregate verified pass rate per course.</p>
         <p><strong>Why:</strong> the strongest possible marketing claim in this category.</p>
         <p><strong>Discussion / outcome:</strong> requires the outcome survey and at least 100 completers per course.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-11" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-11</span>
+        <span class="idea-title">Creator edition of the delivery engine</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-11 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> sell the learner-side tool to tutors who already have their own material, as a flat monthly fee, with them bringing their own students.</p>
+        <p><strong>Why:</strong> it is the only version of selling the engine that avoids authoring consulting and never touches the money flow.</p>
+        <p><strong>Discussion / outcome:</strong> deferred. Needs multi-tenant hosting, entitlements and billing, and an existing audience. Reopens at 5,000 subscribers on a vertical. See 3.4 and D-BP-13.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-12" data-idea-status="ignored">
+    <details>
+      <summary>
+        <span class="idea-id">I-12</span>
+        <span class="idea-title">Marketplace for third-party curricula</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-12 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> let other creators publish curricula and sell to learners on our platform.</p>
+        <p><strong>Why considered:</strong> it would cover subject breadth we cannot author ourselves.</p>
+        <p><strong>Discussion / outcome:</strong> ignored. Two-sided cold start, payouts, refund disputes, moderation and marketplace tax rules, with no staff. Marketplace creators mostly bring their own audience anyway, so the flat-fee creator edition is the better version. See 3.4.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-13" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-13</span>
+        <span class="idea-title">Paid tier for the alert itself</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-13 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> charge for a deeper alert, for example jurisdiction comparisons, deadline calendars or a members archive.</p>
+        <p><strong>Why:</strong> if readers pay for the alert alone, the vertical is a media product rather than a funnel and deserves more investment.</p>
+        <p><strong>Discussion / outcome:</strong> decide in year two, after the label test in 6.10 has a real answer. Q-12.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-14" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-14</span>
+        <span class="idea-title">Aggregate benchmark report from operating data</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-14 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> publish annual aggregate findings from course and software usage, for example which topics fail most and which preparation patterns pass most.</p>
+        <p><strong>Why:</strong> it is genuinely new information that no publisher and no model has, and it feeds citations and trust.</p>
+        <p><strong>Discussion / outcome:</strong> only when sample size makes every cell non-identifiable, and after a legal read. Never publish anything that can point at one customer.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-15" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-15</span>
+        <span class="idea-title">Vertical template as a reusable kit</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-15 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> package the vertical template so a new subject site is a data file plus writing, not a build.</p>
+        <p><strong>Why:</strong> it is the difference between two verticals and five.</p>
+        <p><strong>Discussion / outcome:</strong> build it during the first vertical, not after. If the second vertical needs a week of layout, the kit is not finished.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-16" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-16</span>
+        <span class="idea-title">Small-team corporate edition</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-16 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> sell a self-serve package to teams of five to fifty, bought by a team lead on a card, with no procurement.</p>
+        <p><strong>Why:</strong> bottom-up avoids the institutional sale while still reaching company training budgets.</p>
+        <p><strong>Discussion / outcome:</strong> deferred until data isolation, export and audit exist. See 3.4.</p>
       </div>
     </details>
   </div>
@@ -1445,6 +1916,120 @@ if north star < 10   -> stop investing in that jurisdiction or subject</pre>
     </details>
   </div>
 
+  <div class="risk-item" data-risk-id="R-11" data-group="BPC-7" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-11</span>
+        <span class="risk-title">Vertical sprawl: two verticals run at once, both half-built</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-11 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> BPC-7 and every month after it.</p>
+        <p><strong>What can go wrong:</strong> attention splits, neither vertical reaches a cadence, the list stays cold and course production slips as well.</p>
+        <p><strong>Likelihood / impact:</strong> high likelihood, high impact.</p>
+        <p><strong>Mitigation:</strong> D-BP-15 and 8.3. One alert stream at a time. A second vertical starts only after the first reaches 300 subscribers.</p>
+        <p><strong>Last review:</strong> 2026-11-16 - open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-12" data-group="BPC-7" data-risk-level="critical" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-12</span>
+        <span class="risk-title">Stale reference page sends a reader into a wrong action</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-12 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-26, T-31.</p>
+        <p><strong>What can go wrong:</strong> a rule or fee changes, the page stays live, a reader relies on it, and the trust asset is gone along with the course reputation.</p>
+        <p><strong>Likelihood / impact:</strong> high likelihood without process, critical impact.</p>
+        <p><strong>Mitigation:</strong> re-verification date on every page, stale warning or unpublish when it passes, public correction log, correction within 24 hours, refund on request.</p>
+        <p><strong>Last review:</strong> 2026-11-16 - open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-13" data-group="BPC-7" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-13</span>
+        <span class="risk-title">The site reads as generated content and earns no subscribers</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-13 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-26, T-30.</p>
+        <p><strong>What can go wrong:</strong> readers assume slop, never subscribe, and the vertical consumes production hours for nothing.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, high impact.</p>
+        <p><strong>Mitigation:</strong> the four accountability markers in 6.10, human review before publish, no volume targets, and the consequence rule as the publishing gate.</p>
+        <p><strong>Last review:</strong> 2026-11-16 - open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-14" data-group="BPC-7" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-14</span>
+        <span class="risk-title">Alert cadence collapses after the first few issues</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-14 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-27, T-33.</p>
+        <p><strong>What can go wrong:</strong> the habit never forms, the list cools, and subscribers stop opening by the time the course launches.</p>
+        <p><strong>Likelihood / impact:</strong> high likelihood, high impact.</p>
+        <p><strong>Mitigation:</strong> four consecutive alerts before claiming a cadence, event-driven fallback when the change stream is thin, and a written decision if the vertical drops to reference-only.</p>
+        <p><strong>Last review:</strong> 2026-11-16 - open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-15" data-group="BPC-7" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-15</span>
+        <span class="risk-title">Vertical earns readers but produces no buyers</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-15 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> 6.8, 6.9, 11.4.</p>
+        <p><strong>What can go wrong:</strong> a well-read vertical attracts people who never intend to buy, and course production continues on hope.</p>
+        <p><strong>Likelihood / impact:</strong> medium likelihood, high impact.</p>
+        <p><strong>Mitigation:</strong> course-interest clicks as the primary metric, the demand gate before production, and closing the vertical to reference-only after two failed gates.</p>
+        <p><strong>Last review:</strong> 2026-11-16 - open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-16" data-group="BPC-7" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-16</span>
+        <span class="risk-title">Published aggregate data identifies a customer</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-16 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> I-14.</p>
+        <p><strong>What can go wrong:</strong> a small cell in a benchmark report points at one learner or one organization, which breaks trust and may break a privacy commitment.</p>
+        <p><strong>Likelihood / impact:</strong> low likelihood, medium impact.</p>
+        <p><strong>Mitigation:</strong> minimum sample size per cell, no small-cell publication, legal read before the first report, and a stated aggregation policy.</p>
+        <p><strong>Last review:</strong> 2026-11-16 - open</p>
+      </div>
+    </details>
+  </div>
+
   <h3>17.1 Failure rules</h3>
   <table>
     <tr><th>Scenario</th><th>Deterministic response</th></tr>
@@ -1456,6 +2041,10 @@ if north star < 10   -> stop investing in that jurisdiction or subject</pre>
     <tr><td>Content error reported by a learner</td><td>Fix within 24 hours, publish a correction note, refund on request.</td></tr>
     <tr><td>Production slips a month</td><td>Ship the launch kit of the previous course instead of a weaker new course; never fake the monthly count.</td></tr>
     <tr><td>Support contacts above 10 per 100 sales</td><td>Stop marketing spend; fix onboarding and help content first.</td></tr>
+    <tr><td>No alert published in a vertical for three consecutive weeks</td><td>Switch that vertical to event-driven only and remove it from the active list until the cadence can be sustained.</td></tr>
+    <tr><td>Vertical passes the demand gate but the first launch sells fewer than 20</td><td>Keep the vertical as a reference and SEO asset, stop producing courses for it, and re-run the six tests in 6.8 before considering another.</td></tr>
+    <tr><td>Reference page found to be wrong</td><td>Correct within 24 hours, add a dated entry to the correction log, notify subscribers if the error changes an action, and refund on request.</td></tr>
+    <tr><td>A second vertical is running at full cadence</td><td>Close the newer one to reference-only. One alert stream is a rule, not a preference.</td></tr>
   </table>
   <p class="ok"><strong>Overall verdict.</strong> The plan is safe to execute with near-zero cash because the risk is concentrated in content accuracy and search timing, not in capital. The guarantee should not be advertised on a course until phase 1 and the quality gate in section 7.4 have both passed.</p>
 
@@ -1465,10 +2054,11 @@ if north star < 10   -> stop investing in that jurisdiction or subject</pre>
     <tr><td>2026-11-16</td><td>1.0</td><td>First version: market model, product definition, pricing, go-to-market, content factory, 24-month roadmap, targets, budget, metrics, risks, gates and tasks.</td></tr>
     <tr><td>2026-11-16</td><td>1.1</td><td>Rebuilt on the shared document shell with sidebar, tabs, execution panel and risk dashboard.</td></tr>
     <tr><td>2026-11-16</td><td>1.2</td><td>Reframed as a business plan with its own structure. Removed specification-style governance sections, renamed the tabs to Plan, Execution and Risks, and replaced the decision register with a settled-decisions table.</td></tr>
+    <tr><td>2026-11-16</td><td>1.3</td><td>Added the audience asset: a subject knowledge site per vertical with a reference core and a recurring alert, the six vertical tests, the demand gate between audience and course, the publishing gate and accountability markers, reference core production, calendar sequencing and audience metrics. Added 3.4 adjacent options with reopen triggers, 3.5 the engine stays internal. Added 4 assumptions, 6 decisions, 4 questions, 10 tasks in phase 6, 6 ideas and 6 risks.</td></tr>
   </table>
 
   <div class="footer">
-    Self-Paced Course Business Plan - version 1.2 - 2026-11-16.
+    Self-Paced Course Business Plan - version 1.3 - 2026-11-16.
     Keep the numbers honest, update the assumptions when data arrives, and never ship a course without its launch kit.
   </div>
   </div><!-- /#view-document -->
