@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UniconHub Studio</title>
+<link rel="stylesheet" href="studio.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span>
+      <strong>UniconHub Studio</strong>
+      <span class="sub" id="repoLine">repository: loading</span>
+    </span>
+  </div>
+  <div class="topbar-actions">
+    <span class="chip chip-warn" id="serverChip" hidden></span>
+    <span class="chip chip-warn" id="readOnlyChip" title="Studio reads the repository. Writes go through a build run, a queued task or a publish plan - never straight from a click.">read only</span>
+    <input id="searchInput" class="search-input" type="search" placeholder="Search the repository (text, case does not matter)" aria-label="Search the repository" />
+    <button id="btnRefresh" class="btn btn-ghost" type="button">Refresh</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="rail">
+    <div class="rail-head">
+      <span>Repository</span>
+      <button id="btnCollapseAll" class="link-btn" type="button">collapse</button>
+    </div>
+    <ul id="tree" class="tree" role="tree"></ul>
+    <p class="rail-foot" id="railFoot">Folders load as you open them.</p>
+  </aside>
+
+  <main class="main">
+    <nav class="tabs" id="tabs">
+      <button class="tab is-active" data-view="tools" type="button">Tools <span class="tab-count" id="toolCount">0</span></button>
+      <button class="tab" data-view="file" type="button">File <span class="tab-count" id="fileCount">-</span></button>
+      <button class="tab" data-view="tasks" type="button">Tasks <span class="tab-count" id="taskCount">-</span></button>
+      <button class="tab" data-view="search" type="button">Search <span class="tab-count" id="searchCount">-</span></button>
+    </nav>
+
+    <section class="view" id="view-tools">
+      <div class="stat-row" id="statRow"></div>
+      <div class="toolbar">
+        <div class="seg" id="groupFilter" role="group" aria-label="Folder group"></div>
+        <div class="seg" id="statusFilter" role="group" aria-label="Status"></div>
+        <input id="toolFilter" class="tool-filter" type="search" placeholder="Filter tools by name or path" aria-label="Filter tools" />
+      </div>
+      <div class="table-wrap">
+        <table class="grid" id="toolTable">
+          <thead>
+            <tr>
+              <th class="col-status">Status</th>
+              <th>Tool</th>
+              <th>Folder</th>
+              <th class="col-num">Package</th>
+              <th class="col-num">Publish</th>
+              <th class="col-build">Build</th>
+              <th class="col-act"></th>
+            </tr>
+          </thead>
+          <tbody id="toolRows"><tr><td colspan="7" class="empty">Loading the registry...</td></tr></tbody>
+        </table>
+      </div>
+      <p class="foot-note" id="toolsFoot"></p>
+    </section>
+
+    <section class="view" id="view-file" hidden>
+      <div class="file-head">
+        <div>
+          <div class="file-path" id="filePath">No file open</div>
+          <div class="file-meta" id="fileMeta">Pick a file in the tree.</div>
+        </div>
+        <div class="file-actions">
+          <div class="seg" id="fileMode" role="group" aria-label="Preview or code">
+            <button type="button" data-mode="preview" class="is-active">Preview</button>
+            <button type="button" data-mode="code">Code</button>
+          </div>
+          <button id="btnOpenTab" class="btn btn-ghost btn-sm" type="button" disabled>New tab</button>
+          <button id="btnCopyPath" class="btn btn-ghost btn-sm" type="button" disabled>Copy path</button>
+        </div>
+      </div>
+      <div class="preview-wrap" id="previewWrap" hidden>
+        <iframe id="fileFrame" title="File preview" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
+        <p class="foot-note" id="previewNote"></p>
+      </div>
+      <div class="code-wrap" id="codeWrap">
+        <p class="empty">Nothing open yet.</p>
+      </div>
+    </section>
+
+    <section class="view" id="view-tasks" hidden>
+      <div class="file-head">
+        <div>
+          <div class="file-path" id="tasksTool">No tool selected</div>
+          <div class="file-meta" id="tasksMeta">Pick a tool in the Tools tab and press <b>tasks</b>.</div>
+        </div>
+        <div class="file-actions">
+          <button id="btnTasksSsot" class="btn btn-ghost btn-sm" type="button" disabled>Open SSOT</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="seg" id="taskFilter" role="group" aria-label="Task state"></div>
+        <input id="taskSearch" class="tool-filter" type="search" placeholder="Filter tasks by id, title or group" aria-label="Filter tasks" />
+      </div>
+      <div class="table-wrap">
+        <table class="grid" id="taskTable">
+          <thead>
+            <tr>
+              <th class="col-status">State</th>
+              <th class="col-task-id">ID</th>
+              <th>Task</th>
+              <th>Group</th>
+              <th class="col-num">Points</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody id="taskRows"><tr><td colspan="6" class="empty">No tool selected.</td></tr></tbody>
+        </table>
+      </div>
+      <p class="foot-note" id="tasksFoot"></p>
+    </section>
+
+    <section class="view" id="view-search" hidden>
+      <p class="foot-note" id="searchMeta">Type in the search box above.</p>
+      <div id="searchHits" class="hits"><p class="empty">No search yet.</p></div>
+    </section>
+  </main>
+</div>
+
+<script src="studio.js"></script>
+</body>
+</html>

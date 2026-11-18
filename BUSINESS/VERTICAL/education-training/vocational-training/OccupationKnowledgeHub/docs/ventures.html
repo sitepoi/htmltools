@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business and venture catalogue - Entrepreneur Knowledge Hub</title>
+<style>
+  :root {
+    --ven-bg: #f1f5f9;
+    --ven-card: #ffffff;
+    --ven-ink: #121a2b;
+    --ven-soft: #35405a;
+    --ven-muted: #5d6a83;
+    --ven-faint: #8b95a8;
+    --ven-line: #dfe6f1;
+    --ven-line-soft: #eef2f8;
+    --ven-accent: #1b3a7a;
+    --ven-accent-2: #0f766e;
+    --ven-accent-soft: #eef3ff;
+    --ven-grad: #6d28d9;
+    --ven-grad-soft: #f3eeff;
+    --ven-bach: #1d4ed8;
+    --ven-bach-soft: #eaf0ff;
+    --ven-coll: #0f766e;
+    --ven-coll-soft: #e7f6f3;
+    --ven-appr: #a16207;
+    --ven-appr-soft: #fdf6e3;
+    --ven-hs: #475569;
+    --ven-hs-soft: #eef1f6;
+    --ven-none: #6b7280;
+    --ven-none-soft: #f3f4f6;
+    --ven-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 10px 24px -18px rgba(16, 24, 40, .35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--ven-bg);
+    color: var(--ven-ink);
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    padding: 22px 16px 40px;
+  }
+  .ven { max-width: 1240px; margin: 0 auto; }
+  .ven-head {
+    position: relative;
+    background: var(--ven-card);
+    border: 1px solid var(--ven-line);
+    border-radius: 18px;
+    box-shadow: var(--ven-shadow);
+    padding: 22px 24px;
+    overflow: hidden;
+  }
+  .ven-head::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--ven-accent), var(--ven-accent-2));
+  }
+  .ven-kicker {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ven-accent-2);
+    margin-bottom: 4px;
+  }
+  .ven h1 {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.2;
+    letter-spacing: -.02em;
+  }
+  .ven-lede {
+    margin: 8px 0 0;
+    max-width: 86ch;
+    color: var(--ven-muted);
+    font-size: 13.5px;
+  }
+  .ven-head-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .ven-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 13px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .ven-btn-primary { background: var(--ven-accent); border-color: #16326a; color: #fff; }
+  .ven-btn-primary:hover { background: #16326a; }
+  .ven-btn-ghost { background: var(--ven-card); border-color: var(--ven-line); color: var(--ven-soft); }
+  .ven-btn-ghost:hover { border-color: #c3d2ea; color: var(--ven-accent); }
+
+  .ven-stats {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .ven-stat {
+    background: var(--ven-card);
+    border: 1px solid var(--ven-line);
+    border-radius: 12px;
+    padding: 11px 13px;
+    box-shadow: var(--ven-shadow);
+  }
+  .ven-stat strong { display: block; font-size: 20px; letter-spacing: -.02em; }
+  .ven-stat span { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ven-faint); font-weight: 700; }
+  .ven-stat.is-total strong { color: var(--ven-accent); }
+  .ven-stat.is-grad strong { color: var(--ven-grad); }
+  .ven-stat.is-bach strong { color: var(--ven-bach); }
+  .ven-stat.is-coll strong { color: var(--ven-coll); }
+  .ven-stat.is-appr strong { color: var(--ven-appr); }
+  .ven-stat.is-entry strong { color: var(--ven-accent-2); }
+  .ven-stat.is-video strong { color: #b4232a; }
+  .ven-deptline { margin: -4px 0 14px; font-size: 12px; color: var(--ven-faint); }
+
+  .ven-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    background: var(--ven-card);
+    border: 1px solid var(--ven-line);
+    border-radius: 14px;
+    box-shadow: var(--ven-shadow);
+    padding: 11px 13px;
+    margin-bottom: 12px;
+  }
+  .ven-toolbar input[type="search"],
+  .ven-toolbar select {
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ven-ink);
+    background: #fbfcfe;
+    border: 1px solid var(--ven-line);
+    border-radius: 9px;
+    padding: 8px 10px;
+    outline: none;
+  }
+  .ven-toolbar input[type="search"] { flex: 1 1 250px; min-width: 180px; }
+  .ven-toolbar input:focus, .ven-toolbar select:focus { border-color: #9db3e0; box-shadow: 0 0 0 3px rgba(27, 58, 122, .1); }
+  .ven-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ven-chip {
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--ven-line);
+    background: var(--ven-card);
+    color: var(--ven-soft);
+    cursor: pointer;
+  }
+  .ven-chip:hover { border-color: #c3d2ea; }
+  .ven-chip.is-on { background: var(--ven-accent); border-color: var(--ven-accent); color: #fff; }
+  .ven-result { margin-left: auto; font-size: 11.5px; color: var(--ven-faint); white-space: nowrap; }
+
+  .ven-ind {
+    background: var(--ven-card);
+    border: 1px solid var(--ven-line);
+    border-radius: 16px;
+    box-shadow: var(--ven-shadow);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .ven-ind-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #f8faff, #f1f6fd);
+    border-bottom: 1px solid var(--ven-line);
+  }
+  .ven-ind-code {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ven-accent);
+    background: var(--ven-accent-soft);
+    border: 1px solid #dbe5fb;
+    border-radius: 7px;
+    padding: 3px 7px;
+    margin-top: 2px;
+  }
+  .ven-ind-text { min-width: 0; flex: 1; }
+  .ven-ind-name { margin: 0; font-size: 15.5px; letter-spacing: -.01em; }
+  .ven-ind-desc { margin: 2px 0 0; font-size: 12.5px; color: var(--ven-muted); }
+  .ven-ind-count {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ven-soft);
+    background: var(--ven-card);
+    border: 1px solid var(--ven-line);
+    border-radius: 999px;
+    padding: 3px 10px;
+  }
+
+  table.ven-table { width: 100%; border-collapse: collapse; }
+  table.ven-table th {
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ven-faint);
+    background: #fbfcfe;
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--ven-line-soft);
+    font-weight: 700;
+  }
+  table.ven-table td {
+    padding: 9px 18px;
+    border-bottom: 1px solid var(--ven-line-soft);
+    vertical-align: top;
+    font-size: 13.2px;
+    color: var(--ven-soft);
+  }
+  table.ven-table tr:last-child td { border-bottom: 0; }
+  table.ven-table tbody tr:hover td { background: #f9fbff; }
+  .ven-name { font-weight: 700; color: var(--ven-ink); }
+  .ven-dept { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--ven-faint); }
+  .ven-stage {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border: 1px solid var(--ven-line);
+    border-radius: 999px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .ven-stage.s-entry { background: #e8f7f1; color: #0f766e; border-color: #c8ebe1; }
+  .ven-stage.s-experienced { background: #fff7e6; color: #a16207; border-color: #f0e0b5; }
+  .ven-stage.s-leadership { background: #f3eeff; color: #6d28d9; border-color: #e3d7ff; }
+  .ven-path { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 500; line-height: 1.35; color: var(--ven-muted); max-width: 56ch; }
+  .ven-blurb { color: var(--ven-muted); font-size: 12.6px; }
+  .ven-watch {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    color: #b4232a;
+    text-decoration: none;
+    border: 1px solid #eccfd0;
+    background: #fdf5f5;
+    border-radius: 999px;
+    padding: 3px 9px;
+    white-space: nowrap;
+  }
+  .ven-watch:hover { border-color: #cf9698; background: #fbe9ea; }
+  .ven-watch-none { color: var(--ven-faint); font-size: 11.5px; }
+  .ven-res {
+    color: var(--ven-accent);
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ven-res:hover { text-decoration: underline; }
+  .ven-res-sep { color: var(--ven-faint); margin: 0 3px; }
+  .ven-resline { margin: -4px 0 14px; font-size: 11.5px; color: var(--ven-faint); }
+  .ven-route {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .ven-route.r-university-graduate { background: var(--ven-grad-soft); color: var(--ven-grad); border-color: #e3d7ff; }
+  .ven-route.r-university-bachelor { background: var(--ven-bach-soft); color: var(--ven-bach); border-color: #d5e0fd; }
+  .ven-route.r-college { background: var(--ven-coll-soft); color: var(--ven-coll); border-color: #cfeee7; }
+  .ven-route.r-apprenticeship { background: var(--ven-appr-soft); color: var(--ven-appr); border-color: #f0e0b5; }
+  .ven-route.r-high-school { background: var(--ven-hs-soft); color: var(--ven-hs); border-color: #e2e8f0; }
+  .ven-route.r-no-formal { background: var(--ven-none-soft); color: var(--ven-none); border-color: #e5e7eb; }
+  .ven-col-route { width: 190px; }
+
+  .ven-empty {
+    background: var(--ven-card);
+    border: 1px dashed #c8d5ea;
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--ven-muted);
+  }
+  .ven-empty h2 { margin: 0 0 6px; color: var(--ven-ink); font-size: 17px; }
+
+  .ven-how {
+    background: var(--ven-card);
+    border: 1px solid var(--ven-line);
+    border-radius: 16px;
+    box-shadow: var(--ven-shadow);
+    padding: 20px 22px;
+    margin-top: 18px;
+  }
+  .ven-how h2 { margin: 0 0 4px; font-size: 17px; }
+  .ven-how p { margin: 0 0 12px; color: var(--ven-muted); font-size: 13px; }
+  .ven-how ol { margin: 0 0 14px; padding-left: 20px; }
+  .ven-how li { margin: 0 0 7px; font-size: 13.2px; color: var(--ven-soft); }
+  .ven-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #24304a;
+    background: #f7f9fd;
+    border: 1px solid var(--ven-line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+  .ven-foot {
+    margin-top: 16px;
+    font-size: 11.5px;
+    color: var(--ven-faint);
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 960px) {
+    .ven-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 720px) {
+    body { padding: 12px 10px 28px; }
+    .ven-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ven-col-route { width: auto; }
+    table.ven-table th:nth-child(2), table.ven-table td:nth-child(2) { display: none; }
+    .ven-ind-head { flex-wrap: wrap; }
+    .ven-result { margin-left: 0; }
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .ven-toolbar, .ven-head-actions, .ven-result { display: none !important; }
+    .ven-stat, .ven-ind, .ven-head, .ven-how { box-shadow: none; }
+    .ven-ind { break-inside: avoid; }
+  }
+</style>
+<style>
+  /* Compact full-height catalogue layout */
+  html, body { height: 100%; }
+  body { padding: 0; overflow: hidden; }
+  .ven {
+    max-width: none;
+    margin: 0;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .ven-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 16px;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    box-shadow: none;
+  }
+  .ven-head-title { min-width: 0; }
+  .ven-kicker { font-size: 9px; margin-bottom: 1px; }
+  .ven h1 { font-size: 16px; }
+  .ven-head-actions { margin: 0 0 0 auto; }
+  .ven-btn { padding: 5px 10px; font-size: 11.5px; }
+
+  .ven-body {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    min-height: 0;
+    min-width: 0;
+  }
+  .ven-side {
+    background: var(--ven-card);
+    border-right: 1px solid var(--ven-line);
+    padding: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ven-toolbar {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 8px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+  }
+  .ven-toolbar input[type="search"],
+  .ven-toolbar select {
+    width: 100%;
+    flex: none;
+    min-width: 0;
+    padding: 7px 9px;
+    font-size: 12.5px;
+  }
+  .ven-toolbar .ven-chip { width: 100%; }
+  .ven-chips { gap: 5px; }
+  .ven-chips .ven-chip { font-size: 10.5px; padding: 4px 8px; }
+  .ven-result { margin: 0; font-size: 11px; }
+  .ven-stage-note { margin: 0; font-size: 10px; line-height: 1.45; color: var(--ven-faint); overflow-wrap: anywhere; }
+  .ven-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+  }
+  .ven-stat { padding: 7px 9px; border-radius: 8px; box-shadow: none; }
+  .ven-stat strong { font-size: 15px; }
+  .ven-stat span { font-size: 8.5px; letter-spacing: .06em; }
+  .ven-deptline { margin: 0; font-size: 10.5px; }
+  .ven-resline { margin: 0; font-size: 10.5px; line-height: 1.6; overflow-wrap: anywhere; }
+
+  .ven-list {
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 12px 16px 40px;
+  }
+  .ven-ind { margin-bottom: 12px; border-radius: 12px; }
+  .ven-ind-head { padding: 10px 14px; }
+  .ven-ind-name { font-size: 14.5px; }
+  .ven-ind-desc { font-size: 11.5px; }
+  table.ven-table th { padding: 6px 12px; }
+  table.ven-table td { padding: 7px 12px; font-size: 12.4px; }
+  .ven-col-route { width: 150px; }
+  .ven-blurb { font-size: 12px; }
+
+  @media (max-width: 1200px) {
+    .ven-col-res, .ven-col-blurb, .ven-blurb { display: none; }
+  }
+  @media (max-width: 1000px) {
+    body { overflow-x: hidden; overflow-y: auto; }
+    .ven { height: auto; min-height: 100vh; }
+    .ven-body { grid-template-columns: 1fr; }
+    .ven-side {
+      border-right: 0;
+      border-bottom: 1px solid var(--ven-line);
+      overflow: visible;
+    }
+    .ven-toolbar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+    .ven-toolbar input[type="search"] { grid-column: 1 / -1; }
+    .ven-toolbar .ven-chip { grid-column: 1 / -1; }
+    .ven-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .ven-list { overflow: visible; padding: 12px 10px 30px; }
+  }
+  @media (max-width: 640px) {
+    .ven-head { flex-wrap: wrap; align-items: stretch; }
+    .ven-head-title, .ven-head-actions { flex: 1 1 100%; }
+    .ven-head-actions { margin-left: 0; }
+    .ven-toolbar { grid-template-columns: 1fr; }
+    .ven-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ven-col-route { width: auto; }
+    table.ven-table th:nth-child(2), table.ven-table td:nth-child(2) { display: none; }
+  }
+  @media print {
+    body { overflow: visible; height: auto; }
+    .ven { height: auto; display: block; }
+    .ven-body { display: block; }
+    .ven-side { display: none; }
+    .ven-list { overflow: visible; padding: 0; }
+  }
+</style>
+<style>
+  .ven-col-capital { width: 132px; }
+  .ven-col-model { width: 168px; }
+  .ven-col-barrier { width: 116px; }
+  .ven-col-rev { width: 118px; }
+  .ven-cap {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid #dbe5fb;
+    background: var(--ven-accent-soft);
+    color: var(--ven-accent);
+    white-space: nowrap;
+  }
+  .ven-cap.c-over-100b { background: #fdecec; border-color: #f5c2c2; color: #b4232a; }
+  .ven-cap.c-1b-100b { background: #fdf2e3; border-color: #f3d6a4; color: #92400e; }
+  .ven-cap.c-100m-1b { background: #fef7e6; border-color: #f2ddad; color: #8a5a05; }
+  .ven-model, .ven-barrier { display: inline-block; font-size: 11.5px; color: var(--ven-soft); }
+  .ven-barrier.b-licence, .ven-barrier.b-industrial, .ven-barrier.b-state { color: #92400e; font-weight: 600; }
+  .ven-barrier.b-state { color: #b4232a; }
+  .ven-rev { font-size: 11.5px; color: var(--ven-muted); }
+  .ven-scale {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #eef1f6;
+    color: var(--ven-hs);
+    vertical-align: 2px;
+  }
+  .ven-reality {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: #9a3412;
+    background: #fff7ed;
+    border-left: 3px solid #fb923c;
+    border-radius: 0 6px 6px 0;
+    padding: 3px 8px;
+    max-width: 74ch;
+  }
+  .ven-reality strong { font-weight: 700; }
+  .ven-note { margin: 0; font-size: 10.5px; line-height: 1.5; color: var(--ven-faint); }
+  .ven-chip.is-on { background: var(--ven-accent-2); border-color: var(--ven-accent-2); color: #fff; }
+  .ven-empty {
+    background: var(--ven-card);
+    border: 1px solid var(--ven-line);
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: var(--ven-shadow);
+  }
+  .ven-empty h2 { margin: 0 0 6px; font-size: 16px; }
+  .ven-empty p { margin: 0; color: var(--ven-muted); font-size: 13px; }
+  @media (max-width: 1420px) {
+    .ven-col-model { display: none; }
+  }
+  @media (max-width: 1240px) {
+    .ven-col-barrier, .ven-col-rev { display: none; }
+  }
+  @media (max-width: 1200px) {
+    .ven-blurb, .ven-col-blurb { display: table-cell; }
+  }
+  @media (max-width: 1100px) {
+    .ven-col-capital { width: auto; }
+  }
+  @media (max-width: 640px) {
+    .ven-col-capital { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="ven">
+
+  <header class="ven-head">
+    <div class="ven-head-title">
+      <span class="ven-kicker">Entrepreneur Knowledge Hub</span>
+      <h1>Business and venture catalogue</h1>
+    </div>
+    <div class="ven-head-actions">
+      <button type="button" class="ven-btn ven-btn-primary" id="ven-export-json">Export filtered JSON</button>
+      <button type="button" class="ven-btn ven-btn-ghost" id="ven-export-csv">Export CSV</button>
+      <a class="ven-btn ven-btn-ghost" href="ventures-import.json" download="ventures-import.json" title="Download the complete import package">Full JSON</a>
+      <a class="ven-btn ven-btn-ghost" href="occupations.html" title="Open the occupation catalogue">Occupation catalogue</a>
+      <a class="ven-btn ven-btn-ghost" href="ssot.html">SSOT</a>
+    </div>
+  </header>
+
+  <div class="ven-body">
+    <aside class="ven-side" aria-label="Catalogue filters">
+      <div class="ven-toolbar">
+        <input type="search" id="ven-search" placeholder="Search ventures" aria-label="Search ventures">
+        <select id="ven-family" aria-label="Filter by venture family"></select>
+        <select id="ven-capital" aria-label="Filter by start-up capital"></select>
+        <select id="ven-model" aria-label="Filter by business model"></select>
+        <select id="ven-barrier" aria-label="Filter by barrier"></select>
+        <select id="ven-scale" aria-label="Filter by reach"></select>
+      </div>
+      <div class="ven-chips" id="ven-quick-chips" aria-label="Quick filters"></div>
+      <p class="ven-note">Capital is a realistic start-up range, not the cost of reaching scale. Every figure is in Canadian dollars and includes the first months of working capital.</p>
+      <span class="ven-result" id="ven-result" role="status" aria-live="polite"></span>
+      <section class="ven-stats" id="ven-stats" aria-label="Catalogue totals"></section>
+      <p class="ven-deptline" id="ven-deptline" aria-label="Venture family summary"></p>
+      <p class="ven-resline" id="ven-resline" aria-label="How to read the bands"></p>
+    </aside>
+    <main id="ven-list" class="ven-list"></main>
+  </div>
+</div>
+
+<script type="application/json" id="venture-catalog-data">{"capitalBands":[{"id":"under-1k","short":"Under $1K","label":"Under $1,000","min":0,"note":"Tools you may already own, a phone and a skill."},{"id":"1k-10k","short":"$1K-$10K","label":"$1,000-$10,000","min":1000,"note":"A vehicle, basic equipment, insurance and a first marketing push."},{"id":"10k-50k","short":"$10K-$50K","label":"$10,000-$50,000","min":10000,"note":"Stock, a small fit-out, certifications and working capital."},{"id":"50k-250k","short":"$50K-$250K","label":"$50,000-$250,000","min":50000,"note":"A leased premises, a crew, equipment and several months of runway."},{"id":"250k-1m","short":"$250K-$1M","label":"$250,000-$1,000,000","min":250000,"note":"A full build-out, inventory and staff before the doors open."},{"id":"1m-10m","short":"$1M-$10M","label":"$1,000,000-$10,000,000","min":1000000,"note":"Land, buildings, machinery or a regulated operating platform."},{"id":"10m-100m","short":"$10M-$100M","label":"$10,000,000-$100,000,000","min":10000000,"note":"Industrial plant, a hospital or a network build."},{"id":"100m-1b","short":"$100M-$1B","label":"$100,000,000-$1,000,000,000","min":100000000,"note":"A bank charter, an airline, a university or a production facility."},{"id":"1b-100b","short":"$1B-$100B","label":"$1,000,000,000-$100,000,000,000","min":1000000000,"note":"National infrastructure, a launch company or a global platform."},{"id":"over-100b","short":"$100B+","label":"$100,000,000,000 and up","min":100000000000,"note":"State scale. Listed so the ceiling is visible."}],"models":[{"id":"service","label":"Local service","note":"Paid for time, skill and a job done on site."},{"id":"retail","label":"Storefront retail","note":"A physical shop selling products."},{"id":"ecommerce","label":"Online retail","note":"Products sold through a website or marketplace."},{"id":"product","label":"Physical product brand","note":"A packaged or manufactured product sold under a brand."},{"id":"manufacturing","label":"Manufacturing","note":"Turns raw or bulk material into finished goods."},{"id":"digital","label":"Software and digital","note":"Built once, sold many times as software or content access."},{"id":"content","label":"Creator and media","note":"Earns from audience attention, advertising and media."},{"id":"marketplace","label":"Marketplace and platform","note":"Connects two sides and takes a fee from the transaction."},{"id":"franchise","label":"Franchise","note":"Runs a proven system under someone else’s brand."},{"id":"regulated","label":"Licensed practice","note":"A professional service that needs a licence to operate."},{"id":"infrastructure","label":"Capital infrastructure","note":"A large asset that produces recurring income."},{"id":"wholesale","label":"Wholesale and distribution","note":"Buys in volume and sells to businesses."},{"id":"hospitality","label":"Hospitality and food","note":"Serves guests, meals or experiences on site."},{"id":"acquisition","label":"Business acquisition","note":"Buys an existing company and operates it."}],"barriers":[{"id":"none","short":"None","label":"No barrier","min":0,"note":"You can start with effort and a phone."},{"id":"skill","short":"Skill","label":"Trade or professional skill","min":1,"note":"Requires training, a portfolio or demonstrated competence."},{"id":"licence","short":"Licence","label":"Licence or registration","min":2,"note":"A regulator, insurer or municipality must approve you."},{"id":"capital","short":"Capital","label":"Serious capital","min":3,"note":"Lenders or investors are required before launch."},{"id":"industrial","short":"Industrial","label":"Industrial capital and permits","min":4,"note":"Large facilities, environmental review and long construction."},{"id":"state","short":"State","label":"State scale","min":5,"note":"Sovereign, national or multi-government involvement."}],"scales":[{"id":"local","short":"Local","label":"Local","note":"One neighbourhood, town or city."},{"id":"regional","short":"Regional","label":"Regional","note":"Several cities or one province or state."},{"id":"national","short":"National","label":"National","note":"One country."},{"id":"global","short":"Global","label":"Global","note":"Several countries from the start."},{"id":"frontier","short":"Frontier","label":"Frontier","note":"Needs a market that does not exist yet."}],"firstRevenue":[{"id":"days","short":"Days","label":"Days","note":"Cash comes in within the first week."},{"id":"weeks","short":"Weeks","label":"Weeks","note":"First paying customer within a month or two."},{"id":"months","short":"Months","label":"Months","note":"Usually three to twelve months before revenue."},{"id":"year","short":"About a year","label":"About a year","note":"Roughly a year of build before revenue."},{"id":"years","short":"Years","label":"Years","note":"Multi-year build, approval or construction."}],"folders":[{"name":"Trades and construction contracting","slug":"trades-construction","code":"VF-01","order":10,"description":"Sell a hands-on trade to homeowners and builders. Tools, a vehicle and a certification are the usual start."},{"name":"Home, cleaning and property services","slug":"home-property-services","code":"VF-02","order":20,"description":"Recurring work around homes and small buildings, from weekly cleaning to self-storage."},{"name":"Food and beverage","slug":"food-beverage","code":"VF-03","order":30,"description":"Make or serve food and drink: trucks, kitchens, bakeries, breweries and packaged food."},{"name":"Retail and local commerce","slug":"retail-local","code":"VF-04","order":40,"description":"A physical store serving a neighbourhood or a town."},{"name":"Online retail and dropshipping","slug":"ecommerce","code":"VF-05","order":50,"description":"Sell products online with no storefront, from a one-person store to a private label brand."},{"name":"Creator and personal brand","slug":"creator-economy","code":"VF-06","order":60,"description":"Turn an audience into income through advertising, sponsorships, products and memberships."},{"name":"Software, apps and digital products","slug":"software-digital","code":"VF-07","order":70,"description":"Build software once and sell it many times, from a plugin to a vertical platform."},{"name":"Education, tutoring and online courses","slug":"education-training","code":"VF-08","order":80,"description":"Teach a subject or a skill, in person or online, one student at a time or at scale."},{"name":"Professional and B2B services","slug":"professional-services","code":"VF-09","order":90,"description":"Sell expertise to organisations: accounting, law, recruiting, engineering and advice."},{"name":"Marketing, media and agencies","slug":"marketing-media","code":"VF-10","order":100,"description":"Sell attention and craft: advertising, content, design, video, PR and publishing."},{"name":"Health care services","slug":"health-care","code":"VF-11","order":110,"description":"Licensed care businesses, from a one-room practice to a hospital network."},{"name":"Childcare, eldercare and schools","slug":"care-institutions","code":"VF-12","order":120,"description":"Caring for children and seniors, and running schools and colleges."},{"name":"Beauty, wellness and fitness","slug":"beauty-wellness","code":"VF-13","order":130,"description":"Personal care, appearance, movement and wellbeing."},{"name":"Hospitality, travel and events","slug":"hospitality-events","code":"VF-14","order":140,"description":"Rooms, trips, venues and experiences that people pay to attend."},{"name":"Transport, logistics and delivery","slug":"transport-logistics","code":"VF-15","order":150,"description":"Move goods and people, from one courier van to a national network."},{"name":"Automotive sales and service","slug":"automotive","code":"VF-16","order":160,"description":"Cars as the product: servicing, cleaning, selling, distributing and building them."},{"name":"Agriculture and food production","slug":"agriculture","code":"VF-17","order":170,"description":"Growing, raising and harvesting food, fibre and forest products."},{"name":"Manufacturing and industrial","slug":"manufacturing","code":"VF-18","order":180,"description":"Turn materials into products, from a 3D printer to a steel mill."},{"name":"Real estate, rental and property","slug":"real-estate","code":"VF-19","order":190,"description":"Own, trade, develop or manage property and the income it produces."},{"name":"Finance, insurance and fintech","slug":"finance-insurance","code":"VF-20","order":200,"description":"Move, lend, protect and invest money under licence."},{"name":"Energy, utilities and environment","slug":"energy-environment","code":"VF-21","order":210,"description":"Produce power, manage waste and water, and sell clean technology."},{"name":"Buying, franchising and rolling up","slug":"buying-franchising","code":"VF-22","order":220,"description":"Buy a business that already works instead of starting one, then grow it."},{"name":"Import, export and wholesale","slug":"wholesale-trade","code":"VF-23","order":230,"description":"Buy in volume and sell to businesses, or move goods across borders."},{"name":"Pet and animal businesses","slug":"pet-animal","code":"VF-24","order":240,"description":"Services and products for pets, horses and other animals."},{"name":"Frontier technology and space","slug":"frontier-space","code":"VF-25","order":250,"description":"Hard technology that takes years, engineers and patient capital before revenue."},{"name":"Public-scale and impossible today","slug":"public-scale","code":"VF-26","order":260,"description":"Ventures that need a hundred billion dollars or a state. Listed so the ceiling is visible, not because one person can start them."}],"objects":[["Handyman service","home-property-services","under-1k","service","skill","local","days","Fixes the small jobs tradespeople avoid: shelves, doors, leaks, patching and assembly.",""],["Flooring installer","trades-construction","10k-50k","service","skill","local","weeks","Installs hardwood, tile, laminate, vinyl and carpet in homes and small commercial spaces; tools and a van are the main start-up cost.",""],["Painting company","trades-construction","1k-10k","service","skill","local","weeks","Interior and exterior painting for homes and small commercial units, priced per room or per project.",""],["Drywall and finishing crew","trades-construction","10k-50k","service","skill","local","weeks","Hangs, tapes, sands and textures drywall for builders and renovators.",""],["Carpentry and framing crew","trades-construction","10k-50k","service","skill","local","weeks","Frames houses and builds decks, stairs and structural carpentry for contractors.",""],["General renovation contractor","trades-construction","50k-250k","service","licence","regional","months","Manages whole renovations with a licensed crew and trade partners, and carries the warranty.",""],["Electrical contracting company","trades-construction","10k-50k","service","licence","local","months","Residential and light commercial wiring, panels, service upgrades and inspections.",""],["Plumbing company","trades-construction","10k-50k","service","licence","local","months","Service calls, installations and emergency plumbing for homes and small buildings.",""],["HVAC contracting company","trades-construction","50k-250k","service","licence","regional","months","Installs, services and maintains heating, ventilation and air conditioning systems.",""],["Roofing company","trades-construction","50k-250k","service","licence","regional","months","Re-roofs, repairs and inspects residential and light commercial roofs.",""],["Concrete and foundation contractor","trades-construction","50k-250k","service","licence","regional","months","Forming, pouring and finishing driveways, slabs, footings and foundations.",""],["Fencing contractor","trades-construction","10k-50k","service","skill","local","weeks","Installs wood, vinyl, chain-link and ornamental fencing for homes and businesses.",""],["Excavation and earthworks company","trades-construction","250k-1m","service","capital","regional","months","Site preparation, trenching, grading and foundation digging with owned machinery.",""],["Welding and metal fabrication shop","trades-construction","50k-250k","manufacturing","skill","regional","months","Custom gates, railings, structural steel and repair work for builders and industry.",""],["Cabinetmaking and millwork shop","trades-construction","50k-250k","manufacturing","skill","regional","months","Builds kitchens, built-ins and commercial millwork to measure.",""],["Insulation contractor","trades-construction","10k-50k","service","skill","local","weeks","Spray foam, batt and blown insulation plus air sealing for new and existing buildings.",""],["Solar installation company","trades-construction","50k-250k","service","licence","regional","months","Designs and installs rooftop solar and small commercial systems, including permits and rebates.",""],["Restoration and disaster cleanup company","trades-construction","50k-250k","service","licence","regional","months","Water, fire and mould restoration for insurers and homeowners, on call around the clock.",""],["Home inspection service","trades-construction","1k-10k","service","licence","local","weeks","Inspects houses before purchase and writes the report buyers and agents rely on.",""],["Scaffolding and access equipment rental","trades-construction","250k-1m","service","capital","regional","months","Rents, delivers and erects scaffolding and lifts for construction and maintenance work.",""],["House cleaning company","home-property-services","1k-10k","service","none","local","days","Recurring residential cleaning sold by the visit or on a weekly contract.",""],["Lawn care and snow removal","home-property-services","1k-10k","service","none","local","days","Seasonal contracts for mowing, trimming, leaf removal and driveway clearing.",""],["Window cleaning service","home-property-services","under-1k","service","none","local","days","Interior and exterior window cleaning for homes, storefronts and low-rise offices.",""],["Pressure washing service","home-property-services","1k-10k","service","none","local","days","Cleans driveways, siding, decks and commercial exteriors with mobile equipment.",""],["Gutter cleaning service","home-property-services","1k-10k","service","none","local","days","Clears and repairs gutters and downspouts, often bundled with window cleaning.",""],["Junk removal and hauling","home-property-services","10k-50k","service","licence","local","weeks","Removes household and commercial junk and disposes or recycles it legally.",""],["Moving company","home-property-services","50k-250k","service","licence","regional","months","Local and long-distance moves with a truck, crew, packing and storage.",""],["Carpet and upholstery cleaning","home-property-services","10k-50k","service","skill","local","weeks","Deep cleans carpets, rugs and furniture for homes and offices.",""],["Tree service and arborist company","home-property-services","50k-250k","service","licence","regional","months","Trimming, removal, stump grinding and hazard assessment with certified arborists.",""],["Pest control company","home-property-services","10k-50k","service","licence","regional","weeks","Treats insects, rodents and wildlife for homes and food businesses under licence.",""],["Locksmith service","home-property-services","1k-10k","service","licence","local","weeks","Emergency lockouts, rekeying, lock installation and safe opening.",""],["Appliance repair service","home-property-services","1k-10k","service","skill","local","weeks","Repairs washers, dryers, fridges, ovens and dishwashers, often through warranty networks.",""],["Pool service and installation","home-property-services","10k-50k","service","skill","local","weeks","Weekly pool chemistry, equipment repair and seasonal opening and closing.",""],["Chimney sweep service","home-property-services","1k-10k","service","skill","local","weeks","Sweeps, inspects and repairs chimneys and wood heating systems.",""],["Security and alarm installation company","home-property-services","10k-50k","service","licence","regional","months","Installs alarms, cameras and access control, with optional monitoring contracts.",""],["Smart home installation business","home-property-services","1k-10k","service","skill","local","weeks","Sets up networks, cameras, thermostats and voice control for homeowners.",""],["Home staging business","home-property-services","1k-10k","service","none","regional","weeks","Furnishes and styles homes for sale and rents the furniture to the seller.",""],["Interior design studio","home-property-services","1k-10k","service","skill","regional","months","Designs residential and small commercial interiors and manages the trades.",""],["Self-storage facility","home-property-services","1m-10m","infrastructure","capital","regional","year","Builds or converts a building into rented storage units with recurring monthly income.",""],["Property management company","home-property-services","10k-50k","service","licence","regional","months","Runs rentals for owners: tenants, maintenance, accounting and inspections.",""],["Food truck","food-beverage","50k-250k","hospitality","licence","local","weeks","One mobile kitchen selling a short menu at offices, events and street spots.",""],["Ghost kitchen and delivery-only restaurant","food-beverage","50k-250k","hospitality","licence","local","weeks","Cooks from a rented commercial kitchen and sells only through delivery apps.",""],["Cafe","food-beverage","250k-1m","hospitality","licence","local","months","Coffee, light food and seating for a neighbourhood or office district.",""],["Full-service restaurant","food-beverage","250k-1m","hospitality","licence","local","months","A kitchen plus table service, with a menu built around a cuisine or a concept.",""],["Bakery","food-beverage","50k-250k","hospitality","licence","local","months","Bakes bread, pastries and cakes for walk-in customers and wholesale accounts.",""],["Home-based cake and pastry business","food-beverage","1k-10k","product","licence","local","weeks","Made-to-order cakes and desserts sold through social media and referrals.",""],["Catering company","food-beverage","10k-50k","hospitality","licence","regional","weeks","Cooks and serves for events, offices and institutions under contract.",""],["Meal-prep subscription service","food-beverage","10k-50k","product","licence","local","weeks","Weekly prepared meals delivered or collected on a subscription.",""],["Juice and smoothie bar","food-beverage","50k-250k","hospitality","licence","local","months","Fast, healthy drinks and snacks in a small high-traffic location.",""],["Coffee roastery","food-beverage","50k-250k","manufacturing","skill","regional","months","Roasts green beans and sells wholesale to cafes plus direct online.",""],["Microbrewery","food-beverage","250k-1m","manufacturing","licence","regional","year","Brews beer on site with a taproom and distribution to local accounts.",""],["Winery","food-beverage","1m-10m","manufacturing","licence","regional","years","Grows or buys grapes, makes wine and sells through a tasting room and distribution.",""],["Distillery","food-beverage","1m-10m","manufacturing","licence","regional","years","Produces spirits and sells them from a tasting room and through liquor boards.",""],["Ice cream shop","food-beverage","50k-250k","hospitality","licence","local","months","Makes or serves ice cream in a seasonal storefront or a mobile unit.",""],["Specialty food manufacturer","food-beverage","50k-250k","manufacturing","licence","national","months","Makes sauces, snacks or preserves in a commercial kitchen and sells to retailers.",""],["Private chef service","food-beverage","under-1k","service","skill","local","days","Cooks in clients' homes for dinners, small events and weekly meal service.",""],["Mobile bar and bartending service","food-beverage","1k-10k","service","licence","local","weeks","Brings a bar, staff and drinks to weddings and private events.",""],["Vending machine route","food-beverage","10k-50k","retail","none","local","weeks","Places and stocks vending machines in offices, schools and public buildings.",""],["Concession trailer","food-beverage","10k-50k","hospitality","licence","regional","weeks","A towable stand selling snacks and drinks at fairs, games and festivals.",""],["Farmers market food stall","food-beverage","1k-10k","hospitality","licence","local","weeks","A weekend stall selling prepared food or specialty products at markets.",""],["Convenience store","retail-local","250k-1m","retail","licence","local","months","Long hours, high turnover and a small basket of everyday goods.",""],["Independent grocery store","retail-local","1m-10m","retail","licence","local","months","A full grocery range for a neighbourhood, with produce, chilled and dry goods.",""],["Clothing boutique","retail-local","50k-250k","retail","none","local","months","A curated clothing range for a specific customer, sold in store and online.",""],["Hardware store","retail-local","250k-1m","retail","none","local","months","Tools, fasteners, paint and building supplies for homeowners and trades.",""],["Independent pharmacy","retail-local","250k-1m","regulated","licence","local","months","Dispenses prescriptions and sells health products under a pharmacist licence.",""],["Bookstore","retail-local","50k-250k","retail","none","local","months","New or used books with events and special orders to compete with online sellers.",""],["Cannabis retail store","retail-local","250k-1m","retail","licence","local","months","A licensed storefront selling regulated cannabis products.",""],["Liquor store","retail-local","250k-1m","retail","licence","local","months","Retail alcohol sales under a provincial licence and buying rules.",""],["Pet supply store","retail-local","50k-250k","retail","none","local","months","Food, accessories and live animals for local pet owners.",""],["Furniture store","retail-local","250k-1m","retail","none","local","months","Sells home furniture with delivery, assembly and financing options.",""],["Mattress store","retail-local","250k-1m","retail","none","local","months","A narrow product category with high ticket values and negotiated margins.",""],["Electronics repair shop","retail-local","10k-50k","service","skill","local","weeks","Repairs phones, laptops and small appliances, often with a device resale side.",""],["Phone accessory kiosk","retail-local","10k-50k","retail","none","local","weeks","A small mall kiosk selling cases, chargers, screen protectors and repairs.",""],["Thrift and consignment store","retail-local","50k-250k","retail","none","local","weeks","Sells donated or consigned goods and splits proceeds with the consignor.",""],["Florist shop","retail-local","50k-250k","retail","none","local","months","Bouquets, arrangements and event flowers with delivery.",""],["Garden centre","retail-local","250k-1m","retail","none","regional","months","Plants, soil, tools and seasonal garden supplies with outdoor display space.",""],["Sporting goods store","retail-local","250k-1m","retail","none","local","months","Equipment and apparel for a sport or the whole outdoor market, with rentals possible.",""],["Art gallery","retail-local","50k-250k","retail","none","regional","months","Represents artists, runs exhibitions and earns commission on sales.",""],["Vape shop","retail-local","50k-250k","retail","licence","local","months","Regulated nicotine and vaping products for adults, with age verification.",""],["Farm supply and feed store","retail-local","250k-1m","retail","none","regional","months","Feed, seed, fencing and farm hardware for rural customers.",""],["Dropshipping store","ecommerce","under-1k","ecommerce","none","global","days","Sells products shipped by a supplier, so no stock is bought up front.",""],["Print-on-demand brand","ecommerce","under-1k","ecommerce","none","global","days","Designs artwork and lets a printer produce and ship each item after the order.",""],["Amazon private label brand","ecommerce","10k-50k","ecommerce","none","global","months","Sources a product, puts a brand on it and ranks it on marketplaces.",""],["Handmade marketplace shop","ecommerce","under-1k","ecommerce","none","global","days","Sells handmade goods through a marketplace that brings the traffic.",""],["Niche online store with own inventory","ecommerce","10k-50k","ecommerce","none","national","weeks","Buys stock in a narrow category and ships it from home or a small unit.",""],["Subscription box","ecommerce","10k-50k","ecommerce","none","national","months","Curates and ships a themed box every month to paying subscribers.",""],["Online liquidation and overstock reseller","ecommerce","10k-50k","ecommerce","none","national","weeks","Buys pallets and closeouts cheaply and sells individual items online.",""],["Dropshipping automation agency","ecommerce","10k-50k","service","none","global","weeks","Builds and runs stores for other people and takes a fee or a share.",""],["Niche online marketplace","ecommerce","50k-250k","marketplace","none","national","months","Connects buyers and sellers in one category and takes a commission on each sale.",""],["Private-label sourcing agency","ecommerce","1k-10k","wholesale","none","global","weeks","Finds factories, negotiates samples and manages production for brand owners.",""],["Cross-border e-commerce brand","ecommerce","50k-250k","ecommerce","none","global","months","Sells into several countries with local warehousing, tax and returns handled.",""],["Affiliate review site","ecommerce","under-1k","content","none","global","months","Publishes product comparisons and earns commission when readers buy.",""],["Custom merchandise print shop","ecommerce","10k-50k","product","none","national","weeks","Prints shirts, mugs and gifts to order for teams, events and small brands.",""],["Live selling and social commerce business","ecommerce","1k-10k","ecommerce","none","national","weeks","Sells stock through live video sessions and direct messages.",""],["YouTube channel on advertising revenue","creator-economy","under-1k","content","none","global","months","Builds a channel around one topic and earns from advertising and sponsors.",""],["Faceless YouTube automation channel","creator-economy","under-1k","content","none","global","months","Publishes narrated or animated videos produced by a small outsourced team.",""],["TikTok and Reels creator","creator-economy","under-1k","content","none","global","months","Short-form video that grows an audience and sells sponsorships or products.",""],["Twitch streamer","creator-economy","under-1k","content","none","global","months","Live streaming with subscriptions, donations and sponsorships.",""],["Podcaster","creator-economy","under-1k","content","none","global","months","An audio show monetised through sponsors, ads and its own products.",""],["Paid newsletter","creator-economy","under-1k","content","none","global","weeks","A written publication where readers pay monthly for the full edition.",""],["Niche blog with ads and affiliate links","creator-economy","under-1k","content","none","global","months","Answers search questions in one topic and earns from display ads and links.",""],["Instagram influencer with brand deals","creator-economy","under-1k","content","none","global","months","A curated account that charges brands for posts, stories and campaigns.",""],["UGC creator for brands","creator-economy","under-1k","content","none","global","days","Films short product videos that brands use in their own advertising.",""],["Online course creator","creator-economy","under-1k","digital","none","global","weeks","Packages a skill into recorded lessons and sells it repeatedly.",""],["Paid membership community","creator-economy","under-1k","digital","none","global","weeks","A private group with ongoing access, events and answers for a monthly fee.",""],["Digital template and preset seller","creator-economy","under-1k","digital","none","global","days","Sells reusable designs, documents and presets as instant downloads.",""],["Stock photo and video contributor","creator-economy","under-1k","content","skill","global","months","Licenses photos and clips through stock libraries for passive royalties.",""],["Independent musician","creator-economy","1k-10k","content","skill","global","months","Releases music and earns from streaming, shows, merchandise and sync licensing.",""],["Self-published author","creator-economy","under-1k","content","none","global","months","Writes and publishes books directly, keeping the royalty instead of a publisher's cut.",""],["Webcomic and manga artist","creator-economy","under-1k","content","skill","global","months","Publishes a serial story and monetises through subscriptions, print and commissions.",""],["Virtual influencer and AI persona studio","creator-economy","1k-10k","content","none","global","months","Runs a synthetic character with a consistent voice for brand campaigns.",""],["Personal coaching brand","creator-economy","under-1k","service","none","global","weeks","Sells one-to-one and group coaching built on a visible personal reputation.",""],["Sports and esports athlete brand","creator-economy","1k-10k","content","skill","global","months","Turns competitive performance into sponsorships, content and coaching income.",""],["Adult subscription creator","creator-economy","under-1k","content","none","global","days","An 18+ subscription channel selling private content directly to fans.",""],["Indie mobile app","software-digital","1k-10k","digital","none","global","months","Solves one narrow problem for a phone audience, sold by subscription or one-off purchase.",""],["Micro-SaaS tool","software-digital","1k-10k","digital","none","global","months","A small web tool with a monthly subscription, built and run by a few people.",""],["Browser extension","software-digital","under-1k","digital","none","global","weeks","Adds a feature to an existing browser or web app and charges for the premium tier.",""],["WordPress plugin or theme","software-digital","under-1k","digital","none","global","weeks","Licensed software sold yearly to site owners through a plugin marketplace.",""],["Shopify app","software-digital","1k-10k","digital","none","global","months","An add-on for online stores, billed monthly through the app store.",""],["Indie game studio","software-digital","10k-50k","digital","none","global","year","Builds and publishes a game for PC or console and sells copies.",""],["Web design studio","software-digital","under-1k","service","none","regional","weeks","Builds websites for local businesses and charges per project or retainer.",""],["No-code automation consultancy","software-digital","under-1k","service","none","regional","weeks","Connects a client's apps and removes manual work with automated workflows.",""],["AI product studio","software-digital","1k-10k","digital","none","global","months","Puts a model behind a specific workflow and sells the outcome, not the model.",""],["Developer API business","software-digital","10k-50k","digital","none","global","months","Sells metered access to a specialised service that other software calls.",""],["Data and AI consulting practice","software-digital","under-1k","service","skill","national","weeks","Helps companies make sense of their data and adopt AI safely.",""],["Managed IT services company","software-digital","10k-50k","service","skill","regional","months","Runs networks, devices and support for small businesses on a monthly contract.",""],["Cybersecurity consultancy","software-digital","10k-50k","service","skill","national","months","Audits, tests and hardens systems for organisations that cannot afford a breach.",""],["Software development outsourcing company","software-digital","10k-50k","service","skill","global","months","Builds software for other companies with a remote engineering team.",""],["Vertical SaaS company","software-digital","50k-250k","digital","none","national","year","Software built for one industry's exact workflow, sold by subscription.",""],["Online marketplace platform","software-digital","50k-250k","marketplace","none","national","year","Two-sided platform that charges for matching supply and demand.",""],["Social network app","software-digital","250k-1m","digital","capital","global","years","A network product that only works once a critical mass of users joins.",""],["Game publisher","software-digital","1m-10m","digital","capital","global","years","Funds and publishes games made by independent studios and shares the revenue.",""],["Enterprise software company","software-digital","1m-10m","digital","capital","global","years","Sells multi-year licences and implementation projects to large organisations.",""],["Industry search engine","software-digital","10k-50k","digital","none","national","months","Indexes one industry's suppliers, rules and documents better than a general search engine.",""],["Online tutoring practice","education-training","under-1k","service","skill","global","days","One-to-one lessons over video in a subject the founder already knows.",""],["Online course business","education-training","under-1k","digital","none","global","weeks","Sells a recorded curriculum with workbooks and a community.",""],["Test-prep tutoring company","education-training","1k-10k","service","none","regional","weeks","Small-group and one-to-one preparation for a specific exam.",""],["Online language school","education-training","1k-10k","service","none","global","months","Sells live lessons with a roster of teachers in several languages.",""],["Coding bootcamp","education-training","50k-250k","service","skill","national","months","An intensive course that takes beginners to a junior developer job.",""],["Exam-prep academy with a physical centre","education-training","50k-250k","regulated","licence","regional","months","Classrooms, mock exams and supervision for students preparing for high-stakes tests.",""],["Corporate training company","education-training","10k-50k","service","skill","national","months","Designs and delivers training programmes for employers.",""],["Coaching certification business","education-training","10k-50k","digital","none","global","months","Teaches a method and certifies other practitioners to use it.",""],["Paid learning community","education-training","1k-10k","digital","none","global","weeks","Ongoing lessons and peer support behind a monthly membership.",""],["Curriculum design consultancy","education-training","under-1k","service","skill","national","weeks","Writes curricula, assessments and teacher guides for schools and companies.",""],["Driving school","education-training","10k-50k","regulated","licence","regional","months","In-car lessons and road-test preparation with licensed instructors.",""],["Music school","education-training","10k-50k","service","skill","local","months","Instrument and voice lessons in a studio or in students' homes.",""],["Tutoring franchise","education-training","50k-250k","franchise","licence","regional","months","Runs a branded tutoring centre with the franchisor's curriculum and marketing.",""],["EdTech platform","education-training","50k-250k","digital","none","global","year","Software where schools or students learn, practise and track progress.",""],["Online academy with live classes","education-training","10k-50k","digital","none","global","months","Scheduled live classes plus recordings, sold as term or annual access.",""],["Trade school","education-training","250k-1m","regulated","licence","regional","year","Hands-on training for a licensed trade, with workshops, instructors and accreditation.",""],["Corporate learning platform","education-training","50k-250k","digital","none","global","year","A learning management system sold to employers with content and reporting.",""],["Children's STEM enrichment programme","education-training","10k-50k","service","skill","regional","months","After-school science, robotics and coding classes for children.",""],["Bookkeeping practice","professional-services","under-1k","regulated","licence","regional","weeks","Keeps small businesses' books current and files their returns.",""],["Accounting firm","professional-services","10k-50k","regulated","licence","regional","months","Audit, tax and advisory work for companies that need a professional signature.",""],["Law firm","professional-services","10k-50k","regulated","licence","regional","months","Legal advice and representation in one or more practice areas.",""],["Immigration consultancy","professional-services","1k-10k","regulated","licence","national","weeks","Prepares applications and advises on visas and permanent residence.",""],["HR consultancy","professional-services","under-1k","service","skill","national","weeks","Policies, hiring, performance and compliance support for growing companies.",""],["Recruitment agency","professional-services","under-1k","service","none","national","weeks","Finds candidates for employers and charges a fee per placement.",""],["Management consultancy","professional-services","under-1k","service","skill","national","weeks","Sells structured problem solving to executives and owners.",""],["Virtual assistant agency","professional-services","1k-10k","service","none","global","weeks","Provides remote assistants for scheduling, inboxes, invoices and admin.",""],["Translation agency","professional-services","under-1k","service","skill","global","weeks","Coordinates a pool of translators and delivers translated documents.",""],["Market research firm","professional-services","1k-10k","service","skill","national","months","Runs surveys, interviews and analysis for product and marketing decisions.",""],["Grant writing service","professional-services","under-1k","service","skill","national","weeks","Writes funding applications for charities and public organisations.",""],["Business plan and pitch consultant","professional-services","under-1k","service","skill","national","weeks","Prepares plans, financial models and pitch decks for founders and lenders.",""],["Call centre and BPO company","professional-services","50k-250k","service","capital","global","months","Handles calls, chat and back-office work for other companies.",""],["Engineering consultancy","professional-services","10k-50k","regulated","licence","regional","months","Designs and stamps drawings for buildings, infrastructure and equipment.",""],["Architecture firm","professional-services","10k-50k","regulated","licence","regional","months","Designs buildings and manages permits and construction documents.",""],["Land surveying firm","professional-services","50k-250k","regulated","licence","regional","months","Measures and certifies property boundaries and elevations.",""],["Environmental consultancy","professional-services","10k-50k","service","skill","national","months","Permits, impact studies and compliance for projects that touch land and water.",""],["Patent and IP services firm","professional-services","1k-10k","regulated","licence","national","months","Prepares, files and defends patents, trademarks and intellectual property.",""],["Notary practice","professional-services","1k-10k","regulated","licence","local","weeks","Certifies documents, signatures and real estate transactions.",""],["Workplace safety consultancy","professional-services","under-1k","service","skill","national","weeks","Writes safety programmes, trains staff and prepares employers for inspections.",""],["Social media management agency","marketing-media","under-1k","service","none","global","weeks","Plans, writes and schedules content for small brands.",""],["SEO agency","marketing-media","under-1k","service","skill","global","weeks","Improves a client's search rankings and reports the traffic gained.",""],["Paid ads agency","marketing-media","under-1k","service","skill","global","weeks","Runs and optimises advertising accounts for a monthly fee or a share of spend.",""],["Branding studio","marketing-media","1k-10k","service","skill","regional","months","Builds names, identities and brand systems for companies.",""],["Video production company","marketing-media","10k-50k","service","skill","regional","months","Shoots and edits commercials, brand films and product videos.",""],["Photography studio","marketing-media","10k-50k","service","skill","local","weeks","Portrait, product and event photography sold per session or per project.",""],["Podcast production agency","marketing-media","1k-10k","service","skill","global","weeks","Records, edits and publishes shows for companies and creators.",""],["Public relations firm","marketing-media","1k-10k","service","skill","national","months","Earns media coverage and manages reputation for clients.",""],["Copywriting and content studio","marketing-media","under-1k","service","skill","global","weeks","Writes websites, emails, ads and articles for brands.",""],["Email marketing agency","marketing-media","under-1k","service","skill","global","weeks","Builds automated email programmes that turn lists into sales.",""],["Conversion optimisation agency","marketing-media","under-1k","service","skill","global","weeks","Tests pages and flows to increase the percentage of visitors who buy.",""],["Influencer marketing agency","marketing-media","1k-10k","service","none","global","weeks","Matches brands with creators and manages the campaigns and payments.",""],["Digital news publication","marketing-media","10k-50k","content","none","national","months","Covers a local or niche beat and earns from ads, memberships and events.",""],["Magazine publisher","marketing-media","50k-250k","content","none","national","year","A print and digital title funded by advertising and subscriptions.",""],["Sign and graphics shop","marketing-media","10k-50k","manufacturing","skill","regional","weeks","Makes storefront signs, vehicle graphics and banners.",""],["Commercial printing company","marketing-media","250k-1m","manufacturing","capital","regional","months","Offset and digital printing for businesses and institutions.",""],["Event marketing agency","marketing-media","10k-50k","service","skill","regional","months","Creates launches, trade shows and brand experiences.",""],["Motion graphics and animation studio","marketing-media","1k-10k","service","skill","global","months","Explains products and data through animated video.",""],["Localization studio","marketing-media","1k-10k","service","skill","global","months","Adapts software, websites and media for other languages and cultures.",""],["Talent and influencer roster agency","marketing-media","10k-50k","service","none","national","months","Represents creators, negotiates deals and takes a commission.",""],["Counselling and therapy practice","health-care","under-1k","regulated","licence","regional","weeks","Licensed therapists see clients in person or online and bill per session.",""],["Physiotherapy clinic","health-care","50k-250k","regulated","licence","regional","months","Assessment and rehabilitation with a team of physiotherapists and equipment.",""],["Chiropractic clinic","health-care","50k-250k","regulated","licence","regional","months","Spinal and musculoskeletal treatment under a regulated professional licence.",""],["Massage therapy clinic","health-care","10k-50k","regulated","licence","regional","weeks","Registered massage therapy with treatment rooms and direct billing.",""],["Dental practice","health-care","250k-1m","regulated","licence","regional","months","General dentistry with chairs, imaging and a hygiene team.",""],["Optometry clinic","health-care","250k-1m","regulated","licence","regional","months","Eye exams, lenses and frames under an optometrist licence.",""],["Walk-in and family medical clinic","health-care","250k-1m","regulated","licence","regional","months","Primary care physicians seeing walk-in and rostered patients.",""],["Specialist medical practice","health-care","250k-1m","regulated","licence","regional","months","A specialist physician group with referrals, procedures and staff.",""],["Diagnostic imaging centre","health-care","1m-10m","regulated","licence","regional","year","Ultrasound, X-ray and MRI services ordered by referring physicians.",""],["Medical laboratory","health-care","1m-10m","regulated","licence","regional","year","Processes blood and tissue samples for clinics and hospitals.",""],["Home care agency","health-care","10k-50k","regulated","licence","regional","months","Sends personal support workers into clients' homes on scheduled visits.",""],["Nursing staffing agency","health-care","10k-50k","regulated","licence","regional","weeks","Places nurses and support workers into facilities that are short-staffed.",""],["Addiction treatment centre","health-care","1m-10m","regulated","licence","regional","year","Residential and outpatient treatment with clinical staff and accreditation.",""],["Dental laboratory","health-care","50k-250k","manufacturing","skill","regional","months","Makes crowns, bridges and dentures for dental practices.",""],["Hearing clinic","health-care","50k-250k","regulated","licence","regional","months","Hearing tests, aids and follow-up care under a licensed practitioner.",""],["Veterinary clinic","health-care","250k-1m","regulated","licence","regional","months","Exams, surgery and preventive care for pets with a veterinary team.",""],["Fertility clinic","health-care","1m-10m","regulated","licence","regional","years","Fertility assessment and treatment with laboratories and specialists.",""],["Cosmetic surgery clinic","health-care","1m-10m","regulated","licence","regional","year","Elective procedures with operating rooms, surgeons and aftercare.",""],["Telehealth platform","health-care","50k-250k","digital","licence","national","year","Software that connects patients with licensed clinicians over video.",""],["Medical device company","health-care","1m-10m","manufacturing","licence","global","years","Designs, certifies and sells a device into clinics or hospitals.",""],["Pharmaceutical manufacturer (generic)","health-care","10m-100m","manufacturing","licence","national","years","Produces off-patent medicines in a certified facility.",""],["Hospital (single facility)","health-care","10m-100m","infrastructure","licence","regional","years","A full acute-care building with emergency, surgery and inpatient beds.",""],["Hospital network","health-care","1b-100b","infrastructure","capital","national","years","Several hospitals run as one system with shared staff, purchasing and records.",""],["New drug research company","health-care","100m-1b","manufacturing","licence","global","years","Runs discovery and clinical trials for a new medicine, with approval as the goal.",""],["Home daycare","care-institutions","under-1k","regulated","licence","local","weeks","Licensed care for a small group of children in the provider's home.",""],["Daycare centre","care-institutions","250k-1m","regulated","licence","local","months","A licensed building with age-grouped rooms, staff ratios and playgrounds.",""],["Before and after school programme","care-institutions","10k-50k","regulated","licence","local","months","Supervised care around the school day, often inside a school or community hall.",""],["Nanny agency","care-institutions","1k-10k","service","none","regional","weeks","Screens and places nannies with families and charges a placement fee.",""],["Senior home care agency","care-institutions","10k-50k","regulated","licence","regional","months","Schedules personal care and companionship visits for seniors at home.",""],["Assisted living facility","care-institutions","1m-10m","infrastructure","licence","regional","years","Housing with meals, help with daily tasks and staff on site.",""],["Nursing home","care-institutions","10m-100m","infrastructure","licence","regional","years","Round-the-clock clinical care with regulated staffing ratios.",""],["Retirement community","care-institutions","10m-100m","infrastructure","capital","regional","years","Independent units plus shared services, sold or rented to retirees.",""],["Group home operator","care-institutions","250k-1m","regulated","licence","regional","year","Supported housing for adults with disabilities or high needs, funded per bed.",""],["Foster care agency","care-institutions","50k-250k","regulated","licence","regional","year","Recruits, trains and supports foster families on behalf of the state.",""],["Private K-12 school","care-institutions","1m-10m","regulated","licence","regional","years","A full school with teachers, curriculum, facilities and tuition fees.",""],["Boarding school","care-institutions","10m-100m","infrastructure","licence","regional","years","Tuition plus residence, meals and round-the-clock supervision.",""],["International school","care-institutions","10m-100m","infrastructure","licence","global","years","A campus teaching an international curriculum to mobile families.",""],["Private university","care-institutions","100m-1b","infrastructure","licence","national","years","Degree programmes, faculty, accreditation and campus infrastructure.",""],["Skills college","care-institutions","1m-10m","regulated","licence","regional","years","Career-focused diplomas with workshops, instructors and industry placement.",""],["Children's activity centre","care-institutions","250k-1m","service","licence","regional","months","Indoor play, classes and birthday parties in a fitted-out space.",""],["Summer camp operator","care-institutions","250k-1m","service","licence","regional","months","Seasonal camps with staff, insurance, food and activity programmes.",""],["Adult day programme","care-institutions","50k-250k","regulated","licence","regional","months","Daytime activities, meals and supervision for seniors or adults with support needs.",""],["Hair salon with chair renters","beauty-wellness","10k-50k","service","licence","local","weeks","Rents chairs to independent stylists and runs a small retail shelf.",""],["Barbershop","beauty-wellness","50k-250k","service","licence","local","months","Walk-in and booked haircuts with a strong local brand.",""],["Nail salon","beauty-wellness","50k-250k","service","licence","local","months","Manicures, pedicures and nail art in a high-traffic location.",""],["Skin and esthetics clinic","beauty-wellness","50k-250k","regulated","licence","local","months","Facials, peels and skin treatments with certified estheticians.",""],["Medical spa","beauty-wellness","250k-1m","regulated","licence","regional","months","Injectables, lasers and skin treatments supervised by medical staff.",""],["Massage spa","beauty-wellness","50k-250k","service","licence","local","months","Relaxation and therapeutic massage with a room-per-therapist model.",""],["Tattoo studio","beauty-wellness","10k-50k","service","licence","local","weeks","Licensed tattoo and piercing artists working from a health-inspected studio.",""],["Laser hair removal clinic","beauty-wellness","250k-1m","regulated","licence","regional","months","Laser treatments sold in packages with medical oversight.",""],["Independent cosmetics brand","beauty-wellness","10k-50k","manufacturing","none","national","months","Develops a small makeup line with contract manufacturers and sells direct.",""],["Skincare brand","beauty-wellness","10k-50k","manufacturing","licence","national","months","Formulates and packages skincare, with claims and labelling regulated.",""],["Wellness retreat","beauty-wellness","250k-1m","hospitality","licence","regional","year","Multi-day programmes combining lodging, food, movement and therapy.",""],["Yoga studio","beauty-wellness","50k-250k","service","none","local","months","Class passes and memberships in a dedicated practice space.",""],["Pilates studio","beauty-wellness","50k-250k","service","licence","local","months","Reformer and mat classes with certified instructors.",""],["Personal training business","beauty-wellness","under-1k","service","skill","local","days","One-to-one and small-group training in gyms, homes or outdoors.",""],["Independent gym","beauty-wellness","250k-1m","service","capital","local","months","Equipment, floor space and monthly memberships.",""],["CrossFit affiliate","beauty-wellness","50k-250k","franchise","licence","local","months","A licensed box running the branded group training methodology.",""],["Martial arts school","beauty-wellness","50k-250k","service","skill","local","months","Classes, belts and memberships under an instructor's accreditation.",""],["Sauna and cold plunge studio","beauty-wellness","250k-1m","service","capital","local","months","Booked heat and cold sessions with memberships and recovery add-ons.",""],["Nutrition practice","beauty-wellness","under-1k","regulated","licence","regional","weeks","Dietary assessment and plans from a registered dietitian.",""],["Mobile beauty service","beauty-wellness","under-1k","service","licence","local","days","Brings hair, makeup or nails to weddings, homes and offices.",""],["Short-term rental operator","hospitality-events","50k-250k","hospitality","licence","regional","weeks","Furnishes and runs apartments for nightly and weekly guests.",""],["Bed and breakfast","hospitality-events","250k-1m","hospitality","licence","local","months","A small property with hosted rooms, breakfast and local character.",""],["Boutique hotel","hospitality-events","1m-10m","hospitality","capital","regional","years","A designed property with a restaurant, staff and direct bookings.",""],["Hostel","hospitality-events","250k-1m","hospitality","licence","local","months","Shared rooms and communal space for budget travellers.",""],["Campground and glamping site","hospitality-events","50k-250k","hospitality","licence","regional","months","Land with pitches, cabins or tents, washrooms and seasonal bookings.",""],["Tour operator","hospitality-events","10k-50k","hospitality","licence","regional","weeks","Packaged day trips and multi-day tours with guides and transport.",""],["Travel agency","hospitality-events","under-1k","service","licence","national","days","Books flights, hotels and packages and earns commission or a service fee.",""],["Event planning company","hospitality-events","under-1k","service","none","regional","weeks","Plans and runs weddings, conferences and corporate events.",""],["Wedding venue","hospitality-events","1m-10m","infrastructure","capital","regional","year","A property licensed and fitted out for ceremonies, receptions and catering.",""],["Conference centre","hospitality-events","10m-100m","infrastructure","capital","national","years","Purpose-built meeting space with AV, catering and parking.",""],["Party rental company","hospitality-events","50k-250k","service","none","regional","weeks","Rents tents, tables, chairs, linens and lighting for events.",""],["Escape room","hospitality-events","50k-250k","hospitality","licence","local","months","Themed puzzle rooms sold per group session.",""],["Entertainment centre","hospitality-events","1m-10m","infrastructure","capital","regional","years","Arcade, bowling, laser tag or similar attractions under one roof.",""],["Bar and nightclub","hospitality-events","250k-1m","hospitality","licence","local","months","Licensed drinks, music and late-night service.",""],["Food hall operator","hospitality-events","1m-10m","hospitality","capital","regional","years","Leases stalls to independent kitchens and runs the shared seating and bar.",""],["Casino","hospitality-events","100m-1b","hospitality","licence","regional","years","Gaming floor, restaurants and entertainment under a state gaming licence.",""],["Airline","hospitality-events","100m-1b","infrastructure","licence","national","years","Aircraft, routes, crews, maintenance and an air operator certificate.",""],["Theme park","hospitality-events","1b-100b","infrastructure","capital","regional","years","Rides, shows, food and parking built on a large land parcel.",""],["Cruise line","hospitality-events","1b-100b","infrastructure","capital","global","years","Ships, crews, itineraries and port agreements sold as packaged holidays.",""],["Sports stadium operator","hospitality-events","100m-1b","infrastructure","capital","regional","years","Builds and runs a venue and earns from tickets, suites, events and naming rights.",""],["Courier and delivery service","transport-logistics","10k-50k","service","none","local","weeks","Same-day parcel and document delivery with a van or a bike fleet.",""],["Last-mile delivery franchise","transport-logistics","10k-50k","franchise","licence","regional","weeks","Runs a branded route network for a larger delivery company.",""],["Owner-operator trucking","transport-logistics","50k-250k","service","licence","regional","weeks","One tractor-trailer hauling contracted freight.",""],["Trucking fleet","transport-logistics","1m-10m","service","capital","national","months","Several trucks, drivers, dispatch and maintenance under one authority.",""],["Freight brokerage","transport-logistics","10k-50k","service","licence","national","months","Matches shippers with carriers and earns a margin on each load.",""],["Warehousing and 3PL company","transport-logistics","1m-10m","infrastructure","capital","regional","months","Stores, picks and ships stock for other companies.",""],["E-commerce fulfilment centre","transport-logistics","250k-1m","infrastructure","capital","regional","months","Receives inventory, stores it and ships orders for online sellers.",""],["Bike and scooter rental fleet","transport-logistics","250k-1m","infrastructure","licence","regional","months","Places a shared fleet on city streets and charges per ride.",""],["Car rental company","transport-logistics","250k-1m","service","licence","regional","months","A fleet rented by the day with insurance, cleaning and returns.",""],["Chauffeur and limousine service","transport-logistics","50k-250k","service","licence","regional","months","Booked black-car transfers, events and airport runs.",""],["Taxi and rideshare fleet","transport-logistics","50k-250k","service","licence","regional","months","Vehicles and drivers operating on a licensed dispatch platform.",""],["School bus contractor","transport-logistics","250k-1m","service","licence","regional","year","Runs contracted routes for a school district with buses and drivers.",""],["Shuttle service","transport-logistics","50k-250k","service","licence","regional","months","Scheduled or on-demand shuttles for airports, hotels and employers.",""],["Drone delivery network","transport-logistics","10m-100m","infrastructure","licence","regional","years","Aircraft, ground stations and aviation approvals for automated delivery.",""],["Customs brokerage","transport-logistics","10k-50k","service","licence","national","months","Clears imports and exports through customs for shippers.",""],["Cross-dock and transload operator","transport-logistics","250k-1m","infrastructure","capital","regional","months","Moves freight between trucks, rail and containers without long storage.",""],["Rail freight operator","transport-logistics","1b-100b","infrastructure","capital","national","years","Track, locomotives, crews and rights of way for moving freight by rail.",""],["Container shipping line","transport-logistics","1b-100b","infrastructure","capital","global","years","Owns or charters vessels and sells container slots on fixed routes.",""],["Port terminal operator","transport-logistics","1b-100b","infrastructure","state","national","years","Leases waterfront land, builds cranes and moves containers under a port authority.",""],["Mobile mechanic service","automotive","1k-10k","service","licence","local","weeks","Repairs vehicles at the customer's home or workplace with a fitted van.",""],["Auto repair shop","automotive","50k-250k","service","licence","local","months","Hoists, tools and technicians for general mechanical repairs.",""],["Auto body and paint shop","automotive","250k-1m","service","licence","regional","months","Collision repair, paint booths and insurer-approved work.",""],["Detailing business","automotive","1k-10k","service","none","local","days","Interior and exterior deep cleaning, polishing and ceramic coating.",""],["Self-serve car wash","automotive","250k-1m","infrastructure","capital","local","months","Bays with pressure washers, coin or card payment and minimal staff.",""],["Full-service car wash and tunnel","automotive","1m-10m","infrastructure","capital","regional","year","An automated tunnel with attendants, vacuums and memberships.",""],["Oil change shop","automotive","250k-1m","franchise","licence","regional","months","Fast drive-through oil and fluid service, often under a franchise brand.",""],["Tire shop","automotive","250k-1m","service","skill","regional","months","Tire sales, mounting, balancing and seasonal storage.",""],["Used car dealership","automotive","250k-1m","retail","licence","regional","months","Buys, reconditions and retails used vehicles from a lot or online.",""],["New car dealership (franchised)","automotive","10m-100m","franchise","capital","regional","years","A manufacturer franchise with a showroom, service bays and inventory floor plan.",""],["National car distributor and importer","automotive","100m-1b","wholesale","capital","national","years","Imports a brand, homologates it and supplies the dealer network.",""],["EV charging network","automotive","1m-10m","infrastructure","capital","regional","years","Installs chargers on leased sites and earns per kilowatt hour.",""],["Car-sharing service","automotive","1m-10m","service","licence","regional","years","A bookable fleet parked across a city with insurance and cleaning.",""],["Vehicle upfitting and conversion shop","automotive","250k-1m","manufacturing","skill","regional","months","Converts vans and trucks for trades, ambulances and accessibility.",""],["Auto parts store","automotive","250k-1m","retail","none","regional","months","Parts, fluids and accessories for DIY and trade customers.",""],["Motorcycle dealership","automotive","250k-1m","retail","licence","regional","months","Sells motorcycles, gear and service under manufacturer agreements.",""],["Low-volume vehicle manufacturer","automotive","1m-10m","manufacturing","licence","national","years","Builds a small run of specialist vehicles with full certification.",""],["Automotive parts supplier","automotive","10m-100m","manufacturing","capital","global","years","Supplies components to vehicle assembly plants under long contracts.",""],["Car manufacturer with a new mass-market brand","automotive","1b-100b","manufacturing","capital","global","years","Factories, supplier networks, dealers and homologation in every market.","Toyota took decades of state-backed growth. A realistic entry is a niche or low-volume brand, not a full-range automaker."],["Autonomous vehicle company","automotive","1b-100b","digital","capital","global","years","Sensor stacks, driving software, safety validation and fleet operations.",""],["Market garden","agriculture","10k-50k","product","none","local","months","Intensive vegetable growing on a small plot sold to local buyers.",""],["Greenhouse operation","agriculture","250k-1m","product","capital","regional","months","Controlled growing of vegetables, flowers or seedlings under glass.",""],["Berry farm","agriculture","250k-1m","product","capital","regional","year","Field berries with picking crews, cooling and wholesale or pick-your-own sales.",""],["Orchard","agriculture","250k-1m","product","capital","regional","years","Fruit trees with years of establishment before full harvest.",""],["Vineyard","agriculture","1m-10m","product","capital","regional","years","Grape growing plus wine production or contract sales to wineries.",""],["Grain farm","agriculture","1m-10m","product","capital","regional","months","Large-acreage cropping with seed, fertilizer, storage and machinery.",""],["Dairy farm","agriculture","1m-10m","product","licence","regional","months","Milk production under a quota system with herd, barn and equipment.",""],["Cattle ranch","agriculture","1m-10m","product","capital","regional","years","Land, herd, feed and grazing cycles for beef production.",""],["Poultry farm","agriculture","250k-1m","product","licence","regional","months","Contracted chicken or egg production with barns and biosecurity.",""],["Beekeeping and honey business","agriculture","1k-10k","product","skill","local","months","Hives, honey extraction and pollination services for orchards.",""],["Mushroom farm","agriculture","50k-250k","product","skill","regional","months","Indoor growing rooms with substrate, humidity control and wholesale buyers.",""],["Hydroponic vertical farm","agriculture","1m-10m","infrastructure","capital","regional","year","Stacked growing racks with lighting, nutrients and climate control.",""],["Microgreens urban farm","agriculture","1k-10k","product","none","local","weeks","Fast-cycle greens grown indoors and sold to restaurants and markets.",""],["Farm-to-table subscription","agriculture","10k-50k","ecommerce","licence","regional","weeks","Weekly boxes of local produce delivered or collected.",""],["Agri-tourism attraction","agriculture","50k-250k","hospitality","licence","regional","months","Corn mazes, petting zoos and farm experiences sold to visitors.",""],["Farm equipment dealership","agriculture","250k-1m","retail","capital","regional","months","Sells and services tractors and implements under manufacturer agreements.",""],["Seed and fertilizer distributor","agriculture","250k-1m","wholesale","licence","regional","months","Bulk input supply with storage, blending and delivery to farms.",""],["Insect protein farm","agriculture","1m-10m","manufacturing","capital","national","years","Breeds and processes insects for feed and food ingredients.",""],["Commercial fishing operation","agriculture","250k-1m","product","licence","regional","months","A licensed vessel, gear and crew selling to processors.",""],["Aquaculture farm","agriculture","1m-10m","product","licence","regional","years","Raises fish or shellfish in pens or tanks under environmental permits.",""],["Silviculture and forestry contractor","agriculture","50k-250k","service","licence","regional","months","Plants, thins and manages forest land for owners and licensees.",""],["3D printing service bureau","manufacturing","10k-50k","service","skill","regional","weeks","Prints prototypes and small production runs for designers and engineers.",""],["CNC machine shop","manufacturing","250k-1m","manufacturing","skill","regional","months","Turns and mills metal parts to drawing for industrial customers.",""],["Precision sheet metal shop","manufacturing","250k-1m","manufacturing","skill","regional","months","Cuts, bends and welds sheet metal for equipment builders.",""],["Furniture manufacturing studio","manufacturing","50k-250k","manufacturing","skill","regional","months","Designs and builds furniture lines for retail and contract buyers.",""],["Cut-and-sew clothing manufacturer","manufacturing","250k-1m","manufacturing","skill","national","months","Pattern making, cutting and sewing for fashion brands.",""],["Screen printing and embroidery shop","manufacturing","10k-50k","manufacturing","none","national","weeks","Decorates apparel for teams, schools and company merchandise.",""],["Packaging manufacturer","manufacturing","1m-10m","manufacturing","capital","regional","years","Makes boxes, labels and protective packaging for food and consumer brands.",""],["Plastics injection moulding company","manufacturing","1m-10m","manufacturing","capital","regional","years","Moulds and presses plastic parts on contract.",""],["Food processing plant","manufacturing","1m-10m","manufacturing","licence","regional","years","Turns raw ingredients into packaged food under safety certification.",""],["Beverage bottling plant","manufacturing","1m-10m","manufacturing","licence","regional","years","Fills and labels drinks for brands that do not own a line.",""],["Contract cosmetics manufacturer","manufacturing","250k-1m","manufacturing","licence","national","months","Formulates and fills skincare and makeup for other brands.",""],["Electronics assembly company","manufacturing","1m-10m","manufacturing","capital","global","years","Places components and tests boards for product companies.",""],["Battery manufacturer","manufacturing","10m-100m","manufacturing","industrial","global","years","Cell chemistry, production lines and safety certification.",""],["Solar panel factory","manufacturing","10m-100m","manufacturing","industrial","global","years","Wafer, cell and module lines with quality and warranty testing.",""],["Cement plant","manufacturing","100m-1b","manufacturing","industrial","regional","years","Kilns, quarries and distribution under emissions permits.",""],["Pharmaceutical manufacturing plant","manufacturing","100m-1b","manufacturing","licence","global","years","Certified production lines and quality systems for medicines.",""],["Shipyard","manufacturing","100m-1b","manufacturing","industrial","national","years","Dry docks, cranes and skilled trades building and repairing vessels.",""],["Appliance manufacturer","manufacturing","100m-1b","manufacturing","industrial","global","years","Assembly lines, certification and a service network for home appliances.",""],["Textile mill","manufacturing","10m-100m","manufacturing","industrial","national","years","Spinning, weaving or finishing fabric at industrial volume.",""],["Steel mill","manufacturing","1b-100b","manufacturing","industrial","national","years","Furnaces, rolling lines, energy contracts and emissions control.","Considered strategic by governments; permits and power contracts come before any revenue."],["Aircraft manufacturer","manufacturing","1b-100b","manufacturing","industrial","global","years","Design, certification, assembly and a decades-long order book.","Airframe certification and a global support network take a decade or more."],["Semiconductor fabrication plant","manufacturing","1b-100b","manufacturing","industrial","global","years","Clean rooms, lithography tools and a multi-year construction timeline.","A leading-edge fab is a 20 billion dollar and up project with a decade of permitting, power and talent. A realistic entry is chip design without a fab."],["Consumer electronics brand","manufacturing","10m-100m","manufacturing","capital","global","years","Designs devices, contracts the assembly and runs certification and support.",""],["House flipping","real-estate","50k-250k","infrastructure","capital","local","months","Buys, renovates and resells homes with borrowed capital and a trade crew.",""],["Single-unit rental property","real-estate","50k-250k","infrastructure","capital","local","weeks","Owns and rents one unit and collects monthly income.",""],["Multi-unit rental portfolio","real-estate","1m-10m","infrastructure","capital","regional","months","Several rented units managed as one small portfolio.",""],["Commercial property landlord","real-estate","1m-10m","infrastructure","capital","regional","months","Leases office, retail or mixed-use space to business tenants.",""],["Industrial property landlord","real-estate","10m-100m","infrastructure","industrial","regional","years","Warehouses and workshops leased on long commercial terms.",""],["Real estate brokerage","real-estate","10k-50k","regulated","licence","regional","months","A licensed brokerage with agents earning commission on sales.",""],["Small property developer","real-estate","1m-10m","infrastructure","capital","regional","years","Buys land, builds a few units and sells or holds them.",""],["Subdivision developer","real-estate","10m-100m","infrastructure","industrial","regional","years","Services land, builds roads and sells lots to builders.",""],["Parking lot operator","real-estate","250k-1m","infrastructure","capital","local","months","Leases or buys surface parking and collects hourly or monthly fees.",""],["Mobile home park operator","real-estate","1m-10m","infrastructure","capital","regional","years","Owns the land and utilities and rents pads to home owners.",""],["Vacation rental management company","real-estate","10k-50k","service","licence","regional","weeks","Runs listings, cleaning and guest communication for owners.",""],["Co-working space","real-estate","250k-1m","service","capital","local","months","Desks, meeting rooms and memberships in a leased floor.",""],["Real estate photography business","real-estate","under-1k","service","skill","regional","days","Shoots and edits listing photos, tours and floor plans.",""],["Real estate investment trust","real-estate","100m-1b","infrastructure","capital","national","years","A listed vehicle that owns and operates income property.",""],["Land assembly and development partnership","real-estate","10m-100m","infrastructure","industrial","regional","years","Buys adjoining parcels, rezones them and sells to a developer.",""],["Tax preparation practice","finance-insurance","under-1k","regulated","licence","regional","weeks","Prepares personal and small business returns each season and sells advice around them.",""],["Financial planning practice","finance-insurance","10k-50k","regulated","licence","regional","months","Builds plans and manages client assets for a fee or a percentage.",""],["Mortgage brokerage","finance-insurance","10k-50k","regulated","licence","regional","months","Matches borrowers with lenders and earns a commission on funded loans.",""],["Insurance agency","finance-insurance","10k-50k","regulated","licence","regional","months","Sells and services home, auto and commercial policies for several carriers.",""],["Payment processing reseller","finance-insurance","10k-50k","service","licence","national","weeks","Signs merchants onto a payment platform and earns a share of the fees.",""],["Private lending company","finance-insurance","1m-10m","regulated","licence","regional","months","Lends its own capital to borrowers who do not fit bank criteria.",""],["Credit repair service","finance-insurance","under-1k","service","licence","national","weeks","Disputes errors on credit reports and coaches clients on rebuilding scores.",""],["Debt collection agency","finance-insurance","10k-50k","regulated","licence","national","months","Recovers overdue accounts for creditors under consumer protection rules.",""],["Payments fintech app","finance-insurance","250k-1m","digital","licence","national","year","A software layer that moves money between accounts and merchants.",""],["Digital bank","finance-insurance","10m-100m","regulated","licence","national","years","Deposits, cards and lending on a banking licence without branches.",""],["Chartered bank","finance-insurance","100m-1b","regulated","licence","national","years","A full deposit-taking institution with capital, audits and supervision.",""],["New insurance carrier","finance-insurance","100m-1b","regulated","licence","national","years","Underwrites risk, holds reserves and sells through brokers.",""],["Stock exchange","finance-insurance","100m-1b","regulated","licence","national","years","Lists companies, runs a matching engine and supervises members.",""],["Asset management firm","finance-insurance","1m-10m","regulated","licence","national","months","Manages funds for clients and charges a management fee.",""],["Hedge fund","finance-insurance","1m-10m","regulated","licence","global","months","Pools investor capital into a defined strategy with a performance fee.",""],["Private equity firm","finance-insurance","10m-100m","regulated","licence","global","years","Raises a fund, buys companies and improves and sells them.",""],["Venture capital fund","finance-insurance","10m-100m","regulated","licence","global","years","Raises a fund and takes equity positions in early-stage companies.",""],["Crypto exchange","finance-insurance","1m-10m","regulated","licence","global","months","Matches buyers and sellers of digital assets with custody and compliance.",""],["Accounting franchise","finance-insurance","10k-50k","franchise","licence","regional","months","Runs a branded bookkeeping and tax office under a franchisor's system.",""],["Business loan brokerage","finance-insurance","under-1k","service","licence","national","weeks","Places small business loan applications with lenders and earns a referral fee.",""],["Energy consultancy","energy-environment","under-1k","service","skill","national","weeks","Audits energy use and recommends retrofits and procurement changes.",""],["Energy retrofit contractor","energy-environment","10k-50k","service","skill","regional","months","Upgrades insulation, heating and controls to cut building energy use.",""],["Solar farm (utility scale)","energy-environment","10m-100m","infrastructure","industrial","regional","years","Land, panels, interconnection and a long-term power purchase agreement.",""],["Wind farm","energy-environment","100m-1b","infrastructure","industrial","regional","years","Turbines, grid connection and permits across a large land area.",""],["Battery storage facility","energy-environment","10m-100m","infrastructure","industrial","regional","years","Stores and releases power into the grid for arbitrage and stability.",""],["EV charging network operator","energy-environment","1m-10m","infrastructure","capital","regional","years","Leases sites, installs chargers and sells electricity per session.",""],["Water treatment service company","energy-environment","250k-1m","service","licence","regional","months","Tests, treats and maintains water systems for buildings and industry.",""],["Waste management company","energy-environment","250k-1m","service","licence","regional","months","Collects, sorts and disposes of commercial and residential waste.",""],["Recycling business","energy-environment","50k-250k","manufacturing","licence","regional","months","Sorts and processes recyclable material for resale.",""],["Composting operation","energy-environment","50k-250k","manufacturing","licence","regional","months","Collects organic waste and turns it into compost or soil products.",""],["Landfill operator","energy-environment","10m-100m","infrastructure","licence","regional","years","Permitted disposal sites with liners, monitoring and closure obligations.",""],["Environmental remediation firm","energy-environment","250k-1m","service","licence","regional","months","Cleans contaminated soil and groundwater for owners and regulators.",""],["Hydroelectric project","energy-environment","100m-1b","infrastructure","state","regional","years","Dams, turbines, water rights and environmental approval.",""],["Geothermal project","energy-environment","10m-100m","infrastructure","industrial","regional","years","Wells, heat exchange plants and grid or district heating contracts.",""],["Hydrogen production plant","energy-environment","10m-100m","infrastructure","industrial","regional","years","Electrolysers or reforming units with storage and offtake agreements.",""],["Carbon capture company","energy-environment","10m-100m","infrastructure","industrial","national","years","Captures emissions at industrial sites and sells credits or storage.",""],["Fusion power company","energy-environment","1b-100b","infrastructure","industrial","global","years","Plasma machines, magnets and decades of physics and engineering.",""],["Nuclear power plant","energy-environment","1b-100b","infrastructure","state","national","years","Reactor design, licensing, construction and a national safety regime.",""],["Oil refinery","energy-environment","1b-100b","infrastructure","industrial","national","years","Crude processing units, pipelines, storage and environmental permits.",""],["Oil and gas producer","energy-environment","1b-100b","infrastructure","industrial","national","years","Exploration, drilling, production and land rights at basin scale.",""],["Buy an existing laundromat","buying-franchising","250k-1m","infrastructure","capital","local","weeks","Buys a coin laundry with machines, lease and an established route of customers.",""],["Buy an existing car wash","buying-franchising","250k-1m","infrastructure","capital","local","weeks","Purchases a working wash with equipment, land or lease and staff.",""],["Buy a vending route","buying-franchising","50k-250k","retail","none","local","weeks","Takes over machines already placed in locations with regular restocking.",""],["Buy a liquor store","buying-franchising","250k-1m","retail","licence","local","weeks","Purchases a licensed store and transfers the licence and inventory.",""],["Buy a gas station","buying-franchising","1m-10m","retail","licence","local","months","Fuel supply agreement, pumps, convenience store and land or lease.",""],["Buy a quick-service restaurant franchise","buying-franchising","250k-1m","franchise","licence","local","months","A branded counter-service unit with a proven menu and supplier network.",""],["Buy a coffee franchise","buying-franchising","250k-1m","franchise","licence","local","months","A branded cafe with training, supply chain and national marketing.",""],["Buy a cleaning franchise","buying-franchising","50k-250k","franchise","none","regional","weeks","A franchise territory with a brand, booking system and commercial clients.",""],["Buy a plumbing or HVAC franchise","buying-franchising","250k-1m","franchise","licence","regional","months","A licensed service franchise with dispatch, vans and trained technicians.",""],["Buy a self-storage facility","buying-franchising","1m-10m","infrastructure","capital","regional","months","Purchases an operating facility with tenants and expansion land.",""],["Buy an accounting practice","buying-franchising","250k-1m","regulated","licence","regional","months","Takes over a client book and the staff that serves it.",""],["Buy an e-commerce brand","buying-franchising","250k-1m","ecommerce","none","global","weeks","Acquires a store with sales history, traffic and supplier relationships.",""],["Buy a SaaS product","buying-franchising","250k-1m","digital","none","global","weeks","Acquires software with existing subscribers and recurring revenue.",""],["Buy a small manufacturing company","buying-franchising","1m-10m","manufacturing","capital","regional","months","Purchases machines, staff and customer contracts from an owner who is exiting.",""],["Buy a restaurant","buying-franchising","250k-1m","hospitality","licence","local","weeks","Takes over a fitted-out space, equipment, staff and existing bookings.",""],["Search fund (buy and run an SME)","buying-franchising","1m-10m","acquisition","capital","regional","months","Raises a small fund, finds an owner-run company and steps in as chief executive.",""],["Roll-up of small firms","buying-franchising","10m-100m","acquisition","capital","national","years","Buys many small competitors and merges them into one larger operator.",""],["Multi-unit franchise territory","buying-franchising","1m-10m","franchise","licence","regional","months","Buys the rights to open several branded units across a territory.",""],["Buy a dental practice","buying-franchising","1m-10m","regulated","licence","regional","months","Purchases chairs, patient list and staff; the buyer must be licensed.",""],["Buy a veterinary practice","buying-franchising","1m-10m","regulated","licence","regional","months","Acquires a clinic with clients, equipment and a veterinary team.",""],["Import and export trading company","wholesale-trade","10k-50k","wholesale","licence","global","months","Finds products in one country and sells them into another.",""],["Amazon wholesale reseller","wholesale-trade","10k-50k","wholesale","none","national","weeks","Buys branded stock at wholesale and resells it on a marketplace.",""],["Product sourcing agency","wholesale-trade","1k-10k","wholesale","none","global","weeks","Finds factories, checks quality and manages orders for brands.",""],["Consumer goods distribution company","wholesale-trade","250k-1m","wholesale","capital","regional","months","Holds inventory and supplies retailers under distribution agreements.",""],["Beverage distributor","wholesale-trade","250k-1m","wholesale","licence","regional","months","Warehouses and delivers drinks to licensed retailers and restaurants.",""],["Food distributor","wholesale-trade","250k-1m","wholesale","licence","regional","months","Supplies restaurants and grocers with chilled, frozen and dry goods.",""],["Building materials distributor","wholesale-trade","1m-10m","wholesale","capital","regional","months","Stockyards, delivery trucks and trade accounts for builders.",""],["Medical supplies distributor","wholesale-trade","250k-1m","wholesale","licence","regional","months","Supplies clinics and care homes with consumables and equipment.",""],["Auto parts distributor","wholesale-trade","250k-1m","wholesale","capital","regional","months","Supplies repair shops with parts and same-day delivery routes.",""],["Industrial supplies distributor","wholesale-trade","250k-1m","wholesale","capital","regional","months","Sells fasteners, safety gear and consumables to factories and contractors.",""],["Wholesale clothing supplier","wholesale-trade","50k-250k","wholesale","none","national","months","Sells clothing lines in bulk to boutiques and online sellers.",""],["Export agent for local producers","wholesale-trade","under-1k","wholesale","none","global","weeks","Represents local farms and makers in foreign markets for a commission.",""],["Freight forwarding company","wholesale-trade","10k-50k","wholesale","licence","global","months","Books space with carriers and handles documents for international shipments.",""],["Commodity trading firm","wholesale-trade","1m-10m","wholesale","licence","global","months","Buys and sells physical commodities with logistics and hedging.",""],["Farm products broker","wholesale-trade","1k-10k","wholesale","licence","regional","weeks","Connects growers with buyers and takes a margin on the transaction.",""],["Dog walking service","pet-animal","under-1k","service","none","local","days","Group and solo walks sold as recurring weekly packages.",""],["Pet sitting service","pet-animal","under-1k","service","none","local","days","In-home visits and overnight care while owners travel.",""],["Dog grooming salon","pet-animal","10k-50k","service","licence","local","weeks","Bathing, clipping and styling from a fitted salon or a mobile van.",""],["Dog training business","pet-animal","1k-10k","service","skill","regional","weeks","Puppy classes, obedience and behaviour work sold in packages.",""],["Pet daycare and boarding","pet-animal","250k-1m","service","licence","regional","months","Supervised daytime care and overnight stays with runs and staff.",""],["Mobile veterinary practice","pet-animal","50k-250k","regulated","licence","regional","months","A fitted vehicle brings exams, vaccines and basic care to clients.",""],["Pet food brand","pet-animal","10k-50k","manufacturing","licence","national","months","Formulates and packages food with contract manufacturers and sells direct.",""],["Aquarium maintenance service","pet-animal","1k-10k","service","skill","local","weeks","Cleans, stocks and services home and office aquariums on a schedule.",""],["Pet photography business","pet-animal","under-1k","service","skill","regional","days","Studio and outdoor pet portraits sold as prints and digital files.",""],["Pet transport service","pet-animal","1k-10k","service","licence","regional","weeks","Moves pets between homes, airports and vets with safe crating.",""],["Dog breeding kennel","pet-animal","10k-50k","product","licence","regional","months","Breeds and raises a specific breed under animal welfare rules.",""],["Pet waste removal service","pet-animal","under-1k","service","none","local","days","Recurring yard clean-up for dog owners on a weekly route.",""],["Animal rescue and adoption operation","pet-animal","10k-50k","service","licence","regional","months","Fosters, treats and rehomes animals, funded by donations and fees.",""],["Equine boarding stable","pet-animal","250k-1m","service","licence","regional","months","Stalls, pasture, feed and care sold as monthly boarding.",""],["Satellite manufacturing company","frontier-space","10m-100m","manufacturing","industrial","global","years","Builds spacecraft buses and payloads for operators and governments.",""],["Earth observation data service","frontier-space","10m-100m","infrastructure","industrial","global","years","Sells imagery and analysis of the planet to industry and agencies.",""],["Small orbital launch company","frontier-space","1b-100b","manufacturing","industrial","global","years","Develops a rocket, launch site and customers for small satellites.","Rocket Lab needed more than a decade and over a billion dollars to reach orbit regularly."],["Satellite internet constellation","frontier-space","1b-100b","infrastructure","industrial","global","years","Hundreds of satellites, ground stations, spectrum and user terminals.","Spectrum filings, launch capacity and terminal subsidies make this a capital-markets project."],["Private space station","frontier-space","1b-100b","infrastructure","industrial","global","years","Habitat modules, launch contracts and life-support certification.","Certification and rescue planning are government-grade problems."],["Space tourism operator","frontier-space","1b-100b","infrastructure","industrial","global","years","Vehicles, training, medical screening and a licensed launch operation.","Insurance and licensing are as hard as the vehicle itself."],["Lunar landing and services company","frontier-space","1b-100b","infrastructure","industrial","global","years","Landers, payload integration and contracts with space agencies.","Revenue depends on agency contracts awarded years in advance."],["Industrial robotics company","frontier-space","1m-10m","manufacturing","capital","global","years","Sells automation cells and the software that runs them.",""],["Humanoid robotics company","frontier-space","100m-1b","manufacturing","capital","global","years","Actuators, perception, control software and manufacturing partnerships.","Every unit is a hardware and safety problem; the field is still pre-scale."],["Drone manufacturer","frontier-space","1m-10m","manufacturing","licence","global","months","Builds and certifies drones for inspection, mapping and delivery.",""],["Quantum computing company","frontier-space","100m-1b","digital","industrial","global","years","Hardware, error correction and cloud access to a quantum machine.","Error correction at useful scale has not been demonstrated; expect patient science capital."],["AI foundation model lab","frontier-space","1b-100b","digital","industrial","global","years","Compute clusters, research teams and training runs at frontier scale.","Training runs at the frontier cost hundreds of millions per cycle."],["Semiconductor chip design company (fabless)","frontier-space","10m-100m","digital","capital","global","years","Designs chips and outsources fabrication to a foundry.",""],["Gene therapy company","frontier-space","100m-1b","manufacturing","licence","global","years","Preclinical work, trials and manufacturing for a genetic treatment.","A single programme can take a decade and several hundred million dollars to reach approval."],["Neural interface company","frontier-space","100m-1b","manufacturing","industrial","global","years","Implants, surgical robotics and clinical evidence over many years.","Regulators treat implants as high-risk devices; clinical evidence takes years to collect."],["Synthetic biology company","frontier-space","10m-100m","manufacturing","licence","global","years","Engineers organisms or enzymes and scales them into production.",""],["Global software platform at Microsoft scale","public-scale","over-100b","digital","state","global","years","Operating systems, productivity suites and cloud sold to most of the world's organisations.","Requires a product ecosystem, a developer base and decades of capital. Nobody starts here; companies arrive here."],["Global search engine at Google scale","public-scale","over-100b","digital","state","global","years","An index of the entire web plus the advertising system that funds it.","Search is a data and capital war. The workable entry is vertical search inside one industry."],["Global social network at Meta scale","public-scale","over-100b","digital","state","global","years","Billions of users, moderation at scale and an advertising machine.","Network effects protect the incumbent. A niche community is the realistic entry."],["Smartphone ecosystem at Apple scale","public-scale","over-100b","manufacturing","state","global","years","Hardware, an operating system, an app store and a services business.","Requires chip design, manufacturing partners and a developer ecosystem measured in millions."],["Rocket and constellation at SpaceX scale","public-scale","over-100b","manufacturing","state","global","years","Reusable launch, a satellite constellation and a launch site.","Reusability took SpaceX two decades and repeated failures. Small launch is the realistic entry."],["Automaker at Toyota scale","public-scale","over-100b","manufacturing","state","global","years","Global factories, supplier networks, dealers and model lines.","Toyota-scale production is a national industrial project with decades of supplier development."],["Aircraft manufacturer at Boeing scale","public-scale","over-100b","manufacturing","state","global","years","Certificated airframes, engine partnerships and a decades-long order book.","Certification alone takes years. A realistic entry is parts, interiors or drones."],["Semiconductor foundry at TSMC scale","public-scale","over-100b","manufacturing","state","global","years","Leading-edge fabs, water and power contracts, and process know-how.","Each generation costs more than the last. Fabless chip design is the accessible route."],["Oil major at Exxon scale","public-scale","over-100b","infrastructure","state","global","years","Reserves, upstream, refining, chemicals and a global trading desk.","Requires sovereign-scale reserves and a century of accumulated assets."],["Global bank at JPMorgan scale","public-scale","over-100b","regulated","state","global","years","Balance sheet, capital ratios, regulators in every market and technology.","Banking licences are granted per country against capital that no individual can raise."],["Pharmaceutical major at Pfizer scale","public-scale","over-100b","manufacturing","state","global","years","A pipeline, trials, regulatory approvals and a global sales force.","A single approved drug can cost a billion. A portfolio at this scale is a public company."],["Global shipping line at Maersk scale","public-scale","over-100b","infrastructure","state","global","years","Vessels, container fleets, terminals and route networks.","Asset heavy and cyclical. A niche trade lane is the realistic entry."],["Global cloud provider at AWS scale","public-scale","over-100b","infrastructure","state","global","years","Data centres in dozens of regions with custom hardware and networking.","Built on a decade of capital spending and an existing enterprise customer base."],["National electricity grid","public-scale","over-100b","infrastructure","state","national","years","Transmission lines, substations, control rooms and regulators.","Owned or regulated by governments; a private developer can only build one project on the edge."],["National health system","public-scale","over-100b","infrastructure","state","national","years","Hospitals, clinics, staff and funding across a whole country.","A state function. Private operators sell services into it, not replace it."],["National university system","public-scale","over-100b","infrastructure","state","national","years","Campuses, faculties, research funding and accreditation across a country.","Requires endowment, land and accreditation built over generations."],["New planned city","public-scale","over-100b","infrastructure","state","regional","years","Land, roads, water, power, housing and decades of construction.","Only governments and sovereign funds attempt this; the record of private attempts is poor."],["Metro rail system","public-scale","1b-100b","infrastructure","state","regional","years","Tunnels, stations, rolling stock and a public procurement process.","A public procurement, not a startup. Suppliers to the project are the investable layer."],["International airport","public-scale","1b-100b","infrastructure","state","regional","years","Runways, terminals, navigation systems and airline agreements.","Land, noise studies and airline commitments make this a government project."],["Container port","public-scale","1b-100b","infrastructure","state","regional","years","Berths, cranes, dredging and rail connections.","Granted by a port authority on waterfront that is almost never privately available."],["National defense contractor at Lockheed scale","public-scale","over-100b","manufacturing","state","global","years","Classified programmes, cleared staff and multi-decade government contracts.","Entry is as a supplier or a services subcontractor, not as a prime."],["Global telecom carrier at national scale","public-scale","over-100b","infrastructure","state","national","years","Spectrum, towers, fibre and a national regulatory licence.","Spectrum auctions and national licences are awarded through public processes."]]}</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var dataElement = document.getElementById('venture-catalog-data');
+  if (!dataElement) return;
+  var data;
+  try { data = JSON.parse(dataElement.textContent); } catch (error) { return; }
+
+  function indexById(list) {
+    var map = {};
+    list.forEach(function (item) { map[item.id] = item; });
+    return map;
+  }
+  var BAND_BY_ID = indexById(data.capitalBands);
+  var MODEL_BY_ID = indexById(data.models);
+  var BARRIER_BY_ID = indexById(data.barriers);
+  var SCALE_BY_ID = indexById(data.scales);
+  var REVENUE_BY_ID = indexById(data.firstRevenue);
+  var familyBySlug = {};
+  data.folders.forEach(function (family) { familyBySlug[family.slug] = family; });
+
+  var ventures = data.objects.map(function (row) {
+    return {
+      name: row[0],
+      family: row[1],
+      capital: row[2],
+      model: row[3],
+      barrier: row[4],
+      scale: row[5],
+      firstRevenue: row[6],
+      blurb: row[7],
+      reality: row[8] || ''
+    };
+  });
+
+  /* ---------------------------------------------------------- summary */
+
+  var familyCounts = {};
+  ventures.forEach(function (venture) { familyCounts[venture.family] = (familyCounts[venture.family] || 0) + 1; });
+
+  function countBand(ids) {
+    return ventures.filter(function (venture) { return ids.indexOf(venture.capital) !== -1; }).length;
+  }
+  function countModel(ids) {
+    return ventures.filter(function (venture) { return ids.indexOf(venture.model) !== -1; }).length;
+  }
+
+  var statsElement = document.getElementById('ven-stats');
+  statsElement.innerHTML =
+    statCard('is-total', ventures.length, 'Venture types') +
+    statCard('is-entry', countBand(['under-1k', '1k-10k']), 'Under $10K') +
+    statCard('is-coll', countBand(['under-1k', '1k-10k', '10k-50k', '50k-250k']), 'Under $250K') +
+    statCard('is-bach', countBand(['1m-10m', '10m-100m', '100m-1b', '1b-100b', 'over-100b']), '$1M and up') +
+    statCard('is-video', countBand(['over-100b']), 'Impossible today') +
+    statCard('is-appr', ventures.filter(function (venture) { return venture.barrier === 'licence'; }).length, 'Needs a licence') +
+    statCard('is-grad', countModel(['ecommerce', 'digital', 'content', 'marketplace']), 'Online first');
+
+  function statCard(className, value, label) {
+    return '<div class="ven-stat ' + className + '"><strong>' + value + '</strong><span>' + escapeHtml(label) + '</span></div>';
+  }
+
+  var familyLine = document.getElementById('ven-deptline');
+  if (familyLine) familyLine.textContent = data.folders.length + ' venture families · ' + data.capitalBands.length + ' capital bands';
+
+  var reslineElement = document.getElementById('ven-resline');
+  if (reslineElement) {
+    reslineElement.textContent = 'Bands run from under $1K to $100B and up. A band is the money needed to open, not to dominate the market.';
+  }
+
+  /* ---------------------------------------------------------- filters */
+
+  var searchElement = document.getElementById('ven-search');
+  var familyElement = document.getElementById('ven-family');
+  var capitalElement = document.getElementById('ven-capital');
+  var modelElement = document.getElementById('ven-model');
+  var barrierElement = document.getElementById('ven-barrier');
+  var scaleElement = document.getElementById('ven-scale');
+  var quickChipsElement = document.getElementById('ven-quick-chips');
+  var listElement = document.getElementById('ven-list');
+  var resultElement = document.getElementById('ven-result');
+  var currentMatches = [];
+  var quickFilters = { under10k: false, noLicence: false, impossible: false, online: false };
+
+  var familyOptions = '<option value="">All venture families (' + data.folders.length + ')</option>';
+  data.folders.forEach(function (family) {
+    familyOptions += '<option value="' + escapeHtml(family.slug) + '">' + escapeHtml(family.name) + ' (' + (familyCounts[family.slug] || 0) + ')</option>';
+  });
+  familyElement.innerHTML = familyOptions;
+
+  var capitalOptions = '<option value="">All capital bands (' + ventures.length + ')</option>';
+  data.capitalBands.forEach(function (band) {
+    capitalOptions += '<option value="' + escapeHtml(band.id) + '">' + escapeHtml(band.short) + ' (' + countBand([band.id]) + ')</option>';
+  });
+  capitalElement.innerHTML = capitalOptions;
+
+  var modelOptions = '<option value="">All business models</option>';
+  data.models.forEach(function (model) {
+    modelOptions += '<option value="' + escapeHtml(model.id) + '">' + escapeHtml(model.label) + ' (' + countModel([model.id]) + ')</option>';
+  });
+  modelElement.innerHTML = modelOptions;
+
+  var barrierOptions = '<option value="">Any barrier</option>';
+  data.barriers.forEach(function (barrier) {
+    barrierOptions += '<option value="' + escapeHtml(barrier.id) + '">' + escapeHtml(barrier.label) + ' (' + ventures.filter(function (venture) { return venture.barrier === barrier.id; }).length + ')</option>';
+  });
+  barrierElement.innerHTML = barrierOptions;
+
+  var scaleOptions = '<option value="">Any reach</option>';
+  data.scales.forEach(function (scale) {
+    scaleOptions += '<option value="' + escapeHtml(scale.id) + '">' + escapeHtml(scale.label) + ' (' + ventures.filter(function (venture) { return venture.scale === scale.id; }).length + ')</option>';
+  });
+  scaleElement.innerHTML = scaleOptions;
+
+  var QUICK_FILTERS = [
+    { id: 'under10k', label: 'Under $10K' },
+    { id: 'noLicence', label: 'No licence needed' },
+    { id: 'impossible', label: 'Impossible today' },
+    { id: 'online', label: 'Online first' }
+  ];
+  quickChipsElement.innerHTML = QUICK_FILTERS.map(function (filter) {
+    return '<button type="button" class="ven-chip" data-quick="' + filter.id + '">' + escapeHtml(filter.label) + '</button>';
+  }).join('');
+
+  quickChipsElement.addEventListener('click', function (event) {
+    var chip = event.target.closest('.ven-chip');
+    if (!chip) return;
+    var id = chip.getAttribute('data-quick');
+    quickFilters[id] = !quickFilters[id];
+    chip.classList.toggle('is-on', quickFilters[id]);
+    render();
+  });
+
+  searchElement.addEventListener('input', render);
+  familyElement.addEventListener('change', render);
+  capitalElement.addEventListener('change', render);
+  modelElement.addEventListener('change', render);
+  barrierElement.addEventListener('change', render);
+  scaleElement.addEventListener('change', render);
+  document.getElementById('ven-export-json').addEventListener('click', downloadFilteredJson);
+  document.getElementById('ven-export-csv').addEventListener('click', downloadFilteredCsv);
+
+  /* ---------------------------------------------------------- render */
+
+  function getMatches() {
+    var query = String(searchElement.value || '').trim().toLowerCase();
+    var family = familyElement.value || '';
+    var capital = capitalElement.value || '';
+    var model = modelElement.value || '';
+    var barrier = barrierElement.value || '';
+    var scale = scaleElement.value || '';
+    return ventures.filter(function (venture) {
+      if (family && venture.family !== family) return false;
+      if (capital && venture.capital !== capital) return false;
+      if (model && venture.model !== model) return false;
+      if (barrier && venture.barrier !== barrier) return false;
+      if (scale && venture.scale !== scale) return false;
+      if (quickFilters.under10k && ['under-1k', '1k-10k'].indexOf(venture.capital) === -1) return false;
+      if (quickFilters.noLicence && (venture.barrier === 'licence' || venture.barrier === 'state')) return false;
+      if (quickFilters.impossible && venture.capital !== 'over-100b') return false;
+      if (quickFilters.online && ['ecommerce', 'digital', 'content', 'marketplace'].indexOf(venture.model) === -1) return false;
+      if (!query) return true;
+      var familyName = familyBySlug[venture.family] ? familyBySlug[venture.family].name : '';
+      var modelLabel = MODEL_BY_ID[venture.model] ? MODEL_BY_ID[venture.model].label : '';
+      var barrierLabel = BARRIER_BY_ID[venture.barrier] ? BARRIER_BY_ID[venture.barrier].label : '';
+      var scaleLabel = SCALE_BY_ID[venture.scale] ? SCALE_BY_ID[venture.scale].label : '';
+      var text = venture.name + ' ' + venture.blurb + ' ' + venture.reality + ' ' + familyName + ' ' + modelLabel + ' ' + barrierLabel + ' ' + scaleLabel;
+      return text.toLowerCase().indexOf(query) !== -1;
+    });
+  }
+
+  function render() {
+    var matches = getMatches();
+    currentMatches = matches;
+
+    var parts = [matches.length + ' of ' + ventures.length + ' venture types'];
+    if (quickFilters.under10k) parts.push('under $10K');
+    if (quickFilters.noLicence) parts.push('no licence');
+    if (quickFilters.impossible) parts.push('impossible today');
+    if (quickFilters.online) parts.push('online first');
+    resultElement.textContent = parts.join(' · ');
+
+    if (!matches.length) {
+      listElement.innerHTML = '<div class="ven-empty"><h2>No venture matches</h2><p>Clear the search or choose another family, capital band, business model, barrier or reach.</p></div>';
+      return;
+    }
+
+    var byFamily = {};
+    matches.forEach(function (venture) {
+      (byFamily[venture.family] = byFamily[venture.family] || []).push(venture);
+    });
+
+    var html = '';
+    data.folders.forEach(function (family) {
+      var list = byFamily[family.slug];
+      if (!list || !list.length) return;
+      list.sort(function (first, second) { return first.name.localeCompare(second.name); });
+      html += familySection(family, list);
+    });
+    listElement.innerHTML = html;
+  }
+
+  function familySection(family, list) {
+    var html = '<section class="ven-ind" id="family-' + escapeHtml(family.slug) + '">' +
+      '<header class="ven-ind-head">' +
+      '<span class="ven-ind-code">' + escapeHtml(family.code) + '</span>' +
+      '<div class="ven-ind-text"><h2 class="ven-ind-name">' + escapeHtml(family.name) + '</h2>' +
+      '<p class="ven-ind-desc">' + escapeHtml(family.description || '') + '</p></div>' +
+      '<span class="ven-ind-count">' + list.length + (list.length === 1 ? ' venture' : ' ventures') + '</span>' +
+      '</header>' +
+      '<table class="ven-table"><thead><tr><th>Venture</th><th class="ven-col-capital">Capital to start</th><th class="ven-col-model">Model</th><th class="ven-col-barrier">Barrier</th><th class="ven-col-rev">First revenue</th><th class="ven-col-blurb">What it is</th></tr></thead><tbody>';
+    list.forEach(function (venture) {
+      var band = BAND_BY_ID[venture.capital] || { short: venture.capital };
+      var model = MODEL_BY_ID[venture.model] || { label: venture.model };
+      var barrier = BARRIER_BY_ID[venture.barrier] || { short: venture.barrier, label: venture.barrier, note: '' };
+      var scale = SCALE_BY_ID[venture.scale] || { short: venture.scale, note: '' };
+      var revenue = REVENUE_BY_ID[venture.firstRevenue] || { short: venture.firstRevenue, note: '' };
+      html += '<tr>' +
+        '<td class="ven-name">' + escapeHtml(venture.name) +
+          '<span class="ven-scale" title="' + escapeHtml(scale.note) + '">' + escapeHtml(scale.short) + '</span>' +
+          (venture.reality ? '<span class="ven-reality"><strong>Reality check:</strong> ' + escapeHtml(venture.reality) + '</span>' : '') +
+        '</td>' +
+        '<td class="ven-col-capital"><span class="ven-cap c-' + escapeHtml(venture.capital) + '" title="' + escapeHtml(band.note) + '">' + escapeHtml(band.short) + '</span></td>' +
+        '<td class="ven-col-model"><span class="ven-model">' + escapeHtml(model.label) + '</span></td>' +
+        '<td class="ven-col-barrier"><span class="ven-barrier b-' + escapeHtml(venture.barrier) + '" title="' + escapeHtml(barrier.note) + '">' + escapeHtml(barrier.short) + '</span></td>' +
+        '<td class="ven-col-rev"><span class="ven-rev" title="' + escapeHtml(revenue.note) + '">' + escapeHtml(revenue.short) + '</span></td>' +
+        '<td class="ven-blurb">' + escapeHtml(venture.blurb) + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table></section>';
+    return html;
+  }
+
+  function exportFilters() {
+    var filters = {
+      search: String(searchElement.value || '').trim(),
+      family: familyElement.value || '',
+      familyLabel: familyElement.value && familyBySlug[familyElement.value] ? familyBySlug[familyElement.value].name : '',
+      capital: capitalElement.value || '',
+      capitalLabel: capitalElement.value && BAND_BY_ID[capitalElement.value] ? BAND_BY_ID[capitalElement.value].label : '',
+      model: modelElement.value || '',
+      modelLabel: modelElement.value && MODEL_BY_ID[modelElement.value] ? MODEL_BY_ID[modelElement.value].label : '',
+      barrier: barrierElement.value || '',
+      barrierLabel: barrierElement.value && BARRIER_BY_ID[barrierElement.value] ? BARRIER_BY_ID[barrierElement.value].label : '',
+      scale: scaleElement.value || '',
+      scaleLabel: scaleElement.value && SCALE_BY_ID[scaleElement.value] ? SCALE_BY_ID[scaleElement.value].label : ''
+    };
+    QUICK_FILTERS.forEach(function (filter) { filters[filter.id] = quickFilters[filter.id]; });
+    return filters;
+  }
+
+  function exportRows() {
+    return currentMatches.map(function (venture) {
+      return {
+        name: venture.name,
+        family: venture.family,
+        familyLabel: familyBySlug[venture.family] ? familyBySlug[venture.family].name : venture.family,
+        capital: venture.capital,
+        capitalLabel: BAND_BY_ID[venture.capital] ? BAND_BY_ID[venture.capital].label : venture.capital,
+        model: venture.model,
+        modelLabel: MODEL_BY_ID[venture.model] ? MODEL_BY_ID[venture.model].label : venture.model,
+        barrier: venture.barrier,
+        barrierLabel: BARRIER_BY_ID[venture.barrier] ? BARRIER_BY_ID[venture.barrier].label : venture.barrier,
+        scale: venture.scale,
+        scaleLabel: SCALE_BY_ID[venture.scale] ? SCALE_BY_ID[venture.scale].label : venture.scale,
+        firstRevenue: venture.firstRevenue,
+        firstRevenueLabel: REVENUE_BY_ID[venture.firstRevenue] ? REVENUE_BY_ID[venture.firstRevenue].label : venture.firstRevenue,
+        blurb: venture.blurb,
+        reality: venture.reality
+      };
+    });
+  }
+
+  function downloadBlob(content, mimeType, fileName) {
+    var blob = new Blob([content], { type: mimeType });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function downloadFilteredJson() {
+    if (!currentMatches.length) {
+      resultElement.textContent = 'No ventures to export.';
+      return;
+    }
+    var payload = {
+      exportedAt: new Date().toISOString(),
+      filters: exportFilters(),
+      count: currentMatches.length,
+      capitalBands: data.capitalBands,
+      models: data.models,
+      barriers: data.barriers,
+      scales: data.scales,
+      firstRevenue: data.firstRevenue,
+      objects: exportRows()
+    };
+    downloadBlob(JSON.stringify(payload, null, 2), 'application/json;charset=utf-8', 'ventures-filtered.json');
+  }
+
+  function csvCell(value) {
+    var text = String(value === undefined || value === null ? '' : value);
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  function downloadFilteredCsv() {
+    if (!currentMatches.length) {
+      resultElement.textContent = 'No ventures to export.';
+      return;
+    }
+    var rows = [['Venture', 'Family', 'Capital to start', 'Business model', 'Barrier', 'Reach', 'First revenue', 'What it is', 'Reality check']];
+    currentMatches.forEach(function (venture) {
+      rows.push([
+        venture.name,
+        familyBySlug[venture.family] ? familyBySlug[venture.family].name : venture.family,
+        BAND_BY_ID[venture.capital] ? BAND_BY_ID[venture.capital].label : venture.capital,
+        MODEL_BY_ID[venture.model] ? MODEL_BY_ID[venture.model].label : venture.model,
+        BARRIER_BY_ID[venture.barrier] ? BARRIER_BY_ID[venture.barrier].label : venture.barrier,
+        SCALE_BY_ID[venture.scale] ? SCALE_BY_ID[venture.scale].label : venture.scale,
+        REVENUE_BY_ID[venture.firstRevenue] ? REVENUE_BY_ID[venture.firstRevenue].label : venture.firstRevenue,
+        venture.blurb,
+        venture.reality
+      ]);
+    });
+    var csv = '\ufeff' + rows.map(function (row) { return row.map(csvCell).join(','); }).join('\r\n');
+    downloadBlob(csv, 'text/csv;charset=utf-8', 'ventures-filtered.csv');
+  }
+
+  function escapeHtml(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  if (window.location && window.location.search) {
+    var params = new URLSearchParams(window.location.search);
+    var wantedFamily = params.get('family');
+    var wantedQuery = params.get('q');
+    if (wantedFamily && familyBySlug[wantedFamily]) familyElement.value = wantedFamily;
+    if (wantedQuery) searchElement.value = wantedQuery;
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

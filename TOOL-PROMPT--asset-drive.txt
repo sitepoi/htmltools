@@ -1,0 +1,387 @@
+PROMPT - BUILD THE "ASSET DRIVE" HTML TOOL
+=========================================
+
+0. PLACEMENT AND IDENTITY
+-------------------------
+Tool name: AssetDrive
+Tool type: TYPE 1 object-level interface (in the CMS data part of an object)
+Idea: B-G-12-g - Asset Drive
+Taxonomy: BUSINESS / GENERAL / file-media / file-management-storage / AssetDrive
+Repo folders:
+  BUSINESS/GENERAL/file-media/file-management-storage/AssetDrive/app/
+  BUSINESS/GENERAL/file-media/file-management-storage/AssetDrive/docs/
+Deliverables:
+  app/AssetDrive.html
+  app/AssetDrive.css
+  app/AssetDrive.js
+  app/test-harness.html
+  docs/ (npm run docs:init after the app files exist)
+Do NOT commit or push to git. Do NOT change any other tool.
+
+BUILD STATUS (2026-11-17)
+-------------------------
+Build 2026-11-17-1 is implemented at the paths above (app files + harness +
+the seven docs). The owner deferred ZIP: there is no JSZip dependency and no
+ZIP row in the download menu; downloads are one-by-one only. The jszipCdnUrl
+parameter is therefore not declared. Everything else in this prompt is built
+and verified headlessly. The JSZip conflict in section 3 is moot until ZIP
+returns.
+
+1. READ THESE FILES FIRST (BINDING)
+-----------------------------------
+  html-tool-rules.txt   (TYPE 1 SDK, entry point, params, sandbox, build badge,
+                         inline-script tokenizer safety, external content relay)
+
+Where they disagree with this prompt, the rules file wins. The known conflicts
+are listed in section 3 below and must be resolved at build time.
+
+2. THE SPECIFICATION (as supplied by the owner)
+-----------------------------------------------
+
+ROLE
+Build a complete, production-quality CMS html-tool called "Asset Drive".
+
+PURPOSE
+An in-CMS media/asset manager that behaves like the existing Asset Drive (FolderManager):
+it browses virtual folders built from file paths, previews images, copies asset URLs,
+downloads whole folders, and allows uploads and basic file management.
+The tool stores its own data in its CMS field value. It does NOT use Firestore directly.
+
+DELIVERY FORMAT
+Return exactly three code blocks, labeled and ordered. No explanation outside them.
+
+[HTML]
+body markup only - no <html>, <head>, <body>, <style>, <script> wrapper tags.
+External CDN <script> tags ARE allowed here (use them only for JSZip).
+
+[CSS]
+stylesheet rules only - no <style> wrapper.
+
+[JS]
+JavaScript only - no <script> wrapper. Must begin with tool.onReady(...).
+
+PLATFORM RULES - MANDATORY
+- The tool runs in a sandboxed iframe. No localStorage, no sessionStorage, no cookies.
+- No direct fetch() to external URLs. Use only the tool.* SDK channels below.
+- No alert(), confirm(), or prompt(). Build in-tool modals instead.
+- No raw postMessage. Use only the tool.* SDK.
+- Never use DOMContentLoaded or window.onload. tool.onReady is the single entry point.
+- Values may be any JSON type. Persist with tool.setValue.
+- Escape all user-generated strings when rendering. Never inject file names with innerHTML.
+- Always call tool.declareParams and tool.reportMissingParams inside tool.onReady.
+- Always check tool.isReadOnly() on first load and on change; lock editing when read-only.
+- Call tool.resize() after layout changes that affect iframe height.
+- The tool must be fully functional with no placeholders and no TODO comments.
+
+SDK CHANNELS - USE THESE
+- tool.getValue() / tool.setValue(value) - load and persist this field's value.
+- tool.onValueChange(cb) - re-render when the value changes externally.
+- tool.isReadOnly() / tool.onReadonlyChange(cb) - read-only handling.
+- tool.getUser() - roles and effectiveAccess for soft UI gating.
+- tool.param(name, default) - admin parameters.
+- tool.notify(message, 'success' | 'info' | 'warning' | 'error') - CMS toasts.
+- tool.openUrl(url) - open a file in a new tab (use for "Open in new tab" and one-by-one downloads).
+- tool.requestUpload(accept, cb) - host file picker upload. cb(error, file) where file = { name, url, size, type }.
+  Requires allowUpload. Handle errors gracefully when unavailable.
+- tool.requestFetch(url, { timeoutMs, maxBytes }, cb) - server-side fetch relay for binary files.
+  GET only, https only, host allowlist, hard cap 500 KB, returns { status, contentType, dataUrl } for binary
+  and { status, contentType, text } for text. Use this ONLY for ZIP packing. Handle errors and skips.
+- tool.requestSave(cb) - optional explicit save, only if a save button is used.
+- tool.getParentPageUrl() - origin + pathname of the CMS page (display/share only).
+- tool.declareOutput(schema) - declare the saved value shape.
+- tool.declareParams([...]) - declare every param the tool reads.
+
+DATA MODEL - FIELD VALUE
+value = {
+  folderId: string,
+  name: string,                    // drive title, default "Asset Drive"
+  files: FileRecord[]
+}
+
+FileRecord = {
+  id: string,                      // stable unique id
+  name: string,                    // storage file name
+  displayName?: string,            // user-visible name, falls back to name
+  path: string,                    // "folder/subfolder/file.png" - never leading slash
+  url: string,                     // public download URL
+  thumb_url?: string,              // optional thumbnail URL
+  cdnUrl?: string,                 // optional CDN override - effective URL wins
+  contentType?: string,
+  size?: number,
+  updatedAt?: number,              // epoch ms
+  firstUploadedAt?: number,
+  starred?: boolean,
+  locked?: boolean,
+  tags?: string[],
+  colorLabel?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple',
+  versions?: [{ url, size, updatedAt }]   // max 3 old versions on overwrite
+}
+
+Effective URL rule (use everywhere): file.cdnUrl || file.url
+Thumbnail rule: file.thumb_url || file.cdnUrl || file.url
+Image detection: contentType starts with "image/" OR extension in
+png, jpg, jpeg, gif, webp, svg, bmp, ico, avif, tiff.
+
+TOOL PARAMETERS - DECLARE ALL
+- driveLabel    (text, default "Asset Drive")           - header title when value.name is empty
+- maxUploadSizeMb (number, default "25")                - reject larger uploads with a toast
+- jszipCdnUrl   (text, default "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js")
+- showSaveButton (toggle, default "no")                 - shows a Save button that calls tool.requestSave
+Call tool.reportMissingParams for any param that is truly required (none should be).
+
+LAYOUT
+1. Header
+   - Editable drive title (click to rename, Enter to commit, Escape to cancel, no prompt()).
+   - File count and total size summary for the current folder.
+2. Toolbar (wraps on narrow widths)
+   - Upload button (hidden in read-only).
+   - New Folder button (hidden in read-only).
+   - Search input with clear button.
+   - Type filter select: All files, Images, Documents, Spreadsheets, Presentations, PDFs, Video, Audio.
+   - Sort controls: Name, Modified, Size with asc/desc.
+   - View toggle: Grid and List.
+   - Select mode toggle.
+   - Copy URLs dropdown.
+   - Download dropdown.
+3. Breadcrumb bar: Root > folder > subfolder, each segment clickable.
+4. Body: left folder tree (collapsible on mobile), main file area, right detail panel when a file is selected.
+5. Bulk action bar appears when one or more files are selected.
+
+FOLDER MODEL
+- Folders are derived from file paths only; there are no folder records.
+- Collect every unique directory path from FileRecord.path. Always show a Root node.
+- Folder tree rows show name, indentation, active highlight, and file counts.
+- Clicking a folder navigates into it. Breadcrumb always matches.
+- A folder with only subfolders shows the subfolders.
+- Empty current folder shows a friendly empty state.
+
+MAIN AREA - GRID VIEW
+Card contents per file:
+- Image thumbnail (thumb_url || url) for image files, otherwise a colored type icon.
+- Display name, truncated with ellipsis and full name in the tooltip.
+- Type badge (PNG, JPG, WEBP, PDF, XLSX, DOCX, ZIP, etc.).
+- Star badge, lock badge, color dot.
+- Small folder hint when the result comes from search in another folder.
+- Per-file copy button. After copying show a check icon for 1.5 seconds.
+Folders appear first as folder cards, then files, sorted by the active sort.
+
+MAIN AREA - LIST VIEW
+Columns: type icon, name (+ badges and folder hint), type, size, modified date, URL preview (truncated), actions.
+Column headers for Name, Size, Modified are clickable to change sorting.
+Rows show the same per-file copy action and copied feedback.
+
+SEARCH, FILTER, SORT
+- Search matches displayName/name and tags, across ALL folders and subfolders.
+- Search results show which folder each file lives in.
+- Clearing search returns to the current folder.
+- Type filter is applied client-side using content type and extension.
+- Sorting: folders always before files; name/date/size ascending or descending.
+- Keep a stable deterministic order when values are equal.
+
+SELECTION
+- Select mode shows checkboxes.
+- Ctrl/Cmd click toggles a single item, Shift click selects a range, plain click selects one.
+- Select All and None actions in the bulk bar.
+- Selections are cleared when navigating folders.
+- Keyboard: Arrow keys move focus, Enter opens, Escape clears selection. Optional but preferred.
+
+BULK ACTIONS BAR (when items are selected)
+- "{n} selected"
+- All, None
+- Star, Unstar
+- Copy URLs
+- Download ZIP
+- Move (opens Move dialog)
+- Delete (hidden in read-only; confirmation dialog required)
+
+COPY FEATURES - ALL REQUIRED
+1. Per-file Copy URL button and context-menu item
+   - Copies file.cdnUrl || file.url.
+   - Shows inline "Copied" feedback.
+2. Copy URLs dropdown in the toolbar with:
+   - Copy this folder                -> one URL per line for files directly in the current folder
+   - Copy this folder + subfolders   -> recursive, one URL per line, stable path order
+   - Copy image URLs (this folder)   -> only image files directly in the current folder
+   - Copy image thumbnails (this folder) -> only image files, thumb_url || cdnUrl || url
+   - Copy selected files             -> appears when a selection exists
+   Each row shows a file count, e.g. "12 files" / "1 file". Disable rows with zero files.
+   The button shows transient feedback: "Copied 12 URLs" or "Copied 8 thumbnail URLs".
+3. Clipboard implementation
+   - Prefer navigator.clipboard.writeText.
+   - On failure, fall back to a temporary hidden textarea plus document.execCommand('copy').
+   - If both fail, show an error toast.
+4. Skip .gitkeep placeholders and records without a URL.
+
+DOWNLOAD FEATURES - ALL REQUIRED
+1. Download dropdown in the toolbar with:
+   - Download as ZIP                   -> files directly in the current folder, archive root = files
+   - Download as ZIP + subfolders      -> recursive, preserves folder structure inside the ZIP
+   - Download files one by one         -> one separate download per file
+   Each row shows a file count and is disabled when empty.
+2. Bulk bar: Download ZIP for selected files.
+3. Folder context menu: Download folder (ZIP), recursive.
+
+ZIP IMPLEMENTATION DETAILS
+- Load JSZip from the CDN <script> tag. If JSZip is missing, show an error and keep
+  the one-by-one option available.
+- Process files sequentially:
+  a. Set button text to "Packing 3/12...".
+  b. Call tool.requestFetch(effectiveUrl, { timeoutMs: 15000, maxBytes: 500000 }, cb).
+  c. On success with dataUrl: strip the "data:*;base64," prefix, decode base64 to Uint8Array,
+     and add it to the archive.
+  d. Skip failures and files exceeding the 500 KB relay cap, but keep counting them.
+- Sanitize every ZIP path segment: replace \ / : * ? " < > | with "-", trim spaces,
+  collapse whitespace. Keep folder structure after sanitizing.
+- Guarantee unique entry paths: append " (2)", " (3)" before the extension on collision.
+- Generate with compression "STORE" (images are already compressed).
+- Trigger the download with URL.createObjectURL plus a temporary <a download> element,
+  then revoke the object URL.
+- Archive name: current folder name, or the drive name at root, sanitized, plus ".zip".
+- When stripping the current folder from entry paths, files sit at the ZIP root.
+- Progress states: "Preparing N files...", "Packing i/N...", "Creating ZIP...".
+- Final feedback: "Zipped 12 files" or "Zipped 10 of 12 files" (skipped count implied).
+- Because the relay rejects files over 500 KB, explain in the UI hint:
+  "Large files are skipped in ZIP mode; use Download files one by one."
+
+ONE-BY-ONE DOWNLOAD DETAILS
+- For each file call tool.openUrl(file.cdnUrl || file.url) with a 300-400 ms delay.
+- Show progress "Downloading 3/12..." in the Download button.
+- Warn in the row tooltip: "Your browser may ask you to allow multiple downloads."
+- Count started downloads and notify: "Started 10 downloads" or "Download failed".
+
+UPLOAD AND FILE OPERATIONS
+- Upload button calls tool.requestUpload(accept, cb) into the current folder.
+  Build a FileRecord:
+  id = unique id, name = returned file.name, path = currentPath + "/" + name (no leading slash),
+  url = returned file.url, contentType = returned type, size = returned size,
+  updatedAt = Date.now(), firstUploadedAt = Date.now().
+- If a record with the same path exists, treat it as overwrite:
+  push the old { url, size, updatedAt } into versions (max 3 old entries),
+  keep the record id, firstUploadedAt, starred, locked, tags, colorLabel, cdnUrl,
+  replace url/size/updatedAt with the new upload.
+- If the new name closely matches an existing different path (normalized lowercase,
+  non-alphanumerics removed), show a non-blocking duplicate warning banner with Dismiss.
+- Reject files larger than maxUploadSizeMb with a toast.
+- New Folder: in-tool modal with a single text input, creates nothing physical -
+  creates/ensures the path exists by being selected; show it in the tree immediately.
+  (Implementation: store created empty folders in value.emptyFolders: string[] so
+  empty folders survive reloads. Include emptyFolders in the data model.)
+- Rename file: edits displayName only; path, URL and storage path never change.
+- Move: modal lists Root and every folder path; moving rewrites file.path to the new
+  folder + file name. Show a warning that the stored URL remains unchanged.
+- Duplicate: copy the record with a new id and a name ending in " (copy)".
+- Delete file: confirmation modal, removes the record. Warn if firstUploadedAt exists:
+  "Deleting will remove this record; the stored URL becomes unmanaged."
+- Delete folder: confirmation modal listing the number of files, removes all records
+  whose path equals the folder or starts with "folder/".
+- Locked files cannot be deleted or moved until unlocked.
+- Star, Unstar, Color label (none, red, orange, yellow, green, blue, purple), Tags editor.
+- All mutations update local state immediately and call tool.setValue(newValue).
+  If showSaveButton is on, the Save button calls tool.requestSave and toasts the result.
+
+DETAIL PANEL (right side when a file is selected)
+- Large image preview for images (object-fit contain), otherwise a type icon.
+- Editable display name, read-only URL and thumbnail URL with copy buttons.
+- Metadata: folder path, type, size, modified, first uploaded, star/lock state, tags.
+- Actions: Copy URL, Copy thumbnail URL, Open in new tab, Download (openUrl),
+  Share link (copy of the effective URL), Close.
+- Version list when versions exist, each with copy and open actions.
+- Hide destructive actions in read-only mode.
+
+CONTEXT MENUS
+File context menu: Properties, Open in new tab, Copy URL, Copy thumbnail URL,
+Download, Rename display name, Move to..., Duplicate, Star/Unstar, Lock/Unlock,
+Color label row, Delete.
+Folder context menu: Open Folder, Copy all file URLs, Download folder (ZIP), Delete Folder.
+Context menus must close on outside click and on Escape.
+
+DIALOGS AND FEEDBACK
+- Build a reusable in-tool modal component with overlay, title, body, Cancel/Confirm.
+- Use it for new folder, rename, move, delete confirmations, and duplicate warnings.
+- Use tool.notify for success/info/warning/error messages.
+- Never use browser dialogs.
+- Show transient inline feedback on copy buttons (check icon) and toolbar buttons.
+
+READ-ONLY MODE
+- tool.isReadOnly() true: hide Upload, New Folder, Rename, Move, Duplicate, Delete,
+  Star/Unstar and color editing.
+- Keep browsing, search, filtering, selection, Copy URLs, Copy thumbnails,
+  Download ZIP and Download files one by one fully available.
+
+STYLING
+- Clean, professional light theme. CSS variables for colors, radius, spacing, font sizes.
+- Neutral palette with a single indigo accent (#4F46E5 / #EEF2FF).
+- Sticky toolbar and breadcrumb, scrollable file area.
+- Responsive: folder tree hides below 700 px; grid becomes 1-2 columns on narrow widths.
+- No external CSS frameworks. All styles in the CSS block.
+- Subtle hover states, focus outlines for keyboard users, and disabled states at 40% opacity.
+
+SECURITY AND QUALITY
+- Escape all file and folder names before inserting into HTML.
+- Never store binary data, base64 payloads, or tokens in the field value.
+- Cap the value at metadata only; warn if a save would exceed roughly 900 KB.
+- Avoid unbounded loops; handle 1000+ file records without freezing.
+- URL.createObjectURL results must always be revoked.
+- Handle missing or malformed value shapes gracefully:
+  value may be null, a JSON string, or an object with missing files array.
+  Normalize to { folderId, name, files: [], emptyFolders: [] }.
+
+OUT OF SCOPE - DO NOT BUILD
+- Google Drive or OneDrive OAuth browsing.
+- Built-in spreadsheet, document, PDF, Word or HTML editors.
+- Firebase permission management or share-permission dialogs.
+- Real-time multi-user sync.
+- Direct storage deletion.
+These are replaced by "Open in new tab", URL copying, and record-level removal.
+
+ACCEPTANCE CHECKLIST
+- Tool renders on first load even with an empty or null value.
+- Folder tree, breadcrumb and grid match the file paths.
+- Search finds files in all subfolders and shows their folder.
+- Grid and list views both work; sorting works in both.
+- Ctrl/Shift click, select mode, Select All and None work.
+- Per-file Copy URL copies the effective URL and shows feedback.
+- Copy this folder, Copy this folder + subfolders, Copy selected files produce
+  newline-separated URL lists in stable path order.
+- Copy image URLs and Copy image thumbnails only include image files.
+- Download as ZIP saves a valid archive with the correct file count.
+- Download as ZIP + subfolders preserves folder structure.
+- Download files one by one starts a separate download per file.
+- Files over 500 KB are skipped in ZIP mode and reported in the result notice.
+- Upload adds a proper FileRecord and persists through tool.setValue.
+- Overwrite keeps the record id and old versions.
+- Rename, Move, Duplicate, Star, Lock, Color, Tags and Delete all persist.
+- Read-only mode leaves copy and download available and hides all edits.
+- No console errors, no browser dialogs, no direct fetch, no localStorage.
+
+CONTROL METADATA
+name: Asset Drive
+description: Browse asset folders, preview images, copy URL lists and thumbnails,
+  and download files one by one. (ZIP was deferred by the owner on 2026-11-17.)
+category: Files
+icon: folder emoji
+height: 640px
+autoHeight: no
+displayMode: inline
+
+3. BUILD-TIME CONFLICTS TO RESOLVE (from html-tool-rules.txt)
+-------------------------------------------------------------
+1. JSZIP AND THE NO-EXTERNAL-RESOURCES RULE
+   The specification allows an external CDN <script src> tag for JSZip and a
+   jszipCdnUrl parameter. html-tool-rules.txt forbids external resources in the
+   three files (a stalled CDN script freezes the whole tool in the CMS sandbox).
+   Resolve before coding: ship a small built-in STORE-only ZIP writer inside the
+   JS block (the archive uses compression "STORE", so a writer is about 60 lines
+   plus CRC32), or load a library through the parent relay. Do not put a CDN
+   script tag in the HTML block without an explicit owner decision.
+2. INLINE-SCRIPT TOKENIZER SAFETY
+   No raw </script and no unclosed <!-- anywhere in the JS block (write <\/script
+   and \u003C!--). This has killed tools in the CMS before.
+3. BUILD BADGE
+   Carry TOOL_BUILD (YYYY-MM-DD-rN) in the JS block, show it in the header, log it
+   on boot, and put the per-file build stamp as the first line of each file.
+4. DATA SHAPE
+   Add emptyFolders: string[] to the declared output schema, not only to the text
+   model, so the saved shape is explicit.
+
+END OF PROMPT

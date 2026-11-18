@@ -119,7 +119,7 @@
   .occ-stat.is-bach strong { color: var(--occ-bach); }
   .occ-stat.is-coll strong { color: var(--occ-coll); }
   .occ-stat.is-appr strong { color: var(--occ-appr); }
-  .occ-stat.is-entry strong { color: var(--occ-hs); }
+  .occ-stat.is-entry strong { color: var(--occ-accent-2); }
   .occ-stat.is-video strong { color: #b4232a; }
   .occ-deptline { margin: -4px 0 14px; font-size: 12px; color: var(--occ-faint); }
 
@@ -229,6 +229,23 @@
   table.occ-table tbody tr:hover td { background: #f9fbff; }
   .occ-name { font-weight: 700; color: var(--occ-ink); }
   .occ-dept { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--occ-faint); }
+  .occ-stage {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border: 1px solid var(--occ-line);
+    border-radius: 999px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .occ-stage.s-entry { background: #e8f7f1; color: #0f766e; border-color: #c8ebe1; }
+  .occ-stage.s-experienced { background: #fff7e6; color: #a16207; border-color: #f0e0b5; }
+  .occ-stage.s-leadership { background: #f3eeff; color: #6d28d9; border-color: #e3d7ff; }
+  .occ-path { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 500; line-height: 1.35; color: var(--occ-muted); max-width: 56ch; }
   .occ-blurb { color: var(--occ-muted); font-size: 12.6px; }
   .occ-watch {
     display: inline-block;
@@ -403,6 +420,7 @@
   .occ-chips { gap: 5px; }
   .occ-chips .occ-chip { font-size: 10.5px; padding: 4px 8px; }
   .occ-result { margin: 0; font-size: 11px; }
+  .occ-stage-note { margin: 0; font-size: 10px; line-height: 1.45; color: var(--occ-faint); overflow-wrap: anywhere; }
   .occ-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
@@ -478,7 +496,10 @@
       <h1>Occupation catalogue - Canada</h1>
     </div>
     <div class="occ-head-actions">
-      <a class="occ-btn occ-btn-primary" href="occupations-import.json" download="occupations-import.json">Download JSON</a>
+      <button type="button" class="occ-btn occ-btn-primary" id="occ-export-json">Export filtered JSON</button>
+      <button type="button" class="occ-btn occ-btn-ghost" id="occ-export-csv">Export CSV</button>
+      <a class="occ-btn occ-btn-ghost" href="occupations-import.json" download="occupations-import.json" title="Download the complete import package">Full JSON</a>
+      <a class="occ-btn occ-btn-ghost" href="ventures.html" title="Open the business and venture catalogue">Venture catalogue</a>
       <a class="occ-btn occ-btn-ghost" href="ssot.html">SSOT</a>
     </div>
   </header>
@@ -491,8 +512,10 @@
         <select id="occ-faculty" aria-label="Filter by faculty"></select>
         <select id="occ-department" aria-label="Filter by graduation department"></select>
         <select id="occ-route" aria-label="Filter by education route"></select>
+        <select id="occ-stage" aria-label="Filter by career stage" title="Entry: first role after the listed education or training. Experienced: usually requires prior related work experience. Leadership: management, executive or appointment role reached after substantial experience."></select>
         <button type="button" class="occ-chip" id="occ-video-chip">With video only</button>
       </div>
+      <p class="occ-stage-note" id="occ-stage-note"></p>
       <div class="occ-chips" id="occ-route-chips" aria-label="Education route shortcuts"></div>
       <span class="occ-result" id="occ-result" role="status" aria-live="polite"></span>
       <section class="occ-stats" id="occ-stats" aria-label="Catalogue totals"></section>
@@ -509,518 +532,1434 @@
     "note": "Canada-wide explainer links. The catalogue page shows a Job Bank search built from each occupation name plus the NOC and WorkBC links. Reference only: the importer must ignore this key.",
     "jobSearchUrlTemplate": "https://www.jobbank.gc.ca/jobsearch/jobsearch?searchstring={query}",
     "links": [
-      { "short": "NOC", "label": "NOC 2021 - official duties, requirements and classification", "url": "https://noc.esdc.gc.ca/" },
-      { "short": "WorkBC", "label": "WorkBC Career Profiles - over 500 BC career profiles", "url": "https://www.workbc.ca/plan-career/career-profiles" },
-      { "short": "Job Bank", "label": "Job Bank - wages, outlook and job postings", "url": "https://www.jobbank.gc.ca/" },
-      { "short": "Red Seal", "label": "Red Seal - trades certification across Canada", "url": "https://www.red-seal.ca/" },
-      { "short": "EduCanada", "label": "EduCanada - study programmes in Canada", "url": "https://www.educanada.ca/" },
-      { "short": "Career Trek", "label": "WorkBC Career Trek - occupation videos", "url": "https://www.workbc.ca/plan-career/career-trek-videos" },
-      { "short": "ALIS", "label": "ALIS - Alberta occupational profiles and career videos", "url": "https://alis.alberta.ca/" }
+      {
+        "short": "NOC",
+        "label": "NOC 2021 - official duties, requirements and classification",
+        "url": "https://noc.esdc.gc.ca/"
+      },
+      {
+        "short": "WorkBC",
+        "label": "WorkBC Career Profiles - over 500 BC career profiles",
+        "url": "https://www.workbc.ca/plan-career/career-profiles"
+      },
+      {
+        "short": "Job Bank",
+        "label": "Job Bank - wages, outlook and job postings",
+        "url": "https://www.jobbank.gc.ca/"
+      },
+      {
+        "short": "Red Seal",
+        "label": "Red Seal - trades certification across Canada",
+        "url": "https://www.red-seal.ca/"
+      },
+      {
+        "short": "EduCanada",
+        "label": "EduCanada - study programmes in Canada",
+        "url": "https://www.educanada.ca/"
+      },
+      {
+        "short": "Career Trek",
+        "label": "WorkBC Career Trek - occupation videos",
+        "url": "https://www.workbc.ca/plan-career/career-trek-videos"
+      },
+      {
+        "short": "ALIS",
+        "label": "ALIS - Alberta occupational profiles and career videos",
+        "url": "https://alis.alberta.ca/"
+      }
     ]
   },
   "folders": [
-    {"name":"Management","slug":"management","code":"IND-01","order":10,"description":"Leaders who set direction, budgets and people."},
-    {"name":"Business, finance and accounting","slug":"business-finance","code":"IND-02","order":20,"description":"Money, risk, investment and professional advice."},
-    {"name":"Office and administration","slug":"office-administration","code":"IND-03","order":30,"description":"The administrative backbone of every organisation."},
-    {"name":"Information technology","slug":"information-technology","code":"IND-04","order":40,"description":"Software, data, systems and security."},
-    {"name":"Engineering and applied science","slug":"engineering-science","code":"IND-05","order":50,"description":"Design, build and research the physical world."},
-    {"name":"Environment and conservation","slug":"environmental-science","code":"IND-06","order":60,"description":"Protect air, water, land and wildlife."},
-    {"name":"Health care","slug":"health-care","code":"IND-07","order":70,"description":"Direct patient care, therapy and health technology."},
-    {"name":"Social and community services","slug":"social-community","code":"IND-08","order":80,"description":"Support people, families and communities."},
-    {"name":"Education and training","slug":"education-training","code":"IND-09","order":90,"description":"Teach, train and design learning."},
-    {"name":"Legal, public safety and government","slug":"legal-public-safety","code":"IND-10","order":100,"description":"Law, enforcement and public administration."},
-    {"name":"Arts, culture and media","slug":"arts-culture-media","code":"IND-11","order":110,"description":"Create, perform and communicate."},
-    {"name":"Sports and recreation","slug":"sports-recreation","code":"IND-12","order":120,"description":"Sport, fitness and outdoor recreation."},
-    {"name":"Sales and retail","slug":"sales-retail","code":"IND-13","order":130,"description":"Sell, merchandise and manage customer accounts."},
-    {"name":"Hospitality and tourism","slug":"hospitality-tourism","code":"IND-14","order":140,"description":"Hotels, travel and guest experience."},
-    {"name":"Food service and culinary","slug":"food-service","code":"IND-15","order":150,"description":"Kitchens, service and food production."},
-    {"name":"Personal and customer service","slug":"personal-service","code":"IND-16","order":160,"description":"Personal care and everyday customer service."},
-    {"name":"Trades and construction","slug":"trades-construction","code":"IND-17","order":170,"description":"Build, install and maintain the built environment."},
-    {"name":"Transportation and logistics","slug":"transport-logistics","code":"IND-18","order":180,"description":"Move people, goods and information."},
-    {"name":"Agriculture, forestry, fishing and mining","slug":"agriculture-natural-resources","code":"IND-19","order":190,"description":"Farms, forests, fisheries and mining."},
-    {"name":"Manufacturing, utilities and processing","slug":"manufacturing-utilities","code":"IND-20","order":200,"description":"Make products and run utilities."}
+    {
+      "name": "Management",
+      "slug": "management",
+      "code": "IND-01",
+      "order": 10,
+      "description": "Leadership roles, most reached after experience in a related occupation."
+    },
+    {
+      "name": "Business, finance and accounting",
+      "slug": "business-finance",
+      "code": "IND-02",
+      "order": 20,
+      "description": "Money, risk, investment and professional advice."
+    },
+    {
+      "name": "Office and administration",
+      "slug": "office-administration",
+      "code": "IND-03",
+      "order": 30,
+      "description": "The administrative backbone of every organisation."
+    },
+    {
+      "name": "Information technology",
+      "slug": "information-technology",
+      "code": "IND-04",
+      "order": 40,
+      "description": "Software, data, systems and security."
+    },
+    {
+      "name": "Engineering and applied science",
+      "slug": "engineering-science",
+      "code": "IND-05",
+      "order": 50,
+      "description": "Design, build and research the physical world."
+    },
+    {
+      "name": "Environment and conservation",
+      "slug": "environmental-science",
+      "code": "IND-06",
+      "order": 60,
+      "description": "Protect air, water, land and wildlife."
+    },
+    {
+      "name": "Health care",
+      "slug": "health-care",
+      "code": "IND-07",
+      "order": 70,
+      "description": "Direct patient care, therapy and health technology."
+    },
+    {
+      "name": "Social and community services",
+      "slug": "social-community",
+      "code": "IND-08",
+      "order": 80,
+      "description": "Support people, families and communities."
+    },
+    {
+      "name": "Education and training",
+      "slug": "education-training",
+      "code": "IND-09",
+      "order": 90,
+      "description": "Teach, train and design learning."
+    },
+    {
+      "name": "Legal, public safety and government",
+      "slug": "legal-public-safety",
+      "code": "IND-10",
+      "order": 100,
+      "description": "Law, enforcement and public administration."
+    },
+    {
+      "name": "Arts, culture and media",
+      "slug": "arts-culture-media",
+      "code": "IND-11",
+      "order": 110,
+      "description": "Create, perform and communicate."
+    },
+    {
+      "name": "Sports and recreation",
+      "slug": "sports-recreation",
+      "code": "IND-12",
+      "order": 120,
+      "description": "Sport, fitness and outdoor recreation."
+    },
+    {
+      "name": "Sales and retail",
+      "slug": "sales-retail",
+      "code": "IND-13",
+      "order": 130,
+      "description": "Sell, merchandise and manage customer accounts."
+    },
+    {
+      "name": "Hospitality and tourism",
+      "slug": "hospitality-tourism",
+      "code": "IND-14",
+      "order": 140,
+      "description": "Hotels, travel and guest experience."
+    },
+    {
+      "name": "Food service and culinary",
+      "slug": "food-service",
+      "code": "IND-15",
+      "order": 150,
+      "description": "Kitchens, service and food production."
+    },
+    {
+      "name": "Personal and customer service",
+      "slug": "personal-service",
+      "code": "IND-16",
+      "order": 160,
+      "description": "Personal care and everyday customer service."
+    },
+    {
+      "name": "Trades and construction",
+      "slug": "trades-construction",
+      "code": "IND-17",
+      "order": 170,
+      "description": "Build, install and maintain the built environment."
+    },
+    {
+      "name": "Transportation and logistics",
+      "slug": "transport-logistics",
+      "code": "IND-18",
+      "order": 180,
+      "description": "Move people, goods and information."
+    },
+    {
+      "name": "Agriculture, forestry, fishing and mining",
+      "slug": "agriculture-natural-resources",
+      "code": "IND-19",
+      "order": 190,
+      "description": "Farms, forests, fisheries and mining."
+    },
+    {
+      "name": "Manufacturing, utilities and processing",
+      "slug": "manufacturing-utilities",
+      "code": "IND-20",
+      "order": 200,
+      "description": "Make products and run utilities."
+    }
   ],
   "educationRoutes": [
-    {"id":"university-graduate","label":"Master's or doctorate","short":"Graduate degree"},
-    {"id":"university-bachelor","label":"Bachelor's degree","short":"Bachelor"},
-    {"id":"college","label":"College diploma or certificate","short":"College"},
-    {"id":"apprenticeship","label":"Apprenticeship or trade certification","short":"Apprenticeship"},
-    {"id":"high-school","label":"High school plus on-the-job training","short":"High school"},
-    {"id":"no-formal","label":"No formal education requirement","short":"No formal"}
+    {
+      "id": "university-graduate",
+      "label": "Master's or doctorate",
+      "short": "Graduate degree"
+    },
+    {
+      "id": "university-bachelor",
+      "label": "Bachelor's degree",
+      "short": "Bachelor"
+    },
+    {
+      "id": "college",
+      "label": "College diploma or certificate",
+      "short": "College"
+    },
+    {
+      "id": "apprenticeship",
+      "label": "Apprenticeship or trade certification",
+      "short": "Apprenticeship"
+    },
+    {
+      "id": "high-school",
+      "label": "High school plus on-the-job training",
+      "short": "High school"
+    },
+    {
+      "id": "no-formal",
+      "label": "No formal education requirement",
+      "short": "No formal"
+    }
   ],
   "objects": [
-    ["Chief executive officer","management","university-graduate","Sets strategy and leads the whole organisation."],
-    ["General manager","management","university-bachelor","Runs the day-to-day operations of a company."],
-    ["Operations manager","management","university-bachelor","Keeps service, production and people running."],
-    ["Project manager","management","university-bachelor","Plans scope, budget, risks and delivery."],
-    ["Human resources manager","management","university-bachelor","Leads hiring, pay and employee relations."],
-    ["Finance manager","management","university-bachelor","Owns budgets, reporting and controls."],
-    ["Marketing manager","management","university-bachelor","Plans campaigns, brand and market research."],
-    ["Sales manager","management","university-bachelor","Leads a sales team and its targets."],
-    ["Purchasing manager","management","university-bachelor","Buys goods and manages suppliers."],
-    ["Facilities manager","management","university-bachelor","Runs buildings and workplace services."],
-    ["Construction manager","management","university-bachelor","Runs sites, schedules and budgets."],
-    ["Health services manager","management","university-graduate","Leads a clinic, unit or health programme."],
-    ["Restaurant manager","management","college","Runs service, staff and food costs."],
-    ["Retail manager","management","college","Runs a store, its team and stock."],
-    ["Hotel manager","management","college","Oversees rooms, staff and guest experience."],
-
-    ["Accountant","business-finance","university-bachelor","Prepares and reviews financial records."],
-    ["Financial auditor","business-finance","university-bachelor","Checks that financial statements are accurate."],
-    ["Bookkeeper","business-finance","college","Records income, expenses and reconciliations."],
-    ["Payroll administrator","business-finance","college","Calculates wages and deductions."],
-    ["Financial analyst","business-finance","university-bachelor","Studies data and recommends decisions."],
-    ["Investment analyst","business-finance","university-bachelor","Researches investments and builds models."],
-    ["Financial planner","business-finance","university-bachelor","Plans savings, tax and retirement."],
-    ["Insurance underwriter","business-finance","university-bachelor","Decides which risks an insurer can accept."],
-    ["Insurance broker","business-finance","college","Finds insurance cover for clients."],
-    ["Claims adjuster","business-finance","college","Assesses and settles insurance claims."],
-    ["Loan officer","business-finance","college","Reviews loan applications."],
-    ["Mortgage broker","business-finance","college","Matches borrowers with lenders."],
-    ["Tax preparer","business-finance","college","Prepares tax returns for clients."],
-    ["Economist","business-finance","university-graduate","Studies markets, policy and economic data."],
-    ["Actuary","business-finance","university-bachelor","Prices risk using mathematics."],
-    ["Management consultant","business-finance","university-graduate","Advises on strategy and operations."],
-    ["Real estate agent","business-finance","college","Helps clients buy, sell and lease property."],
-    ["Procurement officer","business-finance","college","Buys goods and services for an organisation."],
-
-    ["Administrative assistant","office-administration","college","Handles schedules, files and office support."],
-    ["Executive assistant","office-administration","college","Supports a senior leader and their correspondence."],
-    ["Receptionist","office-administration","high-school","Greets visitors and manages the front desk."],
-    ["Data entry clerk","office-administration","high-school","Enters and checks information in systems."],
-    ["Records management technician","office-administration","college","Organises, stores and retrieves records."],
-    ["Office manager","office-administration","college","Runs the administration of an office."],
-    ["Legal administrative assistant","office-administration","college","Prepares legal documents and manages files."],
-    ["Medical administrative assistant","office-administration","college","Handles bookings, patient files and billing."],
-    ["Human resources assistant","office-administration","college","Supports hiring and employee records."],
-    ["Event coordinator","office-administration","college","Plans venues, suppliers and event schedules."],
-
-    ["Software developer","information-technology","university-bachelor","Builds and maintains software applications."],
-    ["Web developer","information-technology","college","Builds websites and web applications."],
-    ["Mobile app developer","information-technology","university-bachelor","Builds apps for phones and tablets."],
-    ["Game developer","information-technology","university-bachelor","Builds video games and game engines."],
-    ["Data scientist","information-technology","university-graduate","Finds patterns in data and builds models."],
-    ["Data engineer","information-technology","university-bachelor","Builds pipelines that move and clean data."],
-    ["Data analyst","information-technology","university-bachelor","Turns data into reports and decisions."],
-    ["Machine learning engineer","information-technology","university-graduate","Builds and deploys learning models."],
-    ["AI specialist","information-technology","university-graduate","Applies artificial intelligence to real problems."],
-    ["Database administrator","information-technology","college","Keeps databases fast and backed up."],
-    ["Systems administrator","information-technology","college","Runs servers, accounts and system updates."],
-    ["Network administrator","information-technology","college","Keeps networks connected and secure."],
-    ["Cloud architect","information-technology","university-bachelor","Designs cloud infrastructure and services."],
-    ["DevOps engineer","information-technology","university-bachelor","Automates building, testing and releasing."],
-    ["Cybersecurity analyst","information-technology","university-bachelor","Watches for attacks and closes security gaps."],
-    ["QA analyst","information-technology","college","Tests software and reports defects."],
-    ["Technical support specialist","information-technology","college","Solves software and hardware problems."],
-    ["UX designer","information-technology","university-bachelor","Designs how products feel and work for users."],
-    ["Product manager","information-technology","university-bachelor","Decides what a product should do and why."],
-    ["Business analyst","information-technology","university-bachelor","Turns business needs into system requirements."],
-
-    ["Civil engineer","engineering-science","university-bachelor","Designs roads, bridges and water systems."],
-    ["Mechanical engineer","engineering-science","university-bachelor","Designs machines and mechanical systems."],
-    ["Electrical engineer","engineering-science","university-bachelor","Designs electrical systems and equipment."],
-    ["Electronics engineer","engineering-science","university-bachelor","Designs circuits, sensors and devices."],
-    ["Chemical engineer","engineering-science","university-bachelor","Designs chemical processes and plants."],
-    ["Industrial engineer","engineering-science","university-bachelor","Improves processes and productivity."],
-    ["Manufacturing engineer","engineering-science","university-bachelor","Designs how products are made."],
-    ["Aerospace engineer","engineering-science","university-bachelor","Designs aircraft, spacecraft and components."],
-    ["Mining engineer","engineering-science","university-bachelor","Plans mines and mineral extraction."],
-    ["Petroleum engineer","engineering-science","university-bachelor","Designs oil and gas extraction."],
-    ["Environmental engineer","engineering-science","university-bachelor","Designs systems that protect air and water."],
-    ["Biomedical engineer","engineering-science","university-bachelor","Designs medical devices and equipment."],
-    ["Materials engineer","engineering-science","university-bachelor","Develops metals, plastics and composites."],
-    ["Structural engineer","engineering-science","university-bachelor","Checks that structures carry their loads."],
-    ["Architect","engineering-science","university-graduate","Designs buildings and leads the design team."],
-    ["Urban planner","engineering-science","university-bachelor","Plans land use, housing and transport."],
-    ["Engineering technologist","engineering-science","college","Supports engineers with design and testing."],
-    ["Drafting technologist","engineering-science","college","Turns designs into technical drawings."],
-    ["Chemist","engineering-science","university-graduate","Analyses substances and develops products."],
-    ["Biologist","engineering-science","university-graduate","Studies living organisms and ecosystems."],
-    ["Geologist","engineering-science","university-graduate","Studies rocks, minerals and the earth."],
-    ["Laboratory technician","engineering-science","college","Runs tests and keeps lab equipment working."],
-
-    ["Environmental scientist","environmental-science","university-bachelor","Studies pollution, ecosystems and impact."],
-    ["Conservation officer","environmental-science","college","Protects wildlife, habitat and natural areas."],
-    ["Environmental impact analyst","environmental-science","university-bachelor","Reviews projects for environmental effects."],
-    ["Sustainability coordinator","environmental-science","university-bachelor","Runs an organisation's environmental programmes."],
-    ["Environmental health officer","environmental-science","university-bachelor","Inspects food, water and housing for health risks."],
-    ["Wildlife technician","environmental-science","college","Surveys and manages wildlife populations."],
-    ["Recycling coordinator","environmental-science","college","Runs waste reduction and recycling programmes."],
-    ["Park interpreter","environmental-science","college","Teaches visitors about nature and parks."],
-
-    ["Registered nurse","health-care","university-bachelor","Assesses patients and coordinates their care."],
-    ["Licensed practical nurse","health-care","college","Gives direct nursing care under supervision."],
-    ["Nurse practitioner","health-care","university-graduate","Diagnoses, prescribes and leads patient care."],
-    ["Registered psychiatric nurse","health-care","university-bachelor","Cares for people with mental health needs."],
-    ["Health care aide","health-care","college","Helps patients with daily living and mobility."],
-    ["Physician assistant","health-care","university-graduate","Practises medicine under a doctor's supervision."],
-    ["Family physician","health-care","university-graduate","Provides primary medical care to families."],
-    ["Specialist physician","health-care","university-graduate","Diagnoses and treats one medical specialty."],
-    ["Surgeon","health-care","university-graduate","Performs operations and surgical care."],
-    ["Psychiatrist","health-care","university-graduate","Diagnoses and treats mental illness."],
-    ["Dentist","health-care","university-graduate","Diagnoses and treats teeth and mouth."],
-    ["Dental hygienist","health-care","college","Cleans teeth and teaches oral care."],
-    ["Dental assistant","health-care","college","Assists dentists and prepares patients."],
-    ["Optometrist","health-care","university-graduate","Examines eyes and prescribes glasses."],
-    ["Pharmacist","health-care","university-graduate","Dispenses medicine and advises on safe use."],
-    ["Pharmacy technician","health-care","college","Prepares and manages prescriptions."],
-    ["Physiotherapist","health-care","university-graduate","Restores movement after injury or illness."],
-    ["Occupational therapist","health-care","university-graduate","Helps people manage daily activities."],
-    ["Respiratory therapist","health-care","college","Treats breathing and lung problems."],
-    ["Speech-language pathologist","health-care","university-graduate","Treats speech, language and swallowing."],
-    ["Audiologist","health-care","university-graduate","Tests hearing and fits hearing aids."],
-    ["Dietitian","health-care","university-bachelor","Plans nutrition and advises on diet."],
-    ["Chiropractor","health-care","university-graduate","Treats spine and joint problems."],
-    ["Massage therapist","health-care","college","Treats muscles and soft tissue by massage."],
-    ["Psychologist","health-care","university-graduate","Assesses and treats behaviour and mental health."],
-    ["Medical laboratory technologist","health-care","college","Runs lab tests that guide diagnosis."],
-    ["Medical radiation technologist","health-care","college","Takes X-rays and medical scans."],
-    ["Paramedic","health-care","college","Gives emergency care outside hospital."],
-    ["Midwife","health-care","university-bachelor","Cares for pregnancy, birth and early weeks."],
-    ["Veterinarian","health-care","university-graduate","Diagnoses and treats animals."],
-
-    ["Social worker","social-community","university-bachelor","Helps with housing, safety and family issues."],
-    ["Child protection worker","social-community","university-bachelor","Acts on child safety concerns."],
-    ["Child and youth care worker","social-community","college","Supports young people in care and crisis."],
-    ["Addictions counsellor","social-community","college","Helps clients manage substance use."],
-    ["Family therapist","social-community","university-graduate","Works with couples and families."],
-    ["Community service worker","social-community","college","Connects people to services and support."],
-    ["Settlement worker","social-community","college","Helps newcomers settle and find services."],
-    ["Disability support worker","social-community","college","Supports people with disabilities daily."],
-    ["Employment counsellor","social-community","university-bachelor","Helps clients find work and training."],
-    ["Volunteer coordinator","social-community","college","Recruits, trains and schedules volunteers."],
-    ["Funeral director","social-community","college","Arranges funerals and supports families."],
-
-    ["Elementary school teacher","education-training","university-bachelor","Teaches young children several subjects."],
-    ["Secondary school teacher","education-training","university-bachelor","Teaches one or two subjects to teenagers."],
-    ["Early childhood educator","education-training","college","Cares for and teaches children under six."],
-    ["Educational assistant","education-training","college","Supports students and teachers in class."],
-    ["Special education teacher","education-training","university-bachelor","Teaches students with special needs."],
-    ["School counsellor","education-training","university-graduate","Guides students on courses and wellbeing."],
-    ["College instructor","education-training","university-graduate","Teaches at a college or institute."],
-    ["University professor","education-training","university-graduate","Teaches and researches at a university."],
-    ["School principal","education-training","university-graduate","Leads a school, its staff and results."],
-    ["ESL teacher","education-training","university-bachelor","Teaches English to speakers of other languages."],
-    ["Curriculum consultant","education-training","university-graduate","Designs courses and learning materials."],
-    ["Instructional designer","education-training","university-bachelor","Builds online and classroom learning."],
-    ["Librarian","education-training","university-graduate","Manages collections and research services."],
-    ["Career counsellor","education-training","university-bachelor","Helps people choose and change careers."],
-
-    ["Lawyer","legal-public-safety","university-bachelor","Advises clients and represents them in law."],
-    ["Paralegal","legal-public-safety","college","Handles legal work under a lawyer's authority."],
-    ["Notary public","legal-public-safety","college","Certifies documents and some legal acts."],
-    ["Police officer","legal-public-safety","college","Patrols, investigates and keeps public order."],
-    ["Correctional officer","legal-public-safety","college","Supervises people in custody."],
-    ["Probation officer","legal-public-safety","university-bachelor","Supervises offenders in the community."],
-    ["Firefighter","legal-public-safety","college","Fights fires and responds to emergencies."],
-    ["Fire inspector","legal-public-safety","college","Inspects buildings for fire safety."],
-    ["Border services officer","legal-public-safety","college","Checks people and goods at the border."],
-    ["Security guard","legal-public-safety","high-school","Protects people and property."],
-    ["Emergency dispatcher","legal-public-safety","high-school","Answers 911 calls and sends help."],
-    ["Policy analyst","legal-public-safety","university-bachelor","Researches and writes public policy."],
-    ["Building inspector","legal-public-safety","college","Checks construction against the building code."],
-
-    ["Graphic designer","arts-culture-media","college","Creates visual designs for print and screen."],
-    ["Interior designer","arts-culture-media","college","Designs interiors that work and look right."],
-    ["Industrial designer","arts-culture-media","university-bachelor","Designs products and their usability."],
-    ["Fashion designer","arts-culture-media","college","Designs clothing and collections."],
-    ["Animator","arts-culture-media","college","Creates moving images and animation."],
-    ["Photographer","arts-culture-media","college","Shoots and edits photographs."],
-    ["Videographer","arts-culture-media","college","Films and edits video productions."],
-    ["Video editor","arts-culture-media","college","Cuts footage into a finished story."],
-    ["Film director","arts-culture-media","university-bachelor","Leads a film's creative production."],
-    ["Actor","arts-culture-media","college","Performs roles on stage and screen."],
-    ["Musician","arts-culture-media","college","Performs or composes music."],
-    ["Dancer","arts-culture-media","college","Performs dance professionally."],
-    ["Visual artist","arts-culture-media","college","Creates original art for exhibition and sale."],
-    ["Copywriter","arts-culture-media","university-bachelor","Writes advertising and marketing text."],
-    ["Journalist","arts-culture-media","university-bachelor","Reports news and investigates stories."],
-    ["Translator","arts-culture-media","university-bachelor","Converts text between languages."],
-    ["Social media manager","arts-culture-media","college","Runs an organisation's social channels."],
-    ["Public relations specialist","arts-culture-media","university-bachelor","Manages an organisation's public image."],
-
-    ["Professional athlete","sports-recreation","high-school","Competes in sport at a professional level."],
-    ["Coach","sports-recreation","college","Trains athletes and plans competition."],
-    ["Fitness instructor","sports-recreation","college","Leads exercise classes and programmes."],
-    ["Personal trainer","sports-recreation","college","Designs one-to-one exercise plans."],
-    ["Athletic therapist","sports-recreation","university-bachelor","Prevents and treats sports injuries."],
-    ["Sports referee","sports-recreation","high-school","Officiates games and enforces the rules."],
-    ["Recreation programme coordinator","sports-recreation","university-bachelor","Runs community recreation programmes."],
-    ["Lifeguard","sports-recreation","high-school","Watches swimmers and responds to emergencies."],
-    ["Outdoor guide","sports-recreation","college","Leads hiking, paddling and wilderness trips."],
-
-    ["Retail sales associate","sales-retail","high-school","Serves customers and sells products in store."],
-    ["Store supervisor","sales-retail","high-school","Leads a shift and supports the store manager."],
-    ["Retail buyer","sales-retail","university-bachelor","Chooses the products a retailer will sell."],
-    ["Merchandiser","sales-retail","college","Plans product displays and stock."],
-    ["Wholesale sales representative","sales-retail","college","Sells products to businesses."],
-    ["Account manager","sales-retail","university-bachelor","Manages key client relationships and sales."],
-    ["Business development manager","sales-retail","university-bachelor","Finds new markets and clients."],
-    ["Car salesperson","sales-retail","high-school","Sells new and used vehicles."],
-    ["Telemarketer","sales-retail","high-school","Calls customers to sell or survey."],
-    ["Cashier","sales-retail","no-formal","Takes payments and serves customers."],
-    ["E-commerce specialist","sales-retail","college","Runs online stores and product listings."],
-
-    ["Hotel front desk agent","hospitality-tourism","college","Checks guests in and handles requests."],
-    ["Concierge","hospitality-tourism","college","Arranges guest services and local bookings."],
-    ["Housekeeping supervisor","hospitality-tourism","high-school","Leads room cleaning and standards."],
-    ["Travel agent","hospitality-tourism","college","Plans and books travel for clients."],
-    ["Tour guide","hospitality-tourism","high-school","Leads groups and explains attractions."],
-    ["Flight attendant","hospitality-tourism","high-school","Keeps passengers safe and comfortable."],
-    ["Event planner","hospitality-tourism","college","Plans conferences, weddings and events."],
-    ["Casino dealer","hospitality-tourism","high-school","Runs table games for guests."],
-    ["Tourism marketing officer","hospitality-tourism","university-bachelor","Promotes a destination and its events."],
-
-    ["Chef","food-service","apprenticeship","Leads a kitchen and designs menus."],
-    ["Cook","food-service","apprenticeship","Prepares food to order in a kitchen."],
-    ["Baker","food-service","apprenticeship","Bakes bread, pastries and desserts."],
-    ["Butcher","food-service","apprenticeship","Cuts and prepares meat for sale."],
-    ["Food service supervisor","food-service","high-school","Leads a shift in a food outlet."],
-    ["Server","food-service","high-school","Takes orders and serves guests."],
-    ["Bartender","food-service","high-school","Mixes and serves drinks responsibly."],
-    ["Barista","food-service","high-school","Prepares coffee and serves customers."],
-    ["Kitchen helper","food-service","no-formal","Cleans and helps with basic food tasks."],
-
-    ["Hairstylist","personal-service","apprenticeship","Cuts, colours and styles hair."],
-    ["Barber","personal-service","apprenticeship","Cuts and shaves hair for clients."],
-    ["Esthetician","personal-service","college","Provides skin care and beauty treatments."],
-    ["Nail technician","personal-service","college","Manicures, pedicures and nail art."],
-    ["Nanny","personal-service","high-school","Cares for children in the family home."],
-    ["Pet groomer","personal-service","college","Grooms and cares for pets."],
-    ["Janitor","personal-service","no-formal","Cleans and maintains buildings."],
-    ["Cleaning supervisor","personal-service","high-school","Leads a cleaning team and schedule."],
-    ["Customer service representative","personal-service","high-school","Answers customer questions and complaints."],
-    ["Call centre agent","personal-service","high-school","Handles phone requests and sales."],
-
-    ["Carpenter","trades-construction","apprenticeship","Builds and repairs wooden structures."],
-    ["Electrician","trades-construction","apprenticeship","Installs and repairs electrical systems."],
-    ["Plumber","trades-construction","apprenticeship","Installs and repairs water and drainage."],
-    ["Pipefitter","trades-construction","apprenticeship","Installs industrial piping systems."],
-    ["Welder","trades-construction","apprenticeship","Joins metal parts by welding."],
-    ["Sheet metal worker","trades-construction","apprenticeship","Fabricates and installs sheet metal."],
-    ["Ironworker","trades-construction","apprenticeship","Erects steel structures and reinforcement."],
-    ["Millwright","trades-construction","apprenticeship","Installs and repairs industrial machinery."],
-    ["Machinist","trades-construction","apprenticeship","Cuts and shapes metal parts."],
-    ["Cabinetmaker","trades-construction","apprenticeship","Builds furniture and custom cabinets."],
-    ["Bricklayer","trades-construction","apprenticeship","Builds walls with brick and stone."],
-    ["Concrete finisher","trades-construction","apprenticeship","Pours and finishes concrete surfaces."],
-    ["Roofer","trades-construction","apprenticeship","Installs and repairs roofs."],
-    ["Glazier","trades-construction","apprenticeship","Installs glass in buildings and vehicles."],
-    ["Insulator","trades-construction","apprenticeship","Installs thermal and sound insulation."],
-    ["Painter and decorator","trades-construction","apprenticeship","Paints and finishes interior and exterior surfaces."],
-    ["Drywall installer","trades-construction","apprenticeship","Hangs and finishes drywall."],
-    ["Tile setter","trades-construction","apprenticeship","Installs tiles on floors and walls."],
-    ["Crane operator","trades-construction","apprenticeship","Operates cranes on construction sites."],
-    ["Heavy equipment operator","trades-construction","apprenticeship","Runs excavators, dozers and loaders."],
-    ["Construction labourer","trades-construction","no-formal","Supports the trades on a construction site."],
-    ["Construction estimator","trades-construction","college","Prices construction work and materials."],
-    ["Site supervisor","trades-construction","college","Runs crews, safety and the site schedule."],
-    ["Solar installer","trades-construction","college","Installs solar panels and systems."],
-    ["Elevator mechanic","trades-construction","apprenticeship","Installs and repairs elevators and lifts."],
-    ["Refrigeration mechanic","trades-construction","apprenticeship","Installs and repairs cooling systems."],
-
-    ["Truck driver","transport-logistics","high-school","Moves goods long distance by road."],
-    ["Delivery driver","transport-logistics","high-school","Delivers parcels and orders locally."],
-    ["Bus driver","transport-logistics","high-school","Drives passengers on city or intercity routes."],
-    ["Taxi driver","transport-logistics","no-formal","Carries passengers by car."],
-    ["Train conductor","transport-logistics","high-school","Manages a train's crew and cars."],
-    ["Locomotive engineer","transport-logistics","college","Operates trains on the rail network."],
-    ["Airline pilot","transport-logistics","college","Flies commercial aircraft."],
-    ["Flight instructor","transport-logistics","college","Teaches people to fly."],
-    ["Air traffic controller","transport-logistics","college","Directs aircraft in the air and on the ground."],
-    ["Aircraft maintenance engineer","transport-logistics","college","Maintains and certifies aircraft."],
-    ["Ship captain","transport-logistics","college","Commands a vessel and its crew."],
-    ["Warehouse worker","transport-logistics","high-school","Picks, packs and moves stock."],
-    ["Forklift operator","transport-logistics","high-school","Moves goods with a forklift."],
-    ["Logistics coordinator","transport-logistics","college","Plans shipments and delivery schedules."],
-    ["Dispatcher","transport-logistics","college","Sends drivers and tracks deliveries."],
-    ["Postal worker","transport-logistics","high-school","Sorts and delivers mail."],
-
-    ["Crop farmer","agriculture-natural-resources","college","Grows grain, vegetables or fruit."],
-    ["Livestock farmer","agriculture-natural-resources","college","Raises cattle, sheep or pigs."],
-    ["Dairy farmer","agriculture-natural-resources","college","Runs a dairy herd and milk production."],
-    ["Farm supervisor","agriculture-natural-resources","college","Leads farm workers and daily tasks."],
-    ["Agronomist","agriculture-natural-resources","university-bachelor","Advises farmers on crops and soil."],
-    ["Animal nutritionist","agriculture-natural-resources","university-bachelor","Designs feed plans for farm animals."],
-    ["Logger","agriculture-natural-resources","high-school","Cuts and moves trees in the forest."],
-    ["Forestry technologist","agriculture-natural-resources","college","Plans forest use and harvest."],
-    ["Fisher","agriculture-natural-resources","high-school","Catches fish and seafood commercially."],
-    ["Underground miner","agriculture-natural-resources","high-school","Extracts ore underground."],
-    ["Blaster","agriculture-natural-resources","apprenticeship","Prepares and fires controlled explosions."],
-    ["Driller","agriculture-natural-resources","high-school","Drills holes for mining and construction."],
-    ["Oil and gas drilling operator","agriculture-natural-resources","college","Operates drilling rig equipment."],
-    ["Beekeeper","agriculture-natural-resources","college","Keeps bees and produces honey."],
-
-    ["Assembly worker","manufacturing-utilities","high-school","Assembles products on a production line."],
-    ["Machine operator","manufacturing-utilities","high-school","Runs production machines."],
-    ["CNC machinist","manufacturing-utilities","college","Programs and runs computer-controlled machines."],
-    ["Quality control technician","manufacturing-utilities","college","Tests products against standards."],
-    ["Production supervisor","manufacturing-utilities","college","Leads a production shift."],
-    ["Power engineer","manufacturing-utilities","college","Runs boilers, turbines and plant utilities."],
-    ["Water treatment plant operator","manufacturing-utilities","college","Treats water for drinking."],
-    ["Wastewater treatment operator","manufacturing-utilities","college","Treats sewage and waste water."],
-    ["Chemical plant operator","manufacturing-utilities","college","Runs chemical production equipment."],
-    ["Food processing worker","manufacturing-utilities","high-school","Prepares and packages food products."],
-    ["Sawmill machine operator","manufacturing-utilities","high-school","Runs sawmill equipment."],
-    ["Printing press operator","manufacturing-utilities","college","Sets up and runs printing presses."],
-    ["Material handler","manufacturing-utilities","no-formal","Moves materials in a facility."],
-    ["Boiler operator","manufacturing-utilities","college","Runs boilers and heating plants."],
-    ["Automotive service technician","trades-construction","apprenticeship","Diagnoses and repairs cars and light trucks."],
-    ["Gas fitter","trades-construction","apprenticeship","Installs and services gas lines and appliances."],
-    ["Longshore worker","transport-logistics","high-school","Loads and unloads ships at a port."],
-    ["Landscape architect","engineering-science","university-bachelor","Designs outdoor spaces and landscapes."],
-    ["Robotics engineer","engineering-science","university-graduate","Builds and programs robots and automation."],
-    ["Engineering manager","management","university-bachelor","Leads engineering teams and projects."],
-    ["Pharmacy assistant","health-care","college","Helps pharmacists prepare and dispense medicine."],
-    ["Radiation therapist","health-care","university-bachelor","Delivers radiation treatment to patients."],
-    ["Audiovisual technician","arts-culture-media","college","Sets up sound, video and lighting systems."],
-    ["Harbour master","transport-logistics","college","Runs port traffic, safety and moorage."],
-    ["Oceanographer","environmental-science","university-graduate","Studies oceans, currents and marine systems."],
-    ["Optician","health-care","college","Fits and dispenses glasses and contact lenses."],
-    ["Medical sonographer","health-care","college","Uses ultrasound to image the body."],
-    ["Heavy duty equipment mechanic","trades-construction","apprenticeship","Repairs heavy trucks and construction equipment."],
-    ["Customs broker","business-finance","college","Clears goods through customs for importers."],
-    ["Property manager","business-finance","college","Runs buildings, tenants and leases."],
-    ["IT manager","management","university-bachelor","Leads an organisation's IT systems and staff."],
-    ["Accounting clerk","business-finance","college","Records transactions and supports accounting."],
-    ["Sales coordinator","sales-retail","college","Supports a sales team, orders and schedules."],
-    ["Health and safety consultant","environmental-science","university-bachelor","Advises workplaces on health and safety."],
-    ["Land surveyor","engineering-science","college","Measures land and prepares survey plans."],
-    ["Grounds maintenance worker","agriculture-natural-resources","high-school","Maintains lawns, gardens and outdoor grounds."],
-    ["Nursery and greenhouse worker","agriculture-natural-resources","high-school","Grows and tends plants in nurseries and greenhouses."],
-    ["Brew master","food-service","college","Runs brewing and develops beer recipes."],
-    ["Boat builder","manufacturing-utilities","college","Builds and repairs boats and small vessels."],
-    ["Instrument mechanic","trades-construction","apprenticeship","Installs and calibrates industrial instruments."],
-    ["Mine manager","management","university-bachelor","Runs a mine's operations, safety and crew."],
-    ["Geological technician","engineering-science","college","Collects and tests rock and soil samples."],
-    ["Acupuncturist","health-care","college","Treats pain and illness with acupuncture."],
-    ["Landscape horticulturalist","agriculture-natural-resources","college","Designs and maintains gardens and landscapes."],
-    ["Silviculturist","agriculture-natural-resources","university-bachelor","Plans reforestation and forest health."],
-    ["Well site supervisor","agriculture-natural-resources","college","Supervises oil and gas drilling crews."],
-    ["Hydrogeology engineer","engineering-science","university-graduate","Studies groundwater and designs wells."],
-    ["Registered animal health technician","health-care","college","Assists veterinarians with animal care."],
-    ["Author","arts-culture-media","college","Writes books and long-form content."],
-    ["Managing editor","arts-culture-media","university-bachelor","Runs an editorial team and publication."],
-    ["University dean","education-training","university-graduate","Leads a faculty, its programmes and staff."],
-    ["Producer","arts-culture-media","university-bachelor","Manages the budget and delivery of a production."],
-    ["Deck hand","transport-logistics","high-school","Works on deck to handle lines and cargo."],
-    ["Social development manager","social-community","university-bachelor","Leads community and social programmes."],
-    ["Indigenous advisor","social-community","university-bachelor","Advises on Indigenous relations and policy."],
-    ["Environmental safety consultant","environmental-science","university-bachelor","Advises on environmental and safety risks."],
-    ["Powerline technician","trades-construction","apprenticeship","Builds and repairs overhead and underground power lines."],
-    ["Arborist","agriculture-natural-resources","apprenticeship","Prunes, plants and cares for trees and shrubs."],
-    ["Wildland firefighter","legal-public-safety","college","Controls forest and grassland fires."],
-    ["Public health inspector","health-care","university-bachelor","Inspects food, water and facilities for health risks."],
-    ["Statistician","business-finance","university-graduate","Designs studies and analyses numerical data."],
-    ["Anthropologist","social-community","university-graduate","Studies human cultures and societies."],
-    ["Curator","arts-culture-media","university-graduate","Builds and interprets museum collections."],
-    ["Archivist","arts-culture-media","university-graduate","Preserves and describes historical records."],
-    ["Forester","agriculture-natural-resources","university-bachelor","Plans the sustainable management of forests."],
-    ["Court reporter","legal-public-safety","college","Records legal proceedings word for word."],
-    ["Bylaw enforcement officer","legal-public-safety","college","Enforces municipal bylaws and regulations."],
-    ["Marriage and family counsellor","social-community","university-graduate","Helps couples and families resolve problems."],
-    ["Operations research analyst","business-finance","university-bachelor","Uses models to improve business decisions."],
-    ["Geomatics technologist","engineering-science","college","Measures and maps land and spatial data."],
-    ["Hazardous waste management technologist","environmental-science","college","Handles and disposes of hazardous materials safely."],
-    ["Hydrometric technician","environmental-science","college","Measures water levels and flows."],
-    ["Land titles analyst","office-administration","college","Reviews land ownership records and transfers."],
-    ["Broadcast maintenance technologist","arts-culture-media","college","Maintains broadcasting and audio-visual equipment."],
-    ["Optical laboratory technician","health-care","college","Grinds and fits lenses to prescriptions."],
-    ["Audiometric technician","health-care","college","Tests hearing and supports audiologists."],
-    ["Prosthetic and orthotic technician","health-care","college","Builds and fits artificial limbs and braces."],
-    ["Podiatric physician","health-care","university-graduate","Diagnoses and treats foot and ankle conditions."],
-    ["Turfgrass management specialist","agriculture-natural-resources","college","Manages sports fields, lawns and turf."],
-    ["Vending machine technician","trades-construction","college","Installs and repairs vending and coin equipment."],
-    ["Banquet manager","hospitality-tourism","college","Runs banquets, conferences and large events."],
-    ["Casting director","arts-culture-media","college","Selects actors for film, television and theatre."],
-    ["Costume designer","arts-culture-media","college","Designs and builds costumes for productions."],
-    ["Cinematographer","arts-culture-media","college","Plans and captures the visual images of a film."],
-    ["Art instructor","education-training","college","Teaches drawing, painting and studio art."],
-    ["Professional investigator","legal-public-safety","college","Investigates fraud, insurance and legal cases."],
-    ["Ecologist","environmental-science","university-graduate","Studies ecosystems and advises on conservation."],
-    ["Entomologist","environmental-science","university-graduate","Studies insects and their impact on crops and health."],
-    ["Advertising account executive","sales-retail","college","Manages advertising accounts and client campaigns."],
-    ["Auto detailer","trades-construction","high-school","Cleans and restores vehicle interiors and exteriors."],
-    ["Floral designer","sales-retail","college","Designs and sells floral arrangements."],
-    ["Makeup artist","personal-service","college","Applies makeup for film, theatre and events."],
-    ["Occupational hygienist","environmental-science","university-bachelor","Assesses workplace exposure to health hazards."],
-    ["Ergonomist","health-care","university-graduate","Designs workstations and tasks to fit people."],
-    ["Cardiology technologist","health-care","college","Runs heart tests and monitors cardiac patients."],
-    ["Database analyst","information-technology","college","Designs and queries databases for business data."],
-    ["Mental health aide","health-care","college","Supports people living with mental illness."],
-    ["Unit clerk","office-administration","college","Coordinates patient records and unit communications."],
-    ["Health information manager","health-care","university-bachelor","Manages patient records and health data systems."],
-    ["Dental laboratory technician","health-care","college","Makes crowns, bridges and dental prosthetics."],
-    ["Wind turbine technician","trades-construction","college","Installs and maintains wind turbines."]
+    ["Chief executive officer","management","university-graduate","Sets strategy and leads the whole organisation.","leadership","Usually reached after senior management experience, often through a general manager or functional manager role.","chief-executive-officer"],
+    ["General manager","management","university-bachelor","Runs the day-to-day operations of a company.","leadership","Usually reached after experience as a functional manager or operations manager.","general-manager"],
+    ["Operations manager","management","university-bachelor","Keeps service, production and people running.","leadership","Usually reached after experience as an operations coordinator, supervisor or analyst.","operations-manager"],
+    ["Project manager","management","university-bachelor","Plans scope, budget, risks and delivery.","experienced","Usually reached after experience as a project coordinator or team lead.","project-manager"],
+    ["Human resources manager","management","university-bachelor","Leads hiring, pay and employee relations.","leadership","Usually reached after experience as an HR assistant, coordinator or generalist.","human-resources-manager"],
+    ["Finance manager","management","university-bachelor","Owns budgets, reporting and controls.","leadership","Usually reached after experience as a financial analyst or accountant.","finance-manager"],
+    ["Marketing manager","management","university-bachelor","Plans campaigns, brand and market research.","leadership","Usually reached after experience as a marketing coordinator or specialist.","marketing-manager"],
+    ["Sales manager","management","university-bachelor","Leads a sales team and its targets.","leadership","Usually reached after experience as a sales representative or account manager.","sales-manager"],
+    ["Purchasing manager","management","university-bachelor","Buys goods and manages suppliers.","leadership","Usually reached after experience as a procurement officer or buyer.","purchasing-manager"],
+    ["Facilities manager","management","university-bachelor","Runs buildings and workplace services.","leadership","Usually reached after experience in facilities coordination or building operations.","facilities-manager"],
+    ["Construction manager","management","university-bachelor","Runs sites, schedules and budgets.","leadership","Usually reached after experience as a construction estimator, site supervisor or project coordinator.","construction-manager"],
+    ["Health services manager","management","university-graduate","Leads a clinic, unit or health programme.","leadership","Usually reached after experience in health administration or clinical management.","health-services-manager"],
+    ["Restaurant manager","management","college","Runs service, staff and food costs.","leadership","Usually reached after experience as a food service supervisor or assistant manager.","restaurant-manager"],
+    ["Retail manager","management","college","Runs a store, its team and stock.","leadership","Usually reached after experience as a store supervisor or assistant manager.","retail-manager"],
+    ["Hotel manager","management","college","Oversees rooms, staff and guest experience.","leadership","Usually reached after experience in hotel operations or front office supervision.","hotel-manager"],
+    ["Accountant","business-finance","university-bachelor","Prepares and reviews financial records.","entry","","accountant"],
+    ["Financial auditor","business-finance","university-bachelor","Checks that financial statements are accurate.","entry","","financial-auditor"],
+    ["Bookkeeper","business-finance","college","Records income, expenses and reconciliations.","entry","","bookkeeper"],
+    ["Payroll administrator","business-finance","college","Calculates wages and deductions.","entry","","payroll-administrator"],
+    ["Financial analyst","business-finance","university-bachelor","Studies data and recommends decisions.","entry","","financial-analyst"],
+    ["Investment analyst","business-finance","university-bachelor","Researches investments and builds models.","entry","","investment-analyst"],
+    ["Financial planner","business-finance","university-bachelor","Plans savings, tax and retirement.","entry","","financial-planner"],
+    ["Insurance underwriter","business-finance","university-bachelor","Decides which risks an insurer can accept.","entry","","insurance-underwriter"],
+    ["Insurance broker","business-finance","college","Finds insurance cover for clients.","entry","","insurance-broker"],
+    ["Claims adjuster","business-finance","college","Assesses and settles insurance claims.","entry","","claims-adjuster"],
+    ["Loan officer","business-finance","college","Reviews loan applications.","entry","","loan-officer"],
+    ["Mortgage broker","business-finance","college","Matches borrowers with lenders.","entry","","mortgage-broker"],
+    ["Tax preparer","business-finance","college","Prepares tax returns for clients.","entry","","tax-preparer"],
+    ["Economist","business-finance","university-graduate","Studies markets, policy and economic data.","entry","","economist"],
+    ["Actuary","business-finance","university-bachelor","Prices risk using mathematics.","entry","","actuary"],
+    ["Management consultant","business-finance","university-graduate","Advises on strategy and operations.","experienced","Usually reached after a graduate degree and experience in business analysis or industry.","management-consultant"],
+    ["Real estate agent","business-finance","college","Helps clients buy, sell and lease property.","entry","","real-estate-agent"],
+    ["Procurement officer","business-finance","college","Buys goods and services for an organisation.","entry","","procurement-officer"],
+    ["Administrative assistant","office-administration","college","Handles schedules, files and office support.","entry","","administrative-assistant"],
+    ["Executive assistant","office-administration","college","Supports a senior leader and their correspondence.","entry","","executive-assistant"],
+    ["Receptionist","office-administration","high-school","Greets visitors and manages the front desk.","entry","","receptionist"],
+    ["Data entry clerk","office-administration","high-school","Enters and checks information in systems.","entry","","data-entry-clerk"],
+    ["Records management technician","office-administration","college","Organises, stores and retrieves records.","entry","","records-management-technician"],
+    ["Office manager","office-administration","college","Runs the administration of an office.","leadership","Usually reached after experience as an administrative assistant or office coordinator.","office-manager"],
+    ["Legal administrative assistant","office-administration","college","Prepares legal documents and manages files.","entry","","legal-administrative-assistant"],
+    ["Medical administrative assistant","office-administration","college","Handles bookings, patient files and billing.","entry","","medical-administrative-assistant"],
+    ["Human resources assistant","office-administration","college","Supports hiring and employee records.","entry","","human-resources-assistant"],
+    ["Event coordinator","office-administration","college","Plans venues, suppliers and event schedules.","entry","","event-coordinator"],
+    ["Software developer","information-technology","university-bachelor","Builds and maintains software applications.","entry","","software-developer"],
+    ["Web developer","information-technology","college","Builds websites and web applications.","entry","","web-developer"],
+    ["Mobile app developer","information-technology","university-bachelor","Builds apps for phones and tablets.","entry","","mobile-app-developer"],
+    ["Game developer","information-technology","university-bachelor","Builds video games and game engines.","entry","","game-developer"],
+    ["Data scientist","information-technology","university-graduate","Finds patterns in data and builds models.","entry","","data-scientist"],
+    ["Data engineer","information-technology","university-bachelor","Builds pipelines that move and clean data.","entry","","data-engineer"],
+    ["Data analyst","information-technology","university-bachelor","Turns data into reports and decisions.","entry","","data-analyst"],
+    ["Machine learning engineer","information-technology","university-graduate","Builds and deploys learning models.","entry","","machine-learning-engineer"],
+    ["AI specialist","information-technology","university-graduate","Applies artificial intelligence to real problems.","entry","","ai-specialist"],
+    ["Database administrator","information-technology","college","Keeps databases fast and backed up.","entry","","database-administrator"],
+    ["Systems administrator","information-technology","college","Runs servers, accounts and system updates.","entry","","systems-administrator"],
+    ["Network administrator","information-technology","college","Keeps networks connected and secure.","entry","","network-administrator"],
+    ["Cloud architect","information-technology","university-bachelor","Designs cloud infrastructure and services.","experienced","Usually reached after experience in cloud engineering, systems administration or software development.","cloud-architect"],
+    ["DevOps engineer","information-technology","university-bachelor","Automates building, testing and releasing.","experienced","Usually reached after experience in software development or systems administration.","devops-engineer"],
+    ["Cybersecurity analyst","information-technology","university-bachelor","Watches for attacks and closes security gaps.","entry","","cybersecurity-analyst"],
+    ["QA analyst","information-technology","college","Tests software and reports defects.","entry","","qa-analyst"],
+    ["Technical support specialist","information-technology","college","Solves software and hardware problems.","entry","","technical-support-specialist"],
+    ["UX designer","information-technology","university-bachelor","Designs how products feel and work for users.","entry","","ux-designer"],
+    ["Product manager","information-technology","university-bachelor","Decides what a product should do and why.","experienced","Usually reached after experience in product, business analysis or engineering.","product-manager"],
+    ["Business analyst","information-technology","university-bachelor","Turns business needs into system requirements.","entry","","business-analyst"],
+    ["Civil engineer","engineering-science","university-bachelor","Designs roads, bridges and water systems.","entry","","civil-engineer"],
+    ["Mechanical engineer","engineering-science","university-bachelor","Designs machines and mechanical systems.","entry","","mechanical-engineer"],
+    ["Electrical engineer","engineering-science","university-bachelor","Designs electrical systems and equipment.","entry","","electrical-engineer"],
+    ["Electronics engineer","engineering-science","university-bachelor","Designs circuits, sensors and devices.","entry","","electronics-engineer"],
+    ["Chemical engineer","engineering-science","university-bachelor","Designs chemical processes and plants.","entry","","chemical-engineer"],
+    ["Industrial engineer","engineering-science","university-bachelor","Improves processes and productivity.","entry","","industrial-engineer"],
+    ["Manufacturing engineer","engineering-science","university-bachelor","Designs how products are made.","entry","","manufacturing-engineer"],
+    ["Aerospace engineer","engineering-science","university-bachelor","Designs aircraft, spacecraft and components.","entry","","aerospace-engineer"],
+    ["Mining engineer","engineering-science","university-bachelor","Plans mines and mineral extraction.","entry","","mining-engineer"],
+    ["Petroleum engineer","engineering-science","university-bachelor","Designs oil and gas extraction.","entry","","petroleum-engineer"],
+    ["Environmental engineer","engineering-science","university-bachelor","Designs systems that protect air and water.","entry","","environmental-engineer"],
+    ["Biomedical engineer","engineering-science","university-bachelor","Designs medical devices and equipment.","entry","","biomedical-engineer"],
+    ["Materials engineer","engineering-science","university-bachelor","Develops metals, plastics and composites.","entry","","materials-engineer"],
+    ["Structural engineer","engineering-science","university-bachelor","Checks that structures carry their loads.","entry","","structural-engineer"],
+    ["Architect","engineering-science","university-graduate","Designs buildings and leads the design team.","entry","","architect"],
+    ["Urban planner","engineering-science","university-bachelor","Plans land use, housing and transport.","entry","","urban-planner"],
+    ["Engineering technologist","engineering-science","college","Supports engineers with design and testing.","entry","","engineering-technologist"],
+    ["Drafting technologist","engineering-science","college","Turns designs into technical drawings.","entry","","drafting-technologist"],
+    ["Chemist","engineering-science","university-graduate","Analyses substances and develops products.","entry","","chemist"],
+    ["Biologist","engineering-science","university-graduate","Studies living organisms and ecosystems.","entry","","biologist"],
+    ["Geologist","engineering-science","university-graduate","Studies rocks, minerals and the earth.","entry","","geologist"],
+    ["Laboratory technician","engineering-science","college","Runs tests and keeps lab equipment working.","entry","","laboratory-technician"],
+    ["Environmental scientist","environmental-science","university-bachelor","Studies pollution, ecosystems and impact.","entry","","environmental-scientist"],
+    ["Conservation officer","environmental-science","college","Protects wildlife, habitat and natural areas.","entry","","conservation-officer"],
+    ["Environmental impact analyst","environmental-science","university-bachelor","Reviews projects for environmental effects.","entry","","environmental-impact-analyst"],
+    ["Sustainability coordinator","environmental-science","university-bachelor","Runs an organisation's environmental programmes.","entry","","sustainability-coordinator"],
+    ["Environmental health officer","environmental-science","university-bachelor","Inspects food, water and housing for health risks.","entry","","environmental-health-officer"],
+    ["Wildlife technician","environmental-science","college","Surveys and manages wildlife populations.","entry","","wildlife-technician"],
+    ["Recycling coordinator","environmental-science","college","Runs waste reduction and recycling programmes.","entry","","recycling-coordinator"],
+    ["Park interpreter","environmental-science","college","Teaches visitors about nature and parks.","entry","","park-interpreter"],
+    ["Registered nurse","health-care","university-bachelor","Assesses patients and coordinates their care.","entry","","registered-nurse"],
+    ["Licensed practical nurse","health-care","college","Gives direct nursing care under supervision.","entry","","licensed-practical-nurse"],
+    ["Nurse practitioner","health-care","university-graduate","Diagnoses, prescribes and leads patient care.","experienced","Usually reached after experience as a registered nurse and a graduate nursing degree.","nurse-practitioner"],
+    ["Registered psychiatric nurse","health-care","university-bachelor","Cares for people with mental health needs.","entry","","registered-psychiatric-nurse"],
+    ["Health care aide","health-care","college","Helps patients with daily living and mobility.","entry","","health-care-aide"],
+    ["Physician assistant","health-care","university-graduate","Practises medicine under a doctor's supervision.","entry","","physician-assistant"],
+    ["Family physician","health-care","university-graduate","Provides primary medical care to families.","entry","","family-physician"],
+    ["Specialist physician","health-care","university-graduate","Diagnoses and treats one medical specialty.","entry","","specialist-physician"],
+    ["Surgeon","health-care","university-graduate","Performs operations and surgical care.","entry","","surgeon"],
+    ["Psychiatrist","health-care","university-graduate","Diagnoses and treats mental illness.","entry","","psychiatrist"],
+    ["Dentist","health-care","university-graduate","Diagnoses and treats teeth and mouth.","entry","","dentist"],
+    ["Dental hygienist","health-care","college","Cleans teeth and teaches oral care.","entry","","dental-hygienist"],
+    ["Dental assistant","health-care","college","Assists dentists and prepares patients.","entry","","dental-assistant"],
+    ["Optometrist","health-care","university-graduate","Examines eyes and prescribes glasses.","entry","","optometrist"],
+    ["Pharmacist","health-care","university-graduate","Dispenses medicine and advises on safe use.","entry","","pharmacist"],
+    ["Pharmacy technician","health-care","college","Prepares and manages prescriptions.","entry","","pharmacy-technician"],
+    ["Physiotherapist","health-care","university-graduate","Restores movement after injury or illness.","entry","","physiotherapist"],
+    ["Occupational therapist","health-care","university-graduate","Helps people manage daily activities.","entry","","occupational-therapist"],
+    ["Respiratory therapist","health-care","college","Treats breathing and lung problems.","entry","","respiratory-therapist"],
+    ["Speech-language pathologist","health-care","university-graduate","Treats speech, language and swallowing.","entry","","speech-language-pathologist"],
+    ["Audiologist","health-care","university-graduate","Tests hearing and fits hearing aids.","entry","","audiologist"],
+    ["Dietitian","health-care","university-bachelor","Plans nutrition and advises on diet.","entry","","dietitian"],
+    ["Chiropractor","health-care","university-graduate","Treats spine and joint problems.","entry","","chiropractor"],
+    ["Massage therapist","health-care","college","Treats muscles and soft tissue by massage.","entry","","massage-therapist"],
+    ["Psychologist","health-care","university-graduate","Assesses and treats behaviour and mental health.","entry","","psychologist"],
+    ["Medical laboratory technologist","health-care","college","Runs lab tests that guide diagnosis.","entry","","medical-laboratory-technologist"],
+    ["Medical radiation technologist","health-care","college","Takes X-rays and medical scans.","entry","","medical-radiation-technologist"],
+    ["Paramedic","health-care","college","Gives emergency care outside hospital.","entry","","paramedic"],
+    ["Midwife","health-care","university-bachelor","Cares for pregnancy, birth and early weeks.","entry","","midwife"],
+    ["Veterinarian","health-care","university-graduate","Diagnoses and treats animals.","entry","","veterinarian"],
+    ["Social worker","social-community","university-bachelor","Helps with housing, safety and family issues.","entry","","social-worker"],
+    ["Child protection worker","social-community","university-bachelor","Acts on child safety concerns.","entry","","child-protection-worker"],
+    ["Child and youth care worker","social-community","college","Supports young people in care and crisis.","entry","","child-youth-care-worker"],
+    ["Addictions counsellor","social-community","college","Helps clients manage substance use.","entry","","addictions-counsellor"],
+    ["Family therapist","social-community","university-graduate","Works with couples and families.","entry","","family-therapist"],
+    ["Community service worker","social-community","college","Connects people to services and support.","entry","","community-service-worker"],
+    ["Settlement worker","social-community","college","Helps newcomers settle and find services.","entry","","settlement-worker"],
+    ["Disability support worker","social-community","college","Supports people with disabilities daily.","entry","","disability-support-worker"],
+    ["Employment counsellor","social-community","university-bachelor","Helps clients find work and training.","entry","","employment-counsellor"],
+    ["Volunteer coordinator","social-community","college","Recruits, trains and schedules volunteers.","entry","","volunteer-coordinator"],
+    ["Funeral director","social-community","college","Arranges funerals and supports families.","entry","","funeral-director"],
+    ["Elementary school teacher","education-training","university-bachelor","Teaches young children several subjects.","entry","","elementary-school-teacher"],
+    ["Secondary school teacher","education-training","university-bachelor","Teaches one or two subjects to teenagers.","entry","","secondary-school-teacher"],
+    ["Early childhood educator","education-training","college","Cares for and teaches children under six.","entry","","early-childhood-educator"],
+    ["Educational assistant","education-training","college","Supports students and teachers in class.","entry","","educational-assistant"],
+    ["Special education teacher","education-training","university-bachelor","Teaches students with special needs.","entry","","special-education-teacher"],
+    ["School counsellor","education-training","university-graduate","Guides students on courses and wellbeing.","entry","","school-counsellor"],
+    ["College instructor","education-training","university-graduate","Teaches at a college or institute.","entry","","college-instructor"],
+    ["University professor","education-training","university-graduate","Teaches and researches at a university.","entry","","university-professor"],
+    ["School principal","education-training","university-graduate","Leads a school, its staff and results.","leadership","Usually reached after teaching experience and a school leadership credential.","school-principal"],
+    ["ESL teacher","education-training","university-bachelor","Teaches English to speakers of other languages.","entry","","esl-teacher"],
+    ["Curriculum consultant","education-training","university-graduate","Designs courses and learning materials.","experienced","Usually reached after teaching experience and a graduate education credential.","curriculum-consultant"],
+    ["Instructional designer","education-training","university-bachelor","Builds online and classroom learning.","entry","","instructional-designer"],
+    ["Librarian","education-training","university-graduate","Manages collections and research services.","entry","","librarian"],
+    ["Career counsellor","education-training","university-bachelor","Helps people choose and change careers.","entry","","career-counsellor"],
+    ["Lawyer","legal-public-safety","university-bachelor","Advises clients and represents them in law.","entry","","lawyer"],
+    ["Paralegal","legal-public-safety","college","Handles legal work under a lawyer's authority.","entry","","paralegal"],
+    ["Notary public","legal-public-safety","college","Certifies documents and some legal acts.","entry","","notary-public"],
+    ["Police officer","legal-public-safety","college","Patrols, investigates and keeps public order.","entry","","police-officer"],
+    ["Correctional officer","legal-public-safety","college","Supervises people in custody.","entry","","correctional-officer"],
+    ["Probation officer","legal-public-safety","university-bachelor","Supervises offenders in the community.","entry","","probation-officer"],
+    ["Firefighter","legal-public-safety","college","Fights fires and responds to emergencies.","entry","","firefighter"],
+    ["Fire inspector","legal-public-safety","college","Inspects buildings for fire safety.","experienced","Usually reached after experience as a firefighter and fire-safety certification.","fire-inspector"],
+    ["Border services officer","legal-public-safety","college","Checks people and goods at the border.","entry","","border-services-officer"],
+    ["Security guard","legal-public-safety","high-school","Protects people and property.","entry","","security-guard"],
+    ["Emergency dispatcher","legal-public-safety","high-school","Answers 911 calls and sends help.","entry","","emergency-dispatcher"],
+    ["Policy analyst","legal-public-safety","university-bachelor","Researches and writes public policy.","entry","","policy-analyst"],
+    ["Building inspector","legal-public-safety","college","Checks construction against the building code.","entry","","building-inspector"],
+    ["Graphic designer","arts-culture-media","college","Creates visual designs for print and screen.","entry","","graphic-designer"],
+    ["Interior designer","arts-culture-media","college","Designs interiors that work and look right.","entry","","interior-designer"],
+    ["Industrial designer","arts-culture-media","university-bachelor","Designs products and their usability.","entry","","industrial-designer"],
+    ["Fashion designer","arts-culture-media","college","Designs clothing and collections.","entry","","fashion-designer"],
+    ["Animator","arts-culture-media","college","Creates moving images and animation.","entry","","animator"],
+    ["Photographer","arts-culture-media","college","Shoots and edits photographs.","entry","","photographer"],
+    ["Videographer","arts-culture-media","college","Films and edits video productions.","entry","","videographer"],
+    ["Video editor","arts-culture-media","college","Cuts footage into a finished story.","entry","","video-editor"],
+    ["Film director","arts-culture-media","university-bachelor","Leads a film's creative production.","leadership","Usually reached after experience in film production, often starting as an assistant director or editor.","film-director"],
+    ["Actor","arts-culture-media","college","Performs roles on stage and screen.","entry","","actor"],
+    ["Musician","arts-culture-media","college","Performs or composes music.","entry","","musician"],
+    ["Dancer","arts-culture-media","college","Performs dance professionally.","entry","","dancer"],
+    ["Visual artist","arts-culture-media","college","Creates original art for exhibition and sale.","entry","","visual-artist"],
+    ["Copywriter","arts-culture-media","university-bachelor","Writes advertising and marketing text.","entry","","copywriter"],
+    ["Journalist","arts-culture-media","university-bachelor","Reports news and investigates stories.","entry","","journalist"],
+    ["Translator","arts-culture-media","university-bachelor","Converts text between languages.","entry","","translator"],
+    ["Social media manager","arts-culture-media","college","Runs an organisation's social channels.","entry","","social-media-manager"],
+    ["Public relations specialist","arts-culture-media","university-bachelor","Manages an organisation's public image.","entry","","public-relations-specialist"],
+    ["Professional athlete","sports-recreation","high-school","Competes in sport at a professional level.","entry","","professional-athlete"],
+    ["Coach","sports-recreation","college","Trains athletes and plans competition.","entry","","coach"],
+    ["Fitness instructor","sports-recreation","college","Leads exercise classes and programmes.","entry","","fitness-instructor"],
+    ["Personal trainer","sports-recreation","college","Designs one-to-one exercise plans.","entry","","personal-trainer"],
+    ["Athletic therapist","sports-recreation","university-bachelor","Prevents and treats sports injuries.","entry","","athletic-therapist"],
+    ["Sports referee","sports-recreation","high-school","Officiates games and enforces the rules.","entry","","sports-referee"],
+    ["Recreation programme coordinator","sports-recreation","university-bachelor","Runs community recreation programmes.","entry","","recreation-programme-coordinator"],
+    ["Lifeguard","sports-recreation","high-school","Watches swimmers and responds to emergencies.","entry","","lifeguard"],
+    ["Outdoor guide","sports-recreation","college","Leads hiking, paddling and wilderness trips.","entry","","outdoor-guide"],
+    ["Retail sales associate","sales-retail","high-school","Serves customers and sells products in store.","entry","","retail-sales-associate"],
+    ["Store supervisor","sales-retail","high-school","Leads a shift and supports the store manager.","experienced","Usually reached after experience as a retail sales associate.","store-supervisor"],
+    ["Retail buyer","sales-retail","university-bachelor","Chooses the products a retailer will sell.","entry","","retail-buyer"],
+    ["Merchandiser","sales-retail","college","Plans product displays and stock.","entry","","merchandiser"],
+    ["Wholesale sales representative","sales-retail","college","Sells products to businesses.","entry","","wholesale-sales-representative"],
+    ["Account manager","sales-retail","university-bachelor","Manages key client relationships and sales.","entry","","account-manager"],
+    ["Business development manager","sales-retail","university-bachelor","Finds new markets and clients.","leadership","Usually reached after experience in sales or business development.","business-development-manager"],
+    ["Car salesperson","sales-retail","high-school","Sells new and used vehicles.","entry","","car-salesperson"],
+    ["Telemarketer","sales-retail","high-school","Calls customers to sell or survey.","entry","","telemarketer"],
+    ["Cashier","sales-retail","no-formal","Takes payments and serves customers.","entry","","cashier"],
+    ["E-commerce specialist","sales-retail","college","Runs online stores and product listings.","entry","","ecommerce-specialist"],
+    ["Hotel front desk agent","hospitality-tourism","college","Checks guests in and handles requests.","entry","","hotel-front-desk-agent"],
+    ["Concierge","hospitality-tourism","college","Arranges guest services and local bookings.","entry","","concierge"],
+    ["Housekeeping supervisor","hospitality-tourism","high-school","Leads room cleaning and standards.","experienced","Usually reached after experience in housekeeping.","housekeeping-supervisor"],
+    ["Travel agent","hospitality-tourism","college","Plans and books travel for clients.","entry","","travel-agent"],
+    ["Tour guide","hospitality-tourism","high-school","Leads groups and explains attractions.","entry","","tour-guide"],
+    ["Flight attendant","hospitality-tourism","high-school","Keeps passengers safe and comfortable.","entry","","flight-attendant"],
+    ["Event planner","hospitality-tourism","college","Plans conferences, weddings and events.","entry","","event-planner"],
+    ["Casino dealer","hospitality-tourism","high-school","Runs table games for guests.","entry","","casino-dealer"],
+    ["Tourism marketing officer","hospitality-tourism","university-bachelor","Promotes a destination and its events.","entry","","tourism-marketing-officer"],
+    ["Chef","food-service","apprenticeship","Leads a kitchen and designs menus.","entry","","chef"],
+    ["Cook","food-service","apprenticeship","Prepares food to order in a kitchen.","entry","","cook"],
+    ["Baker","food-service","apprenticeship","Bakes bread, pastries and desserts.","entry","","baker"],
+    ["Butcher","food-service","apprenticeship","Cuts and prepares meat for sale.","entry","","butcher"],
+    ["Food service supervisor","food-service","high-school","Leads a shift in a food outlet.","experienced","Usually reached after experience in food service.","food-service-supervisor"],
+    ["Server","food-service","high-school","Takes orders and serves guests.","entry","","server"],
+    ["Bartender","food-service","high-school","Mixes and serves drinks responsibly.","entry","","bartender"],
+    ["Barista","food-service","high-school","Prepares coffee and serves customers.","entry","","barista"],
+    ["Kitchen helper","food-service","no-formal","Cleans and helps with basic food tasks.","entry","","kitchen-helper"],
+    ["Hairstylist","personal-service","apprenticeship","Cuts, colours and styles hair.","entry","","hairstylist"],
+    ["Barber","personal-service","apprenticeship","Cuts and shaves hair for clients.","entry","","barber"],
+    ["Esthetician","personal-service","college","Provides skin care and beauty treatments.","entry","","esthetician"],
+    ["Nail technician","personal-service","college","Manicures, pedicures and nail art.","entry","","nail-technician"],
+    ["Nanny","personal-service","high-school","Cares for children in the family home.","entry","","nanny"],
+    ["Pet groomer","personal-service","college","Grooms and cares for pets.","entry","","pet-groomer"],
+    ["Janitor","personal-service","no-formal","Cleans and maintains buildings.","entry","","janitor"],
+    ["Cleaning supervisor","personal-service","high-school","Leads a cleaning team and schedule.","experienced","Usually reached after experience in cleaning or janitorial work.","cleaning-supervisor"],
+    ["Customer service representative","personal-service","high-school","Answers customer questions and complaints.","entry","","customer-service-representative"],
+    ["Call centre agent","personal-service","high-school","Handles phone requests and sales.","entry","","call-centre-agent"],
+    ["Carpenter","trades-construction","apprenticeship","Builds and repairs wooden structures.","entry","","carpenter"],
+    ["Electrician","trades-construction","apprenticeship","Installs and repairs electrical systems.","entry","","electrician"],
+    ["Plumber","trades-construction","apprenticeship","Installs and repairs water and drainage.","entry","","plumber"],
+    ["Pipefitter","trades-construction","apprenticeship","Installs industrial piping systems.","entry","","pipefitter"],
+    ["Welder","trades-construction","apprenticeship","Joins metal parts by welding.","entry","","welder"],
+    ["Sheet metal worker","trades-construction","apprenticeship","Fabricates and installs sheet metal.","entry","","sheet-metal-worker"],
+    ["Ironworker","trades-construction","apprenticeship","Erects steel structures and reinforcement.","entry","","ironworker"],
+    ["Millwright","trades-construction","apprenticeship","Installs and repairs industrial machinery.","entry","","millwright"],
+    ["Machinist","trades-construction","apprenticeship","Cuts and shapes metal parts.","entry","","machinist"],
+    ["Cabinetmaker","trades-construction","apprenticeship","Builds furniture and custom cabinets.","entry","","cabinetmaker"],
+    ["Bricklayer","trades-construction","apprenticeship","Builds walls with brick and stone.","entry","","bricklayer"],
+    ["Concrete finisher","trades-construction","apprenticeship","Pours and finishes concrete surfaces.","entry","","concrete-finisher"],
+    ["Roofer","trades-construction","apprenticeship","Installs and repairs roofs.","entry","","roofer"],
+    ["Glazier","trades-construction","apprenticeship","Installs glass in buildings and vehicles.","entry","","glazier"],
+    ["Insulator","trades-construction","apprenticeship","Installs thermal and sound insulation.","entry","","insulator"],
+    ["Painter and decorator","trades-construction","apprenticeship","Paints and finishes interior and exterior surfaces.","entry","","painter-and-decorator"],
+    ["Drywall installer","trades-construction","apprenticeship","Hangs and finishes drywall.","entry","","drywall-installer"],
+    ["Tile setter","trades-construction","apprenticeship","Installs tiles on floors and walls.","entry","","tile-setter"],
+    ["Crane operator","trades-construction","apprenticeship","Operates cranes on construction sites.","entry","","crane-operator"],
+    ["Heavy equipment operator","trades-construction","apprenticeship","Runs excavators, dozers and loaders.","entry","","heavy-equipment-operator"],
+    ["Construction labourer","trades-construction","no-formal","Supports the trades on a construction site.","entry","","construction-labourer"],
+    ["Construction estimator","trades-construction","college","Prices construction work and materials.","entry","","construction-estimator"],
+    ["Site supervisor","trades-construction","college","Runs crews, safety and the site schedule.","experienced","Usually reached after experience in the trade or construction coordination.","site-supervisor"],
+    ["Solar installer","trades-construction","college","Installs solar panels and systems.","entry","","solar-installer"],
+    ["Elevator mechanic","trades-construction","apprenticeship","Installs and repairs elevators and lifts.","entry","","elevator-mechanic"],
+    ["Refrigeration mechanic","trades-construction","apprenticeship","Installs and repairs cooling systems.","entry","","refrigeration-mechanic"],
+    ["Truck driver","transport-logistics","high-school","Moves goods long distance by road.","entry","","truck-driver"],
+    ["Delivery driver","transport-logistics","high-school","Delivers parcels and orders locally.","entry","","delivery-driver"],
+    ["Bus driver","transport-logistics","high-school","Drives passengers on city or intercity routes.","entry","","bus-driver"],
+    ["Taxi driver","transport-logistics","no-formal","Carries passengers by car.","entry","","taxi-driver"],
+    ["Train conductor","transport-logistics","high-school","Manages a train's crew and cars.","entry","","train-conductor"],
+    ["Locomotive engineer","transport-logistics","college","Operates trains on the rail network.","entry","","locomotive-engineer"],
+    ["Airline pilot","transport-logistics","college","Flies commercial aircraft.","entry","","airline-pilot"],
+    ["Flight instructor","transport-logistics","college","Teaches people to fly.","entry","","flight-instructor"],
+    ["Air traffic controller","transport-logistics","college","Directs aircraft in the air and on the ground.","entry","","air-traffic-controller"],
+    ["Aircraft maintenance engineer","transport-logistics","college","Maintains and certifies aircraft.","entry","","aircraft-maintenance-engineer"],
+    ["Ship captain","transport-logistics","college","Commands a vessel and its crew.","leadership","Usually reached after sea time and certification as a deck officer.","ship-captain"],
+    ["Warehouse worker","transport-logistics","high-school","Picks, packs and moves stock.","entry","","warehouse-worker"],
+    ["Forklift operator","transport-logistics","high-school","Moves goods with a forklift.","entry","","forklift-operator"],
+    ["Logistics coordinator","transport-logistics","college","Plans shipments and delivery schedules.","entry","","logistics-coordinator"],
+    ["Dispatcher","transport-logistics","college","Sends drivers and tracks deliveries.","entry","","dispatcher"],
+    ["Postal worker","transport-logistics","high-school","Sorts and delivers mail.","entry","","postal-worker"],
+    ["Crop farmer","agriculture-natural-resources","college","Grows grain, vegetables or fruit.","entry","","crop-farmer"],
+    ["Livestock farmer","agriculture-natural-resources","college","Raises cattle, sheep or pigs.","entry","","livestock-farmer"],
+    ["Dairy farmer","agriculture-natural-resources","college","Runs a dairy herd and milk production.","entry","","dairy-farmer"],
+    ["Farm supervisor","agriculture-natural-resources","college","Leads farm workers and daily tasks.","experienced","Usually reached after experience in farm operations.","farm-supervisor"],
+    ["Agronomist","agriculture-natural-resources","university-bachelor","Advises farmers on crops and soil.","entry","","agronomist"],
+    ["Animal nutritionist","agriculture-natural-resources","university-bachelor","Designs feed plans for farm animals.","entry","","animal-nutritionist"],
+    ["Logger","agriculture-natural-resources","high-school","Cuts and moves trees in the forest.","entry","","logger"],
+    ["Forestry technologist","agriculture-natural-resources","college","Plans forest use and harvest.","entry","","forestry-technologist"],
+    ["Fisher","agriculture-natural-resources","high-school","Catches fish and seafood commercially.","entry","","fisher"],
+    ["Underground miner","agriculture-natural-resources","high-school","Extracts ore underground.","entry","","underground-miner"],
+    ["Blaster","agriculture-natural-resources","apprenticeship","Prepares and fires controlled explosions.","entry","","blaster"],
+    ["Driller","agriculture-natural-resources","high-school","Drills holes for mining and construction.","entry","","driller"],
+    ["Oil and gas drilling operator","agriculture-natural-resources","college","Operates drilling rig equipment.","entry","","oil-and-gas-drilling-operator"],
+    ["Beekeeper","agriculture-natural-resources","college","Keeps bees and produces honey.","entry","","beekeeper"],
+    ["Assembly worker","manufacturing-utilities","high-school","Assembles products on a production line.","entry","","assembly-worker"],
+    ["Machine operator","manufacturing-utilities","high-school","Runs production machines.","entry","","machine-operator"],
+    ["CNC machinist","manufacturing-utilities","college","Programs and runs computer-controlled machines.","entry","","cnc-machinist"],
+    ["Quality control technician","manufacturing-utilities","college","Tests products against standards.","entry","","quality-control-technician"],
+    ["Production supervisor","manufacturing-utilities","college","Leads a production shift.","experienced","Usually reached after experience as a production worker or team lead.","production-supervisor"],
+    ["Power engineer","manufacturing-utilities","college","Runs boilers, turbines and plant utilities.","entry","","power-engineer"],
+    ["Water treatment plant operator","manufacturing-utilities","college","Treats water for drinking.","entry","","water-treatment-plant-operator"],
+    ["Wastewater treatment operator","manufacturing-utilities","college","Treats sewage and waste water.","entry","","wastewater-treatment-operator"],
+    ["Chemical plant operator","manufacturing-utilities","college","Runs chemical production equipment.","entry","","chemical-plant-operator"],
+    ["Food processing worker","manufacturing-utilities","high-school","Prepares and packages food products.","entry","","food-processing-worker"],
+    ["Sawmill machine operator","manufacturing-utilities","high-school","Runs sawmill equipment.","entry","","sawmill-machine-operator"],
+    ["Printing press operator","manufacturing-utilities","college","Sets up and runs printing presses.","entry","","printing-press-operator"],
+    ["Material handler","manufacturing-utilities","no-formal","Moves materials in a facility.","entry","","material-handler"],
+    ["Boiler operator","manufacturing-utilities","college","Runs boilers and heating plants.","entry","","boiler-operator"],
+    ["Automotive service technician","trades-construction","apprenticeship","Diagnoses and repairs cars and light trucks.","entry","","automotive-service-technician"],
+    ["Gas fitter","trades-construction","apprenticeship","Installs and services gas lines and appliances.","entry","","gas-fitter"],
+    ["Longshore worker","transport-logistics","high-school","Loads and unloads ships at a port.","entry","","longshore-worker"],
+    ["Landscape architect","engineering-science","university-bachelor","Designs outdoor spaces and landscapes.","entry","","landscape-architect"],
+    ["Robotics engineer","engineering-science","university-graduate","Builds and programs robots and automation.","entry","","robotics-engineer"],
+    ["Engineering manager","management","university-bachelor","Leads engineering teams and projects.","leadership","Usually reached after experience as an engineer or engineering team lead.","engineering-manager"],
+    ["Pharmacy assistant","health-care","college","Helps pharmacists prepare and dispense medicine.","entry","","pharmacy-assistant"],
+    ["Radiation therapist","health-care","university-bachelor","Delivers radiation treatment to patients.","entry","","radiation-therapist"],
+    ["Audiovisual technician","arts-culture-media","college","Sets up sound, video and lighting systems.","entry","","audiovisual-technician"],
+    ["Harbour master","transport-logistics","college","Runs port traffic, safety and moorage.","leadership","Usually reached after experience in port operations or marine safety.","harbour-master"],
+    ["Oceanographer","environmental-science","university-graduate","Studies oceans, currents and marine systems.","entry","","oceanographer"],
+    ["Optician","health-care","college","Fits and dispenses glasses and contact lenses.","entry","","optician"],
+    ["Medical sonographer","health-care","college","Uses ultrasound to image the body.","entry","","medical-sonographer"],
+    ["Heavy duty equipment mechanic","trades-construction","apprenticeship","Repairs heavy trucks and construction equipment.","entry","","heavy-duty-equipment-mechanic"],
+    ["Customs broker","business-finance","college","Clears goods through customs for importers.","entry","","customs-broker"],
+    ["Property manager","business-finance","college","Runs buildings, tenants and leases.","experienced","Usually reached after experience in property administration or real estate.","property-manager"],
+    ["IT manager","management","university-bachelor","Leads an organisation's IT systems and staff.","leadership","Usually reached after experience in IT operations, systems administration or team leadership.","it-manager"],
+    ["Accounting clerk","business-finance","college","Records transactions and supports accounting.","entry","","accounting-clerk"],
+    ["Sales coordinator","sales-retail","college","Supports a sales team, orders and schedules.","entry","","sales-coordinator"],
+    ["Health and safety consultant","environmental-science","university-bachelor","Advises workplaces on health and safety.","entry","","health-and-safety-consultant"],
+    ["Land surveyor","engineering-science","college","Measures land and prepares survey plans.","entry","","land-surveyor"],
+    ["Grounds maintenance worker","agriculture-natural-resources","high-school","Maintains lawns, gardens and outdoor grounds.","entry","","grounds-maintenance-worker"],
+    ["Nursery and greenhouse worker","agriculture-natural-resources","high-school","Grows and tends plants in nurseries and greenhouses.","entry","","nursery-and-greenhouse-worker"],
+    ["Brew master","food-service","college","Runs brewing and develops beer recipes.","entry","","brew-master"],
+    ["Boat builder","manufacturing-utilities","college","Builds and repairs boats and small vessels.","entry","","boat-builder"],
+    ["Instrument mechanic","trades-construction","apprenticeship","Installs and calibrates industrial instruments.","entry","","instrument-mechanic"],
+    ["Mine manager","management","university-bachelor","Runs a mine's operations, safety and crew.","leadership","Usually reached after experience as a mine engineer, supervisor or operations lead.","mine-manager"],
+    ["Geological technician","engineering-science","college","Collects and tests rock and soil samples.","entry","","geological-technician"],
+    ["Acupuncturist","health-care","college","Treats pain and illness with acupuncture.","entry","","acupuncturist"],
+    ["Landscape horticulturalist","agriculture-natural-resources","college","Designs and maintains gardens and landscapes.","entry","","landscape-horticulturalist"],
+    ["Silviculturist","agriculture-natural-resources","university-bachelor","Plans reforestation and forest health.","entry","","silviculturist"],
+    ["Well site supervisor","agriculture-natural-resources","college","Supervises oil and gas drilling crews.","experienced","Usually reached after experience in drilling operations and safety certification.","well-site-supervisor"],
+    ["Hydrogeology engineer","engineering-science","university-graduate","Studies groundwater and designs wells.","entry","","hydrogeology-engineer"],
+    ["Registered animal health technician","health-care","college","Assists veterinarians with animal care.","entry","","registered-animal-health-technician"],
+    ["Author","arts-culture-media","college","Writes books and long-form content.","entry","","author"],
+    ["Managing editor","arts-culture-media","university-bachelor","Runs an editorial team and publication.","leadership","Usually reached after experience as an editor or editorial team lead.","managing-editor"],
+    ["University dean","education-training","university-graduate","Leads a faculty, its programmes and staff.","leadership","Usually reached after academic leadership experience as a professor or department chair.","university-dean"],
+    ["Producer","arts-culture-media","university-bachelor","Manages the budget and delivery of a production.","leadership","Usually reached after experience in production management or coordination.","producer"],
+    ["Deck hand","transport-logistics","high-school","Works on deck to handle lines and cargo.","entry","","deck-hand"],
+    ["Social development manager","social-community","university-bachelor","Leads community and social programmes.","leadership","Usually reached after experience in social services or community programme management.","social-development-manager"],
+    ["Indigenous advisor","social-community","university-bachelor","Advises on Indigenous relations and policy.","entry","","indigenous-advisor"],
+    ["Environmental safety consultant","environmental-science","university-bachelor","Advises on environmental and safety risks.","entry","","environmental-safety-consultant"],
+    ["Powerline technician","trades-construction","apprenticeship","Builds and repairs overhead and underground power lines.","entry","","powerline-technician"],
+    ["Arborist","agriculture-natural-resources","apprenticeship","Prunes, plants and cares for trees and shrubs.","entry","","arborist"],
+    ["Wildland firefighter","legal-public-safety","college","Controls forest and grassland fires.","entry","","wildland-firefighter"],
+    ["Public health inspector","health-care","university-bachelor","Inspects food, water and facilities for health risks.","entry","","public-health-inspector"],
+    ["Statistician","business-finance","university-graduate","Designs studies and analyses numerical data.","entry","","statistician"],
+    ["Anthropologist","social-community","university-graduate","Studies human cultures and societies.","entry","","anthropologist"],
+    ["Curator","arts-culture-media","university-graduate","Builds and interprets museum collections.","entry","","curator"],
+    ["Archivist","arts-culture-media","university-graduate","Preserves and describes historical records.","entry","","archivist"],
+    ["Forester","agriculture-natural-resources","university-bachelor","Plans the sustainable management of forests.","entry","","forester"],
+    ["Court reporter","legal-public-safety","college","Records legal proceedings word for word.","entry","","court-reporter"],
+    ["Bylaw enforcement officer","legal-public-safety","college","Enforces municipal bylaws and regulations.","entry","","bylaw-enforcement-officer"],
+    ["Marriage and family counsellor","social-community","university-graduate","Helps couples and families resolve problems.","entry","","marriage-and-family-counsellor"],
+    ["Operations research analyst","business-finance","university-bachelor","Uses models to improve business decisions.","entry","","operations-research-analyst"],
+    ["Geomatics technologist","engineering-science","college","Measures and maps land and spatial data.","entry","","geomatics-technologist"],
+    ["Hazardous waste management technologist","environmental-science","college","Handles and disposes of hazardous materials safely.","entry","","hazardous-waste-management-technologist"],
+    ["Hydrometric technician","environmental-science","college","Measures water levels and flows.","entry","","hydrometric-technician"],
+    ["Land titles analyst","office-administration","college","Reviews land ownership records and transfers.","entry","","land-titles-analyst"],
+    ["Broadcast maintenance technologist","arts-culture-media","college","Maintains broadcasting and audio-visual equipment.","entry","","broadcast-maintenance-technologist"],
+    ["Optical laboratory technician","health-care","college","Grinds and fits lenses to prescriptions.","entry","","optical-laboratory-technician"],
+    ["Audiometric technician","health-care","college","Tests hearing and supports audiologists.","entry","","audiometric-technician"],
+    ["Prosthetic and orthotic technician","health-care","college","Builds and fits artificial limbs and braces.","entry","","prosthetic-and-orthotic-technician"],
+    ["Podiatric physician","health-care","university-graduate","Diagnoses and treats foot and ankle conditions.","entry","","podiatric-physician"],
+    ["Turfgrass management specialist","agriculture-natural-resources","college","Manages sports fields, lawns and turf.","entry","","turfgrass-management-specialist"],
+    ["Vending machine technician","trades-construction","college","Installs and repairs vending and coin equipment.","entry","","vending-machine-technician"],
+    ["Banquet manager","hospitality-tourism","college","Runs banquets, conferences and large events.","leadership","Usually reached after experience in banquet or event operations.","banquet-manager"],
+    ["Casting director","arts-culture-media","college","Selects actors for film, television and theatre.","leadership","Usually reached after experience as a casting assistant or producer.","casting-director"],
+    ["Costume designer","arts-culture-media","college","Designs and builds costumes for productions.","entry","","costume-designer"],
+    ["Cinematographer","arts-culture-media","college","Plans and captures the visual images of a film.","entry","","cinematographer"],
+    ["Art instructor","education-training","college","Teaches drawing, painting and studio art.","entry","","art-instructor"],
+    ["Professional investigator","legal-public-safety","college","Investigates fraud, insurance and legal cases.","entry","","professional-investigator"],
+    ["Ecologist","environmental-science","university-graduate","Studies ecosystems and advises on conservation.","entry","","ecologist"],
+    ["Entomologist","environmental-science","university-graduate","Studies insects and their impact on crops and health.","entry","","entomologist"],
+    ["Advertising account executive","sales-retail","college","Manages advertising accounts and client campaigns.","entry","","advertising-account-executive"],
+    ["Auto detailer","trades-construction","high-school","Cleans and restores vehicle interiors and exteriors.","entry","","auto-detailer"],
+    ["Floral designer","sales-retail","college","Designs and sells floral arrangements.","entry","","floral-designer"],
+    ["Makeup artist","personal-service","college","Applies makeup for film, theatre and events.","entry","","makeup-artist"],
+    ["Occupational hygienist","environmental-science","university-bachelor","Assesses workplace exposure to health hazards.","entry","","occupational-hygienist"],
+    ["Ergonomist","health-care","university-graduate","Designs workstations and tasks to fit people.","entry","","ergonomist"],
+    ["Cardiology technologist","health-care","college","Runs heart tests and monitors cardiac patients.","entry","","cardiology-technologist"],
+    ["Database analyst","information-technology","college","Designs and queries databases for business data.","entry","","database-analyst"],
+    ["Mental health aide","health-care","college","Supports people living with mental illness.","entry","","mental-health-aide"],
+    ["Unit clerk","office-administration","college","Coordinates patient records and unit communications.","entry","","unit-clerk"],
+    ["Health information manager","health-care","university-bachelor","Manages patient records and health data systems.","leadership","Usually reached after experience in health information management or health administration.","health-information-manager"],
+    ["Dental laboratory technician","health-care","college","Makes crowns, bridges and dental prosthetics.","entry","","dental-laboratory-technician"],
+    ["Wind turbine technician","trades-construction","college","Installs and maintains wind turbines.","entry","","wind-turbine-technician"],
+    ["Deputy sheriff","legal-public-safety","college","Enforces court orders and transports people in custody.","entry","","deputy-sheriff"],
+    ["Intelligence analyst","legal-public-safety","university-bachelor","Turns intelligence and data into public-safety findings.","experienced","Usually after experience in policing, security, military or research, plus intelligence training.","intelligence-analyst"],
+    ["Emergency manager","legal-public-safety","university-bachelor","Leads emergency programmes and whole-community response.","leadership","Usually reached after experience in emergency management, public safety or a related field.","emergency-manager"],
+    ["Community care licensing officer","social-community","university-bachelor","Licenses and monitors community care facilities.","experienced","Usually after experience in social services, health care or regulatory compliance.","community-care-licensing-officer"],
+    ["Family justice counsellor","social-community","university-bachelor","Helps families resolve disputes and understand court options.","experienced","Usually after a social-services degree and family justice training.","family-justice-counsellor"],
+    ["Family mediator","social-community","university-bachelor","Guides families to voluntary agreements without court.","experienced","Usually after mediation training and experience in family or social services.","family-mediator"],
+    ["Child support officer","social-community","university-bachelor","Helps establish and enforce child support arrangements.","experienced","Usually after experience in social services, law or public administration.","child-support-officer"],
+    ["Justice interviewer","social-community","college","Interviews people about their circumstances for justice decisions.","entry","","justice-interviewer"],
+    ["Animal protection officer","legal-public-safety","college","Investigates animal cruelty and enforces protection laws.","entry","","animal-protection-officer"],
+    ["Clinical counsellor","social-community","university-graduate","Provides talk therapy and mental-health counselling.","entry","","clinical-counsellor"],
+    ["Clinical counselling supervisor","social-community","university-graduate","Supervises counsellors and protects standards of care.","leadership","Usually reached after several years as a registered clinical counsellor.","clinical-counselling-supervisor"],
+    ["Trauma counsellor","social-community","university-graduate","Treats complex trauma and crisis reactions.","experienced","Usually after clinical counselling education and supervised trauma practice.","trauma-counsellor"],
+    ["Conflict resolution specialist","social-community","university-bachelor","Resolves disputes through mediation and facilitation.","experienced","Usually after mediation or conflict-resolution training and related experience.","conflict-resolution-specialist"],
+    ["Crisis communications specialist","arts-culture-media","university-bachelor","Manages public information during emergencies.","experienced","Usually after experience in public relations, communications or emergency management.","crisis-communications-specialist"],
+    ["Cybercrime analyst","information-technology","university-bachelor","Investigates cybercrime patterns, malware and digital evidence.","experienced","Usually after experience in cybersecurity, policing or digital forensics.","cybercrime-analyst"],
+    ["Digital forensics analyst","information-technology","university-bachelor","Recovers and analyses digital evidence.","experienced","Usually after experience in IT security, policing or forensic technology.","digital-forensics-analyst"],
+    ["Fire officer","legal-public-safety","college","Leads a fire crew, station or suppression programme.","leadership","Usually reached after several years as a firefighter and fire officer certification.","fire-officer"],
+    ["Gaming security officer","legal-public-safety","high-school","Provides security in casinos and gaming sites.","entry","","gaming-security-officer"],
+    ["Canine security handler","legal-public-safety","college","Handles and deploys a detection or security dog.","experienced","Usually after experience as a security guard and canine handling training.","canine-security-handler"],
+    ["Trainer and facilitator","education-training","college","Delivers training and leads group learning.","entry","","trainer-and-facilitator"],
+    ["GIS analyst","engineering-science","university-bachelor","Maps and analyses geographic data for decisions.","entry","","gis-analyst"],
+    ["Emergency medical responder","health-care","college","Gives basic emergency care before an ambulance arrives.","entry","","emergency-medical-responder"],
+    ["Advanced care paramedic","health-care","college","Provides advanced life support in pre-hospital care.","experienced","Usually after working as a primary care paramedic and completing advanced care training.","advanced-care-paramedic"],
+    ["Emergency management coordinator","legal-public-safety","university-bachelor","Plans and coordinates emergency preparedness and response.","entry","","emergency-management-coordinator"],
+    ["MLOps engineer","information-technology","university-bachelor","Builds and runs machine-learning systems in production.","experienced","Usually after experience as a software engineer or data scientist.","mlops-engineer"],
+    ["AI governance analyst","information-technology","university-bachelor","Assesses AI risks, rules and accountability.","experienced","Usually after experience in policy, law, risk or data governance.","ai-governance-analyst"],
+    ["AI product manager","management","university-bachelor","Leads AI products from use case to launch.","experienced","Usually after experience in product management, data or software.","ai-product-manager"],
+    ["Robotics technician","engineering-science","college","Installs, maintains and troubleshoots robots.","entry","","robotics-technician"],
+    ["Mechatronics engineer","engineering-science","university-bachelor","Designs machines that combine mechanics, electronics and software.","entry","","mechatronics-engineer"],
+    ["Autonomous systems safety engineer","engineering-science","university-graduate","Makes self-driving and autonomous systems safe.","experienced","Usually after engineering experience in robotics, vehicles or aviation.","autonomous-systems-safety-engineer"],
+    ["Drone pilot","transport-logistics","college","Flies drones for surveys, inspections and deliveries; Transport Canada RPAS certificate required.","entry","","drone-pilot"],
+    ["Drone technician","engineering-science","college","Maintains and repairs drones and their sensors.","entry","","drone-technician"],
+    ["Drone data analyst","engineering-science","university-bachelor","Turns drone images and sensor data into maps and findings.","entry","","drone-data-analyst"],
+    ["Satellite systems engineer","engineering-science","university-bachelor","Designs and integrates satellite systems and payloads.","experienced","Usually after experience in aerospace, electrical or systems engineering.","satellite-systems-engineer"],
+    ["Satellite operations technician","engineering-science","college","Monitors and operates satellites and ground systems.","entry","","satellite-operations-technician"],
+    ["Space mission analyst","engineering-science","university-graduate","Plans orbits, payloads and mission operations.","experienced","Usually after a graduate degree and experience in aerospace or space systems.","space-mission-analyst"],
+    ["Propulsion engineer","engineering-science","university-graduate","Designs rocket, aircraft and spacecraft propulsion.","experienced","Usually after an aerospace or mechanical engineering degree and specialised experience.","propulsion-engineer"],
+    ["Avionics technician","transport-logistics","college","Installs and repairs aircraft electronic systems.","entry","","avionics-technician"],
+    ["Bioinformatics scientist","health-care","university-graduate","Uses data and software to study genomes and disease.","entry","","bioinformatics-scientist"],
+    ["Biomanufacturing technician","health-care","college","Runs equipment that makes medicines and biologics.","entry","","biomanufacturing-technician"],
+    ["Clinical data scientist","health-care","university-graduate","Builds models from clinical data to improve care.","experienced","Usually after experience in data science and health care.","clinical-data-scientist"],
+    ["AI drug discovery scientist","health-care","university-graduate","Uses AI to find and test candidate medicines.","experienced","Usually after a graduate degree and experience in computational biology or chemistry.","ai-drug-discovery-scientist"],
+    ["Quantum software developer","information-technology","university-bachelor","Writes software for quantum computers and simulators.","entry","","quantum-software-developer"],
+    ["Battery technician","engineering-science","college","Installs, tests and services battery systems.","entry","","battery-technician"]
   ],
   "departments": {
     "note": "Catalogue-only graduation departments. One department per occupation, used by the catalogue filter. The importer must ignore this key.",
     "faculties": [
-      {"id":"business","label":"Business and management"},
-      {"id":"it","label":"Information technology"},
-      {"id":"engineering","label":"Engineering and applied science"},
-      {"id":"science","label":"Science"},
-      {"id":"health","label":"Health"},
-      {"id":"social","label":"Social and community services"},
-      {"id":"education","label":"Education and training"},
-      {"id":"law","label":"Legal and public safety"},
-      {"id":"arts","label":"Arts, culture and media"},
-      {"id":"trades","label":"Trades and construction"},
-      {"id":"hospitality","label":"Hospitality and tourism"},
-      {"id":"personal","label":"Personal services and wellness"},
-      {"id":"transport","label":"Transportation"},
-      {"id":"recreation","label":"Recreation and sport"},
-      {"id":"general","label":"General"}
+      {
+        "id": "business",
+        "label": "Business and management"
+      },
+      {
+        "id": "it",
+        "label": "Information technology"
+      },
+      {
+        "id": "engineering",
+        "label": "Engineering and applied science"
+      },
+      {
+        "id": "science",
+        "label": "Science"
+      },
+      {
+        "id": "health",
+        "label": "Health"
+      },
+      {
+        "id": "social",
+        "label": "Social and community services"
+      },
+      {
+        "id": "education",
+        "label": "Education and training"
+      },
+      {
+        "id": "law",
+        "label": "Legal and public safety"
+      },
+      {
+        "id": "arts",
+        "label": "Arts, culture and media"
+      },
+      {
+        "id": "trades",
+        "label": "Trades and construction"
+      },
+      {
+        "id": "hospitality",
+        "label": "Hospitality and tourism"
+      },
+      {
+        "id": "personal",
+        "label": "Personal services and wellness"
+      },
+      {
+        "id": "transport",
+        "label": "Transportation"
+      },
+      {
+        "id": "recreation",
+        "label": "Recreation and sport"
+      },
+      {
+        "id": "general",
+        "label": "General"
+      }
     ],
     "list": [
-      {"slug":"business-management","label":"Business administration and management","faculty":"business","facultyLabel":"Business and management"},
-      {"slug":"accounting-finance","label":"Accounting and finance","faculty":"business","facultyLabel":"Business and management"},
-      {"slug":"marketing-sales","label":"Marketing and sales","faculty":"business","facultyLabel":"Business and management"},
-      {"slug":"human-resources","label":"Human resources","faculty":"business","facultyLabel":"Business and management"},
-      {"slug":"supply-chain","label":"Supply chain and operations","faculty":"business","facultyLabel":"Business and management"},
-      {"slug":"office-administration","label":"Office administration","faculty":"business","facultyLabel":"Business and management"},
-      {"slug":"computer-science","label":"Computer science","faculty":"it","facultyLabel":"Information technology"},
-      {"slug":"software-engineering","label":"Software engineering","faculty":"it","facultyLabel":"Information technology"},
-      {"slug":"computer-engineering","label":"Computer engineering","faculty":"it","facultyLabel":"Information technology"},
-      {"slug":"information-systems","label":"Information systems","faculty":"it","facultyLabel":"Information technology"},
-      {"slug":"data-ai-cybersecurity","label":"Data science, AI and cybersecurity","faculty":"it","facultyLabel":"Information technology"},
-      {"slug":"civil-engineering","label":"Civil engineering","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"mechanical-engineering","label":"Mechanical engineering","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"electrical-engineering","label":"Electrical engineering","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"chemical-engineering","label":"Chemical engineering","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"industrial-engineering","label":"Industrial and manufacturing engineering","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"other-engineering","label":"Other engineering","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"mining-petroleum-engineering","label":"Mining and petroleum engineering","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"engineering-technology","label":"Engineering technology","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"architecture-planning","label":"Architecture and planning","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"construction-management","label":"Construction management","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"geomatics","label":"Geomatics and surveying","faculty":"engineering","facultyLabel":"Engineering and applied science"},
-      {"slug":"mathematics-statistics","label":"Mathematics and statistics","faculty":"science","facultyLabel":"Science"},
-      {"slug":"science","label":"Physical and life sciences","faculty":"science","facultyLabel":"Science"},
-      {"slug":"environmental-science","label":"Environmental science","faculty":"science","facultyLabel":"Science"},
-      {"slug":"agriculture-food-science","label":"Agriculture and food science","faculty":"science","facultyLabel":"Science"},
-      {"slug":"health-sciences","label":"Health sciences","faculty":"health","facultyLabel":"Health"},
-      {"slug":"nursing","label":"Nursing","faculty":"health","facultyLabel":"Health"},
-      {"slug":"pharmacy-dentistry","label":"Pharmacy and dentistry","faculty":"health","facultyLabel":"Health"},
-      {"slug":"rehabilitation-diagnostics","label":"Rehabilitation and diagnostics","faculty":"health","facultyLabel":"Health"},
-      {"slug":"public-health-administration","label":"Public health and health administration","faculty":"health","facultyLabel":"Health"},
-      {"slug":"occupational-health-safety","label":"Occupational health and safety","faculty":"health","facultyLabel":"Health"},
-      {"slug":"social-sciences","label":"Social sciences","faculty":"social","facultyLabel":"Social and community services"},
-      {"slug":"social-work-community","label":"Social work and community services","faculty":"social","facultyLabel":"Social and community services"},
-      {"slug":"education","label":"Education","faculty":"education","facultyLabel":"Education and training"},
-      {"slug":"law-public-safety","label":"Law and public safety","faculty":"law","facultyLabel":"Legal and public safety"},
-      {"slug":"arts-design","label":"Arts and design","faculty":"arts","facultyLabel":"Arts, culture and media"},
-      {"slug":"media-communication","label":"Media and communication","faculty":"arts","facultyLabel":"Arts, culture and media"},
-      {"slug":"trades-construction","label":"Trades and construction","faculty":"trades","facultyLabel":"Trades and construction"},
-      {"slug":"manufacturing-utilities","label":"Manufacturing and utilities","faculty":"trades","facultyLabel":"Trades and construction"},
-      {"slug":"hospitality-tourism","label":"Hospitality and tourism","faculty":"hospitality","facultyLabel":"Hospitality and tourism"},
-      {"slug":"personal-services","label":"Personal services","faculty":"personal","facultyLabel":"Personal services and wellness"},
-      {"slug":"transportation","label":"Transportation","faculty":"transport","facultyLabel":"Transportation"},
-      {"slug":"recreation-sport","label":"Recreation and sport","faculty":"recreation","facultyLabel":"Recreation and sport"},
-      {"slug":"general-no-post-secondary","label":"No post-secondary requirement","faculty":"general","facultyLabel":"General"}
+      {
+        "slug": "business-management",
+        "label": "Business administration and management",
+        "faculty": "business",
+        "facultyLabel": "Business and management"
+      },
+      {
+        "slug": "accounting-finance",
+        "label": "Accounting and finance",
+        "faculty": "business",
+        "facultyLabel": "Business and management"
+      },
+      {
+        "slug": "marketing-sales",
+        "label": "Marketing and sales",
+        "faculty": "business",
+        "facultyLabel": "Business and management"
+      },
+      {
+        "slug": "human-resources",
+        "label": "Human resources",
+        "faculty": "business",
+        "facultyLabel": "Business and management"
+      },
+      {
+        "slug": "supply-chain",
+        "label": "Supply chain and operations",
+        "faculty": "business",
+        "facultyLabel": "Business and management"
+      },
+      {
+        "slug": "office-administration",
+        "label": "Office administration",
+        "faculty": "business",
+        "facultyLabel": "Business and management"
+      },
+      {
+        "slug": "computer-science",
+        "label": "Computer science",
+        "faculty": "it",
+        "facultyLabel": "Information technology"
+      },
+      {
+        "slug": "software-engineering",
+        "label": "Software engineering",
+        "faculty": "it",
+        "facultyLabel": "Information technology"
+      },
+      {
+        "slug": "computer-engineering",
+        "label": "Computer engineering",
+        "faculty": "it",
+        "facultyLabel": "Information technology"
+      },
+      {
+        "slug": "information-systems",
+        "label": "Information systems",
+        "faculty": "it",
+        "facultyLabel": "Information technology"
+      },
+      {
+        "slug": "data-ai-cybersecurity",
+        "label": "Data science, AI and cybersecurity",
+        "faculty": "it",
+        "facultyLabel": "Information technology"
+      },
+      {
+        "slug": "civil-engineering",
+        "label": "Civil engineering",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "mechanical-engineering",
+        "label": "Mechanical engineering",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "electrical-engineering",
+        "label": "Electrical engineering",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "chemical-engineering",
+        "label": "Chemical engineering",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "industrial-engineering",
+        "label": "Industrial and manufacturing engineering",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "other-engineering",
+        "label": "Other engineering",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "mining-petroleum-engineering",
+        "label": "Mining and petroleum engineering",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "engineering-technology",
+        "label": "Engineering technology",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "architecture-planning",
+        "label": "Architecture and planning",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "construction-management",
+        "label": "Construction management",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "geomatics",
+        "label": "Geomatics and surveying",
+        "faculty": "engineering",
+        "facultyLabel": "Engineering and applied science"
+      },
+      {
+        "slug": "mathematics-statistics",
+        "label": "Mathematics and statistics",
+        "faculty": "science",
+        "facultyLabel": "Science"
+      },
+      {
+        "slug": "science",
+        "label": "Physical and life sciences",
+        "faculty": "science",
+        "facultyLabel": "Science"
+      },
+      {
+        "slug": "environmental-science",
+        "label": "Environmental science",
+        "faculty": "science",
+        "facultyLabel": "Science"
+      },
+      {
+        "slug": "agriculture-food-science",
+        "label": "Agriculture and food science",
+        "faculty": "science",
+        "facultyLabel": "Science"
+      },
+      {
+        "slug": "health-sciences",
+        "label": "Health sciences",
+        "faculty": "health",
+        "facultyLabel": "Health"
+      },
+      {
+        "slug": "nursing",
+        "label": "Nursing",
+        "faculty": "health",
+        "facultyLabel": "Health"
+      },
+      {
+        "slug": "pharmacy-dentistry",
+        "label": "Pharmacy and dentistry",
+        "faculty": "health",
+        "facultyLabel": "Health"
+      },
+      {
+        "slug": "rehabilitation-diagnostics",
+        "label": "Rehabilitation and diagnostics",
+        "faculty": "health",
+        "facultyLabel": "Health"
+      },
+      {
+        "slug": "public-health-administration",
+        "label": "Public health and health administration",
+        "faculty": "health",
+        "facultyLabel": "Health"
+      },
+      {
+        "slug": "occupational-health-safety",
+        "label": "Occupational health and safety",
+        "faculty": "health",
+        "facultyLabel": "Health"
+      },
+      {
+        "slug": "social-sciences",
+        "label": "Social sciences",
+        "faculty": "social",
+        "facultyLabel": "Social and community services"
+      },
+      {
+        "slug": "social-work-community",
+        "label": "Social work and community services",
+        "faculty": "social",
+        "facultyLabel": "Social and community services"
+      },
+      {
+        "slug": "education",
+        "label": "Education",
+        "faculty": "education",
+        "facultyLabel": "Education and training"
+      },
+      {
+        "slug": "law-public-safety",
+        "label": "Law and public safety",
+        "faculty": "law",
+        "facultyLabel": "Legal and public safety"
+      },
+      {
+        "slug": "arts-design",
+        "label": "Arts and design",
+        "faculty": "arts",
+        "facultyLabel": "Arts, culture and media"
+      },
+      {
+        "slug": "media-communication",
+        "label": "Media and communication",
+        "faculty": "arts",
+        "facultyLabel": "Arts, culture and media"
+      },
+      {
+        "slug": "trades-construction",
+        "label": "Trades and construction",
+        "faculty": "trades",
+        "facultyLabel": "Trades and construction"
+      },
+      {
+        "slug": "manufacturing-utilities",
+        "label": "Manufacturing and utilities",
+        "faculty": "trades",
+        "facultyLabel": "Trades and construction"
+      },
+      {
+        "slug": "hospitality-tourism",
+        "label": "Hospitality and tourism",
+        "faculty": "hospitality",
+        "facultyLabel": "Hospitality and tourism"
+      },
+      {
+        "slug": "personal-services",
+        "label": "Personal services",
+        "faculty": "personal",
+        "facultyLabel": "Personal services and wellness"
+      },
+      {
+        "slug": "transportation",
+        "label": "Transportation",
+        "faculty": "transport",
+        "facultyLabel": "Transportation"
+      },
+      {
+        "slug": "recreation-sport",
+        "label": "Recreation and sport",
+        "faculty": "recreation",
+        "facultyLabel": "Recreation and sport"
+      },
+      {
+        "slug": "general-no-post-secondary",
+        "label": "No post-secondary requirement",
+        "faculty": "general",
+        "facultyLabel": "General"
+      }
     ],
-    "byObjectIndex": [0,0,0,0,3,1,2,2,4,0,20,30,40,0,40,1,1,1,1,1,1,1,1,1,1,1,1,1,32,22,0,0,4,5,5,5,5,5,5,35,30,3,40,6,7,7,7,10,10,10,10,10,9,9,9,9,7,10,7,9,36,0,0,11,12,13,13,14,15,15,16,17,17,16,16,16,11,19,19,18,18,23,23,23,23,24,24,24,24,30,24,24,24,27,27,27,27,26,26,26,26,26,26,28,28,28,29,28,28,29,29,29,29,29,26,29,29,32,29,29,26,26,26,33,33,33,32,32,33,33,33,32,33,41,34,34,34,34,34,32,34,34,34,34,34,34,34,32,35,35,35,35,35,35,35,35,35,35,35,32,38,36,36,36,36,36,37,37,37,37,36,36,36,36,37,37,37,37,37,43,43,43,43,29,43,43,43,43,2,2,2,2,2,2,2,2,2,44,2,40,40,40,40,40,42,40,40,40,40,40,40,40,40,40,40,40,40,41,41,41,41,41,41,44,44,5,5,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,20,20,38,38,38,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,25,25,25,25,25,25,25,25,25,17,17,17,17,25,39,39,39,39,39,39,39,39,39,39,39,39,39,39,38,38,42,19,8,15,28,29,37,42,23,29,29,38,42,0,9,1,2,31,21,25,25,40,39,38,17,23,29,25,25,17,16,26,37,37,34,37,42,33,33,24,38,25,35,30,22,32,36,36,25,35,35,32,22,21,24,24,5,37,29,29,29,26,25,38,40,37,36,37,34,35,24,23,2,38,41,41,31,31,29,9,26,30,30,28,38]
-  }
+    "byObjectIndex": [
+      0,
+      0,
+      0,
+      0,
+      3,
+      1,
+      2,
+      2,
+      4,
+      0,
+      20,
+      30,
+      40,
+      0,
+      40,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      32,
+      22,
+      0,
+      0,
+      4,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      35,
+      30,
+      3,
+      40,
+      6,
+      7,
+      7,
+      7,
+      10,
+      10,
+      10,
+      10,
+      10,
+      9,
+      9,
+      9,
+      9,
+      7,
+      10,
+      7,
+      9,
+      36,
+      0,
+      0,
+      11,
+      12,
+      13,
+      13,
+      14,
+      15,
+      15,
+      16,
+      17,
+      17,
+      16,
+      16,
+      16,
+      11,
+      19,
+      19,
+      18,
+      18,
+      23,
+      23,
+      23,
+      23,
+      24,
+      24,
+      24,
+      24,
+      30,
+      24,
+      24,
+      24,
+      27,
+      27,
+      27,
+      27,
+      26,
+      26,
+      26,
+      26,
+      26,
+      26,
+      28,
+      28,
+      28,
+      29,
+      28,
+      28,
+      29,
+      29,
+      29,
+      29,
+      29,
+      26,
+      29,
+      29,
+      32,
+      29,
+      29,
+      26,
+      26,
+      26,
+      33,
+      33,
+      33,
+      32,
+      32,
+      33,
+      33,
+      33,
+      32,
+      33,
+      41,
+      34,
+      34,
+      34,
+      34,
+      34,
+      32,
+      34,
+      34,
+      34,
+      34,
+      34,
+      34,
+      34,
+      32,
+      35,
+      35,
+      35,
+      35,
+      35,
+      35,
+      35,
+      35,
+      35,
+      35,
+      35,
+      32,
+      38,
+      36,
+      36,
+      36,
+      36,
+      36,
+      37,
+      37,
+      37,
+      37,
+      36,
+      36,
+      36,
+      36,
+      37,
+      37,
+      37,
+      37,
+      37,
+      43,
+      43,
+      43,
+      43,
+      29,
+      43,
+      43,
+      43,
+      43,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      44,
+      2,
+      40,
+      40,
+      40,
+      40,
+      40,
+      42,
+      40,
+      40,
+      40,
+      40,
+      40,
+      40,
+      40,
+      40,
+      40,
+      40,
+      40,
+      40,
+      41,
+      41,
+      41,
+      41,
+      41,
+      41,
+      44,
+      44,
+      5,
+      5,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      38,
+      20,
+      20,
+      38,
+      38,
+      38,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      42,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      17,
+      17,
+      17,
+      17,
+      25,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      39,
+      38,
+      38,
+      42,
+      19,
+      8,
+      15,
+      28,
+      29,
+      37,
+      42,
+      23,
+      29,
+      29,
+      38,
+      42,
+      0,
+      9,
+      1,
+      2,
+      31,
+      21,
+      25,
+      25,
+      40,
+      39,
+      38,
+      17,
+      23,
+      29,
+      25,
+      25,
+      17,
+      16,
+      26,
+      37,
+      37,
+      34,
+      37,
+      42,
+      33,
+      33,
+      24,
+      38,
+      25,
+      35,
+      30,
+      22,
+      32,
+      36,
+      36,
+      25,
+      35,
+      35,
+      32,
+      22,
+      21,
+      24,
+      24,
+      5,
+      37,
+      29,
+      29,
+      29,
+      26,
+      25,
+      38,
+      40,
+      37,
+      36,
+      37,
+      34,
+      35,
+      24,
+      23,
+      2,
+      38,
+      41,
+      41,
+      31,
+      31,
+      29,
+      9,
+      26,
+      30,
+      30,
+      28,
+      38,
+      35,
+      35,
+      35,
+      33,
+      33,
+      33,
+      33,
+      33,
+      35,
+      33,
+      33,
+      33,
+      33,
+      37,
+      10,
+      10,
+      35,
+      35,
+      35,
+      34,
+      21,
+      26,
+      26,
+      35,
+      10,
+      10,
+      0,
+      18,
+      16,
+      16,
+      42,
+      18,
+      21,
+      16,
+      18,
+      16,
+      12,
+      42,
+      26,
+      26,
+      26,
+      26,
+      10,
+      18
+    ]
+  },
+  "careerStages": [
+    {
+      "id": "entry",
+      "label": "Entry level",
+      "short": "Entry",
+      "description": "First role after the listed education or training; no prior related work experience required."
+    },
+    {
+      "id": "experienced",
+      "label": "Experienced",
+      "short": "Experienced",
+      "description": "Usually requires prior related work experience; may be a first-line supervisor or a specialized role."
+    },
+    {
+      "id": "leadership",
+      "label": "Leadership",
+      "short": "Leadership",
+      "description": "Management, executive or appointment role reached after substantial experience; not a direct entry occupation."
+    }
+  ]
 }
 </script>
 
@@ -1280,17 +2219,43 @@
     ROUTE_SHORT[route.id] = route.short;
   });
 
+  var CAREER_STAGES = data.careerStages || [
+    { id: 'entry', label: 'Entry level', short: 'Entry', description: 'First role after the listed education or training; no prior related work experience required.' },
+    { id: 'experienced', label: 'Experienced', short: 'Experienced', description: 'Usually requires prior related work experience; may be a first-line supervisor or a specialized role.' },
+    { id: 'leadership', label: 'Leadership', short: 'Leadership', description: 'Management, executive or appointment role reached after substantial experience; not a direct entry occupation.' }
+  ];
+  var STAGE_LABELS = {};
+  var STAGE_SHORT = {};
+  var STAGE_DESCRIPTIONS = {};
+  CAREER_STAGES.forEach(function (stage) {
+    STAGE_LABELS[stage.id] = stage.label;
+    STAGE_SHORT[stage.id] = stage.short || stage.label;
+    STAGE_DESCRIPTIONS[stage.id] = stage.description || '';
+  });
+
   var DEPARTMENT_LIST = (data.departments && data.departments.list) || [];
   var DEPARTMENT_INDEX = (data.departments && data.departments.byObjectIndex) || [];
   var DEPARTMENT_BY_SLUG = {};
   DEPARTMENT_LIST.forEach(function (department) { DEPARTMENT_BY_SLUG[department.slug] = department; });
+  var FACULTY_LABELS = {};
+  ((data.departments && data.departments.faculties) || []).forEach(function (faculty) { FACULTY_LABELS[faculty.id] = faculty.label; });
 
   var occupations = data.objects.map(function (row, index) {
     var videos = (OCCUPATION_VIDEOS[row[0]] || []).map(function (video) {
       return { id: video[0], title: video[1], source: video[2] || 'Career Trek', url: 'https://www.youtube.com/watch?v=' + video[0] };
     });
     var department = DEPARTMENT_LIST[DEPARTMENT_INDEX[index]] || null;
-    return { name: row[0], industry: row[1], education: row[2], blurb: row[3], videos: videos, department: department };
+    return {
+      name: row[0],
+      industry: row[1],
+      education: row[2],
+      blurb: row[3],
+      careerStage: row[4] || 'entry',
+      careerPath: row[5] || '',
+      slug: row[6] || '',
+      videos: videos,
+      department: department
+    };
   });
 
   var RESOURCE_LINKS = (data.resources && data.resources.links) || [];
@@ -1304,6 +2269,8 @@
   var counts = { total: occupations.length };
   data.educationRoutes.forEach(function (route) { counts[route.id] = 0; });
   occupations.forEach(function (occupation) { counts[occupation.education] = (counts[occupation.education] || 0) + 1; });
+  var stageCounts = { entry: 0, experienced: 0, leadership: 0 };
+  occupations.forEach(function (occupation) { stageCounts[occupation.careerStage] = (stageCounts[occupation.careerStage] || 0) + 1; });
 
   var departmentCounts = {};
   var facultyCounts = {};
@@ -1324,7 +2291,7 @@
     statCard('is-bach', counts['university-bachelor'], 'Bachelor') +
     statCard('is-coll', counts.college, 'College') +
     statCard('is-appr', counts.apprenticeship, 'Apprenticeship') +
-    statCard('is-entry', (counts['high-school'] || 0) + (counts['no-formal'] || 0), 'Entry level') +
+    statCard('is-entry', stageCounts.entry, 'Entry stage') +
     statCard('is-video', occupations.filter(function (occupation) { return occupation.videos.length > 0; }).length, 'With video');
 
   function statCard(className, value, label) {
@@ -1338,11 +2305,14 @@
   var facultyElement = document.getElementById('occ-faculty');
   var departmentElement = document.getElementById('occ-department');
   var routeElement = document.getElementById('occ-route');
+  var stageElement = document.getElementById('occ-stage');
+  var stageNoteElement = document.getElementById('occ-stage-note');
   var chipsElement = document.getElementById('occ-route-chips');
   var videoChipElement = document.getElementById('occ-video-chip');
   var listElement = document.getElementById('occ-list');
   var resultElement = document.getElementById('occ-result');
   var videoOnly = false;
+  var currentMatches = [];
 
   var reslineElement = document.getElementById('occ-resline');
   if (reslineElement && RESOURCE_LINKS.length) {
@@ -1382,6 +2352,15 @@
   });
   routeElement.innerHTML = routeOptions;
 
+  var stageOptions = '<option value="">All career stages (' + occupations.length + ')</option>';
+  CAREER_STAGES.forEach(function (stage) {
+    stageOptions += '<option value="' + escapeHtml(stage.id) + '">' + escapeHtml(stage.label) + ' (' + (stageCounts[stage.id] || 0) + ')</option>';
+  });
+  stageElement.innerHTML = stageOptions;
+  if (stageNoteElement) {
+    stageNoteElement.textContent = 'Entry: first role after training. Experienced: prior related work. Leadership: management destination.';
+  }
+
   var chips = '<button type="button" class="occ-chip is-on" data-route="">All routes</button>';
   data.educationRoutes.forEach(function (route) {
     chips += '<button type="button" class="occ-chip" data-route="' + escapeHtml(route.id) + '">' +
@@ -1414,36 +2393,50 @@
   });
   departmentElement.addEventListener('change', render);
   routeElement.addEventListener('change', function () { syncChips(); render(); });
+  stageElement.addEventListener('change', render);
   videoChipElement.addEventListener('click', function () {
     videoOnly = !videoOnly;
     videoChipElement.classList.toggle('is-on', videoOnly);
     render();
   });
+  document.getElementById('occ-export-json').addEventListener('click', downloadFilteredJson);
+  document.getElementById('occ-export-csv').addEventListener('click', downloadFilteredCsv);
 
   /* ---------------------------------------------------------- render */
 
-  function render() {
+  function getMatches() {
     var query = String(searchElement.value || '').trim().toLowerCase();
     var industry = industryElement.value || '';
     var faculty = facultyElement.value || '';
     var department = departmentElement.value || '';
     var route = currentRoute();
-    var matches = occupations.filter(function (occupation) {
+    var stage = stageElement.value || '';
+    return occupations.filter(function (occupation) {
       if (industry && occupation.industry !== industry) return false;
       if (faculty && (!occupation.department || occupation.department.faculty !== faculty)) return false;
       if (department && (!occupation.department || occupation.department.slug !== department)) return false;
       if (route && occupation.education !== route) return false;
+      if (stage && occupation.careerStage !== stage) return false;
       if (videoOnly && !occupation.videos.length) return false;
       if (!query) return true;
       var videoTitles = occupation.videos.map(function (video) { return video.title; }).join(' ');
       var departmentText = occupation.department ? occupation.department.label + ' ' + occupation.department.facultyLabel : '';
-      return (occupation.name + ' ' + occupation.blurb + ' ' + departmentText + ' ' + videoTitles).toLowerCase().indexOf(query) !== -1;
+      var stageText = (STAGE_LABELS[occupation.careerStage] || '') + ' ' + (occupation.careerPath || '');
+      return (occupation.name + ' ' + occupation.blurb + ' ' + departmentText + ' ' + stageText + ' ' + videoTitles).toLowerCase().indexOf(query) !== -1;
     });
+  }
 
-    resultElement.textContent = matches.length + ' of ' + occupations.length + ' occupations' + (videoOnly ? ' with video' : '');
+  function render() {
+    var matches = getMatches();
+    currentMatches = matches;
+    var stage = stageElement.value || '';
+    var parts = [matches.length + ' of ' + occupations.length + ' occupations'];
+    if (stage) parts.push(STAGE_LABELS[stage] || stage);
+    if (videoOnly) parts.push('with video');
+    resultElement.textContent = parts.join(' · ');
 
     if (!matches.length) {
-      listElement.innerHTML = '<div class="occ-empty"><h2>No occupation matches</h2><p>Clear the search or choose another industry, faculty, department or education route.</p></div>';
+      listElement.innerHTML = '<div class="occ-empty"><h2>No occupation matches</h2><p>Clear the search or choose another industry, faculty, department, education route or career stage.</p></div>';
       return;
     }
 
@@ -1474,7 +2467,12 @@
     list.forEach(function (occupation) {
       html += '<tr>' +
         '<td class="occ-name">' + escapeHtml(occupation.name) +
-          (occupation.department ? '<span class="occ-dept">' + escapeHtml(occupation.department.label) + '</span>' : '') + '</td>' +
+          '<span class="occ-stage s-' + escapeHtml(occupation.careerStage) + '" title="' +
+          escapeHtml((STAGE_DESCRIPTIONS[occupation.careerStage] || '') + (occupation.careerPath ? ' ' + occupation.careerPath : '')) + '">' +
+          escapeHtml(STAGE_SHORT[occupation.careerStage] || occupation.careerStage) + '</span>' +
+          (occupation.department ? '<span class="occ-dept">' + escapeHtml(occupation.department.label) + '</span>' : '') +
+          (occupation.careerPath ? '<span class="occ-path">' + escapeHtml(occupation.careerPath) + '</span>' : '') +
+        '</td>' +
         '<td><span class="occ-route r-' + escapeHtml(occupation.education) + '" title="' + escapeHtml(ROUTE_LABELS[occupation.education] || '') + '">' +
         escapeHtml(ROUTE_SHORT[occupation.education] || occupation.education) + '</span></td>' +
         '<td class="occ-col-video">' + watchCell(occupation) + '</td>' +
@@ -1509,6 +2507,107 @@
       }
     });
     return parts.join('<span class="occ-res-sep"> · </span>');
+  }
+
+  function exportFilters() {
+    var query = String(searchElement.value || '').trim();
+    var industry = industryElement.value || '';
+    var faculty = facultyElement.value || '';
+    var department = departmentElement.value || '';
+    var route = currentRoute();
+    var stage = stageElement.value || '';
+    return {
+      search: query,
+      industry: industry,
+      industryLabel: industry && folderBySlug[industry] ? folderBySlug[industry].name : '',
+      faculty: faculty,
+      facultyLabel: faculty ? (FACULTY_LABELS[faculty] || faculty) : '',
+      department: department,
+      departmentLabel: department ? (DEPARTMENT_BY_SLUG[department] ? DEPARTMENT_BY_SLUG[department].label : department) : '',
+      educationRoute: route,
+      educationRouteLabel: route ? (ROUTE_LABELS[route] || route) : '',
+      careerStage: stage,
+      careerStageLabel: stage ? (STAGE_LABELS[stage] || stage) : '',
+      videoOnly: videoOnly
+    };
+  }
+
+  function exportRows() {
+    return currentMatches.map(function (occupation) {
+      return {
+        name: occupation.name,
+        slug: occupation.slug,
+        industry: occupation.industry,
+        industryLabel: folderBySlug[occupation.industry] ? folderBySlug[occupation.industry].name : occupation.industry,
+        education: occupation.education,
+        educationLabel: ROUTE_LABELS[occupation.education] || occupation.education,
+        careerStage: occupation.careerStage,
+        careerStageLabel: STAGE_LABELS[occupation.careerStage] || occupation.careerStage,
+        careerPath: occupation.careerPath,
+        department: occupation.department ? occupation.department.label : '',
+        faculty: occupation.department ? occupation.department.facultyLabel : '',
+        blurb: occupation.blurb,
+        videos: occupation.videos.map(function (video) {
+          return { title: video.title, url: video.url, source: video.source };
+        })
+      };
+    });
+  }
+
+  function downloadBlob(content, mimeType, fileName) {
+    var blob = new Blob([content], { type: mimeType });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function downloadFilteredJson() {
+    if (!currentMatches.length) {
+      resultElement.textContent = 'No occupations to export.';
+      return;
+    }
+    var payload = {
+      exportedAt: new Date().toISOString(),
+      filters: exportFilters(),
+      count: currentMatches.length,
+      careerStages: CAREER_STAGES,
+      objects: exportRows()
+    };
+    downloadBlob(JSON.stringify(payload, null, 2), 'application/json;charset=utf-8', 'occupations-filtered.json');
+  }
+
+  function csvCell(value) {
+    var text = String(value === undefined || value === null ? '' : value);
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  function downloadFilteredCsv() {
+    if (!currentMatches.length) {
+      resultElement.textContent = 'No occupations to export.';
+      return;
+    }
+    var rows = [['Occupation', 'Slug', 'Industry', 'Education route', 'Career stage', 'Career path', 'Department', 'Faculty', 'What it is', 'Video URLs']];
+    currentMatches.forEach(function (occupation) {
+      rows.push([
+        occupation.name,
+        occupation.slug,
+        folderBySlug[occupation.industry] ? folderBySlug[occupation.industry].name : occupation.industry,
+        ROUTE_LABELS[occupation.education] || occupation.education,
+        STAGE_LABELS[occupation.careerStage] || occupation.careerStage,
+        occupation.careerPath,
+        occupation.department ? occupation.department.label : '',
+        occupation.department ? occupation.department.facultyLabel : '',
+        occupation.blurb,
+        occupation.videos.map(function (video) { return video.url; }).join(' | ')
+      ]);
+    });
+    var csv = '\ufeff' + rows.map(function (row) { return row.map(csvCell).join(','); }).join('\r\n');
+    downloadBlob(csv, 'text/csv;charset=utf-8', 'occupations-filtered.csv');
   }
 
   function escapeHtml(value) {

@@ -21,6 +21,7 @@ const { renderAndSave } = require('./stages/shared')
 const { createAiClient } = require('./ai/client')
 const chatService = require('./chat/service')
 const live = require('./live')
+const workspace = require('./workspace')
 const { nowIso } = require('./util')
 
 const UI_DIRECTORY = path.join(APP_ROOT, 'ui')
@@ -122,7 +123,9 @@ function readBody(request) {
 }
 
 function serveStatic(requestPath, response) {
-  const relativePath = requestPath === '/' ? 'index.html' : requestPath.replace(/^\/+/, '')
+  // A folder URL serves its index.html, so /studio/ works like a normal site.
+  const trimmedPath = requestPath.replace(/^\/+/, '')
+  const relativePath = (!trimmedPath || trimmedPath.endsWith('/')) ? trimmedPath + 'index.html' : trimmedPath
   const absolutePath = path.resolve(UI_DIRECTORY, relativePath)
   const uiPrefix = UI_DIRECTORY.endsWith(path.sep) ? UI_DIRECTORY : UI_DIRECTORY + path.sep
   if (!absolutePath.startsWith(uiPrefix)) {
@@ -269,6 +272,42 @@ async function handleApi(request, response, urlObject) {
     } catch (error) {
       sendJson(response, 400, { ok: false, error: error.message })
     }
+    return
+  }
+
+  if (pathName === '/api/workspace/tree' && method === 'GET') {
+    // Studio: one directory level at a time, read only, inside the repo root.
+    const result = workspace.listDirectory(searchParams.get('path') || '', {
+      includeSkipped: searchParams.get('all') === '1'
+    })
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/workspace/file' && method === 'GET') {
+    const result = workspace.readTextFile(searchParams.get('path') || '')
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/workspace/search' && method === 'GET') {
+    const result = workspace.searchText(searchParams.get('q') || '', {
+      path: searchParams.get('path') || ''
+    })
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/workspace/tools' && method === 'GET') {
+    const registry = workspace.toolRegistry({ config })
+    sendJson(response, registry.ok ? 200 : 400, registry)
+    return
+  }
+
+  if (pathName === '/api/workspace/tasks' && method === 'GET') {
+    // The tool backlog is its SSOT task list (section 15), parsed tolerantly.
+    const result = workspace.readToolTasks(searchParams.get('path') || '')
+    sendJson(response, result.ok ? 200 : 400, result)
     return
   }
 
@@ -666,6 +705,30 @@ const server = http.createServer((request, response) => {
       } else {
         try { response.end() } catch (_endError) { /* ignore */ }
       }
+    })
+    return
+  }
+  // /repo/<relative path> serves repository files to the Studio preview iframe,
+  // so a document renders with its own CSS, JS and images. Read only, jailed to
+  // the repository, with the token file and the run folders denied.
+  if (urlObject.pathname === '/repo' || urlObject.pathname.startsWith('/repo/')) {
+    const rawPath = decodeURIComponent(urlObject.pathname.replace(/^\/repo\/?/, ''))
+    const asset = workspace.resolveRepoAsset(rawPath)
+    if (!asset.ok) {
+      sendText(response, asset.reason === 'That file does not exist.' ? 404 : 403, asset.reason)
+      return
+    }
+    fs.readFile(asset.absolutePath, (error, fileBuffer) => {
+      if (error) {
+        sendText(response, 404, 'Not found')
+        return
+      }
+      response.writeHead(200, {
+        'Content-Type': asset.contentType + '; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff'
+      })
+      response.end(fileBuffer)
     })
     return
   }

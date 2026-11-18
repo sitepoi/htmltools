@@ -7,7 +7,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const { APP_ROOT, loadConfig, describeProvider, modelSummary } = require('../src/config')
+const { APP_ROOT, loadConfig, describeProvider, modelSummary, publicConfigView, clampWorkers } = require('../src/config')
 const { RunStore, isValidRunId } = require('../src/state')
 const { unifiedDiff } = require('../src/code/diff')
 const { createPipeline } = require('../src/pipeline')
@@ -32,6 +32,11 @@ const chatService = require('../src/chat/service')
 const probes = require('../src/agent/probes')
 const { normalizeIncomingTasks } = require('../src/stages/shared')
 const { auditChecklist } = require('../src/code/capabilityAudit')
+const toolRoots = require('../src/toolRoots')
+const workspace = require('../src/workspace')
+const storeMap = require('../src/cms/storeMap')
+const { createStoreClient } = require('../src/cms/storeClient')
+const secretsKeys = require('../src/cms/secrets')
 
 const OUTPUT_DIRECTORY = path.join(APP_ROOT, 'selftest-output')
 const RUNS_DIRECTORY = path.join(OUTPUT_DIRECTORY, 'runs')
@@ -819,6 +824,282 @@ async function checkModelResolution() {
     JSON.stringify(clearedSummary))
 }
 
+// Phase 1 of the release platform: tool roots, the store map and the read only
+// store client. No write is exercised here: that is what the phase gate means.
+async function checkReleaseReadLayer() {
+  process.stdout.write('\nRelease layer: roots, store map, store read client\n')
+  const base = path.join(OUTPUT_DIRECTORY, 'release-layer')
+  fs.rmSync(base, { recursive: true, force: true })
+
+  function writeTool(rootPath, folderName, toolName) {
+    const toolDirectory = path.join(rootPath, folderName)
+    fs.mkdirSync(path.join(toolDirectory, 'app'), { recursive: true })
+    fs.mkdirSync(path.join(toolDirectory, 'docs', 'screenshots'), { recursive: true })
+    fs.writeFileSync(path.join(toolDirectory, 'app', toolName + '.html'),
+      '<!-- html build 2026-11-17-3 -->\n<div data-tool-build="2026-11-17-3">x</div>\n', 'utf8')
+    fs.writeFileSync(path.join(toolDirectory, 'app', toolName + '.css'),
+      '/* css build 2026-11-17-3 */\n.a { color: #000; }\n', 'utf8')
+    fs.writeFileSync(path.join(toolDirectory, 'app', toolName + '.js'),
+      "/* js build 2026-11-17-3 */\nvar TOOL_BUILD = '2026-11-17-3';\nconsole.log('[TOOL:BOOT] build ' + TOOL_BUILD);\ntool.onReady(function () {});\n", 'utf8')
+    fs.writeFileSync(path.join(toolDirectory, 'app', 'test-harness.html'), '<!DOCTYPE html>\n<p>harness</p>\n', 'utf8')
+    ;['webpage', 'help', 'presentation'].forEach((kind) => {
+      fs.writeFileSync(path.join(toolDirectory, 'docs', kind + '.html'), '<p>' + kind + '</p>\n', 'utf8')
+    })
+    fs.writeFileSync(path.join(toolDirectory, 'docs', 'screenshots', 'one.png'), 'png', 'utf8')
+    return toolDirectory
+  }
+
+  const rootA = path.join(base, 'rootA')
+  writeTool(rootA, 'AlphaTool', 'AlphaTool')
+  // An app folder that is not a complete tool must be reported, not guessed.
+  fs.mkdirSync(path.join(base, 'rootA', 'BrokenTool', 'app'), { recursive: true })
+  fs.writeFileSync(path.join(base, 'rootA', 'BrokenTool', 'app', 'BrokenTool.html'), '<div></div>', 'utf8')
+
+  const config = loadConfig({
+    localConfigPath: path.join(base, 'missing-config.json'),
+    skipEnvironment: true
+  })
+  config.toolRoots = [
+    { label: 'primary', root: rootA, taxonomyFile: '', writable: true },
+    { label: 'external', root: rootA, taxonomyFile: '', writable: false }
+  ]
+  const listing = toolRoots.listTools(config)
+  const alpha = listing.tools.find((tool) => tool.slug === 'alphatool')
+  check('a tool folder is discovered with its slug, name and stamps',
+    Boolean(alpha) && alpha.toolName === 'AlphaTool' && alpha.stamps.html === '2026-11-17-3' &&
+    alpha.toolBuild === '2026-11-17-3',
+    alpha ? JSON.stringify({ slug: alpha.slug, stamps: alpha.stamps, build: alpha.toolBuild }) : 'not found')
+  check('the registry reports the document set and the screenshots',
+    Boolean(alpha) && Boolean(alpha.documents.webpage) && Boolean(alpha.documents.help) &&
+    alpha.screenshotCount === 1,
+    alpha ? JSON.stringify(Object.keys(alpha.documents)) + ' shots ' + alpha.screenshotCount : '')
+  check('the harness is part of the registry entry', Boolean(alpha && alpha.harness))
+  check('an app folder without the full triple is reported as a problem',
+    listing.problems.some((problem) => /BrokenTool/.test(problem.reason)),
+    JSON.stringify(listing.problems.map((problem) => problem.reason).slice(0, 2)))
+  check('a read only root stays read only',
+    listing.tools.every((tool) => tool.label === undefined || tool.writable === false || tool.writable === true) &&
+    listing.roots.filter((root) => root.label === 'external').every((root) => root.writable === false),
+    JSON.stringify(listing.roots.map((root) => root.label + ':' + root.writable)))
+  check('two roots holding the same slug are refused as a conflict',
+    listing.tools.filter((tool) => tool.slug === 'alphatool').some((tool) => tool.slugConflict === true) ||
+    listing.problems.some((problem) => /share the slug/.test(problem.reason)),
+    JSON.stringify(listing.problems.map((problem) => problem.reason)))
+  const completeness = toolRoots.packageCompleteness(alpha)
+  check('package completeness counts the eight subjects from the files',
+    completeness.present.includes('code') && completeness.present.includes('screenshots') &&
+    completeness.total === 8 && completeness.complete === false,
+    JSON.stringify(completeness))
+
+  // The real repository must be readable through the same registry.
+  const repoListing = toolRoots.listTools(loadConfig({ skipEnvironment: true }))
+  check('the repository is read as one root with many tools',
+    repoListing.tools.length > 10 && repoListing.roots[0].label === 'repo',
+    repoListing.tools.length + ' tool(s)')
+
+  // T-27: the store map is data, and an incomplete row is a named block.
+  const storeMapPath = path.join(base, 'store-map.json')
+  fs.writeFileSync(storeMapPath, JSON.stringify({
+    meta: { schema: 'uniconhub-store-map', version: '0.0.1' },
+    targets: [
+      { id: 'tool', kind: 'tool', cmsObjectType: 'tools-applicationstore', fieldPath: 'x.y', folderId: 'f1', slugRule: 'repoToolSlug', questionRef: 'Q-07', confirmed: true },
+      { id: 'doc-help', kind: 'document', documentKind: 'help', cmsObjectType: '', fieldPath: '', folderId: '', slugRule: '<toolSlug>-help', questionRef: 'Q-08', confirmed: false }
+    ]
+  }, null, 2), 'utf8')
+  const goodMap = storeMap.loadStoreMap(storeMapPath)
+  check('a complete and confirmed target is writable', storeMap.blockedTarget(goodMap.map, 'tool').ok === true,
+    JSON.stringify(goodMap.problems))
+  const blockedDoc = storeMap.blockedTarget(goodMap.map, 'doc-help')
+  check('an incomplete target blocks and names what is missing',
+    blockedDoc.ok === false && blockedDoc.blocked.missing.includes('cmsObjectType') &&
+    blockedDoc.blocked.missing.includes('fieldPath'),
+    JSON.stringify(blockedDoc.blocked && blockedDoc.blocked.missing))
+  check('the block names the question that answers it',
+    blockedDoc.blocked.questionRef === 'Q-08', blockedDoc.blocked.questionRef)
+  check('an unconfirmed but filled target is blocked, not written',
+    storeMap.blockedTarget({
+      targets: [{ id: 't', kind: 'tool', cmsObjectType: 'a', fieldPath: 'b', folderId: 'c', slugRule: 'repoToolSlug', questionRef: 'Q-07', confirmed: false }]
+    }, 't').ok === false)
+  const badMap = storeMap.validateStoreMap({
+    meta: { schema: 'wrong', version: '' },
+    targets: [
+      { id: 'a', kind: 'nope', slugRule: 'repoToolSlug', questionRef: '' },
+      { id: 'a', kind: 'tool', slugRule: 'weird rule', folderId: 'x', folderCode: 'y', questionRef: 'Q-1' }
+    ]
+  })
+  check('the validator rejects a bad schema, a bad kind, a duplicate id and two folder answers',
+    !badMap.ok &&
+    badMap.problems.some((problem) => /meta.schema/.test(problem.message)) &&
+    badMap.problems.some((problem) => /share the id/.test(problem.message)) &&
+    badMap.problems.some((problem) => /slugRule/.test(problem.message)) &&
+    badMap.problems.some((problem) => /not both/.test(problem.message)),
+    badMap.problems.map((problem) => problem.field + ':' + problem.message).join(' | ').slice(0, 200))
+  const repoMap = storeMap.loadStoreMap(path.resolve(APP_ROOT, '..', '..', '..', 'UNICON-TOOLS', 'tools-catalog', 'store-map.json'))
+  check('the repository store map is valid data', repoMap.ok, JSON.stringify(repoMap.problems).slice(0, 160))
+  const repoTargets = storeMap.summary(repoMap.map)
+  const writableIds = repoTargets.filter((target) => target.writable).map((target) => target.id)
+  check('the five document targets are writable from the working editor',
+    ['doc-webpage', 'doc-help', 'doc-updates', 'doc-presentation', 'doc-social']
+      .every((id) => writableIds.includes(id)),
+    writableIds.join(','))
+  check('the tool record stays blocked and names the question that unblocks it',
+    repoTargets.filter((target) => target.id === 'tool' || target.id === 'library' || target.id === 'application')
+      .every((target) => target.writable === false && Boolean(target.questionRef)),
+    JSON.stringify(repoTargets.filter((target) => !target.writable).map((target) => target.id)))
+
+  // T-26: the read client. A fake fetch stands in for the store.
+  const secret = 'store-key-abcdef123456'
+  const cmsConfig = loadConfig({ localConfigPath: path.join(base, 'missing-config.json'), skipEnvironment: true })
+  cmsConfig.cms = Object.assign({}, cmsConfig.cms, {
+    baseUrl: 'https://store.invalid',
+    authMode: 'header',
+    apiKey: '',
+    readPath: '/api/v2/objects',
+    retries: 1
+  })
+  const noCredential = createStoreClient({ config: cmsConfig, env: {}, fetchImpl: async () => ({ ok: true, status: 200, headers: { get: () => '' }, text: async () => '{}' }) })
+  const health = noCredential.health()
+  check('a missing credential blocks before any request',
+    health.ok === false && health.problems.some((problem) => problem.code === 'MISSING_CREDENTIAL'),
+    JSON.stringify(health.problems))
+  let credentialBlocked = false
+  try {
+    await noCredential.listObjects('tools-applicationstore')
+  } catch (error) {
+    credentialBlocked = Boolean(error.blocked) && error.code === 'MISSING_CREDENTIAL' &&
+      /Q-01/.test(JSON.stringify(error.details))
+  }
+  check('a blocked client throws instead of returning an empty list', credentialBlocked)
+
+  function fakeStore(handler) {
+    const calls = []
+    const fetchImpl = async (url, options) => {
+      calls.push({ url, options })
+      return handler(url, options, calls.length)
+    }
+    return { fetchImpl, calls }
+  }
+
+  const headerStore = fakeStore(async () => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => '' },
+    text: async () => JSON.stringify({ items: [{ objectId: 'o1', name: 'Alpha', productData: { data_categoriesBased: { title: 'Alpha', code: { html: 'x' } } } }] })
+  }))
+  const headerClient = createStoreClient({
+    config: cmsConfig,
+    env: { APP_FACTORY_STORE_KEY: secret },
+    fetchImpl: headerStore.fetchImpl
+  })
+  const listed = await headerClient.listObjects('tools-applicationstore', { limit: 5 })
+  const headerCall = headerStore.calls[0]
+  check('the header form sends the key in a header and never in the URL',
+    headerCall.options.headers['x-api-key'] === secret && !headerCall.url.includes(secret) &&
+    !headerCall.url.includes('/api/object/'),
+    headerCall.url)
+  check('a list answer is normalized into records with their field map',
+    listed.items.length === 1 && listed.items[0].objectId === 'o1' &&
+    listed.items[0].fieldNames.includes('title'),
+    JSON.stringify(listed.items.map((item) => item.fieldNames)))
+  check('the settings view of the credential is a masked fingerprint',
+    headerClient.health().credentialFingerprint.includes('(' + secret.length + ' chars)') &&
+    !headerClient.health().credentialFingerprint.includes(secret),
+    headerClient.health().credentialFingerprint)
+
+  const legacyStore = fakeStore(async () => ({
+    ok: true, status: 200, headers: { get: () => '' }, text: async () => JSON.stringify([{ objectId: 'o2' }])
+  }))
+  const legacyConfig = Object.assign({}, cmsConfig, {
+    cms: Object.assign({}, cmsConfig.cms, { authMode: 'url-token' })
+  })
+  const legacyClient = createStoreClient({
+    config: legacyConfig,
+    env: { APP_FACTORY_STORE_KEY: secret },
+    fetchImpl: legacyStore.fetchImpl
+  })
+  await legacyClient.listObjects('tools-applicationstore')
+  check('the legacy form puts the token in the path and sends no key header',
+    legacyStore.calls[0].url.includes('/api/object/' + encodeURIComponent(secret) + '/query/') &&
+    legacyStore.calls[0].options.headers['x-api-key'] === undefined,
+    legacyStore.calls[0].url.replace(secret, '<token>'))
+
+  const deniedStore = fakeStore(async () => ({
+    ok: false,
+    status: 401,
+    headers: { get: () => '' },
+    text: async () => JSON.stringify({ error: 'bad key ' + secret })
+  }))
+  const deniedClient = createStoreClient({
+    config: cmsConfig,
+    env: { APP_FACTORY_STORE_KEY: secret },
+    fetchImpl: deniedStore.fetchImpl
+  })
+  let denied = null
+  try {
+    await deniedClient.getObject('tools-applicationstore', 'o1')
+  } catch (error) {
+    denied = error
+  }
+  check('a refused request surfaces the status and body',
+    Boolean(denied) && denied.status === 401 && /bad key/.test(denied.message),
+    denied ? denied.message.slice(0, 80) : 'no error')
+  check('the credential is redacted from the error text',
+    Boolean(denied) && !denied.message.includes(secret) && /redacted/.test(denied.message),
+    denied ? denied.message.slice(0, 120) : '')
+
+  let attemptCount = 0
+  const flakyStore = fakeStore(async () => {
+    attemptCount += 1
+    if (attemptCount === 1) {
+      return { ok: false, status: 429, headers: { get: () => '0' }, text: async () => 'slow down' }
+    }
+    return { ok: true, status: 200, headers: { get: () => '' }, text: async () => JSON.stringify({ object: { objectId: 'o9', name: 'Retried' } }) }
+  })
+  const flakyClient = createStoreClient({
+    config: cmsConfig,
+    env: { APP_FACTORY_STORE_KEY: secret },
+    fetchImpl: flakyStore.fetchImpl
+  })
+  const retried = await flakyClient.getObject('tools-applicationstore', 'o9')
+  check('a 429 is retried and the read still succeeds',
+    Boolean(retried) && retried.objectId === 'o9' && flakyStore.calls.length === 2,
+    flakyStore.calls.length + ' attempt(s)')
+
+  // Q-01 and Q-03: two keys, in one file the operator controls, outside the repo.
+  const secretsFile = path.join(base, 'operator-secrets.json')
+  fs.writeFileSync(secretsFile, JSON.stringify({
+    store: { baseUrl: 'https://store.invalid', readKey: 'read-key-aaaaaaaaaaaa', writeKey: 'write-key-bbbbbbbbbbbb' }
+  }, null, 2), 'utf8')
+  const secretsConfig = loadConfig({ localConfigPath: path.join(base, 'missing-config.json'), skipEnvironment: true })
+  secretsConfig.secretsPath = secretsFile
+  const described = secretsKeys.describeKeys(secretsConfig, {})
+  check('both keys are read from the secrets file',
+    described.read.present && described.write.present && described.separateKeys,
+    JSON.stringify({ read: described.read.fingerprint, write: described.write.fingerprint }))
+  check('the reported fingerprint never contains the key',
+    !JSON.stringify(described).includes('read-key-aaaaaaaaaaaa') &&
+    !JSON.stringify(described).includes('write-key-bbbbbbbbbbbb'),
+    described.read.fingerprint)
+  const fromEnv = secretsKeys.describeKeys(secretsConfig, { APP_FACTORY_STORE_READ_KEY: 'env-read-key-cccccccccc' })
+  check('the environment beats the file for the read key',
+    fromEnv.read.source === 'env:APP_FACTORY_STORE_READ_KEY' && fromEnv.read.present,
+    fromEnv.read.source)
+  const writeOnly = secretsKeys.resolveKey(secretsConfig, {}, 'write')
+  check('a write key resolves separately from a read key',
+    writeOnly.ok && writeOnly.value === 'write-key-bbbbbbbbbbbb' && writeOnly.kind === 'write',
+    writeOnly.source)
+  const noSecrets = secretsKeys.resolveKey(config, {}, 'write')
+  check('a missing key names the secrets file and the setting',
+    noSecrets.ok === false && noSecrets.code === 'MISSING_CREDENTIAL' &&
+    /store\.writeKey/.test(noSecrets.reason) && noSecrets.questionRef.includes('Q-03'),
+    noSecrets.reason)
+  const cmsView = publicConfigView(secretsConfig)
+  check('the settings view carries the secrets path and no key value',
+    cmsView.cms.secretsPath === secretsFile && cmsView.cms.read.present &&
+    !JSON.stringify(cmsView).includes('read-key-aaaaaaaaaaaa'),
+    cmsView.cms.secretsPath)
+}
+
 async function checkFullLoop() {
   process.stdout.write('\nFull loop with the mock provider\n')
   hub.setQuiet(true)
@@ -1011,6 +1292,124 @@ async function checkFullLoop() {
   return { run: finished, ssot }
 }
 
+async function checkWorkspaceLayer() {
+  process.stdout.write('\nWorkspace layer (Studio read side)\n')
+
+  // Every path is resolved inside the repository, or refused before any IO.
+  check('an absolute path is refused', workspace.normalizeRelative('D:/Windows/win.ini').ok === false)
+  check('a parent traversal is refused', workspace.normalizeRelative('../../etc/passwd').ok === false)
+  check('a nested traversal is refused', workspace.normalizeRelative('BUSINESS/../../secret.txt').ok === false)
+  check('a normal path is accepted', workspace.normalizeRelative('BUSINESS/GENERAL').ok === true)
+  check('the root is accepted', workspace.normalizeRelative('').ok === true)
+
+  const top = workspace.listDirectory('')
+  check('the repository root lists entries', top.ok && top.entries.length > 5, top.reason)
+  const topNames = top.entries.map((entry) => entry.name)
+  check('the root lists BUSINESS and PERSONAL', topNames.indexOf('BUSINESS') !== -1 && topNames.indexOf('PERSONAL') !== -1, topNames.slice(0, 8).join(','))
+  check('the root hides the git folder', topNames.indexOf('.git') === -1)
+  check('directories sort before files', top.entries[0].type === 'dir', top.entries[0] && top.entries[0].type)
+
+  const business = workspace.listDirectory('BUSINESS')
+  check('BUSINESS lists its taxonomy folders', business.ok && business.entries.some((entry) => entry.name === 'GENERAL'), business.reason)
+  const missingFolder = workspace.listDirectory('DOES-NOT-EXIST')
+  check('a missing folder is reported, not thrown', missingFolder.ok === false && /does not exist/.test(missingFolder.reason), missingFolder.reason)
+
+  const pkg = workspace.readTextFile('package.json')
+  check('a text file is read', pkg.ok && pkg.text.indexOf('"scripts"') !== -1, pkg.reason)
+  check('the read reports bytes and lines', pkg.ok && pkg.bytes > 0 && pkg.lines > 1)
+  check('a directory is refused as a file', workspace.readTextFile('BUSINESS').ok === false)
+  check('a missing file is reported, not thrown', workspace.readTextFile('nope/nothing.js').ok === false)
+  check('an absolute file path is refused', workspace.readTextFile('C:/Windows/win.ini').ok === false)
+  check('the size cap is enforced', workspace.readTextFile('package.json', { maxBytes: 10 }).ok === false)
+
+  const binaryPath = 'BUSINESS/GENERAL/ai-automation/ai-chat-assistants/MeetingNotes/docs/screenshots/01-dashboard-desktop.png'
+  const binaryRead = workspace.readTextFile(binaryPath)
+  check('a binary file is refused with a reason', binaryRead.ok === false && (binaryRead.binary === true || /binary/i.test(binaryRead.reason)), binaryRead.reason)
+
+  const hits = workspace.searchText('toolRegistry', { path: 'DESKTOP-APPS' })
+  check('search finds a known symbol', hits.ok && hits.hits.length > 0, hits.reason)
+  check('search reports the file and line of a hit',
+    hits.ok && hits.hits.every((hit) => typeof hit.path === 'string' && hit.line > 0))
+  check('search refuses an empty query', workspace.searchText('').ok === false)
+  check('search refuses an overlong query', workspace.searchText('x'.repeat(500)).ok === false)
+  check('search stays inside the repository', workspace.searchText('x', { path: '../..' }).ok === false)
+
+  const registry = workspace.toolRegistry({ config: loadConfig() })
+  check('the registry lists tools', registry.ok && registry.total > 10, registry.total + ' tools')
+  check('every tool has a known status',
+    registry.tools.every((tool) => ['published', 'ready', 'documented', 'in-progress', 'draft'].indexOf(tool.status) !== -1))
+  check('every tool has a group and a trail', registry.tools.every((tool) => tool.group && typeof tool.trail === 'string'))
+  check('the registry groups include BUSINESS', registry.groups.some((group) => group.group === 'BUSINESS'),
+    registry.groups.map((group) => group.group).join(','))
+  check('the registry reads the publish ledger', registry.ledger.ok === true, registry.ledger.reason)
+  check('published never exceeds the tool count',
+    registry.tools.filter((tool) => tool.status === 'published').length <= registry.total)
+  check('every tool reports its package subjects',
+    registry.tools.every((tool) => Array.isArray(tool.package.present) && tool.package.total === 8))
+  check('the registry is read only', fs.existsSync(path.join(APP_ROOT, 'src', 'workspace.js')) &&
+    fs.readFileSync(path.join(APP_ROOT, 'src', 'workspace.js'), 'utf8').indexOf('writeFileSync') === -1)
+
+  // --- preview: /repo serves files to the iframe, and never the token file ---
+  const previewAsset = workspace.resolveRepoAsset('UNICON-TOOLS/ApplicationStoreItem/ApplicationStoreItem.html')
+  check('the preview resolver serves an html file', previewAsset.ok && previewAsset.contentType === 'text/html', previewAsset.reason)
+  check('the preview resolver refuses the token file',
+    workspace.resolveRepoAsset('DESKTOP-APPS/Html-Tool-Factory/html-tool-factory/config.local.json').ok === false)
+  check('the preview resolver refuses run folders',
+    workspace.resolveRepoAsset('DESKTOP-APPS/Html-Tool-Factory/html-tool-factory/runs/anything.json').ok === false)
+  check('the preview resolver refuses the git folder', workspace.resolveRepoAsset('.git/config').ok === false)
+  check('the preview resolver refuses a traversal',
+    workspace.resolveRepoAsset('../outside.html').ok === false)
+  check('the preview resolver refuses unknown types',
+    workspace.resolveRepoAsset('package-lock.yaml').ok === false || workspace.resolveRepoAsset('estate.exe').ok === false)
+  check('the text reader refuses the token file too',
+    workspace.readTextFile('DESKTOP-APPS/Html-Tool-Factory/html-tool-factory/config.local.json').ok === false)
+
+  // --- the SSOT task list is the backlog Studio shows ---
+  const sampleSsot = [
+    '<div class="task-item" data-task-id="T-01" data-group="HTF-1" data-task-status="done">',
+    '<summary><span class="task-id">T-01</span><span class="task-title">First thing</span>',
+    '<span class="task-priority status-mandatory">Mandatory</span></summary>',
+    '<div class="task-details"><p><strong>Points:</strong> 40 of 100.</p></div></div>',
+    '<div class="task-item" data-task-id="T-02" data-group="HTF-2" data-task-status="not-started">',
+    '<summary><span class="task-title">Second &amp; last</span></summary></div>'
+  ].join('\n')
+  const parsedTasks = workspace.parseSsotTasks(sampleSsot)
+  check('the task parser finds every task', parsedTasks.length === 2, String(parsedTasks.length))
+  check('the task parser reads the id, group and title',
+    parsedTasks[0].id === 'T-01' && parsedTasks[0].group === 'HTF-1' && parsedTasks[0].title === 'First thing')
+  check('the task parser reads points as number of target',
+    parsedTasks[0].points === 40 && parsedTasks[0].pointsOf === 100, JSON.stringify(parsedTasks[0]))
+  check('the task parser marks a done task', parsedTasks[0].done === true && parsedTasks[0].status === 'done')
+  check('the task parser decodes entities in a title', parsedTasks[1].title === 'Second & last', parsedTasks[1].title)
+  check('the task parser survives a file with no tasks', workspace.parseSsotTasks('<p>nothing</p>').length === 0)
+
+  const realTasks = workspace.readToolTasks('DESKTOP-APPS/Html-Tool-Factory/html-tool-factory')
+  check('the tool task reader parses a real SSOT', realTasks.ok && realTasks.tasks.length > 20, realTasks.reason || realTasks.tasks.length)
+  check('the tool task reader counts done and open', realTasks.ok &&
+    realTasks.counts.done > 0 && realTasks.counts.open > 0 &&
+    realTasks.counts.done + realTasks.counts.open + realTasks.counts.ignored === realTasks.counts.total,
+    JSON.stringify(realTasks.counts))
+  check('the tool task reader refuses a folder with no SSOT', workspace.readToolTasks('UNICON-TOOLS/tools-catalog').ok === false)
+  check('the tool task reader refuses the repository root', workspace.readToolTasks('').ok === false)
+
+  // --- serial first: the worker setting (D-HTF-52) ---
+  const serialConfig = loadConfig({ skipEnvironment: true })
+  check('Studio starts with exactly one build worker', serialConfig.studio && serialConfig.studio.workers === 1,
+    JSON.stringify(serialConfig.studio))
+  check('the worker count can never be zero or negative',
+    clampWorkers(0) === 1 && clampWorkers(-5) === 1 && clampWorkers('nonsense') === 1)
+  check('the worker count is capped', clampWorkers(99) === 8 && clampWorkers(4) === 4)
+  check('the studio setting is visible in the public config view',
+    publicConfigView(serialConfig).studio && publicConfigView(serialConfig).studio.workers === 1)
+  const previousWorkers = process.env.APP_FACTORY_STUDIO_WORKERS
+  process.env.APP_FACTORY_STUDIO_WORKERS = '99'
+  check('an environment override is clamped too', loadConfig().studio.workers === 8)
+  if (previousWorkers === undefined) delete process.env.APP_FACTORY_STUDIO_WORKERS
+  else process.env.APP_FACTORY_STUDIO_WORKERS = previousWorkers
+  check('the environment override is gone again',
+    loadConfig().studio.workers === 1)
+}
+
 async function main() {
   process.stdout.write('HTML Tool Factory self test\n')
   checkUnitBehaviour()
@@ -1020,6 +1419,8 @@ async function main() {
   await checkEditGates()
   await checkCostReporting()
   await checkModelResolution()
+  await checkReleaseReadLayer()
+  await checkWorkspaceLayer()
   const loopResult = await checkFullLoop()
 
   process.stdout.write('\n' + passed + ' checks passed, ' + failures.length + ' failed.\n')

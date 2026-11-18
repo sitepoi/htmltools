@@ -102,6 +102,13 @@ if (fs.existsSync(ssotPath)) {
   const pageBuild = (htmlText.match(/<meta name="app-build" content="([^"]+)">/) || [])[1]
   check('the dashboard page carries the same build stamp', pageBuild === APP_BUILD,
     'page ' + pageBuild + ' / code ' + APP_BUILD)
+  // Studio compares this with the server it talks to and warns when they differ,
+  // which is what turns a stale server into a visible message instead of a
+  // mystery "Not found" on every preview.
+  const studioText = fs.readFileSync(path.join(APP_ROOT, 'ui', 'studio', 'studio.js'), 'utf8')
+  const studioBuild = (studioText.match(/var STUDIO_BUILD = '([^']+)'/) || [])[1]
+  check('the Studio page carries the same build stamp', studioBuild === APP_BUILD,
+    'studio ' + studioBuild + ' / code ' + APP_BUILD)
 } else {
   check('the application SSOT exists', false, ssotPath)
 }
@@ -190,6 +197,39 @@ function checkDashboardRenderers() {
 }
 
 checkDashboardRenderers()
+
+// ---------------------------------------------------------------- release layer
+// The store map is data the engine trusts, so it is validated here too. A broken
+// map must fail the build instead of waiting until someone publishes.
+const { loadStoreMap, summary } = require('../src/cms/storeMap')
+const storeMapPath = path.resolve(APP_ROOT, '..', '..', '..', 'UNICON-TOOLS', 'tools-catalog', 'store-map.json')
+const storeMapResult = loadStoreMap(storeMapPath)
+check('the store map exists and validates', storeMapResult.ok === true,
+  JSON.stringify(storeMapResult.problems || []).slice(0, 200))
+const storeMapTargets = summary(storeMapResult.map)
+check('every store map target names the question that answers it',
+  storeMapTargets.every((target) => Boolean(target.questionRef)),
+  JSON.stringify(storeMapTargets.filter((target) => !target.questionRef).map((target) => target.id)))
+
+// A credential must never be committed. The check looks for the shapes a key
+// takes rather than for a known value, so a pasted key fails the build.
+const secretPatterns = [
+  { pattern: /\bsk-[A-Za-z0-9]{20,}\b/, label: 'an API key literal (sk-...)' },
+  { pattern: /\bx-api-key['"]?\s*:\s*['"][A-Za-z0-9_-]{12,}['"]/i, label: 'a hardcoded x-api-key value' },
+  { pattern: /\/api\/object\/[A-Za-z0-9_-]{16,}\//, label: 'a token in a request path' }
+]
+const sourceFiles = allFiles.filter((file) => {
+  const relative = path.relative(APP_ROOT, file).replace(/\\/g, '/')
+  return /^(src|ui)\//.test(relative) && /\.(js|cjs|html|css|json)$/.test(relative)
+})
+const secretHits = []
+sourceFiles.forEach((file) => {
+  const text = fs.readFileSync(file, 'utf8')
+  secretPatterns.forEach(({ pattern, label }) => {
+    if (pattern.test(text)) secretHits.push(path.relative(APP_ROOT, file) + ': ' + label)
+  })
+})
+check('no credential literal is committed in src or ui', secretHits.length === 0, secretHits.join(' | '))
 
 process.stdout.write('\n' + passed + ' checks passed, ' + failures.length + ' failed.\n')
 if (failures.length) {

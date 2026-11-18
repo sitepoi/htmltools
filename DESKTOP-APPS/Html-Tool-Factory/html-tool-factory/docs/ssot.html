@@ -57,19 +57,23 @@
   <div id="view-document" class="view">
   <h1>HTML Tool Factory</h1>
   <p class="meta">
-    SINGLE SOURCE OF TRUTH for the factory: the autonomous builder that turns one
-    idea from the idea catalog into a finished html tool in the repository
-    taxonomy. Every decision about the factory is logged in section 11 and this
+    SINGLE SOURCE OF TRUTH for the factory: the build and release management
+    platform for html tools, the applications they belong to, and every document
+    published with them. The factory turns one idea from the idea catalog into a
+    finished html tool in the repository taxonomy, publishes the tool and its
+    documents to the application store, and verifies what the store actually
+    holds. Every decision about the factory is logged in section 11 and this
     document is updated in the same change as the code. When this document and
     the code disagree, this document is the tiebreaker.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.12.2</td></tr>
-    <tr><th>Last updated</th><td>2026-10-29</td></tr>
+    <tr><th>Document version</th><td>0.13.5</td></tr>
+    <tr><th>Last updated</th><td>2026-11-17</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The factory application in <code>DESKTOP-APPS/Html-Tool-Factory/html-tool-factory</code></td></tr>
-    <tr><th>Primary code areas</th><td><code>src/pipeline.js</code>, <code>src/stages/*.js</code>, <code>src/tool/*.js</code>, <code>src/ssot/*.js</code>, <code>src/knowledge/contextPack.js</code>, <code>src/ai/prompts.js</code>, <code>ui/</code></td></tr>
-    <tr><th>Explicitly out of scope</th><td>Documentation of the generated tools (each tool has its own SSOT), the repository release scripts, and the CMS publishing flow.</td></tr>
+    <tr><th>Primary code areas</th><td><code>src/pipeline.js</code>, <code>src/stages/*.js</code>, <code>src/tool/*.js</code>, <code>src/ssot/*.js</code>, <code>src/knowledge/contextPack.js</code>, <code>src/ai/prompts.js</code>, <code>ui/</code>; planned: <code>src/publish/*.js</code>, <code>src/cms/*.js</code></td></tr>
+    <tr><th>Direction change</th><td>2026-11-17 - the factory is no longer only a builder. It becomes the build AND release management platform for html tools, applications and their published documents. The direction is recorded in D-HTF-37 to D-HTF-48, RM-01 to RM-16, task groups HTF-11 and HTF-12, and the blocking answers in section 14. No code shipped with this change.</td></tr>
+    <tr><th>Explicitly out of scope</th><td>Documentation of the generated tools (each tool has its own SSOT), the repository release scripts (<code>npm run rel</code>), and the packaging step (<code>npm run ship:cms</code>). The factory consumes that bundle; it does not replace it.</td></tr>
   </table>
 
   <div class="summary-grid">
@@ -108,6 +112,15 @@
   <p class="ok"><strong>Core guarantee.</strong> A tool folder that the factory
   writes is always a valid three file html tool that opens and works, and a run
   never reports "finished" while work is still open.</p>
+  <p class="note"><strong>Release guarantee (direction change 2026-11-17).</strong>
+  A tool that the factory reports as published is readable in the application
+  store with the same build and the same per file stamps that the repository
+  holds at that moment. Publishing never reports success from the request
+  result alone: it re-reads the record and compares stamps. A missing setting,
+  id, type, folder or field stops the action with a named reason before
+  anything is written, so there is no silent no-op anywhere in the release
+  path. The same engine runs from the dashboard and from the repository
+  command line, and the catalog only reads its results.</p>
 
   <h2 id="sec-files">2. Related files</h2>
   <table>
@@ -126,6 +139,14 @@
     <tr><td><code>src/server.js</code></td><td>HTTP API and static dashboard</td><td>Run routes and the settings routes</td></tr>
     <tr><td><code>ui/app.js</code></td><td>Dashboard</td><td>Timeline, tasks, actions</td></tr>
     <tr><td><code>test/run-selftest.cjs</code>, <code>test/check-sources.cjs</code></td><td>Verification</td><td>Whole files</td></tr>
+    <tr><td><code>src/toolRoots.js</code></td><td>Every folder that may contain tools (the repository taxonomy plus external roots)</td><td>Whole file (planned, T-25)</td></tr>
+    <tr><td><code>src/cms/storeClient.js</code></td><td>Application store read and write client, credential handling, retries, size guard</td><td>Whole file (planned, T-26, T-31, T-33)</td></tr>
+    <tr><td><code>src/cms/storeMap.js</code></td><td>Type ids, field ids, folder ids and slug rules for every publish target, loaded from data</td><td>Whole file (planned, T-27)</td></tr>
+    <tr><td><code>src/publish/toolPayload.js</code></td><td>Build stamp sync and the html tool payload</td><td>Whole file (planned, T-29)</td></tr>
+    <tr><td><code>src/publish/docsPayload.js</code></td><td>One payload per document type, with a content signature</td><td>Whole file (planned, T-34)</td></tr>
+    <tr><td><code>src/publish/ledger.js</code></td><td>Release ledger: target, id, build, stamps, signatures, result per action</td><td>Whole file (planned, T-28)</td></tr>
+    <tr><td><code>src/publish/verify.js</code></td><td>Dry run plan and read-back verification</td><td>Whole file (planned, T-30)</td></tr>
+    <tr><td><code>scripts/publish-cli.js</code> (repository root)</td><td>Command line entry used by VS Code and by the factory</td><td>Whole file (planned, T-32)</td></tr>
   </table>
 
   <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
@@ -168,6 +189,34 @@
     <tr><td>C-35</td><td>The restart dialog shows the run id with a copy button and the tool path as clickable segments, each one opening that folder in the file manager; the confirmation is the last six characters</td><td><code>src/server.js</code>, <code>ui/app.js</code>, <code>ui/index.html</code></td><td>0.12.0</td></tr>
     <tr><td>C-36</td><td>The model actually used is never hidden: the provider chip, the AI log lines, the run start and Settings all name the endpoint default and the per stage overrides</td><td><code>src/config.js</code>, <code>src/ai/client.js</code>, <code>src/pipeline.js</code>, <code>ui/app.js</code></td><td>0.12.1</td></tr>
     <tr><td>C-37</td><td>A build stamp travels from the server to the page, and the dashboard says "Reload needed" when the open page or the running server is older than the other</td><td><code>src/config.js</code>, <code>src/server.js</code>, <code>ui/index.html</code>, <code>ui/app.js</code></td><td>0.12.2</td></tr>
+    <tr><td>C-38</td><td>Tool roots as configuration: every tool folder under every root is discovered read only with its slug, build stamp, per file stamps, harness, document set, screenshots and package completeness</td><td><code>src/toolRoots.js</code>, <code>src/config.js</code></td><td>0.13.0</td></tr>
+    <tr><td>C-39</td><td>Application store read client with both auth forms, redaction everywhere, bounded retries, normalisation of every list and detail shape, and a field map per record</td><td><code>src/cms/storeClient.js</code></td><td>0.13.0</td></tr>
+    <tr><td>C-40</td><td>Store map as data with a validator: a target is usable only when it is filled and confirmed, and a blocked target names the row, the missing values and the question</td><td><code>src/cms/storeMap.js</code>, <code>UNICON-TOOLS/tools-catalog/store-map.json</code></td><td>0.13.0</td></tr>
+    <tr><td>C-41</td><td>A separate read key and write key, resolved from a secrets file outside this repository (environment first), with only masked fingerprints leaving the module</td><td><code>src/cms/secrets.js</code>, <code>src/cms/storeClient.js</code>, <code>src/config.js</code></td><td>0.13.1</td></tr>
+    <tr><td>C-42</td><td>The five document targets are filled from a working CMS editor and writable: type, dcb field, folder typeId, slug rule and payload shape are data in the store map</td><td><code>UNICON-TOOLS/tools-catalog/store-map.json</code></td><td>0.13.1</td></tr>
+  </table>
+
+  <h3>3.2 Planned capability set - management platform (HTF-11 and HTF-12)</h3>
+  <p>Nothing in this table exists yet. It is the agreed scope of the direction
+  change recorded on 2026-11-17, kept next to the shipped capabilities so the
+  gap is visible in one place. A row moves into 3.1 only when its task is done,
+  tested and reflected in a release log row.</p>
+  <table>
+    <tr><th>ID</th><th>Planned capability</th><th>Owner tasks</th><th>State</th></tr>
+    <tr><td>P-01</td><td>Tool roots: the repository taxonomy plus any number of external tool folders, discovered and listed with their build stamps</td><td>T-25</td><td>shipped (registry); dashboard list in T-37</td></tr>
+    <tr><td>P-02</td><td>Application store read client: tools, applications, and the field map that describes both</td><td>T-26</td><td>shipped (reads)</td></tr>
+    <tr><td>P-03</td><td>Store map as data: cmsObjectType, field id, folder (typeId) and slug rule per publish target, validated before use</td><td>T-27</td><td>shipped (mechanism); values blocked pending section 14</td></tr>
+    <tr><td>P-04</td><td>Release ledger: one row per publish target with id, build, stamps, signature, result and timestamp</td><td>T-28</td><td>planned</td></tr>
+    <tr><td>P-05</td><td>Publish a tool: create a new store record or update an existing one, with the build stamp bumped and only the changed file stamps moved</td><td>T-29, T-31</td><td>planned</td></tr>
+    <tr><td>P-06</td><td>Enable and disable a tool or application in the store from the factory</td><td>T-31, T-36</td><td>planned</td></tr>
+    <tr><td>P-07</td><td>Dry run first: every target, action, size and diff listed before anything is written</td><td>T-30</td><td>planned</td></tr>
+    <tr><td>P-08</td><td>Read-back verification: published means the re-read record matches the intended build and stamps</td><td>T-30</td><td>planned</td></tr>
+    <tr><td>P-09</td><td>Documents: one object per document type, published only when its content signature changed, never inside the tool record</td><td>T-34</td><td>planned</td></tr>
+    <tr><td>P-10</td><td>Screenshots and social kit targets, as URLs or media upload depending on the confirmed answer</td><td>T-35</td><td>planned</td></tr>
+    <tr><td>P-11</td><td>One command line entry, so VS Code and the factory run the same engine</td><td>T-32</td><td>planned</td></tr>
+    <tr><td>P-12</td><td>Dashboard: a Tools tab (registry, build, store state, drift, document progress) and a Publish dialog (dry run, confirm, progress, result)</td><td>T-37, T-38</td><td>planned</td></tr>
+    <tr><td>P-13</td><td>Settings: credential, base URL, tool roots, default enabled state, all masked and validated</td><td>T-39</td><td>planned</td></tr>
+    <tr><td>P-14</td><td>Selftest and source checks for every new module, against a mocked store</td><td>T-40</td><td>planned</td></tr>
   </table>
 
   <h2 id="sec-glossary">4. Glossary</h2>
@@ -181,6 +230,19 @@
     <tr><td>Depth checklist</td><td>The ten capability items a tool must have before a run may report finished.</td></tr>
     <tr><td>Lesson</td><td>One recorded failure reason in <code>knowledge/lessons.json</code>, injected into later prompts.</td></tr>
     <tr><td>AF region</td><td>A marked part of a generated tool SSOT (<code>AF:TASKS</code>, <code>AF:IDEAS</code>, <code>AF:CHECK</code>, <code>AF:BUILD</code>) that the factory owns.</td></tr>
+    <tr><td>Application store</td><td>The platform CMS deployment at <code>applicationstore.uniconhub.com</code> that holds the published applications, the published html tools and their documents.</td></tr>
+    <tr><td>Store tool record</td><td>One object of <code>cmsObjectType</code> <code>tools-applicationstore</code>. Its field values live in <code>productData.data_categoriesBased</code>, and the tool definition itself is the nested object <code>html_tool_definition</code>.</td></tr>
+    <tr><td>Store application record</td><td>One object of <code>cmsObjectType</code> <code>applications-applicationstore</code>. It carries <code>appName</code>, <code>developer</code>, <code>appCategory</code> and <code>applicationVersions[]</code>.</td></tr>
+    <tr><td>draft (nested key)</td><td><code>html_tool_definition.draft</code> is the key that holds the tool definition (name, description, category, icon, tags, the three code blocks, params, schema). It is a container, not a "not published yet" status. Publishing state is the enabled switch, not this key.</td></tr>
+    <tr><td>Enabled switch</td><td>The field that decides whether a stored tool or application is usable. For applications it is <code>applicationVersions[i].isEnabled</code> (<code>'no'</code> disables). For tools the exact field must be confirmed (section 14, Q-13).</td></tr>
+    <tr><td>cmsObjectType</td><td>The type id of a CMS object, for example <code>tools-applicationstore</code>. A type ending in <code>-applicationstore</code> is routed to the store deployment; one ending in <code>-uniconbaseapps</code> is a platform helper type in the current tenant.</td></tr>
+    <tr><td>Folder / typeId</td><td>The folder object that contains created records. The create call needs the folder id so a tool or a document lands next to its peers instead of in an unlisted default folder.</td></tr>
+    <tr><td>Publish target</td><td>One destination of a release: the tool record, or one document object of a named type. Each target has its own object type, field id, folder id, slug and result in the release ledger.</td></tr>
+    <tr><td>Document object</td><td>A separate CMS object that holds one published document (webpage, help, presentation, updates, social), kept outside the tool record because of the 1 MB object limit.</td></tr>
+    <tr><td>Release ledger</td><td><code>UNICON-TOOLS/tools-catalog/tool-publish-state.json</code> extended with store ids, builds, stamps, document targets, signatures and timestamps. It is the only record of what was published and when.</td></tr>
+    <tr><td>Repo tool slug</td><td>A stable key that ties a store record to a repository tool folder (planned field <code>repoToolSlug</code>). Names and titles may change; this key may not.</td></tr>
+    <tr><td>Package completeness</td><td>How many of the eight release subjects exist in the repository (code, harness, screenshots, webpage, help, presentation, updates, social). It is a repository fact, not proof of publication.</td></tr>
+    <tr><td>First party development key</td><td>A CMS credential created for first party development, usable for reads and writes through the store API. It replaces the tenant token that today sits in the request URL.</td></tr>
   </table>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
@@ -215,6 +277,27 @@
     <li>No decision blocks the operator from raising the budget in <code>config.local.json</code>.</li>
   </ol>
 
+  <h3>6.2 Management platform requirements (direction change 2026-11-17)</h3>
+  <table>
+    <tr><th>ID</th><th>Requirement</th></tr>
+    <tr><td>RM-01</td><td>The factory builds and releases from one place: build a tool, publish the tool, publish its documents, verify the result and read the release state, all from the dashboard or one command.</td></tr>
+    <tr><td>RM-02</td><td>One engine, two doors: the dashboard and the repository command line call the same modules. No second publishing implementation.</td></tr>
+    <tr><td>RM-03</td><td>Tool roots are configurable: the repository taxonomy plus any number of external folders that contain tools or applications. A root may be read only.</td></tr>
+    <tr><td>RM-04</td><td>The store is reached only from the Node process, with a credential from the environment or the gitignored local config. No credential in the repository, in the dashboard, in a tool parameter or in a log line.</td></tr>
+    <tr><td>RM-05</td><td>Every write is an upsert keyed by a stable repository slug. The first publish creates the record and stores its object id; every later publish updates that id.</td></tr>
+    <tr><td>RM-06</td><td>Nothing is written when a required setting, id, type, folder, field or slug is missing. The action stops with the missing value named, and with the question id that has to be answered first.</td></tr>
+    <tr><td>RM-07</td><td>Enable and disable is the publish switch. The factory can read and change it for a tool and for an application version without opening the CMS.</td></tr>
+    <tr><td>RM-08</td><td>Documents are published one object per document type, never inside the tool record, and only when their content signature changed.</td></tr>
+    <tr><td>RM-09</td><td>Every action writes the release ledger: target, object type, object id, build, stamps, signature, result and timestamp. A partial release is a first class state and can be resumed.</td></tr>
+    <tr><td>RM-10</td><td>Publish is a dry run first. The operator sees every target, the action, the size and the diff before writing, and confirms the list.</td></tr>
+    <tr><td>RM-11</td><td>A new tool and an existing tool follow the same path. Creating and updating differ only in which object id the plan carries.</td></tr>
+    <tr><td>RM-12</td><td>The folder and type catalogue (cmsObjectType, folder ids, slugs, field ids) is data that the catalogues own and the engine reads. No id is hardcoded in <code>src</code>.</td></tr>
+    <tr><td>RM-13</td><td>Verification is read-back. A publish is successful only when the re-read record matches the intended build and stamps.</td></tr>
+    <tr><td>RM-14</td><td>The client supports the header credential and the legacy URL token, so the token can be removed from URLs without a second code path.</td></tr>
+    <tr><td>RM-15</td><td>The factory never publishes a document whose build and content do not belong to the tool build it ships in the same release.</td></tr>
+    <tr><td>RM-16</td><td>Every publish action appears in the run log and in the release ledger, with the model and the operator decision that caused it.</td></tr>
+  </table>
+
   <h2 id="sec-options">7. Option evaluation and decision</h2>
   <table>
     <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
@@ -223,6 +306,18 @@
     <tr><td><strong>C. Point scored batching</strong></td><td>Score each task 5 to 100, pack to a 100 point target</td><td>Yes: balances load and call count</td><td>Medium: scoring module, batch prompt, atomic batch apply</td><td class="status-adopted">ADOPTED (D-HTF-14)</td></tr>
   </table>
   <p><strong>Decision: option C.</strong> The score is deterministic (kind, files, acceptance lines, wording, checklist link) and may be refined by the planner inside 5 to 100.</p>
+
+  <h3>7.2 Where the release management lives</h3>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Works?</th><th>Verdict</th></tr>
+    <tr><td><strong>A. The catalog page publishes</strong></td><td>The tools catalog reads files, builds payloads and calls the store from the browser</td><td>No: no filesystem, no credential, cross origin</td><td class="status-rejected">REJECTED (D-HTF-38)</td></tr>
+    <tr><td><strong>B. A CMS html tool publishes</strong></td><td>A tool inside the CMS reads the store and writes the records</td><td>Partly: sees the store, cannot see the repository files or stamps</td><td class="status-rejected">REJECTED for release, kept for manual repair</td></tr>
+    <tr><td><strong>C. Factory only, monolithic</strong></td><td>Publishing code lives inside the dashboard server only</td><td>Partly: no use from VS Code, duplicates the logic later</td><td class="status-rejected">REJECTED (D-HTF-38)</td></tr>
+    <tr><td><strong>D. Shared engine plus operator surfaces</strong></td><td><code>src/publish</code> and <code>src/cms</code> are the only implementation; the dashboard and the command line both call them; the catalog only reads the ledger</td><td>Yes: filesystem and credential in one process, one code path, one ledger</td><td class="status-adopted">ADOPTED (D-HTF-37, D-HTF-38)</td></tr>
+  </table>
+  <p><strong>Decision: option D.</strong> The factory is the operator surface because it is
+already a Node service with repository access, a dashboard and a run log. The
+publishing engine lives in the repository so the same code runs from VS Code.</p>
 
   <h2 id="sec-design">8. Solution design</h2>
   <h3>8.1 Core invariant</h3>
@@ -261,6 +356,163 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     <tr><td><code>src/ssot/standardDocs.js</code></td><td>Render points in the generated SSOT task items and group headers.</td></tr>
   </table>
 
+  <h3>8.5 Tool roots and the registry</h3>
+  <p>The factory stops assuming one repository. A configuration array names every
+  folder that may contain tools:</p>
+  <pre>
+"toolRoots": [
+  { "label": "repo", "root": "", "taxonomyFile": "UNICON-TOOLS/tools-catalog/folder-hierarchy-import.json", "writable": true },
+  { "label": "external", "root": "D:/PROJECTS/EXTERNAL-TOOLS", "taxonomyFile": "", "writable": false }
+]
+  </pre>
+  <ul>
+    <li>A folder is a tool when it contains an <code>app</code> directory with a matching html, css and js file; <code>listing</code> and <code>reporting</code> parts are accepted like the repository already does.</li>
+    <li>A registry entry carries: <code>slug</code> (folder name, the stable store key), <code>root</code>, <code>path</code>, <code>parts</code>, code files, document files, harness, screenshot count, <code>toolBuild</code>, per file <code>stamps</code>, <code>modifiedAt</code>, optional <code>ideaCode</code> and the store object id from the ledger.</li>
+    <li>An external root is read only unless it is marked writable. Discovery never writes anything.</li>
+    <li>The registry is rebuilt on start and on demand; the dashboard shows every root and every tool with its build stamp.</li>
+  </ul>
+
+  <h3>8.6 Store map - ids are data, not code</h3>
+  <p>Every id the engine needs lives in one versioned file,
+  <code>UNICON-TOOLS/tools-catalog/store-map.json</code>, so the catalogs stay the
+  source of truth for the folder tree and the factory never guesses.</p>
+  <pre>
+{
+  "meta": { "schema": "uniconhub-store-map", "version": "0.0.0" },
+  "targets": [
+    { "id": "tool", "kind": "tool",
+      "cmsObjectType": "", "fieldPath": "productData.data_categoriesBased.html_tool_definition",
+      "folderId": "", "slugRule": "repoToolSlug", "enabledField": "",
+      "questionRef": "Q-07, Q-08, Q-09, Q-13" },
+    { "id": "doc-webpage", "kind": "document",
+      "cmsObjectType": "", "fieldPath": "", "folderId": "",
+      "slugRule": "<toolSlug>-webpage", "questionRef": "Q-07, Q-08, Q-09, Q-11" }
+  ]
+}
+  </pre>
+  <ul>
+    <li>An entry is complete only when every field the plan uses is filled. An incomplete entry stops the publish before any write and names the entry id and the question id that answers it.</li>
+    <li>The folder may be given as <code>folderId</code> or as a taxonomy <code>folderCode</code> that the catalog resolves; a code that does not resolve is an error, never a default folder.</li>
+    <li>No <code>cmsObjectType</code>, field id, folder id or slug literal appears in <code>src</code>.</li>
+  </ul>
+
+  <h3>8.7 Publish pipeline - deterministic order</h3>
+  <table>
+    <tr><th>Step</th><th>What happens</th><th>Writes?</th></tr>
+    <tr><td>1. Collect</td><td>Registry entry, repository stamps, document files, store map rows, ledger row</td><td>No</td></tr>
+    <tr><td>2. Compare</td><td>Repository build and stamps against the ledger and, when available, the store record</td><td>No</td></tr>
+    <tr><td>3. Plan</td><td>One row per target: action create, update, enable, disable or skip, with size and diff</td><td>No</td></tr>
+    <tr><td>4. Confirm</td><td>Operator confirms the plan in the dashboard, or passes <code>--yes</code> on the command line</td><td>No</td></tr>
+    <tr><td>5. Bump</td><td>One <code>TOOL_BUILD</code> for the release; only the stamps of files whose content changed move</td><td>Yes, tool files</td></tr>
+    <tr><td>6. Publish tool</td><td>Create when the ledger has no object id, update that id afterwards, then set the enabled switch</td><td>Yes, store</td></tr>
+    <tr><td>7. Read back</td><td>Re-read the record by id and compare name, build, stamps and enabled state</td><td>No</td></tr>
+    <tr><td>8. Publish documents</td><td>Only the documents whose content signature changed, one object per document type, in the order webpage, help, presentation, updates, social</td><td>Yes, store</td></tr>
+    <tr><td>9. Verify</td><td>Read back every written target; any mismatch marks the release failed</td><td>No</td></tr>
+    <tr><td>10. Ledger</td><td>Write the result of every target, including the skipped ones and their reason</td><td>Yes, ledger</td></tr>
+  </table>
+  <ul>
+    <li>A publish is idempotent: the same tool published twice writes once and the second run reports <code>skipped</code> with the reason "no change".</li>
+    <li>The tool is published before its documents, so a document failure never leaves a document pointing at a build the store does not have.</li>
+    <li>The size guard refuses a payload above 900 KB before the request, and names the target and the measured size. Documents are never inlined into the tool record.</li>
+  </ul>
+
+  <h3>8.8 Store client and credentials</h3>
+  <ul>
+    <li>Node only, no new dependency. Two auth modes in one client: a credential header (preferred) and the legacy token in the URL, so the URL form can be retired without a second code path.</li>
+    <li>Resolution order: environment variable, then gitignored <code>config.local.json</code>, then blocked with <code>MISSING_CREDENTIAL</code>. The value is never written to a run folder, a log line or the dashboard.</li>
+    <li>Settings shows only a masked fingerprint (last four characters and length). The server never returns the value.</li>
+    <li>Retries are bounded and only for transport errors and 429; a 4xx body is surfaced verbatim because it usually names the wrong type or field.</li>
+  </ul>
+
+  <h3>8.9 Document publishing</h3>
+  <ul>
+    <li>One target per document, each with its own object type, field, folder and slug. A document is published only when the hash of its content differs from the ledger signature.</li>
+    <li>The slug rule is stable (<code>&lt;toolSlug&gt;-webpage</code> and so on) so a re-publish updates the same object instead of creating a second one.</li>
+    <li>A document is never embedded in the tool record; that is what keeps the tool object under the 1 MB limit.</li>
+    <li>Document content is generated by the existing repository generators on request. The publisher ships what exists; it never invents document content.</li>
+  </ul>
+
+  <h3>8.10 Verification and the release ledger</h3>
+  <p>Success is not the HTTP status. A target is <code>published</code> only after a
+  read-back matches the intended state. The ledger row per target:</p>
+  <pre>
+"<ToolName>": {
+  "store": { "objectId": "", "build": "", "stamps": { "html": "", "css": "", "js": "" },
+             "enabled": null, "publishedAt": "", "verifiedAt": "", "lastWriter": "factory" },
+  "documents": { "webpage": { "objectType": "", "objectId": "", "signature": "", "publishedAt": "" } },
+  "targets": { "tool": { "status": "planned|blocked|published|failed|skipped|outdated", "reason": "" } }
+}
+  </pre>
+  <ul>
+    <li><code>release:status</code> prints one line per tool: build, store build, drift parts, documents current or stale, last publish.</li>
+    <li>A target that was blocked keeps its block reason, so a later run shows what is still unanswered.</li>
+  </ul>
+
+  <h3>8.11 No silent no-op policy</h3>
+  <p>Every publish action ends in exactly one of three outcomes, and the
+  dashboard shows which:</p>
+  <table>
+    <tr><th>Outcome</th><th>Meaning</th><th>Evidence</th></tr>
+    <tr><td><code>done</code></td><td>The write happened and the read-back matches</td><td>object id, build, stamps, timestamp</td></tr>
+    <tr><td><code>blocked</code></td><td>Nothing was written because a value is missing</td><td>the missing value, the store map entry and the question id</td></tr>
+    <tr><td><code>failed</code></td><td>The request was made and refused or the read-back differs</td><td>HTTP status, response body, both sides of the comparison</td></tr>
+  </table>
+  <p>A request that returns success but does not change the record is a
+  <code>failed</code> target, never a <code>done</code> one.</p>
+
+  <h3>8.12 Studio - the local repository workspace</h3>
+  <p>Goal: the web interface becomes the development and deployment surface for every
+  tool in the repository, so VS Code is no longer required for routine work. The
+  binding constraint comes first:</p>
+  <ul>
+    <li>A page inside the CMS is a sandboxed iframe. It may use the object API and the
+    fetch relay only; it can never read <code>D:\...</code>. The dashboard at
+    <code>127.0.0.1</code> is a local process running as the user, so it can. Studio is
+    therefore a <b>local</b> surface: same server, second page at <code>/studio/</code>.</li>
+    <li>One repository read module, <code>src/workspace.js</code>, and it is read only:
+    every path resolves inside the repository root or is refused before any IO, listings
+    stop at 500 entries, a read stops at 1 MB, a search stops at 200 hits over 3000 files.
+    Writes never live here.</li>
+    <li>The tool registry is derived, never typed twice: <code>toolRoots.listTools</code>
+    gives the folders and build stamps, the catalog bundle gives the publish ledger.
+    One label per tool - <code>draft</code>, <code>in-progress</code>,
+    <code>documented</code> (7 of 8 subjects), <code>ready</code> (8 of 8 local),
+    <code>published</code> (the ledger says so).</li>
+    <li>Read routes: <code>GET /api/workspace/tree</code>,
+    <code>/file</code>, <code>/search</code>, <code>/tools</code>, <code>/tasks</code>.
+    They are the same data the future write routes will guard.</li>
+    <li><b>Preview first.</b> <code>/repo/&lt;path&gt;</code> serves a repository file to
+    the preview iframe with its real content type, so a document renders with its own CSS,
+    JS and images. Every <code>.html</code> opens in the preview by default, including
+    <code>ssot.html</code> and <code>test-harness.html</code>; code is one click away. The
+    route is jailed like every other one and additionally refuses
+    <code>config.local.json</code>, <code>.env*</code>, <code>.git</code>,
+    <code>node_modules</code>, <code>runs</code>, <code>selftest-output</code> and
+    <code>.vscode</code>; the text reader refuses the same names, so a script inside a
+    preview cannot read them either.</li>
+    <li><b>Tasks means the tool SSOT.</b> The backlog Studio shows is section 15 of the
+    tool's own <code>docs/ssot.html</code>, parsed tolerantly (id, group, title, status,
+    points, priority) and filtered by state. It is not a shell: Studio reads the list, the
+    SSOT stays the place where it is edited.</li>
+    <li>There is no code editor. The AI writes code; Studio shows it, previews it, tests
+    it and approves the diffs. The write rule for later phases: every change is a
+    proposal (path + diff + backup) confirmed in the UI and applied by the server, with a
+    read-back.</li>
+    <li><b>Serial first.</b> <code>studio.workers</code> defaults to <code>1</code>, is
+    clamped to 1..8 and can never be <code>0</code> (D-HTF-52). The queue executor in P4
+    starts one tool at a time; parallel work is a later, deliberate change made with the
+    option table in <code>docs/STUDIO-DESIGN.md</code> section 6, not a default.</li>
+  </ul>
+  <table>
+    <tr><th>Phase</th><th>Surface</th><th>Acceptance</th></tr>
+    <tr><td>P0 (done)</td><td>Read: tree, file, search, tool registry</td><td>Self test proves the path jail, the caps and the registry join</td></tr>
+    <tr><td>P1 (done)</td><td>Preview-first viewer (html, images, pdf, md), tool-first tree styling, the SSOT task list per tool</td><td>The preview serves the real file with relative assets, the token file is 403, and the task parser is proven on fixtures and on a real SSOT</td></tr>
+    <tr><td>P2</td><td>AI chat per tool with diff proposals (the first thing to replace VS Code with)</td><td>A proposal is refused on a stale hash; a confirmed write leaves a backup and a read-back</td></tr>
+    <tr><td>P3</td><td>Test: run the tool harness and per tool checks</td><td>A failing harness is a visible failure, never a silent pass</td></tr>
+    <tr><td>P4</td><td>Queue: the application tool selection runs as parallel workers</td><td>One worker per tool folder, failure isolated to its tool</td></tr>
+    <tr><td>P5</td><td>Deploy: the release engine publishes and reads back</td><td>Nothing is reported published without a matching read-back</td></tr>
+  </table>
+
   <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
   <table>
     <tr><th>Scenario</th><th>Outcome</th></tr>
@@ -272,6 +524,17 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     <tr><td>Operator presses Continue</td><td>Parked tasks reopened, budget extended by 5, cost meter reset only after a budget stop</td></tr>
     <tr><td>Operator confirms Restart</td><td>Only that run's tool folder and backups deleted, run reset to stage 1</td></tr>
     <tr><td>Restart asked for a folder the run does not own</td><td>Deletion refused, nothing removed</td></tr>
+    <tr><td>Publish started without a credential</td><td><code>blocked</code> before any request, reason <code>MISSING_CREDENTIAL</code> naming the setting</td></tr>
+    <tr><td>A store map entry is incomplete</td><td><code>blocked</code>, naming the entry id and the section 14 question that answers it</td></tr>
+    <tr><td>The repository tool has no <code>TOOL_BUILD</code></td><td><code>blocked</code>, naming the file and the build stamp rule</td></tr>
+    <tr><td>Create is refused by the store</td><td><code>failed</code> with the exact status and body; nothing is adopted into the ledger</td></tr>
+    <tr><td>A record with the same slug exists but the ledger has no id for it</td><td>Create refused, the found object id is shown, adoption needs an explicit confirmation</td></tr>
+    <tr><td>The store record changed since the ledger signature</td><td>Update refused, both signatures shown, nothing overwritten</td></tr>
+    <tr><td>A payload exceeds the size guard</td><td>Publish refused, target and measured size named</td></tr>
+    <tr><td>The tool published and one document failed</td><td>Tool stays published, that document target is <code>failed</code>, the retry resumes from it</td></tr>
+    <tr><td>Read-back does not match the intended build or stamps</td><td><code>failed</code>, both sides kept in the ledger, the tool is not reported as current</td></tr>
+    <tr><td>The same tool is published again with no change</td><td><code>skipped</code> with reason "no change"; no write and no build bump</td></tr>
+    <tr><td>An external root is read only</td><td>Reading and publishing are allowed; any write back to that root is refused with the root label</td></tr>
   </table>
 
   <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
@@ -285,6 +548,14 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     <tr><td>L-06</td><td>No visual check of the rendered tool</td><td>Layout and readability problems stay invisible</td><td>Task T-16</td></tr>
     <tr><td>L-07</td><td>No MCP client</td><td>External tools must be coded in, not attached</td><td>Idea I-07</td></tr>
     <tr><td>L-08</td><td>Operator notes are not injected into prompts</td><td>The operator cannot add a project rule for one run</td><td>Task T-12</td></tr>
+    <tr><td>L-09</td><td>The store write endpoint and the field ids are not confirmed yet</td><td>No create or update can be trusted until section 14 is answered</td><td>Questions Q-01 to Q-12</td></tr>
+    <tr><td>L-10</td><td>No confirmed per tool enabled field in the store</td><td>Publish cannot switch a tool on or off until Q-13 is answered</td><td>Question Q-13</td></tr>
+    <tr><td>L-11</td><td>No fleet view</td><td>The factory cannot say which tenant runs which version</td><td>Idea I-14</td></tr>
+    <tr><td>L-12</td><td>Applications are read only for now</td><td>An application package cannot be assembled or published by the factory yet</td><td>Task T-36, idea I-13</td></tr>
+    <tr><td>L-13</td><td>Studio reads the repository but cannot yet change it</td><td>Browsing, searching and the tool registry work; editing, tasks and parallel runs are phases P1 to P3</td><td>SSOT 8.12</td></tr>
+    <tr><td>L-13</td><td>No media upload</td><td>Screenshots travel as URLs only until the upload answer exists</td><td>Question Q-27, task T-35</td></tr>
+    <tr><td>L-14</td><td>Documents are generated on request by the existing repository scripts</td><td>The publisher ships what exists and never invents document content</td><td>Accepted (D-HTF-42)</td></tr>
+    <tr><td>L-15</td><td>Verification runs on demand, not on a schedule</td><td>Drift is only visible when someone asks for it</td><td>Idea I-12</td></tr>
   </table>
 
   <h2 id="sec-decisions">11. Decision register</h2>
@@ -324,7 +595,23 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     <tr><td>D-HTF-33</td><td>2026-10-29</td><td>The model conversation is watched live: deltas travel over the existing event stream, are kept in memory only, are capped per call, and a finished call is kept in a short history.</td><td>An operator who cannot see the call cannot tell a slow model from a hung one, and a token by token log on disk would grow the run folder without adding evidence. Keeping the deltas in memory keeps the archive clean while the dashboard stays readable.</td><td class="status-adopted">Adopted</td></tr>
     <tr><td>D-HTF-34</td><td>2026-10-29</td><td>A batch is always computed with a dry run first, then validated against the prospective content in a temporary file, then diffed; only then is it written. A whole file rewrite is allowed at 80 points or more. The review gate is a per run option, waits with a bounded poll, and a rejection never writes, never spends a retry, and stops the remaining batches.</td><td>One code path for both modes: supervised and automatic differ only in whether a human answer is awaited, so a reviewed batch is never a different, less tested path. Rejection is treated as a decision, not a failure, because charging the model's retry budget for the operator's choice would make the next iteration look worse than it is.</td><td class="status-adopted">Adopted</td></tr>
     <tr><td>D-HTF-35</td><td>2026-10-29</td><td>A destructive confirmation asks for the last six characters of the run id (or the whole id), never for a forty character string, and the path is shown as clickable segments that open the folder. The server derives both from the run record, so the dashboard cannot ask it to open an arbitrary path.</td><td>Typing an id nobody can see is a copy exercise, not a confirmation, and a single unbroken path is unreadable and scrolls out of the dialog. Six characters still prove the operator looked at the run, and the trail makes the folder reachable in one click without widening what the server will open.</td><td class="status-adopted">Adopted</td></tr>
-    <tr><td>D-HTF-36</td><td>2026-10-29</td><td>A model name has exactly two levels: the provider default and the per stage override (<code>models.planner</code>, <code>models.coder</code>). The override wins, and that fact is shown in the provider chip, in every AI log line ("answered apply-tasks with ..."), once at the start of every run, and as two editable fields in Settings.</td><td>Running a strong model for code and a cheaper one for planning is the right setup, so the override stays. What must not stay is the surprise: an operator who changes the endpoint model and sees no effect has no way to find the second setting, and a log that only says "answered" hides which model spent the tokens.</td><td class="status-adopted">Adopted</td></tr>  </table>
+    <tr><td>D-HTF-36</td><td>2026-10-29</td><td>A model name has exactly two levels: the provider default and the per stage override (<code>models.planner</code>, <code>models.coder</code>). The override wins, and that fact is shown in the provider chip, in every AI log line ("answered apply-tasks with ..."), once at the start of every run, and as two editable fields in Settings.</td><td>Running a strong model for code and a cheaper one for planning is the right setup, so the override stays. What must not stay is the surprise: an operator who changes the endpoint model and sees no effect has no way to find the second setting, and a log that only says "answered" hides which model spent the tokens.</td><td class="status-adopted">Adopted</td></tr>    <tr><td>D-HTF-37</td><td>2026-11-17</td><td>The factory is the build AND release management platform: it builds a tool, publishes it and its documents to the application store, and verifies the published state.</td><td>Building and releasing are one loop. Splitting them leaves the store state to memory and to manual pasting, which is exactly how a folder and its record drift apart.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-38</td><td>2026-11-17</td><td>One publishing engine (<code>src/publish</code>, <code>src/cms</code>) used by the dashboard API and by the repository command line. The catalog only reads the ledger.</td><td>Filesystem and credential must live in one Node process, and two implementations always drift. The catalog is opened from disk by anyone, so it must stay credential free.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-39</td><td>2026-11-17</td><td>The store is written only server-side, with a credential from the environment or the gitignored local config; the first party development key replaces the token in the URL.</td><td>A key in a page, a tool parameter or a repository file is a leak with a delay. The legacy URL form stays supported only while it is being retired.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-40</td><td>2026-11-17</td><td>A store record is tied to a tool by a stable <code>repoToolSlug</code>, and after the first create every update uses the object id stored in the ledger.</td><td>Names and titles change; an object id does not. Matching by name creates duplicates and can overwrite a sibling.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-41</td><td>2026-11-17</td><td>Enable and disable is the publish switch. No draft semantics are assumed until the store answers what the nested <code>draft</code> key means.</td><td>The operator decides what is live. A container key must never be read as a status.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-42</td><td>2026-11-17</td><td>Each document is published as its own object of its own type, with a content signature; documents are never stored inside the tool record.</td><td>The 1 MB object limit is real and the tool code already fills a large part of it. One object per document also makes a single document update cheap.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-43</td><td>2026-11-17</td><td>Tool roots are configured: the repository taxonomy plus any number of external roots, each with its own taxonomy file or a flat tool folder, read only unless marked writable.</td><td>Tools are developed in more than one place. A hardcoded repository root would make the platform useless outside this tree.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-44</td><td>2026-11-17</td><td>Types, field ids, folder ids and slug rules are data in the catalogs and the store map; no id is hardcoded in <code>src</code>.</td><td>The store will change. A data row is a one line fix; a literal in code is a release, and a repeated literal is a silent no-op.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-45</td><td>2026-11-17</td><td>Every publish writes the release ledger, and a partial release is a first class state that can be resumed.</td><td>A release that fails halfway is normal, not exceptional. Without a ledger the next run repeats what already worked and forgets what did not.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-46</td><td>2026-11-17</td><td>No silent no-op: a missing setting, id, type, folder, field or slug stops the action with a named reason before any write.</td><td>A publish that reports success without writing is worse than an error; the operator asked for a system with no quiet failures.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-47</td><td>2026-11-17</td><td>Publish is a dry run first, and the confirmation lists type, folder, field and action for every target.</td><td>The expensive mistakes are target mistakes: the wrong type, the wrong folder, the wrong record. They are cheap to see and impossible to undo.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-48</td><td>2026-11-17</td><td>Success is read-back. A publish is complete only when the re-read record matches the intended build and stamps.</td><td>A write that the store accepted but did not apply looks identical to a successful one from the client side.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-49</td><td>2026-11-17</td><td>Reads and writes use two separate keys (Q-01), both read from one secrets file outside this repository (Q-03): <code>%USERPROFILE%/.unicon-secrets.json</code>, overridable with <code>config.secretsPath</code> or <code>APP_FACTORY_SECRETS_FILE</code>. The environment still wins. The assistant and the dashboard never read that file; only <code>src/cms/secrets.js</code> does, and only masked fingerprints leave it.</td><td>Two keys mean a leaked read key cannot write. A file outside the repository can never be committed, diffed or pasted into a chat by accident, which is what the operator asked for; the fingerprint is enough to see which key is in force without exposing it.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-50</td><td>2026-11-17</td><td>Every value in the store map must cite where it came from. A value read out of a working CMS tool in this repository may be marked confirmed; a value quoted only from this document stays unconfirmed and keeps its target blocked. The tool record therefore stays blocked while its five documents are writable.</td><td>The HTML Tool Item Editor already writes documents correctly, so its constants are evidence, not a guess. Its own record type is never stated in its code, so using <code>tools-applicationstore</code> as if it were confirmed would be exactly the silent guess this design forbids.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-51</td><td>2026-11-17</td><td>An update patches fields, it never replaces the record: the engine sends only the keys it owns inside <code>productData.data_categoriesBased</code>, after comparing with what the store holds (Q-05).</td><td>A tool record carries dozens of fields the factory does not own. A full replace would silently clear them, and nothing in a response would say so.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-HTF-52</td><td>2026-11-18</td><td>Studio builds <b>one tool at a time</b> for now. <code>studio.workers</code> defaults to 1, is clamped to 1..8 and can never be 0. Parallel workers arrive later, and only as an explicit decision with the option table in <code>docs/STUDIO-DESIGN.md</code> section 6.</td><td>A parallel batch multiplies the cost of a bad plan and makes a failure hard to attribute, and the queue has no finished batches yet to tune concurrency against. Serial first, parallel when there is evidence.</td><td class="status-adopted">Adopted</td></tr>
+  </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
   <ol>
@@ -333,6 +620,7 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     <li>The contract in <code>src/tool/contract.js</code> and section 6 must stay in step; a new rule is added to both.</li>
     <li>Before changing a prompt, check the JSON contract in the same file and the parser in <code>src/ai/parse.js</code>.</li>
     <li>Run <code>npm run selftest</code> and <code>npm run check</code> before every push.</li>
+    <li>Documentation for this tool lives in <code>docs/</code> under this folder - the SSOT, the Studio design and every handoff request. Nothing is added to the repository root; a new document gets a folder, never the root.</li>
   </ol>
 
   <h2 id="sec-checklist">13. Implementation checklist</h2>
@@ -345,13 +633,74 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     <tr><td>5</td><td>Live step detail (batches in the timeline)</td><td><code>src/pipeline.js</code>, <code>ui/app.js</code> - DONE</td></tr>
     <tr><td>6</td><td>Points in the dashboard task list and in the generated SSOT</td><td><code>ui/app.js</code>, <code>src/ssot/standardDocs.js</code> - DONE</td></tr>
     <tr><td>7</td><td>Factory SSOT rewritten in the standard structure</td><td><code>docs/ssot.html</code> - DONE</td></tr>
+    <tr><td>8</td><td>Tool roots registry (repository plus external roots)</td><td><code>src/toolRoots.js</code>, <code>src/config.js</code> - T-25 DONE</td></tr>
+    <tr><td>9</td><td>Store read client (tools and applications)</td><td><code>src/cms/storeClient.js</code> - T-26 DONE</td></tr>
+    <tr><td>10</td><td>Store map data and validator</td><td><code>src/cms/storeMap.js</code>, <code>UNICON-TOOLS/tools-catalog/store-map.json</code> - T-27 DONE</td></tr>
+    <tr><td>11</td><td>Release ledger schema and writer</td><td><code>src/publish/ledger.js</code>, <code>tool-publish-state.json</code> - T-28</td></tr>
+    <tr><td>12</td><td>Tool and document payload builders with stamp sync</td><td><code>src/publish/toolPayload.js</code>, <code>src/publish/docsPayload.js</code> - T-29, T-34</td></tr>
+    <tr><td>13</td><td>Dry run plan and read-back verification</td><td><code>src/publish/verify.js</code> - T-30</td></tr>
+    <tr><td>14</td><td>Create, update, enable and disable through the store client</td><td><code>src/cms/storeClient.js</code> - T-31</td></tr>
+    <tr><td>15</td><td>Command line entry shared with VS Code</td><td><code>scripts/publish-cli.js</code> - T-32</td></tr>
+    <tr><td>16</td><td>Credential resolution, redaction and legacy URL mode</td><td><code>src/cms/storeClient.js</code>, <code>src/config.js</code> - T-33</td></tr>
+    <tr><td>17</td><td>Dashboard Tools tab (roots, build, store state, drift, documents)</td><td><code>ui/index.html</code>, <code>ui/app.js</code>, <code>src/server.js</code> - T-37</td></tr>
+    <tr><td>18</td><td>Dashboard Publish dialog (plan, confirm, progress, result)</td><td><code>ui/app.js</code>, <code>ui/app.css</code>, <code>src/server.js</code> - T-38</td></tr>
+    <tr><td>19</td><td>Settings for store and roots, secret masked</td><td><code>src/config.js</code>, <code>src/server.js</code>, <code>ui/app.js</code> - T-39</td></tr>
+    <tr><td>20</td><td>Selftest and source checks against a mocked store</td><td><code>test/run-selftest.cjs</code>, <code>test/check-sources.cjs</code> - T-40</td></tr>
   </table>
 
   <h2 id="sec-questions">14. Open questions</h2>
+  <h3>14.1 Planning questions</h3>
   <ol>
     <li><strong>Should a batch ever be split when the model fails twice?</strong> Today the whole batch fails and its tasks return to the queue. Splitting it into single tasks on the second attempt could rescue one task while losing the atomicity guarantee.</li>
     <li><strong>Should points be measured instead of estimated?</strong> After a batch we know the real token cost; feeding that back would calibrate the estimator.</li>
   </ol>
+
+  <h3>14.2 Open questions for the store team</h3>
+  <p class="note"><strong>Rule.</strong> An unanswered question is a blocked action, never a default. When an answer arrives: write it into the store map, log the decision in section 11, and move the row to 14.3 with the date. A publish that needs an open row stops before any write and names the question id. The write questions are written out in full, ready to hand over, in <code>docs/CMS-REQUEST--store-write-api.txt</code>.</p>
+  <table>
+    <tr><th>ID</th><th>Question</th><th>What it unblocks</th><th>Owner task</th></tr>
+    <tr><td>Q-02</td><td>Which header carries the write credential, and is there a tenant or host header the store expects? Reads are answered: x-api-key.</td><td>Writes</td><td>T-31</td></tr>
+    <tr><td>Q-04</td><td>Which URLs create, update and read an object by id, and with which method? Is there a Node reachable write endpoint, or only the CMS relay?</td><td>Every write request</td><td>T-31</td></tr>
+    <tr><td>Q-09</td><td>The folder typeId for created records of each type. The document folders are known (www.uniconhub.com, help.uniconhub.com); the tool, library and application folders are not.</td><td>Create placement</td><td>T-27</td></tr>
+    <tr><td>Q-10</td><td>Does a create need typeId, parentId, both, or a folder path?</td><td>Create placement</td><td>T-27</td></tr>
+    <tr><td>Q-11</td><td>Which fields are required on create besides productData, and who generates name, slug and contentId?</td><td>Create payload shape</td><td>T-29, T-31</td></tr>
+    <tr><td>Q-12</td><td>Are object ids and folder type ids stable across deployments, or must every id be read at runtime?</td><td>Whether ids may be committed as data</td><td>T-27</td></tr>
+    <tr><td>Q-14</td><td>Is there a status field that also hides a record, and how does it interact with toolStatus?</td><td>No false published state</td><td>T-31</td></tr>
+    <tr><td>Q-15</td><td>Should the factory create a record as draft and set it active only after the read-back matches?</td><td>Safe first publish</td><td>T-31</td></tr>
+    <tr><td>Q-16</td><td>For applications: is the newest applicationVersions entry with fileUrl and isEnabled !== "no" the live version?</td><td>Application status</td><td>T-36</td></tr>
+    <tr><td>Q-17</td><td>Is there a field on the tool record that can hold the stable repository slug, and is it filterable?</td><td>Create or update matching</td><td>T-31</td></tr>
+    <tr><td>Q-18</td><td>Which field is unique for a tool: name, slug, toolName or gwAppName? Global or per folder?</td><td>Duplicate prevention</td><td>T-29</td></tr>
+    <tr><td>Q-19</td><td>When a tool is renamed or split, update the same record or create a new one and disable the old?</td><td>Rename handling</td><td>T-31</td></tr>
+    <tr><td>Q-20</td><td>Which external folders must the factory reach, and is each a taxonomy root or a flat tools folder?</td><td>Tool roots</td><td>T-25</td></tr>
+    <tr><td>Q-21</td><td>Do external tools use the same three files, TOOL_BUILD and stamps? If not, what identifies their build?</td><td>Drift comparison outside the repository</td><td>T-25</td></tr>
+    <tr><td>Q-22</td><td>Are external roots writable by the factory, or read only for discovery and publish?</td><td>Write guard per root</td><td>T-25</td></tr>
+    <tr><td>Q-24</td><td>Are document objects kept in the tool leaf folder tree or apart? The editor uses one folder per document kind.</td><td>Folder ids per target</td><td>T-27</td></tr>
+    <tr><td>Q-27</td><td>Where do screenshots go: a media upload endpoint, or URLs inside the record?</td><td>Screenshot publishing</td><td>T-35</td></tr>
+    <tr><td>Q-28</td><td>Should every publish write a tool-code-versions-uniconbaseapps object? Which version number and what retention?</td><td>History and rollback</td><td>T-31, T-34</td></tr>
+    <tr><td>Q-29</td><td>Which identity should the ledger record as the publisher?</td><td>Audit trail</td><td>T-28</td></tr>
+    <tr><td>Q-30</td><td>Which object types besides tools and documents should the platform manage first?</td><td>First release scope</td><td>T-37</td></tr>
+    <tr><td>Q-32</td><td>Should the platform read the full list on every open, or cache it with a TTL?</td><td>Dashboard freshness</td><td>T-37</td></tr>
+    <tr><td>Q-33</td><td>Is there a staging store deployment to rehearse against?</td><td>Safe rehearsal</td><td>T-31</td></tr>
+    <tr><td>Q-34</td><td>Should a publish require an operator name and a reason, written into the ledger?</td><td>Release accountability</td><td>T-28</td></tr>
+  </table>
+  <p><strong>First real write.</strong> The remaining gate is <strong>Q-02 (write header), Q-04 (write URLs), Q-09 and Q-10 (folder and placement), Q-11 (required create fields), Q-17 (repository slug field) and Q-18 (unique field)</strong>. Everything else can wait for the phase that needs it.</p>
+
+  <h3>14.3 Answered register</h3>
+  <p class="note">Answered on 2026-11-17 by the operator and from working CMS tools in this repository. The store map holds the values; this table holds the reasoning.</p>
+  <table>
+    <tr><th>ID</th><th>Answer</th><th>Stored in</th><th>Owner task</th></tr>
+    <tr><td>Q-01</td><td>Two separate keys: the operator creates a read key and a write key. Reads use the read key, every write uses the write key. A single key still works and is reported as not separate.</td><td>store.readKey and store.writeKey in the secrets file; config.cms.apiKey and config.cms.writeKey as fallback</td><td>T-26, T-31</td></tr>
+    <tr><td>Q-03</td><td>One file outside this repository: %USERPROFILE%/.unicon-secrets.json, overridable with config.secretsPath or APP_FACTORY_SECRETS_FILE. The assistant and the dashboard never read it; only src/cms/secrets.js does, and only masked fingerprints leave it. Environment variables still win.</td><td>src/cms/secrets.js, config.secretsPath</td><td>T-33</td></tr>
+    <tr><td>Q-05</td><td>Patch by field, not full replace: send only the keys we own inside productData.data_categoriesBased, after comparing. The CMS relay already behaves this way.</td><td>SSOT 8.7 step 6, D-HTF-51</td><td>T-31</td></tr>
+    <tr><td>Q-06</td><td>Not a concern for now: limits live on the API key and a request monitor can come later. The 900 KB payload guard and bounded retries stay.</td><td>config.cms.maxPayloadBytes, config.cms.retries</td><td>T-31</td></tr>
+    <tr><td>Q-07</td><td>From the working editor: webpage, help, updates and presentation are website-builder-uniconbaseapps; social is tool-social-content-uniconbaseapps; versions are tool-code-versions-uniconbaseapps; the html tool library is website-html-tool-library-applicationstore. The tool record type is still only quoted from this document.</td><td>UNICON-TOOLS/tools-catalog/store-map.json cmsObjectType</td><td>T-27, T-31</td></tr>
+    <tr><td>Q-08</td><td>Documents: written into productData.data_categoriesBased.webpageContentWithBuilder with code.html, code.css, code.js, seo and pageMeta; social uses contentHtml. The tool record uses sibling field ids toolName, toolStatus, toolHtmlCode, toolCssCode, toolJsCode, toolParams, toolOutputSchema, toolDisplayMode, toolHeight, toolAutoHeight and toolValidationEnabled.</td><td>store-map.json fieldPath and fields</td><td>T-27, T-29</td></tr>
+    <tr><td>Q-13</td><td>Tools: toolStatus with active or draft. Applications: applicationVersions[].isEnabled, where "no" disables a version.</td><td>store-map.json enabledField and enabledValues</td><td>T-31</td></tr>
+    <tr><td>Q-23</td><td>One UNICON-TOOLS/tools-catalog/store-map.json for tools, applications and documents (8.6, D-HTF-44).</td><td>UNICON-TOOLS/tools-catalog/store-map.json</td><td>T-27</td></tr>
+    <tr><td>Q-25</td><td>webpage, help, presentation, updates and social, in that order. Screenshots travel as URLs until Q-27 is answered.</td><td>store-map.json document targets</td><td>T-34</td></tr>
+    <tr><td>Q-26</td><td>webpage, help, updates and presentation are builder values (fragment HTML in code.html plus css, js and seo), not full documents. Social is one contentHtml document. Nothing is inlined into the tool record.</td><td>store-map.json shape</td><td>T-34</td></tr>
+    <tr><td>Q-31</td><td>Create, update and disable only. The factory never deletes or archives a store record.</td><td>decision D-HTF-41 and the failure matrix</td><td>T-31</td></tr>
+  </table>
 
   <h2 id="sec-tasklist">15. Development task list</h2>
   <p>Ordered backlog for the factory itself. Tasks are grouped into release
@@ -949,6 +1298,351 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     </div>
   </section>
 
+  <section class="task-group" data-release-group="HTF-11" data-group-status="in-progress">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: store connection and publish core - 660 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">PHASE 1 SHIPPED - writes still blocked</span>
+      <span class="task-group-progress" data-group-progress="HTF-11">4/9</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-11"></div></div>
+    <p class="task-group-note">Why these belong together: this is the smallest set that can publish one real tool and prove it by reading it back. Nothing in this group may report success from a mocked store alone.</p>
+
+    <div class="task-item" data-task-id="T-25" data-group="HTF-11" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-25</span>
+          <span class="task-title">Discover tools across configurable roots, not one repository</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-25 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 60 of 100.</p>
+          <p><strong>Problem it solves:</strong> the factory only knows the repository taxonomy, so a tool developed in another folder cannot be built, published or verified.</p>
+          <p><strong>How we will solve it:</strong> a <code>toolRoots</code> array in the config (label, root, optional taxonomy file, writable flag) plus <code>src/toolRoots.js</code>, which walks each root and returns one registry entry per tool.</p>
+          <p><strong>Benefit:</strong> one list of every tool the operator owns, wherever it lives, with the build stamp that the store comparison needs.</p>
+          <p><strong>Files:</strong> <code>src/toolRoots.js</code>, <code>src/config.js</code>, <code>src/server.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> DONE (phase 1) - <code>src/toolRoots.js</code> reads a <code>toolRoots</code> array, walks each root to a bounded depth with a skip list, and recognises a tool as an <code>app</code> folder holding one html, one css and one js that share a base name (which is why the listing and reporting tools and the folders whose files are not named after the folder all resolve). A registry entry carries the stable <code>slug</code> (folder name), root, path, parts, code files, harness, the document set (webpage, help, presentation, updates, social, ssot, index), screenshot count, <code>toolBuild</code>, per file stamps, <code>modifiedAt</code> and <code>writable</code>. An external root is read only unless marked. An app folder without the full triple is reported as a problem, two tools with the same slug are a conflict, discovery writes nothing, and <code>packageCompleteness</code> counts the eight release subjects from the files. The dashboard list is T-37.</p>
+          <p><strong>Still open:</strong> Q-20 (which external roots exist), Q-21 (build identity outside the repository), Q-22 (writable or not) - the registry works and reports what it finds, but only the repository root is configured so far.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-26" data-group="HTF-11" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-26</span>
+          <span class="task-title">Read the application store: tools, applications and their field map</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-26 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Problem it solves:</strong> the factory cannot see what the store already holds, so create versus update is a guess.</p>
+          <p><strong>How we will use it:</strong> <code>src/cms/storeClient.js</code> with <code>listObjects</code>, <code>getObject</code> and <code>describeFieldMap</code>, read only. Records are normalised out of <code>productData.data_categoriesBased</code>, a list answer is accepted as an array, <code>items</code>, <code>objects</code>, <code>data</code> or <code>results</code>, a detail answer as <code>{object}</code> or <code>{data}</code>, and the field map lists which keys the record really has so a wrong type is visible before a write.</p>
+          <p><strong>Benefit:</strong> a reliable picture of the store before any write, and the same normalisation the store UI uses.</p>
+          <p><strong>Files:</strong> <code>src/cms/storeClient.js</code></p>
+          <p><strong>Status:</strong> DONE for reads (phase 1) - both auth forms live in one client: the header form sends <code>config.cms.keyHeader</code> (default <code>x-api-key</code>) and the legacy form builds <code>/api/object/{token}/{fn}/{type}</code>, so the URL token can be retired without a second code path. The credential resolves from the environment (<code>APP_FACTORY_STORE_KEY</code>, <code>UNICON_STORE_API_KEY</code>, <code>UNICONBASEAPPS_API_KEY</code>) then the gitignored <code>config.local.json</code>, otherwise <code>MISSING_CREDENTIAL</code> names the setting and Q-01 to Q-03 before any request. Every string leaving the module is redacted, a 429 and a 5xx are retried, a 4xx body is surfaced verbatim, and the dashboard only ever sees <code>present</code>, <code>source</code> and a masked fingerprint. Writes are T-31 and stay blocked.</p>
+          <p><strong>Still open:</strong> Q-01 (read versus write key), Q-02 (write header), Q-03 (where the key may live and how it rotates), Q-04 to Q-06 (write URLs, id location, limits), Q-16 (live application version).</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-27" data-group="HTF-11" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-27</span>
+          <span class="task-title">Store map as data, with a validator that refuses an incomplete row</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-27 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 70 of 100.</p>
+          <p><strong>Problem it solves:</strong> type ids, field ids, folder ids and slug rules are today spread over memory, notes and one CMS tool, so a missing one becomes a silent no-op.</p>
+          <p><strong>How we will use it:</strong> <code>UNICON-TOOLS/tools-catalog/store-map.json</code> v0.1.0 with eight targets (tool, library, five documents, application), each carrying kind, <code>cmsObjectType</code>, <code>fieldPath</code>, <code>folderId</code> or <code>folderCode</code>, slug rule, enabled field, <code>questionRef</code>, <code>confirmed</code> and a provenance note. <code>src/cms/storeMap.js</code> validates it (schema, version, unique ids, known kind, understood slug rule, one folder answer only, a question reference on every row) and <code>blockedTarget</code> returns the row id, the missing values and the question id.</p>
+          <p><strong>Benefit:</strong> the answers to section 14 become data, and no id is ever hardcoded in <code>src</code>.</p>
+          <p><strong>Files:</strong> <code>UNICON-TOOLS/tools-catalog/store-map.json</code>, <code>src/cms/storeMap.js</code></p>
+          <p><strong>Status:</strong> DONE as a mechanism (phase 1) - a target is only <code>writable</code> when it is filled AND <code>confirmed</code>; every row is currently filled only with what this repository can cite and is therefore <code>blocked</code>, which is the honest state until the store answers. The two values that are cited rather than guessed: <code>website-html-tool-library-applicationstore</code> with the <code>code { html, css, js }</code> field (PUBLICWEBSITE-REQUEST--publish-widget-with-data.txt, verified) and the host <code>applicationstore.uniconhub.com</code>.</p>
+          <p><strong>Still open:</strong> Q-07 to Q-12, Q-23, Q-24 - the folder ids, the document types and fields, and whether ids are stable enough to commit.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-28" data-group="HTF-11" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-28</span>
+          <span class="task-title">Release ledger with one row per target and a resumable partial state</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-28 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 60 of 100.</p>
+          <p><strong>Problem it solves:</strong> after one publish there is no record of which object id, build, stamp or document went where, so a retry repeats work and a failure disappears.</p>
+          <p><strong>How we will solve it:</strong> extend <code>UNICON-TOOLS/tools-catalog/tool-publish-state.json</code> with <code>store</code>, <code>documents</code> and <code>targets</code> blocks, and add <code>src/publish/ledger.js</code> with read, merge and write helpers. Target states: planned, blocked, published, failed, skipped, outdated. Every row keeps its reason.</p>
+          <p><strong>Benefit:</strong> the catalog can show the truth, and a release can continue where it stopped.</p>
+          <p><strong>Files:</strong> <code>src/publish/ledger.js</code>, <code>UNICON-TOOLS/tools-catalog/tool-publish-state.json</code>, <code>scripts/build-catalog-page.js</code></p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-29" data-group="HTF-11" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-29</span>
+          <span class="task-title">Build the tool payload and move only the stamps that changed</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-29 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 90 of 100.</p>
+          <p><strong>Problem it solves:</strong> the store record and the repository drift because the build number is bumped by hand and the payload shape lives only inside a CMS tool.</p>
+          <p><strong>How we will solve it:</strong> <code>src/publish/toolPayload.js</code> bumps <code>TOOL_BUILD</code> once per release, moves the first line stamp only in files whose content changed, reads name, description, category, icon, tags, code and params from the tool folder or its metadata, and writes the same <code>html_tool_definition.draft</code> shape the store already consumes. A size guard refuses a payload above 900 KB before the request.</p>
+          <p><strong>Benefit:</strong> the store always carries a build that can be compared with the repository, and no publish can exceed the object limit unnoticed.</p>
+          <p><strong>Files:</strong> <code>src/publish/toolPayload.js</code>, <code>src/tool/contract.js</code></p>
+          <p><strong>Status:</strong> not started. Blocked by Q-08, Q-18.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-30" data-group="HTF-11" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-30</span>
+          <span class="task-title">Dry run plan and read-back verification</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-30 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Problem it solves:</strong> the expensive mistakes are target mistakes, and a write that the store accepted but did not apply looks like success.</p>
+          <p><strong>How we will solve it:</strong> <code>src/publish/verify.js</code> produces the plan (create, update, enable, disable, skip) with type, folder, field, size and diff per target, and provides the read-back comparison used after every write. A mismatch is a failed target and never a warning.</p>
+          <p><strong>Benefit:</strong> publish can be reviewed before it costs anything, and success means what the store actually holds.</p>
+          <p><strong>Files:</strong> <code>src/publish/verify.js</code>, <code>src/cms/storeClient.js</code></p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-31" data-group="HTF-11" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-31</span>
+          <span class="task-title">Create, update and switch a tool on or off in the store</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-31 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 100 of 100.</p>
+          <p><strong>Problem it solves:</strong> there is no working write path, so a new tool or an update still needs manual pasting in the CMS.</p>
+          <p><strong>How we will solve it:</strong> create when the ledger has no object id and a same-slug record does not exist, update that id afterwards, then set the enabled field from the plan. A same-slug record that the ledger does not know is never adopted without an explicit confirmation, and an update whose remote signature differs from the ledger signature is refused instead of overwritten.</p>
+          <p><strong>Benefit:</strong> new tools and updates follow one safe path, and no publish can overwrite a record somebody else changed.</p>
+          <p><strong>Files:</strong> <code>src/cms/storeClient.js</code>, <code>src/publish/ledger.js</code></p>
+          <p><strong>Status:</strong> not started. Blocked by Q-01 to Q-06, Q-11 to Q-15, Q-17.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-32" data-group="HTF-11" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-32</span>
+          <span class="task-title">One command line entry shared by VS Code and the factory</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-32 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Problem it solves:</strong> publishing only from a running desktop app means the same work is rebuilt later for chat and terminals.</p>
+          <p><strong>How we will solve it:</strong> <code>scripts/publish-cli.js</code> and npm scripts <code>tool:verify</code>, <code>tool:publish</code>, <code>docs:publish</code> and <code>release:status</code>. The CLI calls the same modules as the dashboard, supports <code>--dry-run</code>, <code>--yes</code>, <code>--docs</code> and prints the same per target result.</p>
+          <p><strong>Benefit:</strong> one implementation, two doors, and a publish that a chat can trigger with one command.</p>
+          <p><strong>Files:</strong> <code>scripts/publish-cli.js</code>, <code>package.json</code> (repository root)</p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-33" data-group="HTF-11" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-33</span>
+          <span class="task-title">Credential resolution, redaction and the legacy URL mode</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-33 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 40 of 100.</p>
+          <p><strong>Problem it solves:</strong> the store token currently travels in the URL, which leaks it into logs, history and screenshots.</p>
+          <p><strong>How we will solve it:</strong> one resolver (environment, then the secrets file, then gitignored <code>config.local.json</code>, then <code>MISSING_CREDENTIAL</code> with the setting and the question id), two auth modes in the client, a masked fingerprint in Settings, redaction in every log line, and a source check that fails on a key-like literal in <code>src</code> or <code>ui</code>.</p>
+          <p><strong>Benefit:</strong> the first party key can replace the URL token without a second code path, and the key never appears where it can be copied.</p>
+          <p><strong>Files:</strong> <code>src/cms/secrets.js</code>, <code>src/cms/storeClient.js</code>, <code>src/config.js</code>, <code>src/server.js</code>, <code>test/check-sources.cjs</code></p>
+          <p><strong>Status:</strong> DONE - <code>src/cms/secrets.js</code> resolves a read key and a write key separately (Q-01) from <code>APP_FACTORY_STORE_READ_KEY</code> or <code>APP_FACTORY_STORE_WRITE_KEY</code>, then from <code>%USERPROFILE%/.unicon-secrets.json</code> (or <code>config.secretsPath</code>, or <code>APP_FACTORY_SECRETS_FILE</code>), then from the gitignored config (Q-03). Only presence, source and a masked fingerprint are ever returned: <code>/api/state</code> carries no key, and a source check fails the build on a key shaped literal in <code>src</code> or <code>ui</code>. The header form and the legacy <code>/api/object/{token}/{fn}/{type}</code> form share one request path, and every error message is redacted before it leaves the client.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="HTF-12" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: documents and the management dashboard - 560 points</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="HTF-12">0/7</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="HTF-12"></div></div>
+    <p class="task-group-note">Why these belong together: the operator can only trust a release when the documents, the store state and the actions live in the same screen.</p>
+
+    <div class="task-item" data-task-id="T-34" data-group="HTF-12" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-34</span>
+          <span class="task-title">Publish each document as its own object, only when it changed</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-34 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 100 of 100.</p>
+          <p><strong>Problem it solves:</strong> all documents live outside the tool record because of the 1 MB limit, and today nothing publishes them.</p>
+          <p><strong>How we will solve it:</strong> <code>src/publish/docsPayload.js</code> builds one payload per document from the files that already exist, hashes the content, and skips a document whose signature matches the ledger. Slugs follow a stable rule, and the order is webpage, help, presentation, updates, social. A document failure never rolls the tool back; it is recorded as a failed target and resumed later.</p>
+          <p><strong>Benefit:</strong> a full release writes only what changed, and a document can be re-published alone.</p>
+          <p><strong>Files:</strong> <code>src/publish/docsPayload.js</code>, <code>src/publish/ledger.js</code></p>
+          <p><strong>Status:</strong> not started. Blocked by Q-07 to Q-11, Q-24 to Q-26.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-35" data-group="HTF-12" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-35</span>
+          <span class="task-title">Screenshots and the social kit targets</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-35 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 60 of 100.</p>
+          <p><strong>Problem it solves:</strong> screenshots and the social kit are part of the release but have no destination in the pipeline.</p>
+          <p><strong>How we will solve it:</strong> after Q-27 and Q-25 are answered, either store the screenshot URLs in the confirmed record field or upload them to the confirmed media endpoint, and publish the social document through the same document path. Both are ledger targets with their own signature.</p>
+          <p><strong>Benefit:</strong> one release still covers the whole published package.</p>
+          <p><strong>Files:</strong> <code>src/publish/docsPayload.js</code>, <code>src/cms/storeClient.js</code></p>
+          <p><strong>Status:</strong> not started. Blocked by Q-25, Q-27.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-36" data-group="HTF-12" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-36</span>
+          <span class="task-title">See application status and switch an application version on or off</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-36 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Problem it solves:</strong> applications are the other half of the store, and the operator has no view of which version is live.</p>
+          <p><strong>How we will solve it:</strong> read <code>applications-applicationstore</code>, compute the live version exactly as the store does, show name, category, developer, live version and enabled state in the Tools tab, and allow enabling or disabling a version through the store client. Building or packaging an application stays out of scope.</p>
+          <p><strong>Benefit:</strong> tools and applications are managed from one place, without implying that the factory can build an application package.</p>
+          <p><strong>Files:</strong> <code>src/cms/storeClient.js</code>, <code>ui/app.js</code></p>
+          <p><strong>Status:</strong> not started. Blocked by Q-07, Q-16.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-37" data-group="HTF-12" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-37</span>
+          <span class="task-title">Tools tab: every tool, its build, its store state and its documents</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-37 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 100 of 100.</p>
+          <p><strong>Problem it solves:</strong> the operator cannot see which tools are published, current or stale without opening three different places.</p>
+          <p><strong>How we will solve it:</strong> a new dashboard tab grouped by root, one row per tool: slug, repository build, store build, outdated parts (html, css, js), documents current or stale, enabled state, last publish and last writer, with filters for not published, outdated and blocked, and one action per row to run the plan.</p>
+          <p><strong>Benefit:</strong> the release question is answered in one screen, for tools inside and outside the repository.</p>
+          <p><strong>Files:</strong> <code>ui/index.html</code>, <code>ui/app.js</code>, <code>ui/app.css</code>, <code>src/server.js</code></p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-38" data-group="HTF-12" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-38</span>
+          <span class="task-title">Publish dialog: plan, confirm, progress and result per target</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-38 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 90 of 100.</p>
+          <p><strong>Problem it solves:</strong> a single Publish button with no plan is a button that cannot be reviewed.</p>
+          <p><strong>How we will solve it:</strong> the dialog runs the dry run, shows one row per target with type, folder, field, action, size and diff, requires an explicit confirmation, then streams progress and ends with the ledger result. A blocked row shows its missing value and question id, and the dialog refuses to publish a plan that contains one unless that row is deselected.</p>
+          <p><strong>Benefit:</strong> the operator approves exactly what will be written, and a blocked release explains itself.</p>
+          <p><strong>Files:</strong> <code>ui/app.js</code>, <code>ui/app.css</code>, <code>src/server.js</code></p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-39" data-group="HTF-12" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-39</span>
+          <span class="task-title">Settings for the store, the roots and the default enabled state</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-39 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 50 of 100.</p>
+          <p><strong>Problem it solves:</strong> base URL, credential and roots would otherwise be edited by hand in a file with no validation.</p>
+          <p><strong>How we will solve it:</strong> a Settings section with base URL, credential (write only, masked when read), tool roots, default enabled state for a new record, and a Test connection button that reports the exact status and error. Values are saved to <code>config.local.json</code>; the credential is never returned by the API.</p>
+          <p><strong>Benefit:</strong> setup is explicit and testable, and a wrong value fails loudly in Settings instead of silently at publish time.</p>
+          <p><strong>Files:</strong> <code>src/config.js</code>, <code>src/server.js</code>, <code>ui/app.js</code>, <code>ui/index.html</code></p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-40" data-group="HTF-12" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-40</span>
+          <span class="task-title">Selftest and source checks for the whole release path</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-40 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Points:</strong> 80 of 100.</p>
+          <p><strong>Problem it solves:</strong> a publishing path that is only tested by hand will regress on the first schema change.</p>
+          <p><strong>How we will solve it:</strong> a mocked store in the selftest covering: create, update, enable, skip when unchanged, blocked on a missing store map row, blocked on a missing credential, size guard, remote signature mismatch, read-back mismatch, partial documents, and a name collision. Source checks cover no hardcoded type or folder ids, no key-like literal, no credential in a log line, and the store map schema version. A separate opt-in check runs the real read against the store when a credential exists; it never writes.</p>
+          <p><strong>Benefit:</strong> the release path is verified the same way the builder is, and a real write is never the first test.</p>
+          <p><strong>Files:</strong> <code>test/run-selftest.cjs</code>, <code>test/check-sources.cjs</code></p>
+          <p><strong>Status:</strong> not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Ideas for the factory, kept until they are decided. An agreed idea moves to
   section 15 with points; a rejected one is marked ignored with the reason.</p>
@@ -1134,6 +1828,102 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     </details>
   </div>
 
+  <div class="idea-item" data-idea-id="I-12" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-12</span>
+        <span class="idea-title">Scheduled drift check across every root</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-12 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> read the store on a schedule, compare builds and stamps, and show the outdated tools without an operator pressing verify.</p>
+        <p><strong>Why:</strong> drift appears between releases, not during them, and only an automatic check sees it.</p>
+        <p><strong>Discussion:</strong> read only, so it can run with a read key; needs a quiet notification channel that does not spam.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-13" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-13</span>
+        <span class="idea-title">Assemble an application package from its tools</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-13 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> build an application version that bundles a named set of published tools, from the tools in the registry.</p>
+        <p><strong>Why:</strong> the store has applications and tools; publishing a tool is only half the story if the application that ships it must be assembled by hand.</p>
+        <p><strong>Discussion:</strong> needs the application package format and the version numbering from the store team; the read side (T-36) comes first.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-14" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-14</span>
+        <span class="idea-title">Fleet view: which tenant runs which version</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-14 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> show installed and latest version per tenant for a tool, instead of only the published version.</p>
+        <p><strong>Why:</strong> publishing a new build does not mean every tenant runs it.</p>
+        <p><strong>Discussion:</strong> needs an installation record or a version field on the tenant side; belongs to the U-admin style view, not to the repository.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-15" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-15</span>
+        <span class="idea-title">Regenerate the documents inside the publish plan</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-15 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> when the release plan sees a code change, regenerate the affected satellites with the existing documentation generators before the dry run.</p>
+        <p><strong>Why:</strong> today the operator must remember a second command, and a stale webpage is published happily.</p>
+        <p><strong>Discussion:</strong> the SSOT is never regenerated, only satellites; the plan must show which documents the generator would change before anything is written.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-16" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-16</span>
+        <span class="idea-title">One click rollback to the previous published build</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-16 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> keep the last published payload per tool and republish it as a new build when a release turns out to be wrong.</p>
+        <p><strong>Why:</strong> rolling back by hand means re-pasting three files into the CMS while users are affected.</p>
+        <p><strong>Discussion:</strong> depends on the code version snapshot answer (Q-28); a rollback is a forward publish with the old content, never a delete.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-17" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-17</span>
+        <span class="idea-title">Release notes written from the ledger</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-17 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> generate the update row of <code>updates.html</code> from the published build, the changed files and the finished tasks.</p>
+        <p><strong>Why:</strong> the release already knows what changed; writing it twice invites the version and the note to disagree.</p>
+        <p><strong>Discussion:</strong> the text still needs a human pass; the ledger supplies the facts, not the prose.</p>
+      </div>
+    </details>
+  </div>
+
   <h2 id="sec-testplan">17. Test plan - step by step</h2>  <h3>17.1 Scenarios</h3>
   <ol>
     <li><strong>TP-01 - self test.</strong> Run <code>npm run selftest</code>. PASS if every check passes and the sample run reaches a terminal state.</li>
@@ -1301,6 +2091,114 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
     </details>
   </div>
 
+  <div class="risk-item" data-risk-id="R-09" data-group="HTF-11" data-risk-level="critical" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-09</span>
+        <span class="risk-title">A publish updates the wrong store record</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-09 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-31, T-38</p>
+        <p><strong>What can go wrong:</strong> a name match or a stale id overwrites a different tool, and the mistake is invisible until a tenant installs it.</p>
+        <p><strong>Mitigation:</strong> update only by the object id in the ledger; a name mismatch between plan and remote record aborts; a same-slug record the ledger does not know needs explicit adoption; the confirmation lists type, folder and name per target.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-10" data-group="HTF-11" data-risk-level="critical" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-10</span>
+        <span class="risk-title">The store credential leaks into the repository or a log</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-10 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-33, T-39</p>
+        <p><strong>What can go wrong:</strong> the key is pasted into a file, printed in an error, or stored in a run folder that gets shared.</p>
+        <p><strong>Mitigation:</strong> environment or gitignored config only, masked Settings, redaction in every log and error line, never in a tool parameter or a generated tool, and a source check that fails on a key-like literal.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-11" data-group="HTF-12" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-11</span>
+        <span class="risk-title">A partial release leaves the store mixed and nobody notices</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-11 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-28, T-34</p>
+        <p><strong>What can go wrong:</strong> the tool publishes, two documents pass and three fail, and the next publish starts over without knowing what is missing.</p>
+        <p><strong>Mitigation:</strong> per target ledger with a reason, tool before documents, changed-only document publish, resumable run, and a Tools tab that shows stale documents.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-12" data-group="HTF-11" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-12</span>
+        <span class="risk-title">A payload crosses the 1 MB object limit</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-12 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-29, T-34</p>
+        <p><strong>What can go wrong:</strong> a large tool plus an inlined document is rejected or truncated, and the store keeps the old build.</p>
+        <p><strong>Mitigation:</strong> a 900 KB guard before the request that names the target and the measured size, documents never inline, screenshots as URLs, and a selftest that pushes the payload over the guard.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-13" data-group="HTF-11" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-13</span>
+        <span class="risk-title">The store schema changes and the factory writes nowhere</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-13 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-27</p>
+        <p><strong>What can go wrong:</strong> a renamed field or type turns every write into a no-op that still returns success.</p>
+        <p><strong>Mitigation:</strong> one store map with a schema version, read-back after every write, the exact response body in the ledger on failure, and no hardcoded id anywhere.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 open</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-14" data-group="HTF-11" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-14</span>
+        <span class="risk-title">An unconfirmed write endpoint is treated as working</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-14 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-31</p>
+        <p><strong>What can go wrong:</strong> a mocked test passes, the operator believes publishing works, and the first real release silently changes nothing.</p>
+        <p><strong>Mitigation:</strong> no task in HTF-11 is done until one real create and one real update succeed and are read back from the real store; mocked tests are a floor, not the proof.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 open</p>
+      </div>
+    </details>
+  </div>
+
   <h3>Risk resolution record - 2026-10-29</h3>
   <table>
     <tr><th>Risk</th><th>State</th><th>Resolution and evidence</th></tr>
@@ -1337,12 +2235,18 @@ select-idea -> research-ssot -> [ plan-tasks -> risk-review -> resolve-risks
       <tr><td>2026-10-29</td><td>0.12.0</td><td>T-05 and T-06 shipped: the planner writes the batches into the SSOT so the iteration is visible before it costs anything, and every batch and step records real provider tokens with the provenance shown next to the points. The restart dialog now shows the run id with a copy button and the tool path as clickable segments that open that folder, and it confirms on the last six characters. 181 self test checks and 66 source checks.</td></tr>
       <tr><td>2026-10-29</td><td>0.12.1</td><td>The model actually used is no longer a mystery: the provider chip names the endpoint model and every stage override, each AI log line names the model that answered, the start of a run logs the resolved models, and Settings has a Model per stage section for the two overrides. 186 self test checks.</td></tr>
       <tr><td>2026-10-29</td><td>0.12.2</td><td><code>APP_BUILD</code> is sent with the state and printed into the page; when the two differ the dashboard shows "Reload needed" with the reason instead of silently showing old markup or talking to an old server. A source check keeps the build stamp equal to the document version. 186 self test checks and 68 source checks.</td></tr>
+      <tr><td>2026-11-17</td><td>0.13.0</td><td>Phase 0 and phase 1 of the release upgrade: the store map exists as data (8 targets, every value either cited or empty, every row naming its question), the tool roots registry discovers every tool in the repository with its stamps, harness, document set and screenshots, and the store client reads with both auth forms, redacts the credential everywhere and reports MISSING_CREDENTIAL before any request. No write was made. 210 self test checks and 74 source checks.</td></tr>
+      <tr><td>2026-11-17</td><td>0.13.1</td><td>Eleven blocking answers applied: two separate keys (read and write) resolved from a secrets file outside the repository, the five document targets filled from the working HTML Tool Item Editor and now writable, patch by field instead of full replace, and a written handoff (CMS-REQUEST--store-write-api.txt) for the write endpoints. 216 self test checks.</td></tr>
+      <tr><td>2026-11-17</td><td>0.13.2</td><td>Studio P0: a local read-only repository workspace (<code>src/workspace.js</code>) with tree, file, search and tool registry routes, and a second page at <code>/studio/</code> that lists every tool under BUSINESS and PERSONAL with its package and publish state. 248 self test checks.</td></tr>
+      <tr><td>2026-11-18</td><td>0.13.3</td><td>Studio P1: every html file opens as a <b>preview</b> through a jailed <code>/repo/</code> route (with its own css, js and images) and code is one click away; the tree marks tool folders first; any tool's backlog is read from its own <code>docs/ssot.html</code> in a Tasks tab. The token file and the run folders are refused by both the preview and the text reader. 265 self test checks.</td></tr>
+      <tr><td>2026-11-18</td><td>0.13.4</td><td>Concurrency decided: Studio builds one tool at a time (D-HTF-52). <code>studio.workers</code> defaults to 1, is clamped to 1..8 and can never be 0, visible in the state view; parallel stays a later, deliberate change. 271 self test checks.</td></tr>
+      <tr><td>2026-11-18</td><td>0.13.5</td><td>Studio: the visited location is in the URL (<code>#file/</code>, <code>#tasks/</code>, <code>#search/</code>), so a refresh reopens the tree, the view and the item instead of an empty page; and the page compares its build with the server's and says when the server is running older code. That mismatch was the real reason a preview answered <i>Not found</i> while the Studio page itself worked. 271 self test checks and 78 source checks.</td></tr>
     </tbody>
   </table>
 
   <div class="footer">
     HTML Tool Factory - single source of truth for every decision about this
-    builder. Version 0.12.2, 2026-10-29. Keep in sync with the code.
+    factory. Version 0.12.2, 2026-11-17. Keep in sync with the code.
   </div>
   </div><!-- /#view-document -->
 
