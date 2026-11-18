@@ -363,10 +363,24 @@ function toolRegistry(options) {
   const config = settings.config || loadConfig()
   const listing = toolRoots.listTools(config)
   const ledger = loadPublishLedger()
+  const relativeOf = (absolutePath) => (absolutePath
+    ? path.relative(repoRoot(), absolutePath).replace(/\\/g, '/')
+    : '')
   const tools = listing.tools.map((tool) => {
     const packageState = toolRoots.packageCompleteness(tool)
     const publishState = publishedSubjectsOf(ledger, tool.folderName)
     const segments = String(tool.relativePath || '').split('/')
+    // Repository relative paths only: the studio builds its Code / Test / Docs
+    // sub-tabs straight from these, so a missing file is a disabled tab instead
+    // of a 404.
+    const documentsRelative = {}
+    Object.keys(tool.documents || {}).forEach((kind) => {
+      documentsRelative[kind] = relativeOf(tool.documents[kind])
+    })
+    const codeRelative = {}
+    Object.keys(tool.codeFiles || {}).forEach((kind) => {
+      codeRelative[kind] = relativeOf(tool.codeFiles[kind])
+    })
     return {
       slug: tool.slug,
       folderName: tool.folderName,
@@ -379,8 +393,10 @@ function toolRegistry(options) {
       writable: tool.writable,
       toolBuild: tool.toolBuild,
       stamps: tool.stamps,
-      harness: Boolean(tool.harness),
-      documents: tool.documents,
+      parts: tool.parts,
+      codeFiles: codeRelative,
+      harness: tool.harness ? relativeOf(tool.harness) : '',
+      documents: documentsRelative,
       documentsMissing: tool.documentsMissing,
       screenshotCount: tool.screenshotCount,
       modifiedAt: tool.modifiedAt,

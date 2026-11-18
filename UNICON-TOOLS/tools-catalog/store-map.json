@@ -1,19 +1,27 @@
 {
   "meta": {
     "schema": "uniconhub-store-map",
-    "version": "0.2.0",
-    "updatedAt": "2026-11-17",
+    "version": "0.3.0",
+    "updatedAt": "2026-11-18",
     "host": "applicationstore.uniconhub.com",
-    "note": "Every id the release engine needs, as data (factory SSOT 8.6). A target is usable for a write only when it is filled AND confirmed. Values marked confirmed were read out of a working CMS tool in this repository (UNICON-TOOLS/HtmlToolLibraryItem - the HTML Tool Item Editor), not guessed.",
+    "note": "Every id the release engine needs, as data (factory SSOT 8.6). A target is usable for a write only when it is filled AND confirmed. Values marked confirmed were read out of a working CMS tool in this repository (UNICON-TOOLS/HtmlToolLibraryItem - the HTML Tool Item Editor), not guessed, or were confirmed by the operator. confirmedParts records which parts of a target were confirmed when the whole target is still not writable.",
+    "objectExport": {
+      "file": "UNICON-TOOLS/tools-catalog/store-objects-export.json",
+      "status": "missing",
+      "required": true,
+      "unblocks": ["Q-35", "Q-41", "Q-43"],
+      "note": "The operator can download the full folder and object list. When that file exists, a tool record id is resolved by matching the repository and tool-ideas slug against the export, never by generating an id. Expected shape: exportedAt, host, folders (id, name, typeId, parentId) and objects (id, cmsObjectType, typeId, name, slug, version). Until it exists every tool is reported unmatched and the tool target stays blocked."
+    },
     "provenance": {
       "documents": "UNICON-TOOLS/HtmlToolLibraryItem/HtmlToolLibraryItem.js: DEFAULT_PAGE_TARGET_TYPE, DEFAULT_SOCIAL_TARGET_TYPE, DEFAULT_DOCS_FOLDER_TYPE_MAP, pageFieldMap(), socialFieldMap(), buildPageDcb(), buildSocialDcb(), docSlugOf()",
       "documents.create": "requestObjects('create', { mainObjectType, name, productData: { data_categoriesBased: payload }, typeId })",
       "documents.update": "requestObjects('update', { mainObjectType, objectId, productData: { data_categoriesBased: payload } }) - only the mapped dcb key is sent",
       "tool.fields": "FIELD_DEFINITIONS in the same tool: toolName, toolIcon, toolStatus, toolDescription, toolHtmlCode, toolCssCode, toolJsCode, toolDisplayMode, toolHeight, toolAutoHeight, toolParams, toolOutputSchema, toolValidationEnabled",
       "tool.enabled": "toolStatus with options active | draft (the editor writes it as a sibling field)",
-      "tool.cmsObjectType": "SSOT glossary names tools-applicationstore; the editor never states its own record type, so it stays unconfirmed",
+      "tool.cmsObjectType": "operator-confirmed 2026-11-18: html tools are stored as tools-applicationstore",
+      "tool.idRule": "operator-confirmed 2026-11-18: the record id must equal the tool slug, and that slug is the one used by the tool ideas catalog, so an id can be resolved from the store object export instead of being generated",
       "library": "PUBLICWEBSITE-REQUEST--publish-widget-with-data.txt: website-html-tool-library-applicationstore with code { html, css, js }",
-      "write api": "the editor writes through the CMS relay tool.requestObjects with the operator session; no Node reachable write endpoint is documented yet - see DESKTOP-APPS/Html-Tool-Factory/html-tool-factory/docs/CMS-REQUEST--store-write-api.txt"
+      "write api": "CMS API v2, documented in PROJECTS/UNICONHUB/CODE/sitepoicms/_docs/rules/desktop-first-party-api-v2-integration.html: GET/POST /api/v2/objects/{cmsObjectType}, PATCH|PUT /api/v2/objects/{cmsObjectType}/{objectId} with If-Match CAS, POST .../query, POST .../bulk. Auth is either a first-party service token (x-unicon-service-token) or a managed tenant API key; deletes are not allowed. Contract extract: DESKTOP-APPS/Html-Tool-Factory/html-tool-factory/docs/STORE-API-V2.md"
     }
   },
   "targets": [
@@ -41,11 +49,13 @@
       "folderCode": "",
       "slugRule": "repoToolSlug",
       "slugField": "",
+      "idRule": "mustEqualSlug",
       "enabledField": "toolStatus",
       "enabledValues": { "on": "active", "off": "draft" },
-      "questionRef": "Q-07, Q-09, Q-10, Q-17, Q-18",
+      "questionRef": "Q-07, Q-09, Q-10, Q-17, Q-18, Q-35, Q-36, Q-37",
+      "confirmedParts": { "cmsObjectType": true, "fields": true, "idRule": true, "folderId": false, "slugField": false },
       "confirmed": false,
-      "blockedBecause": "the record type is only quoted from this document, there is no folder id, and no field can hold the repository slug yet"
+      "blockedBecause": "the record type and the id==slug rule are confirmed, but there is still no folder id (typeId is required for every create) and no field that holds the slug, so only updates against ids resolved from a store object export are safe"
     },
     {
       "id": "library",

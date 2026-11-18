@@ -23,7 +23,7 @@ const DEFAULT_STORE_MAP_PATH = path.join(REPOSITORY_ROOT, 'UNICON-TOOLS', 'tools
 // The build of the factory itself. It is served to the dashboard so a page left
 // open across a change can say so instead of quietly showing old markup. Keep it
 // equal to the document version in docs/ssot.html (a source check enforces it).
-const APP_BUILD = '0.13.5'
+const APP_BUILD = '0.13.11'
 
 const BUILT_IN_DEFAULTS = {
   host: '127.0.0.1',
@@ -67,7 +67,14 @@ const BUILT_IN_DEFAULTS = {
   // a stray value from ever starting an unbounded number of runs.
   studio: {
     workers: 1,
-    maxWorkers: 8
+    maxWorkers: 8,
+    // How many characters of SSOT plus code one chat question may carry. The
+    // chat is useful when it reads the tool; it is expensive when it reads all
+    // of it on every message.
+    chatContextChars: 120000,
+    // The model the Studio chat asks for. Empty means "whatever the provider
+    // default is". deepseek-flash is the operator's Unicon AI gateway model.
+    chatModel: 'deepseek-flash'
   },
   // Repository knowledge injected into the two prompts that decide what to
   // build: the tool rules, the publish checklist and the lessons of past runs.
@@ -284,7 +291,9 @@ function normalizeConfig(configValue) {
   config.port = Number(config.port) || 4173
   config.studio = Object.assign({}, config.studio, {
     workers: clampWorkers(config.studio && config.studio.workers),
-    maxWorkers: Math.max(1, Math.min(32, Number(config.studio && config.studio.maxWorkers) || 8))
+    maxWorkers: Math.max(1, Math.min(32, Number(config.studio && config.studio.maxWorkers) || 8)),
+    chatContextChars: Math.max(20000, Math.min(400000, Number(config.studio && config.studio.chatContextChars) || 120000)),
+    chatModel: String(config.studio && config.studio.chatModel != null ? config.studio.chatModel : 'deepseek-flash').slice(0, 80)
   })
   if (config.studio.workers > config.studio.maxWorkers) config.studio.workers = config.studio.maxWorkers
   config.ideasCatalogPath = path.resolve(APP_ROOT, String(config.ideasCatalogPath || DEFAULT_CATALOG_PATH))

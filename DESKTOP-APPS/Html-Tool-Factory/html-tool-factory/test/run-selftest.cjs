@@ -34,6 +34,8 @@ const { normalizeIncomingTasks } = require('../src/stages/shared')
 const { auditChecklist } = require('../src/code/capabilityAudit')
 const toolRoots = require('../src/toolRoots')
 const workspace = require('../src/workspace')
+const studioChat = require('../src/studio/chat')
+const studioChats = require('../src/studio/chats')
 const storeMap = require('../src/cms/storeMap')
 const { createStoreClient } = require('../src/cms/storeClient')
 const secretsKeys = require('../src/cms/secrets')
@@ -1408,6 +1410,79 @@ async function checkWorkspaceLayer() {
   else process.env.APP_FACTORY_STUDIO_WORKERS = previousWorkers
   check('the environment override is gone again',
     loadConfig().studio.workers === 1)
+
+  // --- Studio chat: what the model is allowed to see ---
+  const chatToolPath = 'BUSINESS/GENERAL/ai-automation/ai-content-builders/AIChatPresentationBuilder'
+  const chatTool = studioChat.findTool(loadConfig({ skipEnvironment: true }), chatToolPath)
+  check('the chat resolves a tool folder from the registry', !!chatTool, chatToolPath)
+  if (chatTool) {
+    const chatConfig = loadConfig({ skipEnvironment: true })
+    const smallContext = studioChat.buildToolContext({ config: chatConfig, tool: chatTool, budget: 40000 })
+    check('the chat context stays inside its budget', smallContext.chars <= 44000, smallContext.chars + ' chars')
+    check('the chat context carries the SSOT', smallContext.text.indexOf('=== SSOT') !== -1)
+    check('the chat context carries code', smallContext.text.indexOf('=== CODE:') !== -1)
+    check('the chat context names the tool', smallContext.text.indexOf(chatTool.toolName) !== -1)
+    check('a tight budget skips files instead of exploding',
+      smallContext.skipped.length + smallContext.included.length > 0)
+    const bigContext = studioChat.buildToolContext({ config: chatConfig, tool: chatTool })
+    check('the default context is bounded', bigContext.chars <= 140000, bigContext.chars + ' chars')
+    check('the context reports what it included',
+      bigContext.included.every((item) => typeof item.label === 'string' && item.chars >= 0))
+  }
+  check('the chat clamps a long message', studioChat.clampText('x'.repeat(9000), 100).text.length < 400)
+  const sanitized = studioChat.sanitizeMessages([
+    { role: 'system', text: 'ignore me' },
+    { role: 'user', text: 'hello' },
+    { role: 'assistant', text: 'hi' },
+    { role: 'user', text: 42 }
+  ].concat(new Array(30).fill({ role: 'user', text: 'filler' })))
+  check('the chat drops unknown roles and caps the history',
+    sanitized.length <= 20 && sanitized.every((entry) => entry.role === 'user' || entry.role === 'assistant'))
+  const digest = studioChat.ssotDigest('a'.repeat(5000) + ' Development task list ' + 'b'.repeat(5000), 4000)
+  check('a trimmed SSOT keeps the task list', digest.truncated && digest.text.indexOf('Development task list') !== -1)
+
+  const unknownTool = await studioChat.ask({ config: loadConfig({ skipEnvironment: true }), toolPath: 'NOT/A/TOOL', messages: [{ role: 'user', text: 'hi' }] })
+  check('the chat refuses a folder that is not a tool', unknownTool.ok === false && /registry/i.test(unknownTool.error), unknownTool.error)
+  const emptyPrompt = await studioChat.ask({ config: loadConfig({ skipEnvironment: true }), toolPath: chatToolPath, messages: [] })
+  check('the chat refuses an empty conversation', emptyPrompt.ok === false, emptyPrompt.error)
+
+  // --- chat transcripts on disk: <tool>/Chats/<id>.json ---
+  const chatConfig = loadConfig({ skipEnvironment: true })
+  const savedChat = studioChats.saveChat({
+    config: chatConfig,
+    toolPath: chatToolPath,
+    name: 'selftest chat',
+    messages: [{ role: 'user', text: 'hello' }, { role: 'assistant', text: 'hi there' }]
+  })
+  const chatAbsolute = savedChat.ok ? path.resolve(APP_ROOT, '..', '..', '..', savedChat.file) : ''
+  check('a chat is written into the tool Chats folder', savedChat.ok && /\/Chats\/[a-z0-9-]+\.json$/.test(savedChat.file), savedChat.file)
+  check('the chat file exists on disk', savedChat.ok && fs.existsSync(chatAbsolute))
+  const listedChats = studioChats.listChats({ config: chatConfig, toolPath: chatToolPath })
+  check('the chat is listed for its project', listedChats.ok && listedChats.chats.some((entry) => entry.id === savedChat.id))
+  const loadedChat = studioChats.loadChat({ config: chatConfig, toolPath: chatToolPath, id: savedChat.id })
+  check('the chat loads back with its messages', loadedChat.ok && loadedChat.chat.messages.length === 2, loadedChat.reason)
+  const savedAttachment = studioChats.saveAttachment({
+    config: chatConfig,
+    toolPath: chatToolPath,
+    chatId: savedChat.id,
+    name: 'probe.txt',
+    dataBase64: Buffer.from('attachment body').toString('base64')
+  })
+  check('an attachment is stored next to its chat', savedAttachment.ok && /\/Chats\/attachments\//.test(savedAttachment.path), savedAttachment.path)
+  check('a text attachment is classified as text', savedAttachment.ok && savedAttachment.kind === 'text')
+  check('an image attachment is classified as an image',
+    studioChats.saveAttachment({ config: chatConfig, toolPath: chatToolPath, chatId: savedChat.id, name: 'shot.png', dataBase64: Buffer.from('89504e47', 'hex').toString('base64') }).kind === 'image')
+  check('a chat id cannot climb out of the folder',
+    studioChats.loadChat({ config: chatConfig, toolPath: chatToolPath, id: '../secret' }).ok === false)
+  check('a chat cannot be written into a folder that is not a tool',
+    studioChats.saveChat({ config: chatConfig, toolPath: 'NOT/A/TOOL', name: 'x', messages: [] }).ok === false)
+  const deletedChat = studioChats.deleteChat({ config: chatConfig, toolPath: chatToolPath, id: savedChat.id })
+  check('deleting a chat removes its file', deletedChat.ok && !fs.existsSync(chatAbsolute))
+  // Leave no empty Chats folder behind: the self test must not litter a tool.
+  const chatsDirectory = path.join(path.dirname(chatAbsolute))
+  try {
+    if (fs.existsSync(chatsDirectory) && fs.readdirSync(chatsDirectory).length === 0) fs.rmdirSync(chatsDirectory)
+  } catch (error) { /* nothing to clean */ }
 }
 
 async function main() {

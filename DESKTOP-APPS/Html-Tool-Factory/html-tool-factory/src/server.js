@@ -22,6 +22,8 @@ const { createAiClient } = require('./ai/client')
 const chatService = require('./chat/service')
 const live = require('./live')
 const workspace = require('./workspace')
+const studioChat = require('./studio/chat')
+const studioChats = require('./studio/chats')
 const { nowIso } = require('./util')
 
 const UI_DIRECTORY = path.join(APP_ROOT, 'ui')
@@ -307,6 +309,97 @@ async function handleApi(request, response, urlObject) {
   if (pathName === '/api/workspace/tasks' && method === 'GET') {
     // The tool backlog is its SSOT task list (section 15), parsed tolerantly.
     const result = workspace.readToolTasks(searchParams.get('path') || '')
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/studio/chat' && method === 'POST') {
+    // Studio chat: the server decides what the model reads (SSOT, code, open
+    // file, open tasks, attachments). It never writes a source file.
+    const body = await readBody(request)
+    const result = await studioChat.ask({
+      config,
+      toolPath: body.toolPath,
+      messages: body.messages,
+      openFile: body.openFile,
+      task: body.task,
+      attachments: body.attachments
+    })
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/studio/chat/ping' && method === 'POST') {
+    // A tiny call that proves the gateway, the key and the model name work,
+    // without spending a real answer on it.
+    const startedAt = Date.now()
+    try {
+      const result = await studioChat.ask({
+        config,
+        toolPath: String((await readBody(request)).toolPath || ''),
+        messages: [{ role: 'user', text: 'Reply with the single word: ready' }]
+      })
+      sendJson(response, result.ok ? 200 : 400, {
+        ok: result.ok,
+        error: result.error || '',
+        provider: result.ok ? result.reply.provider : '',
+        model: result.ok ? result.reply.model : '',
+        latencyMs: Date.now() - startedAt,
+        reply: result.ok ? String(result.reply.text || '').slice(0, 200) : ''
+      })
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: String(error && error.message || error) })
+    }
+    return
+  }
+
+  if (pathName === '/api/studio/chats' && method === 'GET') {
+    const result = studioChats.listChats({ config, toolPath: searchParams.get('path') || '' })
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/studio/chats/load' && method === 'GET') {
+    const result = studioChats.loadChat({
+      config,
+      toolPath: searchParams.get('path') || '',
+      id: searchParams.get('id') || ''
+    })
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/studio/chats/save' && method === 'POST') {
+    const body = await readBody(request)
+    const result = studioChats.saveChat({
+      config,
+      toolPath: body.toolPath,
+      id: body.id,
+      name: body.name,
+      model: body.model,
+      messages: body.messages
+    })
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/studio/chats/delete' && method === 'POST') {
+    const body = await readBody(request)
+    const result = studioChats.deleteChat({ config, toolPath: body.toolPath, id: body.id })
+    sendJson(response, result.ok ? 200 : 400, result)
+    return
+  }
+
+  if (pathName === '/api/studio/chat/attachment' && method === 'POST') {
+    const body = await readBody(request)
+    const result = studioChats.saveAttachment({
+      config,
+      toolPath: body.toolPath,
+      chatId: body.chatId,
+      name: body.name,
+      dataBase64: body.dataBase64
+    })
+    if (result.ok) delete result.absolutePath
     sendJson(response, result.ok ? 200 : 400, result)
     return
   }

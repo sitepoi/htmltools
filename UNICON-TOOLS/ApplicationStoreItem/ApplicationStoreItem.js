@@ -1,4 +1,4 @@
-/* js build 2026-11-17-2 */
+/* js build 2026-11-18-1 */
 /* ============================================================
    Application Store Item - UniconHub CMS html-tool
    Manages ONE application record of the application store:
@@ -9,7 +9,7 @@
 (function () {
   'use strict';
 
-  var TOOL_BUILD = '2026-11-17-2';
+  var TOOL_BUILD = '2026-11-18-1';
   try { console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ApplicationStoreItem'); } catch (error) {}
 
   /* --------------------------------------------------------
@@ -1988,6 +1988,7 @@
       + '</div>'
       + '<span class="asi-doc-status" id="asi-doc-status-' + docKey + '">New document - not saved yet</span>'
       + '<span class="asi-doc-actions">'
+      + '<button class="asi-btn asi-btn-ghost asi-btn-sm" type="button" data-act="doc-paste-all" data-doc="' + docKey + '" title="Read [HTML], [CSS] and [JS] sections from the clipboard and fill this document">⇩ Paste all code</button>'
       + '<button class="asi-btn asi-btn-primary asi-btn-sm" type="button" data-act="doc-save" data-doc="' + docKey + '" title="Create or update the ' + escHtml(docTargetType(docKey)) + ' object with this document">⇪ Save document</button>'
       + '<button class="asi-btn asi-btn-ghost asi-btn-sm" type="button" data-act="doc-reload" data-doc="' + docKey + '" title="Load the saved content from the ' + escHtml(docTargetType(docKey)) + ' object into the editor">↻ Reload from object</button>'
       + '</span></div>');
@@ -2226,7 +2227,64 @@
     var docKey = button.getAttribute('data-doc');
     if (action === 'doc-save' && docKey) saveDoc(docKey);
     else if (action === 'doc-reload' && docKey) reloadDoc(docKey);
+    else if (action === 'doc-paste-all' && docKey) pasteAllCode(docKey);
     else if (action === 'doc-preview' && docKey) { _activeDocKey = docKey; renderDocPreview(); }
+  }
+
+  // Studio copies a tool's code as three labelled sections ([HTML] [CSS] [JS],
+  // the same shape html-tool-rules.txt asks a model for). This reads that shape
+  // back out, so one copy and one paste moves a whole tool into a document.
+  function parseCodeBundle(rawText) {
+    var text = String(rawText == null ? '' : rawText).replace(/\r\n/g, '\n');
+    var pattern = /^[ \t]*(?:[-=*#>]+[ \t]*)?\[?[ \t]*(HTML|CSS|JS)[ \t]*\]?[ \t]*(?:[-=*#:]+)?[ \t]*$/gim;
+    var matches = [];
+    var match = pattern.exec(text);
+    while (match !== null) {
+      matches.push({ kind: match[1].toLowerCase(), start: match.index, headerEnd: pattern.lastIndex });
+      match = pattern.exec(text);
+    }
+    if (!matches.length) return null;
+    var sections = { html: '', css: '', js: '' };
+    matches.forEach(function (entry, index) {
+      var end = index + 1 < matches.length ? matches[index + 1].start : text.length;
+      var body = text.slice(entry.headerEnd, end).trim();
+      sections[entry.kind] = body;
+    });
+    if (!sections.html && !sections.css && !sections.js) return null;
+    return sections;
+  }
+  function pasteAllCode(docKey) {
+    var label = DOC_LABELS[docKey] || docKey;
+    function apply(rawText) {
+      var parsed = parseCodeBundle(rawText);
+      if (!parsed) {
+        notify('The clipboard has no [HTML], [CSS] or [JS] section. Use Studio "Copy all" for this tool.', 'warning');
+        return;
+      }
+      var doc = docMemory(docKey);
+      if (docKey === 'social') {
+        doc.contentHtml = parsed.html;
+      } else {
+        doc.html = parsed.html;
+        doc.css = parsed.css;
+        doc.js = parsed.js;
+      }
+      doc.dirty = true;
+      refreshDocPaneValues();
+      renderDocStatus(docKey);
+      schedulePreviewRefresh();
+      logActivity('Paste all code', label + ' filled from the clipboard');
+      notify('Filled the ' + label + ' document. Press "Save document" to write it to the CMS.', 'success');
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText().then(apply, function () {
+          notify('This page cannot read the clipboard. Paste into the HTML box instead.', 'warning');
+        });
+        return;
+      }
+    } catch (error) {}
+    notify('This page cannot read the clipboard. Paste into the HTML box instead.', 'warning');
   }
   function handleDocPartClick(event) {
     var button = event.target && event.target.closest ? event.target.closest('[data-doc-part]') : null;

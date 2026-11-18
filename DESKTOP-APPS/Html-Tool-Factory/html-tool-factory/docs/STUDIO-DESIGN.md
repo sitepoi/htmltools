@@ -46,10 +46,11 @@ map, one publish ledger. No second source of truth anywhere.
 | 6 | First VS Code habit to replace | **AI chat → see the result → test it.** Reading and editing code are lower priority but remain. |
 | 7 | Tree | **Tool-first**: tool folders are visually distinct (accent colour, bold, left rule, `tool` tag). |
 | 8 | Previews | **Every `.html` opens in a preview by default** (including `ssot.html`, `test-harness.html`, documents). Code is one click away. |
+| 9 | Layout | **Three columns, one job each:** projects + folder tree (left), chat (middle), results (right: file, tasks, search). Tools and tree live together as two views of the same panel, because the tree is the VS Code habit and the tool cards carry the numbers. |
 
 ---
 
-## 3. What exists today (P0 + P1)
+## 3. What exists today (P0, P1, P2 read side)
 
 - `src/workspace.js` — the entire disk side, bounded: paths resolve **inside**
   the repository or are refused before any IO; listings stop at 500 entries,
@@ -60,19 +61,20 @@ map, one publish ledger. No second source of truth anywhere.
   real content type, so a document renders with its own CSS, JS and images.
   Jailed to the repository; `config.local.json`, `.env*`, `.git`, `node_modules`,
   `runs`, `selftest-output` and `.vscode` are refused (403).
-- **`/studio/`** — lazy folder tree with tool folders highlighted, **preview or
-  code** per file (preview first), line-numbered code viewer, repository search,
-  the **tool registry** and the **task list of any tool**.
-- **URL state** — `#file/<path>`, `#tasks/<path>`, `#search/<query>`, `#tools`.
-  A refresh reopens the tree, the view and the item instead of an empty page,
-  and the address can be pasted into another window.
+- **`src/studio/chat.js` + `POST /api/studio/chat`** — the chat context is built
+  server side: the tool SSOT (trimmed so its task list survives), the three code
+  files, the open file and a focus task, inside `studio.chatContextChars`. The
+  answer comes from the configured provider. **Nothing is written.**
+- **The page** — three columns: projects + folder tree on the left, chat in the
+  middle, file (preview/download/Code/Test/Docs), tasks and search on the right.
+  A project selected anywhere is the selected project everywhere.
+- **URL state** — `#tool/<path>`, `#file/<path>`, `#tasks/<path>`,
+  `#search/<query>`. A refresh reopens the tree, the view and the item.
 - **Stale server guard** — the page carries its build, asks the server for its
-  own and shows a warning chip when they differ. A server started before the
-  page's routes existed answers *Not found* on every preview; that is now a
-  visible message, not a mystery.
+  own and shows a warning chip when they differ.
 
-That already covers: read every folder, see every tool with its package and
-publish state, preview any document, and read any tool's real backlog.
+That covers: find a project, read its state, see its documents rendered, read
+its real backlog, and ask about it with its code and SSOT in context.
 
 ---
 
@@ -80,12 +82,14 @@ publish state, preview any document, and read any tool's real backlog.
 
 | Panel | Replaces | Content | State |
 | --- | --- | --- | --- |
-| **Explorer** | the file tree | folders load on demand, tool folders marked and styled | done |
-| **Registry** | "where is that tool, does it have docs, is it published" | one row per tool, filters, 8-subject meters, `tasks` and `open` actions | done |
+| **Explorer** | the file tree | folders load on demand, tool folders marked and styled; the whole panel is a drawer (one icon to collapse, one to close) | done |
+| **Projects** | "which tool am I working on" | the registry as cards: status, package and publish meters, `open` and `tasks`; clicking a card selects the project | done |
+| **Registry** | "where is that tool, does it have docs, is it published" | one row per tool, filters, 8-subject meters, `tasks` and `open` actions; the selected project's row is highlighted | done |
 | **Preview / Code** | opening a file to look at it | preview first for html (and images, pdf, md, txt), code one click away | done |
-| **Tasks** | scrolling a 200 KB SSOT to find the backlog | the SSOT task list: state, id, title, group, points, priority, filters, counts | done |
-| **Chat** | asking an AI in a side window, then pasting code | per-tool chat that proposes changes as diffs | P2 |
-| **Test** | opening the harness manually | run the tool's own harness and checks, show the result next to the preview | P3 |
+| **Tool tabs** | hunting for the html, css, js, harness and seven documents of one tool | opening any file inside a tool selects that project and shows **Code** (HTML / CSS / JS), **Test** (harness) and **Docs** (webpage, help, presentation, updates, social, SSOT, index) built only from files that exist | done |
+| **Tasks** | scrolling a 200 KB SSOT to find the backlog | the SSOT task list of the selected project: state, id, title, group, points, priority, filters, counts, and a `chat` button that puts the task into the conversation | done |
+| **Chat** | asking an AI in a side window, then pasting code | per-project conversation with the SSOT, the code and the open file in context; answers and plans only | **read side done**, proposals next |
+| **Test** | opening the harness manually | run the harness and per-tool checks, show the result next to the preview | P3 |
 | **Release** | manual publishing | per tool: plan → confirm → write → read-back, with the ledger beside it | P5 |
 
 ---
@@ -239,3 +243,77 @@ without a matching read-back.
 2. Backups: accept **`.studio/backups/` with retention 20** (§7)?
 3. Token ceiling per tool: what number should `studio.workerTokenCeiling` start at?
 4. When to revisit parallel workers: after how many finished queue batches?
+
+---
+
+## 16. Chat sessions on disk
+
+Every conversation is a file in the project it belongs to:
+
+```
+<tool>/Chats/<chat-id>.json                 name, model, createdAt, updatedAt, messages[]
+<tool>/Chats/attachments/<chat-id>/<file>   uploads, deleted with their chat
+```
+
+- A chat is Studio's own artifact, not part of the tool package. This is the one
+  place Studio writes, and it never writes outside that folder.
+- Several chats can run at once, in one project or across projects: each send is
+  its own request, the answer lands in the chat that asked, and switching
+  sessions never cancels another one.
+- `+` new, `✎` rename, `×` delete (deletes the file and its attachments).
+- The session list, the open session and the drawer state survive a refresh.
+
+## 17. Connecting the Unicon AI gateway
+
+The chat uses whatever provider the factory is configured with, and asks for
+`studio.chatModel` (default `deepseek-flash`). Point it at the Unicon gateway
+with these settings in `config.local.json` (gitignored) or the environment:
+
+| Setting | Environment | Meaning |
+| --- | --- | --- |
+| `provider` | `APP_FACTORY_PROVIDER` | `unicon-gateway` |
+| `uniconGateway.baseUrl` | `APP_FACTORY_GATEWAY_BASE_URL` / `UNICON_AI_GATEWAY_BASE_URL` | gateway origin, **no** `/v1` |
+| `uniconGateway.apiKey` | `APP_FACTORY_GATEWAY_API_KEY` / `UNICON_AI_GATEWAY_API_KEY` | the key. It is never typed into the chat and never returned by the API |
+| `uniconGateway.tenantHost` | `APP_FACTORY_GATEWAY_TENANT` / `UNICON_AI_GATEWAY_HOST` | tenant header, when the gateway needs one |
+| `uniconGateway.defaultProvider` | — | the `provider` field of the request, e.g. `deepseek` |
+| `studio.chatModel` | — | the `model` field, default `deepseek-flash` |
+
+What the client already sends (it is the same call the build loop uses):
+
+```
+POST {baseUrl}/v1/chat/complete
+headers: Content-Type, X-Unicon-Source: html-tool-factory,
+         X-Api-Key + Authorization: Bearer (when a key is set),
+         X-Unicon-Host (when a tenant is set)
+body:    { messages: [{role, content}], provider, model }
+answer:  outputText | output_text | text | answer | message | content
+         | choices[0].message.content | result.assistant.markdown | result.message
+```
+
+The **●** button in the chat header calls `POST /api/studio/chat/ping`, which
+sends one minimal message and reports the provider, the model, the latency, or
+the exact error. That is the fastest way to prove a gateway setting without
+spending a real answer.
+
+### What I still need to know to finish the gateway integration
+
+1. The gateway base URL (is it the same one `scripts/releaseContext.js` uses?).
+2. Are the header names above the real ones, or does it expect something else?
+3. Is a tenant host header required, and what value?
+4. The exact `model` id and the `provider` id the gateway expects for
+   `deepseek-flash`.
+5. Which response key holds the answer text (we accept several; confirming one
+   removes the guessing).
+6. Context limit, rate limit, and whether streaming is supported.
+7. **Vision**: does the gateway expose an image-capable model, and what is the
+   content-part shape for an image? `deepseek-flash` is text only, so a
+   screenshot cannot be read by it. Attachments are stored and named in the
+   prompt today; reading their pixels needs that model.
+
+## 18. What the chat still cannot do
+
+- Write a file. It explains, plans and shows exact code; applying is the write
+  spine (proposal → diff → confirm → backup → read-back) and is the next phase.
+- Use tools on its own (read another file, run a check, search the repo). Today
+  the **server** decides the context; the model cannot ask for more.
+- Read an image. See §17.7.

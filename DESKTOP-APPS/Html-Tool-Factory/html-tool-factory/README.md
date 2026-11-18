@@ -408,7 +408,27 @@ Environment variables: `APP_FACTORY_PROVIDER`, `APP_FACTORY_PORT`,
 | Page | Address | What it is |
 | --- | --- | --- |
 | Factory | `/` | one build run: plan, patch, validate, diff, review, restart |
-| Studio | `/studio/` | the repository read side: folder tree, text viewer, repository search, and the tool registry |
+| Studio | `/studio/` | the workspace: projects, chat and results |
+
+Studio is three columns, one job each:
+
+| Column | Holds |
+| --- | --- |
+| left | **Projects** (the registry as cards: status, package and publish meters) and **Files** (the folder tree), switchable, plus a close icon for the whole panel |
+| middle | **Chat** for the selected project |
+| right | **File** (preview first, code one click away, Code / Test / Docs sub-tabs), **Tasks** (the tool's SSOT task list) and **Search** |
+
+Selecting a project in the list, or any file inside a tool folder in the tree,
+makes that tool the selected project everywhere: the chat target, the task list
+and the registry highlight. The folder tree keeps working exactly like a VS Code
+explorer, and the tool panel keeps the numbers the tree cannot show.
+
+**The chat reads, it never writes.** `POST /api/studio/chat` builds the context
+server side - the tool SSOT (trimmed so its task list survives), the three code
+files, the file you have open and a focus task - inside `studio.chatContextChars`
+(120k default), sends it to the configured provider and returns the answer. A
+path sent from the browser is never trusted as a location. A task in the Tasks
+tab has a `chat` button that puts it into the conversation as the focus task.
 
 Studio reads the real disk because the server runs as you; a page inside the
 CMS cannot, and never will. The read side lives in one module,
@@ -417,12 +437,13 @@ or refused before any IO, a listing stops at 500 entries, a read stops at 1 MB
 and refuses binaries, a search stops at 200 hits over 3000 files.
 
 ```
-GET /api/workspace/tree?path=BUSINESS      one directory level
-GET /api/workspace/file?path=package.json  one text file, capped
-GET /api/workspace/search?q=toolRegistry   literal, case insensitive
-GET /api/workspace/tools                   every tool + package/publish state
-GET /api/workspace/tasks?path=<tool>       that tool's SSOT task list
-GET /repo/<path>                           a file for the preview iframe
+GET  /api/workspace/tree?path=BUSINESS      one directory level
+GET  /api/workspace/file?path=package.json  one text file, capped
+GET  /api/workspace/search?q=toolRegistry   literal, case insensitive
+GET  /api/workspace/tools                   every project + package/publish state
+GET  /api/workspace/tasks?path=<tool>       that tool's SSOT task list
+GET  /repo/<path>                           a file for the preview iframe
+POST /api/studio/chat                       ask about one project (read only)
 ```
 
 **Preview first.** Every `.html` (documents, `ssot.html`, `test-harness.html`,

@@ -3,6 +3,14 @@ CMS REQUEST — APPLICATION STORE WRITE API FOR THE RELEASE ENGINE
 One page to hand to the CMS team. Every answer below unblocks a
 numbered factory question (Q-04 to Q-18 in the factory SSOT 14.3).
 Please answer by editing this file under each "ANSWER:" line.
+
+UPDATED 2026-11-18. The CMS API v2 integration document
+(PROJECTS/UNICONHUB/CODE/sitepoicms/_docs/rules/desktop-first-party-api-v2-integration.html)
+answers the transport: base URL, both credentials, the seven endpoints,
+create and PATCH bodies, compare-and-swap, rate limits and the error table.
+The extract the factory relies on is docs/STORE-API-V2.md in this folder.
+Sections marked ANSWERED below are kept for traceability only - do not
+answer them again. What is still open is listed at the end of this file.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 0. WHAT WE ALREADY KNOW (verified, no answer needed)
@@ -38,24 +46,21 @@ Our engine runs in Node on the operator's machine (no CMS session), so it
 needs the equivalent of requestObjects over HTTP.
 
 ──────────────────────────────────────────────────────────
-Q-04 (factory). THE WRITE ENDPOINTS
-1. Which HTTP method + URL creates an object of a given cmsObjectType?
-   Please give one concrete example with a real type, e.g.:
-       POST {base}/api/v2/objects/website-builder-uniconbaseapps
-2. Which HTTP method + URL updates an existing object by its object id?
-3. Which HTTP method + URL reads one object by id (confirm it is
-   GET {base}/api/v2/objects/{type}/{id} and that {type} is required)?
-4. Is there a separate write host or prefix (a control plane), or is the
-   same applicationstore host used for reads and writes?
-5. Are writes disabled or rate limited for API keys today, and what status
-   does a refused write return?
+Q-04 (factory). THE WRITE ENDPOINTS  --  ANSWERED 2026-11-18
+Answered by the v2 integration document, not by this sheet. Summary:
 
-ANSWER:
-1.
-2.
-3.
-4.
-5.
+    POST  /api/v2/objects/{cmsObjectType}                  create  -> 201
+    GET   /api/v2/objects/{cmsObjectType}/{objectId}       read
+    PATCH /api/v2/objects/{cmsObjectType}/{objectId}       merge update
+    PUT   /api/v2/objects/{cmsObjectType}/{objectId}       replace content
+    POST  /api/v2/objects/{cmsObjectType}/query            query
+    POST  /api/v2/objects/{cmsObjectType}/bulk             500 ops, no deletes
+    GET   /health
+
+Same host for reads and writes, base https://<tenant-host>/api/v2.
+PATCH and PUT are compare-and-swap on version through If-Match; a missing
+base is 409 CAS_CONFLICT and never writes. Deletes are not available.
+Full detail: docs/STORE-API-V2.md sections 3, 5 and 6.
 
 ──────────────────────────────────────────────────────────
 Q-05 (factory). REQUEST BODY AND UPDATE SEMANTICS
@@ -157,3 +162,64 @@ WHAT WE WILL DO WITH THE ANSWERS
   enable) and keep the dry-run plan, the 900 KB guard, the release ledger
   and the read-back verification as they are designed in SSOT 8.7.
 - Nothing is published until a dry run is approved with --yes.
+
+
+──────────────────────────────────────────────────────────
+STILL OPEN AFTER 2026-11-18 (these are the real blockers)
+
+Q-35. THE STORE OBJECT EXPORT
+The operator has said a full folder and object list can be downloaded.
+We need it to resolve ids instead of inventing them, because a tool record's
+id must equal the repository slug (D-HTF-55). Please state:
+    a. which screen or endpoint produces the complete download;
+    b. whether it lists folders as well as objects;
+    c. the fields it contains per object - we need at least
+       id, cmsObjectType, typeId, name, slug and version (Q-41);
+    d. whether it is a snapshot or a live query.
+Until it exists, every tool is reported as unmatched and nothing is written.
+
+Q-43. WHO OWNS THE ID ON A FIRST CREATE
+The v2 document discourages sending object.id, but the id must equal the
+slug. May we create a record with a client-supplied id equal to the slug,
+or must the store generate the id and the export be refreshed first?
+
+Q-36. NAME AND SLUG FIELD ON tools-applicationstore
+Which field holds the display name, and which holds the slug? The create
+body accepts slug; the HTML Tool Item Editor never writes one.
+
+Q-37. WHERE THE CODE FIELDS LIVE
+Are toolHtmlCode, toolCssCode and toolJsCode inside
+productData.data_categoriesBased (one layer), or siblings on the object?
+The v2 create body shows the one-layer form; the editor uses flat field ids.
+
+Q-38. WHICH CREDENTIAL WRITES
+We propose a managed tenant API key scoped objects:write, sent in
+x-api-key exactly as the read side already does, because a first-party
+service token needs a private key that must not live in a desktop app.
+Please confirm the key is accepted for POST and PATCH on
+tools-applicationstore, website-builder-uniconbaseapps and
+tool-social-content-uniconbaseapps, and that the key's app permission is
+editor on each.
+
+Q-39. DOCUMENTS IN THE SAME CLICK
+The update button has three modes (D-HTF-53): code only, code + docs,
+code + docs + screenshots. Confirm that the five documents may be created
+and updated in the same release, and whether each needs its own folder id
+and enabled flag before the tool record is switched on.
+
+Q-40. CONFLICT POLICY
+On 409 CAS_CONFLICT should the engine re-read, re-diff and retry once, or
+stop and show the operator the diff? Both are safe with PATCH; only one
+matches how the platform expects clients to behave.
+
+Q-41. VERSION IN THE EXPORT
+Does the export or the list expose version per object, so If-Match can be
+sent without an extra read on every publish?
+
+Q-42. PROOF OF A WRITE
+What should the release ledger store: the returned version, a hash of the
+read-back content, or both?
+
+Q-27. SCREENSHOTS
+A media endpoint is not reachable with a first-party service token. Which
+endpoint and which credential uploads a screenshot for update mode 3?

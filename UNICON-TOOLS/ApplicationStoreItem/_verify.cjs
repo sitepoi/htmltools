@@ -96,7 +96,7 @@ const actPattern = /data-act="([a-z-]+)"/g;
 let actMatch;
 const htmlAndJs = html + '\n' + js;
 while ((actMatch = actPattern.exec(htmlAndJs)) !== null) acts.add(actMatch[1]);
-const knownActs = ['doc-save', 'doc-reload', 'doc-preview', 'release-edit', 'release-delete', 'file-copy', 'file-remove', 'shot-up', 'shot-down', 'shot-copy', 'shot-icon', 'shot-remove'];
+const knownActs = ['doc-save', 'doc-reload', 'doc-preview', 'doc-paste-all', 'release-edit', 'release-delete', 'file-copy', 'file-remove', 'shot-up', 'shot-down', 'shot-copy', 'shot-icon', 'shot-remove'];
 acts.forEach((act) => {
   if (!knownActs.includes(act)) problems.push('Unhandled data-act: ' + act);
 });
