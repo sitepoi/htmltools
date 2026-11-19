@@ -474,8 +474,19 @@ function stripTags(htmlText) {
 // The SSOT task list is the real backlog (section 15). It is HTML, so it is
 // read with a small, tolerant parse: data-task-id marks a task, the title,
 // status, points and priority are optional decorations around it.
+//
+// Only markup a browser RENDERS counts. A task block inside an HTML comment or
+// inside <script>/<style> is a template sample, not a task, and treating it as
+// one makes the drawer disagree with the page it was read from.
+function stripUnrendered(htmlText) {
+  return String(htmlText == null ? '' : htmlText)
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+}
+
 function parseSsotTasks(htmlText) {
-  const text = String(htmlText == null ? '' : htmlText)
+  const text = stripUnrendered(htmlText)
   const chunks = text.split('<div class="task-item"')
   const tasks = []
   const seen = {}

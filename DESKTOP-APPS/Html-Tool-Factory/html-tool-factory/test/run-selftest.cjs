@@ -1385,6 +1385,23 @@ async function checkWorkspaceLayer() {
   check('the task parser decodes entities in a title', parsedTasks[1].title === 'Second & last', parsedTasks[1].title)
   check('the task parser survives a file with no tasks', workspace.parseSsotTasks('<p>nothing</p>').length === 0)
 
+  // A template sample inside a comment is not a task: the page does not show it.
+  const commentedSsot = [
+    '<!-- TEMPLATE: copy one block per group',
+    '<div class="task-item" data-task-id="T-99" data-group="[GROUP-KEY]" data-task-status="not-started">',
+    '<span class="task-title">[Short task name]</span></div> -->',
+    '<div class="task-item" data-task-id="T-50" data-group="real" data-task-status="not-started">',
+    '<span class="task-title">Real work</span></div>',
+    '<script>var template = \'<div class="task-item" data-task-id="T-98">\'</script>'
+  ].join('\n')
+  const commentedTasks = workspace.parseSsotTasks(commentedSsot)
+  check('a task inside an html comment is not a task', commentedTasks.length === 1,
+    commentedTasks.map((task) => task.id).join(','))
+  check('a real task next to a commented template is still read',
+    commentedTasks[0] && commentedTasks[0].id === 'T-50' && commentedTasks[0].title === 'Real work')
+  check('a task inside a script block is not a task',
+    workspace.parseSsotTasks('<script>var x = \'<div class="task-item" data-task-id="T-97">\'</script>').length === 0)
+
   const realTasks = workspace.readToolTasks('DESKTOP-APPS/Html-Tool-Factory/html-tool-factory')
   check('the tool task reader parses a real SSOT', realTasks.ok && realTasks.tasks.length > 20, realTasks.reason || realTasks.tasks.length)
   check('the tool task reader counts done and open', realTasks.ok &&
@@ -1393,6 +1410,14 @@ async function checkWorkspaceLayer() {
     JSON.stringify(realTasks.counts))
   check('the tool task reader refuses a folder with no SSOT', workspace.readToolTasks('UNICON-TOOLS/tools-catalog').ok === false)
   check('the tool task reader refuses the repository root', workspace.readToolTasks('').ok === false)
+  // Regression: AssetDrive ships template task blocks inside comments, and the
+  // drawer listed them as real tasks (T-PU-01..03 and T-01 with a placeholder title).
+  const assetTasks = workspace.readToolTasks('BUSINESS/GENERAL/file-media/file-management-storage/AssetDrive')
+  check('the drawer lists only the tasks the page shows',
+    assetTasks.ok && assetTasks.tasks.every((task) => task.id.indexOf('T-AD-') === 0),
+    assetTasks.ok ? assetTasks.tasks.map((task) => task.id).join(',') : assetTasks.reason)
+  check('no parsed task keeps a placeholder title or group',
+    assetTasks.ok && assetTasks.tasks.every((task) => task.title.indexOf('[') !== 0 && task.group.indexOf('[') !== 0))
 
   // --- serial first: the worker setting (D-HTF-52) ---
   const serialConfig = loadConfig({ skipEnvironment: true })

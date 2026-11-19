@@ -4,7 +4,7 @@
    which only asks the model a question and never writes a file. */
 
 (function () {
-  var STUDIO_BUILD = '0.13.11';
+  var STUDIO_BUILD = '0.13.12';
   var RAIL_KEY = 'uniconhub_studio_rail_v1';
   var RAIL_VIEW_KEY = 'uniconhub_studio_rail_view_v1';
   var TASKS_KEY = 'uniconhub_studio_tasks_v1';

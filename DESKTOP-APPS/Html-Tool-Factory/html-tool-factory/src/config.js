@@ -23,7 +23,7 @@ const DEFAULT_STORE_MAP_PATH = path.join(REPOSITORY_ROOT, 'UNICON-TOOLS', 'tools
 // The build of the factory itself. It is served to the dashboard so a page left
 // open across a change can say so instead of quietly showing old markup. Keep it
 // equal to the document version in docs/ssot.html (a source check enforces it).
-const APP_BUILD = '0.13.11'
+const APP_BUILD = '0.13.12'
 
 const BUILT_IN_DEFAULTS = {
   host: '127.0.0.1',
