@@ -1,0 +1,1245 @@
+<!--
+  =========================================================================
+  PROGRAMS & REGISTRATION - fragment for the CentreCanada website
+  (route /programs)
+  - One parent <div class="cc-page cc-programs"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are scoped under .cc-programs so nothing leaks
+  - Program facts follow the live site:
+      Weekend School 2026-2027 - Kindergarten 4-5, Grades 1-5,
+        $125 / $250 / $375
+      Summer School 2026 - 93 6th Street New Westminster,
+        July 27 - August 14 2026, Grades 1-5
+      Winter Camp 2026-2027 - Harrison Lake Hotel rooms full,
+        new registrations on a backup list (bilingual notice)
+      Spring Reading Camp - April 3-5, Scouts Campground
+        27660 Dewdney Trunk Rd Maple Ridge, men 25+, $50
+      Veritas Basketball - ages 10-12, Prince Charles Elementary
+  - The interest form follows the platform contract: form data-gw-form,
+    hidden honeypot named "gw_hp", [data-gw-form-status] live region.
+  - FORM ENDPOINT: set data-gw-form-endpoint on the form (or edit
+    formApiEndpoint below) once the CentreCanada deployment domain is
+    confirmed. ===== CMS CONFIG NEEDED =====
+  - SEO for the CMS page object (slug "programs"):
+    title "Programs & Registration - CentreCanada Newcomer Services"
+    description "Weekend School, Summer School, Winter Camp, Spring Reading
+    Camp, Veritas Basketball and career seminars for newcomer families in
+    British Columbia. See current dates, fees and register your interest."
+  =========================================================================
+-->
+<div class="cc-page cc-programs">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="cc-p-hero">
+		<div class="cc-p-hero-bg" aria-hidden="true"></div>
+		<div class="cc-p-wrap cc-p-hero-grid">
+			<div>
+				<p class="cc-p-kicker"><span class="cc-p-kicker-bar" aria-hidden="true"></span>Programs &amp; registration</p>
+				<h1 class="cc-p-hero-title">A place in every season<br><span class="cc-p-accent">for every family.</span></h1>
+				<p class="cc-p-hero-lede">
+					Current CentreCanada programs, dates and fees in one place. Register your interest and our
+					team will follow up with the forms and next steps for your chosen program.
+				</p>
+			</div>
+			<div class="cc-p-hero-side cc-p-reveal">
+				<p class="cc-p-side-kicker">At a glance</p>
+				<ul class="cc-p-side-list">
+					<li><strong>Weekend School</strong><span>Kindergarten &amp; Grades 1&ndash;5</span></li>
+					<li><strong>Summer School</strong><span>July 27 &ndash; August 14, 2026</span></li>
+					<li><strong>Winter Camp</strong><span>Harrison Lake &middot; backup list open</span></li>
+					<li><strong>Spring Reading Camp</strong><span>April 3&ndash;5 &middot; adults 25+</span></li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== NOTICE ============================= -->
+	<section class="cc-p-notice-wrap" aria-label="Program notice">
+		<div class="cc-p-wrap">
+			<div class="cc-p-notice cc-p-reveal">
+				<span class="cc-p-notice-flag">Notice</span>
+				<p class="cc-p-notice-text">
+					<strong>Winter Camp 2026&ndash;2027:</strong> Harrison Lake Hotel rooms are full now.
+					All new registrations will be placed on a backup list.
+					<em>(Harrison Lake otel kay&#305;tlar&#305; dolmu&#351;tur, yeni kay&#305;tlar yedek listeye al&#305;nacakt&#305;r.)</em>
+				</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== PROGRAMS =========================== -->
+	<section class="cc-p-list">
+		<div class="cc-p-wrap">
+			<div class="cc-p-sec-head cc-p-reveal">
+				<div>
+					<p class="cc-p-kicker"><span class="cc-p-kicker-bar" aria-hidden="true"></span>Current programs</p>
+					<h2 class="cc-p-sec-title">Six ways to learn, connect and grow</h2>
+				</div>
+			</div>
+
+			<div class="cc-p-grid">
+
+				<!-- Weekend School -->
+				<article class="cc-p-card cc-p-reveal">
+					<div class="cc-p-card-top">
+						<span class="cc-p-card-season">All year</span>
+						<span class="cc-p-status cc-p-status-open">Registration open</span>
+					</div>
+					<h3 class="cc-p-card-title">Weekend School <span>2026&ndash;2027</span></h3>
+					<p class="cc-p-card-text">
+						A warm, structured weekend program for young learners, with small classes and caring
+						teachers.
+					</p>
+					<dl class="cc-p-facts">
+						<div><dt>Grades</dt><dd>Kindergarten (ages 4&ndash;5) and Grades 1&ndash;5</dd></div>
+						<div><dt>Fees</dt><dd>1 child $125 &middot; 2 children $250 &middot; 3 children $375</dd></div>
+					</dl>
+					<a class="cc-p-card-link" href="#register-interest">Register interest <span aria-hidden="true">&rarr;</span></a>
+				</article>
+
+				<!-- Summer School -->
+				<article class="cc-p-card cc-p-card-dark cc-p-reveal">
+					<div class="cc-p-card-top">
+						<span class="cc-p-card-season">Summer 2026</span>
+						<span class="cc-p-status">Seasonal</span>
+					</div>
+					<h3 class="cc-p-card-title">Summer School <span>2026</span></h3>
+					<p class="cc-p-card-text">
+						A three-week program where students learn, explore and build friendships in a positive,
+						supportive environment &mdash; with educational, recreational and group activities.
+					</p>
+					<dl class="cc-p-facts">
+						<div><dt>Location</dt><dd>93 6th Street, New Westminster, BC</dd></div>
+						<div><dt>Dates</dt><dd>July 27 &ndash; August 14, 2026</dd></div>
+						<div><dt>Grades</dt><dd>Students currently in Grades 1&ndash;5</dd></div>
+					</dl>
+					<a class="cc-p-card-link" href="#register-interest">Register interest <span aria-hidden="true">&rarr;</span></a>
+				</article>
+
+				<!-- Winter Camp -->
+				<article class="cc-p-card cc-p-reveal">
+					<div class="cc-p-card-top">
+						<span class="cc-p-card-season">Winter 2026&ndash;2027</span>
+						<span class="cc-p-status cc-p-status-warn">Backup list</span>
+					</div>
+					<h3 class="cc-p-card-title">Winter Camp <span>Harrison Lake</span></h3>
+					<p class="cc-p-card-text">
+						A seasonal retreat for connection, learning and rest at Harrison Lake. Hotel rooms are
+						full &mdash; new registrations go on the backup list.
+					</p>
+					<dl class="cc-p-facts">
+						<div><dt>Accommodation</dt><dd>Harrison Lake Hotel (full) &middot; backup list available</dd></div>
+						<div><dt>Alternatives</dt><dd>
+							<a href="https://www.harrisonbeachhotel.com/" target="_blank" rel="noopener">Harrison Beach Hotel</a>,
+							<a href="https://www.harrisonresort.com/" target="_blank" rel="noopener">Harrison Hot Springs Resort</a>,
+							<a href="https://www.shouthotels.com/spring-villa-hotel-harrison-hot-springs/" target="_blank" rel="noopener">Spring Villa Hotel</a>,
+							<a href="http://www.harrisonspamotel.com/" target="_blank" rel="noopener">Harrison Spa Motel</a>
+							&mdash; arrange and book individually.
+						</dd></div>
+					</dl>
+					<a class="cc-p-card-link" href="#register-interest">Join the backup list <span aria-hidden="true">&rarr;</span></a>
+				</article>
+
+				<!-- Spring Reading Camp -->
+				<article class="cc-p-card cc-p-reveal">
+					<div class="cc-p-card-top">
+						<span class="cc-p-card-season">Spring</span>
+						<span class="cc-p-status">Seasonal</span>
+					</div>
+					<h3 class="cc-p-card-title">Spring Reading Camp <span>Bahar Okuma Kamp&#305;</span></h3>
+					<p class="cc-p-card-text">
+						A focused reading camp for adults. Conversation is limited so reading time stays
+						uninterrupted &mdash; breakfast, dinner and refreshments are provided.
+					</p>
+					<dl class="cc-p-facts">
+						<div><dt>Dates</dt><dd>April 3&ndash;5 &middot; entry Friday at 17:00</dd></div>
+						<div><dt>Location</dt><dd>Scouts Campground, 27660 Dewdney Trunk Rd, Maple Ridge, BC V2W 1Y9</dd></div>
+						<div><dt>Who</dt><dd>Men aged 25+</dd></div>
+						<div><dt>Fee</dt><dd>$50 &middot; bring a pillow and sleeping bag</dd></div>
+					</dl>
+					<a class="cc-p-card-link" href="#register-interest">Register interest <span aria-hidden="true">&rarr;</span></a>
+				</article>
+
+				<!-- Veritas Basketball -->
+				<article class="cc-p-card cc-p-reveal">
+					<div class="cc-p-card-top">
+						<span class="cc-p-card-season">Youth sport</span>
+						<span class="cc-p-status">Seasonal</span>
+					</div>
+					<h3 class="cc-p-card-title">Veritas Basketball <span>Program</span></h3>
+					<p class="cc-p-card-text">
+						A season of skill-building, teamwork and high-energy fun for young athletes in a
+						supportive environment.
+					</p>
+					<dl class="cc-p-facts">
+						<div><dt>Ages</dt><dd>10&ndash;12</dd></div>
+						<div><dt>Location</dt><dd>Prince Charles Elementary</dd></div>
+					</dl>
+					<a class="cc-p-card-link" href="#register-interest">Register interest <span aria-hidden="true">&rarr;</span></a>
+				</article>
+
+				<!-- Career seminars -->
+				<article class="cc-p-card cc-p-card-dark cc-p-reveal">
+					<div class="cc-p-card-top">
+						<span class="cc-p-card-season">Careers</span>
+						<span class="cc-p-status">Throughout the year</span>
+					</div>
+					<h3 class="cc-p-card-title">Career Seminars <span>&amp; workshops</span></h3>
+					<p class="cc-p-card-text">
+						From career festivals to women and youth seminars, our workshops connect newcomers with
+						colleges, employers and career confidence.
+					</p>
+					<dl class="cc-p-facts">
+						<div><dt>Examples</dt><dd>Career Festival &middot; Empowering Futures &middot; Next Step</dd></div>
+						<div><dt>Partners</dt><dd>Community colleges and local employers</dd></div>
+					</dl>
+					<a class="cc-p-card-link" data-ic-nav-href="/events" href="/events">See upcoming events <span aria-hidden="true">&rarr;</span></a>
+				</article>
+
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ HOW IT WORKS ========================= -->
+	<section class="cc-p-how">
+		<div class="cc-p-wrap">
+			<div class="cc-p-how-grid">
+				<div class="cc-p-how-copy cc-p-reveal">
+					<p class="cc-p-kicker cc-p-kicker-light"><span class="cc-p-kicker-bar" aria-hidden="true"></span>Registration</p>
+					<h2 class="cc-p-how-title">How registration works</h2>
+					<p class="cc-p-how-text">
+						Programs run in seasons and places are limited. Submit your interest below and our team
+						will send the correct registration form, confirm availability and explain the fee for
+						your program.
+					</p>
+					<a class="cc-p-how-btn" href="#register-interest">Start your registration</a>
+				</div>
+				<ol class="cc-p-steps cc-p-reveal">
+					<li><strong>Choose a program</strong><span>Pick the season and program that fits your family.</span></li>
+					<li><strong>Send your interest</strong><span>Complete the short form &mdash; no payment is taken online here.</span></li>
+					<li><strong>We confirm your place</strong><span>Our team follows up with the official form, fee details and start date.</span></li>
+				</ol>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FORM =============================== -->
+	<section class="cc-p-form" id="register-interest">
+		<div class="cc-p-wrap cc-p-form-grid">
+			<div class="cc-p-form-copy cc-p-reveal">
+				<p class="cc-p-kicker"><span class="cc-p-kicker-bar" aria-hidden="true"></span>Register your interest</p>
+				<h2 class="cc-p-sec-title">Tell us who is joining and when</h2>
+				<p class="cc-p-form-text">
+					Fill in the form and we will contact you with the registration form and next steps. If you
+					prefer, email us at <a href="mailto:hello@centrecanada.org">hello@centrecanada.org</a> or
+					visit one of our offices.
+				</p>
+				<ul class="cc-p-form-list">
+					<li>Registration is confirmed only after our team replies</li>
+					<li>Fees are set per program and season</li>
+					<li>Children&rsquo;s programs require a parent or guardian</li>
+				</ul>
+				<p class="cc-p-form-note">
+					Your information is used only to process this program enquiry, in line with BC privacy law.
+				</p>
+			</div>
+
+			<div class="cc-p-form-card cc-p-reveal">
+				<form class="cc-p-form-el" data-gw-form data-gw-form-type="program-interest"
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
+					<div class="cc-p-fields">
+						<label class="cc-p-field">
+							<span>Parent / guardian name <em>*</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="cc-p-field">
+							<span>Email <em>*</em></span>
+							<input type="email" name="email" inputmode="email" autocomplete="email" required>
+						</label>
+						<label class="cc-p-field">
+							<span>Phone</span>
+							<input type="tel" name="phone" inputmode="tel" autocomplete="tel">
+						</label>
+						<label class="cc-p-field">
+							<span>Program <em>*</em></span>
+							<select name="program" required>
+								<option value="">Select a program</option>
+								<option>Weekend School 2026-2027</option>
+								<option>Summer School 2026</option>
+								<option>Winter Camp 2026-2027 (backup list)</option>
+								<option>Spring Reading Camp</option>
+								<option>Veritas Basketball</option>
+								<option>Career Seminars</option>
+								<option>Other / not sure</option>
+							</select>
+						</label>
+						<label class="cc-p-field">
+							<span>Number of children / participants</span>
+							<input type="number" name="participants" min="1" max="12" inputmode="numeric" placeholder="1">
+						</label>
+						<label class="cc-p-field">
+							<span>Questions or notes</span>
+							<textarea name="message" rows="4" placeholder="Tell us the child's age or grade, preferred start date, or anything we should know."></textarea>
+						</label>
+						<label class="cc-p-consent">
+							<input type="checkbox" name="consent" value="yes" required>
+							<span>I agree to be contacted about this program and understand my information is handled under the CentreCanada privacy notice. <em>*</em></span>
+						</label>
+					</div>
+
+					<input class="cc-p-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+					<div class="cc-p-form-actions">
+						<button type="submit" class="cc-p-submit">Send registration interest</button>
+						<div class="cc-p-form-status" data-gw-form-status role="status" aria-live="polite"></div>
+					</div>
+					<p class="cc-p-form-small">
+						Required fields are marked *. We reply during office hours, usually within two business days.
+					</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== STYLES ============================= -->
+	<style>
+		.cc-programs {
+			--cc-red: #e81c2e;
+			--cc-red-deep: #b81223;
+			--cc-red-soft: #fde8ea;
+			--cc-navy: #141a3d;
+			--cc-navy-deep: #0b102c;
+			--cc-navy-2: #1e2650;
+			--cc-ink: #1b2137;
+			--cc-muted: #5c6277;
+			--cc-paper: #fffdf9;
+			--cc-cream: #f7f3ec;
+			--cc-line: #e7e1d6;
+			--cc-amber: #f2b544;
+			--cc-amber-soft: #fbe6bd;
+			background: var(--cc-paper);
+			color: var(--cc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow-x: clip;
+		}
+
+		.cc-programs,
+		.cc-programs *,
+		.cc-programs *::before,
+		.cc-programs *::after {
+			box-sizing: border-box;
+		}
+
+		.cc-programs h1,
+		.cc-programs h2,
+		.cc-programs h3,
+		.cc-programs p {
+			margin: 0;
+		}
+
+		.cc-p-wrap {
+			width: 100%;
+			max-width: 1180px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		.cc-p-kicker {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.2em;
+			text-transform: uppercase;
+			color: var(--cc-red-deep);
+			margin-bottom: 14px !important;
+		}
+
+		.cc-p-kicker-bar {
+			width: 32px;
+			height: 3px;
+			border-radius: 2px;
+			background: linear-gradient(90deg, var(--cc-red), var(--cc-amber));
+			flex: 0 0 auto;
+		}
+
+		.cc-p-kicker-light {
+			color: var(--cc-amber-soft);
+		}
+
+		.cc-p-sec-title {
+			font-size: clamp(26px, 3.2vw, 38px);
+			line-height: 1.14;
+			letter-spacing: -0.02em;
+			font-weight: 800;
+			color: var(--cc-navy);
+		}
+
+		.cc-p-sec-head {
+			margin-bottom: 34px;
+		}
+
+		/* ------------------------------- hero ------------------------------- */
+		.cc-p-hero {
+			position: relative;
+			background: var(--cc-cream);
+			padding: 70px 0 54px;
+			overflow: hidden;
+		}
+
+		.cc-p-hero-bg {
+			position: absolute;
+			inset: 0;
+			background:
+				radial-gradient(46% 70% at 92% 10%, rgba(232, 28, 46, 0.11), transparent 60%),
+				repeating-linear-gradient(0deg, rgba(20, 26, 61, 0.028) 0 1px, transparent 1px 44px);
+			pointer-events: none;
+		}
+
+		.cc-p-hero-grid {
+			position: relative;
+			display: grid;
+			grid-template-columns: 1.15fr 0.85fr;
+			gap: 46px;
+			align-items: center;
+		}
+
+		.cc-p-hero-title {
+			font-size: clamp(36px, 4.8vw, 56px);
+			line-height: 1.06;
+			letter-spacing: -0.03em;
+			font-weight: 800;
+			color: var(--cc-navy);
+		}
+
+		.cc-p-accent {
+			color: var(--cc-red);
+		}
+
+		.cc-p-hero-lede {
+			margin-top: 18px !important;
+			font-size: 17px;
+			line-height: 1.65;
+			color: var(--cc-muted);
+			max-width: 620px;
+		}
+
+		.cc-p-hero-side {
+			background: var(--cc-navy);
+			color: #fff;
+			border-radius: 16px;
+			padding: 26px 24px;
+			border-left: 4px solid var(--cc-amber);
+			box-shadow: 0 28px 52px -32px rgba(11, 16, 44, 0.65);
+		}
+
+		.cc-p-side-kicker {
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--cc-amber-soft);
+			margin-bottom: 12px !important;
+		}
+
+		.cc-p-side-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.cc-p-side-list li {
+			display: flex;
+			justify-content: space-between;
+			gap: 14px;
+			font-size: 13.5px;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+			padding-bottom: 9px;
+		}
+
+		.cc-p-side-list li:last-child {
+			border-bottom: 0;
+			padding-bottom: 0;
+		}
+
+		.cc-p-side-list strong {
+			color: #fff;
+			font-weight: 700;
+		}
+
+		.cc-p-side-list span {
+			color: #b9bfd6;
+			text-align: right;
+		}
+
+		/* ------------------------------ notice ------------------------------ */
+		.cc-p-notice-wrap {
+			background: var(--cc-cream);
+			padding: 0 0 42px;
+		}
+
+		.cc-p-notice {
+			display: flex;
+			align-items: flex-start;
+			gap: 16px;
+			background: #fff7e3;
+			border: 1px solid rgba(242, 181, 68, 0.55);
+			border-left: 4px solid var(--cc-amber);
+			border-radius: 12px;
+			padding: 16px 20px;
+		}
+
+		.cc-p-notice-flag {
+			font-size: 10.5px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: #7a5410;
+			background: var(--cc-amber-soft);
+			border-radius: 999px;
+			padding: 4px 11px;
+			flex: 0 0 auto;
+			margin-top: 2px;
+		}
+
+		.cc-p-notice-text {
+			font-size: 14.5px;
+			line-height: 1.6;
+			color: #4a3a14;
+		}
+
+		.cc-p-notice-text strong {
+			color: #33270b;
+		}
+
+		.cc-p-notice-text em {
+			display: block;
+			margin-top: 4px;
+			font-style: normal;
+			font-size: 13px;
+			color: #6b5a2c;
+		}
+
+		/* ------------------------------ cards ------------------------------- */
+		.cc-p-list {
+			padding: 62px 0 84px;
+			background: var(--cc-paper);
+		}
+
+		.cc-p-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 16px;
+		}
+
+		.cc-p-card {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			background: var(--cc-cream);
+			border: 1px solid var(--cc-line);
+			border-radius: 16px;
+			padding: 26px 24px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.cc-p-card:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 24px 44px -30px rgba(11, 16, 44, 0.4);
+		}
+
+		.cc-p-card-dark {
+			background: linear-gradient(155deg, var(--cc-navy-2), var(--cc-navy-deep));
+			border-color: var(--cc-navy);
+			color: #fff;
+		}
+
+		.cc-p-card-top {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+
+		.cc-p-card-season {
+			font-size: 10.5px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--cc-red-deep);
+			background: var(--cc-red-soft);
+			border-radius: 999px;
+			padding: 4px 11px;
+		}
+
+		.cc-p-card-dark .cc-p-card-season {
+			color: var(--cc-navy-deep);
+			background: var(--cc-amber);
+		}
+
+		.cc-p-status {
+			font-size: 10.5px;
+			font-weight: 800;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: var(--cc-muted);
+			border: 1px solid var(--cc-line);
+			border-radius: 999px;
+			padding: 4px 10px;
+		}
+
+		.cc-p-card-dark .cc-p-status {
+			color: #b9bfd6;
+			border-color: rgba(255, 255, 255, 0.22);
+		}
+
+		.cc-p-status-open {
+			color: #116b3a;
+			border-color: rgba(17, 107, 58, 0.3);
+			background: rgba(17, 107, 58, 0.08);
+		}
+
+		.cc-p-status-warn {
+			color: #8a5c09;
+			border-color: rgba(138, 92, 9, 0.3);
+			background: rgba(242, 181, 68, 0.16);
+		}
+
+		.cc-p-card-title {
+			font-size: 21px;
+			font-weight: 800;
+			line-height: 1.2;
+			color: var(--cc-navy);
+		}
+
+		.cc-p-card-title span {
+			display: block;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			color: var(--cc-muted);
+			margin-top: 3px;
+		}
+
+		.cc-p-card-dark .cc-p-card-title {
+			color: #fff;
+		}
+
+		.cc-p-card-dark .cc-p-card-title span {
+			color: var(--cc-amber-soft);
+		}
+
+		.cc-p-card-text {
+			font-size: 14px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+		}
+
+		.cc-p-card-dark .cc-p-card-text {
+			color: #b9bfd6;
+		}
+
+		.cc-p-facts {
+			margin: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.cc-p-facts div {
+			display: flex;
+			flex-direction: column;
+			gap: 1px;
+			border-top: 1px dashed var(--cc-line);
+			padding-top: 8px;
+		}
+
+		.cc-p-card-dark .cc-p-facts div {
+			border-color: rgba(255, 255, 255, 0.14);
+		}
+
+		.cc-p-facts dt {
+			font-size: 10px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--cc-red-deep);
+		}
+
+		.cc-p-card-dark .cc-p-facts dt {
+			color: var(--cc-amber);
+		}
+
+		.cc-p-facts dd {
+			margin: 0;
+			font-size: 13px;
+			line-height: 1.55;
+			color: var(--cc-ink);
+		}
+
+		.cc-p-card-dark .cc-p-facts dd {
+			color: #d9dded;
+		}
+
+		.cc-p-facts dd a {
+			color: inherit;
+			font-weight: 600;
+			text-decoration: underline;
+			text-underline-offset: 2px;
+		}
+
+		.cc-p-card-link {
+			margin-top: auto;
+			padding-top: 8px;
+			font-size: 13.5px;
+			font-weight: 800;
+			color: var(--cc-red-deep);
+			text-decoration: none;
+		}
+
+		.cc-p-card-dark .cc-p-card-link {
+			color: var(--cc-amber-soft);
+		}
+
+		/* ------------------------------ how it ------------------------------ */
+		.cc-p-how {
+			background:
+				radial-gradient(55% 80% at 8% 0%, rgba(232, 28, 46, 0.22), transparent 60%),
+				linear-gradient(150deg, var(--cc-navy-2), var(--cc-navy-deep));
+			color: #fff;
+			padding: 74px 0;
+		}
+
+		.cc-p-how-grid {
+			display: grid;
+			grid-template-columns: 1.05fr 0.95fr;
+			gap: 48px;
+			align-items: center;
+		}
+
+		.cc-p-how-title {
+			font-size: clamp(26px, 3.2vw, 36px);
+			line-height: 1.16;
+			font-weight: 800;
+			color: #fff;
+			letter-spacing: -0.015em;
+		}
+
+		.cc-p-how-text {
+			margin-top: 13px !important;
+			font-size: 15.5px;
+			line-height: 1.7;
+			color: #b9bfd6;
+			max-width: 500px;
+		}
+
+		.cc-p-how-btn {
+			display: inline-flex;
+			margin-top: 20px;
+			padding: 13px 24px;
+			background: linear-gradient(135deg, var(--cc-red), var(--cc-red-deep));
+			color: #fff;
+			border-radius: 10px;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.03em;
+			text-decoration: none;
+			box-shadow: 0 14px 26px -14px rgba(232, 28, 46, 0.9);
+		}
+
+		.cc-p-steps {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			counter-reset: cc-p-step;
+		}
+
+		.cc-p-steps li {
+			counter-increment: cc-p-step;
+			position: relative;
+			background: rgba(255, 255, 255, 0.05);
+			border: 1px solid rgba(255, 255, 255, 0.14);
+			border-radius: 14px;
+			padding: 17px 20px 17px 58px;
+			display: flex;
+			flex-direction: column;
+			gap: 3px;
+		}
+
+		.cc-p-steps li::before {
+			content: counter(cc-p-step, decimal-leading-zero);
+			position: absolute;
+			left: 18px;
+			top: 17px;
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.14em;
+			color: var(--cc-amber);
+		}
+
+		.cc-p-steps strong {
+			font-size: 15px;
+			font-weight: 800;
+			color: #fff;
+		}
+
+		.cc-p-steps span {
+			font-size: 13.5px;
+			line-height: 1.5;
+			color: #b9bfd6;
+		}
+
+		/* -------------------------------- form ------------------------------ */
+		.cc-p-form {
+			padding: 84px 0 92px;
+			background: var(--cc-cream);
+			scroll-margin-top: 100px;
+		}
+
+		.cc-p-form-grid {
+			display: grid;
+			grid-template-columns: 0.9fr 1.1fr;
+			gap: 48px;
+			align-items: start;
+		}
+
+		.cc-p-form-text {
+			margin-top: 14px !important;
+			font-size: 15.5px;
+			line-height: 1.7;
+			color: var(--cc-muted);
+		}
+
+		.cc-p-form-text a {
+			color: var(--cc-red-deep);
+			font-weight: 700;
+			text-decoration: none;
+			border-bottom: 1px solid rgba(232, 28, 46, 0.35);
+		}
+
+		.cc-p-form-list {
+			list-style: none;
+			margin: 20px 0 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.cc-p-form-list li {
+			position: relative;
+			padding-left: 22px;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--cc-ink);
+		}
+
+		.cc-p-form-list li::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 5px;
+			width: 7px;
+			height: 12px;
+			border-right: 2px solid var(--cc-red);
+			border-bottom: 2px solid var(--cc-red);
+			transform: rotate(40deg);
+		}
+
+		.cc-p-form-note {
+			margin-top: 20px !important;
+			font-size: 12.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+			background: var(--cc-paper);
+			border: 1px dashed var(--cc-line);
+			border-radius: 10px;
+			padding: 12px 14px;
+		}
+
+		.cc-p-form-card {
+			background: var(--cc-paper);
+			border: 1px solid var(--cc-line);
+			border-radius: 18px;
+			padding: 28px 26px;
+			box-shadow: 0 30px 56px -38px rgba(11, 16, 44, 0.4);
+		}
+
+		.cc-p-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 14px;
+		}
+
+		.cc-p-field {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.cc-p-field:nth-child(1),
+		.cc-p-field:nth-child(6) {
+			grid-column: span 2;
+		}
+
+		.cc-p-field span {
+			font-size: 12.5px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			color: var(--cc-ink);
+		}
+
+		.cc-p-field em {
+			color: var(--cc-red);
+			font-style: normal;
+		}
+
+		.cc-p-field input,
+		.cc-p-field select,
+		.cc-p-field textarea {
+			width: 100%;
+			font-family: inherit;
+			font-size: 14.5px;
+			color: var(--cc-ink);
+			background: var(--cc-cream);
+			border: 1px solid var(--cc-line);
+			border-radius: 10px;
+			padding: 11px 13px;
+			outline: none;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.cc-p-field input:focus,
+		.cc-p-field select:focus,
+		.cc-p-field textarea:focus {
+			border-color: rgba(232, 28, 46, 0.55);
+			box-shadow: 0 0 0 3px rgba(232, 28, 46, 0.12);
+		}
+
+		.cc-p-field textarea {
+			resize: vertical;
+			min-height: 92px;
+		}
+
+		.cc-p-consent {
+			display: flex;
+			align-items: flex-start;
+			gap: 10px;
+			grid-column: span 2;
+			font-size: 12.5px;
+			line-height: 1.55;
+			color: var(--cc-muted);
+		}
+
+		.cc-p-consent input {
+			width: 17px;
+			height: 17px;
+			margin-top: 2px;
+			flex: 0 0 auto;
+			accent-color: var(--cc-red);
+		}
+
+		.cc-p-consent em {
+			color: var(--cc-red);
+			font-style: normal;
+		}
+
+		.cc-p-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			opacity: 0;
+		}
+
+		.cc-p-form-actions {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			flex-wrap: wrap;
+			margin-top: 18px;
+		}
+
+		.cc-p-submit {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 14px 26px;
+			background: linear-gradient(135deg, var(--cc-red), var(--cc-red-deep));
+			color: #fff;
+			border: 0;
+			border-radius: 10px;
+			font-family: inherit;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.03em;
+			cursor: pointer;
+			box-shadow: 0 12px 24px -12px rgba(184, 18, 35, 0.75);
+			transition: transform 0.2s ease, opacity 0.2s ease;
+		}
+
+		.cc-p-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.cc-p-submit:disabled {
+			opacity: 0.6;
+			cursor: wait;
+			transform: none;
+		}
+
+		.cc-p-form-status {
+			font-size: 13.5px;
+			font-weight: 700;
+			line-height: 1.5;
+		}
+
+		.cc-p-form-status.is-ok {
+			color: #116b3a;
+		}
+
+		.cc-p-form-status.is-error {
+			color: var(--cc-red-deep);
+		}
+
+		.cc-p-form-small {
+			margin-top: 12px !important;
+			font-size: 11.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+		}
+
+		/* ------------------------------ motion ------------------------------ */
+		.cc-p-reveal-init {
+			opacity: 0;
+			transform: translateY(20px);
+			transition: opacity 0.6s ease, transform 0.6s ease;
+		}
+
+		.cc-p-reveal-init.is-in {
+			opacity: 1;
+			transform: none;
+		}
+
+		.is-reduced-motion .cc-p-reveal-init {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* ---------------------------- responsive ---------------------------- */
+		@media (max-width: 1020px) {
+			.cc-p-hero-grid {
+				grid-template-columns: 1fr;
+				gap: 32px;
+			}
+
+			.cc-p-hero-side {
+				max-width: 520px;
+			}
+
+			.cc-p-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			.cc-p-how-grid,
+			.cc-p-form-grid {
+				grid-template-columns: 1fr;
+				gap: 32px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.cc-p-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.cc-p-hero {
+				padding: 52px 0 44px;
+			}
+
+			.cc-p-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.cc-p-field:nth-child(1),
+			.cc-p-field:nth-child(6),
+			.cc-p-consent {
+				grid-column: span 1;
+			}
+
+			.cc-p-form-card {
+				padding: 22px 18px;
+			}
+		}
+	</style>
+
+	<!-- ============================== SCRIPT ============================= -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.cc-programs');
+			if (!pageRoot || pageRoot.getAttribute('data-cc-programs-ready') === '1') { return; }
+			pageRoot.setAttribute('data-cc-programs-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) { pageRoot.classList.add('is-reduced-motion'); }
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.cc-p-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.remove('cc-p-reveal'); });
+			} else {
+				revealItems.forEach(function (item) {
+					item.classList.remove('cc-p-reveal');
+					item.classList.add('cc-p-reveal-init');
+				});
+
+				var revealObserver = new IntersectionObserver(function (entries) {
+					entries.forEach(function (entry) {
+						if (!entry.isIntersecting) { return; }
+						entry.target.classList.add('is-in');
+						revealObserver.unobserve(entry.target);
+					});
+				}, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+				revealItems.forEach(function (item) { revealObserver.observe(item); });
+			}
+
+			/* ---------------- program interest form ---------------- */
+			/* CMS CONFIG NEEDED: confirm the CentreCanada deployment domain.
+			   The per-form data-gw-form-endpoint attribute overrides this. */
+			var formApiEndpoint = 'https://centrecanadaca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function phoneDigits(rawValue) {
+				var text = rawValue === null || rawValue === undefined ? '' : String(rawValue);
+				return text.replace(/[^\d]/g, '');
+			}
+
+			function formatPhoneDigits(rawValue) {
+				var digits = phoneDigits(rawValue);
+				if (digits.length === 11 && digits.charAt(0) === '1') { digits = digits.slice(1); }
+				digits = digits.slice(0, 10);
+				if (digits.length <= 3) { return digits; }
+				var areaCode = digits.slice(0, 3);
+				var restOfNumber = digits.slice(3);
+				if (restOfNumber.length <= 3) { return '(' + areaCode + ') ' + restOfNumber; }
+				return '(' + areaCode + ') ' + restOfNumber.slice(0, 3) + '-' + restOfNumber.slice(3);
+			}
+
+			function applyPhoneFormat(phoneInput) {
+				var formatted = formatPhoneDigits(phoneInput.value);
+				if (formatted !== phoneInput.value) { phoneInput.value = formatted; }
+			}
+
+			var phoneField = pageRoot.querySelector('form[data-gw-form] input[name="phone"]');
+			if (phoneField) {
+				phoneField.addEventListener('input', function () { applyPhoneFormat(phoneField); });
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+				var fields = Array.prototype.slice.call(
+					form.querySelectorAll('input[name], select[name], textarea[name]')
+				);
+				fields.forEach(function (field) {
+					if (field.name === 'gw_hp') { return; }
+					if (field.type === 'checkbox') {
+						values[field.name] = field.checked ? (field.value || 'yes') : '';
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+				return values;
+			}
+
+			function handleSubmit(event) {
+				event.preventDefault();
+				var form = event.currentTarget;
+				if (form.getAttribute('data-submitting') === '1') { return; }
+
+				var honeypot = form.querySelector('input[name="gw_hp"]');
+				if (honeypot && honeypot.value) {
+					setFormStatus(form, 'Thank you. We will be in touch.', 'ok');
+					form.reset();
+					return;
+				}
+
+				if (typeof form.reportValidity === 'function' && !form.reportValidity()) { return; }
+
+				var submitButton = form.querySelector('button[type="submit"]');
+				var values = collectFormValues(form);
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null && ownEndpoint !== '' ? ownEndpoint : formApiEndpoint;
+				var cmsObjectType = form.getAttribute('data-gw-cms-object-type') || formDefaultCmsObjectType;
+
+				form.setAttribute('data-submitting', '1');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending your registration interest\u2026', '');
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || 'program-interest',
+					cmsObjectType: cmsObjectType,
+					pageUrl: window.location.href,
+					values: values
+				};
+
+				fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					if (!response.ok) { throw new Error('HTTP ' + response.status); }
+					setFormStatus(form, 'Thank you \u2014 your interest has been received. Our team will contact you with the registration form and next steps.', 'ok');
+					form.reset();
+				}).catch(function () {
+					setFormStatus(form, 'We could not send the form right now. Please email hello@centrecanada.org and we will register your interest directly.', 'error');
+				}).then(function () {
+					form.removeAttribute('data-submitting');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			forms.forEach(function (form) {
+				if (form.getAttribute('data-cc-form-bound') === '1') { return; }
+				form.setAttribute('data-cc-form-bound', '1');
+				form.addEventListener('submit', handleSubmit);
+			});
+		})();
+	</script>
+
+</div>

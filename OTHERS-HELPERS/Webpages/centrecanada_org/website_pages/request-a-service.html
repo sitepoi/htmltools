@@ -1,0 +1,857 @@
+<!--
+  =========================================================================
+  REQUEST A SERVICE - fragment for the CentreCanada website
+  (route /request-a-service)
+  - One parent <div class="cc-page cc-request"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are scoped under .cc-request so nothing leaks
+  - Departments follow the live request form: Documentation Assistance,
+    Food and Clothing, Health Care, Housing Aid, Employment Assistance,
+    Educational Assistance, Special Assistance, Administration,
+    Dialogue and Integration
+  - The request form follows the platform contract: form data-gw-form,
+    hidden honeypot named "gw_hp", [data-gw-form-status] live region.
+  - FORM ENDPOINT: set data-gw-form-endpoint on the form (or edit
+    formApiEndpoint below) once the CentreCanada deployment domain is
+    confirmed. ===== CMS CONFIG NEEDED =====
+  - SEO for the CMS page object (slug "request-a-service"):
+    title "Request a Service - CentreCanada Newcomer Services Society"
+    description "Request newcomer support from CentreCanada: documentation,
+    food and clothing, health care, housing, employment, education,
+    special assistance and integration services in British Columbia."
+  =========================================================================
+-->
+<div class="cc-page cc-request">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="cc-rq-hero">
+		<div class="cc-rq-hero-bg" aria-hidden="true"></div>
+		<div class="cc-rq-wrap cc-rq-hero-grid">
+			<div>
+				<p class="cc-rq-kicker"><span class="cc-rq-kicker-bar" aria-hidden="true"></span>Request a service</p>
+				<h1 class="cc-rq-hero-title">Tell us what<br><span class="cc-rq-accent">you need.</span></h1>
+				<p class="cc-rq-hero-lede">
+					You do not need to know which department you need. Share what is happening and our team
+					will route your request to the right person.
+				</p>
+			</div>
+			<div class="cc-rq-hero-side cc-rq-reveal">
+				<p class="cc-rq-side-kicker">We can help with</p>
+				<ul class="cc-rq-side-list">
+					<li>Documentation Assistance</li>
+					<li>Food and Clothing</li>
+					<li>Health Care</li>
+					<li>Housing Aid</li>
+					<li>Employment Assistance</li>
+					<li>Educational Assistance</li>
+					<li>Special Assistance</li>
+					<li>Administration</li>
+					<li>Dialogue and Integration</li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== PROCESS ============================ -->
+	<section class="cc-rq-process">
+		<div class="cc-rq-wrap">
+			<div class="cc-rq-steps cc-rq-reveal">
+				<article class="cc-rq-step">
+					<span class="cc-rq-step-num" aria-hidden="true">01</span>
+					<h2 class="cc-rq-step-title">Share your request</h2>
+					<p class="cc-rq-step-text">Use the form below or email hello@centrecanada.org. Include the best way to reach you.</p>
+				</article>
+				<article class="cc-rq-step">
+					<span class="cc-rq-step-num" aria-hidden="true">02</span>
+					<h2 class="cc-rq-step-title">We review and follow up</h2>
+					<p class="cc-rq-step-text">A team member reviews your request and contacts you to understand the details.</p>
+				</article>
+				<article class="cc-rq-step">
+					<span class="cc-rq-step-num" aria-hidden="true">03</span>
+					<h2 class="cc-rq-step-title">You get a clear plan</h2>
+					<p class="cc-rq-step-text">Documents, referrals and follow-through &mdash; with someone beside you at each step.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- =============================== FORM ============================== -->
+	<section class="cc-rq-form">
+		<div class="cc-rq-wrap cc-rq-form-grid">
+			<div class="cc-rq-form-copy cc-rq-reveal">
+				<p class="cc-rq-kicker"><span class="cc-rq-kicker-bar" aria-hidden="true"></span>Service request form</p>
+				<h2 class="cc-rq-sec-title">A few details, then we take it from here</h2>
+				<p class="cc-rq-form-text">
+					The more you tell us, the faster we can help. If you are submitting for someone else, please
+					include their name and how you are connected.
+				</p>
+				<ul class="cc-rq-form-list">
+					<li>Requests are reviewed by a real team member</li>
+					<li>Multilingual support &mdash; tell us your preferred language</li>
+					<li>Urgent safety concerns should go to emergency services first</li>
+				</ul>
+				<p class="cc-rq-form-note">
+					Your information is used only to process this service request, in line with BC privacy law.
+				</p>
+			</div>
+
+			<div class="cc-rq-form-card cc-rq-reveal">
+				<form class="cc-rq-form-el" data-gw-form data-gw-form-type="service-request"
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
+					<div class="cc-rq-fields">
+						<label class="cc-rq-field">
+							<span>Your name <em>*</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="cc-rq-field">
+							<span>Email <em>*</em></span>
+							<input type="email" name="email" inputmode="email" autocomplete="email" required>
+						</label>
+						<label class="cc-rq-field">
+							<span>Phone</span>
+							<input type="tel" name="phone" inputmode="tel" autocomplete="tel">
+						</label>
+						<label class="cc-rq-field">
+							<span>Department <em>*</em></span>
+							<select name="department" required>
+								<option value="">Select a department</option>
+								<option>Documentation Assistance</option>
+								<option>Food and Clothing</option>
+								<option>Health Care</option>
+								<option>Housing Aid</option>
+								<option>Employment Assistance</option>
+								<option>Educational Assistance</option>
+								<option>Special Assistance</option>
+								<option>Administration</option>
+								<option>Dialogue and Integration</option>
+								<option>Not sure / other</option>
+							</select>
+						</label>
+						<label class="cc-rq-field">
+							<span>Preferred contact</span>
+							<select name="preferred_contact">
+								<option>Email</option>
+								<option>Phone call</option>
+								<option>Text message</option>
+							</select>
+						</label>
+						<label class="cc-rq-field">
+							<span>Preferred language</span>
+							<input type="text" name="language" placeholder="English, Turkish, Arabic..." autocomplete="language">
+						</label>
+						<label class="cc-rq-field">
+							<span>How can we help? <em>*</em></span>
+							<textarea name="message" rows="5" required placeholder="Describe what you need help with, including any deadlines or documents involved."></textarea>
+						</label>
+						<label class="cc-rq-consent">
+							<input type="checkbox" name="consent" value="yes" required>
+							<span>I agree that CentreCanada may use these details to process my request, in line with the privacy notice. <em>*</em></span>
+						</label>
+					</div>
+
+					<input class="cc-rq-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+					<div class="cc-rq-form-actions">
+						<button type="submit" class="cc-rq-submit">Send service request</button>
+						<div class="cc-rq-form-status" data-gw-form-status role="status" aria-live="polite"></div>
+					</div>
+					<p class="cc-rq-form-small">
+						Required fields are marked *. If you cannot use this form, email hello@centrecanada.org or
+						visit an office in Burnaby, New Westminster or Victoria.
+					</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== OFFICES ============================ -->
+	<section class="cc-rq-offices">
+		<div class="cc-rq-wrap cc-rq-offices-inner cc-rq-reveal">
+			<p class="cc-rq-offices-label">Prefer to visit?</p>
+			<div class="cc-rq-offices-list">
+				<p><strong>New Westminster</strong>93 6th St, V3L 2Z8</p>
+				<p><strong>Burnaby</strong>7825 Edmonds St</p>
+				<p><strong>Victoria</strong>#201, 524 Culduthel Rd, V8Z 1G1</p>
+			</div>
+			<a class="cc-rq-offices-link" data-ic-nav-href="/contact-us" href="/contact-us">Contact details <span aria-hidden="true">&rarr;</span></a>
+		</div>
+	</section>
+
+	<!-- ============================== STYLES ============================= -->
+	<style>
+		.cc-request {
+			--cc-red: #e81c2e;
+			--cc-red-deep: #b81223;
+			--cc-red-soft: #fde8ea;
+			--cc-navy: #141a3d;
+			--cc-navy-deep: #0b102c;
+			--cc-navy-2: #1e2650;
+			--cc-ink: #1b2137;
+			--cc-muted: #5c6277;
+			--cc-paper: #fffdf9;
+			--cc-cream: #f7f3ec;
+			--cc-line: #e7e1d6;
+			--cc-amber: #f2b544;
+			--cc-amber-soft: #fbe6bd;
+			background: var(--cc-paper);
+			color: var(--cc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow-x: clip;
+		}
+
+		.cc-request,
+		.cc-request *,
+		.cc-request *::before,
+		.cc-request *::after {
+			box-sizing: border-box;
+		}
+
+		.cc-request h1,
+		.cc-request h2,
+		.cc-request h3,
+		.cc-request p {
+			margin: 0;
+		}
+
+		.cc-rq-wrap {
+			width: 100%;
+			max-width: 1180px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		.cc-rq-kicker {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.2em;
+			text-transform: uppercase;
+			color: var(--cc-red-deep);
+			margin-bottom: 14px !important;
+		}
+
+		.cc-rq-kicker-bar {
+			width: 32px;
+			height: 3px;
+			border-radius: 2px;
+			background: linear-gradient(90deg, var(--cc-red), var(--cc-amber));
+			flex: 0 0 auto;
+		}
+
+		.cc-rq-sec-title {
+			font-size: clamp(26px, 3.2vw, 36px);
+			line-height: 1.14;
+			letter-spacing: -0.02em;
+			font-weight: 800;
+			color: var(--cc-navy);
+		}
+
+		/* ------------------------------- hero ------------------------------- */
+		.cc-rq-hero {
+			position: relative;
+			background: var(--cc-cream);
+			padding: 70px 0 72px;
+			overflow: hidden;
+		}
+
+		.cc-rq-hero-bg {
+			position: absolute;
+			inset: 0;
+			background:
+				radial-gradient(46% 70% at 90% 10%, rgba(232, 28, 46, 0.11), transparent 60%),
+				repeating-linear-gradient(0deg, rgba(20, 26, 61, 0.028) 0 1px, transparent 1px 44px);
+			pointer-events: none;
+		}
+
+		.cc-rq-hero-grid {
+			position: relative;
+			display: grid;
+			grid-template-columns: 1.1fr 0.9fr;
+			gap: 46px;
+			align-items: center;
+		}
+
+		.cc-rq-hero-title {
+			font-size: clamp(36px, 4.8vw, 56px);
+			line-height: 1.06;
+			letter-spacing: -0.03em;
+			font-weight: 800;
+			color: var(--cc-navy);
+		}
+
+		.cc-rq-accent {
+			color: var(--cc-red);
+		}
+
+		.cc-rq-hero-lede {
+			margin-top: 18px !important;
+			font-size: 17px;
+			line-height: 1.65;
+			color: var(--cc-muted);
+			max-width: 560px;
+		}
+
+		.cc-rq-hero-side {
+			background: var(--cc-navy);
+			color: #fff;
+			border-radius: 16px;
+			padding: 24px 24px;
+			border-left: 4px solid var(--cc-amber);
+			box-shadow: 0 28px 52px -32px rgba(11, 16, 44, 0.65);
+		}
+
+		.cc-rq-side-kicker {
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--cc-amber-soft);
+			margin-bottom: 12px !important;
+		}
+
+		.cc-rq-side-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 8px;
+		}
+
+		.cc-rq-side-list li {
+			font-size: 13.5px;
+			color: #d9dded;
+			padding-left: 16px;
+			position: relative;
+		}
+
+		.cc-rq-side-list li::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 8px;
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background: var(--cc-red);
+		}
+
+		/* ------------------------------ process ------------------------------ */
+		.cc-rq-process {
+			padding: 46px 0 0;
+			background: var(--cc-paper);
+		}
+
+		.cc-rq-steps {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 16px;
+		}
+
+		.cc-rq-step {
+			background: var(--cc-cream);
+			border: 1px solid var(--cc-line);
+			border-radius: 16px;
+			padding: 24px 22px;
+		}
+
+		.cc-rq-step-num {
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.2em;
+			color: var(--cc-red-deep);
+		}
+
+		.cc-rq-step-title {
+			margin-top: 8px !important;
+			font-size: 18px;
+			font-weight: 800;
+			line-height: 1.25;
+			color: var(--cc-navy);
+		}
+
+		.cc-rq-step-text {
+			margin-top: 7px !important;
+			font-size: 14px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+		}
+
+		/* -------------------------------- form ------------------------------- */
+		.cc-rq-form {
+			padding: 64px 0 82px;
+			background: var(--cc-paper);
+		}
+
+		.cc-rq-form-grid {
+			display: grid;
+			grid-template-columns: 0.9fr 1.1fr;
+			gap: 48px;
+			align-items: start;
+		}
+
+		.cc-rq-form-text {
+			margin-top: 13px !important;
+			font-size: 15.5px;
+			line-height: 1.7;
+			color: var(--cc-muted);
+		}
+
+		.cc-rq-form-list {
+			list-style: none;
+			margin: 20px 0 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.cc-rq-form-list li {
+			position: relative;
+			padding-left: 22px;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--cc-ink);
+		}
+
+		.cc-rq-form-list li::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 5px;
+			width: 7px;
+			height: 12px;
+			border-right: 2px solid var(--cc-red);
+			border-bottom: 2px solid var(--cc-red);
+			transform: rotate(40deg);
+		}
+
+		.cc-rq-form-note {
+			margin-top: 20px !important;
+			font-size: 12.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+			background: var(--cc-cream);
+			border: 1px dashed var(--cc-line);
+			border-radius: 10px;
+			padding: 12px 14px;
+		}
+
+		.cc-rq-form-card {
+			background: var(--cc-cream);
+			border: 1px solid var(--cc-line);
+			border-radius: 18px;
+			padding: 28px 26px;
+			box-shadow: 0 30px 56px -38px rgba(11, 16, 44, 0.4);
+		}
+
+		.cc-rq-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 14px;
+		}
+
+		.cc-rq-field {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.cc-rq-field:nth-child(1),
+		.cc-rq-field:nth-child(7) {
+			grid-column: span 2;
+		}
+
+		.cc-rq-field span {
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--cc-ink);
+		}
+
+		.cc-rq-field em,
+		.cc-rq-consent em {
+			color: var(--cc-red);
+			font-style: normal;
+		}
+
+		.cc-rq-field input,
+		.cc-rq-field select,
+		.cc-rq-field textarea {
+			width: 100%;
+			font-family: inherit;
+			font-size: 14.5px;
+			color: var(--cc-ink);
+			background: var(--cc-paper);
+			border: 1px solid var(--cc-line);
+			border-radius: 10px;
+			padding: 11px 13px;
+			outline: none;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.cc-rq-field input:focus,
+		.cc-rq-field select:focus,
+		.cc-rq-field textarea:focus {
+			border-color: rgba(232, 28, 46, 0.55);
+			box-shadow: 0 0 0 3px rgba(232, 28, 46, 0.12);
+		}
+
+		.cc-rq-field textarea {
+			resize: vertical;
+			min-height: 110px;
+		}
+
+		.cc-rq-consent {
+			display: flex;
+			align-items: flex-start;
+			gap: 10px;
+			grid-column: span 2;
+			font-size: 12.5px;
+			line-height: 1.55;
+			color: var(--cc-muted);
+		}
+
+		.cc-rq-consent input {
+			width: 17px;
+			height: 17px;
+			margin-top: 2px;
+			flex: 0 0 auto;
+			accent-color: var(--cc-red);
+		}
+
+		.cc-rq-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			opacity: 0;
+		}
+
+		.cc-rq-form-actions {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			flex-wrap: wrap;
+			margin-top: 18px;
+		}
+
+		.cc-rq-submit {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 14px 26px;
+			background: linear-gradient(135deg, var(--cc-red), var(--cc-red-deep));
+			color: #fff;
+			border: 0;
+			border-radius: 10px;
+			font-family: inherit;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.03em;
+			cursor: pointer;
+			box-shadow: 0 12px 24px -12px rgba(184, 18, 35, 0.75);
+			transition: transform 0.2s ease, opacity 0.2s ease;
+		}
+
+		.cc-rq-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.cc-rq-submit:disabled {
+			opacity: 0.6;
+			cursor: wait;
+			transform: none;
+		}
+
+		.cc-rq-form-status {
+			font-size: 13.5px;
+			font-weight: 700;
+			line-height: 1.5;
+		}
+
+		.cc-rq-form-status.is-ok {
+			color: #116b3a;
+		}
+
+		.cc-rq-form-status.is-error {
+			color: var(--cc-red-deep);
+		}
+
+		.cc-rq-form-small {
+			margin-top: 12px !important;
+			font-size: 11.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+		}
+
+		/* ------------------------------ offices ------------------------------ */
+		.cc-rq-offices {
+			background: var(--cc-navy);
+			color: #fff;
+			padding: 40px 0;
+		}
+
+		.cc-rq-offices-inner {
+			display: flex;
+			align-items: center;
+			gap: 26px;
+			flex-wrap: wrap;
+		}
+
+		.cc-rq-offices-label {
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.2em;
+			text-transform: uppercase;
+			color: var(--cc-amber);
+			flex: 0 0 auto;
+		}
+
+		.cc-rq-offices-list {
+			display: flex;
+			gap: 26px;
+			flex-wrap: wrap;
+			flex: 1 1 auto;
+		}
+
+		.cc-rq-offices-list p {
+			font-size: 13px;
+			color: #b9bfd6;
+		}
+
+		.cc-rq-offices-list strong {
+			display: block;
+			font-size: 14px;
+			font-weight: 800;
+			color: #fff;
+		}
+
+		.cc-rq-offices-link {
+			font-size: 13.5px;
+			font-weight: 800;
+			color: var(--cc-amber-soft);
+			text-decoration: none;
+			border-bottom: 1px solid rgba(242, 181, 68, 0.45);
+			padding-bottom: 2px;
+			white-space: nowrap;
+		}
+
+		/* ------------------------------ motion ------------------------------- */
+		.cc-rq-reveal-init {
+			opacity: 0;
+			transform: translateY(20px);
+			transition: opacity 0.6s ease, transform 0.6s ease;
+		}
+
+		.cc-rq-reveal-init.is-in {
+			opacity: 1;
+			transform: none;
+		}
+
+		.is-reduced-motion .cc-rq-reveal-init {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* ---------------------------- responsive ----------------------------- */
+		@media (max-width: 1000px) {
+			.cc-rq-hero-grid,
+			.cc-rq-form-grid {
+				grid-template-columns: 1fr;
+				gap: 32px;
+			}
+
+			.cc-rq-hero-side {
+				max-width: 520px;
+			}
+
+			.cc-rq-steps {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		@media (max-width: 560px) {
+			.cc-rq-hero {
+				padding: 52px 0 56px;
+			}
+
+			.cc-rq-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.cc-rq-field:nth-child(1),
+			.cc-rq-field:nth-child(7),
+			.cc-rq-consent {
+				grid-column: span 1;
+			}
+
+			.cc-rq-form-card {
+				padding: 22px 18px;
+			}
+		}
+	</style>
+
+	<!-- ============================== SCRIPT ============================= -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.cc-request');
+			if (!pageRoot || pageRoot.getAttribute('data-cc-request-ready') === '1') { return; }
+			pageRoot.setAttribute('data-cc-request-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) { pageRoot.classList.add('is-reduced-motion'); }
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.cc-rq-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.remove('cc-rq-reveal'); });
+			} else {
+				revealItems.forEach(function (item) {
+					item.classList.remove('cc-rq-reveal');
+					item.classList.add('cc-rq-reveal-init');
+				});
+
+				var revealObserver = new IntersectionObserver(function (entries) {
+					entries.forEach(function (entry) {
+						if (!entry.isIntersecting) { return; }
+						entry.target.classList.add('is-in');
+						revealObserver.unobserve(entry.target);
+					});
+				}, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+				revealItems.forEach(function (item) { revealObserver.observe(item); });
+			}
+
+			/* ---------------- service request form ---------------- */
+			/* CMS CONFIG NEEDED: confirm the CentreCanada deployment domain.
+			   The per-form data-gw-form-endpoint attribute overrides this. */
+			var formApiEndpoint = 'https://centrecanadaca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function phoneDigits(rawValue) {
+				var text = rawValue === null || rawValue === undefined ? '' : String(rawValue);
+				return text.replace(/[^\d]/g, '');
+			}
+
+			function formatPhoneDigits(rawValue) {
+				var digits = phoneDigits(rawValue);
+				if (digits.length === 11 && digits.charAt(0) === '1') { digits = digits.slice(1); }
+				digits = digits.slice(0, 10);
+				if (digits.length <= 3) { return digits; }
+				var areaCode = digits.slice(0, 3);
+				var restOfNumber = digits.slice(3);
+				if (restOfNumber.length <= 3) { return '(' + areaCode + ') ' + restOfNumber; }
+				return '(' + areaCode + ') ' + restOfNumber.slice(0, 3) + '-' + restOfNumber.slice(3);
+			}
+
+			function applyPhoneFormat(phoneInput) {
+				var formatted = formatPhoneDigits(phoneInput.value);
+				if (formatted !== phoneInput.value) { phoneInput.value = formatted; }
+			}
+
+			var phoneField = pageRoot.querySelector('form[data-gw-form] input[name="phone"]');
+			if (phoneField) {
+				phoneField.addEventListener('input', function () { applyPhoneFormat(phoneField); });
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+				var fields = Array.prototype.slice.call(
+					form.querySelectorAll('input[name], select[name], textarea[name]')
+				);
+				fields.forEach(function (field) {
+					if (field.name === 'gw_hp') { return; }
+					if (field.type === 'checkbox') {
+						values[field.name] = field.checked ? (field.value || 'yes') : '';
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+				return values;
+			}
+
+			function handleSubmit(event) {
+				event.preventDefault();
+				var form = event.currentTarget;
+				if (form.getAttribute('data-submitting') === '1') { return; }
+
+				var honeypot = form.querySelector('input[name="gw_hp"]');
+				if (honeypot && honeypot.value) {
+					setFormStatus(form, 'Thank you. We will be in touch.', 'ok');
+					form.reset();
+					return;
+				}
+
+				if (typeof form.reportValidity === 'function' && !form.reportValidity()) { return; }
+
+				var submitButton = form.querySelector('button[type="submit"]');
+				var values = collectFormValues(form);
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null && ownEndpoint !== '' ? ownEndpoint : formApiEndpoint;
+				var cmsObjectType = form.getAttribute('data-gw-cms-object-type') || formDefaultCmsObjectType;
+
+				form.setAttribute('data-submitting', '1');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending your request\u2026', '');
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || 'service-request',
+					cmsObjectType: cmsObjectType,
+					pageUrl: window.location.href,
+					values: values
+				};
+
+				fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					if (!response.ok) { throw new Error('HTTP ' + response.status); }
+					setFormStatus(form, 'Thank you \u2014 your request has been received. A team member will contact you using the details you provided.', 'ok');
+					form.reset();
+				}).catch(function () {
+					setFormStatus(form, 'We could not send the form right now. Please email hello@centrecanada.org with your request and we will follow up.', 'error');
+				}).then(function () {
+					form.removeAttribute('data-submitting');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			forms.forEach(function (form) {
+				if (form.getAttribute('data-cc-form-bound') === '1') { return; }
+				form.setAttribute('data-cc-form-bound', '1');
+				form.addEventListener('submit', handleSubmit);
+			});
+		})();
+	</script>
+
+</div>

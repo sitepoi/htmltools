@@ -1,0 +1,759 @@
+<!--
+  =========================================================================
+  SITE HEADER - central chrome component for the CentreCanada website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent div (class cc-header); no document tags, no libraries
+  - All CSS is scoped under .cc-header so it cannot leak into page content
+  - No header / nav / footer element tags (plain divs + ARIA roles)
+  - Brand = the CentreCanada red logo from its WordPress media URL
+    (red artwork on transparent - the bar is warm white so it sits well)
+  - Design tokens (--cc-*) are repeated in every page file so each page is
+    self-contained; keep them in sync when the palette changes
+  - Nav targets (CMS route form, never .html): / (home), /about-us,
+    /services, /learning-centre, /programs, /events, /resources, /careers,
+    /contact-us. The CTA points at /donate
+  - Facts: hello@centrecanada.org, offices in Burnaby, New Westminster and
+    Victoria BC, socials facebook.com/centrecanadanss,
+    instagram.com/centrecanadanss, twitter.com/centrecanada_
+  - SPA-safe: the stylesheet is copied into the document head once under
+    #cc-header-css, every .cc-header mount initialises itself, global
+    listeners are bound once per window, and the active page link re-syncs
+    on gw:content-ready and gw.onRouteChange
+  =========================================================================
+-->
+<div class="cc-header" data-cc-header>
+
+	<!-- ---------- inline icon sprite (no external requests, no library) ---------- -->
+	<svg class="cc-hd-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+		<symbol id="cc-i-mail" viewBox="0 0 24 24"><rect x="4" y="6.4" width="16" height="11.2" rx="2.4" /><path d="m5.4 8.2 6.6 4.8 6.6-4.8" /></symbol>
+		<symbol id="cc-i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="3" /></symbol>
+		<symbol id="cc-i-heart" viewBox="0 0 24 24"><path d="M19.4 5.6a5.2 5.2 0 0 0-7.4 0l-.1.1-.1-.1a5.2 5.2 0 1 0-7.4 7.4l7.5 7.5 7.5-7.5a5.2 5.2 0 0 0 0-7.4Z" /></symbol>
+		<symbol id="cc-i-hands" viewBox="0 0 24 24"><path d="M11 14 8.5 11.5a2.1 2.1 0 0 1 3-3L14 11" /><path d="m13 14 2.5-2.5a2.1 2.1 0 0 1 3 3L16 17" /><path d="M4 12.5 7 9.5" /><path d="M20 12.5 17 9.5" /><path d="M12 3v3" /><path d="M8.5 4.5 10 6" /><path d="M15.5 4.5 14 6" /></symbol>
+		<symbol id="cc-i-arrow" viewBox="0 0 24 24"><path d="M4.6 12h14" /><path d="m13.4 7 5 5-5 5" /></symbol>
+		<symbol id="cc-i-facebook" viewBox="0 0 24 24"><path d="M14.5 21v-7h2.6l.4-3h-3V9.3c0-.9.3-1.5 1.6-1.5h1.5V5.1A21 21 0 0 0 15.2 5c-2.4 0-4 1.4-4 4.1V11H8.5v3h2.7v7" /></symbol>
+		<symbol id="cc-i-instagram" viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></symbol>
+		<symbol id="cc-i-twitter" viewBox="0 0 24 24"><path d="M4.5 4.5 19 19.5" /><path d="M19.5 4.5 4.5 19.5" /></symbol>
+	</svg>
+
+	<!-- ---------------------- top information strip ---------------------- -->
+	<div class="cc-hd-top">
+		<div class="cc-hd-wrap cc-hd-top-inner">
+			<p class="cc-hd-top-note">
+				<svg class="cc-hd-ico" aria-hidden="true"><use href="#cc-i-pin"></use></svg>
+				Supporting newcomers across British Columbia
+			</p>
+			<div class="cc-hd-top-links">
+				<a class="cc-hd-top-link" data-ic-nav-href="/request-a-service" href="/request-a-service">Request a service</a>
+				<span class="cc-hd-top-sep" aria-hidden="true"></span>
+				<a class="cc-hd-top-link" href="mailto:hello@centrecanada.org">
+					<svg class="cc-hd-ico" aria-hidden="true"><use href="#cc-i-mail"></use></svg>
+					hello@centrecanada.org
+				</a>
+				<span class="cc-hd-top-sep" aria-hidden="true"></span>
+				<div class="cc-hd-top-social">
+					<a class="cc-hd-social" href="https://www.facebook.com/centrecanadanss" target="_blank" rel="noopener" aria-label="CentreCanada on Facebook">
+						<svg class="cc-hd-ico" aria-hidden="true"><use href="#cc-i-facebook"></use></svg>
+					</a>
+					<a class="cc-hd-social" href="https://www.instagram.com/centrecanadanss/" target="_blank" rel="noopener" aria-label="CentreCanada on Instagram">
+						<svg class="cc-hd-ico" aria-hidden="true"><use href="#cc-i-instagram"></use></svg>
+					</a>
+					<a class="cc-hd-social" href="https://twitter.com/centrecanada_" target="_blank" rel="noopener" aria-label="CentreCanada on X (Twitter)">
+						<svg class="cc-hd-ico" aria-hidden="true"><use href="#cc-i-twitter"></use></svg>
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ------------------------------ main bar ------------------------------ -->
+	<div class="cc-hd-bar">
+		<div class="cc-hd-wrap cc-hd-bar-inner">
+
+			<a class="cc-hd-brand" data-ic-nav-href="/" href="/" aria-label="CentreCanada Newcomer Services Society - home">
+				<img class="cc-hd-logo"
+					src="https://centrecanada.org/wp-content/uploads/2023/09/red-logo.png"
+					alt="CentreCanada Newcomer Services Society"
+					width="300" height="86" decoding="async" fetchpriority="high">
+				<span class="cc-hd-brand-text" aria-hidden="true">
+					<strong>CentreCanada</strong>
+					<em>Newcomer Services Society</em>
+				</span>
+			</a>
+
+			<div class="cc-hd-nav" id="cc-hd-menu" role="navigation" aria-label="Main menu">
+				<ul class="cc-hd-list">
+					<li class="cc-hd-item">
+						<a class="cc-hd-link" data-ic-nav-href="/about-us" href="/about-us" data-page="about-us">About Us</a>
+					</li>
+					<li class="cc-hd-item">
+						<a class="cc-hd-link" data-ic-nav-href="/services" href="/services" data-page="services">Services</a>
+					</li>
+					<li class="cc-hd-item">
+						<a class="cc-hd-link" data-ic-nav-href="/learning-centre" href="/learning-centre" data-page="learning-centre">Learning Centre</a>
+					</li>
+					<li class="cc-hd-item">
+						<a class="cc-hd-link" data-ic-nav-href="/programs" href="/programs" data-page="programs">Programs</a>
+					</li>
+					<li class="cc-hd-item">
+						<a class="cc-hd-link" data-ic-nav-href="/events" href="/events" data-page="events">Events</a>
+					</li>
+					<li class="cc-hd-item">
+						<a class="cc-hd-link" data-ic-nav-href="/resources" href="/resources" data-page="resources">Resources</a>
+					</li>
+					<li class="cc-hd-item">
+						<a class="cc-hd-link" data-ic-nav-href="/careers" href="/careers" data-page="careers">Careers</a>
+					</li>
+					<li class="cc-hd-item">
+						<a class="cc-hd-link" data-ic-nav-href="/contact-us" href="/contact-us" data-page="contact-us">Contact</a>
+					</li>
+				</ul>
+
+				<a class="cc-hd-cta" data-ic-nav-href="/donate" href="/donate" data-page="donate">
+					<svg class="cc-hd-ico" aria-hidden="true"><use href="#cc-i-heart"></use></svg>
+					Donate
+				</a>
+			</div>
+
+			<button type="button" class="cc-hd-burger" aria-expanded="false" aria-controls="cc-hd-menu"
+				aria-label="Open menu">
+				<span class="cc-hd-burger-box" aria-hidden="true">
+					<span></span><span></span><span></span>
+				</span>
+			</button>
+		</div>
+	</div>
+
+	<!-- mobile drawer scrim: closes the drawer, never touches page content -->
+	<div class="cc-hd-scrim" aria-hidden="true"></div>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		.cc-header {
+			--cc-red: #e81c2e;
+			--cc-red-deep: #b81223;
+			--cc-red-soft: #fde8ea;
+			--cc-navy: #141a3d;
+			--cc-navy-deep: #0b102c;
+			--cc-navy-2: #1e2650;
+			--cc-ink: #1b2137;
+			--cc-muted: #5c6277;
+			--cc-paper: #fffdf9;
+			--cc-cream: #f7f3ec;
+			--cc-line: #e7e1d6;
+			--cc-amber: #f2b544;
+			--cc-amber-soft: #fbe6bd;
+			position: relative;
+			z-index: 60;
+			width: 100%;
+			background: var(--cc-paper);
+			color: var(--cc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+			box-shadow: 0 10px 30px -18px rgba(11, 16, 44, 0.4);
+		}
+
+		.cc-header,
+		.cc-header *,
+		.cc-header *::before,
+		.cc-header *::after {
+			box-sizing: border-box;
+		}
+
+		.cc-hd-sprite {
+			position: absolute;
+			width: 0;
+			height: 0;
+			overflow: hidden;
+		}
+
+		.cc-hd-ico {
+			width: 1em;
+			height: 1em;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			flex: 0 0 auto;
+		}
+
+		.cc-hd-wrap {
+			width: 100%;
+			max-width: 1260px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		/* ---------- top strip ---------- */
+		.cc-hd-top {
+			background: linear-gradient(90deg, var(--cc-navy-deep), var(--cc-navy) 60%, var(--cc-navy-2));
+			color: #dfe3f0;
+			font-size: 13.5px;
+		}
+
+		.cc-hd-top-inner {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			min-height: 38px;
+		}
+
+		.cc-hd-top-note {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			margin: 0;
+			letter-spacing: 0.04em;
+		}
+
+		.cc-hd-top-links {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+		}
+
+		.cc-hd-top-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			color: #dfe3f0;
+			text-decoration: none;
+			letter-spacing: 0.02em;
+			font-weight: 600;
+		}
+
+		.cc-hd-top-link:hover {
+			color: var(--cc-amber-soft);
+		}
+
+		.cc-hd-top-sep {
+			width: 1px;
+			height: 14px;
+			background: rgba(223, 227, 240, 0.28);
+		}
+
+		.cc-hd-top-social {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.cc-hd-social {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+			color: #dfe3f0;
+			text-decoration: none;
+			transition: color 0.2s ease, background 0.2s ease;
+		}
+
+		.cc-hd-social:hover {
+			color: var(--cc-navy-deep);
+			background: var(--cc-amber-soft);
+		}
+
+		/* ---------- main bar ---------- */
+		.cc-hd-bar {
+			position: relative;
+			background: var(--cc-paper);
+			border-bottom: 1px solid var(--cc-line);
+		}
+
+		.cc-hd-bar::after {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: -1px;
+			height: 3px;
+			background: linear-gradient(90deg, var(--cc-red), var(--cc-red-deep) 45%, var(--cc-amber));
+		}
+
+		.cc-hd-bar-inner {
+			display: flex;
+			align-items: center;
+			gap: 26px;
+			min-height: 84px;
+			position: relative;
+		}
+
+		.cc-hd-brand {
+			display: inline-flex;
+			align-items: center;
+			gap: 12px;
+			flex: 0 0 auto;
+			text-decoration: none;
+			color: var(--cc-ink);
+		}
+
+		.cc-hd-logo {
+			display: block;
+			height: 46px;
+			width: auto;
+			transition: height 0.25s ease;
+		}
+
+		.cc-header.is-compact .cc-hd-logo {
+			height: 38px;
+		}
+
+		.cc-hd-brand-text {
+			display: none;
+			flex-direction: column;
+			line-height: 1.1;
+		}
+
+		.cc-hd-brand-text strong {
+			font-size: 16px;
+			font-weight: 800;
+			letter-spacing: 0.01em;
+			color: var(--cc-navy);
+		}
+
+		.cc-hd-brand-text em {
+			font-style: normal;
+			font-size: 10.5px;
+			font-weight: 700;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--cc-red);
+		}
+
+		/* logo may fail to load on a fresh domain - the wordmark takes over */
+		.cc-hd-brand.is-logo-missing .cc-hd-brand-text {
+			display: flex;
+		}
+
+		.cc-hd-brand.is-logo-missing .cc-hd-logo {
+			display: none;
+		}
+
+		.cc-header.is-compact .cc-hd-bar-inner {
+			min-height: 68px;
+		}
+
+		.cc-hd-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 18px;
+			flex: 1 1 auto;
+			margin-left: auto;
+		}
+
+		.cc-hd-list {
+			display: flex;
+			align-items: center;
+			gap: 1px;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.cc-hd-link {
+			display: inline-flex;
+			align-items: center;
+			padding: 10px 10px;
+			color: var(--cc-ink);
+			text-decoration: none;
+			font-size: 14px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			background: none;
+			border: 0;
+			cursor: pointer;
+			font-family: inherit;
+			position: relative;
+			white-space: nowrap;
+		}
+
+		.cc-hd-link::after {
+			content: '';
+			position: absolute;
+			left: 10px;
+			right: 10px;
+			bottom: 4px;
+			height: 3px;
+			border-radius: 2px;
+			background: linear-gradient(90deg, var(--cc-red), var(--cc-red-deep));
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform 0.25s ease;
+		}
+
+		.cc-hd-link:hover::after,
+		.cc-hd-link.is-active::after {
+			transform: scaleX(1);
+		}
+
+		.cc-hd-link:hover,
+		.cc-hd-link.is-active {
+			color: var(--cc-red-deep);
+		}
+
+		.cc-hd-cta {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 12px 20px;
+			background: linear-gradient(135deg, var(--cc-red), var(--cc-red-deep));
+			color: #fff;
+			font-weight: 800;
+			font-size: 13.5px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			text-decoration: none;
+			border-radius: 10px;
+			box-shadow: 0 8px 18px -10px rgba(184, 18, 35, 0.9);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			flex: 0 0 auto;
+		}
+
+		.cc-hd-cta:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 12px 22px -10px rgba(184, 18, 35, 0.95);
+		}
+
+		/* ---------- burger ---------- */
+		.cc-hd-burger {
+			display: none;
+			margin-left: auto;
+			padding: 10px;
+			background: none;
+			border: 1px solid var(--cc-line);
+			border-radius: 10px;
+			cursor: pointer;
+			position: relative;
+			z-index: 4;
+		}
+
+		.cc-hd-burger-box {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+			width: 22px;
+		}
+
+		.cc-hd-burger-box span {
+			height: 2.5px;
+			background: var(--cc-ink);
+			border-radius: 2px;
+			transition: transform 0.25s ease, opacity 0.25s ease;
+		}
+
+		.cc-header.is-menu-open .cc-hd-burger-box span:nth-child(1) {
+			transform: translateY(7.5px) rotate(45deg);
+		}
+
+		.cc-header.is-menu-open .cc-hd-burger-box span:nth-child(2) {
+			opacity: 0;
+		}
+
+		.cc-header.is-menu-open .cc-hd-burger-box span:nth-child(3) {
+			transform: translateY(-7.5px) rotate(-45deg);
+		}
+
+		/* ---------- scrim ---------- */
+		.cc-hd-scrim {
+			position: fixed;
+			inset: 0;
+			background: rgba(11, 16, 44, 0.55);
+			opacity: 0;
+			visibility: hidden;
+			transition: opacity 0.25s ease, visibility 0.25s;
+			z-index: 1;
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1180px) {
+			.cc-hd-link {
+				padding: 10px 7px;
+				font-size: 13px;
+			}
+
+			.cc-hd-link::after {
+				left: 7px;
+				right: 7px;
+			}
+
+			.cc-hd-bar-inner {
+				gap: 16px;
+			}
+		}
+
+		@media (max-width: 1020px) {
+			.cc-hd-brand-text {
+				display: flex;
+			}
+
+			.cc-hd-logo {
+				height: 40px;
+			}
+		}
+
+		@media (max-width: 940px) {
+			.cc-header.is-menu-open .cc-hd-scrim {
+				opacity: 1;
+				visibility: visible;
+			}
+
+			.cc-hd-burger {
+				display: inline-flex;
+			}
+
+			.cc-hd-bar-inner {
+				z-index: 2;
+			}
+
+			.cc-hd-nav {
+				position: fixed;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				width: min(380px, 88vw);
+				margin: 0;
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				gap: 10px;
+				background: var(--cc-paper);
+				box-shadow: -24px 0 60px rgba(11, 16, 44, 0.4);
+				padding: 78px 22px 26px;
+				overflow-y: auto;
+				transform: translateX(105%);
+				transition: transform 0.3s ease;
+				z-index: 3;
+			}
+
+			.cc-header.is-menu-open .cc-hd-nav {
+				transform: translateX(0);
+			}
+
+			.cc-hd-list {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 2px;
+			}
+
+			.cc-hd-link {
+				width: 100%;
+				justify-content: space-between;
+				padding: 13px 12px;
+				border-bottom: 1px solid var(--cc-line);
+				font-size: 16px;
+			}
+
+			.cc-hd-link::after {
+				display: none;
+			}
+
+			.cc-hd-cta {
+				justify-content: center;
+				margin-top: 8px;
+				font-size: 14px;
+			}
+
+			.cc-hd-top-note {
+				display: none;
+			}
+
+			.cc-hd-top-inner {
+				justify-content: center;
+			}
+
+			.cc-hd-top-sep:first-of-type,
+			.cc-hd-top-link[href^="mailto"] {
+				display: none;
+			}
+		}
+
+		@media (max-width: 560px) {
+			.cc-hd-brand-text em {
+				display: none;
+			}
+
+			.cc-hd-top-link[data-ic-nav-href="/request-a-service"] {
+				display: none;
+			}
+		}
+	</style>
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var HEADER_CSS_ID = 'cc-header-css';
+			var headerRoots = Array.prototype.slice.call(
+				document.querySelectorAll('.cc-header[data-cc-header]')
+			);
+
+			/* -------- stylesheet survives SPA re-mounts (copied once) -------- */
+			function copyHeaderStyleOnce(root) {
+				var head = document.head || document.getElementsByTagName('head')[0];
+				if (!head || document.getElementById(HEADER_CSS_ID)) { return; }
+				var styleEl = root.querySelector('style');
+				if (!styleEl) { return; }
+				var clone = document.createElement('style');
+				clone.id = HEADER_CSS_ID;
+				clone.textContent = styleEl.textContent;
+				head.appendChild(clone);
+			}
+
+			/* -------- scroll reset on route changes (bound once) -------- */
+			function resetPageScroll() {
+				if (window.location.hash) { return; }
+				try { window.scrollTo(0, 0); } catch (scrollError) { /* ignore */ }
+				var scroller = document.scrollingElement || document.documentElement;
+				if (scroller) { scroller.scrollTop = 0; }
+				headerRoots.forEach(function (root) {
+					var node = root.parentElement;
+					while (node) {
+						if (node.scrollTop > 0) { node.scrollTop = 0; }
+						node = node.parentElement;
+					}
+				});
+			}
+
+			function schedulePageScrollReset() {
+				resetPageScroll();
+				window.setTimeout(resetPageScroll, 0);
+				if (window.requestAnimationFrame) { window.requestAnimationFrame(resetPageScroll); }
+				window.setTimeout(resetPageScroll, 180);
+				window.setTimeout(resetPageScroll, 600);
+			}
+
+			/* -------- per-window globals (bound once) -------- */
+			if (!window.__ccHeaderGlobalsBound) {
+				window.__ccHeaderGlobalsBound = true;
+
+				var compactTicking = false;
+
+				function updateAllBars() {
+					compactTicking = false;
+					var isCompact = window.scrollY > 24;
+					headerRoots.forEach(function (root) {
+						root.classList.toggle('is-compact', isCompact);
+					});
+				}
+
+				function requestBarUpdate() {
+					if (compactTicking) { return; }
+					compactTicking = true;
+					window.requestAnimationFrame(updateAllBars);
+				}
+
+				window.addEventListener('scroll', requestBarUpdate, { passive: true });
+				updateAllBars();
+
+				/* delegated click on internal links resets the scroll position */
+				document.addEventListener('click', function (event) {
+					var anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+					if (!anchor) { return; }
+					var href = anchor.getAttribute('href') || '';
+					if (href.charAt(0) !== '/' || href.indexOf('//') === 0 || href.indexOf('#') !== -1) { return; }
+					var target = anchor.getAttribute('target');
+					if (target === '_blank') { return; }
+					schedulePageScrollReset();
+				});
+
+				/* route-change events from the platform */
+				window.addEventListener('gw:content-ready', function () {
+					syncActivePages();
+					schedulePageScrollReset();
+				});
+				window.addEventListener('gw.onRouteChange', function () {
+					syncActivePages();
+					schedulePageScrollReset();
+				});
+
+				/* Escape closes every open drawer (live roots only) */
+				document.addEventListener('keydown', function (event) {
+					if (event.key !== 'Escape') { return; }
+					headerRoots.forEach(closeRootMenu);
+				});
+			}
+
+			/* -------- active page highlight -------- */
+			function syncActivePages() {
+				var currentPath = window.location.pathname || '/';
+				headerRoots.forEach(function (root) {
+					var pageLinks = Array.prototype.slice.call(
+						root.querySelectorAll('a[data-page]')
+					);
+					pageLinks.forEach(function (pageLink) {
+						var pageKey = pageLink.getAttribute('data-page');
+						var pagePath = pageKey === 'home' ? '/' : '/' + pageKey;
+						pageLink.classList.toggle('is-active', currentPath === pagePath);
+					});
+				});
+			}
+
+			/* -------- mobile drawer -------- */
+			function closeRootMenu(root) {
+				if (!root.classList.contains('is-menu-open')) { return; }
+				root.classList.remove('is-menu-open');
+				var burger = root.querySelector('.cc-hd-burger');
+				if (burger) { burger.setAttribute('aria-expanded', 'false'); }
+			}
+
+			function openRootMenu(root) {
+				root.classList.add('is-menu-open');
+				var burger = root.querySelector('.cc-hd-burger');
+				if (burger) { burger.setAttribute('aria-expanded', 'true'); }
+			}
+
+			/* -------- logo fallback (wordmark shows if the image fails) -------- */
+			function watchBrandLogo(root) {
+				var brand = root.querySelector('.cc-hd-brand');
+				var logo = root.querySelector('.cc-hd-logo');
+				if (!brand || !logo) { return; }
+				logo.addEventListener('error', function () {
+					brand.classList.add('is-logo-missing');
+				});
+				if (logo.complete && logo.naturalWidth === 0) {
+					brand.classList.add('is-logo-missing');
+				}
+			}
+
+			/* -------- per-mount initialisation (safe on every SPA navigation) -------- */
+			function initHeader(root) {
+				copyHeaderStyleOnce(root);
+				watchBrandLogo(root);
+
+				var burger = root.querySelector('.cc-hd-burger');
+				var scrim = root.querySelector('.cc-hd-scrim');
+
+				if (burger) {
+					burger.addEventListener('click', function () {
+						if (root.classList.contains('is-menu-open')) { closeRootMenu(root); }
+						else { openRootMenu(root); }
+					});
+				}
+
+				if (scrim) {
+					scrim.addEventListener('click', function () { closeRootMenu(root); });
+				}
+
+				root.addEventListener('keydown', function (event) {
+					if (event.key === 'Escape') { closeRootMenu(root); }
+				});
+			}
+
+			headerRoots.forEach(function (root) {
+				if (root.getAttribute('data-cc-header-ready') === '1') { return; }
+				root.setAttribute('data-cc-header-ready', '1');
+				initHeader(root);
+			});
+
+			syncActivePages();
+		})();
+	</script>
+
+</div>

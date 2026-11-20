@@ -1,0 +1,1138 @@
+<!--
+  =========================================================================
+  BECOME A MEMBER - fragment for the CentreCanada website
+  (route /become-a-member)
+  - One parent <div class="cc-page cc-member"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS scoped under .cc-member so nothing leaks
+  - Facts from the live site and society governance: membership is tied to
+    volunteering with a minimum pledge of 50 hours per year; the board has
+    11 directors serving 3-year terms with a 3-year hiatus; voting members
+    may nominate candidates (nominations close 7 days before the AGM).
+    ===== CMS CONFIG NEEDED: confirm current membership fee / dues and the
+    AGM date before publishing specific numbers. =====
+  - The form follows the platform contract: form data-gw-form, hidden
+    honeypot named "gw_hp", [data-gw-form-status] live region.
+  - FORM ENDPOINT: set data-gw-form-endpoint on the form (or edit
+    formApiEndpoint below) once the CentreCanada deployment domain is
+    confirmed. ===== CMS CONFIG NEEDED =====
+  - SEO for the CMS page object (slug "become-a-member"):
+    title "Become a Member - CentreCanada Newcomer Services Society"
+    description "Become a member of CentreCanada Newcomer Services Society.
+    Volunteer, belong to the community and help shape the society at the
+    annual general meeting in British Columbia."
+  =========================================================================
+-->
+<div class="cc-page cc-member">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="cc-mb-hero">
+		<div class="cc-mb-hero-bg" aria-hidden="true"></div>
+		<div class="cc-mb-wrap cc-mb-hero-grid">
+			<div>
+				<p class="cc-mb-kicker"><span class="cc-mb-kicker-bar" aria-hidden="true"></span>Become a member</p>
+				<h1 class="cc-mb-hero-title">Belong to<br><span class="cc-mb-accent">something shared.</span></h1>
+				<p class="cc-mb-hero-lede">
+					Membership is how CentreCanada stays rooted in its community. Join the society, serve
+					alongside your neighbours and have a voice in how we grow.
+				</p>
+				<div class="cc-mb-hero-actions">
+					<a class="cc-mb-btn" href="#membership-form">Apply for membership</a>
+					<a class="cc-mb-btn-ghost" data-ic-nav-href="/become-a-volunteer" href="/become-a-volunteer">Volunteer first</a>
+				</div>
+			</div>
+			<div class="cc-mb-hero-side cc-mb-reveal">
+				<p class="cc-mb-side-kicker">Membership pathway</p>
+				<ol class="cc-mb-side-steps">
+					<li><span>Apply below</span></li>
+					<li><span>Pledge 50+ volunteer hours a year</span></li>
+					<li><span>Meet the team and get started</span></li>
+					<li><span>Vote at the AGM</span></li>
+				</ol>
+				<p class="cc-mb-side-note">
+					Membership is for people who want to be part of the work &mdash; not just a mailing list.
+				</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ BENEFITS ============================= -->
+	<section class="cc-mb-benefits">
+		<div class="cc-mb-wrap">
+			<div class="cc-mb-sec-head cc-mb-reveal">
+				<div>
+					<p class="cc-mb-kicker"><span class="cc-mb-kicker-bar" aria-hidden="true"></span>What membership gives you</p>
+					<h2 class="cc-mb-sec-title">A seat at the table</h2>
+				</div>
+			</div>
+
+			<div class="cc-mb-benefits-grid">
+				<article class="cc-mb-benefit cc-mb-reveal">
+					<span class="cc-mb-benefit-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M12 3v6" /><path d="m8.5 6 1.5 3 2-3" /><path d="M4 13h16l-1.5 8h-13Z" /><path d="M9 17h6" /></svg>
+					</span>
+					<h3 class="cc-mb-benefit-title">A vote at the AGM</h3>
+					<p class="cc-mb-benefit-text">Voting members approve the direction of the society and nominate candidates for the board.</p>
+				</article>
+				<article class="cc-mb-benefit cc-mb-reveal">
+					<span class="cc-mb-benefit-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+					</span>
+					<h3 class="cc-mb-benefit-title">A real community</h3>
+					<p class="cc-mb-benefit-text">Events, programs and gatherings where newcomers and long-time residents build lasting ties.</p>
+				</article>
+				<article class="cc-mb-benefit cc-mb-reveal">
+					<span class="cc-mb-benefit-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M4 20V6l8-3 8 3v14" /><path d="M9 20v-6h6v6" /><path d="M4 10h16" /></svg>
+					</span>
+					<h3 class="cc-mb-benefit-title">Governance transparency</h3>
+					<p class="cc-mb-benefit-text">An 11-director board elected for three-year terms, with a three-year hiatus after each term.</p>
+				</article>
+				<article class="cc-mb-benefit cc-mb-reveal">
+					<span class="cc-mb-benefit-ico" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M19.4 5.6a5.2 5.2 0 0 0-7.4 0l-.1.1-.1-.1a5.2 5.2 0 1 0-7.4 7.4l7.5 7.5 7.5-7.5a5.2 5.2 0 0 0 0-7.4Z" /></svg>
+					</span>
+					<h3 class="cc-mb-benefit-title">Service with purpose</h3>
+					<p class="cc-mb-benefit-text">Your hours go straight into newcomer support, education and community programs.</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FACTS ============================== -->
+	<section class="cc-mb-facts">
+		<div class="cc-mb-wrap cc-mb-facts-grid">
+			<div class="cc-mb-facts-copy cc-mb-reveal">
+				<p class="cc-mb-kicker cc-mb-kicker-light"><span class="cc-mb-kicker-bar" aria-hidden="true"></span>How it works</p>
+				<h2 class="cc-mb-facts-title">Membership is earned through service</h2>
+				<p class="cc-mb-facts-text">
+					CentreCanada is a volunteer-driven society. Members pledge at least 50 volunteer hours per
+					year, and that commitment is what makes the work possible.
+				</p>
+				<a class="cc-mb-facts-link" data-ic-nav-href="/about-us" href="/about-us">Read our governance <span aria-hidden="true">&rarr;</span></a>
+			</div>
+
+			<div class="cc-mb-fact-grid cc-mb-reveal">
+				<div class="cc-mb-fact">
+					<p class="cc-mb-fact-num">50</p>
+					<p class="cc-mb-fact-label">Volunteer hours minimum per year</p>
+				</div>
+				<div class="cc-mb-fact">
+					<p class="cc-mb-fact-num">11</p>
+					<p class="cc-mb-fact-label">Directors on the board</p>
+				</div>
+				<div class="cc-mb-fact">
+					<p class="cc-mb-fact-num">3 yrs</p>
+					<p class="cc-mb-fact-label">Length of a director term</p>
+				</div>
+				<div class="cc-mb-fact">
+					<p class="cc-mb-fact-num">7 days</p>
+					<p class="cc-mb-fact-label">Nomination notice before the AGM</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- =============================== FORM ============================== -->
+	<section class="cc-mb-form" id="membership-form">
+		<div class="cc-mb-wrap cc-mb-form-grid">
+			<div class="cc-mb-form-copy cc-mb-reveal">
+				<p class="cc-mb-kicker"><span class="cc-mb-kicker-bar" aria-hidden="true"></span>Membership application</p>
+				<h2 class="cc-mb-sec-title">Tell us about you</h2>
+				<p class="cc-mb-form-text">
+					Complete the form and we will contact you with next steps, including the current
+					confirmation process. Questions? Email
+					<a href="mailto:hello@centrecanada.org">hello@centrecanada.org</a>.
+				</p>
+				<ul class="cc-mb-form-list">
+					<li>Membership is tied to your volunteer commitment</li>
+					<li>Voting rights begin once your membership is confirmed</li>
+					<li>Already volunteering? Mention it in the message</li>
+				</ul>
+				<p class="cc-mb-form-note">
+					Your information is used only to process your membership, in line with BC privacy law.
+				</p>
+			</div>
+
+			<div class="cc-mb-form-card cc-mb-reveal">
+				<form class="cc-mb-form-el" data-gw-form data-gw-form-type="membership-application"
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
+					<div class="cc-mb-fields">
+						<label class="cc-mb-field">
+							<span>Full name <em>*</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="cc-mb-field">
+							<span>Email <em>*</em></span>
+							<input type="email" name="email" inputmode="email" autocomplete="email" required>
+						</label>
+						<label class="cc-mb-field">
+							<span>Phone</span>
+							<input type="tel" name="phone" inputmode="tel" autocomplete="tel">
+						</label>
+						<label class="cc-mb-field">
+							<span>City</span>
+							<input type="text" name="city" autocomplete="address-level2">
+						</label>
+						<label class="cc-mb-field">
+							<span>Membership type <em>*</em></span>
+							<select name="membership_type" required>
+								<option value="">Select a membership type</option>
+								<option>Volunteer member</option>
+								<option>Volunteer member (already active)</option>
+								<option>Family membership</option>
+								<option>Student membership</option>
+								<option>Not sure &mdash; please advise</option>
+							</select>
+						</label>
+						<label class="cc-mb-field">
+							<span>Hours you pledge per year <em>*</em></span>
+							<input type="number" name="hours_pledge" min="50" max="2000" step="5" value="50" required>
+						</label>
+						<label class="cc-mb-field">
+							<span>Area of interest</span>
+							<select name="department">
+								<option value="">No preference</option>
+								<option>Documentation Assistance</option>
+								<option>Food and Clothing</option>
+								<option>Health Care</option>
+								<option>Housing Aid</option>
+								<option>Employment Assistance</option>
+								<option>Educational Assistance</option>
+								<option>Special Assistance</option>
+								<option>Administration</option>
+								<option>Dialogue and Integration</option>
+							</select>
+						</label>
+						<label class="cc-mb-field">
+							<span>Anything we should know?</span>
+							<textarea name="message" rows="4" placeholder="Your volunteer history with CentreCanada, skills, languages or questions."></textarea>
+						</label>
+						<label class="cc-mb-consent">
+							<input type="checkbox" name="consent" value="yes" required>
+							<span>I agree to become a member, to the 50-hour annual volunteer pledge and to the collection and use of my information under the CentreCanada privacy notice. <em>*</em></span>
+						</label>
+					</div>
+
+					<input class="cc-mb-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+					<div class="cc-mb-form-actions">
+						<button type="submit" class="cc-mb-submit">Submit membership application</button>
+						<div class="cc-mb-form-status" data-gw-form-status role="status" aria-live="polite"></div>
+					</div>
+					<p class="cc-mb-form-small">
+						Required fields are marked *. Membership confirmation details will be shared by email.
+					</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- =========================== MORE INFO ============================= -->
+	<section class="cc-mb-help">
+		<div class="cc-mb-wrap cc-mb-help-card cc-mb-reveal">
+			<div class="cc-mb-help-bg" aria-hidden="true"></div>
+			<div class="cc-mb-help-copy">
+				<h2 class="cc-mb-help-title">Not ready to apply yet?</h2>
+				<p class="cc-mb-help-text">
+					Start by volunteering at an event or program. It is the easiest way to see how the society
+					works &mdash; and most members begin there.
+				</p>
+			</div>
+			<div class="cc-mb-help-actions">
+				<a class="cc-mb-help-btn" data-ic-nav-href="/become-a-volunteer" href="/become-a-volunteer">See volunteer roles</a>
+				<a class="cc-mb-help-link" data-ic-nav-href="/contact-us" href="/contact-us">Ask a question</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== STYLES ============================= -->
+	<style>
+		.cc-member {
+			--cc-red: #e81c2e;
+			--cc-red-deep: #b81223;
+			--cc-red-soft: #fde8ea;
+			--cc-navy: #141a3d;
+			--cc-navy-deep: #0b102c;
+			--cc-navy-2: #1e2650;
+			--cc-ink: #1b2137;
+			--cc-muted: #5c6277;
+			--cc-paper: #fffdf9;
+			--cc-cream: #f7f3ec;
+			--cc-line: #e7e1d6;
+			--cc-amber: #f2b544;
+			--cc-amber-soft: #fbe6bd;
+			background: var(--cc-paper);
+			color: var(--cc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow-x: clip;
+		}
+
+		.cc-member,
+		.cc-member *,
+		.cc-member *::before,
+		.cc-member *::after {
+			box-sizing: border-box;
+		}
+
+		.cc-member h1,
+		.cc-member h2,
+		.cc-member h3,
+		.cc-member p {
+			margin: 0;
+		}
+
+		.cc-mb-wrap {
+			width: 100%;
+			max-width: 1180px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		.cc-mb-kicker {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.2em;
+			text-transform: uppercase;
+			color: var(--cc-red-deep);
+			margin-bottom: 14px !important;
+		}
+
+		.cc-mb-kicker-bar {
+			width: 32px;
+			height: 3px;
+			border-radius: 2px;
+			background: linear-gradient(90deg, var(--cc-red), var(--cc-amber));
+			flex: 0 0 auto;
+		}
+
+		.cc-mb-kicker-light {
+			color: var(--cc-amber-soft);
+		}
+
+		.cc-mb-sec-title {
+			font-size: clamp(26px, 3.2vw, 36px);
+			line-height: 1.14;
+			letter-spacing: -0.02em;
+			font-weight: 800;
+			color: var(--cc-navy);
+		}
+
+		.cc-mb-sec-head {
+			margin-bottom: 34px;
+		}
+
+		.cc-mb-btn,
+		.cc-mb-btn-ghost {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 13px 24px;
+			border-radius: 10px;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.03em;
+			text-decoration: none;
+			transition: transform 0.2s ease;
+			white-space: nowrap;
+		}
+
+		.cc-mb-btn {
+			background: linear-gradient(135deg, var(--cc-red), var(--cc-red-deep));
+			color: #fff;
+			box-shadow: 0 12px 24px -12px rgba(184, 18, 35, 0.75);
+		}
+
+		.cc-mb-btn-ghost {
+			background: rgba(20, 26, 61, 0.04);
+			color: var(--cc-navy);
+			border: 1.5px solid rgba(20, 26, 61, 0.18);
+		}
+
+		.cc-mb-btn:hover,
+		.cc-mb-btn-ghost:hover {
+			transform: translateY(-2px);
+		}
+
+		/* ------------------------------- hero ------------------------------- */
+		.cc-mb-hero {
+			position: relative;
+			background: var(--cc-navy);
+			color: #fff;
+			padding: 74px 0 78px;
+			overflow: hidden;
+		}
+
+		.cc-mb-hero-bg {
+			position: absolute;
+			inset: 0;
+			background:
+				radial-gradient(50% 80% at 92% 6%, rgba(232, 28, 46, 0.34), transparent 62%),
+				radial-gradient(40% 60% at 4% 96%, rgba(242, 181, 68, 0.14), transparent 68%),
+				repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.024) 0 1px, transparent 1px 46px);
+			pointer-events: none;
+		}
+
+		.cc-mb-hero-grid {
+			position: relative;
+			display: grid;
+			grid-template-columns: 1.1fr 0.9fr;
+			gap: 46px;
+			align-items: center;
+		}
+
+		.cc-mb-hero-title {
+			font-size: clamp(36px, 4.8vw, 56px);
+			line-height: 1.06;
+			letter-spacing: -0.03em;
+			font-weight: 800;
+			color: #fff;
+		}
+
+		.cc-mb-accent {
+			color: var(--cc-amber);
+		}
+
+		.cc-mb-hero .cc-mb-kicker {
+			color: var(--cc-amber-soft);
+		}
+
+		.cc-mb-hero-lede {
+			margin-top: 18px !important;
+			font-size: 17px;
+			line-height: 1.65;
+			color: #c3c8dc;
+			max-width: 560px;
+		}
+
+		.cc-mb-hero-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+			margin-top: 26px;
+		}
+
+		.cc-mb-hero .cc-mb-btn-ghost {
+			background: rgba(255, 255, 255, 0.08);
+			color: #fff;
+			border-color: rgba(255, 255, 255, 0.28);
+		}
+
+		.cc-mb-hero-side {
+			background: rgba(255, 255, 255, 0.055);
+			border: 1px solid rgba(255, 255, 255, 0.16);
+			border-radius: 18px;
+			padding: 26px 24px;
+			backdrop-filter: blur(2px);
+		}
+
+		.cc-mb-side-kicker {
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--cc-amber);
+			margin-bottom: 14px !important;
+		}
+
+		.cc-mb-side-steps {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			counter-reset: cc-step;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.cc-mb-side-steps li {
+			counter-increment: cc-step;
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			font-size: 14px;
+			font-weight: 600;
+			color: #e4e7f2;
+		}
+
+		.cc-mb-side-steps li::before {
+			content: counter(cc-step, decimal-leading-zero);
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 28px;
+			height: 28px;
+			flex: 0 0 auto;
+			border-radius: 50%;
+			background: rgba(232, 28, 46, 0.9);
+			color: #fff;
+			font-size: 11px;
+			font-weight: 800;
+		}
+
+		.cc-mb-side-note {
+			margin-top: 16px !important;
+			padding-top: 14px;
+			border-top: 1px solid rgba(255, 255, 255, 0.16);
+			font-size: 12.5px;
+			line-height: 1.6;
+			color: #b9bfd6;
+		}
+
+		/* ----------------------------- benefits ------------------------------ */
+		.cc-mb-benefits {
+			padding: 84px 0;
+			background: var(--cc-paper);
+		}
+
+		.cc-mb-benefits-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 16px;
+		}
+
+		.cc-mb-benefit {
+			background: var(--cc-cream);
+			border: 1px solid var(--cc-line);
+			border-radius: 16px;
+			padding: 24px 22px;
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.cc-mb-benefit:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 22px 40px -30px rgba(11, 16, 44, 0.4);
+		}
+
+		.cc-mb-benefit-ico {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			border-radius: 12px;
+			background: var(--cc-red-soft);
+			border: 1px solid rgba(232, 28, 46, 0.2);
+			color: var(--cc-red-deep);
+			margin-bottom: 12px;
+		}
+
+		.cc-mb-benefit-ico svg {
+			width: 22px;
+			height: 22px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.8;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.cc-mb-benefit-title {
+			font-size: 17px;
+			font-weight: 800;
+			line-height: 1.25;
+			color: var(--cc-navy);
+		}
+
+		.cc-mb-benefit-text {
+			margin-top: 7px !important;
+			font-size: 13.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+		}
+
+		/* ------------------------------ facts -------------------------------- */
+		.cc-mb-facts {
+			background: var(--cc-cream);
+			padding: 76px 0;
+			border-top: 1px solid var(--cc-line);
+			border-bottom: 1px solid var(--cc-line);
+		}
+
+		.cc-mb-facts-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 48px;
+			align-items: center;
+		}
+
+		.cc-mb-facts-title {
+			font-size: clamp(25px, 3vw, 34px);
+			line-height: 1.16;
+			font-weight: 800;
+			letter-spacing: -0.015em;
+			color: var(--cc-navy);
+		}
+
+		.cc-mb-facts-text {
+			margin-top: 13px !important;
+			font-size: 15.5px;
+			line-height: 1.7;
+			color: var(--cc-muted);
+			max-width: 460px;
+		}
+
+		.cc-mb-facts-link {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			margin-top: 18px;
+			font-size: 13.5px;
+			font-weight: 800;
+			color: var(--cc-red-deep);
+			text-decoration: none;
+			border-bottom: 2px solid rgba(232, 28, 46, 0.3);
+			padding-bottom: 2px;
+		}
+
+		.cc-mb-fact-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 12px;
+		}
+
+		.cc-mb-fact {
+			background: var(--cc-paper);
+			border: 1px solid var(--cc-line);
+			border-radius: 14px;
+			padding: 18px 16px;
+		}
+
+		.cc-mb-fact-num {
+			font-size: 30px;
+			font-weight: 800;
+			line-height: 1;
+			letter-spacing: -0.02em;
+			color: var(--cc-red);
+		}
+
+		.cc-mb-fact-label {
+			margin-top: 6px !important;
+			font-size: 12.5px;
+			line-height: 1.5;
+			color: var(--cc-muted);
+			font-weight: 600;
+		}
+
+		/* -------------------------------- form ------------------------------- */
+		.cc-mb-form {
+			padding: 84px 0;
+			background: var(--cc-paper);
+			scroll-margin-top: 100px;
+		}
+
+		.cc-mb-form-grid {
+			display: grid;
+			grid-template-columns: 0.9fr 1.1fr;
+			gap: 48px;
+			align-items: start;
+		}
+
+		.cc-mb-form-text {
+			margin-top: 13px !important;
+			font-size: 15.5px;
+			line-height: 1.7;
+			color: var(--cc-muted);
+		}
+
+		.cc-mb-form-text a {
+			color: var(--cc-red-deep);
+			font-weight: 700;
+			text-decoration: none;
+			border-bottom: 1px solid rgba(232, 28, 46, 0.35);
+		}
+
+		.cc-mb-form-list {
+			list-style: none;
+			margin: 20px 0 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.cc-mb-form-list li {
+			position: relative;
+			padding-left: 22px;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--cc-ink);
+		}
+
+		.cc-mb-form-list li::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 5px;
+			width: 7px;
+			height: 12px;
+			border-right: 2px solid var(--cc-red);
+			border-bottom: 2px solid var(--cc-red);
+			transform: rotate(40deg);
+		}
+
+		.cc-mb-form-note {
+			margin-top: 20px !important;
+			font-size: 12.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+			background: var(--cc-cream);
+			border: 1px dashed var(--cc-line);
+			border-radius: 10px;
+			padding: 12px 14px;
+		}
+
+		.cc-mb-form-card {
+			background: var(--cc-cream);
+			border: 1px solid var(--cc-line);
+			border-radius: 18px;
+			padding: 28px 26px;
+			box-shadow: 0 30px 56px -38px rgba(11, 16, 44, 0.4);
+		}
+
+		.cc-mb-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 14px;
+		}
+
+		.cc-mb-field {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.cc-mb-field:nth-child(1),
+		.cc-mb-field:nth-child(8) {
+			grid-column: span 2;
+		}
+
+		.cc-mb-field span {
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--cc-ink);
+		}
+
+		.cc-mb-field em,
+		.cc-mb-consent em {
+			color: var(--cc-red);
+			font-style: normal;
+		}
+
+		.cc-mb-field input,
+		.cc-mb-field select,
+		.cc-mb-field textarea {
+			width: 100%;
+			font-family: inherit;
+			font-size: 14.5px;
+			color: var(--cc-ink);
+			background: var(--cc-paper);
+			border: 1px solid var(--cc-line);
+			border-radius: 10px;
+			padding: 11px 13px;
+			outline: none;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.cc-mb-field input:focus,
+		.cc-mb-field select:focus,
+		.cc-mb-field textarea:focus {
+			border-color: rgba(232, 28, 46, 0.55);
+			box-shadow: 0 0 0 3px rgba(232, 28, 46, 0.12);
+		}
+
+		.cc-mb-field textarea {
+			resize: vertical;
+			min-height: 96px;
+		}
+
+		.cc-mb-consent {
+			display: flex;
+			align-items: flex-start;
+			gap: 10px;
+			grid-column: span 2;
+			font-size: 12.5px;
+			line-height: 1.55;
+			color: var(--cc-muted);
+		}
+
+		.cc-mb-consent input {
+			width: 17px;
+			height: 17px;
+			margin-top: 2px;
+			flex: 0 0 auto;
+			accent-color: var(--cc-red);
+		}
+
+		.cc-mb-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			opacity: 0;
+		}
+
+		.cc-mb-form-actions {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			flex-wrap: wrap;
+			margin-top: 18px;
+		}
+
+		.cc-mb-submit {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 14px 26px;
+			background: linear-gradient(135deg, var(--cc-red), var(--cc-red-deep));
+			color: #fff;
+			border: 0;
+			border-radius: 10px;
+			font-family: inherit;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.03em;
+			cursor: pointer;
+			box-shadow: 0 12px 24px -12px rgba(184, 18, 35, 0.75);
+			transition: transform 0.2s ease, opacity 0.2s ease;
+		}
+
+		.cc-mb-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.cc-mb-submit:disabled {
+			opacity: 0.6;
+			cursor: wait;
+			transform: none;
+		}
+
+		.cc-mb-form-status {
+			font-size: 13.5px;
+			font-weight: 700;
+			line-height: 1.5;
+		}
+
+		.cc-mb-form-status.is-ok {
+			color: #116b3a;
+		}
+
+		.cc-mb-form-status.is-error {
+			color: var(--cc-red-deep);
+		}
+
+		.cc-mb-form-small {
+			margin-top: 12px !important;
+			font-size: 11.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+		}
+
+		/* ------------------------------- help -------------------------------- */
+		.cc-mb-help {
+			background: var(--cc-cream);
+			padding: 0 0 84px;
+		}
+
+		.cc-mb-help-card {
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 28px;
+			padding: 38px 42px;
+			border-radius: 20px;
+			overflow: hidden;
+			background: linear-gradient(120deg, var(--cc-navy) 0%, var(--cc-navy-deep) 70%);
+			color: #fff;
+			flex-wrap: wrap;
+			box-shadow: 0 30px 60px -36px rgba(11, 16, 44, 0.7);
+		}
+
+		.cc-mb-help-bg {
+			position: absolute;
+			inset: 0;
+			background:
+				radial-gradient(60% 120% at 100% 0%, rgba(232, 28, 46, 0.35), transparent 60%),
+				radial-gradient(40% 90% at 0% 100%, rgba(242, 181, 68, 0.16), transparent 65%);
+			pointer-events: none;
+		}
+
+		.cc-mb-help-copy,
+		.cc-mb-help-actions {
+			position: relative;
+		}
+
+		.cc-mb-help-title {
+			font-size: clamp(23px, 2.8vw, 30px);
+			font-weight: 800;
+			line-height: 1.2;
+			color: #fff;
+		}
+
+		.cc-mb-help-text {
+			margin-top: 9px !important;
+			font-size: 15px;
+			line-height: 1.65;
+			color: #c3c8dc;
+			max-width: 560px;
+		}
+
+		.cc-mb-help-actions {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+			flex-wrap: wrap;
+		}
+
+		.cc-mb-help-btn {
+			display: inline-flex;
+			padding: 13px 24px;
+			background: var(--cc-paper);
+			color: var(--cc-navy-deep);
+			border-radius: 10px;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.03em;
+			text-decoration: none;
+			white-space: nowrap;
+			box-shadow: 0 12px 24px -14px rgba(11, 16, 44, 0.6);
+		}
+
+		.cc-mb-help-link {
+			font-size: 13.5px;
+			font-weight: 800;
+			color: var(--cc-amber-soft);
+			text-decoration: none;
+			border-bottom: 1px solid rgba(242, 181, 68, 0.45);
+			padding-bottom: 2px;
+			white-space: nowrap;
+		}
+
+		/* ------------------------------ motion ------------------------------- */
+		.cc-mb-reveal-init {
+			opacity: 0;
+			transform: translateY(20px);
+			transition: opacity 0.6s ease, transform 0.6s ease;
+		}
+
+		.cc-mb-reveal-init.is-in {
+			opacity: 1;
+			transform: none;
+		}
+
+		.is-reduced-motion .cc-mb-reveal-init {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* ---------------------------- responsive ----------------------------- */
+		@media (max-width: 1000px) {
+			.cc-mb-hero-grid,
+			.cc-mb-facts-grid,
+			.cc-mb-form-grid {
+				grid-template-columns: 1fr;
+				gap: 32px;
+			}
+
+			.cc-mb-benefits-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+		}
+
+		@media (max-width: 560px) {
+			.cc-mb-hero {
+				padding: 54px 0 58px;
+			}
+
+			.cc-mb-benefits-grid,
+			.cc-mb-fact-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.cc-mb-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.cc-mb-field:nth-child(1),
+			.cc-mb-field:nth-child(8),
+			.cc-mb-consent {
+				grid-column: span 1;
+			}
+
+			.cc-mb-form-card {
+				padding: 22px 18px;
+			}
+
+			.cc-mb-help-card {
+				padding: 30px 24px;
+			}
+		}
+	</style>
+
+	<!-- ============================== SCRIPT ============================= -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.cc-member');
+			if (!pageRoot || pageRoot.getAttribute('data-cc-member-ready') === '1') { return; }
+			pageRoot.setAttribute('data-cc-member-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) { pageRoot.classList.add('is-reduced-motion'); }
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.cc-mb-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.remove('cc-mb-reveal'); });
+			} else {
+				revealItems.forEach(function (item) {
+					item.classList.remove('cc-mb-reveal');
+					item.classList.add('cc-mb-reveal-init');
+				});
+
+				var revealObserver = new IntersectionObserver(function (entries) {
+					entries.forEach(function (entry) {
+						if (!entry.isIntersecting) { return; }
+						entry.target.classList.add('is-in');
+						revealObserver.unobserve(entry.target);
+					});
+				}, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+				revealItems.forEach(function (item) { revealObserver.observe(item); });
+			}
+
+			/* ---------------- membership form ---------------- */
+			/* CMS CONFIG NEEDED: confirm the CentreCanada deployment domain.
+			   The per-form data-gw-form-endpoint attribute overrides this. */
+			var formApiEndpoint = 'https://centrecanadaca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function phoneDigits(rawValue) {
+				var text = rawValue === null || rawValue === undefined ? '' : String(rawValue);
+				return text.replace(/[^\d]/g, '');
+			}
+
+			function formatPhoneDigits(rawValue) {
+				var digits = phoneDigits(rawValue);
+				if (digits.length === 11 && digits.charAt(0) === '1') { digits = digits.slice(1); }
+				digits = digits.slice(0, 10);
+				if (digits.length <= 3) { return digits; }
+				var areaCode = digits.slice(0, 3);
+				var restOfNumber = digits.slice(3);
+				if (restOfNumber.length <= 3) { return '(' + areaCode + ') ' + restOfNumber; }
+				return '(' + areaCode + ') ' + restOfNumber.slice(0, 3) + '-' + restOfNumber.slice(3);
+			}
+
+			function applyPhoneFormat(phoneInput) {
+				var formatted = formatPhoneDigits(phoneInput.value);
+				if (formatted !== phoneInput.value) { phoneInput.value = formatted; }
+			}
+
+			var phoneField = pageRoot.querySelector('form[data-gw-form] input[name="phone"]');
+			if (phoneField) {
+				phoneField.addEventListener('input', function () { applyPhoneFormat(phoneField); });
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+				var fields = Array.prototype.slice.call(
+					form.querySelectorAll('input[name], select[name], textarea[name]')
+				);
+				fields.forEach(function (field) {
+					if (field.name === 'gw_hp') { return; }
+					if (field.type === 'checkbox') {
+						values[field.name] = field.checked ? (field.value || 'yes') : '';
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+				return values;
+			}
+
+			function handleSubmit(event) {
+				event.preventDefault();
+				var form = event.currentTarget;
+				if (form.getAttribute('data-submitting') === '1') { return; }
+
+				var honeypot = form.querySelector('input[name="gw_hp"]');
+				if (honeypot && honeypot.value) {
+					setFormStatus(form, 'Thank you. We will be in touch.', 'ok');
+					form.reset();
+					return;
+				}
+
+				if (typeof form.reportValidity === 'function' && !form.reportValidity()) { return; }
+
+				var submitButton = form.querySelector('button[type="submit"]');
+				var values = collectFormValues(form);
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null && ownEndpoint !== '' ? ownEndpoint : formApiEndpoint;
+				var cmsObjectType = form.getAttribute('data-gw-cms-object-type') || formDefaultCmsObjectType;
+
+				form.setAttribute('data-submitting', '1');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending your application\u2026', '');
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || 'membership-application',
+					cmsObjectType: cmsObjectType,
+					pageUrl: window.location.href,
+					values: values
+				};
+
+				fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					if (!response.ok) { throw new Error('HTTP ' + response.status); }
+					setFormStatus(form, 'Thank you \u2014 your membership application has been received. We will email you with the next steps.', 'ok');
+					form.reset();
+				}).catch(function () {
+					setFormStatus(form, 'We could not send the form right now. Please email hello@centrecanada.org and we will process your application directly.', 'error');
+				}).then(function () {
+					form.removeAttribute('data-submitting');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			forms.forEach(function (form) {
+				if (form.getAttribute('data-cc-form-bound') === '1') { return; }
+				form.setAttribute('data-cc-form-bound', '1');
+				form.addEventListener('submit', handleSubmit);
+			});
+		})();
+	</script>
+
+</div>

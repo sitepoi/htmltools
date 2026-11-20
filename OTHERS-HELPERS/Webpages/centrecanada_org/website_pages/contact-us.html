@@ -1,0 +1,959 @@
+<!--
+  =========================================================================
+  CONTACT US - fragment for the CentreCanada website (route /contact-us)
+  - One parent <div class="cc-page cc-contact"> (CMS embed)
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - All CSS selectors are scoped under .cc-contact so nothing leaks
+  - Facts from the live site: "We're ready, Let's talk." / "Contact us to
+    find out more or how we can help you better." Offices:
+      Burnaby - 7825 Edmonds St, Burnaby, BC
+      New Westminster - 93 6th St, New Westminster, BC V3L 2Z8
+      Victoria - #201, 524 Culduthel Rd, Victoria, BC V8Z 1G1
+    Email hello@centrecanada.org; socials facebook/instagram/twitter
+  - The contact form follows the platform contract: form data-gw-form,
+    hidden honeypot named "gw_hp", [data-gw-form-status] live region.
+  - FORM ENDPOINT: set data-gw-form-endpoint on the form (or edit
+    formApiEndpoint below) once the CentreCanada deployment domain is
+    confirmed. ===== CMS CONFIG NEEDED =====
+  - SEO for the CMS page object (slug "contact-us"):
+    title "Contact Us - CentreCanada Newcomer Services Society"
+    description "Contact CentreCanada Newcomer Services Society. Offices in
+    Burnaby, New Westminster and Victoria, British Columbia. Email
+    hello@centrecanada.org or send us a message online."
+  =========================================================================
+-->
+<div class="cc-page cc-contact">
+
+	<!-- =============================== HERO ============================== -->
+	<section class="cc-ct-hero">
+		<div class="cc-ct-hero-bg" aria-hidden="true"></div>
+		<div class="cc-ct-wrap cc-ct-hero-grid">
+			<div>
+				<p class="cc-ct-kicker"><span class="cc-ct-kicker-bar" aria-hidden="true"></span>Contact us</p>
+				<h1 class="cc-ct-hero-title">We&rsquo;re ready.<br><span class="cc-ct-accent">Let&rsquo;s talk.</span></h1>
+				<p class="cc-ct-hero-lede">
+					Contact us to find out more or how we can help you better. Send a message, email us, or
+					visit one of our three offices in British Columbia.
+				</p>
+			</div>
+			<div class="cc-ct-hero-side cc-ct-reveal">
+				<a class="cc-ct-hero-mail" href="mailto:hello@centrecanada.org">
+					<span class="cc-ct-hero-mail-label">Email us</span>
+					<span class="cc-ct-hero-mail-value">hello@centrecanada.org</span>
+				</a>
+				<ul class="cc-ct-hero-list">
+					<li><span>Burnaby</span><strong>7825 Edmonds St</strong></li>
+					<li><span>New Westminster</span><strong>93 6th St, V3L 2Z8</strong></li>
+					<li><span>Victoria</span><strong>#201, 524 Culduthel Rd</strong></li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FORM =============================== -->
+	<section class="cc-ct-form">
+		<div class="cc-ct-wrap cc-ct-form-grid">
+			<div class="cc-ct-form-copy cc-ct-reveal">
+				<p class="cc-ct-kicker"><span class="cc-ct-kicker-bar" aria-hidden="true"></span>Send a message</p>
+				<h2 class="cc-ct-sec-title">How can we help?</h2>
+				<p class="cc-ct-form-text">
+					Tell us a little about your situation and the best way to reach you. If you already know
+					which service you need, include that too &mdash; it helps us route your message faster.
+				</p>
+				<ul class="cc-ct-form-list">
+					<li>Newcomer services and referrals</li>
+					<li>Programs, registration and fees</li>
+					<li>Volunteering, membership and donations</li>
+					<li>Partnerships, media and events</li>
+				</ul>
+				<p class="cc-ct-form-social-label">Follow CentreCanada</p>
+				<div class="cc-ct-social">
+					<a class="cc-ct-social-link" href="https://www.facebook.com/centrecanadanss" target="_blank" rel="noopener" aria-label="CentreCanada on Facebook">
+						<svg viewBox="0 0 24 24"><path d="M14.5 21v-7h2.6l.4-3h-3V9.3c0-.9.3-1.5 1.6-1.5h1.5V5.1A21 21 0 0 0 15.2 5c-2.4 0-4 1.4-4 4.1V11H8.5v3h2.7v7" /></svg>
+					</a>
+					<a class="cc-ct-social-link" href="https://www.instagram.com/centrecanadanss/" target="_blank" rel="noopener" aria-label="CentreCanada on Instagram">
+						<svg viewBox="0 0 24 24"><rect x="4.4" y="4.4" width="15.2" height="15.2" rx="4.4" /><circle cx="12" cy="12" r="3.6" /><circle cx="16.8" cy="7.2" r="1" /></svg>
+					</a>
+					<a class="cc-ct-social-link" href="https://twitter.com/centrecanada_" target="_blank" rel="noopener" aria-label="CentreCanada on X (Twitter)">
+						<svg viewBox="0 0 24 24"><path d="M4.5 4.5 19 19.5" /><path d="M19.5 4.5 4.5 19.5" /></svg>
+					</a>
+				</div>
+			</div>
+
+			<div class="cc-ct-form-card cc-ct-reveal">
+				<form class="cc-ct-form-el" data-gw-form data-gw-form-type="contact-message"
+					data-gw-cms-object-type="form-submissions-uniconbaseapps">
+					<div class="cc-ct-fields">
+						<label class="cc-ct-field">
+							<span>Name <em>*</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="cc-ct-field">
+							<span>Email <em>*</em></span>
+							<input type="email" name="email" inputmode="email" autocomplete="email" required>
+						</label>
+						<label class="cc-ct-field">
+							<span>Phone</span>
+							<input type="tel" name="phone" inputmode="tel" autocomplete="tel">
+						</label>
+						<label class="cc-ct-field">
+							<span>Topic</span>
+							<select name="subject">
+								<option value="">Select a topic</option>
+								<option>Newcomer services</option>
+								<option>Programs &amp; registration</option>
+								<option>Volunteering</option>
+								<option>Membership</option>
+								<option>Donations</option>
+								<option>Partnerships &amp; media</option>
+								<option>Something else</option>
+							</select>
+						</label>
+						<label class="cc-ct-field">
+							<span>Message <em>*</em></span>
+							<textarea name="message" rows="5" required placeholder="Tell us about your situation and how we can help..."></textarea>
+						</label>
+						<label class="cc-ct-consent">
+							<input type="checkbox" name="consent" value="yes" required>
+							<span>I agree that CentreCanada may use these details to respond to my message, in line with the privacy notice. <em>*</em></span>
+						</label>
+					</div>
+
+					<input class="cc-ct-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+					<div class="cc-ct-form-actions">
+						<button type="submit" class="cc-ct-submit">Send message</button>
+						<div class="cc-ct-form-status" data-gw-form-status role="status" aria-live="polite"></div>
+					</div>
+					<p class="cc-ct-form-small">
+						We use these details only to answer your message. Required fields are marked *.
+					</p>
+				</form>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== OFFICES ============================ -->
+	<section class="cc-ct-offices">
+		<div class="cc-ct-wrap">
+			<div class="cc-ct-sec-head cc-ct-reveal">
+				<div>
+					<p class="cc-ct-kicker"><span class="cc-ct-kicker-bar" aria-hidden="true"></span>Visit us</p>
+					<h2 class="cc-ct-sec-title">Three offices across British Columbia</h2>
+				</div>
+			</div>
+
+			<div class="cc-ct-offices-grid">
+				<article class="cc-ct-office cc-ct-reveal">
+					<p class="cc-ct-office-tag">Head office</p>
+					<h3 class="cc-ct-office-title">New Westminster</h3>
+					<p class="cc-ct-office-address">93 6th St<br>New Westminster, BC V3L 2Z8</p>
+					<a class="cc-ct-office-link" href="https://www.google.com/maps/search/?api=1&amp;query=93+6th+St+New+Westminster+BC+V3L+2Z8" target="_blank" rel="noopener">Open in maps <span aria-hidden="true">&rarr;</span></a>
+				</article>
+				<article class="cc-ct-office cc-ct-reveal">
+					<p class="cc-ct-office-tag">Office</p>
+					<h3 class="cc-ct-office-title">Burnaby</h3>
+					<p class="cc-ct-office-address">7825 Edmonds St<br>Burnaby, BC</p>
+					<a class="cc-ct-office-link" href="https://www.google.com/maps/search/?api=1&amp;query=7825+Edmonds+St+Burnaby+BC" target="_blank" rel="noopener">Open in maps <span aria-hidden="true">&rarr;</span></a>
+				</article>
+				<article class="cc-ct-office cc-ct-reveal">
+					<p class="cc-ct-office-tag">Office</p>
+					<h3 class="cc-ct-office-title">Victoria</h3>
+					<p class="cc-ct-office-address">#201, 524 Culduthel Rd<br>Victoria, BC V8Z 1G1</p>
+					<a class="cc-ct-office-link" href="https://www.google.com/maps/search/?api=1&amp;query=524+Culduthel+Rd+Victoria+BC+V8Z+1G1" target="_blank" rel="noopener">Open in maps <span aria-hidden="true">&rarr;</span></a>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================== ANNOUNCEMENTS ========================== -->
+	<section class="cc-ct-news">
+		<div class="cc-ct-wrap cc-ct-news-card cc-ct-reveal">
+			<div class="cc-ct-news-bg" aria-hidden="true"></div>
+			<div class="cc-ct-news-copy">
+				<h2 class="cc-ct-news-title">Prefer to hear from us first?</h2>
+				<p class="cc-ct-news-text">
+					Join the announcement list for community announcements, event invitations, educational
+					programs and volunteer opportunities.
+				</p>
+			</div>
+			<a class="cc-ct-news-btn" href="mailto:hello@centrecanada.org?subject=Join%20the%20CentreCanada%20announcement%20list">Join the announcement list</a>
+		</div>
+	</section>
+
+	<!-- ============================== STYLES ============================= -->
+	<style>
+		.cc-contact {
+			--cc-red: #e81c2e;
+			--cc-red-deep: #b81223;
+			--cc-red-soft: #fde8ea;
+			--cc-navy: #141a3d;
+			--cc-navy-deep: #0b102c;
+			--cc-navy-2: #1e2650;
+			--cc-ink: #1b2137;
+			--cc-muted: #5c6277;
+			--cc-paper: #fffdf9;
+			--cc-cream: #f7f3ec;
+			--cc-line: #e7e1d6;
+			--cc-amber: #f2b544;
+			--cc-amber-soft: #fbe6bd;
+			background: var(--cc-paper);
+			color: var(--cc-ink);
+			font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow-x: clip;
+		}
+
+		.cc-contact,
+		.cc-contact *,
+		.cc-contact *::before,
+		.cc-contact *::after {
+			box-sizing: border-box;
+		}
+
+		.cc-contact h1,
+		.cc-contact h2,
+		.cc-contact h3,
+		.cc-contact p {
+			margin: 0;
+		}
+
+		.cc-ct-wrap {
+			width: 100%;
+			max-width: 1180px;
+			margin: 0 auto;
+			padding-left: 24px;
+			padding-right: 24px;
+		}
+
+		.cc-ct-kicker {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.2em;
+			text-transform: uppercase;
+			color: var(--cc-red-deep);
+			margin-bottom: 14px !important;
+		}
+
+		.cc-ct-kicker-bar {
+			width: 32px;
+			height: 3px;
+			border-radius: 2px;
+			background: linear-gradient(90deg, var(--cc-red), var(--cc-amber));
+			flex: 0 0 auto;
+		}
+
+		.cc-ct-sec-title {
+			font-size: clamp(26px, 3.2vw, 38px);
+			line-height: 1.14;
+			letter-spacing: -0.02em;
+			font-weight: 800;
+			color: var(--cc-navy);
+		}
+
+		.cc-ct-sec-head {
+			margin-bottom: 34px;
+		}
+
+		/* ------------------------------- hero ------------------------------- */
+		.cc-ct-hero {
+			position: relative;
+			background: var(--cc-cream);
+			padding: 70px 0 74px;
+			overflow: hidden;
+		}
+
+		.cc-ct-hero-bg {
+			position: absolute;
+			inset: 0;
+			background:
+				radial-gradient(46% 70% at 90% 10%, rgba(232, 28, 46, 0.11), transparent 60%),
+				repeating-linear-gradient(0deg, rgba(20, 26, 61, 0.028) 0 1px, transparent 1px 44px);
+			pointer-events: none;
+		}
+
+		.cc-ct-hero-grid {
+			position: relative;
+			display: grid;
+			grid-template-columns: 1.1fr 0.9fr;
+			gap: 48px;
+			align-items: center;
+		}
+
+		.cc-ct-hero-title {
+			font-size: clamp(36px, 4.8vw, 56px);
+			line-height: 1.06;
+			letter-spacing: -0.03em;
+			font-weight: 800;
+			color: var(--cc-navy);
+		}
+
+		.cc-ct-accent {
+			color: var(--cc-red);
+		}
+
+		.cc-ct-hero-lede {
+			margin-top: 18px !important;
+			font-size: 17px;
+			line-height: 1.65;
+			color: var(--cc-muted);
+			max-width: 560px;
+		}
+
+		.cc-ct-hero-side {
+			background: var(--cc-navy);
+			color: #fff;
+			border-radius: 18px;
+			padding: 26px 24px;
+			border-left: 4px solid var(--cc-amber);
+			box-shadow: 0 30px 56px -32px rgba(11, 16, 44, 0.65);
+		}
+
+		.cc-ct-hero-mail {
+			display: block;
+			text-decoration: none;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+			padding-bottom: 14px;
+			margin-bottom: 14px;
+		}
+
+		.cc-ct-hero-mail-label {
+			display: block;
+			font-size: 10.5px;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--cc-amber);
+			margin-bottom: 4px;
+		}
+
+		.cc-ct-hero-mail-value {
+			font-size: 18px;
+			font-weight: 800;
+			color: #fff;
+		}
+
+		.cc-ct-hero-mail:hover .cc-ct-hero-mail-value {
+			color: var(--cc-amber-soft);
+		}
+
+		.cc-ct-hero-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.cc-ct-hero-list li {
+			display: flex;
+			justify-content: space-between;
+			gap: 14px;
+			font-size: 13px;
+			border-bottom: 1px dashed rgba(255, 255, 255, 0.14);
+			padding-bottom: 8px;
+		}
+
+		.cc-ct-hero-list li:last-child {
+			border-bottom: 0;
+			padding-bottom: 0;
+		}
+
+		.cc-ct-hero-list span {
+			color: #b9bfd6;
+			font-weight: 600;
+		}
+
+		.cc-ct-hero-list strong {
+			color: #fff;
+			text-align: right;
+			font-weight: 700;
+		}
+
+		/* ------------------------------- form -------------------------------- */
+		.cc-ct-form {
+			padding: 82px 0;
+			background: var(--cc-paper);
+		}
+
+		.cc-ct-form-grid {
+			display: grid;
+			grid-template-columns: 0.9fr 1.1fr;
+			gap: 50px;
+			align-items: start;
+		}
+
+		.cc-ct-form-text {
+			margin-top: 13px !important;
+			font-size: 15.5px;
+			line-height: 1.7;
+			color: var(--cc-muted);
+		}
+
+		.cc-ct-form-list {
+			list-style: none;
+			margin: 20px 0 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+		}
+
+		.cc-ct-form-list li {
+			position: relative;
+			padding-left: 22px;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--cc-ink);
+		}
+
+		.cc-ct-form-list li::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 5px;
+			width: 7px;
+			height: 12px;
+			border-right: 2px solid var(--cc-red);
+			border-bottom: 2px solid var(--cc-red);
+			transform: rotate(40deg);
+		}
+
+		.cc-ct-form-social-label {
+			margin-top: 26px !important;
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.18em;
+			text-transform: uppercase;
+			color: var(--cc-muted);
+		}
+
+		.cc-ct-social {
+			display: flex;
+			gap: 10px;
+			margin-top: 10px;
+		}
+
+		.cc-ct-social-link {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 38px;
+			height: 38px;
+			border-radius: 50%;
+			border: 1px solid var(--cc-line);
+			color: var(--cc-navy);
+			background: var(--cc-cream);
+			transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+		}
+
+		.cc-ct-social-link svg {
+			width: 17px;
+			height: 17px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+
+		.cc-ct-social-link:hover {
+			background: var(--cc-red);
+			border-color: var(--cc-red);
+			color: #fff;
+		}
+
+		.cc-ct-form-card {
+			background: var(--cc-cream);
+			border: 1px solid var(--cc-line);
+			border-radius: 18px;
+			padding: 28px 26px;
+			box-shadow: 0 30px 56px -38px rgba(11, 16, 44, 0.4);
+		}
+
+		.cc-ct-fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 14px;
+		}
+
+		.cc-ct-field {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.cc-ct-field:nth-child(1),
+		.cc-ct-field:nth-child(5) {
+			grid-column: span 2;
+		}
+
+		.cc-ct-field span {
+			font-size: 12.5px;
+			font-weight: 700;
+			color: var(--cc-ink);
+		}
+
+		.cc-ct-field em,
+		.cc-ct-consent em {
+			color: var(--cc-red);
+			font-style: normal;
+		}
+
+		.cc-ct-field input,
+		.cc-ct-field select,
+		.cc-ct-field textarea {
+			width: 100%;
+			font-family: inherit;
+			font-size: 14.5px;
+			color: var(--cc-ink);
+			background: var(--cc-paper);
+			border: 1px solid var(--cc-line);
+			border-radius: 10px;
+			padding: 11px 13px;
+			outline: none;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.cc-ct-field input:focus,
+		.cc-ct-field select:focus,
+		.cc-ct-field textarea:focus {
+			border-color: rgba(232, 28, 46, 0.55);
+			box-shadow: 0 0 0 3px rgba(232, 28, 46, 0.12);
+		}
+
+		.cc-ct-field textarea {
+			resize: vertical;
+			min-height: 110px;
+		}
+
+		.cc-ct-consent {
+			display: flex;
+			align-items: flex-start;
+			gap: 10px;
+			grid-column: span 2;
+			font-size: 12.5px;
+			line-height: 1.55;
+			color: var(--cc-muted);
+		}
+
+		.cc-ct-consent input {
+			width: 17px;
+			height: 17px;
+			margin-top: 2px;
+			flex: 0 0 auto;
+			accent-color: var(--cc-red);
+		}
+
+		.cc-ct-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			opacity: 0;
+		}
+
+		.cc-ct-form-actions {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			flex-wrap: wrap;
+			margin-top: 18px;
+		}
+
+		.cc-ct-submit {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 14px 26px;
+			background: linear-gradient(135deg, var(--cc-red), var(--cc-red-deep));
+			color: #fff;
+			border: 0;
+			border-radius: 10px;
+			font-family: inherit;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.03em;
+			cursor: pointer;
+			box-shadow: 0 12px 24px -12px rgba(184, 18, 35, 0.75);
+			transition: transform 0.2s ease, opacity 0.2s ease;
+		}
+
+		.cc-ct-submit:hover {
+			transform: translateY(-2px);
+		}
+
+		.cc-ct-submit:disabled {
+			opacity: 0.6;
+			cursor: wait;
+			transform: none;
+		}
+
+		.cc-ct-form-status {
+			font-size: 13.5px;
+			font-weight: 700;
+			line-height: 1.5;
+		}
+
+		.cc-ct-form-status.is-ok {
+			color: #116b3a;
+		}
+
+		.cc-ct-form-status.is-error {
+			color: var(--cc-red-deep);
+		}
+
+		.cc-ct-form-small {
+			margin-top: 12px !important;
+			font-size: 11.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+		}
+
+		/* ------------------------------ offices ------------------------------ */
+		.cc-ct-offices {
+			padding: 82px 0;
+			background: var(--cc-cream);
+		}
+
+		.cc-ct-offices-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 16px;
+		}
+
+		.cc-ct-office {
+			background: var(--cc-paper);
+			border: 1px solid var(--cc-line);
+			border-radius: 16px;
+			padding: 26px 24px;
+			transition: transform 0.25s ease, border-color 0.25s ease;
+		}
+
+		.cc-ct-office:hover {
+			transform: translateY(-3px);
+			border-color: rgba(232, 28, 46, 0.3);
+		}
+
+		.cc-ct-office-tag {
+			font-size: 10.5px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--cc-red-deep);
+			margin-bottom: 8px !important;
+		}
+
+		.cc-ct-office-title {
+			font-size: 20px;
+			font-weight: 800;
+			color: var(--cc-navy);
+		}
+
+		.cc-ct-office-address {
+			margin-top: 8px !important;
+			font-size: 14.5px;
+			line-height: 1.6;
+			color: var(--cc-muted);
+		}
+
+		.cc-ct-office-link {
+			display: inline-flex;
+			margin-top: 14px;
+			font-size: 13px;
+			font-weight: 800;
+			color: var(--cc-red-deep);
+			text-decoration: none;
+			border-bottom: 2px solid rgba(232, 28, 46, 0.3);
+			padding-bottom: 2px;
+		}
+
+		/* ---------------------------- announcements -------------------------- */
+		.cc-ct-news {
+			padding: 0 0 84px;
+			background: var(--cc-cream);
+		}
+
+		.cc-ct-news-card {
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 28px;
+			padding: 40px 44px;
+			border-radius: 20px;
+			overflow: hidden;
+			background: linear-gradient(120deg, var(--cc-navy) 0%, var(--cc-navy-deep) 70%);
+			color: #fff;
+			flex-wrap: wrap;
+			box-shadow: 0 30px 60px -36px rgba(11, 16, 44, 0.7);
+		}
+
+		.cc-ct-news-bg {
+			position: absolute;
+			inset: 0;
+			background:
+				radial-gradient(60% 120% at 100% 0%, rgba(232, 28, 46, 0.35), transparent 60%),
+				radial-gradient(40% 90% at 0% 100%, rgba(242, 181, 68, 0.16), transparent 65%);
+			pointer-events: none;
+		}
+
+		.cc-ct-news-copy,
+		.cc-ct-news-btn {
+			position: relative;
+		}
+
+		.cc-ct-news-title {
+			font-size: clamp(23px, 2.8vw, 31px);
+			font-weight: 800;
+			line-height: 1.2;
+			color: #fff;
+		}
+
+		.cc-ct-news-text {
+			margin-top: 9px !important;
+			font-size: 15px;
+			line-height: 1.65;
+			color: #c3c8dc;
+			max-width: 620px;
+		}
+
+		.cc-ct-news-btn {
+			display: inline-flex;
+			padding: 13px 24px;
+			background: var(--cc-paper);
+			color: var(--cc-navy-deep);
+			border-radius: 10px;
+			font-size: 14px;
+			font-weight: 800;
+			letter-spacing: 0.03em;
+			text-decoration: none;
+			white-space: nowrap;
+			box-shadow: 0 12px 24px -14px rgba(11, 16, 44, 0.6);
+		}
+
+		/* ------------------------------ motion ------------------------------- */
+		.cc-ct-reveal-init {
+			opacity: 0;
+			transform: translateY(20px);
+			transition: opacity 0.6s ease, transform 0.6s ease;
+		}
+
+		.cc-ct-reveal-init.is-in {
+			opacity: 1;
+			transform: none;
+		}
+
+		.is-reduced-motion .cc-ct-reveal-init {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+
+		/* ---------------------------- responsive ----------------------------- */
+		@media (max-width: 1000px) {
+			.cc-ct-hero-grid,
+			.cc-ct-form-grid {
+				grid-template-columns: 1fr;
+				gap: 32px;
+			}
+
+			.cc-ct-hero-side {
+				max-width: 520px;
+			}
+		}
+
+		@media (max-width: 700px) {
+			.cc-ct-offices-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.cc-ct-news-card {
+				padding: 30px 24px;
+			}
+		}
+
+		@media (max-width: 560px) {
+			.cc-ct-hero {
+				padding: 52px 0 58px;
+			}
+
+			.cc-ct-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.cc-ct-field:nth-child(1),
+			.cc-ct-field:nth-child(5),
+			.cc-ct-consent {
+				grid-column: span 1;
+			}
+
+			.cc-ct-form-card {
+				padding: 22px 18px;
+			}
+		}
+	</style>
+
+	<!-- ============================== SCRIPT ============================= -->
+	<script>
+		(function () {
+			'use strict';
+
+			var pageRoot = document.querySelector('.cc-contact');
+			if (!pageRoot || pageRoot.getAttribute('data-cc-contact-ready') === '1') { return; }
+			pageRoot.setAttribute('data-cc-contact-ready', '1');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (motionError) { reduceMotion = false; }
+
+			if (reduceMotion) { pageRoot.classList.add('is-reduced-motion'); }
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(pageRoot.querySelectorAll('.cc-ct-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.remove('cc-ct-reveal'); });
+			} else {
+				revealItems.forEach(function (item) {
+					item.classList.remove('cc-ct-reveal');
+					item.classList.add('cc-ct-reveal-init');
+				});
+
+				var revealObserver = new IntersectionObserver(function (entries) {
+					entries.forEach(function (entry) {
+						if (!entry.isIntersecting) { return; }
+						entry.target.classList.add('is-in');
+						revealObserver.unobserve(entry.target);
+					});
+				}, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+				revealItems.forEach(function (item) { revealObserver.observe(item); });
+			}
+
+			/* ---------------- contact form ---------------- */
+			/* CMS CONFIG NEEDED: confirm the CentreCanada deployment domain.
+			   The per-form data-gw-form-endpoint attribute overrides this. */
+			var formApiEndpoint = 'https://centrecanadaca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'form-submissions-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(pageRoot.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function phoneDigits(rawValue) {
+				var text = rawValue === null || rawValue === undefined ? '' : String(rawValue);
+				return text.replace(/[^\d]/g, '');
+			}
+
+			function formatPhoneDigits(rawValue) {
+				var digits = phoneDigits(rawValue);
+				if (digits.length === 11 && digits.charAt(0) === '1') { digits = digits.slice(1); }
+				digits = digits.slice(0, 10);
+				if (digits.length <= 3) { return digits; }
+				var areaCode = digits.slice(0, 3);
+				var restOfNumber = digits.slice(3);
+				if (restOfNumber.length <= 3) { return '(' + areaCode + ') ' + restOfNumber; }
+				return '(' + areaCode + ') ' + restOfNumber.slice(0, 3) + '-' + restOfNumber.slice(3);
+			}
+
+			function applyPhoneFormat(phoneInput) {
+				var formatted = formatPhoneDigits(phoneInput.value);
+				if (formatted !== phoneInput.value) { phoneInput.value = formatted; }
+			}
+
+			var phoneField = pageRoot.querySelector('form[data-gw-form] input[name="phone"]');
+			if (phoneField) {
+				phoneField.addEventListener('input', function () { applyPhoneFormat(phoneField); });
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+				var fields = Array.prototype.slice.call(
+					form.querySelectorAll('input[name], select[name], textarea[name]')
+				);
+				fields.forEach(function (field) {
+					if (field.name === 'gw_hp') { return; }
+					if (field.type === 'checkbox') {
+						values[field.name] = field.checked ? (field.value || 'yes') : '';
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+				return values;
+			}
+
+			function handleSubmit(event) {
+				event.preventDefault();
+				var form = event.currentTarget;
+				if (form.getAttribute('data-submitting') === '1') { return; }
+
+				var honeypot = form.querySelector('input[name="gw_hp"]');
+				if (honeypot && honeypot.value) {
+					setFormStatus(form, 'Thank you. We will be in touch.', 'ok');
+					form.reset();
+					return;
+				}
+
+				if (typeof form.reportValidity === 'function' && !form.reportValidity()) { return; }
+
+				var submitButton = form.querySelector('button[type="submit"]');
+				var values = collectFormValues(form);
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null && ownEndpoint !== '' ? ownEndpoint : formApiEndpoint;
+				var cmsObjectType = form.getAttribute('data-gw-cms-object-type') || formDefaultCmsObjectType;
+
+				form.setAttribute('data-submitting', '1');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending your message\u2026', '');
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || 'contact-message',
+					cmsObjectType: cmsObjectType,
+					pageUrl: window.location.href,
+					values: values
+				};
+
+				fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					if (!response.ok) { throw new Error('HTTP ' + response.status); }
+					setFormStatus(form, 'Thank you \u2014 your message has been received. We will get back to you as soon as possible.', 'ok');
+					form.reset();
+				}).catch(function () {
+					setFormStatus(form, 'We could not send the form right now. Please email hello@centrecanada.org and we will answer directly.', 'error');
+				}).then(function () {
+					form.removeAttribute('data-submitting');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			forms.forEach(function (form) {
+				if (form.getAttribute('data-cc-form-bound') === '1') { return; }
+				form.setAttribute('data-cc-form-bound', '1');
+				form.addEventListener('submit', handleSubmit);
+			});
+		})();
+	</script>
+
+</div>
