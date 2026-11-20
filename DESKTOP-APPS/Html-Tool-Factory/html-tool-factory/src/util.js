@@ -145,6 +145,14 @@ function estimateTokens(charCount) {
   return Math.ceil((Number(charCount) || 0) / 4)
 }
 
+// A masked fingerprint of a secret, for display only: the last four characters
+// and the length. The value itself never leaves the module that holds it.
+function fingerprintOf(secretValue) {
+  const value = String(secretValue || '')
+  if (!value) return ''
+  return '****' + value.slice(-4) + ' (' + value.length + ' chars)'
+}
+
 module.exports = {
   nowIso,
   shortId,
@@ -165,5 +173,6 @@ module.exports = {
   listContainsTitle,
   safeJsonParse,
   humanBytes,
+  fingerprintOf,
   estimateTokens
 }

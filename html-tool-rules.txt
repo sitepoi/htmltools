@@ -1,4 +1,16 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+html-tool-rules.txt — VERSION 3.0 — 2026-11-18
+
+CHANGELOG v3: merged the platform global requirements (visible tool build
+number, inline-script tokenizer safety, external content via parent CMS
+relay, helper application ids) with the CMS channels already shipped here
+(autosave, AI image generation, binary upload, allow-all-fetch-hosts).
+Conflicts resolved per the merge report (old CDN allowance removed,
+localStorage cache changed to in-memory, getFields/setField formalized).
+Previous version: v2 (2026-10-10 — formalized getFields/setField contracts).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TYPE 1 OF 4 - HTML TOOL (object-level interface in the CMS data part)
 
 Placement: OBJECT level. This tool becomes an interface added to the data
@@ -122,7 +134,8 @@ block (and in any inline script inside the [HTML] block):
      src="https://cdn…"> includes and no <link> to external stylesheets.
      A classic external script blocks every later inline script until it
      loads or fails — in the CMS sandbox a stalled CDN request freezes the
-     whole tool. Everything the tool needs must live inside the three files.
+     whole tool. Everything the tool needs must live inside the three files
+     (or arrive through the parent CMS relay — see EXTERNAL CONTENT).
 
   4. Every test harness MUST offer an inline mode (e.g. ?inlinejs=1) that
      injects the same [JS] block as an INLINE script — the exact
@@ -161,7 +174,10 @@ images, fonts, API data — MUST come through the PARENT CMS. Two channels:
        tool.requestFetch(url, {
          method: 'GET',        // GET only in v1
          timeoutMs: 15000,
-         maxBytes: 512000      // 500 KB cap, server-enforced
+         maxBytes: 512000      // server-enforced response cap; default 500 KB.
+                               // Raise per deployment via the env var
+                               // HTML_TOOL_FETCH_RELAY_MAX_BYTES (ceiling 10 MB)
+                               // and pass the higher value here.
        }, function(err, res) {
          // text:     { status, contentType, text }
          // binary:   { status, contentType, dataUrl }
@@ -176,7 +192,46 @@ images, fonts, API data — MUST come through the PARENT CMS. Two channels:
      These hosts MUST be reachable through the relay for EVERY tenant,
      automatically — installing a tool must never require per-tenant
      allowlisting, keys or allowedObjectTypes entries for the platform's
-     own store. Non-platform (third-party) hosts remain admin-gated.
+     own store. Non-platform (third-party) hosts remain admin-gated via
+     the field setting Allowed Fetch Hosts (settings.allowedFetchHosts).
+
+  PER-FIELD ALLOWLIST BYPASS: a field with
+  settings.allowAllFetchHosts = 'yes' may fetch ANY public https host —
+  https-only, GET-only, private/reserved-IP blocking, 15 s timeout and the
+  response byte cap (default 500 KB, env-configurable) still apply. Default
+  remains: platform hosts + the admin's Allowed Fetch Hosts list.
+
+  LARGE-FILE BINARY DOWNLOAD — tool.requestFileBinary(options, callback)
+  For COMPLETE files (40 MB PDFs, DOCX, ZIP, images) use the streaming
+  channel instead of requestFetch — no 500 KB cap, no truncation:
+
+    tool.requestFileBinary({
+      url: 'https://firebasestorage.googleapis.com/...',
+      maxBytes: 104857600,       // optional; enforced client-side
+      timeoutMs: 120000,         // optional, default 120000
+      cacheKey: 'study-doc:1',   // optional; concurrent same-key calls share
+      onProgress: function (loadedBytes, totalBytes) {}
+    }, function (errCode, result) {
+      if (errCode) { tool.notify(errCode, 'error'); return }
+      // on 'network', result.detail explains the failure (unreachable / no CORS)
+      // result.bytes = the COMPLETE ArrayBuffer
+      // result = { status, contentType, fileName, byteLength,
+      //            encoding:'arraybuffer', bytes, etag, fromCache, elapsedMs }
+    })
+    // Returns { cancel() } — callback then fires with 'cancelled'.
+
+  Stable error codes: 'not_configured' | 'blocked_host' | 'invalid_url' |
+  'too_large' | 'http_error' | 'timeout' | 'network' | 'cancelled'.
+  Requires: allowFileFetch: 'yes' in the field settings.
+  Hosts: platform *.uniconhub.com and Firebase Storage hosts are always
+  allowed; extra hosts via settings.allowedFileFetchHosts; any public https
+  host with settings.allowAllFileFetchHosts = 'yes'. FULLY SERVER-FREE:
+  the parent browser downloads directly for every allowed host — no API
+  route, no Vercel limit, no server cost. If the fetch fails, the callback
+  fires with 'network' plus a result.detail explaining that the host may be
+  unreachable or missing CORS headers (Access-Control-Allow-Origin) — there
+  is NO silent server fallback. Default cap settings.maxFileFetchBytes =
+  104857600 (100 MB), enforced client-side.
 
   TOOL-SIDE RULES:
      - NEVER fetch/XHR outside hosts directly from the 3 files.
@@ -185,8 +240,9 @@ images, fonts, API data — MUST come through the PARENT CMS. Two channels:
        Developer details (which host, which config) go to console.log/
        console.warn ONLY — never into the visible UI. End users do not
        care how the tool reaches its data.
-     - Cache relay responses locally (localStorage) to survive brief
-       outages.
+     - Cache relay responses IN-MEMORY (a plain JS object) to survive
+       brief outages. localStorage/sessionStorage are NOT available in the
+       sandbox — never write to them.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -784,6 +840,40 @@ Example (live typewriter in a thinking bubble):
     }
   })
 
+── AI Image Generation ───────────────────────────────
+tool.requestGenerateImage(options, callback)
+
+Asks the platform AI image-generation model for an image and returns it as
+a JPEG data URL.  Probes with typeof tool.requestGenerateImage === 'function'
+and handles the error case — older hosts simply lack the method.
+
+  • options — { prompt, baseImageDataUrl? }
+      prompt           — string, text description of the desired image (required)
+      baseImageDataUrl — string (optional), a data URL of an existing image to
+                         use as the visual reference
+  • callback — function(error, result)
+      error  — null on success, or string describing what went wrong
+      result — { dataUrl } — a JPEG data URL of the generated image
+
+Requires: allowImageGeneration: 'yes' in the field settings.
+Timeout: 60 seconds.
+
+Example:
+  tool.requestGenerateImage({ prompt: 'A cozy mountain cabin at dusk' },
+    (err, result) => {
+      if (err) { tool.notify('Generation failed: ' + err, 'error'); return }
+      document.getElementById('preview').src = result.dataUrl
+    })
+
+  // With a reference image (image-to-image):
+  tool.requestGenerateImage({
+    prompt: 'Turn this sketch into a polished illustration',
+    baseImageDataUrl: canvas.toDataURL('image/png')
+  }, (err, result) => {
+    if (err) return
+    tool.notify('Done', 'success')
+  })
+
 ── File Upload ────────────────────────────────────────
 tool.requestUpload(accept, callback)
 
@@ -806,6 +896,39 @@ Example:
     if (err) { tool.notify('Upload failed: ' + err, 'error'); return }
     tool.notify('Uploaded: ' + file.name, 'success')
     // file.url can be used in requestSendEmail attachments
+  })
+
+── Binary Upload (no file picker) ─────────────────────
+tool.requestUploadBinary(options, callback)
+
+Uploads bytes the tool ALREADY holds (a canvas snapshot, a camera frame, a
+screenshot encoded as a data URL) straight to CMS storage — WITHOUT opening
+a file picker.  Uses the same storage bucket and per-tool folder convention
+as requestUpload.  Probe with typeof tool.requestUploadBinary === 'function'
+and handle the error case — older hosts simply lack the method.
+
+  • options — { dataUrl, name, contentType }
+      dataUrl     — string, a data: URL (e.g. "data:image/jpeg;base64,...")
+      name        — string, file name (sanitised by the host)
+      contentType — string, MIME type (e.g. "image/jpeg")
+  • callback — function(error, result)
+      error  — null on success, or string describing what went wrong
+      result — { url, name, sizeKb } — same storage and reachability as
+               requestUpload results
+
+Requires: allowBinaryUpload: 'yes' in the field settings.
+Cap: 5 MB per file.  Callers may send many files sequentially.
+
+Example (canvas snapshot upload):
+  var dataUrl = canvas.toDataURL('image/jpeg', 0.9)
+  tool.requestUploadBinary({
+    dataUrl: dataUrl,
+    name: 'chart-' + Date.now() + '.jpg',
+    contentType: 'image/jpeg'
+  }, (err, result) => {
+    if (err) { tool.notify('Upload failed: ' + err, 'error'); return }
+    tool.notify('Uploaded ' + result.sizeKb + ' KB', 'success')
+    // result.url is publicly reachable CMS storage
   })
 
 ── File Content Extraction ────────────────────────────
@@ -1373,17 +1496,28 @@ HARD RULES
 ✓  tool.getParentPageUrl() returns ORIGIN + PATHNAME only — the host strips
    the query string and hash before sending (they can carry auth tokens).
    Treat the value as display/share data, never as an authorization signal.
+✓  Every tool carries a VISIBLE build number: var TOOL_BUILD = 'YYYY-MM-DD-rN'
+   in the [JS] block, rendered as a small badge in the UI and logged on boot
+   as the FIRST console line; per-file first-line stamps track which of the
+   three files changed. See GLOBAL REQUIREMENT - VISIBLE TOOL BUILD NUMBER.
+✓  Inline-script tokenizer safety: never a raw <!-- unless --> closes it on
+   the SAME line, never a raw </script anywhere (write <\/script), never
+   <script src="https://cdn…"> or external <link> from the three files.
+   See GLOBAL REQUIREMENT - INLINE-SCRIPT TOKENIZER SAFETY.
 ✓  Always call tool.declareParams() for EVERY param your tool reads
 ✓  Always call tool.reportMissingParams() inside tool.onReady() if required
    params are missing — this triggers a warning banner in the CMS UI so
    the admin can fix the configuration without digging through JSON.
-✓  External CDN <script> tags ARE allowed inside the HTML field
-   (e.g. Chart.js, Sortable, DataTables, SheetJS, etc.)
+✗  No external <script src="https://cdn…"> / <link> / fonts / fetch-XHR from
+   the three files — everything must be inlined in the three files or come
+   through the parent CMS relay (tool.requestFetch / tool.requestObjects).
+   A stalled CDN script freezes the whole tool.
 ✓  Values can be any JSON type — save objects/arrays freely with tool.setValue()
-✓  tool.requestAI / tool.requestUpload / tool.requestFileContent /
-   tool.requestObjects / tool.requestExportPdf / tool.requestSendEmail
-   ARE exceptions to the no-fetch rule — they go through the parent CMS,
-   not direct from the iframe.
+✓  tool.requestAI / tool.requestAIStream / tool.requestUpload /
+   tool.requestUploadBinary / tool.requestGenerateImage / tool.requestFetch /
+   tool.requestFileContent / tool.requestObjects / tool.requestExportPdf /
+   tool.requestSendEmail ARE exceptions to the no-fetch rule — they go
+   through the parent CMS, not direct from the iframe.
 ✓  Each request* method requires its allow*: 'yes' toolParam. The admin
    configures this. Without it, the callback fires with an error —
    handle this gracefully in your code.

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UniconHub Studio</title>
+<link rel="stylesheet" href="studio.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="brand-text">
+      <strong>UniconHub Studio</strong>
+      <span class="sub" id="projectLine">no project selected</span>
+    </span>
+  </div>
+  <div class="topbar-actions">
+    <input id="searchInput" class="search-input" type="search" placeholder="Search the repository" aria-label="Search the repository" />
+    <button id="btnRefresh" class="btn btn-ghost btn-sm" type="button">Refresh</button>
+    <span class="chip chip-warn" id="serverChip" hidden></span>
+    <span class="chip chip-warn" id="readOnlyChip" title="Studio reads the repository. Changes arrive as AI proposals you confirm, never as a silent write.">read only</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Left edge handle: always on the left, so a closed panel is reopened from
+       the side it lives on. -->
+  <button id="railHandle" class="rail-handle" type="button" title="Hide the left panel" aria-label="Toggle the left panel">&#171;</button>
+  <!-- ============ LEFT: projects (tools) and the folder tree ============ -->
+  <aside class="rail" id="rail">
+    <div class="rail-switch">
+      <div class="seg" id="railSwitch" role="group" aria-label="Left panel">
+        <button type="button" data-rail="tools" class="is-active">Projects</button>
+        <button type="button" data-rail="files">Files</button>
+      </div>
+      <button id="btnRailClose" class="icon-btn icon-btn-sm" type="button" title="Close the panel" aria-label="Close the panel">&#215;</button>
+    </div>
+
+    <div class="rail-view" id="rail-tools">
+      <div class="rail-filters">
+        <input id="toolFilter" class="tool-filter" type="search" placeholder="Filter projects" aria-label="Filter projects" />
+        <div class="seg seg-chips" id="statusFilter" role="group" aria-label="Project state"></div>
+        <div class="seg seg-chips" id="groupFilter" role="group" aria-label="Folder group"></div>
+      </div>
+      <div class="tool-list" id="toolList">
+        <p class="empty">Loading the projects...</p>
+      </div>
+      <p class="rail-foot" id="toolFoot"></p>
+    </div>
+
+    <div class="rail-view" id="rail-files" hidden>
+      <div class="rail-subhead">
+        <span>Repository</span>
+        <button id="btnCollapseAll" class="link-btn" type="button">collapse</button>
+      </div>
+      <ul id="tree" class="tree" role="tree"></ul>
+      <p class="rail-foot" id="railFoot">Folders load as you open them.</p>
+    </div>
+  </aside>
+
+  <!-- ============ CENTER: the chat for the selected project ============ -->
+  <section class="chat-pane" id="chatPane">
+    <div class="chat-head">
+      <div class="chat-head-main">
+        <span class="chat-title" id="chatTitle">Chat</span>
+        <span class="chat-context" id="chatContext"></span>
+      </div>
+      <div class="chat-head-actions">
+        <select id="chatSession" class="chat-session" aria-label="Chat session"></select>
+        <button id="btnChatNew" class="icon-btn icon-btn-sm" type="button" title="New chat" aria-label="New chat">+</button>
+        <button id="btnChatRename" class="icon-btn icon-btn-sm" type="button" title="Rename this chat" aria-label="Rename this chat">&#9998;</button>
+        <button id="btnChatDelete" class="icon-btn icon-btn-sm" type="button" title="Delete this chat" aria-label="Delete this chat">&#215;</button>
+        <button id="btnChatPing" class="icon-btn icon-btn-sm" type="button" title="Test the AI gateway and the model" aria-label="Test the AI gateway">&#9679;</button>
+      </div>
+    </div>
+    <div class="chat-log" id="chatLog"></div>
+    <form class="chat-form" id="chatForm">
+      <div class="chat-pending" id="chatPending" hidden></div>
+      <div class="chat-attach" id="chatAttach" hidden></div>
+      <textarea id="chatInput" class="chat-input" rows="3" placeholder="Select a project on the left, then ask about it, or add a task from the Tasks tab." aria-label="Message"></textarea>
+      <div class="chat-actions">
+        <button id="btnChatAttach" class="btn btn-ghost btn-sm" type="button" title="Attach a file or a screenshot">Attach</button>
+        <span class="chat-hint" id="chatHint">Reads the SSOT, the code, the open file and anything you attach.</span>
+        <button id="btnChatSend" class="btn btn-send" type="submit">Send</button>
+      </div>
+      <input type="file" id="chatFile" multiple hidden />
+    </form>
+  </section>
+
+  <!-- ============ RIGHT: results, tasks, search ============ -->
+  <main class="main">
+    <nav class="tabs" id="tabs">
+      <button class="tab is-active" data-view="file" type="button">File</button>
+      <button class="tab" data-view="search" type="button">Search <span class="tab-count" id="searchCount">-</span></button>
+    </nav>
+
+    <section class="view" id="view-file">
+      <div class="tool-context" id="toolContext" hidden>
+        <div class="tool-context-head">
+          <span class="tool-context-name" id="toolContextName"></span>
+          <span class="tool-context-trail" id="toolContextTrail"></span>
+        </div>
+        <div class="tool-context-tabs">
+          <div class="seg" id="toolGroup" role="group" aria-label="Tool area"></div>
+          <div class="seg seg-subtle" id="toolSubtabs" role="group" aria-label="Files in this area"></div>
+          <button id="btnCopyAll" class="btn btn-ghost btn-sm" type="button" title="Copy this tool's HTML, CSS and JS as labelled sections, ready to paste into the store">Copy all code</button>
+        </div>
+      </div>
+      <div class="file-head">
+        <div>
+          <div class="file-path" id="filePath">No file open</div>
+          <div class="file-meta" id="fileMeta">Pick a file in the tree, or a project on the left.</div>
+        </div>
+        <div class="file-actions">
+          <div class="seg" id="fileMode" role="group" aria-label="Preview or code">
+            <button type="button" data-mode="preview" class="is-active">Preview</button>
+            <button type="button" data-mode="code">Code</button>
+          </div>
+          <button id="btnCopyCode" class="btn btn-ghost btn-sm" type="button" disabled>Copy file</button>
+          <button id="btnOpenTab" class="btn btn-ghost btn-sm" type="button" disabled>New tab</button>
+          <span id="copyNote" class="copy-note"></span>
+        </div>
+      </div>
+      <div class="preview-wrap" id="previewWrap" hidden>
+        <iframe id="fileFrame" title="File preview" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
+      </div>
+      <div class="code-wrap" id="codeWrap">
+        <p class="empty">Nothing open yet.</p>
+      </div>
+    </section>
+
+    <section class="view" id="view-search" hidden>
+      <p class="foot-note" id="searchMeta">Type in the search box above.</p>
+      <div id="searchHits" class="hits"><p class="empty">No search yet.</p></div>
+    </section>
+  </main>
+
+  <!-- ============ RIGHT DRAWER: the selected project's backlog ============ -->
+  <aside class="tasks-drawer" id="tasksDrawer" hidden>
+    <div class="drawer-head">
+      <button id="btnTasksClose" class="icon-btn icon-btn-sm" type="button" title="Collapse the task drawer" aria-label="Collapse the task drawer">&#187;</button>
+      <div class="drawer-head-main">
+        <span class="drawer-title" id="tasksTool">Tasks</span>
+        <span class="drawer-meta" id="tasksMeta">No project selected.</span>
+      </div>
+      <button id="btnTasksSsot" class="btn btn-ghost btn-sm" type="button" disabled>SSOT</button>
+    </div>
+    <div class="drawer-toolbar">
+      <div class="seg seg-chips" id="taskFilter" role="group" aria-label="Task state"></div>
+      <span class="drawer-count" id="tasksCount">-</span>
+    </div>
+    <input id="taskSearch" class="tool-filter drawer-search" type="search" placeholder="Filter tasks by id, title or group" aria-label="Filter tasks" />
+    <div class="task-list" id="taskRows"><p class="empty">No project selected.</p></div>
+    <p class="drawer-foot" id="tasksFoot"></p>
+  </aside>
+</div>
+
+<script src="studio.js"></script>
+</body>
+</html>

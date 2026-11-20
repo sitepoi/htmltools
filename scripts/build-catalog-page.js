@@ -52,6 +52,7 @@ const TOOL_IDEA_MAP = {
   AISystemDesign: { idea: 'AI System Design Studio', code: 'B-G-11-e' },
   HTMLContentEditorAndViewer: { idea: 'HTML Content Editor & Viewer', code: 'B-G-11-f' },
   ImageEditingTools: { idea: 'Image Editing Toolkit', code: 'B-G-12-a' },
+  AssetDrive: { idea: 'Asset Drive', code: 'B-G-12-g' },
   HtmlBulkTranslator: { idea: 'HTML Bulk Translator', code: 'B-G-13-b' },
   AttendanceChecker: { idea: 'Class Attendance Checker', code: 'B-V-01-a' },
   EducationProgramPresentation: { idea: 'Education Program Presentation Builder', code: 'B-V-01-a' },
@@ -306,4 +307,33 @@ const ideasJson = {
 fs.writeFileSync(path.join(TOOLS_CATALOG, 'tool-ideas-catalog.json'), JSON.stringify(ideasJson, null, 2) + '\n', 'utf8')
 
 const ideaCount = manual.groups.reduce((sum, group) => sum + group.categories.reduce((csum, cat) => csum + cat.ideas.length, 0), 0)
+
+// ---- one-request bundle for CMS html-tools ----
+// Consumers (ApplicationStoreItem "Tools" tab, the factory release engine) load
+// the whole catalog in ONE request: ideas + repo build state + publish state.
+// Same SSOT as the page - this file adds no new truth, it only reshapes it.
+const catalogBundle = {
+  schema: 'uniconhub-tool-catalog-bundle',
+  version: '1.0.0',
+  catalogVersion: ideasJson.version,
+  generatedAt: builtAt,
+  subjects: [
+    { id: 'code', label: 'Code' },
+    { id: 'harness', label: 'Test harness' },
+    { id: 'screenshots', label: 'Screenshots' },
+    { id: 'webpage', label: 'Webpage' },
+    { id: 'help', label: 'Help' },
+    { id: 'presentation', label: 'Presentation' },
+    { id: 'updates', label: 'Updates' },
+    { id: 'social', label: 'Social' }
+  ],
+  licensingTypes: ideasJson.licensingTypes,
+  groups: manual.groups,
+  built: ideaTools,
+  publish: { tools: (manual.publish && manual.publish.tools) || {} }
+}
+const bundleText = JSON.stringify(catalogBundle) + '\n'
+fs.writeFileSync(path.join(TOOLS_CATALOG, 'tool-catalog-bundle.json'), bundleText, 'utf8')
+
 console.log('catalog-data.js updated: ' + manual.groups.length + ' groups, ' + ideaCount + ' ideas, ' + Object.keys(ideaTools).length + ' built tools mapped. JSON exports refreshed.')
+console.log('tool-catalog-bundle.json written: ' + Math.round(bundleText.length / 1024) + ' KB, ' + ideaCount + ' ideas, ' + Object.keys(ideaTools).length + ' built, ' + Object.keys(catalogBundle.publish.tools).length + ' publish rows.')

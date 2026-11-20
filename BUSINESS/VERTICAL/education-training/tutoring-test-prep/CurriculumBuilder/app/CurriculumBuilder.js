@@ -1,4 +1,4 @@
-/* js build 2026-10-18-1 */
+/* js build 2026-11-18-30 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,8 +6,65 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-10-18-1';
+var TOOL_BUILD = '2026-11-18-30';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
+// Boot diagnostic: is the large-file download channel present in this CMS build?
+(function logFileChannelAvailability() {
+  try {
+    var channelPresent = (typeof tool !== 'undefined') && typeof tool.requestFileBinary === 'function';
+    console.log('[TOOL:BOOT] large-file download channel: ' + (channelPresent ? 'requestFileBinary available' : 'requestFileBinary MISSING'));
+    console.log('[TOOL:BOOT] PDF renderer: ' + (pdfJsLibraryAvailable() ? 'PDF.js injected' : 'PDF.js NOT injected (PDF page preview disabled)'));
+    console.log('[TOOL:BOOT] file settings probe: ' + JSON.stringify(collectToolCapabilitySnapshot().paramProbe));
+    var bootBadge = document.getElementById('tool-build-badge');
+    if (bootBadge) bootBadge.textContent = 'build ' + TOOL_BUILD + ' · waiting for CMS…';
+  } catch (probeError) { console.warn('[TOOL:BOOT] could not probe the download channel:', probeError); }
+})();
+
+/* ── Early CMS handshake ─────────────────────────────────────────────
+   The CMS pushes onReady / onValueChange as soon as the tool frame exists.
+   This script is large, so a push can arrive BEFORE the entry point at the
+   bottom of the file subscribes - the event was then lost and the tool sat
+   there empty (the intermittent "the content is gone" reports). Subscribe
+   here, remember what arrived, and replay it to the entry point. */
+var earlyCmsHandshake = {
+  readyListenerAttached: false,
+  valueListenerAttached: false,
+  readySeen: false,
+  readyValue: undefined,
+  readyFields: null,
+  valueChangeSeen: false,
+  lastValue: undefined,
+  readyHandler: null,
+  valueChangeHandler: null
+};
+
+function receiveEarlyCmsReady(cmsValue, cmsFields) {
+  earlyCmsHandshake.readySeen = true;
+  earlyCmsHandshake.readyValue = cmsValue;
+  earlyCmsHandshake.readyFields = cmsFields;
+  console.log('[TOOL:READY] the CMS sent onReady · value type: ' + (cmsValue === null ? 'null' : typeof cmsValue));
+  if (earlyCmsHandshake.readyHandler) earlyCmsHandshake.readyHandler(cmsValue, cmsFields);
+}
+
+function receiveEarlyCmsValueChange(cmsValue) {
+  earlyCmsHandshake.valueChangeSeen = true;
+  earlyCmsHandshake.lastValue = cmsValue;
+  if (earlyCmsHandshake.valueChangeHandler) earlyCmsHandshake.valueChangeHandler(cmsValue);
+}
+
+function attachEarlyCmsListeners() {
+  if (typeof tool === 'undefined' || !tool) return;
+  if (typeof tool.onReady === 'function' && !earlyCmsHandshake.readyListenerAttached) {
+    try { tool.onReady(receiveEarlyCmsReady); earlyCmsHandshake.readyListenerAttached = true; }
+    catch (earlyReadyError) { console.warn('[TOOL:BOOT] could not subscribe to onReady early:', earlyReadyError); }
+  }
+  if (typeof tool.onValueChange === 'function' && !earlyCmsHandshake.valueListenerAttached) {
+    try { tool.onValueChange(receiveEarlyCmsValueChange); earlyCmsHandshake.valueListenerAttached = true; }
+    catch (earlyValueError) { console.warn('[TOOL:BOOT] could not subscribe to onValueChange early:', earlyValueError); }
+  }
+}
+
+attachEarlyCmsListeners();
 
 /* ── Helpers ── */
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -42,6 +99,7 @@ var editingSourceLinkIdx = null;
 var editingYoutubeIdx = null;
 var editingPdfIdx = null;
 var editingPdfType = null;
+var editingPdfSourceUrl = '';
 
 /* ── Constants ── */
 var QUIZ_SETS = 3;
@@ -175,6 +233,8 @@ function extractHeavyLessonData(les) {
     content: les.content || null,
     htmlCode: les.htmlCode || null,
     studyHtmlData: les.studyHtmlData || null,
+    studyDocSources: les.studyDocSources || null,
+    studyDocImages: les.studyDocImages || null,
     presentationHtml: les.presentationHtml || null,
     flashcards: les.flashcards || null,
     quiz: les.quiz || null,
@@ -188,7 +248,7 @@ function extractHeavyLessonData(les) {
    These helpers keep only light metadata in the main doc and mirror heavy
    fields (content, htmlCode, studyHtmlData, presentationHtml, flashcards,
    quiz, sourceUrls) exclusively to curriculum-lessons-uniconbase docs. */
-var HEAVY_LESSON_FIELDS = ['content', 'htmlCode', 'studyHtmlData', 'presentationHtml', 'flashcards', 'quiz', 'sourceUrls'];
+var HEAVY_LESSON_FIELDS = ['content', 'htmlCode', 'studyHtmlData', 'presentationHtml', 'flashcards', 'quiz', 'sourceUrls', 'studyDocSources', 'studyDocImages'];
 
 function hasHeavyLessonFields(les) {
   for (var i = 0; i < HEAVY_LESSON_FIELDS.length; i++) {
@@ -402,6 +462,8 @@ function loadLessonDoc(lessonObj, callback) {
       if (docData.content !== undefined) merged.content = docData.content;
       if (docData.htmlCode !== undefined) merged.htmlCode = docData.htmlCode;
       if (docData.studyHtmlData !== undefined) merged.studyHtmlData = docData.studyHtmlData;
+      if (docData.studyDocSources !== undefined) merged.studyDocSources = docData.studyDocSources;
+      if (docData.studyDocImages !== undefined) merged.studyDocImages = docData.studyDocImages;
       if (docData.presentationHtml !== undefined) merged.presentationHtml = docData.presentationHtml;
       if (docData.flashcards !== undefined) merged.flashcards = docData.flashcards;
       if (docData.quiz !== undefined) merged.quiz = docData.quiz;
@@ -2533,20 +2595,53 @@ function toHostingUrl(url) {
 function showSubModal(panelId) {
   var panel = el(panelId);
   var backdrop = el('sub-modal-backdrop');
-  if (panel) panel.style.display = '';
+  if (panel) {
+    if (panelId === 'lesson-editor-panel') {
+      // The lesson editor is a full-height right drawer.
+      panel.style.display = '';
+      panel.classList.add('lesson-drawer-open');
+      document.body.classList.add('lesson-drawer-active');
+      syncDrawerScrollLock();
+    } else {
+      panel.style.display = '';
+    }
+  }
   if (backdrop) backdrop.classList.add('active');
 }
 function hideSubModal(panelId) {
   var panel = el(panelId);
   var backdrop = el('sub-modal-backdrop');
-  if (panel) panel.style.display = 'none';
+  if (panel) {
+    if (panelId === 'lesson-editor-panel') {
+      panel.classList.remove('lesson-drawer-open');
+      document.body.classList.remove('lesson-drawer-active');
+      syncDrawerScrollLock();
+      // Hide after the slide-out animation; guard against a quick re-open.
+      setTimeout(function() {
+        if (!panel.classList.contains('lesson-drawer-open')) panel.style.display = 'none';
+      }, 300);
+    } else {
+      panel.style.display = 'none';
+    }
+  }
   if (backdrop) backdrop.classList.remove('active');
+}
+
+/** Keep a single scrollbar: lock the page behind open drawers */
+function syncDrawerScrollLock() {
+  if (!document.body || !document.body.classList) return;
+  var lessonPanel = el('lesson-editor-panel');
+  var studioDrawer = el('sd-studio-drawer');
+  var lessonDrawerOpen = !!(lessonPanel && lessonPanel.classList.contains('lesson-drawer-open'));
+  var studioDrawerOpen = !!(studioDrawer && studioDrawer.classList.contains('sd-drawer-open'));
+  if (lessonDrawerOpen || studioDrawerOpen) document.body.classList.add('drawer-scroll-locked');
+  else document.body.classList.remove('drawer-scroll-locked');
 }
 
 /* ── HTML Editor ── */
 function execCmd(cmd, val) { document.execCommand(cmd, false, val); }
-function getHtmlContent() { return el('html-editor-content').innerHTML || ''; }
-function setHtmlContent(html) { el('html-editor-content').innerHTML = html || ''; }
+function getHtmlContent() { var contentEl = el('html-editor-content'); return contentEl ? (contentEl.innerHTML || '') : ''; }
+function setHtmlContent(html) { var contentEl = el('html-editor-content'); if (contentEl) contentEl.innerHTML = html || ''; }
 
 /* ── Sandbox-safe link URL input ── */
 function showLinkUrlInput() {
@@ -2571,9 +2666,16 @@ function showLinkUrlInput() {
 
 /* ── Confirm dialog ── */
 var _confirmCallback = null;
-function sandboxConfirm(message, onYes) {
+function sandboxConfirm(message, onYes, confirmLabel) {
   _confirmCallback = onYes;
-  el('confirm-message').textContent = message;
+  var messageEl = el('confirm-message');
+  if (messageEl) messageEl.textContent = message;
+  var yesButton = el('btn-confirm-yes');
+  if (yesButton) {
+    var label = confirmLabel || 'Yes, Continue';
+    yesButton.textContent = label;
+    yesButton.className = (label.indexOf('Delete') !== -1 || label.indexOf('Remove') !== -1) ? 'btn btn-danger' : 'btn btn-primary';
+  }
   el('confirm-overlay').style.display = '';
 }
 function hideConfirm() {
@@ -2585,9 +2687,95 @@ function hideConfirm() {
    DATA: LOAD & SAVE (plain tool.setValue — no CRUD)
    ═══════════════════════════════════════════ */
 
+/** Accept every shape the CMS can hand over: object, JSON string, or a
+ *  { curriculum: … } / { data: … } wrapper. Returns null when there is
+ *  nothing usable. */
+function normalizeCurriculumValue(rawValue) {
+  var value = rawValue;
+  if (typeof value === 'string') {
+    var textValue = value.trim();
+    if (!textValue) return null;
+    try {
+      value = JSON.parse(textValue);
+    } catch (parseError) {
+      console.warn('[CURRICULUM:LOAD] the CMS value is a string but not valid JSON: ' + parseError.message);
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object') return null;
+  if (Array.isArray(value)) return { sections: value };
+  if (!value.sections && value.curriculum && typeof value.curriculum === 'object' && value.curriculum.sections) return value.curriculum;
+  if (!value.sections && value.data && typeof value.data === 'object' && value.data.sections) return value.data;
+  if (!value.sections && value.value && typeof value.value === 'object' && value.value.sections) return value.value;
+  return value;
+}
+
+/** Show a plain line under the empty state when nothing usable arrived */
+function annotateEmptyStateLoadInfo(rawValue, hasSectionsArray) {
+  try {
+    var emptyBox = document.getElementById('sections-empty');
+    if (!emptyBox) return;
+    var hintEl = document.getElementById('sections-empty-load-hint');
+    if (!hintEl) {
+      hintEl = document.createElement('div');
+      hintEl.id = 'sections-empty-load-hint';
+      hintEl.className = 'empty-desc';
+      hintEl.style.marginTop = '10px';
+      hintEl.style.fontSize = '11px';
+      emptyBox.appendChild(hintEl);
+    }
+    if (hasSectionsArray) { hintEl.textContent = ''; return; }
+    var valueKind = (rawValue === undefined) ? 'no value' : (rawValue === null ? 'null' : typeof rawValue);
+    hintEl.textContent = 'The CMS did not send any curriculum content (' + valueKind + ', build ' + TOOL_BUILD + '). If this object should already contain sections, reload the page - technical details are in the browser console.';
+  } catch (hintError) {
+    console.warn('[CURRICULUM:LOAD] could not annotate the empty state:', hintError);
+  }
+}
+
+/** Replace the section list with a readable error card instead of a blank page */
+function showCurriculumLoadFailure(loadError) {
+  var container = el('sections-list');
+  if (!container) return;
+  container.innerHTML = '<div class="empty-state">' +
+    '<div class="empty-icon">⚠️</div>' +
+    '<div class="empty-title">The curriculum could not be displayed</div>' +
+    '<div class="empty-desc">' + esc(String((loadError && loadError.message) || loadError)) + '</div>' +
+    '<div class="empty-desc" style="margin-top:8px;font-size:11px">Build ' + esc(TOOL_BUILD) + ' - the technical details are in the browser console.</div>' +
+  '</div>';
+}
+
+/** When this tool last asked the CMS to save (protects against a transient
+ *  empty value overwriting the screen right after a save). */
+var lastSaveRequestedAt = 0;
+
 function loadCurriculum(val) {
-  sections = (val && val.sections) ? val.sections : [];
   window.__curriculumLastVal = val;  // inspectable from the browser console
+  var curriculumValue = normalizeCurriculumValue(val);
+  var receivedSections = !!(curriculumValue && Array.isArray(curriculumValue.sections));
+  sections = receivedSections ? curriculumValue.sections : [];
+  console.log('[CURRICULUM:LOAD] ' + sections.length + ' section(s) · value type: ' + (val === null ? 'null' : typeof val) + (receivedSections ? '' : ' · NO sections array in the CMS value'));
+  if (val && typeof val === 'object' && !Array.isArray(val)) {
+    console.log('[CURRICULUM:LOAD] value keys: ' + Object.keys(val).slice(0, 12).join(', '));
+  }
+  // The CMS sometimes delivers an empty value for a moment (field re-created,
+  // upload in progress, late onValueChange). Keep what was already loaded
+  // instead of blanking the screen - but respect a real save made here.
+  var lastGoodSections = (window.__curriculumLastGoodValue && Array.isArray(window.__curriculumLastGoodValue.sections))
+    ? window.__curriculumLastGoodValue.sections : null;
+  var savedRecently = lastSaveRequestedAt && (Date.now() - lastSaveRequestedAt) < 15000;
+  var keptLastGoodValue = false;
+  if (!receivedSections && lastGoodSections && lastGoodSections.length && !savedRecently) {
+    sections = JSON.parse(JSON.stringify(lastGoodSections));
+    keptLastGoodValue = true;
+    console.warn('[CURRICULUM:LOAD] the CMS value has no sections - keeping the curriculum loaded earlier in this session (' + sections.length + ' section(s))');
+    if (typeof tool.notify === 'function') {
+      tool.notify('The CMS sent an empty curriculum value - showing the version loaded earlier in this session. Reload the page if it stays empty.', 'warning');
+    }
+  }
+  if (receivedSections && sections.length) {
+    try { window.__curriculumLastGoodValue = { sections: JSON.parse(JSON.stringify(sections)) }; }
+    catch (snapshotError) { console.warn('[CURRICULUM:LOAD] could not keep a copy of the loaded curriculum:', snapshotError); }
+  }
   if (isDeveloper()) {
     var totalLessons = collectAllLessons().length;
     var sectionCount = 0;
@@ -2601,7 +2789,13 @@ function loadCurriculum(val) {
     });
   }
   updateIdBadge();
-  renderSections();
+  try {
+    renderSections();
+    annotateEmptyStateLoadInfo(val, receivedSections || keptLastGoodValue);
+  } catch (renderError) {
+    console.error('[CURRICULUM:LOAD] rendering failed:', renderError);
+    showCurriculumLoadFailure(renderError);
+  }
   tool.resize();
   // One-time per page load: move legacy heavy content out of the main doc
   // into lesson docs (fixes the Firestore 1MB limit error on the main doc),
@@ -2631,6 +2825,7 @@ function saveCurriculum(callback) {
     if (callback) callback('read-only');
     return;
   }
+  lastSaveRequestedAt = Date.now();
   // Deep-clone to avoid any reference issues
   var data = JSON.parse(JSON.stringify({ sections: sections }));
   // Ensure CMS validation passes
@@ -2672,15 +2867,19 @@ function updateIdBadge() {
 function renderSections() {
   var allSections = [];
   eachSection(function(s) { allSections.push(s); });
-  el('manager-section-count').textContent = allSections.length + ' section(s)';
+  var countEl = el('manager-section-count');
+  if (countEl) countEl.textContent = allSections.length + ' section(s)';
   var container = el('sections-list');
   var empty = el('sections-empty');
-
+  if (!container) {
+    console.warn('[CURRICULUM:LOAD] #sections-list is missing from the page markup - check that the HTML file matches this JS build ' + TOOL_BUILD);
+    return;
+  }
   if (allSections.length === 0) {
     container.innerHTML = '';
-    empty.style.display = '';
+    if (empty) empty.style.display = '';
   } else {
-    empty.style.display = 'none';
+    if (empty) empty.style.display = 'none';
     container.innerHTML = renderSectionTreeHtml(sections, 0);
     bindSectionTreeEvents(container);
   }
@@ -2752,7 +2951,14 @@ function bindSectionTreeEvents(container) {
   each('[data-add-subsec]', function() { openSectionEditor(null, this.getAttribute('data-add-subsec')); });
   each('[data-edit-sec]', function() { openSectionEditor(this.getAttribute('data-edit-sec'), null); });
   each('[data-del-sec]', function() { deleteSection(this.getAttribute('data-del-sec')); });
-  each('[data-gen-sec]', function() { startBulkForSection(this.getAttribute('data-gen-sec')); });
+  each('[data-gen-sec]', function() {
+    var targetSectionId = this.getAttribute('data-gen-sec');
+    var targetSection = findSectionById(targetSectionId);
+    var targetName = targetSection ? targetSection.section.title : 'this section';
+    sandboxConfirm('🚀 Generate the missing AI content (Study Content, Slides, Flashcards, Quiz) for "' + targetName + '" and its subsections? It runs the four generators one after another and may take several minutes. Lessons that already have content are skipped.', function() {
+      startBulkForSection(targetSectionId);
+    }, 'Yes, Generate');
+  });
   each('[data-edit-les]', function() {
     var parts = this.getAttribute('data-edit-les').split(':');
     editLessonDirect(parts[0], parseInt(parts[1]));
@@ -2763,7 +2969,9 @@ function bindSectionTreeEvents(container) {
   });
   each('[data-gen-les]', function() {
     var parts = this.getAttribute('data-gen-les').split(':');
-    startBulkForLesson(parts[0], parseInt(parts[1]));
+    sandboxConfirm('🚀 Generate the missing AI content (Study Content, Slides, Flashcards, Quiz) for this lesson? It runs the four generators one after another and may take a few minutes. Content that already exists is skipped.', function() {
+      startBulkForLesson(parts[0], parseInt(parts[1]));
+    }, 'Yes, Generate');
   });
   each('[data-open-doc]', function() { openLessonDocUrl(this.getAttribute('data-open-doc')); });
 }
@@ -2867,7 +3075,7 @@ function deleteSection(sectionId) {
       if (err) return;
       tool.notify('Section deleted.', 'info');
     });
-  });
+  }, 'Yes, Delete');
 }
 
 /* ═══════════════════════════════════════════
@@ -2910,8 +3118,12 @@ function renderLessonsEditorList() {
     for (var j = 0; j < delBtns.length; j++) {
       delBtns[j].addEventListener('click', function(e) {
         e.stopPropagation();
-        editingLessons.splice(parseInt(this.getAttribute('data-del-les')), 1);
-        renderLessonsEditorList();
+        var delLesIdx = parseInt(this.getAttribute('data-del-les'));
+        var delLesTitle = (editingLessons[delLesIdx] && editingLessons[delLesIdx].title) ? editingLessons[delLesIdx].title : 'this lesson';
+        sandboxConfirm('Delete the lesson "' + delLesTitle + '" from this section? This cannot be undone.', function() {
+          editingLessons.splice(delLesIdx, 1);
+          renderLessonsEditorList();
+        }, 'Yes, Delete');
       });
     }
   }
@@ -2933,12 +3145,17 @@ function startAddLesson() {
   editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = []; editingHtmlDocUrls = [];
   editingHiddenDocUrls = [];
   editingFlashcards = [];
-  editingPdfIdx = null; editingPdfType = null;
-  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
+  editingPdfIdx = null; editingPdfType = null; editingPdfSourceUrl = '';
+  renderPdfEditorList();
   hideSubModal('pdf-editor-panel');
   renderFlashcardsEditorList();
   editingHtmlCode = '';
   editingStudyHtmlData = null;
+  editingStudyDocImages = [];
+  editingStudyDocSources = [];
+  editingStudyDocImagesMap = {};
+  studioCurrentDocUrl = '';
+  renderPdfEditorList();
   editingPresentationHtml = '';
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
@@ -2971,8 +3188,8 @@ function populateEditorFromLesson(les) {
   editingWorksheetPdfUrls = normalizePdfArray(les.worksheetPdfUrls);
   editingAnswerKeyPdfUrls = normalizePdfArray(les.answerKeyPdfUrls);
   editingHtmlDocUrls = normalizePdfArray(les.htmlDocUrls);
-  editingPdfIdx = null; editingPdfType = null;
-  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
+  editingPdfIdx = null; editingPdfType = null; editingPdfSourceUrl = '';
+  renderPdfEditorList();
   hideSubModal('pdf-editor-panel');
   var fcVal = les.flashcards;
   if (fcVal && typeof fcVal === 'string') { try { fcVal = JSON.parse(fcVal); } catch(e) { fcVal = null; } }
@@ -2980,6 +3197,10 @@ function populateEditorFromLesson(les) {
   renderFlashcardsEditorList();
   editingHtmlCode = les.htmlCode || '';
   editingStudyHtmlData = les.studyHtmlData || null;
+  editingStudyDocSources = (les.studyDocSources && Array.isArray(les.studyDocSources)) ? JSON.parse(JSON.stringify(les.studyDocSources)) : [];
+  editingStudyDocImagesMap = (les.studyDocImages && typeof les.studyDocImages === 'object' && !Array.isArray(les.studyDocImages)) ? JSON.parse(JSON.stringify(les.studyDocImages)) : {};
+  editingStudyDocImages = [];
+  studioCurrentDocUrl = '';
   editingPresentationHtml = les.presentationHtml || '';
   editingHiddenSections = (les.hiddenSections && Array.isArray(les.hiddenSections)) ? JSON.parse(JSON.stringify(les.hiddenSections)) : [];
   updateAllVisToggles();
@@ -2990,6 +3211,7 @@ function populateEditorFromLesson(les) {
   // Runs AFTER the textareas are filled so the check reads THIS lesson's
   // content, never a stale value from the previously edited lesson.
   normalizeStudyContentInput(false);
+  renderStudyDocStudio();
   updateHtmlPreview();
   setHtmlContent(les.content || '');
   var srcVal = les.sourceUrls;
@@ -3049,6 +3271,8 @@ function saveLessonFromEditor() {
     hiddenDocUrls: editingHiddenDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHiddenDocUrls)) : null,
     htmlCode: editingHtmlCode || null,
     studyHtmlData: editingStudyHtmlData || null,
+    studyDocSources: editingStudyDocSources.length > 0 ? JSON.parse(JSON.stringify(editingStudyDocSources)) : null,
+    studyDocImages: Object.keys(editingStudyDocImagesMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocImagesMap)) : null,
     presentationHtml: editingPresentationHtml || null,
     hiddenSections: editingHiddenSections.length > 0 ? JSON.parse(JSON.stringify(editingHiddenSections)) : null,
     flashcards: editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null,
@@ -3218,10 +3442,13 @@ function autoSaveCurrentLesson() {
 
   // Pasted AI component JSON is rendered to HTML before persisting.
   normalizeStudyContentInput(false);
+  persistStudioImages();
 
   // Sync current editor state into the lesson object
   targetLesson.htmlCode = editingHtmlCode || null;
   targetLesson.studyHtmlData = editingStudyHtmlData || null;
+  targetLesson.studyDocSources = editingStudyDocSources.length > 0 ? JSON.parse(JSON.stringify(editingStudyDocSources)) : null;
+  targetLesson.studyDocImages = Object.keys(editingStudyDocImagesMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocImagesMap)) : null;
   targetLesson.presentationHtml = editingPresentationHtml || null;
   targetLesson.flashcards = editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null;
   targetLesson.quiz = editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null;
@@ -3285,12 +3512,17 @@ function startAddLessonDirect(sectionId) {
   hideSubModal('youtube-editor-panel');
   editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = []; editingHtmlDocUrls = [];
   editingHiddenDocUrls = [];
-  editingPdfIdx = null; editingPdfType = null;
-  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
+  editingPdfIdx = null; editingPdfType = null; editingPdfSourceUrl = '';
+  renderPdfEditorList();
   hideSubModal('pdf-editor-panel');
   renderFlashcardsEditorList();
   editingHtmlCode = '';
   editingStudyHtmlData = null;
+  editingStudyDocImages = [];
+  editingStudyDocSources = [];
+  editingStudyDocImagesMap = {};
+  studioCurrentDocUrl = '';
+  renderPdfEditorList();
   editingPresentationHtml = '';
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
@@ -3338,7 +3570,7 @@ function deleteLessonDirect(sectionId, lessonIdx) {
       if (docId) deleteLessonDoc(docId);
       tool.notify('Lesson deleted.', 'info');
     });
-  });
+  }, 'Yes, Delete');
 }
 
 /* ═══════════════════════════════════════════
@@ -3558,9 +3790,15 @@ function renderQuizEditorList() {
         html += setQuestions.map(function(q, qi) {
           var globalIdx = setStart + qi;
           var answerLabel = q.options && q.options[q.answer] ? q.options[q.answer] : 'Not set';
-          return '<div class="quiz-editor-item"><div class="quiz-editor-item-info"><div class="quiz-editor-item-title">' + (globalIdx+1) + '. ' + esc(q.question || 'Untitled') +
+          var optionsPills = (q.options || []).map(function(opt, oi) {
+            var isCorrect = oi === q.answer;
+            return '<span class="quiz-opt-pill' + (isCorrect ? ' quiz-opt-correct' : '') + '">' + (isCorrect ? '✅ ' : '') + esc(opt) + '</span>';
+          }).join('');
+          var explanationSnippet = (q.explanation_correct || '').substring(0, 140);
+          return '<div class="quiz-editor-item"><div class="quiz-editor-item-info"><div class="quiz-editor-item-title">' + (globalIdx + 1) + '. ' + esc(q.question || 'Untitled') +
             (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') +
-            '</div><div class="quiz-editor-item-meta">' + (q.options?q.options.length:0) + ' options · Answer: ' + esc(answerLabel) + '</div></div>' +
+            '</div><div class="quiz-editor-options">' + optionsPills + '</div>' +
+            '<div class="quiz-editor-item-meta">' + (q.options ? q.options.length : 0) + ' options · Answer: ' + esc(answerLabel) + (explanationSnippet ? ' · 💡 ' + esc(explanationSnippet) : '') + '</div></div>' +
             '<div class="quiz-editor-item-actions"><button class="btn btn-sm btn-outline" data-edit-quiz-idx="' + globalIdx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-quiz-idx="' + globalIdx + '">🗑</button></div></div>';
         }).join('');
       }
@@ -3578,7 +3816,15 @@ function renderQuizEditorList() {
     }
     var delBtns = list.querySelectorAll('[data-del-quiz-idx]');
     for (var j = 0; j < delBtns.length; j++) {
-      delBtns[j].addEventListener('click', function(e) { e.stopPropagation(); editingQuizQuestions.splice(parseInt(this.getAttribute('data-del-quiz-idx')), 1); renderQuizEditorList(); });
+      delBtns[j].addEventListener('click', function(e) {
+        e.stopPropagation();
+        var delQuizIdx = parseInt(this.getAttribute('data-del-quiz-idx'));
+        var delQuizQuestion = (editingQuizQuestions[delQuizIdx] && editingQuizQuestions[delQuizIdx].question) ? editingQuizQuestions[delQuizIdx].question : 'this question';
+        sandboxConfirm('Delete quiz question "' + (delQuizQuestion.length > 60 ? delQuizQuestion.substring(0, 60) + '…' : delQuizQuestion) + '"? Students will no longer answer it.', function() {
+          editingQuizQuestions.splice(delQuizIdx, 1);
+          renderQuizEditorList();
+        }, 'Yes, Delete');
+      });
     }
   }
 }
@@ -3680,7 +3926,15 @@ function renderSourceLinksEditorList() {
     }
     var delBtns = list.querySelectorAll('[data-del-sl-idx]');
     for (var j = 0; j < delBtns.length; j++) {
-      delBtns[j].addEventListener('click', function(e) { e.stopPropagation(); editingSourceLinks.splice(parseInt(this.getAttribute('data-del-sl-idx')), 1); renderSourceLinksEditorList(); });
+      delBtns[j].addEventListener('click', function(e) {
+        e.stopPropagation();
+        var delSlIdx = parseInt(this.getAttribute('data-del-sl-idx'));
+        var delSlLabel = (editingSourceLinks[delSlIdx] && editingSourceLinks[delSlIdx].label) ? editingSourceLinks[delSlIdx].label : 'this link';
+        sandboxConfirm('Delete the resource link "' + delSlLabel + '"? Students will no longer see it.', function() {
+          editingSourceLinks.splice(delSlIdx, 1);
+          renderSourceLinksEditorList();
+        }, 'Yes, Delete');
+      });
     }
   }
 }
@@ -3734,7 +3988,15 @@ function renderYoutubeEditorList() {
     }
     var delBtns = list.querySelectorAll('[data-del-yt-idx]');
     for (var j = 0; j < delBtns.length; j++) {
-      delBtns[j].addEventListener('click', function(e) { e.stopPropagation(); editingYoutubeUrls.splice(parseInt(this.getAttribute('data-del-yt-idx')), 1); renderYoutubeEditorList(); });
+      delBtns[j].addEventListener('click', function(e) {
+        e.stopPropagation();
+        var delYtIdx = parseInt(this.getAttribute('data-del-yt-idx'));
+        var delYtUrl = editingYoutubeUrls[delYtIdx] || '';
+        sandboxConfirm('Delete this video? Students will no longer see it in the study flow: ' + delYtUrl, function() {
+          editingYoutubeUrls.splice(delYtIdx, 1);
+          renderYoutubeEditorList();
+        }, 'Yes, Delete');
+      });
     }
   }
 }
@@ -3780,92 +4042,522 @@ function getPdfArray(type) {
   return [];
 }
 
-function renderPdfEditorList(type) {
-  var arr = getPdfArray(type);
-  var list = el('pdf-list-' + type);
-  var count = el('pdf-count-' + type);
-  if (count) count.textContent = arr.length + ' file(s)';
+/** True when a URL belongs to the source-document list (not a Real file) */
+function isSourceDocumentUrl(url) {
+  for (var i = 0; i < editingStudyDocSources.length; i++) {
+    if (editingStudyDocSources[i].url === url) return true;
+  }
+  return false;
+}
+
+/** Remove a URL from whichever Real type array holds it. Returns its type or ''. */
+function removeRealDocumentUrl(url) {
+  var typeKeys = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
+  for (var t = 0; t < typeKeys.length; t++) {
+    var arr = getPdfArray(typeKeys[t]);
+    var idx = arr.indexOf(url);
+    if (idx !== -1) {
+      arr.splice(idx, 1);
+      return typeKeys[t];
+    }
+  }
+  return '';
+}
+
+/** Unified documents list: every Ready and Sample document in one list */
+function renderPdfEditorList() {
+  var list = el('pdf-list-all');
+  var count = el('pdf-count-all');
   if (!list) return;
-  if (arr.length === 0) {
-    list.innerHTML = '<div style="padding:8px 12px;color:var(--text-muted);font-size:12px;">No files added yet.</div>';
-  } else {
-    list.innerHTML = arr.map(function(url, idx) {
-      var isHidden = editingHiddenDocUrls.indexOf(url) !== -1;
-      var displayName = readableFileName(url);
-      return '<div class="source-link-editor-item"><div class="source-link-editor-item-info"><div class="source-link-editor-item-title">📎 ' + esc(displayName) + (isHidden ? ' <span style="color:var(--text-muted);font-size:11px;font-weight:400">(hidden)</span>' : '') + '</div><div class="source-link-editor-item-meta" title="' + esc(url) + '">' + esc(url.substring(0, 80) + (url.length > 80 ? '…' : '')) + '</div></div><div class="source-link-editor-item-actions"><button class="btn btn-sm doc-vis-toggle' + (isHidden ? ' doc-vis-hidden' : '') + '" data-vis-pdf="' + type + ':' + idx + '" title="' + (isHidden ? 'Show to students' : 'Hide from students') + '">' + (isHidden ? '👁‍🗨' : '👁') + '</button><button class="btn btn-sm btn-outline" data-edit-pdf="' + type + ':' + idx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-pdf="' + type + ':' + idx + '">🗑</button></div></div>';
-    }).join('');
-    // Wire visibility toggles
-    var visBtns = list.querySelectorAll('[data-vis-pdf]');
-    for (var k = 0; k < visBtns.length; k++) {
-      visBtns[k].addEventListener('click', function(e) {
-        e.stopPropagation();
-        var parts = this.getAttribute('data-vis-pdf').split(':');
-        var t = parts[0];
-        var i = parseInt(parts[1]);
-        var u = getPdfArray(t)[i];
-        var hidx = editingHiddenDocUrls.indexOf(u);
-        if (hidx === -1) {
-          editingHiddenDocUrls.push(u);
-        } else {
-          editingHiddenDocUrls.splice(hidx, 1);
-        }
-        renderPdfEditorList(t);
-      });
-    }
-    var editBtns = list.querySelectorAll('[data-edit-pdf]');
-    for (var i = 0; i < editBtns.length; i++) {
-      editBtns[i].addEventListener('click', function(e) { e.stopPropagation(); var parts = this.getAttribute('data-edit-pdf').split(':'); openPdfEditor(parts[0], parseInt(parts[1])); });
-    }
-    var delBtns = list.querySelectorAll('[data-del-pdf]');
-    for (var j = 0; j < delBtns.length; j++) {
-      delBtns[j].addEventListener('click', function(e) { e.stopPropagation(); var parts = this.getAttribute('data-del-pdf').split(':'); var t = parts[0]; var i = parseInt(parts[1]); var arr = getPdfArray(t); var u = arr[i]; arr.splice(i, 1);
-        // Also remove from hidden list when deleted
-        var hidx = editingHiddenDocUrls.indexOf(u);
-        if (hidx !== -1) editingHiddenDocUrls.splice(hidx, 1);
-        renderPdfEditorList(t); });
-    }
+  var rows = [];
+  var typeKeys = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
+  for (var t = 0; t < typeKeys.length; t++) {
+    var arr = getPdfArray(typeKeys[t]);
+    for (var i = 0; i < arr.length; i++) rows.push({ type: typeKeys[t], idx: i, url: arr[i], role: 'real' });
+  }
+  for (var s = 0; s < editingStudyDocSources.length; s++) {
+    rows.push({ type: editingStudyDocSources[s].type || 'studyDoc', url: editingStudyDocSources[s].url, role: 'source' });
+  }
+  if (count) count.textContent = rows.length + ' document(s)';
+  if (rows.length === 0) {
+    list.innerHTML = '<div style="padding:10px 12px;text-align:center;color:var(--text-muted);font-size:12px;">No documents yet. Click "+ Add URL" or "⬆ Upload". ✅ Ready = your processed file used for AI content generation. 🧭 Sample = an outside sample used only to create your own Ready document.</div>';
+    return;
+  }
+  list.innerHTML = rows.map(function(row) {
+    var info = PDF_LABELS[row.type] || {};
+    var displayName = readableFileName(row.url);
+    var isHidden = row.role === 'real' && editingHiddenDocUrls.indexOf(row.url) !== -1;
+    var typeBadge = '<span class="doc-type-badge">' + (info.icon || '📎') + ' ' + esc(info.label || row.type) + '</span>';
+    var roleBadge = row.role === 'real' ? '<span class="doc-role-badge real">✅ Ready</span>' : '<span class="doc-role-badge source">🧭 Sample</span>';
+    var imageCount = studioDocImageCount(row.url);
+    var imageNote = imageCount ? ' · 🖼 ' + imageCount + ' image(s)' : '';
+    var visibilityChip = row.role === 'real'
+      ? (isHidden ? '<span class="doc-vis-chip hidden" title="Students cannot see this document">🙈 Hidden</span>' : '<span class="doc-vis-chip" title="Students can see this document">👁 Visible</span>')
+      : '';
+    var editButton = row.role === 'real'
+      ? '<button class="btn btn-sm btn-outline doc-icon-btn" data-edit-pdf="' + row.type + ':' + row.idx + '" title="Edit this document (role, visibility, URL, delete)">✏️</button>'
+      : '<button class="btn btn-sm btn-outline doc-icon-btn" data-edit-source="' + esc(row.url) + '" title="Edit this sample document (role, URL, delete)">✏️</button>';
+    var downloadButton = '<button class="btn btn-sm btn-outline doc-icon-btn" data-download-doc="' + esc(row.url) + '" title="Download this file to your device">⬇</button>';
+    var processButton = '<button class="btn btn-sm btn-primary doc-icon-btn" data-process-doc="' + esc(row.url) + '" title="Open the processing drawer for this document (extract images, upload, generate content)">⚙️</button>';
+    return '<div class="source-link-editor-item"><div class="source-link-editor-item-info">' +
+      '<div class="source-link-editor-item-title">' + typeBadge + roleBadge + visibilityChip + esc(displayName) + '</div>' +
+      '<div class="source-link-editor-item-meta" title="' + esc(row.url) + '">' + esc(row.url.substring(0, 70)) + imageNote + '</div></div>' +
+      '<div class="source-link-editor-item-actions">' + downloadButton + editButton + processButton + '</div></div>';
+  }).join('');
+
+  // ⬇ Download any document straight to the device
+  var downloadBtns = list.querySelectorAll('[data-download-doc]');
+  for (var dB = 0; dB < downloadBtns.length; dB++) {
+    downloadBtns[dB].addEventListener('click', function(e) {
+      e.stopPropagation();
+      downloadStudyDocFile(this.getAttribute('data-download-doc'));
+    });
+  }
+
+  // ✏️ Edit (Ready document)
+  var editBtns = list.querySelectorAll('[data-edit-pdf]');
+  for (var e2 = 0; e2 < editBtns.length; e2++) {
+    editBtns[e2].addEventListener('click', function(e) {
+      e.stopPropagation();
+      var parts = this.getAttribute('data-edit-pdf').split(':');
+      openPdfEditor(parts[0], parseInt(parts[1]));
+    });
+  }
+  // ✏️ Edit (Sample document)
+  var editSourceBtns = list.querySelectorAll('[data-edit-source]');
+  for (var e3 = 0; e3 < editSourceBtns.length; e3++) {
+    editSourceBtns[e3].addEventListener('click', function(e) {
+      e.stopPropagation();
+      openPdfEditor('studyDoc', null, this.getAttribute('data-edit-source'));
+    });
+  }
+  // ⚙️ Open the processing drawer (Ready or Sample) - the pipeline itself is
+  // started from the drawer's Process button, so no confirm pops up here.
+  var processBtns = list.querySelectorAll('[data-process-doc]');
+  for (var pB = 0; pB < processBtns.length; pB++) {
+    processBtns[pB].addEventListener('click', function(e) {
+      e.stopPropagation();
+      openStudioDrawerForDoc(this.getAttribute('data-process-doc'));
+    });
   }
 }
 
-function openPdfEditor(type, idx) {
+function openPdfEditor(type, idx, sourceUrl) {
+  editingPdfSourceUrl = sourceUrl || '';
+  if (editingPdfSourceUrl) {
+    // Editing a Sample: resolve its stored type for the heading/label
+    for (var srcScan = 0; srcScan < editingStudyDocSources.length; srcScan++) {
+      if (editingStudyDocSources[srcScan].url === editingPdfSourceUrl) {
+        type = editingStudyDocSources[srcScan].type || type;
+        break;
+      }
+    }
+  }
   editingPdfType = type;
   editingPdfIdx = idx;
   showSubModal('pdf-editor-panel');
   var info = PDF_LABELS[type] || {};
-  el('pdf-editor-heading').textContent = (idx !== null ? 'Edit' : 'Add') + ' ' + (info.label || 'PDF');
-  var arr = getPdfArray(type);
-  el('edit-pdf-item-url').value = idx !== null ? (arr[idx] || '') : '';
-  // Update label and button text based on type
+  var isEdit = idx !== null || !!editingPdfSourceUrl;
+  el('pdf-editor-heading').textContent = (isEdit ? 'Edit' : 'Add') + ' ' + (info.label || 'Document');
+  var typeGroup = el('pdf-editor-type-group');
+  var typeSelect = el('edit-pdf-item-type');
+  if (typeGroup) typeGroup.style.display = isEdit ? 'none' : '';
+  var urlValue = '';
+  if (editingPdfSourceUrl) {
+    for (var sIdx = 0; sIdx < editingStudyDocSources.length; sIdx++) {
+      if (editingStudyDocSources[sIdx].url === editingPdfSourceUrl) {
+        urlValue = editingStudyDocSources[sIdx].url;
+        if (typeSelect) typeSelect.value = editingStudyDocSources[sIdx].type || 'studyDoc';
+        break;
+      }
+    }
+  } else if (idx !== null) {
+    var arr = getPdfArray(type);
+    urlValue = arr[idx] || '';
+  }
+  if (typeSelect && !editingPdfSourceUrl) typeSelect.value = type;
+  el('edit-pdf-item-url').value = urlValue;
+  updatePdfEditorRoleSwitch();
+  updatePdfEditorVisSwitch();
+  var deleteButton = el('btn-pdf-editor-delete');
+  if (deleteButton) deleteButton.style.display = isEdit ? '' : 'none';
+  // Update the URL label and button text based on type (the URL label is
+  // the LAST .form-label inside the panel - the first one is the type).
   var isHtml = type === 'htmlDoc';
-  var labelEl = document.querySelector('#pdf-editor-panel .form-label');
+  var panelLabels = document.querySelectorAll('#pdf-editor-panel .form-label');
+  var urlLabel = panelLabels.length ? panelLabels[panelLabels.length - 1] : null;
+  if (urlLabel) urlLabel.textContent = (isHtml ? 'Web Document URL' : 'Document URL') + ' *';
   var btnEl = el('btn-pdf-editor-save');
-  if (labelEl) labelEl.innerHTML = (isHtml ? 'Web Document URL' : 'PDF URL') + ' <span class="required">*</span>';
-  if (btnEl) btnEl.textContent = 'Save ' + (isHtml ? 'HTML Doc' : 'PDF');
+  if (btnEl) btnEl.textContent = 'Save ' + (isHtml ? 'HTML Doc' : 'Document');
 }
 
-function closePdfEditor() { hideSubModal('pdf-editor-panel'); editingPdfType = null; editingPdfIdx = null; }
+/** Reflect the current role in the edit drawer's Ready/Sample switch.
+ *  Checked = Ready (positive state), unchecked = Sample. */
+function updatePdfEditorRoleSwitch() {
+  var roleSwitch = el('edit-pdf-item-role');
+  var stateEl = el('pdf-editor-role-state');
+  var visGroup = el('pdf-editor-vis-group');
+  var roleHint = el('pdf-editor-role-hint');
+  var isSample = !!editingPdfSourceUrl;
+  if (roleSwitch) roleSwitch.checked = !isSample;
+  if (stateEl) stateEl.textContent = isSample ? 'Sample' : 'Ready';
+  if (visGroup) visGroup.style.display = isSample ? 'none' : '';
+  if (roleHint) roleHint.textContent = isSample
+    ? 'Sample = an outside document used only as the input for creating your own Ready document. It is never shown to students.'
+    : 'Ready = your own processed file, shown to students and used for AI content generation in the other tabs.';
+}
+
+/** Reflect the current visibility in the edit drawer's Visible/Hidden switch.
+ *  Checked = Visible (positive state), unchecked = Hidden. */
+function updatePdfEditorVisSwitch() {
+  var visSwitch = el('edit-pdf-item-vis');
+  var stateEl = el('pdf-editor-vis-state');
+  if (!visSwitch) return;
+  var targetUrl = editingPdfSourceUrl;
+  if (!targetUrl && editingPdfIdx !== null && editingPdfType) targetUrl = (getPdfArray(editingPdfType)[editingPdfIdx] || '');
+  var isHidden = !!targetUrl && editingHiddenDocUrls.indexOf(targetUrl) !== -1;
+  visSwitch.checked = !isHidden;
+  if (stateEl) stateEl.textContent = isHidden ? 'Hidden' : 'Visible';
+}
+
+function closePdfEditor() { hideSubModal('pdf-editor-panel'); editingPdfType = null; editingPdfIdx = null; editingPdfSourceUrl = ''; }
+
+/** Add or remove a document url in the hidden list */
+function setDocHiddenState(docUrl, hidden) {
+  var hidx = editingHiddenDocUrls.indexOf(docUrl);
+  if (hidden && hidx === -1) editingHiddenDocUrls.push(docUrl);
+  if (!hidden && hidx !== -1) editingHiddenDocUrls.splice(hidx, 1);
+}
 
 function savePdfUrl() {
   var url = el('edit-pdf-item-url').value.trim();
-  if (!url) { tool.notify('PDF URL is required.', 'warning'); return; }
+  if (!url) { tool.notify('Document URL is required.', 'warning'); return; }
+  var roleSwitch = el('edit-pdf-item-role');
+  var wantSample = roleSwitch ? !roleSwitch.checked : !!editingPdfSourceUrl;
+  var targetType = editingPdfType || 'studyDoc';
+  if (!editingPdfSourceUrl && editingPdfIdx === null) {
+    var typeSelect = el('edit-pdf-item-type');
+    if (typeSelect && typeSelect.value) targetType = typeSelect.value;
+  } else if (editingPdfSourceUrl) {
+    // Editing a Sample keeps its stored type
+    for (var stIdx = 0; stIdx < editingStudyDocSources.length; stIdx++) {
+      if (editingStudyDocSources[stIdx].url === editingPdfSourceUrl) {
+        targetType = editingStudyDocSources[stIdx].type || 'studyDoc';
+        break;
+      }
+    }
+  }
+  // Duplicate check across every Ready list and the Sample list (skip the row being edited)
   var allTypes = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
   for (var t = 0; t < allTypes.length; t++) {
     var checkArr = getPdfArray(allTypes[t]);
     for (var c = 0; c < checkArr.length; c++) {
-      if (allTypes[t] === editingPdfType && c === editingPdfIdx) continue;
+      if (!editingPdfSourceUrl && allTypes[t] === targetType && c === editingPdfIdx) continue;
       if (checkArr[c].trim().toLowerCase() === url.trim().toLowerCase()) {
         var label = (PDF_LABELS[allTypes[t]] || {}).label || allTypes[t];
-        tool.notify('This URL is already in ' + label + '.', 'warning');
+        tool.notify('This URL is already a Ready ' + label + '.', 'warning');
         return;
       }
     }
   }
-  var arr = getPdfArray(editingPdfType);
-  if (editingPdfIdx !== null) { arr[editingPdfIdx] = url; } else { arr.push(url); }
-  var savedType = editingPdfType;
+  for (var sc = 0; sc < editingStudyDocSources.length; sc++) {
+    if (editingStudyDocSources[sc].url === editingPdfSourceUrl) continue;
+    if (editingStudyDocSources[sc].url.trim().toLowerCase() === url.trim().toLowerCase()) {
+      tool.notify('This URL is already a Sample document.', 'warning');
+      return;
+    }
+  }
+  var visSwitch = el('edit-pdf-item-vis');
+  var wantHidden = visSwitch ? !visSwitch.checked : false;
+
+  if (editingPdfSourceUrl) {
+    // Editing a Sample: stays Sample or becomes Ready
+    for (var rmIdx = 0; rmIdx < editingStudyDocSources.length; rmIdx++) {
+      if (editingStudyDocSources[rmIdx].url === editingPdfSourceUrl) {
+        editingStudyDocSources.splice(rmIdx, 1);
+        break;
+      }
+    }
+    if (wantSample) {
+      editingStudyDocSources.push({ url: url, name: readableFileName(url), type: targetType });
+      tool.notify('Sample document saved.', 'success');
+    } else {
+      getPdfArray(targetType).push(url);
+      setDocHiddenState(url, wantHidden);
+      tool.notify('Document saved as Ready - students will see it and AI generation may use it.', 'success');
+    }
+  } else if (editingPdfIdx !== null) {
+    // Editing a Ready: stays Ready or becomes Sample
+    var arr = getPdfArray(targetType);
+    var oldUrl = arr[editingPdfIdx] || '';
+    if (wantSample) {
+      arr.splice(editingPdfIdx, 1);
+      setDocHiddenState(oldUrl, false);
+      editingStudyDocSources.push({ url: url, name: readableFileName(url), type: targetType });
+      tool.notify('Document saved as Sample - it is now the input for creating your own Ready document and is not shown to students.', 'info');
+    } else {
+      arr[editingPdfIdx] = url;
+      setDocHiddenState(url, wantHidden);
+      tool.notify('Document saved!', 'success');
+    }
+  } else {
+    // Adding a new document
+    if (wantSample) {
+      editingStudyDocSources.push({ url: url, name: readableFileName(url), type: targetType });
+      tool.notify('Sample document added - use it to create your own Ready document.', 'info');
+    } else {
+      getPdfArray(targetType).push(url);
+      setDocHiddenState(url, wantHidden);
+      tool.notify('Document saved!', 'success');
+    }
+  }
+  // Keep the image gallery attached when a Sample's URL changed
+  if (editingPdfSourceUrl && editingPdfSourceUrl !== url && editingStudyDocImagesMap[editingPdfSourceUrl]) {
+    editingStudyDocImagesMap[url] = editingStudyDocImagesMap[editingPdfSourceUrl];
+    delete editingStudyDocImagesMap[editingPdfSourceUrl];
+    if (studioCurrentDocUrl === editingPdfSourceUrl) studioCurrentDocUrl = url;
+  }
   closePdfEditor();
-  renderPdfEditorList(savedType);
-  tool.notify('PDF saved!', 'success');
+  renderPdfEditorList();
+}
+
+/** 🗑 Delete the document open in the edit drawer */
+function deletePdfFromEditor() {
+  if (editingPdfSourceUrl) {
+    var sampleUrl = editingPdfSourceUrl;
+    sandboxConfirm('Delete sample document "' + readableFileName(sampleUrl) + '"? Its extracted images are removed from this lesson, but study content already generated from it keeps its own embedded copy and is not affected.', function() {
+      for (var d1 = 0; d1 < editingStudyDocSources.length; d1++) {
+        if (editingStudyDocSources[d1].url === sampleUrl) { editingStudyDocSources.splice(d1, 1); break; }
+      }
+      delete editingStudyDocImagesMap[sampleUrl];
+      if (studioCurrentDocUrl === sampleUrl) closeStudioDrawer();
+      closePdfEditor();
+      renderPdfEditorList();
+      tool.notify('Sample document deleted.', 'info');
+    }, 'Yes, Delete');
+    return;
+  }
+  if (editingPdfIdx === null || !editingPdfType) return;
+  var arr = getPdfArray(editingPdfType);
+  var delUrl = arr[editingPdfIdx];
+  if (!delUrl) return;
+  var delLabel = (PDF_LABELS[editingPdfType] || {}).label || editingPdfType;
+  sandboxConfirm('Delete "' + readableFileName(delUrl) + '" (' + delLabel + ')? Students will no longer see it. Content already generated from this document keeps its embedded images and is not affected.', function() {
+    arr.splice(editingPdfIdx, 1);
+    setDocHiddenState(delUrl, false);
+    closePdfEditor();
+    renderPdfEditorList();
+    tool.notify('Document deleted.', 'info');
+  }, 'Yes, Delete');
+}
+
+/* ── ⚙️ Process document: extract images, upload to storage, generate content ── */
+
+/** True when an image already lives on CMS storage (a hosted URL) */
+function isImageHosted(image) {
+  if (!image) return false;
+  if (typeof image.url === 'string' && image.url.indexOf('http') === 0) return true;
+  if (typeof image.dataUrl === 'string' && image.dataUrl.indexOf('http') === 0) return true;
+  return false;
+}
+
+/** URL used when embedding an image into generated content (hosted preferred) */
+function imageContentSrc(image) {
+  if (!image) return '';
+  if (typeof image.url === 'string' && image.url.indexOf('http') === 0) return image.url;
+  return image.dataUrl || '';
+}
+
+/** Upload ONE gallery image to CMS storage (requestUploadBinary contract from
+ *  html-tool-rules.txt). On success the embedded data URL is dropped so the
+ *  stored lesson document stays small - the hosted URL is used everywhere. */
+function uploadStudioImageToStorage(imageIndex, onDone) {
+  var image = editingStudyDocImages[imageIndex];
+  if (!image || !image.dataUrl) { if (onDone) onDone(false); return; }
+  if (typeof tool.requestUploadBinary !== 'function') { if (onDone) onDone(false); return; }
+  var uploadName = /\.(jpe?g|png|webp)$/i.test(image.name || '') ? image.name : (image.name || 'image') + '.jpg';
+  tool.requestUploadBinary({ dataUrl: image.dataUrl, name: uploadName, contentType: 'image/jpeg' }, function(uploadError, uploadResult) {
+    if (uploadError || !uploadResult || !uploadResult.url) {
+      console.warn('Image upload failed for ' + image.name + ': ' + (uploadError || 'empty result'));
+      if (onDone) onDone(false);
+      return;
+    }
+    image.url = uploadResult.url;
+    image.dataUrl = '';
+    if (uploadResult.sizeKb) image.sizeKb = uploadResult.sizeKb;
+    persistStudioImages();
+    if (onDone) onDone(true);
+  });
+}
+
+/** Resolve an image to a data URL usable as an AI reference (fetch hosted ones) */
+function resolveStudioImageDataUrl(image, onDone) {
+  if (!image) { onDone(''); return; }
+  if (typeof image.dataUrl === 'string' && image.dataUrl.indexOf('data:') === 0) { onDone(image.dataUrl); return; }
+  var hostedUrl = (typeof image.url === 'string' && image.url.indexOf('http') === 0) ? image.url : '';
+  if (!hostedUrl && typeof image.dataUrl === 'string' && image.dataUrl.indexOf('http') === 0) hostedUrl = image.dataUrl;
+  if (!hostedUrl) { onDone(''); return; }
+  if (!binaryFileChannelAvailable() && typeof tool.requestFetch !== 'function') { onDone(''); return; }
+  fetchDocumentBytes(hostedUrl, { purpose: 'ai-image' }, function(fetchError, imageBytes, imageMeta) {
+    if (fetchError || !imageBytes || !imageBytes.length) { onDone(''); return; }
+    var contentType = (imageMeta && imageMeta.contentType) || 'image/jpeg';
+    onDone(bytesToDataUrl(imageBytes, contentType));
+  });
+}
+
+/** Upload the document's non-hosted images to CMS storage */
+function uploadUnhostedStudioImages(onDone) {
+  var unhostedIndexes = [];
+  for (var u = 0; u < editingStudyDocImages.length; u++) {
+    if (!isImageHosted(editingStudyDocImages[u])) unhostedIndexes.push(u);
+  }
+  if (!unhostedIndexes.length) { if (onDone) onDone(0); return; }
+  if (typeof tool.requestUploadBinary !== 'function') {
+    setStudioStatus('⚠️ Image upload is unavailable on this host - requestUploadBinary needs allowBinaryUpload: yes in the field settings. Extracted images stay embedded as data URLs until then.', 'warn');
+    if (onDone) onDone(0);
+    return;
+  }
+  var queue = unhostedIndexes.slice();
+  var uploadedCount = 0;
+  var failedCount = 0;
+  function uploadNext() {
+    if (!queue.length) {
+      renderStudyDocImageGallery();
+      renderPdfEditorList();
+      if (uploadedCount > 0) {
+        setStudioStatus('✅ Uploaded ' + uploadedCount + ' image(s) to CMS storage - the gallery and the generated content now use hosted URLs.', 'ok');
+        autoSaveCurrentLesson();
+      }
+      if (failedCount > 0) tool.notify(failedCount + ' image(s) could not be uploaded to CMS storage - they stay embedded.', 'warning');
+      if (onDone) onDone(uploadedCount);
+      return;
+    }
+    var imageIndex = queue.shift();
+    setStudioStatus('⏳ Uploading image ' + (imageIndex + 1) + ' of ' + editingStudyDocImages.length + ' to CMS storage…', 'busy');
+    uploadStudioImageToStorage(imageIndex, function(uploaded) {
+      if (uploaded) uploadedCount++; else failedCount++;
+      uploadNext();
+    });
+  }
+  uploadNext();
+}
+
+/** ⚙️ Process Document button INSIDE the studio drawer: confirm, then run the pipeline */
+function startDocumentProcessFromDrawer() {
+  var docUrl = studioCurrentDocUrl;
+  if (!docUrl) { tool.notify('No document is open.', 'warning'); return; }
+  var roleLabel = studioDocRole(docUrl) === 'final' ? 'Ready' : 'Sample';
+  sandboxConfirm('⚙️ Process "' + readableFileName(docUrl) + '" (' + roleLabel + ' document)? It reads the document, extracts its images, uploads them to CMS storage when the platform supports it, and regenerates the lesson Study Content from it.', function() {
+    runDocumentProcessPipeline();
+  }, 'Yes, Process');
+}
+
+/** Extract (PDF) → upload images → generate study content, one chain */
+function runDocumentProcessPipeline() {
+  var docUrl = studioCurrentDocUrl;
+  if (!docUrl) { tool.notify('No document is open.', 'warning'); return; }
+  var lowerUrl = docUrl.toLowerCase();
+  var docType = studioDocType(docUrl);
+  var isHtmlDocument = docType === 'htmlDoc' || /\.(html?|htm)(\?|#|$)/.test(lowerUrl);
+  var existingImages = editingStudyDocImagesMap[docUrl];
+  var hasImages = existingImages && existingImages.length > 0;
+  if (isHtmlDocument) {
+    setStudioStatus('⏳ Processing: HTML document - generating study content…', 'busy');
+    uploadUnhostedStudioImages(function() { generateStudyGuideFromStudioDoc(); });
+    return;
+  }
+  if (!hasImages) {
+    setStudioStatus('⏳ Processing: extracting images from the PDF…', 'busy');
+    extractStudyDocImages(function() {
+      uploadUnhostedStudioImages(function() { generateStudyGuideFromStudioDoc(); });
+    });
+    return;
+  }
+  uploadUnhostedStudioImages(function() { generateStudyGuideFromStudioDoc(); });
+}
+
+/* ── 🎨 AI image generation (requestGenerateImage + requestUploadBinary) ── */
+
+/** Generate a brand-new image from a text prompt, add it to the gallery and
+ *  upload it to CMS storage so the document only stores the hosted URL. */
+function generateStudioImageFromPrompt(promptText, baseImageDataUrl, onDone) {
+  if (!studioCurrentDocUrl) {
+    tool.notify('Open a document in the Studio drawer first (⚙️ button on any document).', 'warning');
+    if (onDone) onDone('no-doc');
+    return;
+  }
+  if (typeof tool.requestGenerateImage !== 'function') {
+    tool.notify('AI image generation is not enabled on this host - requestGenerateImage needs allowImageGeneration: yes in the field settings.', 'warning');
+    if (onDone) onDone('unavailable');
+    return;
+  }
+  startStudioStatusTicker('🎨 AI is generating the image (this can take up to 60 seconds)');
+  var generateOptions = { prompt: promptText };
+  if (baseImageDataUrl) generateOptions.baseImageDataUrl = baseImageDataUrl;
+  tool.requestGenerateImage(generateOptions, function(generateError, generateResult) {
+    if (generateError || !generateResult || !generateResult.dataUrl) {
+      setStudioStatus('', '');
+      tool.notify('Image generation failed: ' + (generateError || 'empty result'), 'error');
+      if (onDone) onDone(generateError || 'empty');
+      return;
+    }
+    editingStudyDocImages.push({
+      id: genId(),
+      name: 'ai-image-' + Date.now(),
+      width: 0,
+      height: 0,
+      dataUrl: generateResult.dataUrl,
+      sizeKb: Math.max(1, Math.round(generateResult.dataUrl.length * 0.75 / 1024))
+    });
+    var newImageIndex = editingStudyDocImages.length - 1;
+    setStudioStatus('⏳ Uploading the generated image to CMS storage…', 'busy');
+    uploadStudioImageToStorage(newImageIndex, function(uploaded) {
+      renderStudyDocImageGallery();
+      renderPdfEditorList();
+      autoSaveCurrentLesson();
+      var doneStatus = uploaded
+        ? '✅ AI image generated and stored on CMS storage - the content will use its hosted URL.'
+        : '✅ AI image generated and added to the gallery (embedded - image upload is not enabled on this host).';
+      setStudioStatus(doneStatus, 'ok');
+      tool.notify(doneStatus, 'success');
+      if (onDone) onDone(null, newImageIndex, uploaded);
+    });
+  });
+}
+
+/** 🎨 New AI Image dialog inside the studio drawer */
+function openGenerateImageDialog() {
+  if (!studioCurrentDocUrl) {
+    tool.notify('Open a document in the Studio drawer first (⚙️ button on any document).', 'warning');
+    return;
+  }
+  // If one gallery image is selected and has embedded bytes, use it as the visual reference.
+  var referenceImage = null;
+  var selectedIndexes = studioSelectedImageIndexes();
+  if (selectedIndexes.length) {
+    var candidateImage = editingStudyDocImages[selectedIndexes[0]];
+    if (candidateImage && typeof candidateImage.dataUrl === 'string' && candidateImage.dataUrl.indexOf('data:') === 0) {
+      referenceImage = candidateImage;
+    }
+  }
+  var referenceNote = referenceImage
+    ? '<div class="sd-modal-section"><div class="sd-modal-builtin">Selected image "' + esc(referenceImage.name) + '" will be used as the visual reference (image-to-image).</div></div>'
+    : '';
+  var bodyHtml = '<div class="sd-modal-section"><div class="sd-modal-label">Image prompt</div>' +
+      '<textarea class="form-input form-textarea" id="sd-image-prompt" placeholder="Describe the image you need, e.g. a labeled diagram of the water cycle, flat vector style, clear labels..." style="min-height:90px"></textarea>' +
+      '<span class="form-hint">A new image is added to this document\'s gallery and uploaded to CMS storage automatically.</span></div>' +
+    referenceNote +
+    '<div class="sd-modal-actions"><button type="button" class="btn btn-outline" data-sd-close>Cancel</button><button type="button" class="btn btn-primary" id="sd-image-generate-run">🎨 Generate</button></div>';
+  openStudioModal('🎨 Generate New Image', bodyHtml);
+  var runButton = el('sd-image-generate-run');
+  if (!runButton) return;
+  runButton.addEventListener('click', function() {
+    var promptField = el('sd-image-prompt');
+    var promptText = promptField ? promptField.value.trim() : '';
+    if (!promptText) { tool.notify('Enter an image prompt first.', 'warning'); return; }
+    closeStudioModal();
+    generateStudioImageFromPrompt(promptText, referenceImage ? referenceImage.dataUrl : '', null);
+  });
 }
 
 /* ═══════════════════════════════════════════
@@ -3888,12 +4580,46 @@ function showGenerateInfo(show) {
   if (show) setTimeout(function() { showGenerateInfo(false); }, 4000);
 }
 
+/** Read one document for AI generation: download the FULL file (no relay
+ *  cap) and read its text in the browser, falling back to the CMS text
+ *  service. callback(errorText, fileResult | null) */
+function readDocumentTextForAi(sourceUrl, callback) {
+  function useCmsTextService() {
+    if (typeof tool.requestFileContent !== 'function') {
+      callback('The document text could not be read on this host.', null);
+      return;
+    }
+    tool.requestFileContent(toHostingUrl(sourceUrl), function(readError, fileContent) {
+      if (readError) { callback(readError, null); return; }
+      callback(null, fileContent);
+    });
+  }
+  if (!binaryFileChannelAvailable() && typeof tool.requestFetch !== 'function') { useCmsTextService(); return; }
+  fetchDocumentBytes(sourceUrl, { purpose: 'ai-text' }, function(fetchError, documentBytes) {
+    var downloadedText = '';
+    if (!fetchError && documentBytes && documentBytes.length) {
+      if (isTextDocumentUrl(sourceUrl)) {
+        downloadedText = decodeTextBytes(documentBytes);
+      } else {
+        try { downloadedText = extractPdfTextLocally(documentBytes); } catch (pdfTextError) { downloadedText = ''; }
+      }
+    }
+    if (downloadedText && downloadedText.replace(/\s+/g, '').length >= 200) {
+      callback(null, { text: downloadedText });
+      return;
+    }
+    useCmsTextService();
+  });
+}
+
 function generateQuizFromPdf(onDone) {
   var allUrls = [];
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
   allUrls = allUrls.concat(editingWorksheetPdfUrls);
   allUrls = allUrls.filter(function(u) { return u && u.trim(); });
+  // Sources are sample inputs - AI generators only ever read Real documents.
+  allUrls = allUrls.filter(function(u) { return !isSourceDocumentUrl(u); });
 
   if (allUrls.length === 0) {
     showGenerateInfo(true);
@@ -3912,7 +4638,7 @@ function generateQuizFromPdf(onDone) {
   // When the last one completes (remaining === 0), we hand the combined text to AI.
   for (var ri = 0; ri < allUrls.length; ri++) {
     (function(idx) {
-      tool.requestFileContent(toHostingUrl(allUrls[idx]), function(err, fileResult) {
+      readDocumentTextForAi(allUrls[idx], function(err, fileResult) {
         remaining--;
         if (!err && fileResult) {
           var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
@@ -3938,7 +4664,7 @@ function generateQuizFromPdf(onDone) {
     if (text.length > maxLen) text = text.substring(0, maxLen) + '\n\n[... content truncated ...]';
     updateGenerateButtons({ text: '⏳ Generating...' });
 
-    var prompt = 'You are an expert quiz generator. Generate EXACTLY 15 multiple-choice questions based on the documents below. Return ONLY a JSON array — no markdown, no intro text.\n\nCRITICAL: You MUST generate exactly 15 questions.\n\nDocument content:\n"""\n' + text + '\n"""\n\nThe 15 questions are organized as 3 identical sets of 5 questions each. Each set of 5 follows this difficulty pattern: easy, medium, medium, hard, hard. Each question must have exactly 4 options. Use this JSON format:\n{"question":"...","options":["A","B","C","D"],"answer":0,"difficulty":"easy|medium|hard","explanation_correct":"step-by-step solution","explanations_incorrect":["","","",""]}\n\nSTART YOUR RESPONSE WITH: [{"question":';
+    var prompt = 'You are an expert quiz generator. Generate EXACTLY 15 multiple-choice questions that genuinely test whether a student UNDERSTOOD the documents below. Return ONLY a JSON array — no markdown, no intro text.\n\nCRITICAL: You MUST generate exactly 15 questions.\n\nQUESTION QUALITY RULES (strict):\n• NEVER ask for titles, headings, section names, document names or "what is this lesson about". Every question must test a FACT, CONCEPT, RULE, NUMBER, STEP, CAUSE or EFFECT found in the content.\n• Each question must be answerable ONLY by understanding the content - not by guessing the topic.\n• All 4 options must be plausible distractors with similar length and style. Never use "all of the above" or "none of the above".\n• Avoid double negatives and trick wording. Keep questions clear, specific and professional.\n• The correct answer must be unambiguous and directly supported by the document content.\n• explanation_correct must be a short step-by-step reasoning. explanations_incorrect must explain why EACH wrong option is wrong.\n\nDocument content:\n"""\n' + text + '\n"""\n\nThe 15 questions are organized as 3 identical sets of 5 questions each. Each set of 5 follows this difficulty pattern: easy, medium, medium, hard, hard. Each question must have exactly 4 options. Use this JSON format:\n{"question":"...","options":["A","B","C","D"],"answer":0,"difficulty":"easy|medium|hard","explanation_correct":"step-by-step solution","explanations_incorrect":["","","",""]}\n\nSTART YOUR RESPONSE WITH: [{"question":';
 
     var fullResponse = '';
     tool.requestAIStream(prompt, null, {
@@ -3989,6 +4715,8 @@ function generateHtmlFromPdf(onDone) {
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
   allUrls = allUrls.concat(editingWorksheetPdfUrls);
   allUrls = allUrls.filter(function(u) { return u && u.trim(); });
+  // Sources are sample inputs - AI generators only ever read Real documents.
+  allUrls = allUrls.filter(function(u) { return !isSourceDocumentUrl(u); });
 
   if (allUrls.length === 0) {
     tool.notify('No PDFs added yet. Add PDFs to Presentation, Study Documents, or Worksheets first.', 'warning');
@@ -4007,7 +4735,7 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
 
   for (var ri = 0; ri < allUrls.length; ri++) {
     (function(idx) {
-      tool.requestFileContent(toHostingUrl(allUrls[idx]), function(err, fileResult) {
+      readDocumentTextForAi(allUrls[idx], function(err, fileResult) {
         remaining--;
         if (!err && fileResult) {
           var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
@@ -4322,9 +5050,13 @@ function renderFlashcardsEditorList() {
     for (var j = 0; j < delBtns.length; j++) {
       delBtns[j].addEventListener('click', function(e) {
         e.stopPropagation();
-        editingFlashcards.splice(parseInt(this.getAttribute('data-del-fc')), 1);
-        renderFlashcardsEditorList();
-        autoSaveCurrentLesson();
+        var delFcIdx = parseInt(this.getAttribute('data-del-fc'));
+        var delFcFront = (editingFlashcards[delFcIdx] && (editingFlashcards[delFcIdx].front || editingFlashcards[delFcIdx].q)) ? (editingFlashcards[delFcIdx].front || editingFlashcards[delFcIdx].q) : 'this flashcard';
+        sandboxConfirm('Delete flashcard "' + (delFcFront.length > 60 ? delFcFront.substring(0, 60) + '…' : delFcFront) + '"?', function() {
+          editingFlashcards.splice(delFcIdx, 1);
+          renderFlashcardsEditorList();
+          autoSaveCurrentLesson();
+        }, 'Yes, Delete');
       });
     }
   }
@@ -4394,6 +5126,8 @@ function generateFlashcardsFromPdf(onDone) {
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
   allUrls = allUrls.concat(editingWorksheetPdfUrls);
   allUrls = allUrls.filter(function(u) { return u && u.trim(); });
+  // Sources are sample inputs - AI generators only ever read Real documents.
+  allUrls = allUrls.filter(function(u) { return !isSourceDocumentUrl(u); });
 
   if (allUrls.length === 0) {
     tool.notify('No PDFs added yet. Add PDFs first.', 'warning');
@@ -4410,7 +5144,7 @@ function generateFlashcardsFromPdf(onDone) {
   var remaining = allUrls.length;
   for (var ri = 0; ri < allUrls.length; ri++) {
     (function(idx) {
-      tool.requestFileContent(toHostingUrl(allUrls[idx]), function(err, fileResult) {
+      readDocumentTextForAi(allUrls[idx], function(err, fileResult) {
         remaining--;
         if (!err && fileResult) {
           var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
@@ -4478,6 +5212,8 @@ function generatePresentationFromPdf(onDone) {
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
   allUrls = allUrls.filter(function(u) { return u && u.trim(); });
+  // Sources are sample inputs - AI generators only ever read Real documents.
+  allUrls = allUrls.filter(function(u) { return !isSourceDocumentUrl(u); });
 
   if (allUrls.length === 0) {
     tool.notify('No PDFs added yet. Add PDFs to Presentation Slides or Study Documents first.', 'warning');
@@ -4493,7 +5229,7 @@ function generatePresentationFromPdf(onDone) {
   var remaining = allUrls.length;
   for (var ri = 0; ri < allUrls.length; ri++) {
     (function(idx) {
-      tool.requestFileContent(toHostingUrl(allUrls[idx]), function(err, fileResult) {
+      readDocumentTextForAi(allUrls[idx], function(err, fileResult) {
         remaining--;
         if (!err && fileResult) {
           var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
@@ -4711,6 +5447,3000 @@ function onHtmlCodeInput() {
 }
 
 /* ═══════════════════════════════════════════
+   STUDY DOCUMENT STUDIO
+   Upload or link a source document (Study Documents), extract its images
+   client-side, AI-rephrase the document from scratch into study-guide HTML
+   with the images embedded, and optionally AI-regenerate images with a
+   side-by-side picker. Extracted images are stored as compressed JPEG data
+   URLs inside studyHtmlData.docImages (the CMS has no binary re-upload
+   channel yet, so re-uploading extracted images as separate CMS files is
+   not possible - the gallery and the generated HTML share the same bytes).
+   ═══════════════════════════════════════════ */
+
+var editingStudyDocImages = []; // working copy: images of the document open in the studio drawer
+var editingStudyDocSources = []; // [{url, name}] - processing inputs, never shown to students
+var editingStudyDocImagesMap = {}; // { docUrl: [images] } - persisted per document
+var studioCurrentDocUrl = ''; // the document currently open in the studio drawer
+var studioLocalPdfUrl = '';    // document URL that the local PDF bytes belong to
+var studioLocalPdfBytes = null; // Uint8Array of the PDF read from the user's disk (browser only)
+var studioLocalPdfName = '';   // original file name of the local PDF
+var studioLocalPdfBlobUrl = ''; // blob: URL of the local PDF, used for the preview
+var studioPreviewBlobUrl = ''; // blob: URL built from the CMS relay preview
+
+/** Relay budget for document work. The CMS relay is server-enforced - ask
+ *  for 10 MB so normal PDFs are not rejected for size. */
+var STUDIO_RELAY_MAX_BYTES = 10 * 1024 * 1024;
+
+/* ── Large-file download channel (tool.requestFileBinary) ──
+   The parent CMS downloads the whole file in the browser and hands the
+   COMPLETE ArrayBuffer to the tool - no 500 KB relay cap, no truncation.
+   Requires allowFileFetch: 'yes' in the field settings; when the channel is
+   missing or switched off, small files still load through requestFetch. */
+var STUDIO_BINARY_MAX_BYTES = 100 * 1024 * 1024;
+var STUDIO_BINARY_TIMEOUT_MS = 120000;
+/** In-memory cache: one document is downloaded once per session, never persisted. */
+var studioFileBytesCache = {};
+var studioFileBytesCacheKeys = [];
+var studioFileBytesCacheTotal = 0;
+var STUDIO_FILE_CACHE_MAX_BYTES = 64 * 1024 * 1024;
+/** Concurrent calls for the same URL share a single download. */
+var studioFileBytesInflight = {};
+/** Why the last large-file download attempt did not use the new channel
+ *  ('', a channel error code, or 'missing'). Shown in the error message so a
+ *  misconfigured field is obvious instead of looking like a file-size issue. */
+var lastFileChannelFailure = '';
+var lastFileChannelFailureCode = '';
+/** Which failure code already printed its diagnostic block (once per page) */
+var fileChannelDiagnosticsPrintedFor = '';
+
+/** Print the diagnostic block once per failure code per page load */
+function logFileChannelFailureOnce(failureCode, details) {
+  if (fileChannelDiagnosticsPrintedFor === failureCode) return;
+  fileChannelDiagnosticsPrintedFor = failureCode;
+  logFileChannelDiagnostics('automatic: ' + failureCode, details);
+}
+
+/** Names of every function the CMS SDK exposes (diagnostics only) */
+function describeToolMethodNames() {
+  var methodNames = [];
+  try {
+    for (var methodName in tool) {
+      if (typeof tool[methodName] === 'function') methodNames.push(methodName);
+    }
+  } catch (toolError) { /* ignore */ }
+  return methodNames.sort().join(', ') || '(none)';
+}
+
+/** Remember why the new channel was not used */
+function recordFileChannelFailure(failureCode, fetchResult) {
+  lastFileChannelFailureCode = String(failureCode || '');
+  var detailText = (fetchResult && (fetchResult.detail || fetchResult.message)) ? String(fetchResult.detail || fetchResult.message) : '';
+  lastFileChannelFailure = lastFileChannelFailureCode + (detailText ? ' - ' + detailText : '');
+}
+
+/** Explain the last channel failure in plain language ('' when it worked) */
+function describeFileChannelFailure() {
+  var codeText = lastFileChannelFailureCode;
+  if (!codeText) return '';
+  if (codeText === 'missing') return 'This CMS build does not provide tool.requestFileBinary';
+  if (codeText === 'not_configured') return 'large-file download is switched off for this tool (allowFileFetch: yes is required)';
+  if (codeText === 'blocked_host') return 'the CMS is not allowed to download from this host (allowed file hosts)';
+  if (codeText === 'network') return 'the browser download failed - host unreachable or missing CORS headers' + (lastFileChannelFailure.indexOf(' - ') !== -1 ? ' (' + lastFileChannelFailure.split(' - ')[1] + ')' : '');
+  if (codeText === 'timeout') return 'the download did not finish in time';
+  if (codeText === 'channel_error') return 'the download channel threw an error' + (lastFileChannelFailure.indexOf(' - ') !== -1 ? ' (' + lastFileChannelFailure.split(' - ')[1] + ')' : '');
+  if (codeText === 'cancelled') return 'the download was cancelled';
+  return lastFileChannelFailure;
+}
+
+/* ── Download diagnostics (console only - never shown to end users) ── */
+
+/** Hide anything that looks like a credential before printing settings */
+function redactForDiagnostics(value) {
+  if (!value || typeof value !== 'object') return value;
+  var redacted = {};
+  var keyNames = Object.keys(value).slice(0, 40);
+  for (var keyIndex = 0; keyIndex < keyNames.length; keyIndex++) {
+    var keyName = keyNames[keyIndex];
+    if (/key|secret|token|password|auth|credential/i.test(keyName)) { continue; }
+    var keyValue = value[keyName];
+    if (keyValue === null || typeof keyValue !== 'object') redacted[keyName] = keyValue;
+    else if (Array.isArray(keyValue)) redacted[keyName] = keyValue.slice(0, 10);
+    else redacted[keyName] = '[object]';
+  }
+  return redacted;
+}
+
+/** Deep-ish, credential-free summary of any SDK object (2-3 levels) */
+function summarizeObjectForDiagnostics(value, depth) {
+  var remainingDepth = (typeof depth === 'number') ? depth : 2;
+  if (value === null || value === undefined) return value;
+  if (typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    var arraySample = [];
+    for (var sampleIndex = 0; sampleIndex < Math.min(value.length, 5); sampleIndex++) {
+      arraySample.push(summarizeObjectForDiagnostics(value[sampleIndex], remainingDepth - 1));
+    }
+    return { arrayLength: value.length, sample: arraySample };
+  }
+  var summary = {};
+  var keyNames = Object.keys(value);
+  for (var keyIndex = 0; keyIndex < keyNames.length && keyIndex < 40; keyIndex++) {
+    var keyName = keyNames[keyIndex];
+    if (/key|secret|token|password|auth|credential/i.test(keyName)) continue;
+    var keyValue = value[keyName];
+    if (keyValue === null || typeof keyValue !== 'object') summary[keyName] = keyValue;
+    else if (remainingDepth > 0) summary[keyName] = summarizeObjectForDiagnostics(keyValue, remainingDepth - 1);
+    else summary[keyName] = Array.isArray(keyValue) ? ('array(' + keyValue.length + ')') : '[object]';
+  }
+  return summary;
+}
+
+/** Whatever the SDK exposes about download settings/capabilities */
+function collectToolCapabilitySnapshot() {
+  var snapshot = { build: TOOL_BUILD };
+  try {
+    snapshot.requestFileBinary = (typeof tool.requestFileBinary === 'function') ? 'function' : 'MISSING';
+  } catch (probeError) {
+    snapshot.requestFileBinary = 'tool threw: ' + probeError.message;
+  }
+  // Field definitions carry the settings block in most SDK builds - this shows
+  // which keys really reach the tool frame.
+  try {
+    if (typeof tool.getFields === 'function') snapshot.getFields = summarizeObjectForDiagnostics(tool.getFields(), 3);
+  } catch (fieldsError) {
+    snapshot.getFields = 'threw: ' + fieldsError.message;
+  }
+  var getterNames = ['getSettings', 'getFieldSettings', 'getCapabilities', 'getConfig', 'getParams'];
+  var settingsGetterFound = false;
+  for (var getterIndex = 0; getterIndex < getterNames.length; getterIndex++) {
+    var getterName = getterNames[getterIndex];
+    try {
+      if (typeof tool[getterName] === 'function') {
+        snapshot[getterName] = redactForDiagnostics(tool[getterName]());
+        settingsGetterFound = true;
+      }
+    } catch (getterError) {
+      snapshot[getterName] = 'threw: ' + getterError.message;
+    }
+  }
+  var settingKeys = ['allowFileFetch', 'maxFileFetchBytes', 'allowedFileFetchHosts', 'allowAllFileFetchHosts', 'allowFileContent', 'allowAllFetchHosts', 'allowedFetchHosts', 'maxFetchBytes', 'allowBinaryUpload'];
+  var paramProbe = {};
+  // Only probe params when the SDK has no settings getter (avoids SDK warnings)
+  if (!settingsGetterFound) {
+    for (var settingIndex = 0; settingIndex < settingKeys.length; settingIndex++) {
+      var settingKey = settingKeys[settingIndex];
+      try { paramProbe[settingKey] = tool.param(settingKey, '(not exposed)'); }
+      catch (paramError) { paramProbe[settingKey] = 'threw: ' + paramError.message; }
+    }
+  }
+  snapshot.paramProbe = paramProbe;
+  snapshot.toolMethods = describeToolMethodNames();
+  return snapshot;
+}
+
+/** Compact view of a requestFileBinary result (never prints the bytes) */
+function summarizeFileChannelResult(fetchResult) {
+  if (fetchResult === null || fetchResult === undefined) return null;
+  if (typeof fetchResult !== 'object') return { value: String(fetchResult).substring(0, 200) };
+  var summary = {};
+  var fieldNames = ['status', 'statusText', 'contentType', 'fileName', 'byteLength', 'encoding', 'etag', 'fromCache', 'elapsedMs', 'detail', 'message', 'reason', 'limitBytes', 'code', 'error', 'host', 'url'];
+  for (var fieldIndex = 0; fieldIndex < fieldNames.length; fieldIndex++) {
+    if (fetchResult[fieldNames[fieldIndex]] !== undefined) summary[fieldNames[fieldIndex]] = fetchResult[fieldNames[fieldIndex]];
+  }
+  if (fetchResult.bytes) {
+    summary.bytes = (typeof fetchResult.bytes === 'string')
+      ? 'string(' + fetchResult.bytes.length + ' chars)'
+      : ('ArrayBuffer(' + (fetchResult.bytes.byteLength || 0) + ' bytes)');
+  }
+  if (fetchResult.base64) summary.base64 = 'string(' + fetchResult.base64.length + ' chars)';
+  summary.resultKeys = Object.keys(fetchResult).slice(0, 20).join(', ');
+  return summary;
+}
+
+/** One copyable console block explaining what the channel saw */
+function logFileChannelDiagnostics(stageLabel, details) {
+  try {
+    console.log('===== CURRICULUM BUILDER - FILE CHANNEL DIAGNOSTICS =====');
+    console.log('stage: ' + stageLabel);
+    console.log('build: ' + TOOL_BUILD);
+    console.log('tool snapshot: ' + JSON.stringify(collectToolCapabilitySnapshot(), null, 2));
+    if (details) console.log('details: ' + JSON.stringify(details, null, 2));
+    console.log('===== END FILE CHANNEL DIAGNOSTICS =====');
+  } catch (diagnosticsError) {
+    console.warn('[STUDIO:DOWNLOAD] diagnostics could not be printed:', diagnosticsError);
+  }
+}
+
+/** Console helper: real download test (no cache), defaults to the open document.
+ *  Usage: __curriculumBuilderFileDiag()  or  __curriculumBuilderFileDiag('https://…') */
+function runFileChannelSelfTest(testUrl) {
+  var targetUrl = testUrl || (typeof studioCurrentDocUrl === 'string' ? studioCurrentDocUrl : '');
+  logFileChannelDiagnostics('manual self-test start', {
+    url: targetUrl,
+    hasDocumentOpen: !!targetUrl,
+    requestOptions: { maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS }
+  });
+  if (!targetUrl) {
+    console.warn('[DIAG] No document URL. Open a document first, or call __curriculumBuilderFileDiag("https://…").');
+    return;
+  }
+  if (!binaryFileChannelAvailable()) {
+    console.warn('[DIAG] tool.requestFileBinary is not a function on this host.');
+    return;
+  }
+  var selfTestStartedAt = Date.now();
+  requestFileBinarySafely({ url: targetUrl, maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS }, function(errorCode, fetchResult) {
+    console.log('[DIAG] callback after ' + (Date.now() - selfTestStartedAt) + ' ms - errorCode: ' + (errorCode || 'none'));
+    console.log('[DIAG] result summary: ' + JSON.stringify(summarizeFileChannelResult(fetchResult), null, 2));
+    logFileChannelDiagnostics('manual self-test result', {
+      url: targetUrl,
+      errorCode: errorCode || null,
+      result: summarizeFileChannelResult(fetchResult)
+    });
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.__curriculumBuilderFileDiag = runFileChannelSelfTest;
+  window.__curriculumBuilderToolSnapshot = function() {
+    var snapshot = collectToolCapabilitySnapshot();
+    console.log(JSON.stringify(snapshot, null, 2));
+    return snapshot;
+  };
+  /** Console helper: what the tool currently holds (data + download settings) */
+  window.__curriculumBuilderDebug = function() {
+    var rawValue = window.__curriculumLastVal;
+    var debugInfo = {
+      build: TOOL_BUILD,
+      hasCurriculumValue: rawValue !== undefined && rawValue !== null,
+      valueType: (rawValue === null) ? 'null' : typeof rawValue,
+      valueKeys: (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)) ? Object.keys(rawValue).slice(0, 20) : [],
+      valueLength: (typeof rawValue === 'string') ? rawValue.length : null,
+      sectionCount: sections.length,
+      lastGoodSectionCount: (window.__curriculumLastGoodValue && window.__curriculumLastGoodValue.sections) ? window.__curriculumLastGoodValue.sections.length : 0,
+      secondsSinceLocalSave: lastSaveRequestedAt ? Math.round((Date.now() - lastSaveRequestedAt) / 1000) : null,
+      downloadChannel: collectToolCapabilitySnapshot()
+    };
+    console.log('===== CURRICULUM BUILDER DEBUG =====');
+    console.log(JSON.stringify(debugInfo, null, 2));
+    console.log('===== END CURRICULUM BUILDER DEBUG =====');
+    return debugInfo;
+  };
+}
+
+/** Call requestFileBinary defensively: some SDK builds reject an options
+ *  object that contains a function (postMessage cannot clone it), so retry
+ *  once with plain values when that happens. */
+function requestFileBinarySafely(channelOptions, onResult) {
+  var plainOptions = {
+    url: channelOptions.url,
+    maxBytes: channelOptions.maxBytes,
+    timeoutMs: channelOptions.timeoutMs,
+    cacheKey: channelOptions.cacheKey
+  };
+  try {
+    tool.requestFileBinary(channelOptions, function(errorCode, fetchResult) {
+      if ((errorCode === 'not_configured' || errorCode === 'invalid_options' || errorCode === 'invalid_request') && channelOptions.onProgress) {
+        console.warn('[STUDIO:DOWNLOAD] requestFileBinary refused the options (' + errorCode + ') - retrying without callbacks');
+        try { tool.requestFileBinary(plainOptions, onResult); return; } catch (retryError) { console.warn('[STUDIO:DOWNLOAD] retry failed:', retryError); }
+      }
+      onResult(errorCode, fetchResult);
+    });
+  } catch (channelError) {
+    console.warn('[STUDIO:DOWNLOAD] requestFileBinary threw:', channelError);
+    if (channelOptions.onProgress) {
+      try { tool.requestFileBinary(plainOptions, onResult); return; } catch (retryError) { console.warn('[STUDIO:DOWNLOAD] retry failed:', retryError); }
+    }
+    onResult('channel_error', { detail: String((channelError && channelError.message) || channelError) });
+  }
+}
+
+/** True when the large-file download channel exists on this host */
+function binaryFileChannelAvailable() {
+  return (typeof tool !== 'undefined') && (typeof tool.requestFileBinary === 'function');
+}
+
+/** True for documents that are plain text (decoded with TextDecoder) */
+function isTextDocumentUrl(fileUrl) {
+  return /\.(html?|txt|md|markdown|csv|json|xml|css|js)(\?|#|$)/i.test(String(fileUrl || ''));
+}
+
+/** Last path segment of a URL, usable as a file name on disk */
+function safeDownloadFileName(fileUrlOrName, fallbackName) {
+  var pathText = String(fileUrlOrName || '').split('?')[0].split('#')[0];
+  var nameText = pathText.substring(pathText.lastIndexOf('/') + 1);
+  return nameText || (fallbackName || 'document');
+}
+
+/** Decode text bytes (UTF-8 when the engine supports it, latin1 otherwise) */
+function decodeTextBytes(textBytes) {
+  try {
+    if (typeof TextDecoder === 'function') return new TextDecoder('utf-8').decode(textBytes);
+  } catch (decodeError) { /* fall through to latin1 */ }
+  return bytesToLatin1String(textBytes);
+}
+
+/** data: URL for an in-memory file */
+function bytesToDataUrl(fileBytes, contentType) {
+  return 'data:' + (contentType || 'application/octet-stream') + ';base64,' + bytesToBase64(fileBytes);
+}
+
+/** "12.4 MB" / "840 KB" - used in status lines */
+function formatFileSize(byteLength) {
+  var sizeValue = Number(byteLength) || 0;
+  if (sizeValue >= 1024 * 1024) return (Math.round((sizeValue / (1024 * 1024)) * 10) / 10) + ' MB';
+  if (sizeValue >= 1024) return Math.round(sizeValue / 1024) + ' KB';
+  return sizeValue + ' bytes';
+}
+
+/** Save in-memory bytes to the user's disk through a temporary blob link */
+function saveBytesToDisk(fileBytes, fileName, contentType) {
+  try {
+    var fileBlob = new Blob([fileBytes], { type: contentType || 'application/octet-stream' });
+    var blobUrl = URL.createObjectURL(fileBlob);
+    var downloadAnchor = document.createElement('a');
+    downloadAnchor.href = blobUrl;
+    downloadAnchor.download = fileName || 'document';
+    downloadAnchor.style.display = 'none';
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    setTimeout(function() {
+      try { URL.revokeObjectURL(blobUrl); } catch (revokeError) { /* already gone */ }
+    }, 30000);
+    return true;
+  } catch (saveError) {
+    console.warn('[STUDIO:DOWNLOAD] could not save the file:', saveError);
+    return false;
+  }
+}
+
+/** Keep downloaded bytes for this session (small budget, no persistence) */
+function rememberStudioFileBytes(cacheKey, cacheEntry) {
+  if (!cacheKey || !cacheEntry || !cacheEntry.bytes) return;
+  if (cacheEntry.bytes.length > STUDIO_FILE_CACHE_MAX_BYTES) return;
+  if (!studioFileBytesCache[cacheKey]) studioFileBytesCacheKeys.push(cacheKey);
+  var previousEntry = studioFileBytesCache[cacheKey];
+  if (previousEntry) studioFileBytesCacheTotal -= previousEntry.bytes.length;
+  studioFileBytesCache[cacheKey] = cacheEntry;
+  studioFileBytesCacheTotal += cacheEntry.bytes.length;
+  while (studioFileBytesCacheTotal > STUDIO_FILE_CACHE_MAX_BYTES && studioFileBytesCacheKeys.length > 1) {
+    var oldestKey = studioFileBytesCacheKeys.shift();
+    if (oldestKey === cacheKey) { studioFileBytesCacheKeys.push(oldestKey); break; }
+    var oldestEntry = studioFileBytesCache[oldestKey];
+    if (oldestEntry) {
+      studioFileBytesCacheTotal -= oldestEntry.bytes.length;
+      delete studioFileBytesCache[oldestKey];
+    }
+  }
+}
+
+/** User-facing text for a download error code */
+function describeFileFetchError(errorCode, fetchResult) {
+  var codeText = String(errorCode || '');
+  var detailText = (fetchResult && (fetchResult.detail || fetchResult.reason)) ? String(fetchResult.detail) : '';
+  if (codeText === 'not_configured') return 'File downloads are not enabled on this host (needs allowFileFetch: yes in the field settings).';
+  if (codeText === 'blocked_host') return 'The CMS is not allowed to download from this host - add it to the allowed file hosts.';
+  if (codeText === 'invalid_url') return 'That document link is not a valid https address.';
+  if (codeText === 'too_large') {
+    var limitText = (fetchResult && fetchResult.limitBytes) ? formatFileSize(fetchResult.limitBytes) : 'the configured limit';
+    var actualText = (fetchResult && fetchResult.byteLength) ? ' (this file is ' + formatFileSize(fetchResult.byteLength) + ')' : '';
+    return 'The file is larger than ' + limitText + actualText + '.';
+  }
+  if (codeText === 'http_error') return 'The file host returned HTTP ' + ((fetchResult && fetchResult.status) || 'error') + '.';
+  if (codeText === 'timeout') return 'The download did not finish in time.';
+  if (codeText === 'cancelled') return 'The download was cancelled.';
+  if (codeText === 'network') return 'The download failed - the host may be unreachable or missing CORS headers (Access-Control-Allow-Origin)' + (detailText ? ': ' + detailText : '') + '.';
+  if (codeText === 'relay_failed') {
+    var channelExplanation = describeFileChannelFailure();
+    if (channelExplanation) {
+      return 'The large-file download channel is not usable (' + channelExplanation + '), so the fallback relay was tried and it rejected the document (' + detailText + ') because it stops at 512 KB.';
+    }
+    return 'The CMS relay could not read the document (' + detailText + ') - the relay has a server-enforced 512 KB limit.';
+  }
+  if (codeText === 'channel_error') return 'The large-file download channel threw an error' + (detailText ? ': ' + detailText : '') + '.';
+  if (codeText === 'decode_failed') return 'The downloaded file could not be decoded.';
+  return 'The file could not be downloaded' + (codeText ? ' (' + codeText + ')' : '') + '.';
+}
+
+/** Turn a requestFileBinary result into bytes (arraybuffer or base64 form) */
+function fileBytesFromFetchResult(fetchResult) {
+  if (!fetchResult) return null;
+  try {
+    if (fetchResult.encoding === 'base64' && fetchResult.base64) return base64ToBytes(fetchResult.base64);
+    if (fetchResult.bytes) {
+      if (typeof fetchResult.bytes === 'string') return base64ToBytes(fetchResult.bytes);
+      return new Uint8Array(fetchResult.bytes);
+    }
+    if (fetchResult.dataUrl) {
+      var commaIndex = String(fetchResult.dataUrl).indexOf(',');
+      if (commaIndex !== -1) return base64ToBytes(String(fetchResult.dataUrl).substring(commaIndex + 1));
+    }
+  } catch (bytesError) {
+    console.warn('[STUDIO:DOWNLOAD] could not read the file bytes:', bytesError);
+  }
+  return null;
+}
+
+/** Legacy path: the 500 KB requestFetch relay (small files only) */
+function fetchFileBytesThroughRelay(sourceUrl, onDone) {
+  if (typeof tool.requestFetch !== 'function') { onDone('not_configured', null, null); return; }
+  tool.requestFetch(toHostingUrl(sourceUrl), { method: 'GET', timeoutMs: 30000, maxBytes: STUDIO_RELAY_MAX_BYTES }, function(fetchError, fetchResult) {
+    if (fetchError || !fetchResult || !fetchResult.dataUrl) {
+      onDone('relay_failed', null, { detail: String(fetchError || 'no binary data returned') });
+      return;
+    }
+    try {
+      var relayBytes = base64ToBytes(String(fetchResult.dataUrl).split(',')[1]);
+      onDone(null, relayBytes, {
+        bytes: relayBytes,
+        contentType: fetchResult.contentType || '',
+        fileName: safeDownloadFileName(sourceUrl, 'document'),
+        byteLength: relayBytes.length
+      });
+    } catch (bytesError) {
+      onDone('decode_failed', null, null);
+    }
+  });
+}
+
+/**
+ * Download the COMPLETE bytes of a document.
+ * Local file bytes win (instant), then tool.requestFileBinary (no size cap),
+ * then the old relay for hosts that have not enabled the new channel.
+ * onDone(errorCode, bytes:Uint8Array, meta)
+ */
+function fetchDocumentBytes(sourceUrl, options, onDone) {
+  var requestOptions = options || {};
+  if (!sourceUrl) { onDone('invalid_url', null, null); return; }
+  if (studioLocalPdfBytes && studioLocalPdfUrl === sourceUrl) {
+    var localMeta = {
+      bytes: studioLocalPdfBytes,
+      contentType: 'application/pdf',
+      fileName: studioLocalPdfName || safeDownloadFileName(sourceUrl, 'document.pdf'),
+      byteLength: studioLocalPdfBytes.length,
+      fromLocalFile: true
+    };
+    if (requestOptions.onProgress) requestOptions.onProgress(localMeta.byteLength, localMeta.byteLength);
+    onDone(null, studioLocalPdfBytes, localMeta);
+    return;
+  }
+  // One cache entry per URL - text, images and downloads share the download.
+  var cacheKey = 'file|' + sourceUrl;
+  if (studioFileBytesCache[cacheKey]) {
+    var cachedEntry = studioFileBytesCache[cacheKey];
+    if (requestOptions.onProgress) requestOptions.onProgress(cachedEntry.byteLength, cachedEntry.byteLength);
+    onDone(null, cachedEntry.bytes, cachedEntry);
+    return;
+  }
+  function finishDownload(errorCode, fileBytes, meta) {
+    var waitingCallbacks = studioFileBytesInflight[cacheKey] || [];
+    delete studioFileBytesInflight[cacheKey];
+    for (var waitIndex = 0; waitIndex < waitingCallbacks.length; waitIndex++) waitingCallbacks[waitIndex](errorCode, fileBytes, meta);
+    onDone(errorCode, fileBytes, meta);
+  }
+  if (studioFileBytesInflight[cacheKey]) {
+    studioFileBytesInflight[cacheKey].push(onDone);
+    return;
+  }
+  studioFileBytesInflight[cacheKey] = [];
+  function finishThroughRelay() {
+    fetchFileBytesThroughRelay(sourceUrl, function(relayErrorCode, relayBytes, relayMeta) {
+      if (!relayErrorCode && relayBytes) rememberStudioFileBytes(cacheKey, relayMeta);
+      finishDownload(relayErrorCode, relayBytes, relayMeta);
+    });
+  }
+  if (!binaryFileChannelAvailable()) {
+    recordFileChannelFailure('missing');
+    console.warn('[STUDIO:DOWNLOAD] tool.requestFileBinary is missing - tools available: ' + describeToolMethodNames());
+    logFileChannelFailureOnce('missing', { url: sourceUrl, note: 'The SDK running inside this tool frame has no requestFileBinary method.' });
+    finishThroughRelay();
+    return;
+  }
+  var channelFinished = false;
+  var channelWatchdog = setTimeout(function() {
+    if (channelFinished) return;
+    channelFinished = true;
+    recordFileChannelFailure('timeout');
+    console.warn('[STUDIO:DOWNLOAD] requestFileBinary never called back - falling back to the relay');
+    finishThroughRelay();
+  }, STUDIO_BINARY_TIMEOUT_MS + 30000);
+  requestFileBinarySafely({
+    url: sourceUrl,
+    maxBytes: STUDIO_BINARY_MAX_BYTES,
+    timeoutMs: STUDIO_BINARY_TIMEOUT_MS,
+    cacheKey: cacheKey,
+    onProgress: function(loadedBytes, totalBytes) {
+      if (requestOptions.onProgress) requestOptions.onProgress(loadedBytes, totalBytes);
+    }
+  }, function(fetchErrorCode, fetchResult) {
+    if (channelFinished) return;
+    channelFinished = true;
+    clearTimeout(channelWatchdog);
+    if (!fetchErrorCode) {
+      lastFileChannelFailure = '';
+      lastFileChannelFailureCode = '';
+      var fileBytes = fileBytesFromFetchResult(fetchResult);
+      if (fileBytes && fileBytes.length) {
+        var fileMeta = {
+          bytes: fileBytes,
+          contentType: (fetchResult && fetchResult.contentType) || '',
+          fileName: (fetchResult && fetchResult.fileName) || safeDownloadFileName(sourceUrl, 'document'),
+          byteLength: fileBytes.length,
+          status: fetchResult ? fetchResult.status : 0
+        };
+        rememberStudioFileBytes(cacheKey, fileMeta);
+        finishDownload(null, fileBytes, fileMeta);
+        return;
+      }
+      recordFileChannelFailure('channel_error', { detail: 'the channel returned no bytes' });
+      finishDownload('decode_failed', null, fetchResult);
+      return;
+    }
+    // The channel can be off, blocked for this host, or unable to reach the
+    // host (CORS). Small files can still arrive through the old relay, so
+    // remember the real reason and try it before reporting a failure.
+    var fallbackCodes = ['not_configured', 'blocked_host', 'network', 'channel_error'];
+    if (fallbackCodes.indexOf(fetchErrorCode) !== -1) {
+      recordFileChannelFailure(fetchErrorCode, fetchResult);
+      console.warn('[STUDIO:DOWNLOAD] large-file channel did not deliver (' + fetchErrorCode + ') - trying the 512 KB relay', summarizeFileChannelResult(fetchResult));
+      logFileChannelFailureOnce(fetchErrorCode, {
+        url: sourceUrl,
+        requestOptions: { maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS },
+        callback: { errorCode: fetchErrorCode, result: summarizeFileChannelResult(fetchResult) }
+      });
+      finishThroughRelay();
+      return;
+    }
+    recordFileChannelFailure(fetchErrorCode, fetchResult);
+    logFileChannelFailureOnce(fetchErrorCode, {
+      url: sourceUrl,
+      requestOptions: { maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS },
+      callback: { errorCode: fetchErrorCode, result: summarizeFileChannelResult(fetchResult) }
+    });
+    finishDownload(fetchErrorCode, null, fetchResult);
+  });
+}
+
+/* ── Local (browser-only) file helpers - no server relay involved ── */
+
+/** Open the browser's own file picker (works even when tool.requestUpload is blocked) */
+function pickLocalFile(acceptTypes, onPicked) {
+  try {
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = acceptTypes || '';
+    fileInput.setAttribute('data-local-picker', 'yes');
+    fileInput.style.position = 'fixed';
+    fileInput.style.left = '-10000px';
+    fileInput.style.top = '-10000px';
+    fileInput.style.opacity = '0';
+    document.body.appendChild(fileInput);
+    fileInput.addEventListener('change', function() {
+      var pickedFile = (fileInput.files && fileInput.files.length) ? fileInput.files[0] : null;
+      try { fileInput.remove(); } catch (removeError) { /* older engines */ }
+      if (pickedFile) onPicked(pickedFile);
+    });
+    fileInput.click();
+    return true;
+  } catch (pickError) {
+    console.error('Local file picker could not open:', pickError);
+    return false;
+  }
+}
+
+/** Read a local File as a data URL (browser only) */
+function readLocalFileAsDataUrl(file, onDone) {
+  var fileReader = new FileReader();
+  fileReader.onload = function() { onDone(null, String(fileReader.result || '')); };
+  fileReader.onerror = function() { onDone('Could not read "' + (file.name || 'the file') + '" from disk.'); };
+  fileReader.readAsDataURL(file);
+}
+
+/** Upload a local File to CMS storage via requestUploadBinary (no file picker relay) */
+function uploadLocalFileToStorage(file, onDone) {
+  if (typeof tool.requestUploadBinary !== 'function') {
+    onDone('Binary upload is not enabled (allowBinaryUpload: yes in the field settings).');
+    return;
+  }
+  readLocalFileAsDataUrl(file, function(readError, dataUrl) {
+    if (readError) { onDone(readError); return; }
+    var contentType = file.type || (/\.pdf$/i.test(file.name || '') ? 'application/pdf' : 'application/octet-stream');
+    tool.requestUploadBinary({ dataUrl: dataUrl, name: file.name, contentType: contentType }, function(uploadError, uploadResult) {
+      if (uploadError || !uploadResult || !uploadResult.url) {
+        onDone('Upload failed: ' + (uploadError || 'no URL returned'));
+        return;
+      }
+      onDone(null, uploadResult);
+    });
+  });
+}
+
+/* ── Bytes / base64 helpers ── */
+/* apply() rejects very long argument lists, so the binary string is built
+   from fixed slices that stay well under the browser limit. */
+var BYTE_STRING_CHUNK_SIZE = 32768;
+
+function bytesToLatin1String(byteArray) {
+  var chunks = [];
+  for (var chunkStart = 0; chunkStart < byteArray.length; chunkStart += BYTE_STRING_CHUNK_SIZE) {
+    chunks.push(String.fromCharCode.apply(null, byteArray.subarray(chunkStart, Math.min(chunkStart + BYTE_STRING_CHUNK_SIZE, byteArray.length))));
+  }
+  return chunks.join('');
+}
+
+function latin1StringToBytes(latin1Text) {
+  var bytes = new Uint8Array(latin1Text.length);
+  for (var i = 0; i < latin1Text.length; i++) bytes[i] = latin1Text.charCodeAt(i) & 0xff;
+  return bytes;
+}
+
+/* btoa() pads every call it makes, so each slice MUST hold a multiple of
+   3 bytes. A slice of 32768 leaves '=' padding in the MIDDLE of the joined
+   result, which makes the whole base64 invalid - Chrome then refuses the
+   data: URL with net::ERR_INVALID_URL and nothing can be decoded. */
+var BASE64_CHUNK_SIZE = 32766;
+
+function bytesToBase64(byteArray) {
+  var latin1Text = bytesToLatin1String(byteArray);
+  var base64 = '';
+  for (var chunkStart = 0; chunkStart < latin1Text.length; chunkStart += BASE64_CHUNK_SIZE) {
+    base64 += btoa(latin1Text.substring(chunkStart, chunkStart + BASE64_CHUNK_SIZE));
+  }
+  return base64;
+}
+
+function base64ToBytes(base64Text) {
+  var latin1Text = atob(base64Text);
+  return latin1StringToBytes(latin1Text);
+}
+
+/* ── Raw DEFLATE inflater (RFC 1951, no zlib header) ──
+   PDF image streams use raw deflate; the sandbox has no external
+   libraries, so this compact inflater handles stored, fixed-Huffman and
+   dynamic-Huffman blocks. */
+function inflateRawDeflate(inputBytes) {
+  var sourcePos = 0;
+  var output = [];
+  var bitBuffer = 0;
+  var bitCount = 0;
+
+  function readBits(count) {
+    while (bitCount < count) {
+      bitBuffer |= (sourcePos < inputBytes.length ? inputBytes[sourcePos] : 0) << bitCount;
+      sourcePos++;
+      bitCount += 8;
+    }
+    var value = bitBuffer & ((1 << count) - 1);
+    bitBuffer >>>= count;
+    bitCount -= count;
+    return value;
+  }
+
+  var LENGTH_BASE = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258];
+  var LENGTH_EXTRA = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
+  var DISTANCE_BASE = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577];
+  var DISTANCE_EXTRA = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
+  var CODE_LENGTH_ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+
+  function buildHuffmanTable(codeLengths) {
+    var lengthCounts = [];
+    for (var c = 0; c <= 15; c++) lengthCounts.push(0);
+    for (var i = 0; i < codeLengths.length; i++) {
+      var len = codeLengths[i];
+      if (len > 0 && len <= 15) lengthCounts[len]++;
+    }
+    var nextCode = [];
+    for (var n = 0; n <= 15; n++) nextCode.push(0);
+    var runningCode = 0;
+    for (var bits = 1; bits <= 15; bits++) {
+      runningCode = (runningCode + lengthCounts[bits - 1]) << 1;
+      nextCode[bits] = runningCode;
+    }
+    var table = [];
+    for (var t = 0; t <= 15; t++) table.push({});
+    for (var symbol = 0; symbol < codeLengths.length; symbol++) {
+      var symbolLen = codeLengths[symbol];
+      if (symbolLen > 0) {
+        table[symbolLen][nextCode[symbolLen]] = symbol;
+        nextCode[symbolLen]++;
+      }
+    }
+    return table;
+  }
+
+  function decodeSymbol(table) {
+    var code = 0;
+    for (var len = 1; len <= 15; len++) {
+      code = (code << 1) | readBits(1);
+      if (table[len][code] !== undefined) return table[len][code];
+    }
+    return -1;
+  }
+
+  var fixedLiteralLengths = [];
+  for (var fl = 0; fl < 144; fl++) fixedLiteralLengths.push(8);
+  for (var fl2 = 144; fl2 < 256; fl2++) fixedLiteralLengths.push(9);
+  for (var fl3 = 256; fl3 < 280; fl3++) fixedLiteralLengths.push(7);
+  for (var fl4 = 280; fl4 < 288; fl4++) fixedLiteralLengths.push(8);
+  var fixedDistanceLengths = [];
+  for (var fd = 0; fd < 32; fd++) fixedDistanceLengths.push(5);
+
+  var literalTable = buildHuffmanTable(fixedLiteralLengths);
+  var distanceTable = buildHuffmanTable(fixedDistanceLengths);
+
+  function decodeCompressedBlock() {
+    while (true) {
+      var symbol = decodeSymbol(literalTable);
+      if (symbol < 0) return 'invalid literal code';
+      if (symbol < 256) {
+        output.push(symbol);
+      } else if (symbol === 256) {
+        return null;
+      } else {
+        var lengthIndex = symbol - 257;
+        if (lengthIndex < 0 || lengthIndex >= LENGTH_BASE.length) return 'invalid length symbol';
+        var lengthValue = LENGTH_BASE[lengthIndex] + readBits(LENGTH_EXTRA[lengthIndex]);
+        var distanceSymbol = decodeSymbol(distanceTable);
+        if (distanceSymbol < 0) return 'invalid distance code';
+        var distanceValue = DISTANCE_BASE[distanceSymbol] + readBits(DISTANCE_EXTRA[distanceSymbol]);
+        if (distanceValue > output.length) return 'distance too far back';
+        for (var copyStep = 0; copyStep < lengthValue; copyStep++) {
+          output.push(output[output.length - distanceValue]);
+        }
+      }
+    }
+  }
+
+  var finalBlock = false;
+  while (!finalBlock) {
+    finalBlock = readBits(1) === 1;
+    var blockType = readBits(2);
+    if (blockType === 0) {
+      bitBuffer = 0;
+      bitCount = 0;
+      if (sourcePos + 4 > inputBytes.length) return null;
+      var storedLength = inputBytes[sourcePos] | (inputBytes[sourcePos + 1] << 8);
+      sourcePos += 2;
+      var storedInverse = inputBytes[sourcePos] | (inputBytes[sourcePos + 1] << 8);
+      sourcePos += 2;
+      if ((storedLength ^ 0xffff) !== storedInverse) return null;
+      for (var storedIndex = 0; storedIndex < storedLength; storedIndex++) {
+        if (sourcePos >= inputBytes.length) return null;
+        output.push(inputBytes[sourcePos++]);
+      }
+    } else if (blockType === 1 || blockType === 2) {
+      if (blockType === 2) {
+        var hlit = readBits(5) + 257;
+        var hdist = readBits(5) + 1;
+        var hclen = readBits(4) + 4;
+        var codeLengthLengths = [];
+        for (var cl = 0; cl < 19; cl++) codeLengthLengths.push(0);
+        for (var ci = 0; ci < hclen; ci++) codeLengthLengths[CODE_LENGTH_ORDER[ci]] = readBits(3);
+        var codeLengthTable = buildHuffmanTable(codeLengthLengths);
+        var allLengths = [];
+        while (allLengths.length < hlit + hdist) {
+          var codeLengthSymbol = decodeSymbol(codeLengthTable);
+          if (codeLengthSymbol < 0) return null;
+          if (codeLengthSymbol < 16) {
+            allLengths.push(codeLengthSymbol);
+          } else if (codeLengthSymbol === 16) {
+            var repeatCount = readBits(2) + 3;
+            var previousLength = allLengths.length ? allLengths[allLengths.length - 1] : 0;
+            for (var r16 = 0; r16 < repeatCount; r16++) allLengths.push(previousLength);
+          } else if (codeLengthSymbol === 17) {
+            var zeroRun17 = readBits(3) + 3;
+            for (var z17 = 0; z17 < zeroRun17; z17++) allLengths.push(0);
+          } else {
+            var zeroRun18 = readBits(7) + 11;
+            for (var z18 = 0; z18 < zeroRun18; z18++) allLengths.push(0);
+          }
+        }
+        if (allLengths.length > hlit + hdist) return null;
+        var literalLengths = allLengths.slice(0, hlit);
+        var distanceLengths = allLengths.slice(hlit, hlit + hdist);
+        if (!literalLengths[256]) literalLengths[256] = 1;
+        literalTable = buildHuffmanTable(literalLengths);
+        distanceTable = buildHuffmanTable(distanceLengths);
+      } else {
+        literalTable = buildHuffmanTable(fixedLiteralLengths);
+        distanceTable = buildHuffmanTable(fixedDistanceLengths);
+      }
+      var blockError = decodeCompressedBlock();
+      if (blockError) return null;
+    } else {
+      return null;
+    }
+  }
+  return new Uint8Array(output);
+}
+
+/* ── PDF image stream discovery ── */
+/* Diagnostics for the last scan, shown when nothing could be extracted. */
+var lastPdfText = '';
+var lastPdfScanInfo = {
+  imageObjects: 0, inlineImages: 0, carvedImages: 0, encrypted: false,
+  isPdf: false, imageMentions: 0, pageCount: 0, xobjectCount: 0, jp2Signature: false, masksSkipped: 0,
+  filters: { dct: 0, flate: 0, jpx: 0, jbig2: 0, ccitt: 0 }
+};
+
+function findPdfImageStreams(pdfBytes) {
+  var pdfText = bytesToLatin1String(pdfBytes);
+  lastPdfText = pdfText;
+  lastPdfScanInfo.masksSkipped = 0;
+  var streams = [];
+  // Object numbers referenced as /SMask or /Mask are alpha/soft masks, not
+  // content images - decoding them returns solid black/gray squares.
+  var maskObjectNumbers = {};
+  var smaskRefPattern = /\/SMask\s+(\d+)\s+\d+\s+R/g;
+  var smaskRefMatch;
+  while ((smaskRefMatch = smaskRefPattern.exec(pdfText))) maskObjectNumbers[smaskRefMatch[1]] = true;
+  var maskRefPattern = /\/Mask\s+(\d+)\s+\d+\s+R/g;
+  var maskRefMatch;
+  while ((maskRefMatch = maskRefPattern.exec(pdfText))) maskObjectNumbers[maskRefMatch[1]] = true;
+  var maskArrayPattern = /\/Mask\s*\[([^\]]*?)\]/g;
+  var maskArrayMatch;
+  while ((maskArrayMatch = maskArrayPattern.exec(pdfText))) {
+    var maskArrayNumbers = maskArrayMatch[1].match(/(\d+)\s+\d+\s+R/g) || [];
+    for (var maskArrayIndex = 0; maskArrayIndex < maskArrayNumbers.length; maskArrayIndex++) {
+      var maskNumberMatch = maskArrayNumbers[maskArrayIndex].match(/(\d+)/);
+      if (maskNumberMatch) maskObjectNumbers[maskNumberMatch[1]] = true;
+    }
+  }
+  // Walk the file object by object so every image gets its real object number
+  // and dictionary (the old "look back 2000 chars" trick mis-assigned numbers
+  // and could mistake real pictures for soft masks).
+  var objectHeaderPattern = /(\d+)\s+\d+\s+obj\b/g;
+  var headerMatch;
+  while ((headerMatch = objectHeaderPattern.exec(pdfText)) && streams.length < 40) {
+    var objectNumber = headerMatch[1];
+    var dictionaryStart = headerMatch.index + headerMatch[0].length;
+    var streamKeywordIndex = pdfText.indexOf('stream', dictionaryStart);
+    if (streamKeywordIndex === -1) break;
+    var dictText = pdfText.substring(dictionaryStart, streamKeywordIndex);
+    var endObjectIndex = dictText.indexOf('endobj');
+    if (endObjectIndex !== -1) { headerMatch.lastIndex = dictionaryStart + endObjectIndex; continue; }
+    // Always hop over the whole payload, otherwise binary data could fake
+    // another "N 0 obj" header.
+    var payloadStart = streamKeywordIndex + 6;
+    if (pdfText.charAt(payloadStart) === '\r') payloadStart++;
+    if (pdfText.charAt(payloadStart) === '\n') payloadStart++;
+    var endStreamIndex = pdfText.indexOf('endstream', payloadStart);
+    if (endStreamIndex === -1) break;
+    headerMatch.lastIndex = endStreamIndex + 9;
+    if (!/\/Subtype\s*\/Image/.test(dictText)) continue;
+    if (maskObjectNumbers[objectNumber]) { lastPdfScanInfo.masksSkipped++; continue; }
+    var streamBytes = latin1StringToBytes(pdfText.substring(payloadStart, endStreamIndex));
+    // Trim the EOL that precedes "endstream" so the binary payload is exact.
+    var streamStart = 0;
+    var streamEnd = streamBytes.length;
+    while (streamStart < streamEnd && (streamBytes[streamStart] === 0x0d || streamBytes[streamStart] === 0x0a)) streamStart++;
+    while (streamEnd > streamStart && (streamBytes[streamEnd - 1] === 0x0d || streamBytes[streamEnd - 1] === 0x0a)) streamEnd--;
+    streams.push({ index: streams.length, objectNumber: objectNumber, dictText: dictText, streamBytes: streamBytes.subarray(streamStart, streamEnd) });
+  }
+  lastPdfScanInfo.imageObjects = streams.length;
+  lastPdfScanInfo.inlineImages = 0;
+  lastPdfScanInfo.carvedImages = 0;
+  lastPdfScanInfo.encrypted = pdfText.indexOf('/Encrypt') !== -1;
+  lastPdfScanInfo.isPdf = pdfText.indexOf('%PDF-') !== -1 && pdfText.indexOf('%PDF-') < 1024;
+  lastPdfScanInfo.imageMentions = (pdfText.match(/\/Subtype\s*\/Image/g) || []).length;
+  lastPdfScanInfo.pageCount = (pdfText.match(/\/Type\s*\/Page[^s]/g) || []).length;
+  lastPdfScanInfo.xobjectCount = (pdfText.match(/\/XObject/g) || []).length;
+  lastPdfScanInfo.filters = {
+    dct: (pdfText.match(/\/DCTDecode/g) || []).length,
+    flate: (pdfText.match(/\/FlateDecode/g) || []).length,
+    jpx: (pdfText.match(/\/JPXDecode/g) || []).length,
+    jbig2: (pdfText.match(/\/JBIG2Decode/g) || []).length,
+    ccitt: (pdfText.match(/\/CCITTFaxDecode/g) || []).length
+  };
+  // JPEG2000 file signature (Chrome cannot decode JP2 images)
+  lastPdfScanInfo.jp2Signature = false;
+  var jp2SignatureBytes = [0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A];
+  for (var jp2Index = 0; jp2Index < pdfBytes.length - jp2SignatureBytes.length; jp2Index++) {
+    var jp2Match = true;
+    for (var jp2ByteIndex = 0; jp2ByteIndex < jp2SignatureBytes.length; jp2ByteIndex++) {
+      if (pdfBytes[jp2Index + jp2ByteIndex] !== jp2SignatureBytes[jp2ByteIndex]) { jp2Match = false; break; }
+    }
+    if (jp2Match) { lastPdfScanInfo.jp2Signature = true; break; }
+  }
+  // Inline images (BI ... ID ... EI) have no /Subtype /Image - common in PDFs
+  // exported by design tools.
+  var inlineImages = findInlinePdfImages(pdfText);
+  for (var inlineIndex = 0; inlineIndex < inlineImages.length && streams.length < 40; inlineIndex++) {
+    streams.push({ index: streams.length, dictText: inlineImages[inlineIndex].dictText, streamBytes: inlineImages[inlineIndex].streamBytes });
+    lastPdfScanInfo.inlineImages++;
+  }
+  // Last resort: carve JPEG/PNG byte signatures straight out of the file.
+  // Works for PDFs whose image dictionaries are hidden from the text scan
+  // (compressed object streams, exotic producers).
+  if (!streams.length) {
+    var carvedImages = findRawImageSignatures(pdfBytes);
+    for (var carvedIndex = 0; carvedIndex < carvedImages.length && streams.length < 40; carvedIndex++) {
+      var carvedKind = carvedImages[carvedIndex].kind;
+      streams.push({
+        index: streams.length,
+        dictText: '/Subtype /Image /Width 1 /Height 1' + (carvedKind === 'jpeg' ? ' /Filter /DCTDecode' : ''),
+        streamBytes: carvedImages[carvedIndex].bytes
+      });
+      lastPdfScanInfo.carvedImages++;
+    }
+  }
+  return streams;
+}
+
+/** Carve standalone JPEG/PNG files out of the raw PDF bytes */
+function findRawImageSignatures(pdfBytes) {
+  var carvedImages = [];
+  var byteIndex = 0;
+  var lengthLimit = pdfBytes.length - 3;
+  while (byteIndex < lengthLimit && carvedImages.length < 30) {
+    if (pdfBytes[byteIndex] === 0xFF && pdfBytes[byteIndex + 1] === 0xD8 && pdfBytes[byteIndex + 2] === 0xFF) {
+      var jpegEnd = -1;
+      for (var jpegScan = byteIndex + 2; jpegScan < pdfBytes.length - 1; jpegScan++) {
+        if (pdfBytes[jpegScan] === 0xFF && pdfBytes[jpegScan + 1] === 0xD9) { jpegEnd = jpegScan + 2; break; }
+      }
+      if (jpegEnd > byteIndex + 200) {
+        carvedImages.push({ kind: 'jpeg', bytes: pdfBytes.subarray(byteIndex, jpegEnd) });
+        byteIndex = jpegEnd;
+        continue;
+      }
+    } else if (pdfBytes[byteIndex] === 0x89 && pdfBytes[byteIndex + 1] === 0x50 && pdfBytes[byteIndex + 2] === 0x4E && pdfBytes[byteIndex + 3] === 0x47) {
+      var pngEnd = -1;
+      for (var pngScan = byteIndex + 8; pngScan < pdfBytes.length - 7; pngScan++) {
+        if (pdfBytes[pngScan] === 0x49 && pdfBytes[pngScan + 1] === 0x45 && pdfBytes[pngScan + 2] === 0x4E && pdfBytes[pngScan + 3] === 0x44) { pngEnd = pngScan + 8; break; }
+      }
+      if (pngEnd > byteIndex + 200) {
+        carvedImages.push({ kind: 'png', bytes: pdfBytes.subarray(byteIndex, pngEnd) });
+        byteIndex = pngEnd;
+        continue;
+      }
+    }
+    byteIndex++;
+  }
+  return carvedImages;
+}
+
+/** Find inline images (BI/ID/EI) in the raw file and in inflated content streams */
+function findInlinePdfImages(pdfText) {
+  var foundInlineImages = [];
+  function scanContentForInlineImages(contentText) {
+    var inlinePattern = /\bBI\b([\s\S]{0,600}?)\bID\b([\s\S]*?)\sEI\b/g;
+    var inlineMatch;
+    while ((inlineMatch = inlinePattern.exec(contentText)) && foundInlineImages.length < 20) {
+      var inlineDict = inlineMatch[1];
+      if (!/\/W\s+\d+/.test(inlineDict) || !/\/H\s+\d+/.test(inlineDict)) continue;
+      var rawBytes = latin1StringToBytes(inlineMatch[2]);
+      var dataStart = 0;
+      if (rawBytes.length && (rawBytes[0] === 0x0d || rawBytes[0] === 0x0a || rawBytes[0] === 0x20)) dataStart = 1;
+      if (dataStart === 1 && rawBytes.length > 1 && rawBytes[0] === 0x0d && rawBytes[1] === 0x0a) dataStart = 2;
+      var dataEnd = rawBytes.length;
+      while (dataEnd > dataStart && (rawBytes[dataEnd - 1] === 0x0d || rawBytes[dataEnd - 1] === 0x0a || rawBytes[dataEnd - 1] === 0x20)) dataEnd--;
+      foundInlineImages.push({ dictText: inlineDict, streamBytes: rawBytes.subarray(dataStart, dataEnd) });
+    }
+  }
+  scanContentForInlineImages(pdfText);
+  // Content streams are usually Flate-compressed - inflate them and scan again.
+  var streamPattern = /stream\r?\n([\s\S]*?)endstream/g;
+  var streamMatch;
+  var scannedStreams = 0;
+  while ((streamMatch = streamPattern.exec(pdfText)) && scannedStreams < 200 && foundInlineImages.length < 20) {
+    scannedStreams++;
+    var streamDict = pdfText.substring(Math.max(0, streamMatch.index - 1200), streamMatch.index);
+    if (/\/Subtype\s*\/Image/.test(streamDict)) continue;
+    if (!/\/FlateDecode/.test(streamDict)) continue;
+    var inflatedContent = inflateRawDeflate(latin1StringToBytes(streamMatch[1]));
+    if (inflatedContent) scanContentForInlineImages(bytesToLatin1String(inflatedContent));
+  }
+  return foundInlineImages;
+}
+
+/* ── Image normalization: extracted images keep their ORIGINAL size at
+      web-level JPEG quality - they are meant to be uploaded to CMS storage
+      as separate files, so no aggressive downscaling. ── */
+function canvasCompressToJpeg(imageDataUrl, name, callback) {
+  var sourceImage = new Image();
+  sourceImage.onload = function() {
+    try {
+      var outputWidth = Math.max(1, sourceImage.width);
+      var outputHeight = Math.max(1, sourceImage.height);
+      var canvas = document.createElement('canvas');
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
+      var context = canvas.getContext('2d');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, outputWidth, outputHeight);
+      context.drawImage(sourceImage, 0, 0, outputWidth, outputHeight);
+      var jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      callback(null, {
+        id: genId(),
+        name: name,
+        width: sourceImage.width,
+        height: sourceImage.height,
+        dataUrl: jpegDataUrl,
+        sizeKb: Math.max(1, Math.round(jpegDataUrl.length * 0.75 / 1024))
+      });
+    } catch (canvasError) {
+      callback('browser could not decode the image: ' + canvasError.message);
+    }
+  };
+  sourceImage.onerror = function() { callback('browser could not decode the image'); };
+  sourceImage.src = imageDataUrl;
+}
+
+/** Shared: encode a canvas as a JPEG gallery image object */
+function canvasToStudioImage(canvas, name, callback) {
+  try {
+    var jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    callback(null, {
+      id: genId(),
+      name: name,
+      width: canvas.width,
+      height: canvas.height,
+      dataUrl: jpegDataUrl,
+      sizeKb: Math.max(1, Math.round(jpegDataUrl.length * 0.75 / 1024))
+    });
+  } catch (encodeError) {
+    callback('browser could not encode the image: ' + encodeError.message);
+  }
+}
+
+/** Indexed color (palette) images: map each index byte to the inline palette */
+function indexedPixelsToJpeg(indexBytes, indexedInfo, name, callback) {
+  try {
+    var canvas = document.createElement('canvas');
+    canvas.width = indexedInfo.width;
+    canvas.height = indexedInfo.height;
+    var context = canvas.getContext('2d');
+    var imageData = context.createImageData(indexedInfo.width, indexedInfo.height);
+    var data = imageData.data;
+    var pixelCount = indexedInfo.width * indexedInfo.height;
+    var bitsPerComponent = indexedInfo.bitsPerComponent;
+    var palette = indexedInfo.palette;
+    var maxIndex = (1 << bitsPerComponent) - 1;
+    for (var pixel = 0; pixel < pixelCount; pixel++) {
+      var indexValue;
+      if (bitsPerComponent === 8) {
+        indexValue = indexBytes[pixel] || 0;
+      } else {
+        var bitOffset = pixel * bitsPerComponent;
+        var byteIndex = Math.floor(bitOffset / 8);
+        if (byteIndex >= indexBytes.length) break;
+        var shiftBits = 8 - bitsPerComponent - (bitOffset % 8);
+        indexValue = (indexBytes[byteIndex] >> shiftBits) & maxIndex;
+      }
+      var paletteEntry = palette[indexValue] || palette[palette.length - 1] || [0, 0, 0];
+      data[pixel * 4] = paletteEntry[0];
+      data[pixel * 4 + 1] = paletteEntry[1];
+      data[pixel * 4 + 2] = paletteEntry[2];
+      data[pixel * 4 + 3] = 255;
+    }
+    context.putImageData(imageData, 0, 0);
+    canvasToStudioImage(canvas, name, callback);
+  } catch (indexedError) {
+    callback('image skipped: ' + indexedError.message);
+  }
+}
+
+/* ── PDF filter decoders (needed for real-world image streams) ── */
+function asciiHexDecodePdf(inputBytes) {
+  var outputBytes = [];
+  var highNibble = -1;
+  for (var i = 0; i < inputBytes.length; i++) {
+    var byteValue = inputBytes[i];
+    if (byteValue === 0x3E) break; // '>'
+    var nibble = -1;
+    if (byteValue >= 0x30 && byteValue <= 0x39) nibble = byteValue - 0x30;
+    else if (byteValue >= 0x41 && byteValue <= 0x46) nibble = byteValue - 0x37;
+    else if (byteValue >= 0x61 && byteValue <= 0x66) nibble = byteValue - 0x57;
+    else continue;
+    if (highNibble === -1) { highNibble = nibble; }
+    else { outputBytes.push((highNibble << 4) | nibble); highNibble = -1; }
+  }
+  if (highNibble !== -1) outputBytes.push(highNibble << 4);
+  return new Uint8Array(outputBytes);
+}
+
+function ascii85DecodePdf(inputBytes) {
+  var outputBytes = [];
+  var group = [];
+  var i = 0;
+  if (inputBytes.length > 1 && inputBytes[0] === 0x3C && inputBytes[1] === 0x7E) i = 2; // '<~'
+  for (; i < inputBytes.length; i++) {
+    var byteValue = inputBytes[i];
+    if (byteValue === 0x7E) break; // '~'
+    if (byteValue === 0x20 || byteValue === 0x0A || byteValue === 0x0D || byteValue === 0x09) continue;
+    if (byteValue === 0x7A && group.length === 0) { outputBytes.push(0, 0, 0, 0); continue; } // 'z'
+    if (byteValue < 0x21 || byteValue > 0x75) continue;
+    group.push(byteValue - 0x21);
+    if (group.length === 5) {
+      var value = (((group[0] * 85 + group[1]) * 85 + group[2]) * 85 + group[3]) * 85 + group[4];
+      outputBytes.push((value >>> 24) & 0xFF, (value >>> 16) & 0xFF, (value >>> 8) & 0xFF, value & 0xFF);
+      group = [];
+    }
+  }
+  if (group.length > 1) {
+    var paddingCount = 5 - group.length;
+    while (group.length < 5) group.push(84);
+    var paddedValue = (((group[0] * 85 + group[1]) * 85 + group[2]) * 85 + group[3]) * 85 + group[4];
+    var paddedBytes = [(paddedValue >>> 24) & 0xFF, (paddedValue >>> 16) & 0xFF, (paddedValue >>> 8) & 0xFF, paddedValue & 0xFF];
+    for (var padIndex = 0; padIndex < 4 - paddingCount; padIndex++) outputBytes.push(paddedBytes[padIndex]);
+  }
+  return new Uint8Array(outputBytes);
+}
+
+function runLengthDecodePdf(inputBytes) {
+  var outputBytes = [];
+  var i = 0;
+  while (i < inputBytes.length) {
+    var controlByte = inputBytes[i++];
+    if (controlByte === 128) break;
+    if (controlByte < 128) {
+      var literalCount = controlByte + 1;
+      for (var literalIndex = 0; literalIndex < literalCount && i < inputBytes.length; literalIndex++) outputBytes.push(inputBytes[i++]);
+    } else {
+      var repeatCount = 257 - controlByte;
+      var repeatedByte = inputBytes[i++];
+      for (var repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) outputBytes.push(repeatedByte);
+    }
+  }
+  return new Uint8Array(outputBytes);
+}
+
+/** Undo PNG predictors (Predictor 15) used by some Flate image streams */
+function applyPngPredictor(predictedBytes, width, height, channels) {
+  var rowLength = width * channels;
+  var outputBytes = new Uint8Array(rowLength * height);
+  var previousRow = new Uint8Array(rowLength);
+  var sourceOffset = 0;
+  for (var rowIndex = 0; rowIndex < height; rowIndex++) {
+    if (sourceOffset >= predictedBytes.length) break;
+    var filterType = predictedBytes[sourceOffset++];
+    var rowOutput = outputBytes.subarray(rowIndex * rowLength, rowIndex * rowLength + rowLength);
+    for (var columnIndex = 0; columnIndex < rowLength; columnIndex++) {
+      var rawValue = sourceOffset < predictedBytes.length ? predictedBytes[sourceOffset++] : 0;
+      var leftValue = columnIndex >= channels ? rowOutput[columnIndex - channels] : 0;
+      var upValue = previousRow[columnIndex];
+      var upLeftValue = columnIndex >= channels ? previousRow[columnIndex - channels] : 0;
+      var restoredValue = rawValue;
+      if (filterType === 1) restoredValue = rawValue + leftValue;
+      else if (filterType === 2) restoredValue = rawValue + upValue;
+      else if (filterType === 3) restoredValue = rawValue + Math.floor((leftValue + upValue) / 2);
+      else if (filterType === 4) {
+        var predictorValue = leftValue + upValue - upLeftValue;
+        var distanceLeft = Math.abs(predictorValue - leftValue);
+        var distanceUp = Math.abs(predictorValue - upValue);
+        var distanceUpLeft = Math.abs(predictorValue - upLeftValue);
+        restoredValue = rawValue + (distanceLeft <= distanceUp && distanceLeft <= distanceUpLeft ? leftValue : (distanceUp <= distanceUpLeft ? upValue : upLeftValue));
+      }
+      rowOutput[columnIndex] = restoredValue & 0xFF;
+    }
+    previousRow = rowOutput;
+  }
+  return outputBytes;
+}
+
+/** Parse an inline indexed palette: /ColorSpace [/Indexed /DeviceRGB n <hex>] */
+function parseIndexedPalette(dictText) {
+  var indexedMatch = dictText.match(/\/ColorSpace\s*\[\s*\/Indexed\s*\/(\w+)\s+(\d+)\s*([\s\S]{0,4000}?)\]/);
+  if (!indexedMatch) return null;
+  var baseSpaceName = indexedMatch[1];
+  var baseChannels = baseSpaceName === 'DeviceGray' ? 1 : (baseSpaceName === 'DeviceCMYK' ? 4 : 3);
+  var hexMatch = indexedMatch[3].match(/<([0-9A-Fa-f\s]+)>/);
+  if (!hexMatch) return null;
+  var hexValue = hexMatch[1].replace(/\s+/g, '');
+  if (hexValue.length < baseChannels * 2) return null;
+  var palette = [];
+  for (var position = 0; position + baseChannels * 2 <= hexValue.length; position += baseChannels * 2) {
+    var red = parseInt(hexValue.substr(position, 2), 16);
+    var green = baseChannels >= 3 ? parseInt(hexValue.substr(position + 2, 2), 16) : red;
+    var blue = baseChannels >= 3 ? parseInt(hexValue.substr(position + 4, 2), 16) : red;
+    palette.push([red, green, blue]);
+  }
+  return palette.length ? palette : null;
+}
+
+/** Read one indirect object body (N 0 obj ... endobj) from the current PDF text */
+function readPdfObjectBody(objectNumber) {
+  if (!lastPdfText) return '';
+  var objectPattern = new RegExp('(?:^|[\\r\\n\\s])' + objectNumber + '\\s+\\d+\\s+obj\\b([\\s\\S]{0,2000}?)endobj');
+  var objectMatch = lastPdfText.match(objectPattern);
+  return objectMatch ? objectMatch[1] : '';
+}
+
+var PDF_FILTER_NAMES = ['FlateDecode', 'Fl', 'DCTDecode', 'DCT', 'ASCIIHexDecode', 'AHx', 'ASCII85Decode', 'A85', 'RunLengthDecode', 'RL', 'LZWDecode', 'LZW', 'JPXDecode', 'CCITTFaxDecode', 'CCF', 'JBIG2Decode'];
+
+/** Resolve /Filter: direct array, direct name, or an indirect object reference */
+function resolvePdfFilterNames(dictText) {
+  var filterArrayMatch = dictText.match(/\/Filter\s*\[([^\]]*?)\]/);
+  if (filterArrayMatch) {
+    var arrayNames = filterArrayMatch[1].match(/\/(\w+)/g);
+    return arrayNames ? arrayNames.map(function(nameText) { return nameText.substring(1); }) : [];
+  }
+  var filterSingleMatch = dictText.match(/\/Filter\s*\/(\w+)/);
+  if (filterSingleMatch) return [filterSingleMatch[1]];
+  var filterIndirectMatch = dictText.match(/\/Filter\s+(\d+)\s+\d+\s+R/);
+  if (filterIndirectMatch) {
+    var filterBody = readPdfObjectBody(filterIndirectMatch[1]);
+    var bodyNames = (filterBody.match(/\/(\w+)/g) || []).map(function(nameText) { return nameText.substring(1); });
+    var knownNames = [];
+    for (var nameIndex = 0; nameIndex < bodyNames.length; nameIndex++) {
+      if (PDF_FILTER_NAMES.indexOf(bodyNames[nameIndex]) !== -1) knownNames.push(bodyNames[nameIndex]);
+    }
+    return knownNames;
+  }
+  return [];
+}
+
+/** Resolve the ColorSpace description (direct or indirect, ICCBased N-aware) */
+function resolvePdfColorSpaceText(dictText) {
+  var directArrayMatch = dictText.match(/\/ColorSpace\s*\[([\s\S]{0,1000}?)\]/);
+  if (directArrayMatch) return '[' + directArrayMatch[1] + ']';
+  var directNameMatch = dictText.match(/\/ColorSpace\s*\/(\w+)/);
+  if (directNameMatch) return '/' + directNameMatch[1];
+  var indirectMatch = dictText.match(/\/ColorSpace\s+(\d+)\s+\d+\s+R/);
+  if (indirectMatch) {
+    var bodyText = readPdfObjectBody(indirectMatch[1]);
+    var colorNameMatch = bodyText.match(/\/(DeviceRGB|DeviceGray|DeviceCMYK|ICCBased|Indexed|CalRGB|CalGray|Lab)/);
+    if (colorNameMatch) return bodyText;
+    var iccComponentsMatch = bodyText.match(/\/N\s+(\d+)/);
+    if (iccComponentsMatch) {
+      var componentCount = parseInt(iccComponentsMatch[1], 10);
+      if (componentCount === 3) return '/DeviceRGB';
+      if (componentCount === 1) return '/DeviceGray';
+      if (componentCount === 4) return '/DeviceCMYK';
+    }
+  }
+  return '';
+}
+
+/** LZW decoder (PDF variant, EarlyChange support) */
+function lzwDecodePdf(inputBytes, earlyChange) {
+  var early = (earlyChange === 0) ? 0 : 1;
+  var outputBytes = [];
+  var dictionary = [];
+  var codeLength = 9;
+  var nextCode = 258;
+  function resetDictionary() {
+    dictionary = [];
+    for (var i = 0; i < 256; i++) dictionary.push([i]);
+    dictionary.push(null);
+    dictionary.push(null);
+    codeLength = 9;
+    nextCode = 258;
+  }
+  resetDictionary();
+  var bitBuffer = 0;
+  var bitCount = 0;
+  var previousEntry = null;
+  for (var byteIndex = 0; byteIndex < inputBytes.length; byteIndex++) {
+    bitBuffer = (bitBuffer << 8) | inputBytes[byteIndex];
+    bitCount += 8;
+    while (bitCount >= codeLength) {
+      var code = (bitBuffer >> (bitCount - codeLength)) & ((1 << codeLength) - 1);
+      bitCount -= codeLength;
+      bitBuffer &= (bitCount > 0) ? ((1 << bitCount) - 1) : 0;
+      if (code === 256) { resetDictionary(); previousEntry = null; continue; }
+      if (code === 257) return new Uint8Array(outputBytes);
+      var entry = null;
+      if (code < dictionary.length && dictionary[code]) entry = dictionary[code];
+      else if (previousEntry) entry = previousEntry.concat(previousEntry[0]);
+      else return new Uint8Array(outputBytes);
+      for (var entryIndex = 0; entryIndex < entry.length; entryIndex++) outputBytes.push(entry[entryIndex]);
+      if (previousEntry && nextCode < 4096) {
+        dictionary[nextCode++] = previousEntry.concat(entry[0]);
+        if (nextCode + early === (1 << codeLength) && codeLength < 12) codeLength++;
+      }
+      previousEntry = entry;
+    }
+  }
+  return new Uint8Array(outputBytes);
+}
+
+/** Read one sample from a packed PDF pixel buffer (1/2/4/8/16 bits) */
+function unpackPdfSample(pixelBytes, sampleIndex, bitsPerComponent) {
+  if (bitsPerComponent === 8) return pixelBytes[sampleIndex] || 0;
+  if (bitsPerComponent === 16) {
+    var highByte = pixelBytes[sampleIndex * 2] || 0;
+    var lowByte = pixelBytes[sampleIndex * 2 + 1] || 0;
+    return (highByte << 8) | lowByte;
+  }
+  var bitOffset = sampleIndex * bitsPerComponent;
+  var byteIndex = Math.floor(bitOffset / 8);
+  if (byteIndex >= pixelBytes.length) return 0;
+  var shiftBits = 8 - bitsPerComponent - (bitOffset % 8);
+  return (pixelBytes[byteIndex] >> shiftBits) & ((1 << bitsPerComponent) - 1);
+}
+
+/** Parse a /Decode array (used by image masks and inverted images) */
+function parsePdfDecodeArray(dictText) {
+  var decodeMatch = dictText.match(/\/Decode\s*\[([^\]]*?)\]/);
+  if (!decodeMatch) return null;
+  var values = decodeMatch[1].trim().split(/\s+/).map(function(valueText) { return parseFloat(valueText); });
+  return values.length ? values : null;
+}
+
+/** Fixed PNG predictors 10-14 (no per-row filter byte) */
+function applyFixedPngPredictor(predictedBytes, width, height, channels, predictor) {
+  var rowLength = width * channels;
+  var outputBytes = new Uint8Array(rowLength * height);
+  var previousRow = new Uint8Array(rowLength);
+  var sourceOffset = 0;
+  for (var rowIndex = 0; rowIndex < height; rowIndex++) {
+    var rowOutput = outputBytes.subarray(rowIndex * rowLength, rowIndex * rowLength + rowLength);
+    for (var columnIndex = 0; columnIndex < rowLength; columnIndex++) {
+      var rawValue = sourceOffset < predictedBytes.length ? predictedBytes[sourceOffset++] : 0;
+      var leftValue = columnIndex >= channels ? rowOutput[columnIndex - channels] : 0;
+      var upValue = previousRow[columnIndex];
+      var upLeftValue = columnIndex >= channels ? previousRow[columnIndex - channels] : 0;
+      var restoredValue = rawValue;
+      if (predictor === 11) restoredValue = rawValue + leftValue;
+      else if (predictor === 12) restoredValue = rawValue + upValue;
+      else if (predictor === 13) restoredValue = rawValue + Math.floor((leftValue + upValue) / 2);
+      else if (predictor === 14) {
+        var predictorValue = leftValue + upValue - upLeftValue;
+        var distanceLeft = Math.abs(predictorValue - leftValue);
+        var distanceUp = Math.abs(predictorValue - upValue);
+        var distanceUpLeft = Math.abs(predictorValue - upLeftValue);
+        restoredValue = rawValue + (distanceLeft <= distanceUp && distanceLeft <= distanceUpLeft ? leftValue : (distanceUp <= distanceUpLeft ? upValue : upLeftValue));
+      }
+      rowOutput[columnIndex] = restoredValue & 0xFF;
+    }
+    previousRow = rowOutput;
+  }
+  return outputBytes;
+}
+
+/** Apply any PDF predictor (10-15). TIFF predictor 2 is left untouched. */
+function applyPdfPredictor(predictedBytes, width, height, channels, predictor) {
+  if (predictor === 15) return applyPngPredictor(predictedBytes, width, height, channels);
+  if (predictor >= 10 && predictor <= 14) return applyFixedPngPredictor(predictedBytes, width, height, channels, predictor);
+  return predictedBytes;
+}
+
+/** Map one PDF sample to 0-255 honoring its /Decode range */
+function mapPdfSampleToByte(sample, bitsPerComponent, channelIndex, decodeArray) {
+  var maxSampleValue = (bitsPerComponent === 16) ? 65535 : ((1 << bitsPerComponent) - 1);
+  var decodeMin = 0;
+  var decodeMax = 1;
+  if (decodeArray && decodeArray.length >= (channelIndex + 1) * 2) {
+    decodeMin = decodeArray[channelIndex * 2];
+    decodeMax = decodeArray[channelIndex * 2 + 1];
+  }
+  var normalizedSample = maxSampleValue ? (sample / maxSampleValue) : 0;
+  var decodedValue = decodeMin + normalizedSample * (decodeMax - decodeMin);
+  return Math.max(0, Math.min(255, Math.round(decodedValue * 255)));
+}
+
+/** Render packed pixel samples (1/2/4/8/16-bit, Gray/RGB/CMYK, image masks) */
+function packedPixelsToJpeg(pixelBytes, pixelInfo, name, callback) {
+  try {
+    var width = pixelInfo.width;
+    var height = pixelInfo.height;
+    var channels = pixelInfo.channels;
+    var bitsPerComponent = pixelInfo.bitsPerComponent;
+    var decodeArray = pixelInfo.decodeArray || null;
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    var context = canvas.getContext('2d');
+    var imageData = context.createImageData(width, height);
+    var data = imageData.data;
+    var totalPixels = width * height;
+    for (var pixelIndex = 0; pixelIndex < totalPixels; pixelIndex++) {
+      var baseSample = pixelIndex * channels;
+      var red, green, blue;
+      if (channels === 1) {
+        var grayValue = mapPdfSampleToByte(unpackPdfSample(pixelBytes, baseSample, bitsPerComponent), bitsPerComponent, 0, decodeArray);
+        red = green = blue = grayValue;
+      } else if (channels === 3) {
+        red = mapPdfSampleToByte(unpackPdfSample(pixelBytes, baseSample, bitsPerComponent), bitsPerComponent, 0, decodeArray);
+        green = mapPdfSampleToByte(unpackPdfSample(pixelBytes, baseSample + 1, bitsPerComponent), bitsPerComponent, 1, decodeArray);
+        blue = mapPdfSampleToByte(unpackPdfSample(pixelBytes, baseSample + 2, bitsPerComponent), bitsPerComponent, 2, decodeArray);
+      } else {
+        var cyan = mapPdfSampleToByte(unpackPdfSample(pixelBytes, baseSample, bitsPerComponent), bitsPerComponent, 0, decodeArray);
+        var magenta = mapPdfSampleToByte(unpackPdfSample(pixelBytes, baseSample + 1, bitsPerComponent), bitsPerComponent, 1, decodeArray);
+        var yellow = mapPdfSampleToByte(unpackPdfSample(pixelBytes, baseSample + 2, bitsPerComponent), bitsPerComponent, 2, decodeArray);
+        var black = mapPdfSampleToByte(unpackPdfSample(pixelBytes, baseSample + 3, bitsPerComponent), bitsPerComponent, 3, decodeArray);
+        red = 255 - Math.min(255, cyan + black);
+        green = 255 - Math.min(255, magenta + black);
+        blue = 255 - Math.min(255, yellow + black);
+      }
+      var dataOffset = pixelIndex * 4;
+      data[dataOffset] = red;
+      data[dataOffset + 1] = green;
+      data[dataOffset + 2] = blue;
+      data[dataOffset + 3] = 255;
+    }
+    context.putImageData(imageData, 0, 0);
+    canvasToStudioImage(canvas, name, callback);
+  } catch (packedError) {
+    callback('image skipped: ' + packedError.message);
+  }
+}
+
+/** Read the frame header (SOF marker) of a JPEG stream - diagnostics only */
+function describeJpegFrame(jpegBytes) {
+  var markerPos = 2;
+  while (markerPos + 4 < jpegBytes.length) {
+    if (jpegBytes[markerPos] !== 0xFF) { markerPos++; continue; }
+    var markerCode = jpegBytes[markerPos + 1];
+    if (markerCode === 0xFF) { markerPos++; continue; }
+    if (markerCode === 0xD8 || markerCode === 0xD9 || (markerCode >= 0xD0 && markerCode <= 0xD7)) { markerPos += 2; continue; }
+    if (markerCode === 0xDA) break; // start of scan - no frame header further down
+    var isStartOfFrame = markerCode >= 0xC0 && markerCode <= 0xCF && markerCode !== 0xC4 && markerCode !== 0xC8 && markerCode !== 0xCC;
+    if (isStartOfFrame && markerPos + 9 < jpegBytes.length) {
+      return {
+        precision: jpegBytes[markerPos + 4],
+        height: (jpegBytes[markerPos + 5] << 8) | jpegBytes[markerPos + 6],
+        width: (jpegBytes[markerPos + 7] << 8) | jpegBytes[markerPos + 8],
+        components: jpegBytes[markerPos + 9]
+      };
+    }
+    var segmentLength = (jpegBytes[markerPos + 2] << 8) | jpegBytes[markerPos + 3];
+    if (segmentLength < 2) break;
+    markerPos += 2 + segmentLength;
+  }
+  return null;
+}
+
+/** Short JPEG description appended to a decode error so the cause is visible */
+function describeJpegStreamForError(jpegBytes, jpegFrame) {
+  var details = [];
+  if (jpegFrame) details.push(jpegFrame.width + 'x' + jpegFrame.height);
+  details.push(Math.max(1, Math.round(jpegBytes.length / 1024)) + ' KB');
+  if (jpegFrame && jpegFrame.components === 4) details.push('4-component CMYK JPEG, which Chrome cannot display');
+  else if (jpegFrame && jpegFrame.components) details.push(jpegFrame.components + ' components');
+  return ' (JPEG ' + details.join(', ') + ')';
+}
+
+function decodePdfImageCandidate(candidate, callback) {
+  var dictText = candidate.dictText;
+  var width = 0;
+  var height = 0;
+  var widthMatch = dictText.match(/\/Width\s+(\d+)/) || dictText.match(/\/W\s+(\d+)/);
+  var heightMatch = dictText.match(/\/Height\s+(\d+)/) || dictText.match(/\/H\s+(\d+)/);
+  if (widthMatch) width = parseInt(widthMatch[1], 10);
+  if (heightMatch) height = parseInt(heightMatch[1], 10);
+  if (!width || !height) { callback({ error: 'image skipped: missing width/height' }); return; }
+  var filters = resolvePdfFilterNames(dictText);
+  var imageName = 'document-image-' + (candidate.index + 1);
+  var streamBytes = candidate.streamBytes;
+  var imageCodec = '';
+  for (var filterIndex = 0; filterIndex < filters.length; filterIndex++) {
+    var filterName = filters[filterIndex];
+    if (filterName === 'DCTDecode' || filterName === 'DCT') { imageCodec = 'jpeg'; break; }
+    if (filterName === 'JPXDecode') { callback({ error: 'image skipped: JPEG2000 is not supported' }); return; }
+    if (filterName === 'FlateDecode' || filterName === 'Fl') {
+      var inflatedBytes = inflateRawDeflate(streamBytes);
+      if (!inflatedBytes) { callback({ error: 'image skipped: could not decompress the stream' }); return; }
+      streamBytes = inflatedBytes;
+    } else if (filterName === 'ASCIIHexDecode' || filterName === 'AHx') {
+      streamBytes = asciiHexDecodePdf(streamBytes);
+    } else if (filterName === 'ASCII85Decode' || filterName === 'A85') {
+      streamBytes = ascii85DecodePdf(streamBytes);
+    } else if (filterName === 'RunLengthDecode' || filterName === 'RL') {
+      streamBytes = runLengthDecodePdf(streamBytes);
+    } else if (filterName === 'LZWDecode' || filterName === 'LZW') {
+      var earlyChangeMatch = dictText.match(/\/EarlyChange\s+(\d+)/);
+      streamBytes = lzwDecodePdf(streamBytes, earlyChangeMatch ? parseInt(earlyChangeMatch[1], 10) : 1);
+    } else if (filterName === 'CCITTFaxDecode' || filterName === 'CCF') {
+      callback({ error: 'image skipped: CCITT fax images are not supported' }); return;
+    } else if (filterName === 'JBIG2Decode') {
+      callback({ error: 'image skipped: JBIG2 images are not supported' }); return;
+    } else {
+      callback({ error: 'image skipped: unsupported filter ' + filterName });
+      return;
+    }
+  }
+  if (imageCodec === 'jpeg') {
+    if (streamBytes.length < 4 || streamBytes[0] !== 0xFF || streamBytes[1] !== 0xD8) {
+      callback({ error: 'image skipped: JPEG stream does not start with FF D8 (' + streamBytes.length + ' bytes)' });
+      return;
+    }
+    var jpegFrame = describeJpegFrame(streamBytes);
+    canvasCompressToJpeg('data:image/jpeg;base64,' + bytesToBase64(streamBytes), imageName, function(jpegError, jpegImage) {
+      callback(jpegError ? { error: jpegError + describeJpegStreamForError(streamBytes, jpegFrame) } : { image: jpegImage });
+    });
+    return;
+  }
+  if (streamBytes.length > 8 && streamBytes[0] === 0x89 && streamBytes[1] === 0x50) {
+    canvasCompressToJpeg('data:image/png;base64,' + bytesToBase64(streamBytes), imageName, function(pngError, pngImage) {
+      callback(pngError ? { error: pngError + ' (PNG ' + Math.max(1, Math.round(streamBytes.length / 1024)) + ' KB)' } : { image: pngImage });
+    });
+    return;
+  }
+  var indexedPalette = parseIndexedPalette(dictText);
+  var colorSpaceText = resolvePdfColorSpaceText(dictText);
+  if (!indexedPalette && colorSpaceText.indexOf('/Indexed') !== -1) indexedPalette = parseIndexedPalette('/ColorSpace ' + colorSpaceText.replace(/^\//, ''));
+  var isImageMask = /\/ImageMask\s+true/.test(dictText);
+  var bitsMatch = dictText.match(/\/BitsPerComponent\s+(\d+)/) || dictText.match(/\/BPC\s+(\d+)/);
+  var bitsPerComponent = isImageMask ? 1 : (bitsMatch ? parseInt(bitsMatch[1], 10) : 8);
+  var predictorMatch = dictText.match(/\/Predictor\s+(\d+)/);
+  if (predictorMatch) {
+    var predictorValue = parseInt(predictorMatch[1], 10);
+    if (predictorValue >= 10) {
+      var colorsMatch = dictText.match(/\/Colors\s+(\d+)/);
+      var columnsMatch = dictText.match(/\/Columns\s+(\d+)/);
+      var baseChannelsForPredictor = colorsMatch
+        ? parseInt(colorsMatch[1], 10)
+        : (indexedPalette ? 1 : (/\/DeviceGray|CalGray/.test(colorSpaceText) ? 1 : (/\/DeviceCMYK/.test(colorSpaceText) ? 4 : 3)));
+      var bytesPerSample = Math.max(1, Math.round(bitsPerComponent / 8));
+      var predictorWidth = columnsMatch ? parseInt(columnsMatch[1], 10) : width;
+      streamBytes = applyPdfPredictor(streamBytes, predictorWidth, height, baseChannelsForPredictor * bytesPerSample, predictorValue);
+    }
+  }
+  if (indexedPalette && (bitsPerComponent === 1 || bitsPerComponent === 2 || bitsPerComponent === 4 || bitsPerComponent === 8)) {
+    indexedPixelsToJpeg(streamBytes, { width: width, height: height, bitsPerComponent: bitsPerComponent, palette: indexedPalette }, imageName, function(indexedError, indexedImage) { callback(indexedError ? { error: indexedError } : { image: indexedImage }); });
+    return;
+  }
+  var isGray = /\/DeviceGray|CalGray/.test(colorSpaceText);
+  var isRgb = /\/DeviceRGB|CalRGB/.test(colorSpaceText);
+  var isCmyk = /\/DeviceCMYK/.test(colorSpaceText);
+  // Unknown/indirect color space: infer the channel count from the payload size.
+  if (!isImageMask && !isGray && !isRgb && !isCmyk) {
+    var bytesPerSampleGuess = Math.max(1, Math.round(bitsPerComponent / 8));
+    var inferredChannels = Math.round(streamBytes.length / (width * height * bytesPerSampleGuess));
+    if (inferredChannels === 1) isGray = true;
+    else if (inferredChannels === 3) isRgb = true;
+    else if (inferredChannels === 4) isCmyk = true;
+  }
+  if (isImageMask || isGray || isRgb || isCmyk) {
+    var decodeArray = parsePdfDecodeArray(dictText);
+    packedPixelsToJpeg(streamBytes, {
+      width: width,
+      height: height,
+      bitsPerComponent: bitsPerComponent,
+      channels: isCmyk ? 4 : (isRgb ? 3 : 1),
+      decodeArray: decodeArray
+    }, imageName, function(packedError, packedImage) { callback(packedError ? { error: packedError } : { image: packedImage }); });
+    return;
+  }
+  callback({ error: 'image skipped: unsupported pixel format' + (indexedPalette ? ' (indexed)' : ' (bits=' + bitsPerComponent + ')') });
+}
+
+function decodePdfImageCandidates(candidates, callback) {
+  var decodedImages = [];
+  var skippedNotes = [];
+  var candidateIndex = 0;
+  function decodeNextCandidate() {
+    if (candidateIndex >= candidates.length) { callback(null, decodedImages, skippedNotes); return; }
+    var candidate = candidates[candidateIndex++];
+    decodePdfImageCandidate(candidate, function(decodeResult) {
+      if (decodeResult.error) {
+        skippedNotes.push(decodeResult.error);
+      } else {
+        decodedImages.push(decodeResult.image);
+      }
+      decodeNextCandidate();
+    });
+  }
+  decodeNextCandidate();
+}
+
+/* ── Studio rendering helpers ── */
+var studioStatusTicker = null;
+
+function stopStudioStatusTicker() {
+  if (studioStatusTicker) {
+    clearInterval(studioStatusTicker);
+    studioStatusTicker = null;
+  }
+}
+
+/** Write the status line without touching the ticker (internal) */
+function writeStudioStatus(message, kind) {
+  var statusEl = el('sd-status');
+  if (!statusEl) return;
+  if (!message) { statusEl.style.display = 'none'; return; }
+  statusEl.style.display = '';
+  statusEl.textContent = message;
+  statusEl.className = 'sd-status ' + (kind || 'busy');
+}
+
+function setStudioStatus(message, kind) {
+  stopStudioStatusTicker();
+  writeStudioStatus(message, kind);
+}
+
+/** Live status line: base message + fresh details + elapsed seconds, updated every second */
+function startStudioStatusTicker(baseMessage, detailProvider) {
+  stopStudioStatusTicker();
+  var startedAt = Date.now();
+  function renderTicker() {
+    var elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
+    var detailText = detailProvider ? detailProvider() : '';
+    writeStudioStatus(baseMessage + (detailText ? ' · ' + detailText : '') + ' · ' + elapsedSeconds + 's', 'busy');
+  }
+  renderTicker();
+  studioStatusTicker = setInterval(renderTicker, 1000);
+}
+
+/** 12345 -> "12,345" */
+function formatCount(value) {
+  return String(value || 0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/** Render the partial HTML stream visually (broken tags are auto-corrected) */
+function renderStudioHtmlStreamPreview(rawHtml) {
+  var previewFrame = el('sd-gen-preview');
+  if (!previewFrame || !rawHtml) return;
+  var partialHtml = String(rawHtml).replace(/^```(?:html)?\s*\n?/i, '');
+  previewFrame.srcdoc = studioPreviewCss + partialHtml;
+}
+
+/** Disable the heavy actions while an AI run is streaming (visible on the button too) */
+function setStudioActionButtonsBusy(isBusy) {
+  var generateButton = el('btn-sd-generate');
+  var processButton = el('btn-sd-process');
+  if (generateButton) {
+    generateButton.disabled = !!isBusy;
+    generateButton.textContent = isBusy ? '⏳ Generating…' : '✨ Generate Study Content';
+  }
+  if (processButton) processButton.disabled = !!isBusy;
+}
+
+/* ── Side-by-side comparison: original document vs generated content ── */
+var studioCompareMode = false;
+
+function toggleStudioCompareMode() {
+  studioCompareMode = !studioCompareMode;
+  var previewColumns = el('sd-preview-columns');
+  var studioDrawer = el('sd-studio-drawer');
+  var compareButton = el('btn-sd-compare');
+  if (previewColumns) previewColumns.classList.toggle('sd-compare-active', studioCompareMode);
+  if (studioDrawer) studioDrawer.classList.toggle('sd-compare-wide', studioCompareMode);
+  if (compareButton) {
+    compareButton.classList.toggle('btn-primary', studioCompareMode);
+    compareButton.classList.toggle('btn-outline', !studioCompareMode);
+    compareButton.textContent = studioCompareMode ? '⇔ Side by Side: on' : '⇔ Side by Side';
+  }
+  tool.resize();
+}
+
+/* ── Screenshot import ──
+   Vector drawings, charts and diagrams are page content, not embedded image
+   objects, so they cannot be extracted from the PDF as files. A screenshot
+   pasted from the clipboard is the practical way to capture them. */
+function handleStudioImagePaste(pasteEvent) {
+  if (!studioCurrentDocUrl) return;
+  var studioDrawer = el('sd-studio-drawer');
+  if (!studioDrawer || !studioDrawer.classList.contains('sd-drawer-open')) return;
+  var clipboard = pasteEvent.clipboardData;
+  if (!clipboard || !clipboard.items) return;
+  var pastedImageFile = null;
+  for (var itemIndex = 0; itemIndex < clipboard.items.length; itemIndex++) {
+    var clipboardItem = clipboard.items[itemIndex];
+    if (clipboardItem.kind === 'file' && clipboardItem.type && clipboardItem.type.indexOf('image/') === 0) {
+      pastedImageFile = clipboardItem.getAsFile();
+      break;
+    }
+  }
+  if (!pastedImageFile) return; // a text paste must behave normally
+  pasteEvent.preventDefault();
+  readLocalFileAsDataUrl(pastedImageFile, function(readError, pastedDataUrl) {
+    if (readError || !pastedDataUrl) {
+      tool.notify('Could not read the pasted image: ' + (readError || 'empty clipboard data'), 'error');
+      return;
+    }
+    var pastedImage = new Image();
+    pastedImage.onload = function() { addPastedStudioScreenshot(pastedDataUrl, pastedImage.width, pastedImage.height); };
+    pastedImage.onerror = function() { addPastedStudioScreenshot(pastedDataUrl, 0, 0); };
+    pastedImage.src = pastedDataUrl;
+  });
+}
+
+function addPastedStudioScreenshot(screenshotDataUrl, screenshotWidth, screenshotHeight) {
+  var screenshotNumber = 1;
+  for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+    if (String(editingStudyDocImages[imageIndex].name || '').indexOf('page-screenshot-') === 0) screenshotNumber++;
+  }
+  editingStudyDocImages.push({
+    id: genId(),
+    name: 'page-screenshot-' + screenshotNumber + '.png',
+    width: screenshotWidth || 0,
+    height: screenshotHeight || 0,
+    dataUrl: screenshotDataUrl,
+    sizeKb: Math.max(1, Math.round(screenshotDataUrl.length * 0.75 / 1024))
+  });
+  var newImageIndex = editingStudyDocImages.length - 1;
+  persistStudioImages();
+  renderStudyDocImageGallery();
+  renderPdfEditorList();
+  setStudioStatus('🖼 Added the pasted screenshot to this document\'s images.', 'ok');
+  uploadStudioImageToStorage(newImageIndex, function(uploaded) {
+    if (uploaded) autoSaveCurrentLesson();
+  });
+}
+
+/** Role of a document URL: 'final' (Ready - students see it), 'source' (Sample) or '' (unknown) */
+function studioDocRole(docUrl) {
+  if (isSourceDocumentUrl(docUrl)) return 'source';
+  return studioDocType(docUrl) ? 'final' : '';
+}
+
+/** Write the working image array back to the per-document map */
+function persistStudioImages() {
+  if (!studioCurrentDocUrl) return;
+  if (editingStudyDocImages.length) {
+    editingStudyDocImagesMap[studioCurrentDocUrl] = JSON.parse(JSON.stringify(editingStudyDocImages));
+  } else {
+    delete editingStudyDocImagesMap[studioCurrentDocUrl];
+  }
+}
+
+function studioDocImageCount(docUrl) {
+  var images = editingStudyDocImagesMap[docUrl];
+  return images ? images.length : 0;
+}
+
+/** Document type of a URL across Real lists and Source entries ('' when unknown) */
+function studioDocType(docUrl) {
+  var typeKeys = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
+  for (var t = 0; t < typeKeys.length; t++) {
+    if (getPdfArray(typeKeys[t]).indexOf(docUrl) !== -1) return typeKeys[t];
+  }
+  for (var s = 0; s < editingStudyDocSources.length; s++) {
+    if (editingStudyDocSources[s].url === docUrl) return editingStudyDocSources[s].type || 'studyDoc';
+  }
+  return '';
+}
+
+/* ── PDF preview rendering (CMS-provided PDF.js) ──
+   Chrome refuses to run its built-in PDF viewer inside sandboxed frames, so a
+   PDF cannot be embedded directly. When the CMS injects PDF.js (global
+   pdfjsLib plus the pdfjsWorkerUrl setting) the pages are rasterized here. */
+function pdfJsLibraryAvailable() {
+  return (typeof window !== 'undefined') && !!window.pdfjsLib && (typeof window.pdfjsLib.getDocument === 'function');
+}
+
+/** Explain why no PDF page is shown, with the actions that still work */
+function showStudioPdfPreviewPlaceholder(previewFrame, noteEl, localPdfAvailable, extraReason) {
+  previewFrame.src = 'about:blank';
+  var reasonLine = extraReason ? '<div style="margin-top:6px">' + esc(extraReason) + '</div>' : '';
+  previewFrame.srcdoc = '<style>body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#475569;display:flex;align-items:center;justify-content:center;height:100%;padding:24px;text-align:center;font-size:13px;line-height:1.7}strong{color:#1e293b}</style>' +
+    '<div><div style="font-size:30px;margin-bottom:6px">📄</div>' +
+    '<div><strong>PDF preview needs the PDF.js renderer</strong></div>' +
+    '<div style="margin-top:4px">Chrome blocks its built-in PDF viewer in sandboxed tool frames, so the pages have to be rasterized by the CMS. Use <strong>⬇ Download File</strong> or <strong>👁 Open File</strong> meanwhile.</div>' +
+    reasonLine + '</div>';
+  if (noteEl) noteEl.textContent = localPdfAvailable ? 'Local PDF loaded - use Download File to save it.' : 'Use Download File or Open File to view the document.';
+}
+
+/** Put the already-rasterized pages into the preview frame */
+function showStudioRenderedPdfPages(previewFrame, pageImages, totalPages) {
+  var pagesHtml = pageImages.map(function (pageImage, pageIndex) {
+    return '<div class="pdf-page"><img src="' + pageImage + '" alt="Page ' + (pageIndex + 1) + '"></div>';
+  }).join('');
+  previewFrame.srcdoc = '<style>body{margin:0;background:#e2e8f0;padding:12px;display:flex;flex-direction:column;gap:12px;align-items:center;font-family:system-ui,sans-serif}.pdf-page{background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.18);max-width:100%}.pdf-page img{display:block;width:100%;height:auto}.pdf-count{font-size:12px;color:#475569}</style>' +
+    '<div class="pdf-count">' + pageImages.length + ' of ' + totalPages + ' page(s) rendered</div>' + pagesHtml;
+}
+
+/** Rasterize the PDF pages with PDF.js and stream them into the preview */
+function renderPdfPreviewPages(pdfBytes, previewFrame, noteEl) {
+  var pdfLibrary = window.pdfjsLib;
+  var configuredWorkerUrl = tool.param('pdfjsWorkerUrl', '');
+  if (configuredWorkerUrl && pdfLibrary.GlobalWorkerOptions) pdfLibrary.GlobalWorkerOptions.workerSrc = configuredWorkerUrl;
+  var previewScale = parseFloat(tool.param('pdfPreviewScale', '1.2'));
+  if (!previewScale || previewScale < 0.2) previewScale = 1.2;
+  var maxPreviewPages = 12;
+  // PDF.js transfers the buffer to its worker - pass a copy so the bytes stay
+  // usable afterwards for image extraction.
+  pdfLibrary.getDocument({ data: new Uint8Array(pdfBytes) }).promise.then(function (pdfDocument) {
+    var pagesToRender = Math.min(pdfDocument.numPages, maxPreviewPages);
+    var pageImages = [];
+    function renderNextPage(pageNumber) {
+      if (pageNumber > pagesToRender) {
+        if (noteEl) noteEl.textContent = 'PDF preview · ' + pagesToRender + ' of ' + pdfDocument.numPages + ' page(s)';
+        return;
+      }
+      pdfDocument.getPage(pageNumber).then(function (pdfPage) {
+        var pageViewport = pdfPage.getViewport({ scale: previewScale });
+        var pageCanvas = document.createElement('canvas');
+        pageCanvas.width = Math.max(1, Math.floor(pageViewport.width));
+        pageCanvas.height = Math.max(1, Math.floor(pageViewport.height));
+        pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: pageViewport }).promise.then(function () {
+          pageImages.push(pageCanvas.toDataURL('image/jpeg', 0.82));
+          showStudioRenderedPdfPages(previewFrame, pageImages, pdfDocument.numPages);
+          if (noteEl) noteEl.textContent = 'Rendering page ' + (pageNumber + 1) + ' of ' + pagesToRender + '…';
+          renderNextPage(pageNumber + 1);
+        }).catch(function () { renderNextPage(pageNumber + 1); });
+      }).catch(function () { renderNextPage(pageNumber + 1); });
+    }
+    renderNextPage(1);
+  }).catch(function (pdfPreviewError) {
+    console.warn('[STUDIO:PREVIEW] the PDF renderer could not open the document:', pdfPreviewError);
+    showStudioPdfPreviewPlaceholder(previewFrame, noteEl, false, 'The PDF renderer could not open this document.');
+  });
+}
+
+/** Preview the open document inside the studio drawer (HTML inline, PDF as a blob) */
+function loadStudioDocumentPreview() {
+  var previewFrame = el('sd-doc-preview');
+  var noteEl = el('sd-preview-note');
+  if (!previewFrame) return;
+  if (!studioCurrentDocUrl) {
+    previewFrame.src = 'about:blank';
+    if (noteEl) noteEl.textContent = '';
+    return;
+  }
+  var docType = studioDocType(studioCurrentDocUrl);
+  var lowerUrl = studioCurrentDocUrl.toLowerCase();
+  var isHtmlDocument = docType === 'htmlDoc' || /\.(html?|htm)(\?|#|$)/.test(lowerUrl);
+  if (isHtmlDocument) {
+    if (!binaryFileChannelAvailable() && typeof tool.requestFetch !== 'function') {
+      previewFrame.srcdoc = '';
+      if (noteEl) noteEl.textContent = 'HTML preview needs file downloads on this host. Use "Open File".';
+      return;
+    }
+    if (noteEl) noteEl.textContent = 'Loading…';
+    fetchDocumentBytes(studioCurrentDocUrl, { purpose: 'preview' }, function(fetchError, documentBytes, documentMeta) {
+      if (fetchError || !documentBytes || !documentBytes.length) {
+        previewFrame.srcdoc = '';
+        if (noteEl) noteEl.textContent = 'The document could not be loaded inline (' + describeFileFetchError(fetchError, documentMeta) + ') Use "Open File".';
+        return;
+      }
+      previewFrame.srcdoc = decodeTextBytes(documentBytes);
+      if (noteEl) noteEl.textContent = 'HTML preview';
+    });
+    return;
+  }
+  // PDF: Chrome blocks its built-in PDF viewer inside sandboxed CMS tool
+  // frames, so the page must be rasterized. PDF.js is used when the CMS
+  // injects it; otherwise a clear placeholder is shown.
+  if (pdfJsLibraryAvailable()) {
+    if (noteEl) noteEl.textContent = 'Rendering the PDF preview…';
+    var localPdfBytes = (studioLocalPdfBytes && studioLocalPdfUrl === studioCurrentDocUrl) ? studioLocalPdfBytes : null;
+    if (localPdfBytes) { renderPdfPreviewPages(localPdfBytes, previewFrame, noteEl); return; }
+    fetchDocumentBytes(studioCurrentDocUrl, { purpose: 'preview' }, function(previewFetchError, previewBytes, previewMeta) {
+      if (previewFetchError || !previewBytes || !previewBytes.length) {
+        showStudioPdfPreviewPlaceholder(previewFrame, noteEl, false, describeFileFetchError(previewFetchError, previewMeta));
+        return;
+      }
+      renderPdfPreviewPages(previewBytes, previewFrame, noteEl);
+    });
+    return;
+  }
+  showStudioPdfPreviewPlaceholder(previewFrame, noteEl, !!(studioLocalPdfBlobUrl && studioLocalPdfUrl === studioCurrentDocUrl), '');
+}
+
+/** Download ANY study document to the user's disk.
+ *  Local file bytes -> large-file download channel -> open in a new tab. */
+function downloadStudyDocFile(docUrl) {
+  var targetUrl = docUrl || studioCurrentDocUrl;
+  if (!targetUrl && !studioLocalPdfBlobUrl) { tool.notify('No document is open.', 'warning'); return; }
+  if (studioLocalPdfBlobUrl && studioLocalPdfUrl === targetUrl) {
+    try {
+      var downloadAnchor = document.createElement('a');
+      downloadAnchor.href = studioLocalPdfBlobUrl;
+      downloadAnchor.download = studioLocalPdfName || safeDownloadFileName(targetUrl, 'document.pdf');
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      tool.notify('Download started - open the file in your viewer.', 'info');
+      return;
+    } catch (downloadError) { /* fall through to the download channel */ }
+  }
+  var fallbackName = safeDownloadFileName(targetUrl, 'document');
+  var downloadProgress = { loadedBytes: 0, totalBytes: 0 };
+  startStudioStatusTicker('⏳ Downloading "' + fallbackName + '"', function() {
+    if (!downloadProgress.loadedBytes) return '';
+    return formatFileSize(downloadProgress.loadedBytes) + (downloadProgress.totalBytes ? ' of ' + formatFileSize(downloadProgress.totalBytes) : '');
+  });
+  fetchDocumentBytes(targetUrl, {
+    purpose: 'download',
+    onProgress: function(loadedBytes, totalBytes) {
+      downloadProgress.loadedBytes = loadedBytes || 0;
+      downloadProgress.totalBytes = totalBytes || 0;
+    }
+  }, function(fetchError, fileBytes, fileMeta) {
+    if (fetchError || !fileBytes || !fileBytes.length) {
+      setStudioStatus('❌ ' + describeFileFetchError(fetchError, fileMeta) + ' Opening it in a new tab instead.', 'warn');
+      tool.openUrl(toHostingUrl(targetUrl));
+      return;
+    }
+    var savedName = (fileMeta && fileMeta.fileName) || fallbackName;
+    var savedToDisk = saveBytesToDisk(fileBytes, savedName, (fileMeta && fileMeta.contentType) || 'application/octet-stream');
+    if (savedToDisk) {
+      setStudioStatus('✅ Downloaded "' + savedName + '" (' + formatFileSize(fileBytes.length) + ').', 'ok');
+      tool.notify('Downloaded "' + savedName + '".', 'success');
+    } else {
+      setStudioStatus('❌ The browser could not save the file - opening it in a new tab instead.', 'warn');
+      tool.openUrl(toHostingUrl(targetUrl));
+    }
+  });
+}
+
+/** Download button inside the studio drawer (any document type) */
+function downloadOpenPdf() {
+  downloadStudyDocFile(studioCurrentDocUrl);
+}
+
+/** Download ONE gallery image to disk (embedded data URL or hosted URL) */
+function downloadStudioImageFile(imageIndex) {
+  var image = editingStudyDocImages[imageIndex];
+  if (!image) return;
+  var imageName = String(image.name || 'document-image');
+  if (!/\.(jpe?g|png|webp)$/i.test(imageName)) imageName += '.jpg';
+  var embeddedDataUrl = (typeof image.dataUrl === 'string' && image.dataUrl.indexOf('data:') === 0) ? image.dataUrl : '';
+  if (embeddedDataUrl) {
+    try {
+      var headerEnd = embeddedDataUrl.indexOf(',');
+      var semicolonIndex = embeddedDataUrl.indexOf(';');
+      var contentType = embeddedDataUrl.substring(5, semicolonIndex === -1 ? headerEnd : semicolonIndex);
+      saveBytesToDisk(base64ToBytes(embeddedDataUrl.substring(headerEnd + 1)), imageName, contentType || 'image/jpeg');
+      return;
+    } catch (embeddedError) { /* fall through to the hosted URL */ }
+  }
+  var hostedUrl = (typeof image.url === 'string' && image.url.indexOf('http') === 0) ? image.url : '';
+  if (!hostedUrl) { tool.notify('This image has no downloadable source.', 'warning'); return; }
+  var hostedName = safeDownloadFileName(hostedUrl, imageName);
+  if (!/\.(jpe?g|png|webp)$/i.test(hostedName)) hostedName += '.jpg';
+  tool.notify('Downloading "' + hostedName + '"…', 'info');
+  fetchDocumentBytes(hostedUrl, { purpose: 'image-download' }, function(fetchError, imageBytes, imageMeta) {
+    if (fetchError || !imageBytes || !imageBytes.length) {
+      tool.notify(describeFileFetchError(fetchError, imageMeta), 'error');
+      return;
+    }
+    saveBytesToDisk(imageBytes, hostedName, (imageMeta && imageMeta.contentType) || 'image/jpeg');
+    tool.notify('Downloaded "' + hostedName + '".', 'success');
+  });
+}
+
+/** Re-render the studio-related lists (unified documents list) */
+function renderStudyDocStudio() {
+  renderPdfEditorList();
+}
+
+/** Open the Document Studio drawer for one document (final or source) */
+function openStudioDrawerForDoc(docUrl) {
+  if (!docUrl) { tool.notify('No document to open.', 'warning'); return; }
+  // Local PDF bytes belong to one document - release them when switching docs.
+  if (studioLocalPdfUrl && studioLocalPdfUrl !== docUrl) {
+    if (studioLocalPdfBlobUrl) {
+      try { URL.revokeObjectURL(studioLocalPdfBlobUrl); } catch (localRevokeError) { /* ignore */ }
+      studioLocalPdfBlobUrl = '';
+    }
+    studioLocalPdfBytes = null;
+    studioLocalPdfUrl = '';
+    studioLocalPdfName = '';
+  }
+  persistStudioImages();
+  studioCurrentDocUrl = docUrl;
+  editingStudyDocImages = (editingStudyDocImagesMap[docUrl] && Array.isArray(editingStudyDocImagesMap[docUrl]))
+    ? JSON.parse(JSON.stringify(editingStudyDocImagesMap[docUrl]))
+    : [];
+  // Repeated Extract clicks before duplicates were filtered can leave the same
+  // picture several times in this list - collapse those copies when opening.
+  var removedDuplicateImages = collapseDuplicateStudioImages();
+  if (removedDuplicateImages) persistStudioImages();
+  var role = studioDocRole(docUrl);
+  var titleEl = el('sd-drawer-title');
+  var subtitleEl = el('sd-drawer-subtitle');
+  var roleButton = el('btn-sd-make-role');
+  if (titleEl) titleEl.textContent = '🧰 ' + readableFileName(docUrl);
+  if (subtitleEl) subtitleEl.textContent = (role === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document') + ' · ' + editingStudyDocImages.length + ' image(s)';
+  if (roleButton) roleButton.textContent = role === 'final' ? '🔄 To Sample' : '🔄 To Ready';
+  setStudioStatus('', '');
+  var previewIframe = el('sd-gen-preview');
+  if (previewIframe) previewIframe.srcdoc = '';
+  loadStudioDocumentPreview();
+  renderStudyDocImageGallery();
+  var drawer = el('sd-studio-drawer');
+  var drawerBackdrop = el('sd-studio-backdrop');
+  if (drawer) drawer.classList.add('sd-drawer-open');
+  if (drawerBackdrop) drawerBackdrop.classList.add('sd-drawer-backdrop-open');
+  syncDrawerScrollLock();
+  tool.resize();
+}
+
+function closeStudioDrawer() {
+  persistStudioImages();
+  studioCurrentDocUrl = '';
+  editingStudyDocImages = [];
+  // Keep the local PDF bytes/blob for the session: reopening the same document
+  // does not require picking the file again. They are released when a
+  // different document is opened (see openStudioDrawerForDoc).
+  if (studioPreviewBlobUrl) {
+    try { URL.revokeObjectURL(studioPreviewBlobUrl); } catch (previewRevokeError) { /* ignore */ }
+    studioPreviewBlobUrl = '';
+  }
+  var drawer = el('sd-studio-drawer');
+  var drawerBackdrop = el('sd-studio-backdrop');
+  if (drawer) drawer.classList.remove('sd-drawer-open');
+  if (drawerBackdrop) drawerBackdrop.classList.remove('sd-drawer-backdrop-open');
+  syncDrawerScrollLock();
+  var previewFrame = el('sd-doc-preview');
+  if (previewFrame) previewFrame.src = 'about:blank';
+  renderPdfEditorList();
+  tool.resize();
+}
+
+/** Switch the open document between Final and Source (any type) */
+function toggleStudioDocRole() {
+  if (!studioCurrentDocUrl) return;
+  var role = studioDocRole(studioCurrentDocUrl);
+  if (role === 'final') {
+    var removedType = removeRealDocumentUrl(studioCurrentDocUrl);
+    if (!removedType) return;
+    editingStudyDocSources.push({ url: studioCurrentDocUrl, name: readableFileName(studioCurrentDocUrl), type: removedType });
+    tool.notify('Document marked as Sample - it is now the input for creating your own Ready document and is not shown to students.', 'info');
+  } else if (role === 'source') {
+    var sourceType = 'studyDoc';
+    for (var i = 0; i < editingStudyDocSources.length; i++) {
+      if (editingStudyDocSources[i].url === studioCurrentDocUrl) {
+        sourceType = editingStudyDocSources[i].type || 'studyDoc';
+        editingStudyDocSources.splice(i, 1);
+        break;
+      }
+    }
+    getPdfArray(sourceType).push(studioCurrentDocUrl);
+    tool.notify('Document marked as Ready - students will now see it and AI generation may use it.', 'success');
+  }
+  var roleButton = el('btn-sd-make-role');
+  if (roleButton) roleButton.textContent = studioDocRole(studioCurrentDocUrl) === 'final' ? '🔄 To Sample' : '🔄 To Ready';
+  var subtitleEl = el('sd-drawer-subtitle');
+  if (subtitleEl) subtitleEl.textContent = (studioDocRole(studioCurrentDocUrl) === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document') + ' · ' + editingStudyDocImages.length + ' image(s)';
+  renderPdfEditorList();
+}
+
+function totalStudioImageKb() {
+  var total = 0;
+  for (var i = 0; i < editingStudyDocImages.length; i++) total += editingStudyDocImages[i].sizeKb || 0;
+  return total;
+}
+
+function renderStudyDocImageGallery() {
+  var grid = el('sd-images-grid');
+  var countEl = el('sd-images-count');
+  if (!grid) return;
+  if (countEl) countEl.textContent = editingStudyDocImages.length + ' image(s) · ' + totalStudioImageKb() + ' KB';
+  if (!editingStudyDocImages.length) {
+    grid.innerHTML = '<div class="sd-empty">No images yet. Upload a PDF (or add a URL above), then click "Extract Images". You can also add images directly or generate one with AI.</div>';
+    return;
+  }
+  grid.innerHTML = editingStudyDocImages.map(function(image, idx) {
+    return '<div class="sd-image-card">' +
+      '<label class="sd-image-check"><input type="checkbox" data-sd-select="' + idx + '"> select</label>' +
+      '<img src="' + imageContentSrc(image) + '" alt="' + esc(image.name) + '" title="Click to view large" data-sd-view="' + idx + '">' +
+      '<div class="sd-image-meta">' + esc(image.name) + '<span class="sd-muted">' + (isImageHosted(image) ? '🔗 hosted · ' : '') + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB</span></div>' +
+      '<div class="sd-image-actions">' +
+        '<button type="button" class="btn btn-sm btn-outline" data-sd-regen="' + idx + '">🎨</button>' +
+        '<button type="button" class="btn btn-sm btn-danger" data-sd-remove="' + idx + '">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openStudioModal(title, bodyHtml) {
+  closeStudioModal();
+  var overlay = document.createElement('div');
+  overlay.className = 'sd-modal-overlay';
+  overlay.id = 'sd-modal-overlay';
+  overlay.innerHTML = '<div class="sd-modal"><div class="sd-modal-header">' + esc(title) + '<button type="button" class="sd-modal-close" data-sd-close>✕</button></div><div class="sd-modal-body" id="sd-modal-body">' + bodyHtml + '</div></div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(event) {
+    if (event.target === overlay) { closeStudioModal(); return; }
+    if (event.target && event.target.getAttribute && event.target.getAttribute('data-sd-close') !== null) closeStudioModal();
+  });
+}
+
+function closeStudioModal() {
+  var overlay = el('sd-modal-overlay');
+  if (overlay) overlay.remove();
+}
+
+function openStudioImageView(imageIndex) {
+  var image = editingStudyDocImages[imageIndex];
+  if (!image) return;
+  var imageSrc = imageContentSrc(image);
+  var bodyHtml = '<img class="sd-view-image" src="' + imageSrc + '" alt="' + esc(image.name) + '">' +
+    '<div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-muted)">' + esc(image.name) + ' · ' + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB' + (isImageHosted(image) ? ' · 🔗 hosted' : '') + '</div>' +
+    '<div class="sd-modal-actions" style="justify-content:center">' +
+      '<button type="button" class="btn btn-outline" data-sd-view-open>↗ Open in New Tab</button>' +
+      '<button type="button" class="btn btn-outline" data-sd-view-download>⬇ Download</button>' +
+      '<button type="button" class="btn btn-primary" data-sd-view-regen>🎨 Regenerate</button>' +
+    '</div>';
+  openStudioModal('🖼 ' + esc(image.name), bodyHtml);
+  var modalBody = el('sd-modal-body');
+  if (!modalBody) return;
+  var openButton = modalBody.querySelector('[data-sd-view-open]');
+  if (openButton) openButton.addEventListener('click', function() { tool.openUrl(imageSrc); });
+  var downloadButton = modalBody.querySelector('[data-sd-view-download]');
+  if (downloadButton) {
+    downloadButton.addEventListener('click', function() { downloadStudioImageFile(imageIndex); });
+  }
+  var regenButton = modalBody.querySelector('[data-sd-view-regen]');
+  if (regenButton) regenButton.addEventListener('click', function() { closeStudioModal(); openStudioRegenerateDialog([imageIndex]); });
+}
+
+/* ── Studio actions: upload, extract, generate ── */
+/** Upload dialog: choose the document type, then pick the file */
+function openUploadDocumentDialog() {
+  var typeKeys = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
+  var optionsHtml = typeKeys.map(function(t) {
+    return '<option value="' + t + '">' + (PDF_LABELS[t] ? PDF_LABELS[t].icon + ' ' + PDF_LABELS[t].label : t) + '</option>';
+  }).join('');
+  var bodyHtml = '<div class="sd-modal-section"><div class="sd-modal-label">Document Type</div>' +
+    '<select class="form-input" id="sd-upload-doc-type">' + optionsHtml + '</select></div>' +
+    '<div class="sd-modal-section"><div class="sd-modal-label">File</div>' +
+    '<button type="button" class="btn btn-primary" id="sd-upload-choose">📁 Choose File from Device</button></div>' +
+    '<div class="sd-modal-actions"><button type="button" class="btn btn-outline" data-sd-close>Cancel</button></div>';
+  openStudioModal('⬆ Upload Document', bodyHtml);
+  var chooseButton = el('sd-upload-choose');
+  if (!chooseButton) return;
+  chooseButton.addEventListener('click', function() {
+    function finishDocumentUpload(uploadedName, uploadedUrl) {
+      var chosenType = 'studyDoc';
+      var typeSelect = el('sd-upload-doc-type');
+      if (typeSelect && typeSelect.value) chosenType = typeSelect.value;
+      getPdfArray(chosenType).push(uploadedUrl);
+      closeStudioModal();
+      renderPdfEditorList();
+      tool.notify('Uploaded "' + uploadedName + '" as a Ready ' + ((PDF_LABELS[chosenType] || {}).label || chosenType) + '.', 'success');
+    }
+    // Preferred path: read the file in the browser and upload it with
+    // requestUploadBinary. This does not depend on the CMS file-picker relay,
+    // which can fail silently in some hosts.
+    if (typeof tool.requestUploadBinary === 'function') {
+      var pickerOpened = pickLocalFile('.pdf,.doc,.docx,.xls,.xlsx,.html,.htm,.txt,.csv', function(selectedFile) {
+        tool.notify('Uploading "' + selectedFile.name + '" to CMS storage…', 'info');
+        uploadLocalFileToStorage(selectedFile, function(uploadError, uploadResult) {
+          if (uploadError) { tool.notify(uploadError, 'error'); return; }
+          finishDocumentUpload(selectedFile.name, uploadResult.url);
+        });
+      });
+      if (!pickerOpened) tool.notify('The browser blocked the file picker. Try again from a click.', 'error');
+      return;
+    }
+    if (typeof tool.requestUpload !== 'function') {
+      tool.notify('CMS upload is not enabled (admin must set allowUpload: yes or allowBinaryUpload: yes).', 'warning');
+      closeStudioModal();
+      return;
+    }
+    tool.requestUpload('.pdf,.doc,.docx,.xls,.xlsx,.html,.htm,.txt,.csv', function(uploadError, uploadedFile) {
+      if (uploadError || !uploadedFile) {
+        if (uploadError) tool.notify('Upload failed: ' + uploadError, 'error');
+        return;
+      }
+      finishDocumentUpload(uploadedFile.name, uploadedFile.url);
+    });
+  });
+}
+
+function addStudyDocImageDirectly() {
+  if (!studioCurrentDocUrl) { tool.notify('Open a document in the Studio drawer first (⚙️ button).', 'warning'); return; }
+  function storeUploadedImage(uploadedName, uploadedUrl, uploadedSizeKb) {
+    editingStudyDocImages.push({ id: genId(), name: uploadedName, width: 0, height: 0, url: uploadedUrl, sizeKb: uploadedSizeKb || 0 });
+    persistStudioImages();
+    renderStudyDocImageGallery();
+    renderPdfEditorList();
+    tool.notify('Image added to this document with a reachable CMS URL.', 'success');
+  }
+  if (typeof tool.requestUploadBinary === 'function') {
+    var pickerOpened = pickLocalFile('image/*', function(selectedFile) {
+      tool.notify('Uploading "' + selectedFile.name + '" to CMS storage…', 'info');
+      uploadLocalFileToStorage(selectedFile, function(uploadError, uploadResult) {
+        if (uploadError) { tool.notify(uploadError, 'error'); return; }
+        storeUploadedImage(selectedFile.name, uploadResult.url, uploadResult.sizeKb);
+      });
+    });
+    if (!pickerOpened) tool.notify('The browser blocked the file picker. Try again from a click.', 'error');
+    return;
+  }
+  if (typeof tool.requestUpload !== 'function') {
+    tool.notify('CMS upload is not enabled (admin must set allowUpload: yes or allowBinaryUpload: yes).', 'warning');
+    return;
+  }
+  tool.requestUpload('image/*', function(uploadError, uploadedFile) {
+    if (uploadError || !uploadedFile) {
+      if (uploadError) tool.notify('Upload failed: ' + uploadError, 'error');
+      return;
+    }
+    storeUploadedImage(uploadedFile.name, uploadedFile.url, 0);
+  });
+}
+
+/* ── 📁 Local PDF mode: read the file in the browser, no server relay ── */
+
+/** Button handler: pick a PDF from the device and process it entirely locally */
+function pickAndProcessLocalPdf() {
+  var pickerOpened = pickLocalFile('.pdf,application/pdf', function(selectedFile) {
+    processLocalPdfFile(selectedFile);
+  });
+  if (!pickerOpened) tool.notify('The browser blocked the file picker. Try again from a click.', 'error');
+}
+
+/** Read a local PDF into memory, then extract its images (and make it the target doc) */
+function processLocalPdfFile(selectedFile) {
+  if (!selectedFile) return;
+  var lowerName = String(selectedFile.name || '').toLowerCase();
+  if (lowerName.indexOf('.pdf') === -1 && selectedFile.type !== 'application/pdf') {
+    tool.notify('Choose a PDF file - other formats cannot be read locally.', 'warning');
+    return;
+  }
+  startStudioStatusTicker('📁 Reading "' + selectedFile.name + '" in your browser (no server)');
+  var localReader = new FileReader();
+  localReader.onerror = function() {
+    setStudioStatus('❌ Could not read "' + selectedFile.name + '" from disk.', 'warn');
+  };
+  localReader.onload = function() {
+    var pdfBytes = new Uint8Array(localReader.result);
+    if (studioLocalPdfBlobUrl) {
+      try { URL.revokeObjectURL(studioLocalPdfBlobUrl); } catch (localRevokeError) { /* ignore */ }
+      studioLocalPdfBlobUrl = '';
+    }
+    studioLocalPdfBytes = pdfBytes;
+    studioLocalPdfName = selectedFile.name;
+    studioLocalPdfBlobUrl = URL.createObjectURL(selectedFile);
+    ensureLocalPdfDocument(selectedFile, function(docError, docUrl) {
+      if (docError) {
+        setStudioStatus('❌ ' + docError + ' Tip: open an existing document first, then choose the local PDF - no upload is needed then.', 'warn');
+        return;
+      }
+      studioLocalPdfUrl = docUrl;
+      if (studioCurrentDocUrl !== docUrl) openStudioDrawerForDoc(docUrl);
+      else loadStudioDocumentPreview();
+      runLocalImageExtraction(pdfBytes);
+    });
+  };
+  localReader.readAsArrayBuffer(selectedFile);
+}
+
+/** Use the open document, or upload the local PDF so it becomes a Ready document */
+function ensureLocalPdfDocument(selectedFile, onDone) {
+  if (studioCurrentDocUrl) { onDone(null, studioCurrentDocUrl); return; }
+  uploadLocalFileToStorage(selectedFile, function(uploadError, uploadResult) {
+    if (uploadError) { onDone(uploadError); return; }
+    editingStudyDocPdfUrls.push(uploadResult.url);
+    renderPdfEditorList();
+    onDone(null, uploadResult.url);
+  });
+}
+
+/** Scan local PDF bytes for images - no relay, no 500 KB limit */
+function runLocalImageExtraction(pdfBytes, onDone) {
+  startStudioStatusTicker('🧩 Scanning the local PDF for images (no server involved)');
+  var candidates = findPdfImageStreams(pdfBytes);
+  decodeAndStorePdfImages(candidates, onDone);
+}
+
+/** Stable identity for a gallery image so running Extract again does not add
+ *  the same picture twice. The content hash is kept in image.contentKey
+ *  because uploading to CMS storage clears image.dataUrl. */
+function studioImageContentKey(image) {
+  if (!image) return '';
+  if (typeof image.contentKey === 'string' && image.contentKey) return image.contentKey;
+  // Only an embedded data: URL identifies the picture itself. A hosted URL
+  // (or an empty dataUrl left after the upload) says nothing about content,
+  // so those images fall back to the name+size identity in studioImageMatchKeys().
+  var dataUrlText = (typeof image.dataUrl === 'string' && image.dataUrl.indexOf('data:') === 0) ? image.dataUrl : '';
+  if (!dataUrlText) return '';
+  var hashValue = 2166136261;
+  for (var position = 0; position < dataUrlText.length; position++) {
+    hashValue ^= dataUrlText.charCodeAt(position);
+    hashValue = (hashValue * 16777619) >>> 0;
+  }
+  var contentKey = (image.width || 0) + 'x' + (image.height || 0) + ':' + dataUrlText.length + ':' + hashValue.toString(36);
+  image.contentKey = contentKey;
+  return contentKey;
+}
+
+/** Every identity an image answers to. Two gallery entries sharing any key are
+ *  the same picture (embedded content, extraction position, or stored URL). */
+function studioImageMatchKeys(image) {
+  if (!image) return [];
+  var matchKeys = [];
+  var contentKey = studioImageContentKey(image);
+  if (contentKey) matchKeys.push('content:' + contentKey);
+  var nameText = String(image.name || '');
+  // Extraction results are named document-image-<n>; the name plus the exact
+  // pixel size and a coarse byte-size bucket identifies them even after the
+  // upload cleared their dataUrl (the CMS reports its own rounded sizeKb).
+  if (/^document-image-\d+$/.test(nameText)) {
+    var sizeBucket = Math.round((image.sizeKb || 0) / 16);
+    matchKeys.push('extracted:' + nameText + '|' + (image.width || 0) + 'x' + (image.height || 0) + '|' + sizeBucket);
+  }
+  if (!matchKeys.length) matchKeys.push('ref:' + (image.url || image.dataUrl || ''));
+  return matchKeys;
+}
+
+/** Remove duplicate entries from the open document's gallery. Returns how many
+ *  were removed (duplicates created by repeated Extract clicks before the
+ *  extraction started filtering them out). */
+function collapseDuplicateStudioImages() {
+  var seenImageKeys = {};
+  var uniqueImages = [];
+  var removedCount = 0;
+  for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+    var galleryImage = editingStudyDocImages[imageIndex];
+    var imageKeys = studioImageMatchKeys(galleryImage);
+    var isDuplicate = false;
+    for (var keyIndex = 0; keyIndex < imageKeys.length; keyIndex++) {
+      if (seenImageKeys[imageKeys[keyIndex]]) isDuplicate = true;
+    }
+    if (isDuplicate) { removedCount++; continue; }
+    for (var seenIndex = 0; seenIndex < imageKeys.length; seenIndex++) {
+      seenImageKeys[imageKeys[seenIndex]] = true;
+    }
+    uniqueImages.push(galleryImage);
+  }
+  if (removedCount) {
+    editingStudyDocImages = uniqueImages;
+    console.log('[STUDIO:IMAGES] removed ' + removedCount + ' duplicate image entry(ies) from this document');
+  }
+  return removedCount;
+}
+
+/** Decode image candidates, add them to the open document's gallery and upload them */
+function decodeAndStorePdfImages(candidates, onDone) {
+  if (!candidates || !candidates.length) {
+    var scanInfo = lastPdfScanInfo;
+    var scanSummary = 'objects: ' + scanInfo.imageObjects + ', inline: ' + scanInfo.inlineImages + ', carved: ' + scanInfo.carvedImages +
+      ' · image mentions: ' + scanInfo.imageMentions + ', pages: ' + scanInfo.pageCount + ', /XObject: ' + scanInfo.xobjectCount +
+      ' · DCT: ' + scanInfo.filters.dct + ', Flate: ' + scanInfo.filters.flate + ', JPX: ' + scanInfo.filters.jpx +
+      ', JBIG2: ' + scanInfo.filters.jbig2 + ', CCITT: ' + scanInfo.filters.ccitt +
+      ' · encrypted: ' + (scanInfo.encrypted ? 'yes' : 'no');
+    var scanAdvice = '';
+    if (!scanInfo.isPdf) scanAdvice = ' This file does not start like a PDF - check that it is a real PDF file.';
+    else if (scanInfo.encrypted) scanAdvice = ' The PDF is encrypted - the browser cannot read its images.';
+    else if (scanInfo.filters.jpx > 0 || scanInfo.jp2Signature) scanAdvice = ' Its images are JPEG2000 (JPX) - Chrome cannot decode that format. Export the pages as standard JPEG/PNG or re-save the PDF as a standard PDF.';
+    else if (scanInfo.filters.jbig2 > 0 || scanInfo.filters.ccitt > 0) scanAdvice = ' Its images are scanned fax/JBIG2 - the browser cannot decode them. Convert the scanned pages to JPEG/PNG first.';
+    else if (scanInfo.imageMentions === 0) scanAdvice = ' No raster image objects exist in this file - the pictures you see are likely vector drawings, which cannot be extracted as images.';
+    console.log('[STUDIO:PDF-SCAN]', scanInfo);
+    setStudioStatus('No images found in this document (' + scanSummary + ').' + scanAdvice + ' Use "⬇ Download File" to check the file.', 'warn');
+    if (onDone) onDone();
+    return;
+  }
+  startStudioStatusTicker('🧩 Found ' + candidates.length + ' image stream(s) - decoding images');
+  decodePdfImageCandidates(candidates, function(decodeError, decodedImages, skippedNotes) {
+    if (decodeError) { setStudioStatus('❌ ' + decodeError, 'warn'); if (onDone) onDone(); return; }
+    if (!decodedImages.length) {
+      var uniqueFailureReasons = [];
+      for (var failureIndex = 0; failureIndex < skippedNotes.length; failureIndex++) {
+        if (uniqueFailureReasons.indexOf(skippedNotes[failureIndex]) === -1) uniqueFailureReasons.push(skippedNotes[failureIndex]);
+      }
+      var reasons = uniqueFailureReasons.slice(0, 2).join(' · ');
+      setStudioStatus('❌ Found ' + candidates.length + ' image(s) but none could be decoded. ' + (reasons || ''), 'warn');
+      if (onDone) onDone();
+      return;
+    }
+    // Ignore pictures that are already in this document's gallery - clicking
+    // Extract again must not add the same images a second time.
+    var knownImageKeys = {};
+    for (var existingIndex = 0; existingIndex < editingStudyDocImages.length; existingIndex++) {
+      var existingKeys = studioImageMatchKeys(editingStudyDocImages[existingIndex]);
+      for (var existingKeyIndex = 0; existingKeyIndex < existingKeys.length; existingKeyIndex++) {
+        knownImageKeys[existingKeys[existingKeyIndex]] = true;
+      }
+    }
+    var addedImageCount = 0;
+    var duplicateImageCount = 0;
+    for (var i = 0; i < decodedImages.length; i++) {
+      var decodedImage = decodedImages[i];
+      var decodedKeys = studioImageMatchKeys(decodedImage);
+      var isKnownImage = false;
+      for (var decodedKeyIndex = 0; decodedKeyIndex < decodedKeys.length; decodedKeyIndex++) {
+        if (knownImageKeys[decodedKeys[decodedKeyIndex]]) isKnownImage = true;
+      }
+      if (isKnownImage) { duplicateImageCount++; continue; }
+      for (var newKeyIndex = 0; newKeyIndex < decodedKeys.length; newKeyIndex++) {
+        knownImageKeys[decodedKeys[newKeyIndex]] = true;
+      }
+      editingStudyDocImages.push(decodedImage);
+      addedImageCount++;
+    }
+    if (!addedImageCount) {
+      var duplicateStatus = 'ℹ️ All ' + decodedImages.length + ' image(s) are already in this document\'s list - nothing was added.';
+      setStudioStatus(duplicateStatus, 'ok');
+      tool.notify('These images are already in the list - nothing was added.', 'info');
+      if (onDone) onDone();
+      return;
+    }
+    persistStudioImages();
+    renderStudyDocImageGallery();
+    renderPdfEditorList();
+    var status = '✅ Extracted ' + addedImageCount + ' new image(s).';
+    if (duplicateImageCount) status += ' ' + duplicateImageCount + ' already in the list (not added again).';
+    if (skippedNotes.length) {
+      var uniqueSkipReasons = [];
+      for (var noteIndex = 0; noteIndex < skippedNotes.length; noteIndex++) {
+        if (uniqueSkipReasons.indexOf(skippedNotes[noteIndex]) === -1) uniqueSkipReasons.push(skippedNotes[noteIndex]);
+      }
+      status += ' Skipped ' + skippedNotes.length + ' (' + uniqueSkipReasons.slice(0, 3).join('; ') + ').';
+    }
+    if (lastPdfScanInfo.masksSkipped) status += ' Ignored ' + lastPdfScanInfo.masksSkipped + ' soft mask(s).';
+    setStudioStatus(status, 'ok');
+    tool.notify(status, 'success');
+    // Upload the extracted images one by one so the document stores hosted URLs.
+    uploadUnhostedStudioImages(function(uploadedCount) {
+      if (uploadedCount > 0) {
+        setStudioStatus('✅ Extracted ' + addedImageCount + ' image(s) and uploaded ' + uploadedCount + ' to CMS storage.', 'ok');
+      }
+      if (onDone) onDone();
+    });
+  });
+}
+
+function extractStudyDocImages(onDone) {
+  // Guard against being bound directly to a click handler (the event object
+  // would otherwise arrive here as "onDone").
+  if (typeof onDone !== 'function') onDone = null;
+  var sourceUrl = studioCurrentDocUrl;
+  if (!sourceUrl) {
+    tool.notify('Open a document in the Studio drawer first (⚙️ button on any document).', 'warning');
+    if (onDone) onDone();
+    return;
+  }
+  // Fast path: the PDF was read from the user's own disk - scan those bytes
+  // directly. No server relay, no 403, no 500 KB limit.
+  if (studioLocalPdfBytes && studioLocalPdfUrl === sourceUrl) {
+    runLocalImageExtraction(studioLocalPdfBytes, onDone);
+    return;
+  }
+  if (!binaryFileChannelAvailable() && typeof tool.requestFetch !== 'function') {
+    tool.notify('File downloads are not enabled on this host. Use "📁 From Local PDF" to extract images in your browser.', 'warning');
+    if (onDone) onDone();
+    return;
+  }
+  var extractionProgress = { loadedBytes: 0, totalBytes: 0 };
+  startStudioStatusTicker('⏳ Downloading the document and looking for images', function() {
+    if (!extractionProgress.loadedBytes) return '';
+    return formatFileSize(extractionProgress.loadedBytes) + (extractionProgress.totalBytes ? ' of ' + formatFileSize(extractionProgress.totalBytes) : '');
+  });
+  fetchDocumentBytes(sourceUrl, {
+    purpose: 'images',
+    onProgress: function(loadedBytes, totalBytes) {
+      extractionProgress.loadedBytes = loadedBytes || 0;
+      extractionProgress.totalBytes = totalBytes || 0;
+    }
+  }, function(fetchError, documentBytes, documentMeta) {
+    if (fetchError || !documentBytes || !documentBytes.length) {
+      setStudioStatus('❌ ' + describeFileFetchError(fetchError, documentMeta) + ' Use "📁 From Local PDF" - it reads the file in your browser with no download limit.', 'warn');
+      if (onDone) onDone();
+      return;
+    }
+    try {
+      decodeAndStorePdfImages(findPdfImageStreams(documentBytes), onDone);
+    } catch (parseError) {
+      setStudioStatus('❌ Image extraction failed: ' + parseError.message, 'warn');
+      if (onDone) onDone();
+    }
+  });
+}
+
+/* ── Studio generation: AI rewrites the document into raw HTML ── */
+function buildStudioHtmlPrompt(sourceText, imageCount) {
+  var prompt = 'You are an expert educational content editor. REPHRASE the document below into clean, well-structured HTML for a study guide. This is a rewriting step - the result is raw course content that will be edited and styled later.\n\n' +
+    'OUTPUT RULES (strict):\n' +
+    '- Return ONLY the HTML fragment: no markdown, no code fences, no JSON, no explanations, no <html>/<head>/<body> wrapper.\n' +
+    '- Start with an <h1> title that you rewrite from the document, then use <h2>/<h3> sections, <p>, <ul>/<ol>/<li>, <table>/<thead>/<tbody>/<tr>/<th>/<td>, <blockquote>, <strong>, <em> and <figure>/<figcaption>.\n' +
+    '- Never copy sentences verbatim - rewrite everything in your own words while keeping every fact, number, rule and term exact.\n' +
+    '- Keep the full content of the document (do not summarize it away) and keep a logical reading order.\n' +
+    '- Do not add styling attributes, classes, scripts or inline CSS - semantic HTML only.\n' +
+    '- Use proper text for headings and lists; do not wrap whole paragraphs in <div>.\n';
+  if (imageCount > 0) {
+    prompt += '\nIMAGES: the document has ' + imageCount + ' image(s). Use the exact placeholder tokens below as image sources, for example: <figure><img src="{{IMG0}}" alt="short description"><figcaption>caption</figcaption></figure>. Place an image exactly where the document discusses that figure, chart, diagram or screenshot. Use each placeholder at most once and only where it belongs.\n';
+    for (var imageIndex = 0; imageIndex < imageCount; imageIndex++) {
+      var imageLabel = (editingStudyDocImages[imageIndex] && editingStudyDocImages[imageIndex].name) ? editingStudyDocImages[imageIndex].name : ('image-' + (imageIndex + 1));
+      prompt += '{{IMG' + imageIndex + '}} = ' + imageLabel + '\n';
+    }
+  } else {
+    prompt += '\nIMAGES: none available - do not add <img> tags.\n';
+  }
+  prompt += '\nDocument:\n"""\n' + sourceText + '\n"""\n\nRETURN THE HTML NOW (start with <h1>):';
+  return prompt;
+}
+
+/** Swap {{IMG0}} tokens for real image URLs (string level - raw HTML) */
+function replaceStudioImageTokens(htmlText) {
+  var replacedHtml = String(htmlText || '');
+  for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+    var imageUrl = imageContentSrc(editingStudyDocImages[imageIndex]);
+    if (!imageUrl) continue;
+    var tokenPatterns = ['{{IMG' + imageIndex + '}}', '{{ IMG' + imageIndex + ' }}', '[[IMG' + imageIndex + ']]', 'IMG:' + imageIndex];
+    for (var tokenIndex = 0; tokenIndex < tokenPatterns.length; tokenIndex++) {
+      replacedHtml = replacedHtml.split(tokenPatterns[tokenIndex]).join(imageUrl);
+    }
+  }
+  // Remove leftover placeholders so they can never show up in the lesson.
+  replacedHtml = replacedHtml.replace(/\{\{\s*IMG\s*\d+\s*\}\}/g, '').replace(/\[\[\s*IMG\s*\d+\s*\]\]/g, '');
+  return replacedHtml;
+}
+
+/** Count image tags in generated raw HTML */
+function countHtmlImages(htmlText) {
+  var imageMatches = String(htmlText || '').match(/<img\b/gi);
+  return imageMatches ? imageMatches.length : 0;
+}
+
+var studioPreviewCss = '<style>body{font-family:system-ui,sans-serif;font-size:15px;color:#1e293b;line-height:1.8;padding:20px;max-width:900px;margin:0 auto}.study-guide{line-height:1.8}img{max-width:100%;border-radius:8px}.sg-heading{font-size:22px;font-weight:800;color:#3730a3;margin:32px 0 14px;padding-bottom:10px;border-bottom:2px solid #eef2ff}.sg-hero{text-align:center;padding:32px 24px;background:linear-gradient(135deg,#eef2ff,#f0f4ff);border-radius:16px;margin-bottom:28px;border:1px solid #818cf8}.sg-q-radio{position:absolute;opacity:0;pointer-events:none;width:0;height:0}.sg-q-opt{display:block;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;background:#fafbfc}.sg-q-radio:checked+.sg-q-opt{border-color:#4f46e5;background:#eef2ff;font-weight:600}.sg-q-feedback{display:none;margin-top:12px;padding:14px 16px;background:#d1fae5;border:1px solid #6ee7b7;border-radius:12px}.sg-q-correct:checked~.sg-q-feedback{display:block}@keyframes sgSpotlight{0%,100%{box-shadow:0 0 10px rgba(79,70,229,.15)}50%{box-shadow:0 0 25px rgba(79,70,229,.35)}}.sg-spotlight{animation:sgSpotlight 2.5s ease-in-out infinite}</style>';
+
+/* ── Local PDF text extraction (approximate, browser-only) ── */
+
+/** Decode a PDF literal string (byte string) into readable text */
+function decodePdfTextBytes(literal) {
+  if (!literal) return '';
+  if (literal.length >= 2) {
+    var firstByte = literal.charCodeAt(0);
+    var secondByte = literal.charCodeAt(1);
+    if (firstByte === 0xFE && secondByte === 0xFF) {
+      var bigEndianText = '';
+      for (var beIndex = 2; beIndex + 1 < literal.length; beIndex += 2) {
+        bigEndianText += String.fromCharCode((literal.charCodeAt(beIndex) << 8) | literal.charCodeAt(beIndex + 1));
+      }
+      return bigEndianText;
+    }
+    if (firstByte === 0xFF && secondByte === 0xFE) {
+      var littleEndianText = '';
+      for (var leIndex = 2; leIndex + 1 < literal.length; leIndex += 2) {
+        littleEndianText += String.fromCharCode(literal.charCodeAt(leIndex) | (literal.charCodeAt(leIndex + 1) << 8));
+      }
+      return littleEndianText;
+    }
+  }
+  var cp1252Special = {
+    0x80: '€', 0x82: '‚', 0x83: 'ƒ', 0x84: '„', 0x85: '…', 0x86: '†', 0x87: '‡', 0x88: 'ˆ', 0x89: '‰',
+    0x8A: 'Š', 0x8B: '‹', 0x8C: 'Œ', 0x8E: 'Ž', 0x91: '‘', 0x92: '’', 0x93: '“', 0x94: '”', 0x95: '•',
+    0x96: '–', 0x97: '—', 0x98: '˜', 0x99: '™', 0x9A: 'š', 0x9B: '›', 0x9C: 'œ', 0x9E: 'ž', 0x9F: 'Ÿ'
+  };
+  var decodedText = '';
+  for (var charIndex = 0; charIndex < literal.length; charIndex++) {
+    var byteValue = literal.charCodeAt(charIndex);
+    decodedText += cp1252Special[byteValue] || String.fromCharCode(byteValue);
+  }
+  return decodedText;
+}
+
+/** Pull literal text strings out of one PDF content stream */
+function extractTextFromPdfContentStream(content) {
+  var outputText = '';
+  var contentIndex = 0;
+  var contentLength = content.length;
+  while (contentIndex < contentLength) {
+    var currentChar = content.charAt(contentIndex);
+    if (currentChar === '(') {
+      var nestDepth = 1;
+      contentIndex++;
+      var literalText = '';
+      while (contentIndex < contentLength && nestDepth > 0) {
+        var literalChar = content.charAt(contentIndex);
+        if (literalChar === '\\') {
+          var escapedChar = content.charAt(contentIndex + 1);
+          if (escapedChar === 'n') { literalText += '\n'; contentIndex += 2; }
+          else if (escapedChar === 'r') { literalText += '\r'; contentIndex += 2; }
+          else if (escapedChar === 't') { literalText += '\t'; contentIndex += 2; }
+          else if (escapedChar === 'b' || escapedChar === 'f') { contentIndex += 2; }
+          else if (escapedChar === '(' || escapedChar === ')' || escapedChar === '\\') { literalText += escapedChar; contentIndex += 2; }
+          else if (/[0-7]/.test(escapedChar)) {
+            var octalDigits = escapedChar;
+            contentIndex += 2;
+            for (var octalCount = 0; octalCount < 2 && /[0-7]/.test(content.charAt(contentIndex)); octalCount++) {
+              octalDigits += content.charAt(contentIndex);
+              contentIndex++;
+            }
+            literalText += String.fromCharCode(parseInt(octalDigits, 8));
+          } else { contentIndex += 2; }
+        } else if (literalChar === '(') {
+          nestDepth++;
+          literalText += literalChar;
+          contentIndex++;
+        } else if (literalChar === ')') {
+          nestDepth--;
+          if (nestDepth > 0) literalText += literalChar;
+          contentIndex++;
+        } else { literalText += literalChar; contentIndex++; }
+      }
+      outputText += decodePdfTextBytes(literalText) + ' ';
+    } else if (content.substr(contentIndex, 2) === 'ET' || content.substr(contentIndex, 2) === 'T*') {
+      outputText += '\n';
+      contentIndex += 2;
+    } else if (content.substr(contentIndex, 3) === 'Td ' || content.substr(contentIndex, 3) === 'TD ') {
+      outputText += ' ';
+      contentIndex += 3;
+    } else {
+      contentIndex++;
+    }
+  }
+  return outputText;
+}
+
+/** Approximate text extraction from a PDF byte array - no server involved */
+function extractPdfTextLocally(pdfBytes) {
+  var pdfText = bytesToLatin1String(pdfBytes);
+  var streamPattern = /stream\r?\n([\s\S]*?)endstream/g;
+  var textPieces = [];
+  var streamMatch;
+  var scannedStreams = 0;
+  while ((streamMatch = streamPattern.exec(pdfText)) && scannedStreams < 300) {
+    scannedStreams++;
+    var dictStart = Math.max(0, streamMatch.index - 1200);
+    var dictText = pdfText.substring(dictStart, streamMatch.index);
+    if (/\/Subtype\s*\/Image/.test(dictText)) continue;
+    if (/\/Type\s*\/XRef/.test(dictText)) continue;
+    var streamBytes = latin1StringToBytes(streamMatch[1]);
+    if (/\/FlateDecode/.test(dictText)) {
+      var inflatedBytes = inflateRawDeflate(streamBytes);
+      if (!inflatedBytes) continue;
+      streamBytes = inflatedBytes;
+    } else if (/\/Filter\s*\/[A-Za-z0-9]+/.test(dictText)) {
+      continue; // LZW / ASCII85 / JPX content streams are not supported locally
+    }
+    var streamContent = bytesToLatin1String(streamBytes);
+    if (streamContent.indexOf('BT') === -1) continue;
+    var extractedText = extractTextFromPdfContentStream(streamContent);
+    if (extractedText && extractedText.replace(/\s+/g, '').length > 20) textPieces.push(extractedText);
+  }
+  return textPieces.join('\n')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** Read the document text: local browser extraction first when bytes are
+ *  available, then the downloaded file (large-file channel), then the CMS
+ *  text service. */
+function readSourceDocumentText(onDone) {
+  var sourceUrl = studioCurrentDocUrl;
+  var localBytesAvailable = !!(studioLocalPdfBytes && studioLocalPdfUrl === sourceUrl);
+  var localText = '';
+  if (localBytesAvailable) {
+    setStudioStatus('📝 Reading the PDF text locally in your browser…', 'busy');
+    try { localText = extractPdfTextLocally(studioLocalPdfBytes); } catch (localTextError) { localText = ''; }
+    if (localText && localText.replace(/\s+/g, '').length >= 200) {
+      onDone(null, localText.substring(0, 15000), 'local PDF text (approximate)');
+      return;
+    }
+  }
+  function useLocalText(reason) {
+    if (localText && localText.replace(/\s+/g, '').length >= 200) {
+      onDone(null, localText.substring(0, 15000), 'local PDF text (approximate)');
+      return;
+    }
+    onDone(reason + (localBytesAvailable
+      ? ' The local text reader found too little readable text in this PDF.'
+      : ' Use "📁 From Local PDF" to read the file in your browser instead.'), '');
+  }
+  function readThroughCmsTextService(downloadNote) {
+    if (typeof tool.requestFileContent !== 'function') {
+      useLocalText((downloadNote || '') + ' The CMS text service is not enabled (allowFileContent).');
+      return;
+    }
+    startStudioStatusTicker('⏳ Reading the document text through the CMS service');
+    var readFinished = false;
+    var readWatchdog = setTimeout(function() {
+      if (readFinished) return;
+      readFinished = true;
+      useLocalText((downloadNote || '') + ' The CMS text service did not respond within 45 seconds.');
+    }, 45000);
+    tool.requestFileContent(toHostingUrl(sourceUrl), function(readError, fileContent) {
+      if (readFinished) return;
+      readFinished = true;
+      clearTimeout(readWatchdog);
+      var documentText = '';
+      if (!readError && fileContent) {
+        documentText = typeof fileContent === 'string' ? fileContent : (fileContent.text || fileContent.content || '');
+      }
+      if (documentText && documentText.length > 50) {
+        onDone(null, String(documentText).substring(0, 15000), 'CMS text service');
+        return;
+      }
+      useLocalText((downloadNote || '') + (readError ? (' The CMS text service failed: ' + readError + '.') : ' The CMS text service returned no text.'));
+    });
+  }
+  // Full-file download: text documents are decoded, PDFs go through the local
+  // text extractor - no relay size cap involved.
+  var downloadProgress = { loadedBytes: 0, totalBytes: 0 };
+  startStudioStatusTicker('⏳ Downloading the document to read its text', function() {
+    if (!downloadProgress.loadedBytes) return '';
+    return formatFileSize(downloadProgress.loadedBytes) + (downloadProgress.totalBytes ? ' of ' + formatFileSize(downloadProgress.totalBytes) : '');
+  });
+  fetchDocumentBytes(sourceUrl, {
+    purpose: 'text',
+    onProgress: function(loadedBytes, totalBytes) {
+      downloadProgress.loadedBytes = loadedBytes || 0;
+      downloadProgress.totalBytes = totalBytes || 0;
+    }
+  }, function(fetchError, documentBytes, documentMeta) {
+    var downloadedText = '';
+    if (!fetchError && documentBytes && documentBytes.length) {
+      if (isTextDocumentUrl(sourceUrl)) {
+        downloadedText = decodeTextBytes(documentBytes);
+      } else {
+        try { downloadedText = extractPdfTextLocally(documentBytes); } catch (pdfTextError) { downloadedText = ''; }
+      }
+    }
+    if (downloadedText && downloadedText.replace(/\s+/g, '').length >= 200) {
+      onDone(null, downloadedText.substring(0, 15000), (documentMeta && documentMeta.fromLocalFile)
+        ? 'local PDF text (approximate)'
+        : 'downloaded file (read in your browser)');
+      return;
+    }
+    readThroughCmsTextService(fetchError ? (' ' + describeFileFetchError(fetchError, documentMeta)) : '');
+  });
+}
+
+function generateStudyGuideFromStudioDoc(onDone) {
+  var sourceUrl = studioCurrentDocUrl;
+  if (!sourceUrl) {
+    tool.notify('Open a document in the Studio drawer first (⚙️ button on any document).', 'warning');
+    if (onDone) onDone('no-doc');
+    return;
+  }
+  setStudioActionButtonsBusy(true);
+  startStudioStatusTicker('⏳ Reading the document text… (step 1 of 2)');
+  var genStatusEl = el('sd-gen-status');
+  if (genStatusEl) genStatusEl.textContent = '⏳ reading…';
+  var streamPreviewFrame = el('sd-gen-preview');
+  if (streamPreviewFrame) streamPreviewFrame.srcdoc = '';
+  readSourceDocumentText(function(readError, sourceText, textSourceLabel) {
+    if (readError || !sourceText) {
+      setStudioActionButtonsBusy(false);
+      setStudioStatus('❌ ' + (readError || 'Could not read the document text.'), 'warn');
+      if (genStatusEl) genStatusEl.textContent = '';
+      tool.notify(readError || 'Could not read the document text.', 'error');
+      if (onDone) onDone(readError || 'read-error');
+      return;
+    }
+    var prompt = buildStudioHtmlPrompt(sourceText, editingStudyDocImages.length);
+    var fullResponse = '';
+    var streamedCharacters = 0;
+    var streamFinished = false;
+    var lastPreviewRenderedAt = 0;
+    // Raw HTML rewriting of a long document can take many minutes - allow 15.
+    var streamWatchdog = setTimeout(function() {
+      if (streamFinished) return;
+      streamFinished = true;
+      setStudioActionButtonsBusy(false);
+      setStudioStatus('❌ The AI did not finish within 15 minutes. Nothing was replaced - try again.', 'warn');
+      if (genStatusEl) genStatusEl.textContent = '';
+      tool.notify('AI generation timed out. Try again.', 'error');
+      if (onDone) onDone('stream-timeout');
+    }, 15 * 60 * 1000);
+    if (genStatusEl) genStatusEl.textContent = '⏳ writing HTML…';
+    startStudioStatusTicker('✨ AI is writing the study content as HTML (step 2 of 2 · source: ' + textSourceLabel + ')', function() {
+      renderStudioHtmlStreamPreview(fullResponse);
+      return formatCount(streamedCharacters) + ' characters of HTML';
+    });
+    tool.requestAIStream(prompt, null, {
+      onToken: function(token) {
+        if (streamFinished) return;
+        fullResponse += token;
+        streamedCharacters += token.length;
+        if (genStatusEl) genStatusEl.textContent = '⏳ writing HTML… ' + formatCount(streamedCharacters) + ' chars';
+        // Throttled live render (~1/second) so the preview grows while the AI writes.
+        var previewNow = Date.now();
+        if (previewNow - lastPreviewRenderedAt > 900) {
+          lastPreviewRenderedAt = previewNow;
+          renderStudioHtmlStreamPreview(fullResponse);
+        }
+      },
+      onComplete: function() {
+        if (streamFinished) return;
+        streamFinished = true;
+        clearTimeout(streamWatchdog);
+        finishStudioHtmlGeneration(fullResponse, onDone);
+      },
+      onError: function(streamError) {
+        if (streamFinished) return;
+        streamFinished = true;
+        clearTimeout(streamWatchdog);
+        setStudioActionButtonsBusy(false);
+        setStudioStatus('❌ Generation failed: ' + streamError, 'warn');
+        if (genStatusEl) genStatusEl.textContent = '';
+        if (streamPreviewFrame) streamPreviewFrame.srcdoc = '';
+        tool.notify('Generation failed: ' + streamError, 'error');
+        if (onDone) onDone(streamError);
+      }
+    });
+  });
+}
+
+function finishStudioHtmlGeneration(rawResponse, onDone) {
+  setStudioActionButtonsBusy(false);
+  var genStatusEl = el('sd-gen-status');
+  var raw = String(rawResponse).trim()
+    .replace(/^```(?:html)?\s*\n?/i, '')
+    .replace(/\n?```\s*$/i, '')
+    .trim();
+  // Keep only the HTML fragment when the model wrapped it in prose.
+  var firstTag = raw.indexOf('<');
+  var lastTag = raw.lastIndexOf('>');
+  if (firstTag !== -1 && lastTag > firstTag) raw = raw.substring(firstTag, lastTag + 1);
+  if (raw.length < 100) {
+    setStudioStatus('❌ The AI returned too little HTML. Nothing was replaced - try again.', 'warn');
+    if (genStatusEl) genStatusEl.textContent = '';
+    var emptyPreview = el('sd-gen-preview');
+    if (emptyPreview) emptyPreview.srcdoc = '';
+    tool.notify('The AI returned too little HTML. Try again.', 'error');
+    if (onDone) onDone('empty');
+    return;
+  }
+  var generatedHtml = replaceStudioImageTokens(raw);
+  editingHtmlCode = generatedHtml;
+  editingStudyHtmlData = null;
+  if (el('edit-html-code')) el('edit-html-code').value = generatedHtml;
+  if (el('edit-html-code-v2')) el('edit-html-code-v2').value = generatedHtml;
+  updateHtmlPreview();
+  var studioPreview = el('sd-gen-preview');
+  if (studioPreview) studioPreview.srcdoc = studioPreviewCss + generatedHtml;
+  if (genStatusEl) genStatusEl.textContent = '✅ HTML ready';
+  var imageCount = countHtmlImages(generatedHtml);
+  var status = '✅ Generated raw HTML (' + formatCount(generatedHtml.length) + ' characters';
+  if (imageCount) status += ', ' + imageCount + ' image(s) linked';
+  status += '). It is now the lesson Study Content.';
+  if (generatedHtml.length > 700 * 1024) {
+    status += ' ⚠️ ' + Math.round(generatedHtml.length / 1024) + ' KB - close to the Firestore 1 MB document limit.';
+    setStudioStatus(status, 'warn');
+  } else {
+    setStudioStatus(status, 'ok');
+  }
+  autoSaveCurrentLesson();
+  tool.notify(status + ' Auto-saved.', 'success');
+  if (onDone) onDone(null);
+}
+
+/* ── Image regeneration (needs the CMS image-generation relay) ── */
+var STUDIO_IMAGE_STYLES = [
+  { key: 'professional', label: '✨ More professional', prompt: 'Make this image look more professional and higher quality than the original while keeping the same content and subject.' },
+  { key: 'same', label: '🔒 Same as original', prompt: 'Keep the image as close to the original as possible - it must not look different.' },
+  { key: '3d', label: '🧊 3D version', prompt: 'Recreate this image as a polished 3D-style render.' },
+  { key: 'colorful', label: '🌈 More colorful', prompt: 'Recreate this image with more vivid, colorful styling.' },
+  { key: 'minimal', label: '⬜ Minimal flat', prompt: 'Recreate this image in a clean, minimal flat design style.' },
+  { key: 'dark', label: '🌙 Dark theme', prompt: 'Recreate this image with a dark theme color palette.' },
+  { key: 'light', label: '☀️ Light theme', prompt: 'Recreate this image with a light, airy color palette.' },
+  { key: 'sketch', label: '✏️ Sketch style', prompt: 'Recreate this image as an elegant hand-drawn sketch.' }
+];
+
+function studioSelectedImageIndexes() {
+  var indexes = [];
+  var checkboxes = document.querySelectorAll('#sd-images-grid input[data-sd-select]');
+  for (var i = 0; i < checkboxes.length; i++) {
+    if (checkboxes[i].checked) indexes.push(parseInt(checkboxes[i].getAttribute('data-sd-select'), 10));
+  }
+  return indexes;
+}
+
+function openStudioRegenerateDialog(imageIndexes) {
+  if (!imageIndexes.length) { tool.notify('Select one or more images first (or use the 🎨 button on an image).', 'warning'); return; }
+  var chipsHtml = STUDIO_IMAGE_STYLES.map(function(style) {
+    return '<button type="button" class="sd-style-chip" data-style="' + style.key + '">' + style.label + '</button>';
+  }).join('');
+  openStudioModal('🎨 Regenerate Image' + (imageIndexes.length > 1 ? 's (' + imageIndexes.length + ')' : ''),
+    '<div class="sd-modal-section"><div class="sd-modal-label">Style helpers (click to set the instruction)</div><div class="sd-style-chips">' + chipsHtml + '</div></div>' +
+    '<div class="sd-modal-section"><div class="sd-modal-label">Built-in instruction</div><div class="sd-modal-builtin" id="sd-regen-builtin">' + esc(STUDIO_IMAGE_STYLES[0].prompt) + '</div></div>' +
+    '<div class="sd-modal-section"><div class="sd-modal-label">Additional comment (optional)</div><textarea class="form-input form-textarea" id="sd-regen-comment" placeholder="e.g. use the same colors, remove the background, add labels..." style="min-height:70px"></textarea></div>' +
+    '<div class="sd-modal-actions"><button type="button" class="btn btn-outline" data-sd-close>Cancel</button><button type="button" class="btn btn-primary" id="sd-regen-run">🚀 Generate</button></div>');
+  var builtinPrompt = STUDIO_IMAGE_STYLES[0].prompt;
+  var builtinEl = el('sd-regen-builtin');
+  var chipButtons = document.querySelectorAll('#sd-modal-body .sd-style-chip');
+  for (var c = 0; c < chipButtons.length; c++) {
+    chipButtons[c].addEventListener('click', function() {
+      var styleKey = this.getAttribute('data-style');
+      for (var s = 0; s < STUDIO_IMAGE_STYLES.length; s++) {
+        if (STUDIO_IMAGE_STYLES[s].key === styleKey) {
+          builtinPrompt = STUDIO_IMAGE_STYLES[s].prompt;
+          builtinEl.textContent = builtinPrompt;
+          break;
+        }
+      }
+      for (var t = 0; t < chipButtons.length; t++) chipButtons[t].classList.toggle('active', chipButtons[t] === this);
+    });
+  }
+  el('sd-regen-run').addEventListener('click', function() {
+    var commentText = el('sd-regen-comment').value.trim();
+    var finalPrompt = builtinPrompt + (commentText ? ' ' + commentText : '');
+    closeStudioModal();
+    runStudioImageRegenerationQueue(imageIndexes.slice(), finalPrompt);
+  });
+}
+
+function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
+  if (typeof tool.requestGenerateImage !== 'function') {
+    tool.notify('AI image generation is not enabled on this host - requestGenerateImage needs allowImageGeneration: yes in the field settings. The compare-and-select UI is ready and works as soon as the host enables it.', 'warning');
+    return;
+  }
+  var queue = imageIndexes.slice();
+  function processQueueItem() {
+    if (!queue.length) {
+      setStudioStatus('', '');
+      tool.notify('✅ Image regeneration finished.', 'success');
+      renderStudyDocImageGallery();
+      return;
+    }
+    var imageIndex = queue.shift();
+    var originalImage = editingStudyDocImages[imageIndex];
+    if (!originalImage) { processQueueItem(); return; }
+    startStudioStatusTicker('🎨 AI is regenerating image ' + (imageIndex + 1) + ' of ' + editingStudyDocImages.length + ' (this can take up to 60 seconds)');
+    // Hosted images have no embedded data URL - fetch the bytes for image-to-image.
+    resolveStudioImageDataUrl(originalImage, function(baseImageDataUrl) {
+      var generateOptions = { prompt: finalPrompt };
+      if (baseImageDataUrl) generateOptions.baseImageDataUrl = baseImageDataUrl;
+      tool.requestGenerateImage(generateOptions, function(generateError, generateResult) {
+        if (generateError || !generateResult || !generateResult.dataUrl) {
+          setStudioStatus('', '');
+          tool.notify('Image regeneration failed: ' + (generateError || 'empty result'), 'error');
+          processQueueItem();
+          return;
+        }
+        setStudioStatus('', '');
+        openStudioImageCompare(imageIndex, generateResult.dataUrl, function(decision) {
+          if (decision === 'again') queue.unshift(imageIndex);
+          if (decision === 'use') {
+            replaceStudioImageEverywhere(imageIndex, generateResult.dataUrl);
+            // Store the new image on CMS storage right away so the document keeps
+            // only the hosted URL instead of a large embedded copy.
+            uploadStudioImageToStorage(imageIndex, function(uploaded) {
+              if (uploaded) autoSaveCurrentLesson();
+              renderStudyDocImageGallery();
+              renderPdfEditorList();
+            });
+            renderStudyDocImageGallery();
+          }
+          processQueueItem();
+        });
+      });
+    });
+  }
+  processQueueItem();
+}
+
+function openStudioImageCompare(imageIndex, newDataUrl, decideCallback) {
+  var originalImage = editingStudyDocImages[imageIndex];
+  if (!originalImage) { decideCallback('keep'); return; }
+  var bodyHtml = '<div class="sd-compare">' +
+    '<div class="sd-compare-side"><div class="sd-compare-label">Original</div><img src="' + imageContentSrc(originalImage) + '" alt="Original"></div>' +
+    '<div class="sd-compare-side"><div class="sd-compare-label">AI Regenerated</div><img src="' + newDataUrl + '" alt="Regenerated"></div>' +
+    '</div>' +
+    '<div class="sd-modal-actions"><button type="button" class="btn btn-outline" data-sd-decide="again">🔄 Regenerate Again</button><button type="button" class="btn btn-outline" data-sd-decide="keep">↩ Keep Original</button><button type="button" class="btn btn-primary" data-sd-decide="use">✅ Use New</button></div>';
+  openStudioModal('🔍 Compare: ' + esc(originalImage.name), bodyHtml);
+  var decideButtons = document.querySelectorAll('#sd-modal-body [data-sd-decide]');
+  for (var b = 0; b < decideButtons.length; b++) {
+    decideButtons[b].addEventListener('click', function() {
+      var decision = this.getAttribute('data-sd-decide');
+      closeStudioModal();
+      decideCallback(decision);
+    });
+  }
+}
+
+function replaceStringDeepInComponents(components, oldText, newText) {
+  function walkNode(node) {
+    if (Array.isArray(node)) {
+      for (var i = 0; i < node.length; i++) node[i] = walkNode(node[i]);
+      return node;
+    }
+    if (node && typeof node === 'object') {
+      var keys = Object.keys(node);
+      for (var k = 0; k < keys.length; k++) node[keys[k]] = walkNode(node[keys[k]]);
+      return node;
+    }
+    return node === oldText ? newText : node;
+  }
+  return walkNode(components);
+}
+
+function replaceStudioImageEverywhere(imageIndex, newDataUrl) {
+  var targetImage = editingStudyDocImages[imageIndex];
+  if (!targetImage) return;
+  var oldDataUrl = targetImage.dataUrl;
+  targetImage.dataUrl = newDataUrl;
+  targetImage.url = '';
+  targetImage.sizeKb = Math.max(1, Math.round(newDataUrl.length * 0.75 / 1024));
+  persistStudioImages();
+  if (editingStudyHtmlData && Array.isArray(editingStudyHtmlData.components)) {
+    replaceStringDeepInComponents(editingStudyHtmlData.components, oldDataUrl, newDataUrl);
+    editingHtmlCode = renderComponentsToHtml(editingStudyHtmlData.components);
+    if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
+    if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
+    updateHtmlPreview();
+    var studioPreview = el('sd-gen-preview');
+    if (studioPreview && studioPreview.srcdoc) studioPreview.srcdoc = studioPreviewCss + editingHtmlCode;
+  }
+  autoSaveCurrentLesson();
+}
+
+/* ═══════════════════════════════════════════
    ROLE CHECK
    ═══════════════════════════════════════════ */
 
@@ -4747,19 +8477,17 @@ function checkManagerRole() {
 }
 
 /* ═══════════════════════════════════════════
-   LOADING
-   ═══════════════════════════════════════════ */
-
-function showLoading(show) { el('loading-overlay').style.display = show ? '' : 'none'; }
-
-/* ═══════════════════════════════════════════
    EVENT BINDINGS
    ═══════════════════════════════════════════ */
 
 function bindEvents() {
   el('btn-add-section').addEventListener('click', function() { openSectionEditor(null, null); });
   var btnGenAllCurr = el('btn-generate-all-curriculum');
-  if (btnGenAllCurr) btnGenAllCurr.addEventListener('click', function() { startBulkForCurriculum(); });
+  if (btnGenAllCurr) {
+    btnGenAllCurr.addEventListener('click', function() {
+      sandboxConfirm('🚀 Generate the missing AI content (Study Content, Slides, Flashcards, Quiz) for the ENTIRE curriculum? It runs the four generators one after another over every lesson and may take a long time. Lessons that already have content are skipped.', function() { startBulkForCurriculum(); }, 'Yes, Generate');
+    });
+  }
   el('btn-modal-close').addEventListener('click', closeSectionEditor);
   el('btn-modal-cancel').addEventListener('click', closeSectionEditor);
   el('btn-modal-save').addEventListener('click', saveSection);
@@ -4788,6 +8516,113 @@ function bindEvents() {
   el('btn-youtube-editor-cancel').addEventListener('click', closeYoutubeEditor);
   el('btn-pdf-editor-save').addEventListener('click', savePdfUrl);
   el('btn-pdf-editor-cancel').addEventListener('click', closePdfEditor);
+  var btnPdfEditorDelete = el('btn-pdf-editor-delete');
+  if (btnPdfEditorDelete) btnPdfEditorDelete.addEventListener('click', deletePdfFromEditor);
+  var pdfRoleSwitch = el('edit-pdf-item-role');
+  if (pdfRoleSwitch) {
+    pdfRoleSwitch.addEventListener('change', function() {
+      var stateEl = el('pdf-editor-role-state');
+      var visGroup = el('pdf-editor-vis-group');
+      var roleHint = el('pdf-editor-role-hint');
+      if (stateEl) stateEl.textContent = this.checked ? 'Ready' : 'Sample';
+      if (visGroup) visGroup.style.display = this.checked ? '' : 'none';
+      if (roleHint) roleHint.textContent = this.checked
+        ? 'Ready = your own processed file, shown to students and used for AI content generation in the other tabs.'
+        : 'Sample = an outside document used only as the input for creating your own Ready document. It is never shown to students.';
+    });
+  }
+  var pdfVisSwitch = el('edit-pdf-item-vis');
+  if (pdfVisSwitch) {
+    pdfVisSwitch.addEventListener('change', function() {
+      var stateEl = el('pdf-editor-vis-state');
+      if (stateEl) stateEl.textContent = this.checked ? 'Visible' : 'Hidden';
+    });
+  }
+
+  // Study Document Studio buttons (all guarded - the drawer markup may be
+  // absent in stale harness snapshots).
+  var btnUploadDocument = el('btn-upload-document');
+  if (btnUploadDocument) btnUploadDocument.addEventListener('click', openUploadDocumentDialog);
+  var btnAddDocument = el('btn-add-document');
+  if (btnAddDocument) btnAddDocument.addEventListener('click', function() { openPdfEditor('studyDoc', null); });
+  var btnSdAddImage = el('btn-sd-add-image');
+  if (btnSdAddImage) btnSdAddImage.addEventListener('click', addStudyDocImageDirectly);
+  var btnSdGenerateImage = el('btn-sd-generate-image');
+  if (btnSdGenerateImage) btnSdGenerateImage.addEventListener('click', openGenerateImageDialog);
+  var btnSdExtract = el('btn-sd-extract');
+  if (btnSdExtract) btnSdExtract.addEventListener('click', function() { extractStudyDocImages(); });
+  var btnSdExtractLocal = el('btn-sd-extract-local');
+  if (btnSdExtractLocal) btnSdExtractLocal.addEventListener('click', pickAndProcessLocalPdf);
+  var btnSdGenerate = el('btn-sd-generate');
+  if (btnSdGenerate) {
+    btnSdGenerate.addEventListener('click', function() {
+      sandboxConfirm('✨ AI-rewrite the open document as raw HTML? The AI rephrases the document into semantic HTML with its image links and replaces the current lesson Study Content. This can take several minutes.', function() {
+        generateStudyGuideFromStudioDoc();
+      }, 'Yes, Generate');
+    });
+  }
+  var btnSdProcess = el('btn-sd-process');
+  if (btnSdProcess) btnSdProcess.addEventListener('click', startDocumentProcessFromDrawer);
+  var btnSdOpenDoc = el('btn-sd-open-doc');
+  if (btnSdOpenDoc) {
+    btnSdOpenDoc.addEventListener('click', function() {
+      if (!studioCurrentDocUrl) { tool.notify('No document is open.', 'warning'); return; }
+      tool.openUrl(studioCurrentDocUrl);
+    });
+  }
+  var btnSdDownloadPdf = el('btn-sd-download-pdf');
+  if (btnSdDownloadPdf) btnSdDownloadPdf.addEventListener('click', downloadOpenPdf);
+  var btnSdMakeRole = el('btn-sd-make-role');
+  if (btnSdMakeRole) btnSdMakeRole.addEventListener('click', toggleStudioDocRole);
+  var btnSdDrawerClose = el('btn-sd-drawer-close');
+  if (btnSdDrawerClose) btnSdDrawerClose.addEventListener('click', closeStudioDrawer);
+  var studioBackdrop = el('sd-studio-backdrop');
+  if (studioBackdrop) studioBackdrop.addEventListener('click', closeStudioDrawer);
+  var btnLessonDrawerClose = el('btn-lesson-drawer-close');
+  if (btnLessonDrawerClose) btnLessonDrawerClose.addEventListener('click', cancelLessonEditor);
+  var btnSdSelectAll = el('btn-sd-select-all');
+  if (btnSdSelectAll) {
+    btnSdSelectAll.addEventListener('click', function() {
+      var checkboxes = document.querySelectorAll('#sd-images-grid input[data-sd-select]');
+      var allChecked = true;
+      for (var allIdx = 0; allIdx < checkboxes.length; allIdx++) {
+        if (!checkboxes[allIdx].checked) { allChecked = false; break; }
+      }
+      for (var cbIdx = 0; cbIdx < checkboxes.length; cbIdx++) checkboxes[cbIdx].checked = !allChecked;
+    });
+  }
+  var btnSdRegenSelected = el('btn-sd-regen-selected');
+  if (btnSdRegenSelected) btnSdRegenSelected.addEventListener('click', function() { openStudioRegenerateDialog(studioSelectedImageIndexes()); });
+  var btnSdCompare = el('btn-sd-compare');
+  if (btnSdCompare) btnSdCompare.addEventListener('click', toggleStudioCompareMode);
+  // Drawings and vector illustrations can only be captured as screenshots:
+  // paste one with Ctrl+V while the Studio drawer is open.
+  document.addEventListener('paste', handleStudioImagePaste);
+
+  // Gallery delegation (view large, regenerate, remove)
+  var studioImagesGrid = el('sd-images-grid');
+  if (studioImagesGrid) {
+    studioImagesGrid.addEventListener('click', function(event) {
+      var target = event.target;
+      if (!target || !target.closest) return;
+      var viewTarget = target.closest('[data-sd-view]');
+      if (viewTarget) { openStudioImageView(parseInt(viewTarget.getAttribute('data-sd-view'), 10)); return; }
+      var regenTarget = target.closest('[data-sd-regen]');
+      if (regenTarget) { openStudioRegenerateDialog([parseInt(regenTarget.getAttribute('data-sd-regen'), 10)]); return; }
+      var removeTarget = target.closest('[data-sd-remove]');
+      if (removeTarget) {
+        var removeImageIndex = parseInt(removeTarget.getAttribute('data-sd-remove'), 10);
+        var removeImageName = editingStudyDocImages[removeImageIndex] ? editingStudyDocImages[removeImageIndex].name : 'this image';
+        sandboxConfirm('Remove "' + removeImageName + '" from this document\'s image gallery? Study content already generated keeps its own embedded copy and is not affected.', function() {
+          editingStudyDocImages.splice(removeImageIndex, 1);
+          persistStudioImages();
+          renderStudyDocImageGallery();
+          renderPdfEditorList();
+          tool.notify('Image removed from this document.', 'info');
+        }, 'Yes, Remove');
+      }
+    });
+  }
 
   var pdfAddBtns = document.querySelectorAll('[data-add-pdf]');
   for (var pa = 0; pa < pdfAddBtns.length; pa++) {
@@ -4795,17 +8630,41 @@ function bindEvents() {
   }
 
   var btnGenQuiz = el('btn-generate-quiz-from-pdf');
-  if (btnGenQuiz) btnGenQuiz.addEventListener('click', generateQuizFromPdf);
+  if (btnGenQuiz) {
+    btnGenQuiz.addEventListener('click', function() {
+      sandboxConfirm('🤖 Generate 15 quiz questions with AI from your Ready documents? The AI reads the documents and replaces the current questions. It may take about a minute.', function() { generateQuizFromPdf(); }, 'Yes, Generate');
+    });
+  }
   var btnGen2 = el('btn-generate-quiz-from-pdf-2');
-  if (btnGen2) btnGen2.addEventListener('click', generateQuizFromPdf);
+  if (btnGen2) {
+    btnGen2.addEventListener('click', function() {
+      sandboxConfirm('🤖 Generate 15 quiz questions with AI from your Ready documents? The AI reads the documents and replaces the current questions. It may take about a minute.', function() { generateQuizFromPdf(); }, 'Yes, Generate');
+    });
+  }
   var btnGenHtmlV2 = el('btn-generate-html-from-pdf-v2');
-  if (btnGenHtmlV2) btnGenHtmlV2.addEventListener('click', generateHtmlFromPdf);
+  if (btnGenHtmlV2) {
+    btnGenHtmlV2.addEventListener('click', function() {
+      sandboxConfirm('🤖 Generate the study guide with AI from your Ready documents? The AI reads the documents and replaces the current lesson Study Content. It may take a few minutes.', function() { generateHtmlFromPdf(); }, 'Yes, Generate');
+    });
+  }
   var btnGenFlashcards = el('btn-generate-flashcards');
-  if (btnGenFlashcards) btnGenFlashcards.addEventListener('click', generateFlashcardsFromPdf);
+  if (btnGenFlashcards) {
+    btnGenFlashcards.addEventListener('click', function() {
+      sandboxConfirm('🃏 Generate flashcards with AI from your Ready documents? The AI reads the documents and replaces the current flashcards. It may take about a minute.', function() { generateFlashcardsFromPdf(); }, 'Yes, Generate');
+    });
+  }
   var btnGenFlashcardsV2 = el('btn-generate-flashcards-v2');
-  if (btnGenFlashcardsV2) btnGenFlashcardsV2.addEventListener('click', generateFlashcardsFromPdf);
+  if (btnGenFlashcardsV2) {
+    btnGenFlashcardsV2.addEventListener('click', function() {
+      sandboxConfirm('🃏 Generate flashcards with AI from your Ready documents? The AI reads the documents and replaces the current flashcards. It may take about a minute.', function() { generateFlashcardsFromPdf(); }, 'Yes, Generate');
+    });
+  }
   var btnGenPres = el('btn-generate-presentation');
-  if (btnGenPres) btnGenPres.addEventListener('click', generatePresentationFromPdf);
+  if (btnGenPres) {
+    btnGenPres.addEventListener('click', function() {
+      sandboxConfirm('🎞️ Generate the presentation slides with AI from your Ready documents? The AI reads the documents and replaces the current presentation. It may take about a minute.', function() { generatePresentationFromPdf(); }, 'Yes, Generate');
+    });
+  }
 
   // Visibility toggle clicks (delegated)
   var editorPanel = el('lesson-editor-panel');
@@ -4851,7 +8710,13 @@ function bindEvents() {
   var refreshBtn = el('btn-refresh-preview');
   if (refreshBtn) refreshBtn.addEventListener('click', updateHtmlPreview);
 
-  el('btn-confirm-yes').addEventListener('click', function() { hideConfirm(); if (_confirmCallback) { var cb = _confirmCallback; _confirmCallback = null; cb(); } });
+  // IMPORTANT: capture the callback BEFORE hideConfirm() - hideConfirm resets
+  // _confirmCallback, so reading it afterwards would always be null.
+  el('btn-confirm-yes').addEventListener('click', function() {
+    var confirmedCallback = _confirmCallback;
+    hideConfirm();
+    if (confirmedCallback) confirmedCallback();
+  });
   el('btn-confirm-no').addEventListener('click', function() { hideConfirm(); });
 
   var toolbar = el('html-editor-toolbar');
@@ -4889,6 +8754,8 @@ function bindEvents() {
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
+      var studioDrawer = el('sd-studio-drawer');
+      if (studioDrawer && studioDrawer.classList.contains('sd-drawer-open')) { closeStudioDrawer(); return; }
       var panels = ['youtube-editor-panel','pdf-editor-panel','quiz-question-editor-panel','source-link-editor-panel','lesson-editor-panel'];
       for (var i = 0; i < panels.length; i++) {
         var p = el(panels[i]);
@@ -4910,7 +8777,12 @@ function bindEvents() {
    ENTRY POINT
    ═══════════════════════════════════════════ */
 
-tool.onReady(function(val, fields) {
+var curriculumToolStarted = false;
+
+function startCurriculumTool(val, fields) {
+  if (curriculumToolStarted) return;
+  curriculumToolStarted = true;
+  console.log('[TOOL:READY] onReady fired · value type: ' + (val === null ? 'null' : typeof val));
   if (el('tool-build-badge')) el('tool-build-badge').textContent = 'tool build ' + TOOL_BUILD;
   setTimeout(function() {
     if (el('loading-overlay').style.display !== 'none') {
@@ -4922,7 +8794,9 @@ tool.onReady(function(val, fields) {
     { name: 'builderObjectId', label: 'contentId (for display)', type: 'text', default: '', severity: 'goodToHave', hint: 'Optional: set to this CMS object\'s contentId. Displays in header for copying to the Student tool\'s curriculumSourceId.' },
     { name: 'managerRole', label: 'Manager Role(s)', type: 'text', default: 'admin,editor', severity: 'goodToHave', hint: 'Comma-separated roles that can manage the curriculum.' },
     { name: 'lessonDocUrlTemplate', label: 'Lesson Doc URL Template', type: 'text', default: '', severity: 'optional', hint: 'URL template for opening lesson Firestore docs. Use __ID__ for lessonDocId, __TYPE__ for object type, __ORIGIN__ for the tenant subdomain origin (auto-detected). Leave empty for the default: <tenant origin>/admin/objects/<type>/<id>.' },
-    { name: 'tenantBaseUrl', label: 'Tenant Base URL', type: 'text', default: '', severity: 'optional', hint: 'Optional fallback for doc links when the tenant subdomain cannot be auto-detected from the parent page. Example: https://yourtenant.uniconbase.com' }
+    { name: 'tenantBaseUrl', label: 'Tenant Base URL', type: 'text', default: '', severity: 'optional', hint: 'Optional fallback for doc links when the tenant subdomain cannot be auto-detected from the parent page. Example: https://yourtenant.uniconbase.com' },
+    { name: 'pdfjsWorkerUrl', label: 'PDF.js Worker URL', type: 'text', default: '', severity: 'optional', hint: 'Same-origin URL of pdf.worker.min.js when the CMS injects PDF.js into the tool frame. Leave empty when the CMS sets pdfjsLib.GlobalWorkerOptions.workerSrc itself.' },
+    { name: 'pdfPreviewScale', label: 'PDF Preview Scale', type: 'text', default: '1.2', severity: 'optional', hint: 'Rendering scale for the in-tool PDF page preview (1.2 = 120%). Smaller values render faster.' }
   ]);
 
   updateIdBadge();
@@ -4945,7 +8819,13 @@ tool.onReady(function(val, fields) {
     return;
   }
 
-  bindEvents();
+  // Never let an event-binding problem hide the data: the curriculum is
+  // rendered even when one of the bindings fails.
+  try {
+    bindEvents();
+  } catch (bindError) {
+    console.error('[TOOL:BOOT] bindEvents failed - the curriculum will still be rendered:', bindError);
+  }
   if (tool.isReadOnly()) {
     el('app').innerHTML = '<div style="text-align:center;padding:60px 20px"><div class="empty-icon">🔒</div><div class="empty-title">Read-Only Mode</div><div class="empty-desc">This tool is in read-only mode. Switch to edit mode to manage the curriculum.</div></div>';
     tool.resize();
@@ -4954,6 +8834,80 @@ tool.onReady(function(val, fields) {
 
   tool.onReadonlyChange(function(ro) { if (ro) tool.notify('Read-only mode active. Switch to edit mode.', 'warning'); });
 
-  loadCurriculum(val);
-  tool.onValueChange(function(v) { loadCurriculum(v); });
-});
+  try {
+    loadCurriculum(val);
+  } catch (bootLoadError) {
+    console.error('[TOOL:BOOT] loadCurriculum failed:', bootLoadError);
+    showCurriculumLoadFailure(bootLoadError);
+  }
+  // Give the value-change subscription a second chance in case the SDK
+  // rejected it at file start (the guarded attach never subscribes twice).
+  attachEarlyCmsListeners();
+  if (earlyCmsHandshake.valueChangeSeen && earlyCmsHandshake.lastValue !== undefined) {
+    // A value change arrived while this script was still loading - apply it
+    // now that the entry point has run.
+    applyCurriculumValueFromCms(earlyCmsHandshake.lastValue);
+  }
+}
+
+/** Load a value pushed by the CMS after the entry point already ran */
+function applyCurriculumValueFromCms(cmsValue) {
+  try {
+    loadCurriculum(cmsValue);
+  } catch (changeLoadError) {
+    console.error('[TOOL:BOOT] loadCurriculum failed after a value change:', changeLoadError);
+    showCurriculumLoadFailure(changeLoadError);
+  }
+}
+
+/** If the CMS never delivers onReady, read the value directly so the tool
+ *  still renders instead of staying on an empty loading screen. */
+function startCurriculumValueWatchdog() {
+  var waitedMs = 0;
+  var pollIntervalMs = 1500;
+  var maxWaitMs = 30000;
+  console.log('[TOOL:WAIT] waiting for the CMS value · build ' + TOOL_BUILD);
+  var watchdogTimer = setInterval(function() {
+    if (curriculumToolStarted) { clearInterval(watchdogTimer); return; }
+    waitedMs += pollIntervalMs;
+    var polledValue = null;
+    try {
+      if (typeof tool !== 'undefined' && tool && typeof tool.getValue === 'function') polledValue = tool.getValue();
+    } catch (pollError) {
+      console.warn('[TOOL:WAIT] tool.getValue() failed:', pollError);
+    }
+    var polledCurriculum = polledValue ? normalizeCurriculumValue(polledValue) : null;
+    if (polledCurriculum && Array.isArray(polledCurriculum.sections)) {
+      console.warn('[TOOL:WAIT] onReady did not arrive - rendering the value read from tool.getValue() after ' + waitedMs + ' ms');
+      startCurriculumTool(polledValue, null);
+      clearInterval(watchdogTimer);
+      return;
+    }
+    var waitingBadge = el('tool-build-badge');
+    if (waitingBadge) waitingBadge.textContent = 'build ' + TOOL_BUILD + ' · CMS value not received (' + Math.round(waitedMs / 1000) + 's)';
+    if (waitedMs === 6000) {
+      console.warn('[TOOL:WAIT] no CMS value after 6 s · build ' + TOOL_BUILD + ' · the tool will stay empty until the CMS sends the record');
+      var loadingOverlay = el('loading-overlay');
+      if (loadingOverlay && loadingOverlay.style.display !== 'none') loadingOverlay.style.display = 'none';
+    }
+    if (waitedMs >= maxWaitMs) {
+      clearInterval(watchdogTimer);
+      console.warn('[TOOL:WAIT] gave up waiting for the CMS value after ' + maxWaitMs + ' ms · build ' + TOOL_BUILD);
+    }
+  }, pollIntervalMs);
+}
+
+earlyCmsHandshake.readyHandler = startCurriculumTool;
+earlyCmsHandshake.valueChangeHandler = function(cmsValue) {
+  if (!curriculumToolStarted) return; // replayed by startCurriculumTool
+  applyCurriculumValueFromCms(cmsValue);
+};
+
+// Fallback: subscribe here too in case the early subscription was impossible.
+attachEarlyCmsListeners();
+
+if (earlyCmsHandshake.readySeen) {
+  startCurriculumTool(earlyCmsHandshake.readyValue, earlyCmsHandshake.readyFields);
+} else {
+  startCurriculumValueWatchdog();
+}

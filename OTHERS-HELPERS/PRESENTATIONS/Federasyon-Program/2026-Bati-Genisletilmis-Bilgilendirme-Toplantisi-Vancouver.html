@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>2026 Batı Genişletilmiş Bilgilendirme Toplantısı - Vancouver</title>
+<style>
+  :root {
+    --ink: #152430;
+    --muted: #5d6f7e;
+    --navy: #0d2a3d;
+    --accent: #b07d3f;
+    --accent-soft: #f4ece1;
+    --line: #e2e8ee;
+    --soft: #f6f8fa;
+    --serif: Georgia, "Times New Roman", "Iowan Old Style", serif;
+    --sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 32px 16px 56px;
+    background: #e7ebef;
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 10.5pt;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- sheet ---------- */
+  .sheet {
+    width: 210mm;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 18mm 17mm 16mm;
+    background: #ffffff;
+    border-radius: 3px;
+    box-shadow: 0 18px 50px rgba(16, 38, 55, .16);
+  }
+
+  /* ---------- cover ---------- */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    min-height: 244mm;
+    padding-bottom: 4mm;
+  }
+  .cover .overview { margin-top: 0; }
+  .cover-main { margin-top: auto; margin-bottom: auto; padding: 5mm 0 3mm; }
+  .cover-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--navy);
+  }
+  .brand {
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--navy);
+  }
+  .year {
+    font-family: var(--serif);
+    font-size: 12pt;
+    color: var(--accent);
+    letter-spacing: .08em;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 31pt;
+    line-height: 1.12;
+    letter-spacing: -.01em;
+    color: var(--navy);
+    margin: 26px 0 10px;
+  }
+  .cover-sub {
+    margin: 0;
+    font-size: 14pt;
+    color: var(--muted);
+    letter-spacing: .01em;
+  }
+  .cover-sub strong { color: var(--ink); font-weight: 600; }
+  .rule {
+    width: 54px;
+    height: 3px;
+    background: var(--accent);
+    margin: 20px 0 18px;
+  }
+  .intro {
+    margin: 0 0 24px;
+    font-size: 10.5pt;
+    line-height: 1.62;
+    color: #2a3946;
+    max-width: 168mm;
+  }
+  .cover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin-bottom: 26px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 5px 11px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 8.8pt;
+    color: var(--muted);
+    background: var(--soft);
+  }
+  .chip b { color: var(--navy); font-weight: 600; }
+
+  /* ---------- overview ---------- */
+  .overview {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .overview-title {
+    margin: 0 0 10px;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .overview-row {
+    display: grid;
+    grid-template-columns: 26mm 34mm 1fr;
+    gap: 0 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .overview-row:last-child { border-bottom: 0; }
+  .ov-day {
+    font-family: var(--serif);
+    font-size: 10.5pt;
+    color: var(--accent);
+  }
+  .ov-date {
+    font-size: 9.2pt;
+    color: var(--muted);
+    letter-spacing: .02em;
+  }
+  .ov-theme {
+    font-size: 10pt;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* ---------- day ---------- */
+  .day { padding-top: 12mm; }
+  .day-head {
+    display: grid;
+    grid-template-columns: 22mm 1fr;
+    gap: 0 14px;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--navy);
+  }
+  .day-no {
+    font-family: var(--serif);
+    font-size: 34pt;
+    line-height: 1;
+    color: var(--accent);
+    letter-spacing: -.02em;
+  }
+  .day-date {
+    margin: 0 0 3px;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .day-head h2 {
+    margin: 0;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 17pt;
+    line-height: 1.22;
+    color: var(--navy);
+  }
+  .participants {
+    margin: 10px 0 4px;
+    padding: 9px 12px;
+    background: var(--soft);
+    border-left: 3px solid var(--accent);
+    font-size: 9.6pt;
+    color: #33434f;
+  }
+  .participants b {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 8.2pt;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------- timeline ---------- */
+  .timeline { list-style: none; margin: 8px 0 0; padding: 0; }
+  .timeline--roomy .slot { padding: 13px 0; }
+  .timeline--tight .slot { padding: 3px 0; }
+  .slot {
+    display: grid;
+    grid-template-columns: 27mm 1fr;
+    gap: 0 6mm;
+    padding: 6px 0;
+    break-inside: avoid;
+  }
+  .time {
+    font-size: 9.3pt;
+    font-weight: 600;
+    color: var(--navy);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .01em;
+    padding-top: 1px;
+    white-space: nowrap;
+  }
+  .slot-body {
+    position: relative;
+    padding: 0 0 0 14px;
+    border-left: 1px solid var(--line);
+  }
+  .slot-body::before {
+    content: "";
+    position: absolute;
+    left: -3.5px;
+    top: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .slot-title {
+    display: block;
+    font-size: 10.2pt;
+    color: var(--ink);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .slot-note {
+    display: block;
+    margin-top: 2px;
+    font-size: 9.4pt;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .slot.is-break .slot-title { font-weight: 500; color: var(--muted); }
+  .slot.is-break .slot-body::before { background: #ffffff; border: 1px solid #c3ced8; }
+  .slot.is-highlight .slot-body::before { background: var(--navy); }
+
+  /* ---------- parallel sessions ---------- */
+  .session-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px 9px;
+    margin-top: 6px;
+  }
+  .session {
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #fbfcfd;
+    break-inside: avoid;
+  }
+  .session h4 {
+    margin: 0 0 2px;
+    font-size: 9.4pt;
+    color: var(--navy);
+    font-weight: 700;
+    letter-spacing: .01em;
+  }
+  .session p { margin: 0; font-size: 8.7pt; line-height: 1.4; color: var(--muted); }
+
+  /* ---------- sub sections ---------- */
+  .sub {
+    margin: 9px 0 0;
+    break-inside: avoid;
+  }
+  .sub-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--navy);
+    margin-bottom: 4px;
+  }
+  .sub-head h3 {
+    margin: 0;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 12.5pt;
+    color: var(--navy);
+  }
+  .sub-hint {
+    font-size: 8.2pt;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .sub-note {
+    margin: 0 0 6px;
+    font-size: 9pt;
+    color: var(--muted);
+  }
+
+  /* ---------- tables ---------- */
+  table.sched {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.4pt;
+  }
+  table.sched thead th {
+    text-align: left;
+    padding: 4px 8px 4px 0;
+    font-size: 7.8pt;
+    font-weight: 700;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+  table.sched tbody td {
+    padding: 3px 8px 3px 0;
+    border-bottom: 1px solid #eef2f6;
+    vertical-align: baseline;
+  }
+  table.sched tbody tr:last-child td { border-bottom: 0; }
+  table.sched td.t {
+    width: 24mm;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--navy);
+    font-weight: 600;
+  }
+  table.sched td.name { color: var(--ink); }
+  table.sched td.who { color: var(--muted); width: 34mm; }
+  table.sched td.dur { color: var(--muted); width: 16mm; text-align: right; white-space: nowrap; }
+  table.sched tr.break td { color: var(--muted); }
+  table.sched tr.break td.name { font-weight: 500; }
+
+  /* ---------- two column programme grid ---------- */
+  .talks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 8mm;
+    align-items: start;
+  }
+  .talks-range {
+    margin: 0 0 3px;
+    font-size: 7.6pt;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .talks table.sched { font-size: 9pt; }
+  .talks table.sched td.t { width: 20mm; }
+  .talks table.sched td.who { width: auto; }
+
+  /* ---------- region lines ---------- */
+  .regions { display: grid; gap: 4px; margin-top: 4px; }
+  .regions p { margin: 0; font-size: 9.4pt; color: var(--ink); line-height: 1.45; }
+  .regions b {
+    display: inline-block;
+    min-width: 24mm;
+    font-size: 7.8pt;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-right: 6px;
+  }
+
+  /* ---------- region cards ---------- */
+  .region-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .region-card {
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 8px 10px;
+    background: #fbfcfd;
+    break-inside: avoid;
+  }
+  .region-card b {
+    display: block;
+    font-size: 8pt;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+  .region-card span { font-size: 9.3pt; color: var(--ink); line-height: 1.45; }
+
+  /* ---------- footer ---------- */
+  .doc-foot {
+    margin-top: 14mm;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 8.2pt;
+    color: #8b9aa8;
+    letter-spacing: .03em;
+  }
+  .print-foot { display: none; }
+
+  /* ---------- print button ---------- */
+  .toolbar {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 20;
+  }
+  .toolbar button {
+    font: 600 12px/1 var(--sans);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #ffffff;
+    background: var(--navy);
+    border: 0;
+    border-radius: 999px;
+    padding: 11px 18px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(13, 42, 61, .28);
+  }
+  .toolbar button:hover { background: #123c55; }
+
+  /* ---------- print ---------- */
+  @page { size: A4 portrait; margin: 14mm 14mm 16mm; }
+  @media print {
+    body { background: #ffffff; padding: 0; font-size: 10pt; }
+    .sheet {
+      width: auto;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .toolbar { display: none; }
+    .day { break-before: page; padding-top: 0; }
+    .cover { padding-top: 2mm; }
+    .day-head, .sub-head { break-after: avoid; }
+    .participants { break-after: avoid; }
+    .print-foot { display: none; }
+    .doc-foot { display: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button type="button" onclick="window.print()">PDF olarak yazdır</button>
+</div>
+
+<div class="sheet">
+
+  <!-- ================= COVER ================= -->
+  <header class="cover">
+    <div class="cover-top">
+      <span class="brand">Bilgilendirme Toplantısı</span>
+      <span class="year">2026</span>
+    </div>
+
+    <div class="cover-main">
+    <h1>Batı Genişletilmiş<br />Bilgilendirme Toplantısı</h1>
+    <p class="cover-sub">Vancouver · <strong>20-22 Kasım 2026</strong></p>
+
+    <div class="rule"></div>
+
+    <p class="intro">
+      2026 Batı Genişletilmiş Bilgilendirme Toplantısı, 20-22 Kasım 2026 tarihlerinde CentreCanada ev sahipliğinde
+      Vancouver'da üç gün süreyle yapılacaktır. Batı bölgeleri toplantıya Regional Executive Director'ları,
+      Kadın İcra Direktörleri ve beş ana ünitenin (Rehberlik, Gençlik, MTH, Diyalog, Eğitim) koordinatörleriyle
+      yüz yüze katılır. Doğu bölgeleri ise toplantıya Regional Executive Director'ları ile yüz yüze katılır.
+    </p>
+
+    <div class="cover-meta">
+      <span class="chip"><b>3 gün</b> · 20-22 Kasım 2026</span>
+      <span class="chip"><b>Vancouver</b>, British Columbia</span>
+      <span class="chip">Ev sahibi: <b>CentreCanada</b></span>
+    </div>
+    </div>
+
+    <div class="overview">
+      <p class="overview-title">Program Özeti</p>
+
+      <div class="overview-row">
+        <span class="ov-day">1. Gün</span>
+        <span class="ov-date">20 Kasım Cuma</span>
+        <span class="ov-theme">Regional Executive Directors Müzakere Toplantısı</span>
+      </div>
+      <div class="overview-row">
+        <span class="ov-day">2. Gün</span>
+        <span class="ov-date">21 Kasım Cumartesi</span>
+        <span class="ov-theme">Eş Zamanlı Oturumlar ve Ünite Workshopları</span>
+      </div>
+      <div class="overview-row">
+        <span class="ov-day">3. Gün</span>
+        <span class="ov-date">22 Kasım Pazar</span>
+        <span class="ov-theme">Batı Genişletilmiş Bilgilendirme Toplantısı</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= DAY 1 ================= -->
+  <section class="day">
+    <div class="day-head">
+      <div class="day-no">01</div>
+      <div>
+        <p class="day-date">20 Kasım Cuma</p>
+        <h2>Regional Executive Directors Müzakere Toplantısı</h2>
+      </div>
+    </div>
+
+    <p class="participants"><b>Katılımcılar</b> Bölgelerin Regional Executive Directorları, National Executive Director ve Secretary General.</p>
+
+    <ol class="timeline timeline--roomy">
+      <li class="slot is-break">
+        <span class="time">09:30 - 10:30</span>
+        <span class="slot-body"><span class="slot-title">Kahvaltı</span></span>
+      </li>
+      <li class="slot">
+        <span class="time">10:30 - 10:45</span>
+        <span class="slot-body"><span class="slot-title">Açılış ve Karşılama</span><span class="slot-note">Secretary General</span></span>
+      </li>
+      <li class="slot">
+        <span class="time">10:45 - 11:30</span>
+        <span class="slot-body"><span class="slot-title">NCF Genel Gündemi ve Yeni Dönem Öncelikleri</span><span class="slot-note">National Executive Director</span></span>
+      </li>
+      <li class="slot">
+        <span class="time">11:30 - 12:30</span>
+        <span class="slot-body"><span class="slot-title">Müzakere Başlıkları ve Usul</span><span class="slot-note">Bölgelerin beklentileri, ekonomik durum ve yönetimsel öncelikler</span></span>
+      </li>
+      <li class="slot">
+        <span class="time">12:30 - 13:15</span>
+        <span class="slot-body"><span class="slot-title">Müzakere Oturumu 1</span><span class="slot-note">İl il değerlendirme. Her bölge kendi sorunlarını anlatır, diğer bölgeler imkânları çerçevesinde çözüm önerir.</span></span>
+      </li>
+      <li class="slot is-break">
+        <span class="time">13:15 - 14:30</span>
+        <span class="slot-body"><span class="slot-title">Cuma Namazı ve İkramlar</span></span>
+      </li>
+      <li class="slot">
+        <span class="time">14:30 - 16:00</span>
+        <span class="slot-body"><span class="slot-title">Müzakere Oturumu 2</span><span class="slot-note">Bölgelerin birbirini etkileyen münferit durumlar, ekonomik sürdürülebilirlik ve bölgeler arası işbirliği talepleri</span></span>
+      </li>
+      <li class="slot is-break">
+        <span class="time">16:00 - 16:30</span>
+        <span class="slot-body"><span class="slot-title">İkindi Namazı arası</span></span>
+      </li>
+      <li class="slot">
+        <span class="time">16:30 - 18:00</span>
+        <span class="slot-body"><span class="slot-title">Müzakere Oturumu 3</span><span class="slot-note">Bölgelerin birbirini etkileyen münferit durumlar, ekonomik sürdürülebilirlik ve bölgeler arası işbirliği talepleri</span></span>
+      </li>
+      <li class="slot is-break">
+        <span class="time">18:00 - 18:30</span>
+        <span class="slot-body"><span class="slot-title">Akşam Namazı</span></span>
+      </li>
+      <li class="slot is-break">
+        <span class="time">18:30 - 20:00</span>
+        <span class="slot-body"><span class="slot-title">Akşam Yemeği</span></span>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= DAY 2 ================= -->
+  <section class="day">
+    <div class="day-head">
+      <div class="day-no">02</div>
+      <div>
+        <p class="day-date">21 Kasım Cumartesi</p>
+        <h2>Eş Zamanlı Oturumlar ve Ünite Workshopları</h2>
+      </div>
+    </div>
+
+    <p class="participants"><b>Katılımcılar</b> Katılımcılar yedi eş zamanlı oturuma ayrılır. Her ünite workshopunu o ünitenin Federal Ünite Koordinatörü yönetir; katılımcılar, Batı bölgelerinin o üniteye ait koordinatörleridir.</p>
+
+    <ol class="timeline">
+      <li class="slot is-break">
+        <span class="time">08:30 - 09:30</span>
+        <span class="slot-body"><span class="slot-title">Kahvaltı</span><span class="slot-note">Tüm katılımcılar</span></span>
+      </li>
+
+      <li class="slot">
+        <span class="time">09:30 - 13:00</span>
+        <span class="slot-body">
+          <span class="slot-title">Sabah Oturumları</span>
+          <span class="slot-note">11:15 - 11:30 Çay/Kahve molası dâhil</span>
+          <div class="session-grid">
+            <div class="session">
+              <h4>Kadın İcra Direktörleri</h4>
+              <p>Vizyon toplantısı; National Executive Director katılır, Batı bölgelerinin NCF Kadın İcra Direktörleri katılır.</p>
+            </div>
+            <div class="session">
+              <h4>Regional Executive Directors</h4>
+              <p>NCF Standartlar Çerçevesi nedir, ne değildir; İdari Zorunlu Minimum ve Gelişim Hedefleri; Cuma gününden kalan konuların takibi. National Executive Director adına Secretary General başkanlığında ve moderatörlüğünde.</p>
+            </div>
+            <div class="session">
+              <h4>Rehberlik Ünitesi Workshopu</h4>
+              <p>Federal Rehberlik Ünite Koordinatörü başkanlığında; katılımcılar: Batı bölgelerinin Rehberlik ünite koordinatörleri.</p>
+            </div>
+            <div class="session">
+              <h4>Gençlik Ünitesi Workshopu</h4>
+              <p>Federal Gençlik Ünite Koordinatörü başkanlığında; katılımcılar: Batı bölgelerinin Gençlik ünite koordinatörleri.</p>
+            </div>
+            <div class="session">
+              <h4>MTH Ünitesi Workshopu</h4>
+              <p>Federal MTH Ünite Koordinatörü başkanlığında; katılımcılar: Batı bölgelerinin MTH ünite koordinatörleri.</p>
+            </div>
+            <div class="session">
+              <h4>Diyalog Ünitesi Workshopu</h4>
+              <p>Federal Diyalog Ünite Koordinatörü başkanlığında; katılımcılar: Batı bölgelerinin Diyalog ünite koordinatörleri.</p>
+            </div>
+            <div class="session">
+              <h4>Eğitim Ünitesi Workshopu</h4>
+              <p>Federal Eğitim Ünite Koordinatörü başkanlığında; katılımcılar: Batı bölgelerinin Eğitim ünite koordinatörleri.</p>
+            </div>
+          </div>
+        </span>
+      </li>
+
+      <li class="slot is-break">
+        <span class="time">13:00 - 14:00</span>
+        <span class="slot-body"><span class="slot-title">İkramlar ve Namaz Arası</span></span>
+      </li>
+
+      <li class="slot">
+        <span class="time">14:00 - 18:00</span>
+        <span class="slot-body">
+          <span class="slot-title">Öğleden Sonra Oturumları</span>
+          <span class="slot-note">15:00 - 15:30 İkindi Namazı ve Çay/Kahve molası, 16:15 - 16:45 İkindi Namazı dâhil</span>
+          <div class="session-grid">
+            <div class="session">
+              <h4>Kadın İcra Direktörleri</h4>
+              <p>Saha raporları ve hedef planlaması.</p>
+            </div>
+            <div class="session">
+              <h4>Regional Executive Directors</h4>
+              <p>İdari Standartlara ilişkin görüşler ve her bölgenin 2027 Gelişim Hedefi öncelikleri.</p>
+            </div>
+            <div class="session">
+              <h4>Rehberlik, Gençlik, MTH, Diyalog ve Eğitim Ünitesi Workshopları</h4>
+              <p>Her bölgenin Ünite Standartlarına göre durumu; Pazar sunumlarına hazırlık.</p>
+            </div>
+          </div>
+        </span>
+      </li>
+
+      <li class="slot is-break">
+        <span class="time">18:00 - 18:30</span>
+        <span class="slot-body"><span class="slot-title">Akşam Namazı</span></span>
+      </li>
+      <li class="slot is-break">
+        <span class="time">18:30 - 20:00</span>
+        <span class="slot-body"><span class="slot-title">Akşam Yemeği</span></span>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= DAY 3 ================= -->
+  <section class="day">
+    <div class="day-head">
+      <div class="day-no">03</div>
+      <div>
+        <p class="day-date">22 Kasım Pazar</p>
+        <h2>Batı Genişletilmiş Bilgilendirme Toplantısı</h2>
+      </div>
+    </div>
+
+    <p class="participants"><b>Katılımcılar</b> Cuma ve Cumartesi katılımcılarının tamamı.</p>
+
+    <ol class="timeline timeline--tight">
+      <li class="slot is-break">
+        <span class="time">09:00 - 10:00</span>
+        <span class="slot-body"><span class="slot-title">Kahvaltı</span></span>
+      </li>
+      <li class="slot">
+        <span class="time">10:00 - 10:15</span>
+        <span class="slot-body"><span class="slot-title">Hoş Geldiniz ve Açılış</span><span class="slot-note">Secretary General</span></span>
+      </li>
+      <li class="slot">
+        <span class="time">10:15 - 10:45</span>
+        <span class="slot-body"><span class="slot-title">NCF Genel Gündemi ve NCF Standartlar Çerçevesi</span><span class="slot-note">National Executive Director</span></span>
+      </li>
+    </ol>
+
+    <div class="sub">
+      <div class="sub-head">
+        <h3>Yerel Sunumlar</h3>
+        <span class="sub-hint">Her sunum 7 dakika</span>
+      </div>
+      <div class="talks">
+        <div>
+          <p class="talks-range">10:45 - 11:27</p>
+          <table class="sched">
+            <thead>
+              <tr><th>Saar</th><th>Sunum</th><th>Sunan</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="t">10:45 - 10:52</td><td class="name">Golden Bridges</td><td class="who">Ayşe</td></tr>
+              <tr><td class="t">10:52 - 10:59</td><td class="name">Summer Jobs</td><td class="who">Kazım</td></tr>
+              <tr><td class="t">10:59 - 11:06</td><td class="name">Kız Rehberlik</td><td class="who">Bedriye</td></tr>
+              <tr><td class="t">11:06 - 11:13</td><td class="name">Weekend School</td><td class="who">Şeyma</td></tr>
+              <tr><td class="t">11:13 - 11:20</td><td class="name">Atlas</td><td class="who">Kazım</td></tr>
+              <tr><td class="t">11:20 - 11:27</td><td class="name">Gençlik (Erkek)</td><td class="who">Hüseyin</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <p class="talks-range">11:27 - 12:09</p>
+          <table class="sched">
+            <thead>
+              <tr><th>Saar</th><th>Sunum</th><th>Sunan</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="t">11:27 - 11:34</td><td class="name">Gençlik (Kadın)</td><td class="who">Yasemin</td></tr>
+              <tr><td class="t">11:34 - 11:41</td><td class="name">Rehberlik</td><td class="who">Mustafa</td></tr>
+              <tr><td class="t">11:41 - 11:48</td><td class="name">Diyalog</td><td class="who">Kemal</td></tr>
+              <tr><td class="t">11:48 - 11:55</td><td class="name">Future Bridge</td><td class="who">Kazım</td></tr>
+              <tr><td class="t">11:55 - 12:02</td><td class="name">Grants</td><td class="who">Kemal</td></tr>
+              <tr><td class="t">12:02 - 12:09</td><td class="name">MTH</td><td class="who">Mahir</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <ol class="timeline timeline--tight">
+      <li class="slot is-break">
+        <span class="time">12:09 - 12:45</span>
+        <span class="slot-body"><span class="slot-title">Ara - dinlenme - çay ve ikramlar</span></span>
+      </li>
+    </ol>
+
+    <div class="sub">
+      <div class="sub-head">
+        <h3>Ana Ünite Sunumları</h3>
+        <span class="sub-hint">Her ünite 30 dakika</span>
+      </div>
+      <p class="sub-note">Ünite Standartları ve Kanada Geneli Durum (Federal Ünite Koordinatörleri; her ünite 30 dakika).</p>
+      <table class="sched">
+        <thead>
+          <tr><th>Saar</th><th>Ünite</th><th style="text-align:right;">Süre</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="t">12:45 - 13:15</td><td class="name">Rehberlik Ünitesi</td><td class="dur">30 dk</td></tr>
+          <tr><td class="t">13:15 - 13:45</td><td class="name">Eğitim Ünitesi</td><td class="dur">30 dk</td></tr>
+          <tr class="break"><td class="t">13:45 - 14:30</td><td class="name">Öğle Namazı ve ikramlar</td><td class="dur"></td></tr>
+          <tr><td class="t">14:30 - 15:00</td><td class="name">Gençlik Ünitesi</td><td class="dur">30 dk</td></tr>
+          <tr><td class="t">15:00 - 15:30</td><td class="name">Diyalog Ünitesi</td><td class="dur">30 dk</td></tr>
+          <tr><td class="t">15:30 - 16:00</td><td class="name">MTH Ünitesi</td><td class="dur">30 dk</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ol class="timeline timeline--tight">
+      <li class="slot is-break">
+        <span class="time">16:00 - 16:40</span>
+        <span class="slot-body"><span class="slot-title">İkindi Namazı ve Ara</span></span>
+      </li>
+    </ol>
+
+    <div class="sub">
+      <div class="sub-head">
+        <h3>Bölge Sunumları</h3>
+        <span class="sub-hint">16:40 - 18:00</span>
+      </div>
+      <p class="sub-note">Regional Executive Director'lar, Batı ve Doğu bölgeleri sırayla.</p>
+      <div class="regions">
+        <p><b>10'ar dakika</b> Toronto · Ottawa · Vancouver · Kitchener · Calgary · Edmonton</p>
+        <p><b>5'er dakika</b> Barrie · Montreal · Windsor · Hamilton</p>
+      </div>
+    </div>
+
+    <ol class="timeline timeline--tight">
+      <li class="slot is-highlight">
+        <span class="time">18:00 - 18:15</span>
+        <span class="slot-body"><span class="slot-title">Özet Notlar ve Kapanış</span><span class="slot-note">National Executive Director</span></span>
+      </li>
+      <li class="slot is-break">
+        <span class="time">18:15 - 18:30</span>
+        <span class="slot-body"><span class="slot-title">Akşam Namazı</span></span>
+      </li>
+      <li class="slot is-break">
+        <span class="time">18:30 - 19:30</span>
+        <span class="slot-body"><span class="slot-title">Akşam Yemeği</span></span>
+      </li>
+    </ol>
+  </section>
+
+  <div class="doc-foot">
+    <span>2026 Batı Genişletilmiş Bilgilendirme Toplantısı</span>
+    <span>Vancouver · 20-22 Kasım 2026</span>
+  </div>
+
+</div>
+
+<div class="print-foot">
+  <span>2026 Batı Genişletilmiş Bilgilendirme Toplantısı · Vancouver</span>
+  <span>20-22 Kasım 2026</span>
+</div>
+
+</body>
+</html>

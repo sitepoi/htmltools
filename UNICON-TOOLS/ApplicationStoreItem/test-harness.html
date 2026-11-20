@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Application Store Item - test harness</title>
+<link rel="stylesheet" href="ApplicationStoreItem.css">
+<link rel="stylesheet" href="../../COMMON/TestHarnessBar/harness-bar.css">
+<style>
+  body { margin: 0; background: #e8ebf3; font-family: 'Segoe UI', Arial, sans-serif; }
+  #app { max-width: 1200px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div class="th-bar" id="th-bar"></div>
+<div id="app">
+<!-- TOOL HTML START -->
+<!-- html build 2026-11-18-1 -->
+<div class="asi-root" id="asi-root">
+  <header class="asi-header">
+    <div class="asi-header-inner">
+      <div class="asi-brand">
+        <div class="asi-logo-mark">◈</div>
+        <div>
+          <h1>Application Store Item</h1>
+          <p>One application record - listing, releases, the tool catalog selection, documents and marketing assets in one place</p>
+        </div>
+      </div>
+      <div class="asi-header-actions">
+        <span class="asi-build-badge" id="asi-build-badge">tool build 2026-11-18-1</span>
+        <span class="asi-size-meter" id="asi-size-meter" title="Size of the stored value">0 KB</span>
+        <span class="asi-save-state" id="asi-save-state">Draft staged</span>
+        <span class="asi-role-badge" id="asi-role-badge"></span>
+        <span class="asi-lock-note" id="asi-lock-note" style="display:none">🔒 Read-only</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="asi-tabbar">
+    <nav class="asi-tabs" id="asi-tabs">
+      <button class="asi-tab active" data-tab="details">Details</button>
+      <button class="asi-tab" data-tab="tools">Tools <span class="asi-tab-count" id="asi-tab-tool-count">0</span></button>
+      <button class="asi-tab" data-tab="releases">Releases <span class="asi-tab-count" id="asi-tab-release-count">0</span></button>
+      <button class="asi-tab" data-tab="docs">Docs</button>
+      <button class="asi-tab" data-tab="screenshots">Screenshots <span class="asi-tab-count" id="asi-tab-shot-count">0</span></button>
+      <button class="asi-tab" data-tab="preview">Store preview</button>
+      <button class="asi-tab" data-tab="logs">Logs</button>
+    </nav>
+  </div>
+
+  <main class="asi-main">
+
+    <!-- ============================== DETAILS ============================== -->
+    <section class="asi-pane" id="asi-pane-details">
+      <div class="asi-card">
+        <h2>Application identity</h2>
+        <p class="asi-hint">The store card and the application detail page are built from these values. Edits stage in this tool's saved value immediately.</p>
+        <div class="asi-form-grid">
+          <div class="asi-field">
+            <label for="asi-f-appName">Application name <span class="asi-required">*</span></label>
+            <input class="asi-input" id="asi-f-appName" data-app-field="appName" placeholder="e.g. Curriculum Builder" maxlength="120">
+          </div>
+          <div class="asi-field">
+            <label>Application icon <span class="asi-label-hint">(square image URL)</span></label>
+            <div class="asi-icon-row">
+              <div class="asi-icon-preview" id="asi-icon-preview">A</div>
+              <div class="asi-icon-controls">
+                <input class="asi-input" id="asi-f-appIconUrl" data-app-field="appIconUrl" placeholder="https://... or upload" maxlength="1000">
+                <div>
+                  <button class="asi-btn asi-btn-ghost asi-btn-sm" id="asi-btn-icon-upload" type="button">⬆ Upload icon</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="asi-field asi-field-wide">
+            <label for="asi-f-appShortDescription">Short description <span class="asi-label-hint" id="asi-short-count">0 / 200</span></label>
+            <textarea class="asi-textarea" id="asi-f-appShortDescription" data-app-field="appShortDescription" placeholder="One or two sentences that sell the application in the store grid." maxlength="200"></textarea>
+          </div>
+          <div class="asi-field asi-field-wide">
+            <label for="asi-f-appDescription">Full description</label>
+            <textarea class="asi-textarea asi-textarea-tall" id="asi-f-appDescription" data-app-field="appDescription" placeholder="What the application does, who it is for, and what makes it different. Blank lines separate paragraphs."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="asi-card">
+        <h2>Classification and audience</h2>
+        <div class="asi-form-grid">
+          <div class="asi-field">
+            <label for="asi-f-developer">Developer</label>
+            <div class="asi-icon-row">
+              <select class="asi-select" id="asi-f-developer" data-app-field="developerId"></select>
+              <button class="asi-btn asi-btn-ghost asi-btn-sm" id="asi-btn-developer-refresh" type="button" title="Reload developers">↻</button>
+            </div>
+            <p class="asi-hint" id="asi-developer-note">Loading developers...</p>
+            <input class="asi-input" id="asi-f-developerName" data-app-field="developerName" placeholder="Developer name (fallback when the list is unavailable)" maxlength="120">
+          </div>
+          <div class="asi-field">
+            <label for="asi-f-appCategory">Category</label>
+            <select class="asi-select" id="asi-f-appCategory" data-app-field="appCategory"></select>
+            <p class="asi-hint">The category decides where the application is browsed in the store.</p>
+          </div>
+          <div class="asi-field asi-field-wide">
+            <label>Languages <span class="asi-label-hint" id="asi-language-count">0 selected</span></label>
+            <div class="asi-lang-grid" id="asi-languages-list"></div>
+          </div>
+          <div class="asi-field asi-field-wide">
+            <label>Tags <span class="asi-label-hint">(type and press Enter or comma, max 20)</span></label>
+            <div class="asi-tags-list" id="asi-tags-list"></div>
+            <input class="asi-input" id="asi-f-tags-input" placeholder="e.g. automation, reporting, scheduling" maxlength="200">
+            <div class="asi-tag-suggest" id="asi-tag-suggest"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="asi-card">
+        <h2>Links and store settings</h2>
+        <div class="asi-form-grid-3">
+          <div class="asi-field">
+            <label for="asi-f-website">Website URL</label>
+            <input class="asi-input" id="asi-f-website" data-app-field="website" placeholder="https://..." maxlength="1000">
+          </div>
+          <div class="asi-field">
+            <label for="asi-f-supportUrl">Support URL</label>
+            <input class="asi-input" id="asi-f-supportUrl" data-app-field="supportUrl" placeholder="https://..." maxlength="1000">
+          </div>
+          <div class="asi-field">
+            <label for="asi-f-privacyUrl">Privacy policy URL</label>
+            <input class="asi-input" id="asi-f-privacyUrl" data-app-field="privacyUrl" placeholder="https://..." maxlength="1000">
+          </div>
+          <div class="asi-field">
+            <label for="asi-f-licenseType">License</label>
+            <select class="asi-select" id="asi-f-licenseType" data-app-field="licenseType">
+              <option value="free">Free</option>
+              <option value="freemium">Freemium</option>
+              <option value="paid">Paid</option>
+              <option value="internal">Internal only</option>
+            </select>
+          </div>
+          <div class="asi-field">
+            <label for="asi-f-featured">Featured in store</label>
+            <select class="asi-select" id="asi-f-featured" data-app-field="featured">
+              <option value="no">No</option>
+              <option value="yes">Yes - highlight on the store front</option>
+            </select>
+          </div>
+          <div class="asi-field">
+            <label for="asi-f-appStatus">Listing status</label>
+            <select class="asi-select" id="asi-f-appStatus" data-app-field="appStatus">
+              <option value="draft">Draft - not listed</option>
+              <option value="active">Active - listed in the store</option>
+              <option value="archived">Archived - hidden, kept for history</option>
+            </select>
+          </div>
+        </div>
+        <div class="asi-status-note" id="asi-status-note"></div>
+      </div>
+    </section>
+
+    <!-- ============================== RELEASES ============================== -->
+    <section class="asi-pane" id="asi-pane-releases" style="display:none">
+      <div class="asi-card">
+        <h2>Release overview</h2>
+        <p class="asi-hint">A release is one installable version of the application. Every release can carry several files; the store installs the newest enabled release that has files.</p>
+        <div class="asi-stat-grid" id="asi-rel-summary"></div>
+      </div>
+
+      <div class="asi-card">
+        <div class="asi-release-editor-head">
+          <h3 id="asi-release-editor-title">New release</h3>
+          <span class="asi-hint" id="asi-release-editor-note">Add the files, number and notes, then save the release.</span>
+        </div>
+        <div class="asi-form-grid">
+          <div class="asi-field">
+            <label for="asi-rel-version">Version number <span class="asi-required">*</span></label>
+            <input class="asi-input" id="asi-rel-version" placeholder="e.g. 1.4.0" maxlength="40">
+          </div>
+          <div class="asi-field">
+            <label for="asi-rel-date">Release date</label>
+            <input class="asi-input" id="asi-rel-date" type="date">
+          </div>
+          <div class="asi-field">
+            <label for="asi-rel-enabled">Enabled</label>
+            <select class="asi-select" id="asi-rel-enabled">
+              <option value="yes">Yes - installable</option>
+              <option value="no">No - skipped by the store</option>
+            </select>
+          </div>
+          <div class="asi-field">
+            <label for="asi-f-rel-icon">Release icon override</label>
+            <div class="asi-icon-row">
+              <input class="asi-input" id="asi-f-rel-icon" placeholder="Optional - falls back to the application icon" maxlength="1000">
+              <button class="asi-btn asi-btn-ghost asi-btn-sm" id="asi-btn-rel-icon-upload" type="button">⬆</button>
+            </div>
+          </div>
+          <div class="asi-field asi-field-wide">
+            <label>Release languages</label>
+            <div class="asi-lang-grid" id="asi-rel-languages"></div>
+          </div>
+          <div class="asi-field asi-field-wide">
+            <label for="asi-rel-notes">Release notes</label>
+            <textarea class="asi-textarea" id="asi-rel-notes" placeholder="What changed in this version."></textarea>
+          </div>
+          <div class="asi-field asi-field-wide">
+            <label>Application files <span class="asi-label-hint" id="asi-rel-file-count">0 files</span></label>
+            <div class="asi-release-actions" style="margin-top:0">
+              <button class="asi-btn asi-btn-primary asi-btn-sm" id="asi-btn-add-file" type="button">⬆ Upload file</button>
+              <input class="asi-input" id="asi-rel-url" placeholder="or paste a file URL" maxlength="1000" style="max-width:320px">
+              <button class="asi-btn asi-btn-ghost asi-btn-sm" id="asi-btn-add-url" type="button">+ Add URL</button>
+            </div>
+            <div class="asi-file-list" id="asi-rel-files"></div>
+            <div class="asi-release-size" id="asi-rel-size">Total size: 0 KB</div>
+          </div>
+        </div>
+        <div class="asi-release-actions">
+          <button class="asi-btn asi-btn-primary" id="asi-btn-save-release" type="button">✓ Save release</button>
+          <button class="asi-btn asi-btn-ghost" id="asi-btn-cancel-release" type="button">Cancel</button>
+          <button class="asi-btn asi-btn-ghost" id="asi-btn-new-release" type="button">＋ New release</button>
+        </div>
+      </div>
+
+      <div class="asi-card">
+        <h2>Release history</h2>
+        <p class="asi-hint">Newest first. "Live" marks the release the store installs today.</p>
+        <div class="asi-release-list" id="asi-release-list"></div>
+      </div>
+    </section>
+
+    <!-- ============================== TOOLS ============================== -->
+    <section class="asi-pane" id="asi-pane-tools" style="display:none">
+      <div class="asi-card asi-catalog-card">
+        <div class="asi-catalog-head">
+          <div>
+            <h2>HTML tool catalog</h2>
+            <p class="asi-hint">Reads the full tool ideas catalog <b>from source</b> - nothing is embedded in this tool. Tick the ideas this application ships: the selection is stored in this record in queue order, so it publishes with the application and the build queue can read it.</p>
+          </div>
+          <div class="asi-catalog-head-actions">
+            <span class="asi-catalog-source is-idle" id="asi-catalog-source">not loaded</span>
+            <button class="asi-btn asi-btn-sm" type="button" id="asi-catalog-reload">Reload catalog</button>
+            <button class="asi-btn asi-btn-ghost asi-btn-sm" type="button" id="asi-catalog-import">Import JSON</button>
+            <input type="file" id="asi-catalog-file" accept=".json,application/json" hidden />
+          </div>
+        </div>
+        <div class="asi-catalog-stats" id="asi-catalog-stats"></div>
+      </div>
+
+      <div class="asi-catalog-grid">
+        <div class="asi-card asi-catalog-pane">
+          <div class="asi-catalog-filters">
+            <input class="asi-input" type="search" id="asi-catalog-search" placeholder="Search code, name or purpose" />
+            <select class="asi-select" id="asi-catalog-group"></select>
+            <select class="asi-select" id="asi-catalog-licensing"></select>
+            <select class="asi-select" id="asi-catalog-state">
+              <option value="all">Any state</option>
+              <option value="new">Not built yet</option>
+              <option value="built">Built</option>
+              <option value="documented">Fully documented</option>
+              <option value="published">Published 8/8</option>
+              <option value="selected">Selected</option>
+            </select>
+          </div>
+          <div class="asi-catalog-list" id="asi-catalog-list"></div>
+          <div class="asi-catalog-more">
+            <span class="asi-hint" id="asi-catalog-range"></span>
+            <button class="asi-btn asi-btn-quiet asi-btn-sm" type="button" id="asi-catalog-more">Show more</button>
+          </div>
+        </div>
+
+        <div class="asi-card asi-catalog-pane">
+          <div class="asi-selected-head">
+            <h3>Selected for this application</h3>
+            <span class="asi-selected-count" id="asi-selected-count">0</span>
+          </div>
+          <p class="asi-hint">Queue order is the order below. The state chips are read from the catalog; statuses are yours until you press Sync.</p>
+          <div class="asi-selected-list" id="asi-selected-list"></div>
+          <div class="asi-selected-actions">
+            <button class="asi-btn asi-btn-ghost asi-btn-sm" type="button" id="asi-selected-sync">Sync status from catalog</button>
+            <button class="asi-btn asi-btn-ghost asi-btn-sm" type="button" id="asi-selected-copy">Copy queue JSON</button>
+            <button class="asi-btn asi-btn-ghost asi-btn-sm" type="button" id="asi-selected-clear">Clear selection</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== DOCS ============================== -->
+    <section class="asi-pane" id="asi-pane-docs" style="display:none">
+      <div class="asi-doc-tabs" id="asi-doc-tabs"></div>
+      <div class="asi-doc-content" id="asi-doc-content"></div>
+      <details class="asi-seo-details">
+        <summary>Document targets</summary>
+        <div class="asi-target-config">
+          <p class="asi-hint">Each document is saved to its own CMS object. The types and folders come from the field parameters; the values below show what this record will use.</p>
+          <div class="asi-target-grid">
+            <div class="asi-target-item"><span class="asi-target-label">Record folder</span><code class="asi-target-value" id="asi-target-leaf-folder"></code></div>
+            <div class="asi-target-item"><span class="asi-target-label">Page type</span><code class="asi-target-value" id="asi-target-page-type"></code></div>
+            <div class="asi-target-item"><span class="asi-target-label">Social type</span><code class="asi-target-value" id="asi-target-social-type"></code></div>
+          </div>
+          <p class="asi-hint" id="asi-doc-object-note"></p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================== SCREENSHOTS ============================== -->
+    <section class="asi-pane" id="asi-pane-screenshots" style="display:none">
+      <div class="asi-card">
+        <h2>Store screenshots</h2>
+        <p class="asi-hint">Uploaded to CMS storage - only the URL is kept in this record. Screenshots feed the store gallery and the marketing documents.</p>
+        <div class="asi-shots-bar">
+          <button class="asi-btn asi-btn-primary asi-btn-sm" id="asi-shots-upload" type="button">⬆ Upload screenshot</button>
+          <span class="asi-hint" id="asi-shots-count">0 shots</span>
+        </div>
+        <div class="asi-shots-grid" id="asi-shots-list"></div>
+      </div>
+    </section>
+
+    <!-- ============================== STORE PREVIEW ============================== -->
+    <section class="asi-pane" id="asi-pane-preview" style="display:none">
+      <div class="asi-preview-bar">
+        <div class="asi-preview-switch">
+          <button class="asi-preview-switch-btn active" id="asi-preview-tab-listing" type="button">Store listing</button>
+          <button class="asi-preview-switch-btn" id="asi-preview-tab-payload" type="button">Payload JSON</button>
+        </div>
+        <button class="asi-btn asi-btn-primary asi-btn-sm" id="asi-btn-rebuild-preview" type="button">▶ Rebuild preview</button>
+        <span class="asi-hint">The listing preview mirrors how the application appears in the store. Payload JSON is the legacy-compatible record shape.</span>
+        <span class="asi-preview-status" id="asi-preview-status">Not built yet</span>
+      </div>
+
+      <div id="asi-preview-listing">
+        <div class="asi-preview-frame-wrap">
+          <iframe class="asi-preview-frame" id="asi-preview-frame" sandbox="allow-scripts allow-forms allow-popups" title="Store listing preview"></iframe>
+        </div>
+      </div>
+
+      <div id="asi-preview-payload" style="display:none">
+        <div class="asi-payload-grid">
+          <div class="asi-payload-card">
+            <div class="asi-payload-head">
+              <h3>Store fields (legacy compatible)</h3>
+              <button class="asi-btn asi-btn-ghost asi-btn-sm" id="asi-btn-copy-legacy" type="button">⧉ Copy</button>
+            </div>
+            <p class="asi-hint">The exact old field ids and the <code>applicationVersions[]</code> table. Use this for the migration step or for any consumer that still reads the flat fields.</p>
+            <pre class="asi-payload-pre" id="asi-payload-legacy">{}</pre>
+          </div>
+          <div class="asi-payload-card">
+            <div class="asi-payload-head">
+              <h3>Full tool record</h3>
+              <button class="asi-btn asi-btn-ghost asi-btn-sm" id="asi-btn-copy-full" type="button">⧉ Copy</button>
+            </div>
+            <p class="asi-hint">Everything this tool stores: the application, all releases, document targets, screenshots and migration metadata.</p>
+            <pre class="asi-payload-pre" id="asi-payload-full">{}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="asi-card" style="margin-top:14px">
+        <h2>Store readiness <span class="asi-label-hint" id="asi-readiness-label">0%</span></h2>
+        <p class="asi-hint">A quick, deterministic checklist. It never blocks the CMS save - only the application name and an active listing with a live release are enforced.</p>
+        <div class="asi-readiness-bar"><div class="asi-readiness-fill" id="asi-readiness-fill" style="width:0%"></div></div>
+        <div class="asi-readiness-list" id="asi-readiness"></div>
+      </div>
+    </section>
+
+    <!-- ============================== LOGS ============================== -->
+    <section class="asi-pane" id="asi-pane-logs" style="display:none">
+      <div class="asi-card">
+        <h2>Legacy field migration</h2>
+        <p class="asi-hint">The old application record kept its data in flat sibling fields. Import copies those values into this tool's own record. Existing values are never overwritten - only empty targets are filled.</p>
+        <div class="asi-migration-grid">
+          <div class="asi-migration-box">
+            <h3>Mapping</h3>
+            <table class="asi-map-table">
+              <thead><tr><th>Legacy field</th><th>New location</th></tr></thead>
+              <tbody>
+                <tr><td><code>appName</code></td><td><code>app.appName</code></td></tr>
+                <tr><td><code>appShortDescription</code></td><td><code>app.appShortDescription</code></td></tr>
+                <tr><td><code>developer</code></td><td><code>app.developerId</code> + <code>app.developerName</code></td></tr>
+                <tr><td><code>appCategory</code></td><td><code>app.appCategory</code></td></tr>
+                <tr><td><code>languages</code></td><td><code>app.languages[]</code></td></tr>
+                <tr><td><code>website</code></td><td><code>app.website</code></td></tr>
+                <tr><td><code>applicationVersions</code></td><td><code>versions[]</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="asi-migration-box">
+            <h3>Run the import</h3>
+            <p style="margin:0 0 10px">The tool runs this import automatically the first time it opens on a record that has only legacy values. Use the button to re-run it after new legacy data arrives.</p>
+            <button class="asi-btn asi-btn-primary asi-btn-sm" id="asi-btn-import-legacy" type="button">⬇ Import legacy fields</button>
+            <p class="asi-hint" id="asi-import-note">No import has run in this session yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="asi-card">
+        <h2>Activity log</h2>
+        <p class="asi-hint">Actions of this tool in the current session - releases, documents, uploads and migration. Memory only: nothing here is stored in the CMS.</p>
+        <div class="asi-activity-list" id="asi-activity-list"></div>
+      </div>
+
+      <details class="asi-debug" open>
+        <summary>Diagnostics log</summary>
+        <pre class="asi-debug-log" id="asi-debug-log">(no entries yet)</pre>
+      </details>
+    </section>
+  </main>
+</div>
+
+<!-- TOOL HTML END -->
+</div>
+
+<script src="../../COMMON/TestHarnessBar/harness-bar.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'asi_application_store_test_v1';
+  var OBJECTS_KEY = 'asi_application_store_objects_test_v1';
+  var query = new URLSearchParams(window.location.search);
+  var roleState = 'admin';
+  var readOnlyState = false;
+  var valueListeners = [];
+  var readonlyListeners = [];
+  var userListeners = [];
+  var pendingUploadCallback = null;
+  var uploadInput = null;
+
+  var LEGACY_FIELDS = {
+    appName: 'Legacy Curriculum Planner',
+    appShortDescription: 'Plan, schedule and track a curriculum from one dashboard.',
+    developer: 'dev-unicon-labs',
+    appCategory: 'general-business',
+    languages: ['en', 'tr'],
+    website: 'https://example.test/legacy-curriculum-planner',
+    applicationVersions: [
+      {
+        fileUrl: 'https://example.test/files/curriculum-planner-1.0.0.zip',
+        versionNumber: '1.0.0',
+        sizeInKb: 820,
+        releaseDate: '2026-09-04',
+        languages: ['en'],
+        iconUrl: 'https://example.test/icons/legacy-app.svg',
+        releaseNotes: 'First public release.',
+        isEnabled: 'no'
+      },
+      {
+        fileUrl: ['https://example.test/files/curriculum-planner-1.1.0.zip', 'https://example.test/files/release-notes.txt'],
+        versionNumber: '1.1.0',
+        sizeInKb: 910,
+        releaseDate: '2026-10-19',
+        languages: ['en', 'tr'],
+        iconUrl: '',
+        releaseNotes: 'Adds the report builder and the Turkish interface.',
+        isEnabled: 'yes'
+      }
+    ]
+  };
+
+  function getRecord() {
+    return {
+      id: 'app-record-test-1',
+      _id: 'app-record-test-1',
+      name: 'Sample Application',
+      slug: 'sample-application',
+      typeId: 'sample-application-folder',
+      cmsObjectType: 'applications-applicationstore',
+      objectData: { data_categoriesBased: LEGACY_FIELDS },
+      productData: { data_categoriesBased: LEGACY_FIELDS }
+    };
+  }
+
+  function readStoredValue() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) { return null; }
+  }
+  function writeStoredValue(value) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch (error) {}
+  }
+  function svgDataUrl(color, label) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400">'
+      + '<rect width="640" height="400" fill="' + color + '"/>'
+      + '<text x="320" y="212" font-family="Arial, sans-serif" font-size="40" fill="#ffffff" text-anchor="middle">' + label + '</text>'
+      + '</svg>';
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+  function buildSampleValue() {
+    return {
+      version: 2,
+      app: {
+        appName: 'Sample Application',
+        appIconUrl: svgDataUrl('#2563eb', 'SA'),
+        appShortDescription: 'Run a complete sample workflow with releases, documents and store-ready marketing assets.',
+        appDescription: 'Sample Application demonstrates the full application record.\n\nIt carries two releases with files, two screenshots, a developer link, languages and every store field this tool manages.\n\nUse it as the reference for new application records.',
+        developerId: 'dev-unicon-labs',
+        developerName: 'Unicon Labs',
+        appCategory: 'general-business',
+        languages: ['en', 'fr'],
+        tags: ['automation', 'reporting', 'productivity'],
+        website: 'https://example.test/sample-application',
+        supportUrl: 'https://example.test/sample-application/support',
+        privacyUrl: 'https://example.test/sample-application/privacy',
+        licenseType: 'freemium',
+        featured: 'yes',
+        appStatus: 'active',
+        legacyImportedAt: ''
+      },
+      versions: [
+        {
+          id: 'rel-sample-2', versionNumber: '1.2.0', releaseDate: '2026-11-10',
+          languages: ['en', 'fr'], iconUrl: '',
+          releaseNotes: 'Adds the release dashboard and the French interface.',
+          isEnabled: 'yes',
+          files: [
+            { name: 'sample-application-1.2.0.zip', url: 'mock://releases/sample-application-1.2.0.zip', size: 943718, type: 'application/zip' },
+            { name: 'release-notes-1.2.0.md', url: 'mock://releases/release-notes-1.2.0.md', size: 4096, type: 'text/markdown' }
+          ],
+          sizeInKb: 0, createdAt: '2026-11-10T09:00:00.000Z', updatedAt: '2026-11-10T09:00:00.000Z'
+        },
+        {
+          id: 'rel-sample-1', versionNumber: '1.1.0', releaseDate: '2026-10-02',
+          languages: ['en'], iconUrl: '',
+          releaseNotes: 'Initial public release.',
+          isEnabled: 'no',
+          files: [
+            { name: 'sample-application-1.1.0.zip', url: 'mock://releases/sample-application-1.1.0.zip', size: 880640, type: 'application/zip' }
+          ],
+          sizeInKb: 0, createdAt: '2026-10-02T09:00:00.000Z', updatedAt: '2026-10-02T09:00:00.000Z'
+        }
+      ],
+      docs: {
+        webpage: { target: null }, help: { target: null }, updates: { target: null },
+        presentation: { target: null }, social: { target: null }
+      },
+      shots: [
+        { id: 'shot-sample-1', name: 'sample-dashboard.png', url: svgDataUrl('#0f766e', 'Dashboard'), size: 184320, type: 'image/png', caption: 'Main dashboard', uploadedAt: '2026-11-10T09:00:00.000Z' },
+        { id: 'shot-sample-2', name: 'sample-reports.png', url: svgDataUrl('#7c3aed', 'Reports'), size: 162000, type: 'image/png', caption: 'Reports view', uploadedAt: '2026-11-10T09:00:00.000Z' }
+      ],
+      meta: { createdAt: '2026-09-01T09:00:00.000Z', updatedAt: '2026-11-10T09:00:00.000Z' }
+    };
+  }
+
+  var currentValue = query.get('legacy') === '1' ? null : readStoredValue();
+  if (query.get('sample') === '1' && !currentValue) {
+    currentValue = buildSampleValue();
+    writeStoredValue(currentValue);
+  }
+
+  function seedObjects() {
+    var seed = {
+      'developers-applicationstore': [
+        { id: 'dev-unicon-labs', _id: 'dev-unicon-labs', name: 'Unicon Labs', cmsObjectType: 'developers-applicationstore', productData: { data_categoriesBased: {} } },
+        { id: 'dev-studio-north', _id: 'dev-studio-north', name: 'Studio North', cmsObjectType: 'developers-applicationstore', productData: { data_categoriesBased: {} } }
+      ],
+      'website-builder-uniconbaseapps': [
+        {
+          id: 'page-sample-webpage', _id: 'page-sample-webpage', name: 'Sample Application - Webpage',
+          slug: 'sample-application-webpage', typeId: 'www.uniconhub.com',
+          cmsObjectType: 'website-builder-uniconbaseapps', updated: '2026-11-10T09:00:00.000Z',
+          productData: { data_categoriesBased: {
+            webpageContentWithBuilder: {
+              code: { html: '<div class="sample-page"><h1>Sample Application</h1><p>Saved webpage document.</p></div>', css: '.sample-page{padding:24px;font-family:sans-serif}', js: '' },
+              seo: { metaTitle: 'Sample Application', metaDesc: 'A sample webpage document.' },
+              pageMeta: { name: 'Sample Application - Webpage', slug: 'sample-application-webpage', meta: { language: 'en' }, data: {} }
+            }
+          } }
+        }
+      ],
+      'tool-social-content-uniconbaseapps': [
+        {
+          id: 'social-sample', _id: 'social-sample', name: 'Sample Application - Social',
+          slug: 'sample-application-social', cmsObjectType: 'tool-social-content-uniconbaseapps',
+          updated: '2026-11-10T09:00:00.000Z',
+          productData: { data_categoriesBased: {
+            name: 'Sample Application - Social',
+            slug: 'sample-application-social',
+            contentHtml: '<!DOCTYPE html><html><body><h1>Sample Application launch</h1><p>Saved social document.</p></body></html>',
+            updatedAt: '2026-11-10T09:00:00.000Z'
+          } }
+        }
+      ]
+    };
+    try { localStorage.setItem(OBJECTS_KEY, JSON.stringify(seed)); } catch (error) {}
+    return seed;
+  }
+  function loadObjects() {
+    try {
+      var raw = localStorage.getItem(OBJECTS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (error) {}
+    return seedObjects();
+  }
+  var objectsStore = loadObjects();
+  function saveObjects() {
+    try { localStorage.setItem(OBJECTS_KEY, JSON.stringify(objectsStore)); } catch (error) {}
+  }
+  function findObject(objectType, objectId) {
+    var list = objectsStore[objectType] || [];
+    for (var index = 0; index < list.length; index++) {
+      if (list[index].id === objectId || list[index]._id === objectId) return list[index];
+    }
+    return null;
+  }
+  function handleRequestObjects(action, params, callback) {
+    setTimeout(function () {
+      try {
+        var request = params || {};
+        var objectType = request.mainObjectType;
+        if (action === 'query') {
+          var list = (objectsStore[objectType] || []).filter(function (cmsObject) {
+            return !request.typeId || cmsObject.typeId === request.typeId;
+          });
+          callback(null, { objects: JSON.parse(JSON.stringify(list)) });
+          return;
+        }
+        if (action === 'get') {
+          var found = findObject(objectType, request.objectId);
+          callback(null, { object: found ? JSON.parse(JSON.stringify(found)) : null });
+          return;
+        }
+        if (action === 'create') {
+          var createdId = 'mock-' + String(objectType) + '-' + Date.now();
+          var created = {
+            id: createdId, _id: createdId,
+            name: request.name || 'Untitled',
+            typeId: request.typeId || '',
+            cmsObjectType: objectType,
+            updated: new Date().toISOString(),
+            productData: { data_categoriesBased: JSON.parse(JSON.stringify(request.productData && request.productData.data_categoriesBased || {})) }
+          };
+          objectsStore[objectType] = objectsStore[objectType] || [];
+          objectsStore[objectType].push(created);
+          saveObjects();
+          callback(null, { object: JSON.parse(JSON.stringify(created)) });
+          return;
+        }
+        if (action === 'update') {
+          var updated = findObject(objectType, request.objectId);
+          if (!updated) { callback('Object not found: ' + request.objectId, null); return; }
+          var incoming = request.productData && request.productData.data_categoriesBased || {};
+          updated.productData = updated.productData || { data_categoriesBased: {} };
+          Object.keys(incoming).forEach(function (fieldId) {
+            updated.productData.data_categoriesBased[fieldId] = JSON.parse(JSON.stringify(incoming[fieldId]));
+          });
+          updated.updated = new Date().toISOString();
+          if (request.name) updated.name = request.name;
+          saveObjects();
+          callback(null, { ok: true });
+          return;
+        }
+        if (action === 'delete') {
+          objectsStore[objectType] = (objectsStore[objectType] || []).filter(function (cmsObject) {
+            return cmsObject.id !== request.objectId && cmsObject._id !== request.objectId;
+          });
+          saveObjects();
+          callback(null, { ok: true });
+          return;
+        }
+        callback('Mock requestObjects does not support: ' + action, null);
+      } catch (error) {
+        callback(error.message, null);
+      }
+    }, 30);
+  }
+
+  function ensureUploadInput() {
+    if (uploadInput) return uploadInput;
+    uploadInput = document.createElement('input');
+    uploadInput.type = 'file';
+    uploadInput.style.display = 'none';
+    document.body.appendChild(uploadInput);
+    uploadInput.addEventListener('change', function () {
+      var file = uploadInput.files && uploadInput.files[0];
+      var callback = pendingUploadCallback;
+      pendingUploadCallback = null;
+      if (!file || !callback) return;
+      setTimeout(function () {
+        callback(null, {
+          name: file.name,
+          url: 'mock://uploads/' + encodeURIComponent(file.name),
+          size: file.size || 0,
+          type: file.type || ''
+        });
+      }, 40);
+    });
+    return uploadInput;
+  }
+  function handleUpload(accept, callback) {
+    var input = ensureUploadInput();
+    input.accept = accept || '';
+    input.value = '';
+    pendingUploadCallback = callback;
+    input.click();
+  }
+  window.__asiMockUpload = function (name, size) {
+    var callback = pendingUploadCallback;
+    pendingUploadCallback = null;
+    if (!callback) return 'No upload request is waiting.';
+    var fileName = name || 'mock-file.png';
+    callback(null, {
+      name: fileName,
+      url: 'mock://uploads/' + encodeURIComponent(fileName),
+      size: size || 245760,
+      type: 'application/octet-stream'
+    });
+    return 'Mock upload completed: ' + fileName;
+  };
+
+  window.tool = {
+    onReady: function (callback) {
+      setTimeout(function () { callback(currentValue, getRecord()); }, 30);
+    },
+    getValue: function () { return currentValue; },
+    setValue: function (newValue) {
+      currentValue = newValue;
+      writeStoredValue(newValue);
+    },
+    onValueChange: function (callback) { valueListeners.push(callback); },
+    onFieldsChange: function () {},
+    getFields: function () { return getRecord(); },
+    param: function (name, defaultValue) {
+      var overrides = {
+        developerType: 'developers-applicationstore',
+        previewAccentColor: '#2563eb',
+        defaultLanguages: 'en',
+        docsFolderTypeMap: JSON.stringify({
+          webpage: 'www.uniconhub.com',
+          updates: 'www.uniconhub.com',
+          presentation: 'www.uniconhub.com',
+          help: 'help.uniconhub.com'
+        })
+      };
+      return overrides[name] !== undefined ? overrides[name] : defaultValue;
+    },
+    isReadOnly: function () { return readOnlyState; },
+    onReadonlyChange: function (callback) { readonlyListeners.push(callback); },
+    getUser: function () {
+      if (roleState === 'none') return null;
+      return {
+        id: 'u-' + roleState,
+        name: 'Harness ' + roleState,
+        email: 'harness@example.test',
+        roles: [roleState],
+        effectiveAccess: {
+          isViewer: true,
+          isEditor: roleState === 'admin' || roleState === 'editor',
+          isManager: roleState === 'admin'
+        },
+        locale: 'en'
+      };
+    },
+    onUserChange: function (callback) { userListeners.push(callback); },
+    reportValid: function (isValid, message) {
+      window.HarnessBar.log('reportValid(' + isValid + ')' + (message ? ' - ' + message : ''));
+    },
+    notify: function (message, severity) {
+      window.HarnessBar.log('[' + (severity || 'info') + '] ' + message);
+    },
+    resize: function () {},
+    openUrl: function (url) { window.HarnessBar.log('openUrl: ' + url); },
+    openObjectDetail: function (type, id) { window.HarnessBar.log('openObjectDetail: ' + type + '/' + id); },
+    requestObjects: handleRequestObjects,
+    requestUpload: handleUpload,
+    requestFetch: function (url, options, callback) {
+      var requestOptions = options || {};
+      var timeoutMs = Number(requestOptions.timeoutMs || 15000) || 15000;
+      var maxBytes = Number(requestOptions.maxBytes || 512000) || 512000;
+      var finished = false;
+      var timer = setTimeout(function () {
+        if (finished) return;
+        finished = true;
+        callback('The relay timed out after ' + timeoutMs + ' ms.', null);
+      }, timeoutMs);
+      function finish(err, response) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        window.HarnessBar.log('requestFetch ' + url + ' -> ' + (err ? 'ERROR ' + err : String(response && response.status)));
+        callback(err, response);
+      }
+      try {
+        fetch(url, { method: requestOptions.method || 'GET', cache: 'no-store' }).then(function (response) {
+          return response.text().then(function (text) {
+            if (text.length > maxBytes) { finish('The response is larger than ' + maxBytes + ' bytes.', null); return; }
+            finish(null, { status: response.status, contentType: response.headers.get('content-type') || '', text: text });
+          });
+        }).then(null, function (error) {
+          finish('The relay could not reach ' + url + ': ' + (error && error.message ? error.message : error) + ' (open the harness over http, not file://)', null);
+        });
+      } catch (error) {
+        finish(String(error && error.message ? error.message : error), null);
+      }
+    },
+    requestAI: function (prompt, context, callback) { if (callback) callback('AI is not used by this tool.', null); },
+    requestFileContent: function (url, callback) { if (callback) callback('Not available in the harness.', null); },
+    requestExportPdf: function (options, callback) { if (callback) callback('Not available in the harness.', null); },
+    requestSendEmail: function (options, callback) { if (callback) callback('Not available in the harness.', null); },
+    declareOutput: function () {},
+    declareParams: function () {},
+    reportMissingParams: function (missing, message) { window.HarnessBar.log('reportMissingParams: ' + (message || '')); }
+  };
+
+  window.HarnessBar.init({
+    title: 'Application Store Item',
+    storageKeys: [STORAGE_KEY, OBJECTS_KEY],
+    roles: ['admin', 'editor', 'viewer', 'none'],
+    buttons: [
+      {
+        id: 'sample', label: 'Load sample',
+        onClick: function () {
+          currentValue = buildSampleValue();
+          writeStoredValue(currentValue);
+          window.location.reload();
+        }
+      },
+      {
+        id: 'legacy', label: 'Legacy only',
+        onClick: function () {
+          try { localStorage.removeItem(STORAGE_KEY); } catch (error) {}
+          window.location.search = '?legacy=1';
+        }
+      },
+      {
+        id: 'dump', label: 'Dump value',
+        onClick: function () {
+          window.HarnessBar.log(JSON.stringify(currentValue, null, 2).slice(0, 5000));
+        }
+      }
+    ],
+    info: 'QA: ?sample=1&legacy=1&tab=releases&doctab=help&preview=payload&release=edit'
+  });
+
+  var initialState = window.HarnessBar.getState();
+  roleState = initialState.role;
+  readOnlyState = initialState.readOnly;
+
+  window.HarnessBar.onChange(function (state) {
+    roleState = state.role;
+    readOnlyState = state.readOnly;
+    readonlyListeners.forEach(function (callback) {
+      try { callback(readOnlyState); } catch (error) {}
+    });
+    userListeners.forEach(function (callback) {
+      try { callback(window.tool.getUser()); } catch (error) {}
+    });
+  });
+
+  setTimeout(function () {
+    var tabName = query.get('tab');
+    if (tabName) {
+      var tabButton = document.querySelector('.asi-tab[data-tab="' + tabName + '"]');
+      if (tabButton) tabButton.click();
+    }
+    var docTab = query.get('doctab');
+    if (docTab) {
+      var docButton = document.querySelector('.asi-doc-tab[data-doc-tab="' + docTab + '"]');
+      if (docButton) docButton.click();
+    }
+    if (query.get('preview') === 'payload') {
+      var payloadButton = document.getElementById('asi-preview-tab-payload');
+      if (payloadButton) payloadButton.click();
+    }
+    if (query.get('release') === 'edit') {
+      var editButton = document.querySelector('[data-act="release-edit"]');
+      if (editButton) editButton.click();
+    }
+    if (query.get('docfill') === '1') {
+      var docHtml = document.getElementById('asi-doc-webpage-html');
+      if (docHtml) {
+        docHtml.value = '<div class="asi-qa-doc"><h1>QA saved document</h1></div>';
+        docHtml.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+    if (query.get('relfile') === '1') {
+      var releaseUrl = document.getElementById('asi-rel-url');
+      var addUrlButton = document.getElementById('asi-btn-add-url');
+      if (releaseUrl && addUrlButton) {
+        releaseUrl.value = 'https://example.test/qa-file.zip';
+        addUrlButton.click();
+      }
+    }
+  }, 500);
+
+  setTimeout(function () {
+    var docSave = query.get('docsave');
+    if (docSave) {
+      var saveButton = document.querySelector('[data-act="doc-save"][data-doc="' + docSave + '"]');
+      if (saveButton) saveButton.click();
+    }
+    if (query.get('releasesave') === '1') {
+      var releaseSaveButton = document.getElementById('asi-btn-save-release');
+      if (releaseSaveButton) releaseSaveButton.click();
+    }
+  }, 1400);
+
+  setTimeout(function () {
+    if (query.get('objects') === '1') {
+      window.HarnessBar.log('OBJECTS ' + JSON.stringify(objectsStore, null, 2));
+    }
+    var selectKey = query.get('select');
+    if (selectKey) {
+      var catalogCheckbox = document.querySelector('[data-catalog-id="' + selectKey + '"]');
+      if (catalogCheckbox && !catalogCheckbox.checked) catalogCheckbox.click();
+    }
+  }, 2600);
+})();
+</script>
+<script src="ApplicationStoreItem.js"></script>
+</body>
+</html>

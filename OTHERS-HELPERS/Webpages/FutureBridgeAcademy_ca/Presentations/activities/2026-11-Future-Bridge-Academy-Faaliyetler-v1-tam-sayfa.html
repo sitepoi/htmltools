@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Future Bridge Academy - Yaptığımız işler ve sırada olanlar</title>
+<meta name="description" content="Future Bridge Academy'nin yürüyen çalışmaları, 2026 etkinlikleri, kısa faydaları ve merkezle açılacak başlıklar." />
+<style>
+  :root {
+    --navy: #00325A;
+    --navy-deep: #002545;
+    --blue: #004E89;
+    --orange: #FF6B35;
+    --gold: #FFD23F;
+    --ink: #12233a;
+    --muted: #566a80;
+    --line: #e2e8f0;
+    --soft: #f5f8fb;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eaeef4;
+    overflow: hidden;
+  }
+
+  .stage { position: relative; height: 100%; width: 100%; }
+
+  .slide {
+    display: none;
+    position: absolute;
+    inset: 0;
+    padding: 42px 56px 84px;
+    background: #ffffff;
+    overflow-y: auto;
+  }
+  .slide.is-active { display: flex; flex-direction: column; }
+
+  .inner { width: 100%; max-width: 1180px; margin: 0 auto; }
+  .slide.is-active > .inner { margin-top: auto; margin-bottom: auto; }
+
+  .slide-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+  .kicker {
+    font-size: 12.5px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: var(--orange);
+    margin: 0;
+  }
+  .slide-number {
+    font-size: 12.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .slide h2 {
+    margin: 0 0 12px;
+    font-size: clamp(30px, 3.3vw, 42px);
+    line-height: 1.1;
+    letter-spacing: -.018em;
+    color: var(--navy);
+  }
+  .lede {
+    margin: 0 0 18px;
+    font-size: clamp(17px, 1.5vw, 20px);
+    line-height: 1.45;
+    color: var(--muted);
+    max-width: 66ch;
+  }
+
+  .split {
+    display: grid;
+    grid-template-columns: 1.12fr .88fr;
+    gap: 30px;
+    align-items: start;
+    margin-top: 6px;
+  }
+  .split-even { grid-template-columns: 1fr 1fr; }
+
+  .points { list-style: none; margin: 0; padding: 0; }
+  .points li {
+    font-size: clamp(16.5px, 1.35vw, 18.5px);
+    line-height: 1.45;
+    padding-left: 14px;
+    border-left: 4px solid var(--orange);
+    margin: 0 0 12px;
+  }
+  .points li:last-child { margin-bottom: 0; }
+  .points li strong { color: var(--navy); }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-top: 20px;
+    background: #ffffff;
+  }
+  .facts > div {
+    padding: 13px 16px;
+    border-left: 1px solid var(--line);
+  }
+  .facts > div:first-child { border-left: 0; }
+  .facts b {
+    display: block;
+    font-size: clamp(19px, 1.85vw, 25px);
+    line-height: 1.12;
+    color: var(--navy);
+    letter-spacing: -.01em;
+  }
+  .facts span {
+    display: block;
+    margin-top: 4px;
+    font-size: 11.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .photo {
+    border: 2px dashed #c7d3e1;
+    border-radius: 14px;
+    background: var(--soft);
+    aspect-ratio: 4 / 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 6px;
+    padding: 18px;
+    color: #8494a7;
+  }
+  .photo strong { font-size: 15px; color: #6d7d90; font-weight: 700; }
+  .photo small { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+
+  .foot-note {
+    margin-top: 16px;
+    font-size: 14.5px;
+    line-height: 1.4;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .foot-note strong { color: var(--navy); }
+
+  /* ---------- title slide ---------- */
+  .title-slide {
+    background: radial-gradient(1200px 620px at 12% 8%, #0a4573 0%, var(--navy) 52%, var(--navy-deep) 100%);
+    display: none;
+    padding: 56px;
+  }
+  .title-slide.is-active { display: flex; align-items: center; }
+  .title-slide .inner { width: 100%; }
+  .brand-logo {
+    height: 54px;
+    width: auto;
+    filter: brightness(0) invert(1);
+    opacity: .96;
+  }
+  .title-rule {
+    width: 86px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--gold);
+    margin: 26px 0 22px;
+  }
+  .title-slide h1 {
+    margin: 0 0 16px;
+    font-size: clamp(38px, 4.6vw, 58px);
+    line-height: 1.06;
+    letter-spacing: -.022em;
+    color: #ffffff;
+    max-width: 20ch;
+  }
+  .title-sub {
+    margin: 0;
+    font-size: clamp(17px, 1.6vw, 21px);
+    line-height: 1.5;
+    color: #c6d6e6;
+    max-width: 62ch;
+  }
+  .title-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 26px;
+    margin-top: 38px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, .18);
+    font-size: 12.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #9fb8d1;
+  }
+
+  /* ---------- benefits slide ---------- */
+  .benefit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 6px;
+  }
+  .benefit {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px;
+    background: var(--soft);
+  }
+  .benefit h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    letter-spacing: .02em;
+    color: var(--blue);
+  }
+  .benefit p {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+
+  /* ---------- centre slide ---------- */
+  .centre-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 22px;
+    margin-top: 4px;
+  }
+  .centre-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .centre-item .marker {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--navy);
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+  .centre-item h3 {
+    margin: 0 0 3px;
+    font-size: 16.5px;
+    color: var(--navy);
+  }
+  .centre-item p {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+
+  /* ---------- closing slide ---------- */
+  .closing-grid {
+    display: grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: 34px;
+    align-items: start;
+  }
+  .next-list { list-style: none; margin: 0; padding: 0; }
+  .next-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 18px;
+    color: var(--ink);
+  }
+  .next-list .when {
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--orange);
+    white-space: nowrap;
+  }
+  .thanks {
+    border-left: 4px solid var(--blue);
+    padding: 4px 0 4px 18px;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .thanks p { margin: 0 0 12px; }
+  .thanks p:last-child { margin-bottom: 0; }
+  .closing-foot {
+    margin-top: 28px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  /* ---------- controls ---------- */
+  .controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+    background: rgba(255, 255, 255, .96);
+    border-top: 1px solid var(--line);
+    z-index: 50;
+  }
+  .controls button {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  .controls button:hover { background: var(--soft); }
+  .controls button:disabled { opacity: .4; cursor: default; }
+  .counter { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 58px; }
+  .progress {
+    position: fixed;
+    left: 0;
+    bottom: 58px;
+    height: 4px;
+    width: 0;
+    background: var(--orange);
+    z-index: 51;
+    transition: width .2s ease;
+  }
+  .spacer { flex: 1; }
+  .hint { font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- notes ---------- */
+  .notes-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 58px;
+    max-height: 40vh;
+    overflow-y: auto;
+    background: #0e2137;
+    color: #e8f0f8;
+    padding: 16px 24px 18px;
+    transform: translateY(110%);
+    transition: transform .24s ease;
+    z-index: 45;
+  }
+  .notes-panel.is-open { transform: translateY(0); }
+  .notes-panel .notes-title {
+    font-size: 11.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: var(--gold);
+    margin: 0 0 6px;
+  }
+  .notes-panel p {
+    margin: 0;
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 110ch;
+  }
+
+  .notes-print { display: none; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    body { overflow: visible; background: #ffffff; }
+    .stage { position: static; height: auto; }
+    .slide,
+    .title-slide {
+      display: block !important;
+      position: relative;
+      inset: auto;
+      height: 180mm;
+      padding: 0 0 4mm;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      overflow: hidden;
+    }
+    .slide:last-child { page-break-after: auto; }
+    .title-slide {
+      background: #ffffff !important;
+      padding: 0 0 4mm;
+    }
+    .title-slide h1 { color: var(--navy) !important; }
+    .title-sub { color: var(--muted) !important; }
+    .title-meta { color: var(--muted) !important; border-top-color: #c7d3e1 !important; }
+    .brand-logo { filter: none !important; }
+    .title-rule { background: var(--orange) !important; }
+    .controls, .progress, .notes-panel { display: none !important; }
+    .facts, .benefit, .photo { background: #ffffff !important; }
+    .photo { min-height: 30mm; aspect-ratio: 16 / 9; }
+    .slide h2 { font-size: 21pt; margin-bottom: 3mm; }
+    .lede { font-size: 11pt; margin-bottom: 3mm; }
+    .slide-head { margin-bottom: 3mm; padding-bottom: 1.5mm; }
+    .kicker, .slide-number { font-size: 8pt; }
+    .points li { font-size: 10.5pt; line-height: 1.35; margin-bottom: 1.8mm; }
+    .facts { margin-top: 4mm; }
+    .facts > div { padding: 2mm 3mm; }
+    .facts b { font-size: 13pt; }
+    .facts span { font-size: 7pt; }
+    .photo strong { font-size: 9pt; }
+    .photo small { font-size: 7pt; }
+    .benefit { padding: 3mm 4mm; }
+    .benefit h3 { font-size: 11pt; margin-bottom: 1.5mm; }
+    .benefit p { font-size: 10pt; }
+    .centre-item { padding: 1.6mm 0; }
+    .centre-item h3 { font-size: 10.5pt; }
+    .centre-item p { font-size: 9pt; }
+    .centre-item .marker { width: 6mm; height: 6mm; font-size: 8pt; }
+    .next-list li { font-size: 11pt; padding: 2mm 0; }
+    .next-list .when { font-size: 8pt; }
+    .thanks { font-size: 11pt; }
+    .closing-foot { font-size: 8pt; margin-top: 4mm; }
+    .title-slide h1 { font-size: 30pt; }
+    .title-sub { font-size: 12pt; }
+    .title-meta { font-size: 8pt; margin-top: 8mm; }
+    .brand-logo { height: 12mm; }
+    .title-rule { width: 22mm; height: 1.6mm; margin: 5mm 0 4mm; }
+    .foot-note { font-size: 8.5pt; margin-top: 3mm; padding-top: 2mm; }
+    .notes-print { display: block; }
+    .notes-print h2 { page-break-before: always; }
+    .notes-print .note-entry {
+      page-break-inside: avoid;
+      border-top: 1px solid var(--line);
+      padding: 4mm 0;
+    }
+    .notes-print h3 { margin: 0 0 2mm; font-size: 12pt; color: var(--navy); }
+    .notes-print p { margin: 0; font-size: 10.5pt; line-height: 1.5; color: var(--ink); }
+  }
+
+  @media (max-width: 900px) {
+    .slide { padding: 28px 22px 84px; }
+    .split, .split-even, .benefit-grid, .centre-grid, .closing-grid { grid-template-columns: 1fr; }
+    .facts { grid-template-columns: 1fr 1fr; }
+    .facts > div:nth-child(3) { border-left: 0; }
+    .facts > div { border-top: 1px solid var(--line); }
+    .facts > div:nth-child(-n+2) { border-top: 0; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="stage" id="stage">
+
+  <!-- ============================ 1 - Kapak ============================ -->
+  <section class="slide title-slide" data-notes="Bugün yaptığımız işi, kullandığımız kaynakları ve elde ettiğimiz sonuçları anlatacağım. Sırayla dersler, sınavlar, seminerler, iki etkinlik ve merkez hazırlığı var. Sayılar slaytlarda yazılı olduğu için konuşmada tekrar etmeyeceğim.">
+    <div class="inner">
+      <img class="brand-logo" src="../../flyers/Future-Bridge-Academy%20-Full-Logo-transparent.png" alt="Future Bridge Academy" />
+      <div class="title-rule"></div>
+      <h1>Yaptığımız işler ve sırada olanlar</h1>
+      <p class="title-sub">
+        Ücretsiz online dersler, deneme sınavları, burs seminerleri, 2026'da yapılan iki etkinlik
+        ve merkez hazırlığı.
+      </p>
+      <div class="title-meta">
+        <span>Kasım 2026</span>
+        <span>CentreCanada Newcomer Services Society</span>
+        <span>10 slayt - yaklaşık 20 dakika</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 2 - Online dersler ====================== -->
+  <section class="slide" data-notes="Dersler haftada beş kez ve her ders tek bir sınıf düzeyine ayrılıyor. Öğrenciye kamera, özel bir program ya da ödeme gerekmiyor. En çok sorulan soru dersin seviyesi; cevabı, dersin o hafta okulda işlenen konuya denk gelmesi.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">Yürüyen çalışma</p>
+        <span class="slide-number">2 / 10</span>
+      </div>
+      <h2>Haftada beş online ders</h2>
+      <p class="lede">Her ders tek bir sınıf düzeyine ayrılıyor. 4. sınıftan 12. sınıfa kadar, topluluğa açık ve ücretsiz.</p>
+
+      <div class="split">
+        <ul class="points">
+          <li><strong>Kim katılıyor:</strong> topluluktan öğrenciler, gönüllü öğretmenlerle aynı derste.</li>
+          <li><strong>Ne yapılıyor:</strong> ders, öğrencinin okulda o hafta gördüğü konuyla aynı yerde duruyor.</li>
+          <li><strong>Ne zaman:</strong> her hafta, beş ayrı ders.</li>
+          <li><strong>Sonucu:</strong> öğrenciye cihaz, sakin bir yer, kâğıt ve kalem yeterli; kamera zorunlu değil.</li>
+          <li>Kayıt bir listeyle yürüyor. Kontenjan açıldığında aileye e-posta ile haber veriliyor.</li>
+        </ul>
+        <div class="photo">
+          <strong>Online dersten bir görüntü</strong>
+          <small>Fotoğraf eklenecek</small>
+        </div>
+      </div>
+
+      <div class="facts">
+        <div><b>5</b><span>Haftalık ders</span></div>
+        <div><b>1 ders = 1 sınıf düzeyi</b><span>Dersin kapsamı</span></div>
+        <div><b>4 - 12</b><span>Sınıf aralığı</span></div>
+        <div><b>Ücretsiz</b><span>Katılım bedeli</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================== 3 - Deneme sınavı ====================== -->
+  <section class="slide" data-notes="Deneme sınavı yılda dört kez, yüz yüze yapılıyor; online sürümü yok. Sınavı gönüllüler hazırlıyor ve okuyor, mekanı topluluk veriyor. Aileye dönen şey bir puan değil, hangi adımın eksik olduğunun yazılı açıklaması.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">Yürüyen çalışma</p>
+        <span class="slide-number">3 / 10</span>
+      </div>
+      <h2>Yılda dört deneme sınavı</h2>
+      <p class="lede">Yüz yüze, gerçek sınav koşullarında: kâğıt, süre, gözetim ve puanlama.</p>
+
+      <div class="split">
+        <ul class="points">
+          <li><strong>Kim katılıyor:</strong> topluluktan öğrenciler. Gönüllüler kâğıdı hazırlıyor, sınavı yürütüyor ve okuyor.</li>
+          <li><strong>Ne yapılıyor:</strong> sınav, öğrencinin o sırada okulda gördüğü konudan hazırlanıyor.</li>
+          <li><strong>Ne zaman:</strong> yılda dört kez, topluluğun sağladığı bir mekânda.</li>
+          <li><strong>Sonucu:</strong> puan ve soru soru açıklama. Sonuç, sonraki çalışmanın ne olacağını belirliyor.</li>
+          <li>Online sürümü yok. Sınavın yapıldığı salon, işin bir parçası.</li>
+        </ul>
+        <div class="photo">
+          <strong>Salonda sınav</strong>
+          <small>Fotoğraf eklenecek</small>
+        </div>
+      </div>
+
+      <div class="facts">
+        <div><b>4</b><span>Yılda sınav</span></div>
+        <div><b>Yüz yüze</b><span>Biçim</span></div>
+        <div><b>Ücretsiz</b><span>Katılım bedeli</span></div>
+        <div><b>Yazılı geri bildirim</b><span>Sonrasında</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================== 4 - Burs seminerleri ===================== -->
+  <section class="slide" data-notes="Seminerler ayda bir, yılda sekiz-dokuz kez yapılıyor ve online olduğu için bir oturumda yüzlerce kişiye ulaşabiliyor. Kasım 2026 oturumunda yaklaşık yirmi beş burs tanıtıldı, yaklaşık elli kişi katıldı. Her burs resmi kaynaktan doğrulanıp değeri, son tarihi ve istenen belgeleriyle kayda geçiyor.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">Yürüyen çalışma</p>
+        <span class="slide-number">4 / 10</span>
+      </div>
+      <h2>Burs seminerleri: ayda bir</h2>
+      <p class="lede">Açık ve açılmak üzere olan burslar resmi kaynaklardan araştırılıp anlatılıyor.</p>
+
+      <div class="split">
+        <ul class="points">
+          <li><strong>Kim katılıyor:</strong> öğrenciler ve veliler. Sunumu üniversite gönüllüleri hazırlıyor.</li>
+          <li><strong>Ne yapılıyor:</strong> her burs değeri, uygunluğu, istenen belgeleri, son tarihi ve resmi bağlantısıyla kayda geçiyor.</li>
+          <li><strong>Ne zaman:</strong> ayda bir, yılda 8-9 oturum. Seminer online, video görüşmesiyle.</li>
+          <li><strong>Sonucu (Kasım 2026):</strong> yaklaşık 25 burs tanıtıldı, yaklaşık 50 kişi katıldı.</li>
+          <li>Online olduğu için bir oturum aynı anda yüzlerce kişiye ulaşabiliyor.</li>
+        </ul>
+        <div class="photo">
+          <strong>Burs semineri</strong>
+          <small>Fotoğraf eklenecek</small>
+        </div>
+      </div>
+
+      <div class="facts">
+        <div><b>1</b><span>Ayda oturum</span></div>
+        <div><b>8 - 9</b><span>Yılda oturum</span></div>
+        <div><b>~50</b><span>Kasım 2026 katılımı</span></div>
+        <div><b>~25</b><span>Tanıtılan burs</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= 5 - Career Fair 2026 ==================== -->
+  <section class="slide" data-notes="Career Fair 17 Ekim 2026'da yapıldı, yaklaşık yüz kişi katıldı. Giriş ücretsizdi ve kayıt kapıda, tek bir formla alındı. E-posta iznini ayrı ve isteğe bağlı iki kutu olarak tuttuk; kimse kutu işaretlemek zorunda kalmadı.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">Yapılan etkinlik</p>
+        <span class="slide-number">5 / 10</span>
+      </div>
+      <h2>Career Fair 2026</h2>
+      <p class="lede">Giriş ücretsizdi. Kayıt kapıda, tek bir formla alındı.</p>
+
+      <div class="split">
+        <ul class="points">
+          <li><strong>Kim katıldı:</strong> topluluktan yaklaşık 100 kişi; gönüllü ekip girişte ve stantta durdu.</li>
+          <li><strong>Ne yapıldı:</strong> katılımcı ad, soyad, telefon ve e-posta ile kayıt oldu.</li>
+          <li><strong>Ne zaman:</strong> 17 Ekim 2026.</li>
+          <li><strong>Sonucu:</strong> kayıtlar aynı gün sistemde toplandı, onay ekranda göründü.</li>
+          <li>E-posta izni iki ayrı ve isteğe bağlı kutuydu; işaretlenmezse kayıt tamamlandı.</li>
+        </ul>
+        <div class="photo">
+          <strong>Career Fair 2026</strong>
+          <small>Fotoğraf eklenecek</small>
+        </div>
+      </div>
+
+      <div class="facts">
+        <div><b>17 Ekim 2026</b><span>Tarih</span></div>
+        <div><b>~100</b><span>Katılım</span></div>
+        <div><b>Ücretsiz</b><span>Giriş</span></div>
+        <div><b>Kapıda kayıt</b><span>Yöntem</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= 6 - CEMC deneme sınavı ==================== -->
+  <section class="slide" data-notes="CEMC deneme sınavı 7 Kasım 2026 Cumartesi günü dört şehirde yapıldı: Vancouver, Toronto, Calgary ve Edmonton. Öğrenciler bir saatlik gerçek kâğıdı sınav süresiyle çözdü ve kâğıtlar puanlandı. Katılım belgesi tarihli; öğrenci onu okul dosyasında ve başvurularda kullanabiliyor.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">Yapılan etkinlik</p>
+        <span class="slide-number">6 / 10</span>
+      </div>
+      <h2>CEMC deneme sınavı, dört şehirde</h2>
+      <p class="lede">1 saatlik gerçek CEMC kâğıdı, sınav süresiyle. Kâğıt puanlandı, katılım belgesi verildi.</p>
+
+      <div class="split">
+        <ul class="points">
+          <li><strong>Kim katıldı:</strong> 5. sınıftan 11. sınıfa kadar öğrenciler, gönüllü gözetmenlerle.</li>
+          <li><strong>Ne yapıldı:</strong> öğrenci kendi sınıf düzeyine uyan kâğıdı bir saatte çözdü; kâğıt puanlandı.</li>
+          <li><strong>Ne zaman ve nerede:</strong> 7 Kasım 2026 Cumartesi, Vancouver, Toronto, Calgary ve Edmonton.</li>
+          <li><strong>Sonucu:</strong> öğrenci gerçek puanını ve hangi soruların puan kaybettirdiğini gördü.</li>
+          <li>Katılım belgesi tarihli. Okul dosyasında, IB portfolyosunda ve başvurularda kullanılabiliyor.</li>
+          <li>Bu sınav resmi CEMC yarışmasının yerine geçmiyor; ayrı bir deneme.</li>
+        </ul>
+        <div class="photo">
+          <strong>CEMC deneme sınavı</strong>
+          <small>Fotoğraf eklenecek</small>
+        </div>
+      </div>
+
+      <div class="facts">
+        <div><b>7 Kasım 2026</b><span>Tarih</span></div>
+        <div><b>4</b><span>Şehir</span></div>
+        <div><b>1 saat</b><span>Sınav süresi</span></div>
+        <div><b>5 - 11</b><span>Sınıf aralığı</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== 7 - Gönüllüler ======================== -->
+  <section class="slide" data-notes="Şu an yedi-sekiz genç gönüllü var ve bunların iki-üçü düzenli zaman ayırıyor. On rolün yazılı iş tanımı ve gerçek saat yükü var; gönüllü eğitim, belgelenmiş saat ve referans alıyor. Daha fazla gönüllüye ihtiyacımız var, on rolün tamamı açık.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">İşi yürüten ekip</p>
+        <span class="slide-number">7 / 10</span>
+      </div>
+      <h2>Gönüllü ağı</h2>
+      <p class="lede">On tanımlı rol var. Şu an 7-8 genç gönüllü çalışıyor, 2-3'ü düzenli zaman ayırıyor.</p>
+
+      <div class="split">
+        <ul class="points">
+          <li><strong>Kim:</strong> ağırlıklı olarak üniversite ve lise öğrencileri; düzenli zaman ayıran 2-3 kişi haftalık dersleri ve sınavları yürütüyor.</li>
+          <li><strong>Ne yapılıyor:</strong> on rolün yazılı iş tanımı, gerçek saat yükü ve seçim süreci var.</li>
+          <li><strong>Ne alıyorlar:</strong> eğitim, belgelenmiş gönüllü saati, referans ve dönem sonu değerlendirme.</li>
+          <li><strong>Durum:</strong> daha fazla gönüllüye ihtiyaç var. On rolün tamamı açık.</li>
+        </ul>
+        <ul class="points">
+          <li><strong>Online matematik öğretmeni</strong> - haftada 1 saat.</li>
+          <li><strong>Sınav organizatörü</strong> - sınav başına yaklaşık 6-8 saat.</li>
+          <li><strong>Burs semineri sunucusu</strong> - araştırma ve sunum.</li>
+          <li><strong>Müfredat, yazma rehberliği, kariyer koçluğu</strong> - saatler program sorumlusuyla kararlaştırılıyor.</li>
+        </ul>
+      </div>
+
+      <div class="facts">
+        <div><b>7 - 8</b><span>Gönüllü</span></div>
+        <div><b>2 - 3</b><span>Düzenli zaman ayıran</span></div>
+        <div><b>10</b><span>Tanımlı rol</span></div>
+        <div><b>Tamamı açık</b><span>Rol durumu</span></div>
+      </div>
+
+      <p class="foot-note">
+        <strong>Yürüyen diğer işler:</strong> topluluk WhatsApp grupları ve veli bülteni;
+        drone pilot sertifika kursu (RPAS hazırlığı, kendi müfredatımız, isteğe bağlı ücret).
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================ 8 - Faydalar ========================= -->
+  <section class="slide" data-notes="Aynı iş dört ayrı gruba dokunuyor: öğrenciye, veliye, gönüllüye ve derneğin diğer birimlerine. Bu slaytı tek tek okumayacağım, sadece hangi faydanın kime gittiğini göstereceğim. Sorular gelirse her satırı açabilirim.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">Kısa faydalar</p>
+        <span class="slide-number">8 / 10</span>
+      </div>
+      <h2>Aynı iş, dört gruba ayrı ayrı dokunuyor</h2>
+      <p class="lede">Her satır bugün yürüyen bir işten geliyor.</p>
+
+      <div class="benefit-grid">
+        <article class="benefit">
+          <h3>Öğrenci</h3>
+          <p>Haftalık ders, yılda dört gerçek sınav, soru soru yazılı geri bildirim ve tarihli katılım belgesi. Katılım ücretsiz.</p>
+        </article>
+        <article class="benefit">
+          <h3>Veli</h3>
+          <p>Çocuğun hangi konuda olduğu sade dille yazılı geliyor. Başlangıç için ödeme yok; burs seminerleri online ve ücretsiz.</p>
+        </article>
+        <article class="benefit">
+          <h3>Gönüllü ve öğretmen</h3>
+          <p>Gerçek öğrenciyle çalışma, rol için eğitim, belgelenmiş saat ve referans. On rolün iş tanımı yazılı.</p>
+        </article>
+        <article class="benefit">
+          <h3>Diğer birimler ve dernek</h3>
+          <p>Site, kayıt formları ve sunum düzeni hazır; aynı düzen başka şehirlerde de kullanılıyor. Etkinlik ve seminer kayıtları tek yerde toplanıyor.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 9 - Merkez =========================== -->
+  <section class="slide" data-notes="Merkezle birlikte sekiz başlık açılıyor. Bunlar bugün yürüyen işler değil, o yüzden slaytta açılacak olarak duruyorlar. Açılış tarihi kesinleşince burada yazacak.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">Sırada</p>
+        <span class="slide-number">9 / 10</span>
+      </div>
+      <h2>Merkezle açılacak sekiz başlık</h2>
+      <p class="lede">Açılış tarihi kesinleşince duyurulacak.</p>
+
+      <div class="centre-grid">
+        <div class="centre-item">
+          <span class="marker">1</span>
+          <div><h3>Küçük grup dersleri</h3><p>Aynı konuyu birlikte çalışan küçük bir grup.</p></div>
+        </div>
+        <div class="centre-item">
+          <span class="marker">2</span>
+          <div><h3>Birebir mentorluk ve aylık gelişim raporu</h3><p>Her ay yazılı gelişim özeti.</p></div>
+        </div>
+        <div class="centre-item">
+          <span class="marker">3</span>
+          <div><h3>Yol haritası danışmanlığı</h3><p>Üniversite, college, trades, IB ve AP seçenekleri.</p></div>
+        </div>
+        <div class="centre-item">
+          <span class="marker">4</span>
+          <div><h3>Başvuru portfolyo takibi</h3><p>8. sınıftan itibaren büyüyen dosya.</p></div>
+        </div>
+        <div class="centre-item">
+          <span class="marker">5</span>
+          <div><h3>CEMC contest club</h3><p>Yarışma matematiği ayrı bir hat olarak.</p></div>
+        </div>
+        <div class="centre-item">
+          <span class="marker">6</span>
+          <div><h3>IB ve AP hazırlığı</h3><p>Programa özel hazırlık.</p></div>
+        </div>
+        <div class="centre-item">
+          <span class="marker">7</span>
+          <div><h3>Trades hazırlığı</h3><p>Red Seal matematiği.</p></div>
+        </div>
+        <div class="centre-item">
+          <span class="marker">8</span>
+          <div><h3>Kabul süreci</h3><p>Kısa değerlendirme ve hedef görüşmesi.</p></div>
+        </div>
+      </div>
+
+      <p class="foot-note">
+        <strong>Not:</strong> bu sekiz başlık bugün yürüyen işler arasında sayılmıyor.
+        Aylık deneme sınavı ile CEMC contest club ayrı iki program olarak kalıyor.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================ 10 - Kapanış ========================= -->
+  <section class="slide" data-notes="Sıradaki etkinliklerin tarihleri kesinleşince bu slayta ekleyeceğim. Bugün emeği geçen öğrencilere, velilere ve gönüllülere teşekkür ediyorum. Sonrasında sorularınızı alabilirim.">
+    <div class="inner">
+      <div class="slide-head">
+        <p class="kicker">Kapanış</p>
+        <span class="slide-number">10 / 10</span>
+      </div>
+      <h2>Sırada ne var</h2>
+      <p class="lede">Tarihler kesinleştiğinde bu listede yazacak.</p>
+
+      <div class="closing-grid">
+        <ul class="next-list">
+          <li><span>Sıradaki burs semineri</span><span class="when">Tarih eklenecek</span></li>
+          <li><span>Sıradaki deneme sınavı</span><span class="when">Tarih eklenecek</span></li>
+          <li><span>Sıradaki CEMC deneme sınavı</span><span class="when">Tarih eklenecek</span></li>
+          <li><span>Merkez açılışı</span><span class="when">Duyurulacak</span></li>
+        </ul>
+
+        <div class="thanks">
+          <p>Bugün bu işi yürüten öğrencilere, velilere ve gönüllülere teşekkür ederim.</p>
+          <p>Etkinliklerde mekânı ve desteği veren topluluk kuruluşlarına teşekkür ederim.</p>
+          <p>Program CentreCanada Newcomer Services Society tarafından yürütülüyor.</p>
+        </div>
+      </div>
+
+      <div class="closing-foot">
+        Future Bridge Academy - Kasım 2026 - Sorular için zaman ayrıldı
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="notes-panel" id="notes-panel">
+  <p class="notes-title" id="notes-title">Konuşmacı notu</p>
+  <p id="notes-text"></p>
+</div>
+
+<div class="controls">
+  <button type="button" id="btn-prev">Önceki</button>
+  <button type="button" id="btn-next">Sonraki</button>
+  <span class="counter" id="counter">1 / 10</span>
+  <span class="spacer"></span>
+  <button type="button" id="btn-notes">Notlar (N)</button>
+  <button type="button" id="btn-print">Yazdır (P)</button>
+  <span class="hint">Yön tuşları veya boşluk ile ilerle</span>
+</div>
+
+<div class="notes-print" id="notes-print" aria-hidden="true"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var currentIndex = 0;
+  var progressBar = document.getElementById("progress");
+  var counter = document.getElementById("counter");
+  var previousButton = document.getElementById("btn-prev");
+  var nextButton = document.getElementById("btn-next");
+  var notesButton = document.getElementById("btn-notes");
+  var printButton = document.getElementById("btn-print");
+  var notesPanel = document.getElementById("notes-panel");
+  var notesTitle = document.getElementById("notes-title");
+  var notesText = document.getElementById("notes-text");
+  var notesPrint = document.getElementById("notes-print");
+
+  function slideTitle(slide) {
+    var heading = slide.querySelector("h1, h2");
+    return heading ? heading.textContent.trim() : "Slayt";
+  }
+
+  function showSlide(requestedIndex) {
+    if (requestedIndex < 0) { requestedIndex = 0; }
+    if (requestedIndex > slides.length - 1) { requestedIndex = slides.length - 1; }
+    currentIndex = requestedIndex;
+
+    slides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle("is-active", slideIndex === currentIndex);
+    });
+
+    counter.textContent = (currentIndex + 1) + " / " + slides.length;
+    previousButton.disabled = currentIndex === 0;
+    nextButton.disabled = currentIndex === slides.length - 1;
+    progressBar.style.width = (((currentIndex + 1) / slides.length) * 100) + "%";
+
+    notesTitle.textContent = "Konuşmacı notu - " + (currentIndex + 1) + ". slayt";
+    notesText.textContent = slides[currentIndex].getAttribute("data-notes") || "";
+
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", "#s" + (currentIndex + 1));
+    }
+  }
+
+  function readSlideIndexFromHash() {
+    var hashMatch = /^#s(\d+)$/.exec(window.location.hash);
+    if (!hashMatch) { return 0; }
+    return parseInt(hashMatch[1], 10) - 1;
+  }
+
+  function nextSlide() { showSlide(currentIndex + 1); }
+  function previousSlide() { showSlide(currentIndex - 1); }
+
+  function toggleNotes() {
+    notesPanel.classList.toggle("is-open");
+  }
+
+  function buildPrintNotes() {
+    var wrapper = document.createElement("div");
+    var heading = document.createElement("h2");
+    heading.textContent = "Konuşmacı notları";
+    wrapper.appendChild(heading);
+
+    slides.forEach(function (slide, slideIndex) {
+      var entry = document.createElement("div");
+      entry.className = "note-entry";
+
+      var entryHeading = document.createElement("h3");
+      entryHeading.textContent = (slideIndex + 1) + ". " + slideTitle(slide);
+
+      var entryText = document.createElement("p");
+      entryText.textContent = slide.getAttribute("data-notes") || "";
+
+      entry.appendChild(entryHeading);
+      entry.appendChild(entryText);
+      wrapper.appendChild(entry);
+    });
+
+    notesPrint.appendChild(wrapper);
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+      event.preventDefault();
+      nextSlide();
+    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      previousSlide();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      showSlide(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      showSlide(slides.length - 1);
+    } else if (event.key === "n" || event.key === "N") {
+      toggleNotes();
+    } else if (event.key === "p" || event.key === "P") {
+      window.print();
+    } else if (event.key === "Escape") {
+      notesPanel.classList.remove("is-open");
+    }
+  });
+
+  previousButton.addEventListener("click", previousSlide);
+  nextButton.addEventListener("click", nextSlide);
+  notesButton.addEventListener("click", toggleNotes);
+  printButton.addEventListener("click", function () { window.print(); });
+
+  buildPrintNotes();
+  showSlide(readSlideIndexFromHash());
+})();
+</script>
+</body>
+</html>

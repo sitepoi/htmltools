@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>OKH interaction probe</title></head>
+<body style="font-family:monospace;font-size:13px;margin:12px">
+<h3>Occupation Knowledge Hub - interaction probe</h3>
+<pre id="out">running...</pre>
+<iframe id="frame" width="1400" height="1000" style="border:1px solid #ccc"></iframe>
+<script>
+const lines = [];
+function log(text) { lines.push(text); document.getElementById('out').textContent = lines.join('\n'); }
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+async function waitFor(fn, label, timeout) {
+  const limit = Date.now() + (timeout || 8000);
+  while (Date.now() < limit) {
+    try { const value = fn(); if (value) return value; } catch (err) { /* not ready */ }
+    await sleep(80);
+  }
+  throw new Error('timeout waiting for ' + label);
+}
+
+const HARNESS = 'test-harness.html?sample=1';
+
+(async function () {
+  try { localStorage.clear(); } catch (err) {}
+
+  const frame = document.getElementById('frame');
+  frame.src = HARNESS;
+
+  let doc, win;
+  try {
+    await waitFor(() => frame.contentDocument && frame.contentDocument.getElementById('okh-root'), 'tool root', 12000);
+    doc = frame.contentDocument;
+    win = frame.contentWindow;
+
+    await waitFor(() => doc.getElementById('okh-title') && doc.getElementById('okh-title').textContent === 'Registered Nurse', 'dossier render', 12000);
+    log('PASS boot + dossier render');
+
+    const click = (selector) => {
+      const element = doc.querySelector(selector);
+      if (!element) throw new Error('missing element ' + selector);
+      element.click();
+      return element;
+    };
+    const setValue = (selector, value) => {
+      const element = doc.querySelector(selector);
+      if (!element) throw new Error('missing input ' + selector);
+      element.value = value;
+      element.dispatchEvent(new win.Event('input', { bubbles: true }));
+      element.dispatchEvent(new win.Event('change', { bubbles: true }));
+      return element;
+    };
+    const stored = () => JSON.parse(win.localStorage.getItem('okh_test_value'));
+    const storedObjects = () => JSON.parse(win.localStorage.getItem('okh_test_objects') || '[]');
+
+    /* ---------------- Ask AI ---------------- */
+    log('step: clicking ask tab');
+    click('[data-act="tab"][data-tab="ask"]');
+    log('step: ask tab clicked');
+    await waitFor(() => doc.getElementById('okh-chat-input'), 'chat input');
+    log('step: chat input ready');
+    setValue('#okh-chat-input', 'How long does it take to qualify?');
+    click('[data-act="chat-send"]');
+    log('step: chat sent');
+    await waitFor(() => doc.querySelectorAll('#okh-chat-log .okh-msg').length >= 2, 'coach answer', 8000);
+    await waitFor(() => doc.getElementById('okh-chat-log').textContent.indexOf('Beyond this dossier') !== -1, 'coach answer text', 8000);
+    log('step: coach answered');
+    const chatText = doc.getElementById('okh-chat-log').textContent;
+    log(chatText.indexOf('Beyond this dossier') !== -1 ? 'PASS coach answer rendered' : 'FAIL coach answer missing text');
+
+    /* ---------------- Questions ---------------- */
+    click('[data-act="tab"][data-tab="questions"]');
+    await waitFor(() => doc.querySelector('.okh-thread-card'), 'thread list');
+    const beforeThreads = doc.querySelectorAll('.okh-thread-card').length;
+    log(beforeThreads === 3 ? 'PASS question board loaded 3 threads' : 'FAIL thread count ' + beforeThreads);
+
+    click('.okh-thread-card');
+    await waitFor(() => doc.getElementById('okh-answer-text'), 'thread view');
+    setValue('#okh-answer-text', 'Probe marker answer: twelve hours per week is realistic.');
+    click('[data-act="answer-submit"]');
+    await waitFor(() => doc.querySelectorAll('.okh-answer').length >= 1, 'posted answer', 8000);
+    const questionsStore = storedObjects().filter((o) => o.cmsObjectType === 'occupation-questions');
+    const withNewAnswer = questionsStore.filter((o) => {
+      const dcb = o.productData.data_categoriesBased;
+      const answers = dcb.questionData ? dcb.questionData.answers : dcb.answers;
+      return Array.isArray(answers) && answers.some((answer) => String(answer.body || '').indexOf('Probe marker answer') !== -1);
+    });
+    log(withNewAnswer.length === 1 ? 'PASS answer persisted to the object store' : 'FAIL answer not persisted (' + withNewAnswer.length + ')');
+
+    /* ask a new question */
+    click('[data-act="question-back"]');
+    await waitFor(() => doc.querySelector('[data-act="question-ask"]'), 'ask button');
+    click('[data-act="question-ask"]');
+    await waitFor(() => doc.getElementById('okh-q-title'), 'question modal');
+    setValue('#okh-q-title', 'Do I need a car for clinical placements?');
+    setValue('#okh-q-body', 'Some placements are far from campus.');
+    click('[data-act="question-create"]');
+    await waitFor(() => storedObjects().filter((o) => o.name === 'Do I need a car for clinical placements?').length === 1, 'new question stored', 8000);
+    log('PASS new question created in the CMS store');
+
+    /* ---------------- Edit + AI ---------------- */
+    click('[data-act="tab"][data-tab="edit"]');
+    await waitFor(() => doc.getElementById('okh-ai-instruction'), 'edit pane');
+    click('[data-preset="programs"]');
+    const instruction = doc.getElementById('okh-ai-instruction').value;
+    log(instruction.indexOf('Add real study programs') === 0 ? 'PASS AI preset fills the instruction' : 'FAIL AI preset');
+
+    const beforePrograms = stored().programs.length;
+    click('[data-act="ai-run"]');
+    await waitFor(() => !doc.getElementById('okh-modal').hidden, 'AI preview modal', 10000);
+    const changeRows = doc.querySelectorAll('.okh-ai-change').length;
+    log(changeRows >= 2 ? 'PASS AI preview lists changes (' + changeRows + ')' : 'FAIL AI preview rows ' + changeRows);
+
+    click('[data-act="ai-apply"]');
+    await waitFor(() => stored().programs.length === beforePrograms + 1, 'AI program applied', 8000);
+    const afterAi = stored();
+    log(afterAi.sections.workEnvironment.indexOf('indoor') !== -1 || afterAi.sections.workEnvironment.indexOf('The work is indoors') !== -1
+      ? 'PASS AI applied the section text'
+      : 'FAIL AI section: ' + afterAi.sections.workEnvironment.slice(0, 60));
+
+    /* manual program add */
+    click('[data-act="tab"][data-tab="study"]');
+    await waitFor(() => doc.querySelector('[data-act="program-add"]'), 'study pane');
+    const beforeManual = doc.querySelectorAll('.okh-program').length;
+    click('[data-act="program-add"]');
+    await waitFor(() => doc.getElementById('okh-p-institution'), 'program modal');
+    setValue('#okh-p-institution', 'Test College');
+    setValue('#okh-p-program', 'Test Health Program');
+    setValue('#okh-p-province', 'Manitoba');
+    click('[data-act="program-save"]');
+    await sleep(400);
+    log('debug programs=' + stored().programs.length + ' modalHidden=' + doc.getElementById('okh-modal').hidden + ' status=' + doc.getElementById('th-status').textContent);
+    await waitFor(() => stored().programs.length === afterAi.programs.length + 1, 'manual program stored', 8000);
+    log('PASS manual program saved (' + (beforeManual + 1) + ' cards expected)');
+
+    /* filter */
+    setValue('#okh-study-search', 'mcgill');
+    await sleep(250);
+    const filtered = doc.querySelectorAll('.okh-program').length;
+    log(filtered === 1 ? 'PASS study search filters to 1 card' : 'FAIL study filter ' + filtered);
+
+    /* ---------------- viewer mode ---------------- */
+    const previousDoc = doc;
+    frame.src = HARNESS + '&role=viewer';
+    await waitFor(() => frame.contentDocument && frame.contentDocument !== previousDoc && frame.contentDocument.getElementById('okh-root'), 'viewer root', 12000);
+    doc = frame.contentDocument;
+    win = frame.contentWindow;
+    await waitFor(() => doc.getElementById('okh-role-chip') && doc.getElementById('okh-role-chip').textContent === 'Student', 'viewer render', 12000);
+    const editTab = doc.querySelector('[data-act="tab"][data-tab="edit"]');
+    log(!editTab ? 'PASS viewer has no Edit tab' : 'FAIL viewer sees the Edit tab');
+    const printButton = doc.querySelector('[data-act="print"]');
+    log(!!printButton ? 'PASS viewer keeps the print action' : 'FAIL viewer print missing');
+
+    /* ---------------- config off ---------------- */
+    const viewerDoc = doc;
+    frame.src = HARNESS + '&crud=no&noai=1';
+    await waitFor(() => frame.contentDocument && frame.contentDocument !== viewerDoc && frame.contentDocument.getElementById('okh-root'), 'config root', 12000);
+    doc = frame.contentDocument;
+    await waitFor(() => doc.getElementById('okh-title'), 'config render', 12000);
+    const banner = doc.getElementById('okh-banner-config');
+    log(banner && !banner.hidden && banner.textContent.indexOf('AI is not enabled') !== -1
+      ? 'PASS configuration banner explains what is missing'
+      : 'FAIL configuration banner');
+
+    /* ---------------- draft is private for students ---------------- */
+    const draftValue = JSON.parse(win.localStorage.getItem('okh_test_value'));
+    draftValue.occupation.status = 'draft';
+    win.localStorage.setItem('okh_test_value', JSON.stringify(draftValue));
+    const configDoc = doc;
+    frame.src = HARNESS + '&role=viewer';
+    await waitFor(() => frame.contentDocument && frame.contentDocument !== configDoc && frame.contentDocument.getElementById('okh-root'), 'draft root', 12000);
+    doc = frame.contentDocument;
+    win = frame.contentWindow;
+    await waitFor(() => doc.getElementById('okh-main') && doc.getElementById('okh-main').textContent.indexOf('Not published yet') !== -1, 'draft block', 12000);
+    log('PASS draft dossier is hidden from students');
+
+    /* ---------------- narrow width overflow ---------------- */
+    frame.style.width = '390px';
+    await sleep(400);
+    const scrollWidth = doc.documentElement.scrollWidth;
+    const clientWidth = doc.documentElement.clientWidth;
+    log(scrollWidth <= clientWidth + 1
+      ? 'PASS no horizontal overflow at 390px (' + scrollWidth + '/' + clientWidth + ')'
+      : 'FAIL horizontal overflow at 390px (' + scrollWidth + '/' + clientWidth + ')');
+
+    log('DONE');
+  } catch (error) {
+    log('FAIL exception: ' + error.message);
+    if (doc) {
+      const main = doc.getElementById('okh-main');
+      if (main) log('main html: ' + main.innerHTML.slice(0, 400));
+    }
+  }
+})();
+</script>
+</body>
+</html>

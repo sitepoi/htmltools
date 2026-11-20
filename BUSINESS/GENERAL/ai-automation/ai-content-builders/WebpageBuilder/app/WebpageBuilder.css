@@ -1,4 +1,4 @@
-/* build 2026-10-10-5 */
+/* build 2026-10-10-7 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Built for UniconHub CMS HTML-tool system.
@@ -187,6 +187,47 @@ code { font-family: var(--font-mono); font-size: 0.875em; background: var(--bg3)
    them, and this rule also hides the static markup on first paint. */
 body[data-wb-has-code] .chat-welcome .template-gallery,
 body[data-wb-has-code] .chat-welcome .template-view-all { display: none !important; }
+
+/* ── Import page modal (L1: URL / pasted HTML → AI redesign) ── */
+.import-url {
+  width: 100%;
+  font: inherit; font-size: 13px;
+  padding: 8px 11px;
+  border: 1px solid var(--border, #e2e6ef);
+  border-radius: 9px;
+  background: var(--bg2, #fff);
+  color: inherit;
+}
+.import-url:focus { outline: 2px solid var(--accent, #4f46e5); outline-offset: 1px; }
+.import-hint { font-size: 11px; color: var(--text3, #7b8496); margin: 6px 0 0; line-height: 1.5; }
+.import-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
+.import-status { font-size: 11.5px; color: var(--text2, #4a5568); }
+.import-status.is-err { color: #b42318; font-weight: 600; }
+.import-paste-wrap {
+  margin: 12px 0;
+  border: 1px solid var(--border, #e2e6ef);
+  border-radius: 9px;
+  padding: 8px 11px;
+  background: var(--bg3, #f7f8fb);
+}
+.import-paste-wrap summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text2, #4a5568); }
+.import-paste {
+  width: 100%;
+  margin-top: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #e2e6ef);
+  border-radius: 8px;
+  background: var(--bg2, #fff);
+  color: inherit;
+  resize: vertical;
+}
+.import-note { font-size: 11px; color: var(--text3, #7b8496); margin: 10px 0 0; line-height: 1.5; }
+.import-note-warn { color: #b45309; font-weight: 600; }
+.import-check { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text2, #4a5568); cursor: pointer; }
+.import-check input { width: 14px; height: 14px; accent-color: var(--accent, #4f46e5); }
 
 /* ── Chat message bubbles ── */
 .chat-msg { display: flex; gap: 8px; max-width: 100%; }

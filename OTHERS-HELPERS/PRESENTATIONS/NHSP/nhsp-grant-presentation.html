@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NHSP Hibe Projesi - Sunum</title>
+<meta name="description" content="New Horizons for Seniors Program (NHSP) hibe projesi sunumu: amacımız, etkinliklerimiz, derneğe ve diğer birimlere katkısı." />
+<style>
+  :root {
+    --ink: #12262c;
+    --ink-soft: #3e565d;
+    --muted: #6b817f;
+    --teal-900: #0b2f38;
+    --teal-800: #12434c;
+    --teal-700: #1a5d63;
+    --teal-500: #2e8b8b;
+    --gold: #b98326;
+    --gold-soft: #e8d5ab;
+    --gold-bg: #fbf5e8;
+    --soft: #f2f7f6;
+    --line: #dfe9e7;
+    --paper: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: radial-gradient(120% 120% at 50% 0%, #143c45 0%, #0a1f26 100%);
+    color: var(--ink);
+    font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+  .icon {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+  }
+
+  /* ---------- Deck stage (fixed 16:9 canvas) ---------- */
+  .deck-stage {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 1280px;
+    height: 720px;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 34px 80px rgba(0, 0, 0, .48);
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 52px 64px 58px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .slide.is-active { display: flex; animation: slide-in .32s ease both; }
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Shared slide furniture ---------- */
+  .slide-head { flex: none; margin-bottom: 20px; }
+  .slide-kicker {
+    margin: 0 0 7px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .slide h2 {
+    margin: 0;
+    font-size: 40px;
+    line-height: 1.1;
+    letter-spacing: -.015em;
+    color: var(--ink);
+  }
+  .slide-body { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+  .slide-foot {
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 9px;
+    border-top: 1px solid var(--line);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: #93a8a5;
+  }
+
+  .lead { margin: 0 0 16px; font-size: 20px; line-height: 1.55; color: var(--ink-soft); }
+  .body-text { margin: 0 0 16px; font-size: 16px; line-height: 1.6; color: var(--ink-soft); }
+  .lead strong, .body-text strong { color: var(--teal-800); }
+  .lead-tight { font-size: 16.5px; line-height: 1.5; margin-bottom: 18px; }
+
+  .cols { display: grid; grid-template-columns: 1.05fr 1fr; gap: 38px; align-items: start; }
+  .cols-wide-left { display: grid; grid-template-columns: 1.2fr .8fr; gap: 34px; align-items: stretch; }
+
+  /* ---------- Cards ---------- */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 24px;
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(11, 47, 56, .08); }
+  .card h3 { margin: 0 0 7px; font-size: 19px; line-height: 1.25; color: var(--teal-800); }
+  .card p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink-soft); }
+  .card-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: var(--gold-bg);
+    color: var(--gold);
+  }
+  .card-icon .icon { width: 22px; height: 22px; }
+
+  /* ---------- Photo slots ---------- */
+  .photo-slot {
+    position: relative;
+    margin: 0;
+    overflow: hidden;
+    background: var(--soft);
+    border: 1px dashed #b7cdca;
+    border-radius: 14px;
+    cursor: pointer;
+  }
+  .photo-slot .slot-img { display: none; width: 100%; height: 100%; object-fit: cover; }
+  .photo-slot.has-photo { border-style: solid; border-color: var(--line); background: #eaf0ef; }
+  .photo-slot.has-photo .slot-img { display: block; }
+  .photo-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 12px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.3;
+    color: #7d9491;
+  }
+  .photo-hint .icon { width: 22px; height: 22px; opacity: .85; }
+  .photo-slot.has-photo .photo-hint { display: none; }
+  .photo-slot.is-dragover { border-color: var(--gold); background: var(--gold-bg); }
+  .photo-clear {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(11, 47, 56, .72);
+    color: #ffffff;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease;
+  }
+  .photo-clear .icon { width: 12px; height: 12px; stroke-width: 2.2; }
+  .photo-clear:hover { background: rgba(11, 47, 56, .95); }
+  .photo-slot.has-photo:hover .photo-clear,
+  .photo-slot.has-photo:focus-within .photo-clear { opacity: 1; }
+
+  /* ---------- Cover slide ---------- */
+  .slide-cover {
+    padding: 50px 64px;
+    color: #ffffff;
+    background:
+      radial-gradient(120% 130% at 6% -10%, #1c626b 0%, #0f3c46 42%, #092730 100%);
+  }
+  .slide-cover::before {
+    content: "";
+    position: absolute;
+    right: -130px;
+    bottom: -170px;
+    width: 480px;
+    height: 480px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(185, 131, 38, .28), rgba(185, 131, 38, 0) 68%);
+  }
+  .slide-cover::after {
+    content: "";
+    position: absolute;
+    right: 62px;
+    top: -90px;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    border: 1px solid rgba(232, 213, 171, .22);
+  }
+  .cover-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.14fr .86fr;
+    gap: 46px;
+    align-items: center;
+    height: 100%;
+  }
+  .cover-logo { width: 66px; height: 66px; margin-bottom: 26px; border-radius: 14px; }
+  .cover-logo .slot-img { object-fit: contain; background: #ffffff; padding: 7px; }
+  .cover-logo .photo-hint { color: rgba(255, 255, 255, .7); }
+  .cover-eyebrow {
+    margin: 0 0 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: #9ed3cd;
+  }
+  .slide-cover h1 {
+    margin: 0 0 20px;
+    font-size: 55px;
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -.025em;
+    color: #ffffff;
+  }
+  .slide-cover h1 span {
+    display: block;
+    margin-top: 14px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: .32em;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+  }
+  .cover-lead {
+    max-width: 470px;
+    margin: 0 0 30px;
+    font-size: 18px;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, .82);
+  }
+  .cover-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .cover-meta span {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .82);
+    border: 1px solid rgba(255, 255, 255, .24);
+    border-radius: 999px;
+    padding: 7px 14px;
+  }
+  .cover-meta .meta-sep { width: 5px; height: 5px; padding: 0; border: none; border-radius: 50%; background: var(--gold); }
+  .cover-frame { position: relative; max-width: 382px; margin-left: auto; }
+  .cover-frame::before {
+    content: "";
+    position: absolute;
+    inset: -14px -14px 14px 14px;
+    border: 1.5px solid rgba(232, 213, 171, .42);
+    border-radius: 20px;
+  }
+  .hero-slot { height: 434px; background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .34); }
+  .hero-slot .photo-hint { color: rgba(255, 255, 255, .72); font-size: 12.5px; }
+  .hero-slot.has-photo { border-color: rgba(232, 213, 171, .55); }
+
+  /* ---------- Program facts ---------- */
+  .fact-list { display: flex; flex-direction: column; gap: 14px; }
+  .fact {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: var(--soft);
+    border-left: 3px solid var(--gold);
+    border-radius: 0 12px 12px 0;
+    padding: 19px 22px;
+  }
+  .fact .icon { width: 23px; height: 23px; margin-top: 2px; color: var(--teal-700); }
+  .fact h3 { margin: 0 0 4px; font-size: 17px; color: var(--teal-800); }
+  .fact p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-soft); }
+
+  /* ---------- Activities ---------- */
+  /* ---------- Photo galleries ---------- */
+  .photo-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .photo-frame { position: relative; margin: 0; }
+  .photo-frame .photo-slot { height: 216px; border: none; border-radius: 12px; background: #e9efee; }
+  .photo-frame figcaption {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 2;
+    margin: 0;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: rgba(11, 47, 56, .78);
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+  .date-chip {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    z-index: 2;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .94);
+    color: var(--teal-800);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .02em;
+    box-shadow: 0 2px 6px rgba(11, 47, 56, .18);
+  }
+  .mini-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 18px; }
+  .mini-card { background: var(--gold-bg); border: 1px solid #efe0bd; border-radius: 12px; padding: 14px 18px; }
+  .mini-card h3 { margin: 0 0 3px; font-size: 14.5px; color: #8a6520; }
+  .mini-card p { margin: 0; font-size: 12.5px; line-height: 1.4; color: #6f5a2c; }
+  .facts-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 20px; }
+  .fact-item { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .fact-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .fact-item p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink-soft); }
+  .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .score-card { background: var(--soft); border: 1px solid var(--line); border-radius: 14px; padding: 17px 19px; }
+  .score-value { margin-bottom: 7px; font-size: 23px; font-weight: 800; line-height: 1; color: var(--gold); }
+  .score-value.is-mandatory { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--teal-700); }
+  .score-card h3 { margin: 0 0 4px; font-size: 15.5px; line-height: 1.25; color: var(--teal-800); }
+  .score-card p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-soft); }
+  .score-extra { margin: 12px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+  .score-extra strong { color: var(--teal-800); }
+  .source-line { margin: 10px 0 0; font-size: 10.5px; line-height: 1.3; color: #8fa5a3; }
+  .thanks-band {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 20px;
+    padding: 15px 22px;
+    border-radius: 14px;
+    background: linear-gradient(100deg, #0f3c46 0%, #1a5d63 100%);
+    color: #ffffff;
+  }
+  .thanks-band .brand-logo { width: 46px; height: 46px; margin-bottom: 0; flex: none; border-radius: 10px; padding: 5px; }
+  .thanks-line { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: #ffffff; }
+  .thanks-note { margin: 0; font-size: 11px; line-height: 1.45; color: rgba(255, 255, 255, .72); }
+  .activity-photo-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+  .activity-photo-card {
+    grid-column: span 2;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 15px;
+  }
+  .activity-photo-card.is-wide { grid-column: span 3; }
+  .activity-photo-card .photo-slot { height: 106px; border: none; border-radius: 0; }
+  .activity-photo-card .activity-copy { padding: 12px 16px 14px; }
+  .activity-photo-card h3 { margin: 0 0 4px; font-size: 15.5px; line-height: 1.25; color: var(--teal-800); }
+  .activity-photo-card p { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--ink-soft); }
+  .gain-stack { display: flex; flex-direction: column; gap: 16px; }
+  .gain-stack .photo-slot { height: 148px; border: none; border-radius: 12px; }
+  .cost-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cost-item { display: flex; gap: 11px; align-items: flex-start; background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; }
+  .cost-item .icon { width: 18px; height: 18px; margin-top: 1px; color: var(--teal-700); flex: none; }
+  .cost-item h3 { margin: 0 0 2px; font-size: 13.5px; line-height: 1.2; color: var(--teal-800); }
+  .cost-item p { margin: 0; font-size: 11.5px; line-height: 1.35; color: var(--ink-soft); }
+  .contribution-list { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; }
+  .contribution { display: flex; gap: 15px; align-items: flex-start; background: var(--soft); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .contribution .card-icon { width: 40px; height: 40px; margin-bottom: 0; flex: none; }
+  .contribution h3 { margin: 0 0 4px; font-size: 16.5px; color: var(--teal-800); }
+  .contribution p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); }
+  .contribution-photos { display: flex; flex-direction: column; gap: 16px; }
+  .contribution-photos .photo-slot { height: 168px; border: none; border-radius: 12px; }
+  .note-bar {
+    margin-top: 18px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    background: var(--gold-bg);
+    border: 1px solid #f0e2c4;
+    font-size: 13.5px;
+    color: #7a5c24;
+  }
+  .highlight-band {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 24px;
+    padding: 18px 24px;
+    border-radius: 14px;
+    background: linear-gradient(100deg, #0f3c46 0%, #1a5d63 100%);
+    color: #ffffff;
+  }
+  .highlight-band .icon { width: 26px; height: 26px; color: var(--gold-soft); flex: none; }
+  .highlight-band p { margin: 0; font-size: 14.5px; line-height: 1.5; color: rgba(255, 255, 255, .9); }
+  .highlight-band strong { color: #ffffff; }
+
+  /* ---------- Completed work gallery ---------- */
+  .tile-tag {
+    display: inline-block;
+    margin-bottom: 3px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  /* ---------- Upcoming activities ---------- */
+  .upcoming-grid { display: grid; grid-template-columns: 1.06fr .94fr; gap: 18px; align-items: stretch; }
+  .upcoming-feature {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+  }
+  .upcoming-photo { height: 226px; border: none; border-radius: 0; border-bottom: 1px dashed #c8d9d6; }
+  .upcoming-photo.has-photo { border-bottom: 1px solid var(--line); }
+  .upcoming-copy { padding: 18px 24px 22px; }
+  .upcoming-copy h3 { margin: 3px 0 7px; font-size: 21px; line-height: 1.2; color: var(--teal-800); }
+  .upcoming-copy p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-soft); }
+  .upcoming-stack { display: flex; flex-direction: column; gap: 18px; }
+  .upcoming-card {
+    flex: 1;
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    padding: 22px 24px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+  }
+  .upcoming-card .card-icon { margin-bottom: 0; flex: none; }
+  .upcoming-card h3 { margin: 3px 0 6px; font-size: 18.5px; line-height: 1.25; color: var(--teal-800); }
+  .upcoming-card p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); }
+
+  /* ---------- Volunteer + impact ---------- */
+  .tip-card { background: var(--soft); border: 1px solid var(--line); border-radius: 14px; padding: 19px 21px; }
+  .tip-card h3 { display: flex; gap: 10px; align-items: center; margin: 0 0 7px; font-size: 16.5px; color: var(--teal-800); }
+  .tip-card h3 .icon { width: 19px; height: 19px; color: var(--gold); }
+  .tip-card p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); }
+  .volunteer-list { display: flex; flex-direction: column; gap: 14px; }
+  .tip-row { display: flex; gap: 18px; align-items: center; padding: 16px 22px; }
+  .tip-row .card-icon { width: 40px; height: 40px; margin-bottom: 0; flex: none; }
+  .tip-row h3 { display: block; margin: 0 0 3px; font-size: 16.5px; }
+  .tip-row p { font-size: 13.5px; }
+  .quote-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    padding: 32px 32px 28px;
+    border-radius: 18px;
+    color: #ffffff;
+    background:
+      linear-gradient(160deg, rgba(10, 44, 53, .94) 0%, rgba(10, 44, 53, .70) 58%, rgba(10, 44, 53, .90) 100%),
+      url("images/gonullu-1.jpg") center / cover no-repeat;
+    overflow: hidden;
+  }
+  .quote-panel::after {
+    content: "";
+    position: absolute;
+    right: -70px;
+    bottom: -90px;
+    width: 230px;
+    height: 230px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(185, 131, 38, .3), rgba(185, 131, 38, 0) 70%);
+  }
+  .quote-mark { margin: 0; font-size: 52px; line-height: .8; font-family: Georgia, "Times New Roman", serif; color: var(--gold-soft); }
+  .quote-text { position: relative; margin: 16px 0 16px; font-size: 27px; line-height: 1.3; font-weight: 600; letter-spacing: -.01em; }
+  .quote-sub { position: relative; margin: 0; font-size: 14px; line-height: 1.55; color: rgba(255, 255, 255, .78); }
+  .chip-row { position: relative; display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
+  .chip-row span {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .9);
+    border: 1px solid rgba(255, 255, 255, .28);
+    border-radius: 999px;
+    padding: 5px 11px;
+  }
+
+  .check-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .check-list li { display: flex; gap: 15px; align-items: flex-start; background: var(--soft); border: 1px solid var(--line); border-radius: 13px; padding: 17px 20px; }
+  .check-list .check-badge {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: var(--teal-700);
+    color: #ffffff;
+  }
+  .check-list .check-badge .icon { width: 15px; height: 15px; stroke-width: 2.6; }
+  .check-list strong { display: block; font-size: 16px; font-weight: 700; color: var(--teal-800); margin-bottom: 3px; }
+  .check-list span.check-sub { font-size: 13.5px; line-height: 1.45; color: var(--ink-soft); }
+  .impact-panel { display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 32px; border-radius: 18px; background: var(--gold-bg); border: 1px solid #efe0bd; }
+  .impact-icon {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    margin-bottom: 20px;
+    border-radius: 13px;
+    background: #ffffff;
+    color: var(--gold);
+    border: 1px solid #efe0bd;
+  }
+  .impact-icon .icon { width: 22px; height: 22px; }
+  .impact-panel h3 { margin: 0 0 12px; font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8a6520; }
+  .impact-panel p { margin: 0 0 16px; font-size: 19px; line-height: 1.45; color: #5c4a24; }
+  .impact-panel p + p { margin-bottom: 0; font-size: 14px; color: #7a6535; }
+  .impact-mini { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .impact-mini li { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: #6f5a2c; }
+  .impact-mini li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); flex: none; }
+
+  /* ---------- Closing slide ---------- */
+  .slide-close {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 56px 80px;
+    color: #ffffff;
+    background: radial-gradient(120% 130% at 50% -20%, #1c626b 0%, #0f3c46 45%, #082329 100%);
+  }
+  .slide-close::after {
+    content: "";
+    position: absolute;
+    left: -120px;
+    bottom: -160px;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(185, 131, 38, .24), rgba(185, 131, 38, 0) 70%);
+  }
+  .close-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; max-width: 780px; }
+  .brand-logo { width: 58px; height: 58px; object-fit: contain; background: #ffffff; border-radius: 13px; padding: 6px; margin-bottom: 26px; }
+  .slide-close .close-title { margin: 0 0 16px; font-size: 62px; font-weight: 800; letter-spacing: -.03em; color: #ffffff; }
+  .close-rule { width: 74px; height: 3px; border-radius: 2px; background: var(--gold); margin: 0 0 22px; }
+  .close-line { margin: 0 0 28px; font-size: 20px; font-weight: 600; color: #ffffff; }
+  .close-note { margin: 0; max-width: 600px; font-size: 12.5px; line-height: 1.6; color: rgba(255, 255, 255, .66); }
+  .close-welcome { margin-top: 20px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #9ed3cd; border: 1px solid rgba(255, 255, 255, .24); border-radius: 999px; padding: 8px 18px; }
+
+  /* ---------- Control bar ---------- */
+  .deck-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .32);
+    z-index: 20;
+    max-width: calc(100vw - 24px);
+  }
+  .bar-group { display: flex; align-items: center; gap: 6px; }
+  .bar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--teal-800);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .bar-btn:hover { background: var(--soft); border-color: #c8dad7; }
+  .bar-btn:disabled { opacity: .35; cursor: default; }
+  .bar-btn .icon { width: 15px; height: 15px; }
+  .bar-btn.is-nav { width: 32px; padding: 0; justify-content: center; font-size: 17px; line-height: 1; }
+  .bar-count { min-width: 58px; text-align: center; font-size: 12px; font-weight: 800; letter-spacing: .05em; color: var(--teal-800); }
+  .bar-dots { display: flex; align-items: center; gap: 5px; }
+  .bar-dot {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #cfdedb;
+    cursor: pointer;
+  }
+  .bar-dot:hover { background: #a9c5c0; }
+  .bar-dot.is-current { width: 20px; border-radius: 999px; background: var(--teal-700); }
+  .bar-hint { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  .deck-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: linear-gradient(90deg, var(--gold-soft), var(--gold));
+    z-index: 30;
+    transition: width .25s ease;
+  }
+
+  .deck-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 76px;
+    transform: translate(-50%, 12px);
+    max-width: min(560px, calc(100vw - 40px));
+    padding: 12px 18px;
+    border-radius: 12px;
+    background: rgba(11, 47, 56, .96);
+    color: #ffffff;
+    font-size: 12.5px;
+    line-height: 1.45;
+    text-align: center;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 40;
+  }
+  .deck-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 900px) {
+    .bar-hint { display: none; }
+    .bar-dots { display: none; }
+    .deck-bar { gap: 10px; }
+  }
+
+  /* ---------- Print / PDF: exact 16:9 pages ---------- */
+  @page { size: 1280px 720px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: #ffffff; }
+    .deck-stage {
+      position: static;
+      transform: none !important;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: visible;
+    }
+    .slide {
+      display: flex !important;
+      position: relative;
+      inset: auto;
+      width: 1280px;
+      height: 720px;
+      page-break-after: always;
+      break-after: page;
+      animation: none !important;
+    }
+    .slide:last-of-type { page-break-after: auto; break-after: auto; }
+    .deck-bar, .deck-progress, .deck-toast, .photo-clear { display: none !important; }
+    .photo-hint, .head-hint { display: none !important; }
+    .photo-slot:not(.has-photo) { border-style: solid; border-color: var(--line); background: var(--soft); }
+    .slide-cover .photo-slot:not(.has-photo) { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .34); }
+    .card:hover { transform: none; box-shadow: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<svg class="icon-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-users" viewBox="0 0 24 24">
+    <circle cx="9.2" cy="8" r="3.2"/>
+    <path d="M3.6 19.2c0-3.1 2.5-5 5.6-5s5.6 1.9 5.6 5"/>
+    <path d="M16.2 5.3a3 3 0 0 1 0 5.6"/>
+    <path d="M17.6 14.4c1.9.5 3 2 3 4.3"/>
+  </symbol>
+  <symbol id="i-share" viewBox="0 0 24 24">
+    <path d="M12 15.5V4.2"/>
+    <path d="m8.2 7.8 3.8-3.6 3.8 3.6"/>
+    <path d="M4.5 13.5v4.8c0 .9.7 1.6 1.6 1.6h11.8c.9 0 1.6-.7 1.6-1.6v-4.8"/>
+  </symbol>
+  <symbol id="i-link" viewBox="0 0 24 24">
+    <path d="M10.2 13.8a4 4 0 0 1 0-5.6l2.2-2.2a4 4 0 0 1 5.6 5.6l-1.4 1.4"/>
+    <path d="M13.8 10.2a4 4 0 0 1 0 5.6l-2.2 2.2a4 4 0 0 1-5.6-5.6l1.4-1.4"/>
+  </symbol>
+  <symbol id="i-book" viewBox="0 0 24 24">
+    <path d="M4 19.4A2.4 2.4 0 0 1 6.4 17H20"/>
+    <path d="M6.4 2.2H20v19.6H6.4A2.4 2.4 0 0 1 4 19.4V4.6a2.4 2.4 0 0 1 2.4-2.4z"/>
+  </symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24">
+    <path d="M20.3 5.7a5 5 0 0 0-7.1 0L12 6.9l-1.2-1.2a5 5 0 0 0-7.1 7.1L12 21l8.3-8.2a5 5 0 0 0 0-7.1z"/>
+  </symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24">
+    <path d="M7.2 11.4V6.6a1.4 1.4 0 0 1 2.8 0v4.2"/>
+    <path d="M10 10.8V4.9a1.4 1.4 0 0 1 2.8 0v5.6"/>
+    <path d="M12.8 10.5V6.2a1.4 1.4 0 0 1 2.8 0v6"/>
+    <path d="M15.6 12.2V9.8a1.4 1.4 0 0 1 2.8 0v6.1a5.5 5.5 0 0 1-5.5 5.5h-2a5 5 0 0 1-3.5-1.5l-3-3a1.5 1.5 0 0 1 2.1-2.1l2.5 2.3"/>
+  </symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.6"/>
+    <path d="M3.4 12h17.2"/>
+    <path d="M12 3.4c2.3 2.4 3.5 5.4 3.5 8.6s-1.2 6.2-3.5 8.6c-2.3-2.4-3.5-5.4-3.5-8.6S9.7 5.8 12 3.4z"/>
+  </symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24">
+    <path d="M20.8 12a8.2 8.2 0 0 1-11.9 7.3L4 20.6l1.3-4.9A8.2 8.2 0 1 1 20.8 12z"/>
+    <path d="M8.7 11.4h.02M12 11.4h.02M15.3 11.4h.02"/>
+  </symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24">
+    <rect x="6.6" y="6.6" width="10.8" height="10.8" rx="2.4"/>
+    <rect x="9.6" y="9.6" width="4.8" height="4.8" rx="1"/>
+    <path d="M9.2 3.2v3.4M14.8 3.2v3.4M9.2 17.4v3.4M14.8 17.4v3.4M3.2 9.2h3.4M3.2 14.8h3.4M17.4 9.2h3.4M17.4 14.8h3.4"/>
+  </symbol>
+  <symbol id="i-jar" viewBox="0 0 24 24">
+    <path d="M7.2 3.2h9.6"/>
+    <path d="M8.2 3.2v2.4c0 .7-.3 1.2-.9 1.7a4.2 4.2 0 0 0-1.8 3.5v7.2a2.8 2.8 0 0 0 2.8 2.8h7.4a2.8 2.8 0 0 0 2.8-2.8v-7.2a4.2 4.2 0 0 0-1.8-3.5c-.6-.5-.9-1-.9-1.7V3.2"/>
+    <path d="M5.5 12.4h13"/>
+  </symbol>
+  <symbol id="i-rings" viewBox="0 0 24 24">
+    <path d="M12 2.6 15 6l-3 3.6L9 6z"/>
+    <circle cx="9.4" cy="14.8" r="4.9"/>
+    <circle cx="14.6" cy="14.8" r="4.9"/>
+  </symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24">
+    <path d="M12 3 5.2 5.8v5.4c0 4.3 2.9 7.5 6.8 9.8 3.9-2.3 6.8-5.5 6.8-9.8V5.8z"/>
+    <path d="m9.2 12.1 2 2 3.6-3.8"/>
+  </symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24">
+    <rect x="4" y="5.6" width="16" height="14.8" rx="2.4"/>
+    <path d="M8.2 3.2v4M15.8 3.2v4M4 10.6h16"/>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 24 24">
+    <path d="m5 12.6 4.6 4.6L19 7.4"/>
+  </symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24">
+    <path d="M4.2 8.6h2.9l1.5-2.6h6.8l1.5 2.6h2.9a1.6 1.6 0 0 1 1.6 1.6v7.6a1.6 1.6 0 0 1-1.6 1.6H4.2a1.6 1.6 0 0 1-1.6-1.6v-7.6a1.6 1.6 0 0 1 1.6-1.6z"/>
+    <circle cx="12.2" cy="13.6" r="3.4"/>
+  </symbol>
+  <symbol id="i-present" viewBox="0 0 24 24">
+    <path d="M8.2 5.6 18.4 12 8.2 18.4z"/>
+  </symbol>
+  <symbol id="i-download" viewBox="0 0 24 24">
+    <path d="M12 3.8v10.6"/>
+    <path d="m7.8 10.6 4.2 4.2 4.2-4.2"/>
+    <path d="M4.6 19.6h14.8"/>
+  </symbol>
+  <symbol id="i-print" viewBox="0 0 24 24">
+    <path d="M7 8.4V3.8h10v4.6"/>
+    <rect x="4" y="8.4" width="16" height="7.8" rx="2"/>
+    <path d="M7 13.6h10v6.6H7z"/>
+  </symbol>
+  <symbol id="i-close" viewBox="0 0 24 24">
+    <path d="m6.4 6.4 11.2 11.2M17.6 6.4 6.4 17.6"/>
+  </symbol>
+</svg>
+
+<div class="deck-progress" id="deck-progress"></div>
+
+<main class="deck-stage" id="deck-stage">
+
+  <!-- 01 - Cover -->
+  <section class="slide slide-cover is-active" data-slide-name="Title">
+    <div class="cover-inner">
+      <div class="cover-copy">
+        <figure class="photo-slot cover-logo has-photo" data-key="logo" data-default="centrecanada-logo.png" tabindex="0" role="button" aria-label="Dernek logosunu değiştir">
+          <img class="slot-img" src="centrecanada-logo.png" alt="Dernek logosu" />
+          <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Logo</span></div>
+          <button class="photo-clear" type="button" aria-label="Varsayılan logoya dön"><svg class="icon"><use href="#i-close"></use></svg></button>
+        </figure>
+        <p class="cover-eyebrow">New Horizons for Seniors Program</p>
+        <h1>NHSP Hibe Projesi<span>Sunum</span></h1>
+        <p class="cover-lead">Birlikte öğreniyor, paylaşıyor ve güçleniyoruz.</p>
+        <div class="cover-meta">
+          <span>Kanada Hükümeti desteğiyle</span>
+          <span class="meta-sep"></span>
+          <span>2026</span>
+        </div>
+      </div>
+      <div class="cover-visual">
+        <div class="cover-frame">
+          <figure class="photo-slot hero-slot has-photo" data-key="hero" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F5.jpeg?alt=media&amp;token=da471597-8aa8-422e-898b-710ed23dc668" tabindex="0" role="button" aria-label="Kapak fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F5.jpeg?alt=media&amp;token=da471597-8aa8-422e-898b-710ed23dc668" alt="Space Centre gezisinde birlikte poz veren öğrenciler, öğretmenler ve 55+ üyeler" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 - Hibe -->
+  <section class="slide" data-slide-name="Hibe Parası Nerelerde Kullanılabilir?">
+    <header class="slide-head">
+      <p class="slide-kicker">Hibe Desteği</p>
+      <h2>Hibe Parası Nerelerde Kullanılabilir?</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead lead-tight">Topluluk temelli projelerde 1 yıl için 50.000 $'a kadar destek var. Harcamalar etkinliklerle ilişkilendirilir.</p>
+      <div class="cols-wide-left">
+        <div class="cost-grid">
+          <div class="cost-item"><svg class="icon"><use href="#i-jar"></use></svg><div><h3>Etkinlik ve atölye</h3><p>Malzeme, ikram ve mekân giderleri.</p></div></div>
+          <div class="cost-item"><svg class="icon"><use href="#i-cpu"></use></svg><div><h3>Ekipman</h3><p>Projeksiyon, laptop, mobilya gibi ekipmanlar.</p></div></div>
+          <div class="cost-item"><svg class="icon"><use href="#i-globe"></use></svg><div><h3>Ulaşım</h3><p>Etkinliğe katılım için ulaşım.</p></div></div>
+          <div class="cost-item"><svg class="icon"><use href="#i-chat"></use></svg><div><h3>Eğitmen ve konuşmacı</h3><p>Kurum dışından eğitmen ve konuşmacı ücretleri.</p></div></div>
+          <div class="cost-item"><svg class="icon"><use href="#i-users"></use></svg><div><h3>Personel</h3><p>Etkinliği yürüten personelin maaşı.</p></div></div>
+          <div class="cost-item"><svg class="icon"><use href="#i-book"></use></svg><div><h3>İdari giderler</h3><p>Muhasebe, telefon, internet; en fazla %25.</p></div></div>
+          <div class="cost-item"><svg class="icon"><use href="#i-calendar"></use></svg><div><h3>Tanıtım</h3><p>Etkinlik duyurusu ve baskı giderleri.</p></div></div>
+          <div class="cost-item"><svg class="icon"><use href="#i-shield"></use></svg><div><h3>Onarım ve tadilat</h3><p>Sermaye desteği; en fazla 25.000 $.</p></div></div>
+        </div>
+        <div class="gain-stack">
+          <figure class="photo-frame">
+            <div class="photo-slot has-photo" data-key="hibe-projeksiyon" data-default="images/hibe-projeksiyon.jpg" tabindex="0" role="button" aria-label="Projeksiyon fotoğrafını değiştir">
+              <img class="slot-img" src="images/hibe-projeksiyon.jpg" alt="Sunum için hazırlanmış sınıf ve projeksiyon" />
+              <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+              <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+            </div>
+            <figcaption>Projeksiyon</figcaption>
+          </figure>
+          <figure class="photo-frame">
+            <div class="photo-slot has-photo" data-key="hibe-laptop" data-default="images/hibe-laptop.jpg" tabindex="0" role="button" aria-label="Laptop fotoğrafını değiştir">
+              <img class="slot-img" src="images/hibe-laptop.jpg" alt="Laptop ile çalışan bir kişi" />
+              <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+              <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+            </div>
+            <figcaption>Laptop</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="note-bar">Kapsam dışı: araç, bina veya arsa, sağlık hizmeti, günlük işletme giderleri, yalnızca gezi amaçlı ulaşım, başvuru yazımı.</div>
+      <div class="highlight-band">
+        <svg class="icon"><use href="#i-check"></use></svg>
+        <p><strong>Bizim bütçemizde:</strong> projeksiyon, laptop, yazıcı kartuşları, ofis malzemeleri.</p>
+      </div>
+      <p class="source-line">Kaynak: Canada.ca - NHSP Community-based projects, uygun giderler (2026).</p>
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>02 / 10</span></footer>
+  </section>
+
+  <!-- 03 - Ne yaptık -->
+  <section class="slide" data-slide-name="Ne Yaptık?">
+    <header class="slide-head">
+      <p class="slide-kicker">5 Etkinlik, 5 Format</p>
+      <h2>Faaliyetlerimiz</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead lead-tight">Beş farklı format: gezi, atölye, sınıf, seminer ve söyleşi.</p>
+      <div class="activity-photo-grid">
+        <div class="activity-photo-card">
+          <div class="photo-slot has-photo" data-key="foto-ingilizce" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FEnglish-Classes%2F1.jpeg?alt=media&amp;token=0d5ca42f-c786-44d1-87b0-85d94b8761fa" tabindex="0" role="button" aria-label="İngilizce sınıfı fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FEnglish-Classes%2F1.jpeg?alt=media&amp;token=0d5ca42f-c786-44d1-87b0-85d94b8761fa" alt="İngilizce konuşma sınıfı" />
+            <span class="date-chip">Ekim 2026 - 4 ay</span>
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <div class="activity-copy">
+            <span class="tile-tag">Haftalık pratik</span>
+            <h3>İngilizce Konuşma</h3>
+            <p>Günlük konuşma pratiği ve iletişim becerileri.</p>
+          </div>
+        </div>
+        <div class="activity-photo-card">
+          <div class="photo-slot has-photo" data-key="foto-ai" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FAI-Seminar%2F4.jpeg?alt=media&amp;token=ddf8c388-4683-4e57-9cb7-8bbdaf6158d7" tabindex="0" role="button" aria-label="AI semineri fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FAI-Seminar%2F4.jpeg?alt=media&amp;token=ddf8c388-4683-4e57-9cb7-8bbdaf6158d7" alt="Teknoloji semineri" />
+            <span class="date-chip">26 Eylül 2026</span>
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <div class="activity-copy">
+            <span class="tile-tag">Seminer + soru-cevap</span>
+            <h3>AI Semineri</h3>
+            <p>Yapay zekâyı sade bir dille tanıtıyoruz.</p>
+          </div>
+        </div>
+        <div class="activity-photo-card">
+          <div class="photo-slot has-photo" data-key="foto-weekend" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F1.jpeg?alt=media&amp;token=3b99b6d3-9ff8-4206-9048-9790796607be" tabindex="0" role="button" aria-label="Atölye fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F1.jpeg?alt=media&amp;token=3b99b6d3-9ff8-4206-9048-9790796607be" alt="Weekend School atölyesi" />
+            <span class="date-chip">11 Ekim 2026</span>
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <div class="activity-copy">
+            <span class="tile-tag">Uygulamalı atölye</span>
+            <h3>Weekend School ve Atölyeler</h3>
+            <p>Turşu, reçel, yoğurt ve geleneksel üretim.</p>
+          </div>
+        </div>
+        <div class="activity-photo-card is-wide">
+          <div class="photo-slot has-photo" data-key="foto-kusaklar" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F19.jpeg?alt=media&amp;token=b3091ff8-b334-4d4e-ae60-2de3db6a2385" tabindex="0" role="button" aria-label="Kuşaklar arası etkinlik fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F19.jpeg?alt=media&amp;token=b3091ff8-b334-4d4e-ae60-2de3db6a2385" alt="Müzede birlikte gezen çocuklar ve 55+ üyeler" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <div class="activity-copy">
+            <span class="tile-tag">Ortak etkinlik</span>
+            <h3>Kuşaklar Arası Etkinlikler</h3>
+            <p>Çocuklar, gençler ve 55+ birlikte öğreniyor.</p>
+          </div>
+        </div>
+        <div class="activity-photo-card is-wide">
+          <div class="photo-slot has-photo" data-key="foto-yillik" data-default="images/kultur-1.jpg" tabindex="0" role="button" aria-label="40 yıl etkinliği fotoğrafını değiştir">
+            <img class="slot-img" src="images/kultur-1.jpg" alt="Uzun yıllardır evli bir çift" />
+            <span class="date-chip">6 Aralık 2026</span>
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <div class="activity-copy">
+            <span class="tile-tag">Söyleşi</span>
+            <h3>Bir Yastıkta 40 Yıl</h3>
+            <p>Uzun yıllara dayanan evlilik deneyimleri paylaşılıyor.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>03 / 10</span></footer>
+  </section>
+
+  <!-- 04 - Space Centre gezisi -->
+  <section class="slide" data-slide-name="Space Centre Gezisi">
+    <header class="slide-head">
+      <p class="slide-kicker">Nasıl Yaptık?</p>
+      <h2>Space Centre Gezisi</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">6 Ağustos 2026'da yaz okulu öğretmenleri ve öğrencileri ile 55+ üyelerimiz aynı gezide buluştu. Çocuklar, gençler, öğretmenler ve yaşlılar birlikte öğrendi, birlikte eğlendi.</p>
+      <div class="photo-row">
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="space-1" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F3.jpeg?alt=media&amp;token=86634769-71ee-4780-8eec-d722e4a7d45e" tabindex="0" role="button" aria-label="Gezinin ilk fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F3.jpeg?alt=media&amp;token=86634769-71ee-4780-8eec-d722e4a7d45e" alt="Otobüs önünde birlikte poz veren grup" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Birlikte yola çıktık</figcaption>
+        </figure>
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="space-2" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F13.jpeg?alt=media&amp;token=eceb8e4b-8adb-4d7f-8730-4d3a8221c3a0" tabindex="0" role="button" aria-label="Gezinin ikinci fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F13.jpeg?alt=media&amp;token=eceb8e4b-8adb-4d7f-8730-4d3a8221c3a0" alt="Planetaryumda oturan grup" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Uzay ve bilim</figcaption>
+        </figure>
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="space-3" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F18.jpeg?alt=media&amp;token=fcd498a6-0838-4eea-8ed7-334a3b757092" tabindex="0" role="button" aria-label="Gezinin üçüncü fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F18.jpeg?alt=media&amp;token=fcd498a6-0838-4eea-8ed7-334a3b757092" alt="Astronot kostümüyle fotoğraf çeken çocuklar" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Birlikte keşfetmek</figcaption>
+        </figure>
+      </div>
+      <div class="facts-row">
+        <div class="fact-item"><span class="fact-label">Kimler</span><p>Yaz okulu öğretmenleri, öğrenciler ve 55+ üyeler</p></div>
+        <div class="fact-item"><span class="fact-label">Ne</span><p>Space Centre'da eğitici gezi</p></div>
+        <div class="fact-item"><span class="fact-label">Tarih</span><p>6 Ağustos 2026</p></div>
+        <div class="fact-item"><span class="fact-label">Sonuç</span><p>Çocuklar, gençler ve 55+ üyeler aynı günü paylaştı.</p></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>04 / 10</span></footer>
+  </section>
+
+  <!-- 05 - Turşu atölyesi -->
+  <section class="slide" data-slide-name="Turşu Atölyesi">
+    <header class="slide-head">
+      <p class="slide-kicker">Nasıl Yaptık?</p>
+      <h2>Turşu Atölyesi</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">11 Ekim 2026'da atölye, Weekend School öğrencileriyle birlikte yapıldı. Öğrenciler geleneksel yöntemi öğrendi, kendi turşularını kurdu ve etkinlik sonunda çok mutlu oldu.</p>
+      <div class="photo-row">
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="tursu-1" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F2.jpeg?alt=media&amp;token=a99ebb98-7303-4cde-b372-2206e2a019aa" tabindex="0" role="button" aria-label="Turşu atölyesi fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F2.jpeg?alt=media&amp;token=a99ebb98-7303-4cde-b372-2206e2a019aa" alt="Turşu atölyesinde çocuklar ve yetişkinler" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Birlikte kurduk</figcaption>
+        </figure>
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="tursu-2" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F3.jpeg?alt=media&amp;token=8aac50ca-30f5-44fd-9b0c-433a2e12c732" tabindex="0" role="button" aria-label="Atölyenin ikinci fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F3.jpeg?alt=media&amp;token=8aac50ca-30f5-44fd-9b0c-433a2e12c732" alt="Turşu kavanozunu tutan bir öğrenci" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Kendi turşumuz</figcaption>
+        </figure>
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="tursu-3" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F5.jpeg?alt=media&amp;token=d2a8de9e-18ff-4be2-b265-3e50bca97f85" tabindex="0" role="button" aria-label="Atölyenin üçüncü fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F5.jpeg?alt=media&amp;token=d2a8de9e-18ff-4be2-b265-3e50bca97f85" alt="Atölye malzemeleri" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Kavanozlar hazır</figcaption>
+        </figure>
+      </div>
+      <div class="facts-row">
+        <div class="fact-item"><span class="fact-label">Kimler</span><p>Weekend School öğrencileri ve 55+ üyeler</p></div>
+        <div class="fact-item"><span class="fact-label">Ne</span><p>Geleneksel turşu atölyesi</p></div>
+        <div class="fact-item"><span class="fact-label">Tarih</span><p>11 Ekim 2026</p></div>
+        <div class="fact-item"><span class="fact-label">Sonuç</span><p>Öğrenciler kendi turşularını kurdu.</p></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>05 / 10</span></footer>
+  </section>
+
+  <!-- 06 - İngilizce sınıfları -->
+  <section class="slide" data-slide-name="İngilizce Sınıfları">
+    <header class="slide-head">
+      <p class="slide-kicker">Nasıl Yaptık?</p>
+      <h2>İngilizce Sınıfları</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">Ekim 2026'da başladık; 4 ay boyunca 55+ üyelerimizle günlük konuşma pratiği yapıyoruz. Alışveriş, sağlık, randevu ve küçük sohbetler üzerine çalışıyoruz.</p>
+      <div class="photo-row">
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="ingilizce-1" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FEnglish-Classes%2F1.jpeg?alt=media&amp;token=0d5ca42f-c786-44d1-87b0-85d94b8761fa" tabindex="0" role="button" aria-label="İngilizce sınıfı fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FEnglish-Classes%2F1.jpeg?alt=media&amp;token=0d5ca42f-c786-44d1-87b0-85d94b8761fa" alt="İngilizce sınıfında katılımcılar" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Sınıf</figcaption>
+        </figure>
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="ingilizce-2" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FEnglish-Classes%2F2.jpeg?alt=media&amp;token=12aae9ed-2a5b-460c-a2ee-28ffb99f891c" tabindex="0" role="button" aria-label="İkinci sınıf fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FEnglish-Classes%2F2.jpeg?alt=media&amp;token=12aae9ed-2a5b-460c-a2ee-28ffb99f891c" alt="İngilizce dersinde katılımcılar" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Ders</figcaption>
+        </figure>
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="ingilizce-3" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FEnglish-Classes%2F3.jpeg?alt=media&amp;token=088afdd1-0248-4c4d-b035-3cd9cb3d1450" tabindex="0" role="button" aria-label="Üçüncü sınıf fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FEnglish-Classes%2F3.jpeg?alt=media&amp;token=088afdd1-0248-4c4d-b035-3cd9cb3d1450" alt="İngilizce sınıfında katılımcılar" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Katılımcılar</figcaption>
+        </figure>
+      </div>
+      <div class="facts-row">
+        <div class="fact-item"><span class="fact-label">Kimler</span><p>55+ üyeler</p></div>
+        <div class="fact-item"><span class="fact-label">Ne</span><p>Günlük konuşma pratiği</p></div>
+        <div class="fact-item"><span class="fact-label">Tarih</span><p>Ekim 2026'dan itibaren 4 ay</p></div>
+        <div class="fact-item"><span class="fact-label">Sonuç</span><p>Küçük gruplarla konuşma pratiği yapılıyor.</p></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>06 / 10</span></footer>
+  </section>
+
+  <!-- 07 - AI semineri -->
+  <section class="slide" data-slide-name="AI Semineri">
+    <header class="slide-head">
+      <p class="slide-kicker">Nasıl Yaptık?</p>
+      <h2>AI Semineri</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead">26 Eylül 2026'da yapay zekâyı ve teknolojiyi sade bir dille anlattık. Katılımcılar sorularını sordu, birlikte denedik.</p>
+      <div class="photo-row">
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="ai-1" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FAI-Seminar%2F4.jpeg?alt=media&amp;token=ddf8c388-4683-4e57-9cb7-8bbdaf6158d7" tabindex="0" role="button" aria-label="AI semineri fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FAI-Seminar%2F4.jpeg?alt=media&amp;token=ddf8c388-4683-4e57-9cb7-8bbdaf6158d7" alt="Seminerde konuşmacılar ve katılımcılar" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Sunum</figcaption>
+        </figure>
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="ai-2" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FAI-Seminar%2F2.jpeg?alt=media&amp;token=e352e630-b4f3-4ce6-bc4e-bc561008aa95" tabindex="0" role="button" aria-label="İkinci seminer fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FAI-Seminar%2F2.jpeg?alt=media&amp;token=e352e630-b4f3-4ce6-bc4e-bc561008aa95" alt="Seminer salonunda katılımcılar" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Katılımcılar</figcaption>
+        </figure>
+        <figure class="photo-frame">
+          <div class="photo-slot has-photo" data-key="ai-3" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FAI-Seminar%2F3.jpeg?alt=media&amp;token=e9f489a8-211f-4aa3-9242-14d8b4195738" tabindex="0" role="button" aria-label="Üçüncü seminer fotoğrafını değiştir">
+            <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FAI-Seminar%2F3.jpeg?alt=media&amp;token=e9f489a8-211f-4aa3-9242-14d8b4195738" alt="Seminerde sunum ve salon" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <figcaption>Seminer salonu</figcaption>
+        </figure>
+      </div>
+      <div class="facts-row">
+        <div class="fact-item"><span class="fact-label">Kimler</span><p>55+ üyeler</p></div>
+        <div class="fact-item"><span class="fact-label">Ne</span><p>Yapay zekâ ve teknoloji semineri</p></div>
+        <div class="fact-item"><span class="fact-label">Tarih</span><p>26 Eylül 2026</p></div>
+        <div class="fact-item"><span class="fact-label">Sonuç</span><p>Katılımcılar sorularını sordu.</p></div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>07 / 10</span></footer>
+  </section>
+
+  <!-- 08 - Diğer birimlere katkı -->
+  <section class="slide" data-slide-name="Diğer Birimlere Katkı">
+    <header class="slide-head">
+      <p class="slide-kicker">Birlikte Kazandık</p>
+      <h2>Diğer Birimlere Katkımız</h2>
+    </header>
+    <div class="slide-body">
+      <div class="cols-wide-left">
+        <div class="contribution-list">
+          <div class="contribution">
+            <div class="card-icon"><svg class="icon"><use href="#i-chat"></use></svg></div>
+            <div>
+              <h3>Weekend School</h3>
+              <p>Öğrenciler turşu atölyesine katıldı; öğretmenler ve öğrenciler etkinliklerin parçası oldu.</p>
+            </div>
+          </div>
+          <div class="contribution">
+            <div class="card-icon"><svg class="icon"><use href="#i-users"></use></svg></div>
+            <div>
+              <h3>Yaz Okulu</h3>
+              <p>Space Centre gezisi öğretmenler ve öğrencilerle birlikte yapıldı.</p>
+            </div>
+          </div>
+          <div class="contribution">
+            <div class="card-icon"><svg class="icon"><use href="#i-share"></use></svg></div>
+            <div>
+              <h3>Öğretmenler</h3>
+              <p>Proje kapsamında öğretmenlere istihdam sağlandı.</p>
+            </div>
+          </div>
+          <div class="contribution">
+            <div class="card-icon"><svg class="icon"><use href="#i-globe"></use></svg></div>
+            <div>
+              <h3>Dernek ve topluluk</h3>
+              <p>Dernek kira ödemelerine katkı sağlandı; gönüllüler hizmet etme imkanı buldu.</p>
+            </div>
+          </div>
+        </div>
+        <div class="contribution-photos">
+          <figure class="photo-frame">
+            <div class="photo-slot has-photo" data-key="katki-weekend" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F1.jpeg?alt=media&amp;token=3b99b6d3-9ff8-4206-9048-9790796607be" tabindex="0" role="button" aria-label="Weekend School fotoğrafını değiştir">
+              <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FTursu-workshop%2F1.jpeg?alt=media&amp;token=3b99b6d3-9ff8-4206-9048-9790796607be" alt="Weekend School öğrencileri" />
+              <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+              <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+            </div>
+            <figcaption>Weekend School öğrencileri</figcaption>
+          </figure>
+          <figure class="photo-frame">
+            <div class="photo-slot has-photo" data-key="katki-yazokulu" data-default="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F3.jpeg?alt=media&amp;token=86634769-71ee-4780-8eec-d722e4a7d45e" tabindex="0" role="button" aria-label="Yaz okulu fotoğrafını değiştir">
+              <img class="slot-img" src="https://firebasestorage.googleapis.com/v0/b/societyapp-edd4c.appspot.com/o/CENTRECANADA%2FFOLDERS%2F2026-11-16-6Q39QA2TNF%2FNHSP-2025%2FSpace-Center-Trip-Aug-06%2F3.jpeg?alt=media&amp;token=86634769-71ee-4780-8eec-d722e4a7d45e" alt="Yaz okulu gezisi" />
+              <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+              <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+            </div>
+            <figcaption>Yaz okulu gezisi</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="note-bar">Proje; öğrencilere, öğretmenlere, gönüllülere ve derneğe katkı sağladı.</div>
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>08 / 10</span></footer>
+  </section>
+
+  <!-- 09 - Hibe başvurusu -->
+  <section class="slide" data-slide-name="Başvuruda Neye Puan Veriliyor?">
+    <header class="slide-head">
+      <p class="slide-kicker">NHSP Başvurusu</p>
+      <h2>Başvuruda Neye Puan Veriliyor?</h2>
+    </header>
+    <div class="slide-body">
+      <p class="lead lead-tight">Topluluk temelli projelerde 1 yıl için 50.000 $'a kadar destek var. Değerlendirme 100 puan üzerinden yapılıyor.</p>
+      <div class="score-grid">
+        <div class="score-card">
+          <div class="score-value">%20</div>
+          <h3>Dernek deneyimi</h3>
+          <p>Misyon, deneyim ve 55+ üyelere hizmet geçmişi.</p>
+        </div>
+        <div class="score-card">
+          <div class="score-value">%15</div>
+          <h3>55+ üyelere fayda</h3>
+          <p>Projenin çözdüğü ihtiyaç ve ulaştığı kişiler.</p>
+        </div>
+        <div class="score-card">
+          <div class="score-value">%10</div>
+          <h3>55+ aktif rolü</h3>
+          <p>Üyelerin planlama, karar ve uygulamadaki rolü.</p>
+        </div>
+        <div class="score-card">
+          <div class="score-value">%10</div>
+          <h3>Etkinlik planı</h3>
+          <p>Adımlar, tarihler ve beklenen sonuçlar.</p>
+        </div>
+        <div class="score-card">
+          <div class="score-value">%10</div>
+          <h3>Ulusal öncelik</h3>
+          <p>Dijital okuryazarlık, yalnızlık veya kuşaklar arası çalışma.</p>
+        </div>
+        <div class="score-card">
+          <div class="score-value is-mandatory">Zorunlu</div>
+          <h3>%50 kuralı</h3>
+          <p>Katılımcıların en az yarısı 55 yaş ve üzeri.</p>
+        </div>
+      </div>
+      <p class="score-extra"><strong>Diğer puanlar:</strong> proje hedefi %10, topluma fayda %10, maliyet etkinliği %5, kırılgan gruplar %5, kırsal/uzak %5.</p>
+      <div class="note-bar">Eksik dosya elenir: CRA iş numarası, son 2 yıla ait faaliyet belgesi ve bütçe olmadan başvuru değerlendirilmiyor. Başvuru GCOS üzerinden yapılıyor.</div>
+      <div class="highlight-band">
+        <svg class="icon"><use href="#i-check"></use></svg>
+        <p><strong>Ulusal öncelik +10 puan:</strong> AI semineri dijital okuryazarlık, Bir Yastıkta 40 Yıl kuşaklar arası, dijital güvenlik semineri dolandırıcılık önleme başlığına denk geliyor.</p>
+      </div>
+      <p class="source-line">Kaynak: Canada.ca - NHSP Community-based projects, değerlendirme kriterleri ve başvuru rehberi (2026).</p>
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>09 / 10</span></footer>
+  </section>
+
+  <!-- 10 - Yaklaşan etkinlikler ve teşekkür -->
+  <section class="slide" data-slide-name="Yaklaşan Etkinlikler">
+    <header class="slide-head">
+      <p class="slide-kicker">Sırada Ne Var?</p>
+      <h2>Yaklaşan Etkinlikler</h2>
+    </header>
+    <div class="slide-body">
+      <div class="upcoming-grid">
+        <article class="upcoming-feature">
+          <div class="photo-slot upcoming-photo has-photo" data-key="dijital-1" data-default="images/dijital-1.jpg" tabindex="0" role="button" aria-label="Seminer fotoğrafını değiştir">
+            <img class="slot-img" src="images/dijital-1.jpg" alt="Telefonuyla fotoğraf çeken 55+ üye" />
+            <div class="photo-hint"><svg class="icon"><use href="#i-camera"></use></svg><span>Fotoğraf ekle</span></div>
+            <button class="photo-clear" type="button" aria-label="Fotoğrafı kaldır"><svg class="icon"><use href="#i-close"></use></svg></button>
+          </div>
+          <div class="upcoming-copy">
+            <span class="tile-tag">Sıradaki seminer</span>
+            <h3>Dijital Güvenlik ve Dolandırıcılıktan Korunma</h3>
+            <p>Telefon veya tabletinizi getirin; birlikte güvenlik ayarlarınıza bakalım. Tarih duyurulacak.</p>
+          </div>
+        </article>
+        <div class="upcoming-stack">
+          <article class="upcoming-card">
+            <div class="card-icon"><svg class="icon"><use href="#i-jar"></use></svg></div>
+            <div>
+              <span class="tile-tag">29 Kasım 2026</span>
+              <h3>Geleneksel Kurabiye Atölyesi</h3>
+              <p>Çocuklar ve 55+ üyeler birlikte kurabiye yapacak.</p>
+            </div>
+          </article>
+          <article class="upcoming-card">
+            <div class="card-icon"><svg class="icon"><use href="#i-rings"></use></svg></div>
+            <div>
+              <span class="tile-tag">6 Aralık 2026</span>
+              <h3>Bir Yastıkta 40 Yıl</h3>
+              <p>Uzun yıllardır evli çiftler deneyimlerini gençlerle paylaşıyor.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="thanks-band">
+        <img class="brand-logo" src="centrecanada-logo.png" alt="Dernek logosu" />
+        <div>
+          <p class="thanks-line">Teşekkürler. Birlikte öğreniyor, paylaşıyor ve güçleniyoruz.</p>
+          <p class="thanks-note">Bu proje, Kanada Hükümeti'nin New Horizons for Seniors Programı (NHSP) desteğiyle yürütülmektedir.</p>
+        </div>
+      </div>
+    </div>
+    <footer class="slide-foot"><span>NHSP Hibe Projesi</span><span>10 / 10</span></footer>
+  </section>
+
+</main>
+
+<!-- Controls -->
+<div class="deck-bar" id="deck-bar">
+  <div class="bar-group">
+    <button class="bar-btn is-nav" id="btn-prev" type="button" aria-label="Önceki slayt">&lsaquo;</button>
+    <span class="bar-count" id="bar-count">1 / 10</span>
+    <button class="bar-btn is-nav" id="btn-next" type="button" aria-label="Sonraki slayt">&rsaquo;</button>
+  </div>
+  <div class="bar-dots" id="bar-dots" aria-hidden="true"></div>
+  <div class="bar-group">
+    <button class="bar-btn" id="btn-present" type="button" title="Tam ekran (F)"><svg class="icon"><use href="#i-present"></use></svg><span>Sunum</span></button>
+    <button class="bar-btn" id="btn-print" type="button" title="Yazdır veya PDF olarak kaydet (P)"><svg class="icon"><use href="#i-print"></use></svg><span>Yazdır / PDF</span></button>
+  </div>
+  <span class="bar-hint">Ok tuşları &middot; F tam ekran &middot; P yazdır</span>
+</div>
+
+<div class="deck-toast" id="deck-toast" role="status" aria-live="polite"></div>
+<input class="photo-file-input" id="photo-file-input" type="file" accept="image/*" hidden />
+
+<script>
+(function () {
+  "use strict";
+
+  var PHOTO_STORAGE_KEY = "nhsp-deck-photos-v3";
+  var MAX_PHOTO_EDGE = 1500;
+  var PHOTO_JPEG_QUALITY = 0.86;
+
+  var stageElement = document.getElementById("deck-stage");
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var progressElement = document.getElementById("deck-progress");
+  var countElement = document.getElementById("bar-count");
+  var previousButton = document.getElementById("btn-prev");
+  var nextButton = document.getElementById("btn-next");
+  var dotsContainer = document.getElementById("bar-dots");
+  var presentButton = document.getElementById("btn-present");
+  var printButton = document.getElementById("btn-print");
+  var toastElement = document.getElementById("deck-toast");
+  var fileInput = document.getElementById("photo-file-input");
+
+  var currentSlideIndex = 0;
+  var pendingPhotoKey = null;
+  var savedPhotos = {};
+  var toastTimer = null;
+
+  /* ---------- Slide navigation ---------- */
+  function clampSlideIndex(requestedIndex) {
+    if (requestedIndex < 0) { return 0; }
+    if (requestedIndex > slides.length - 1) { return slides.length - 1; }
+    return requestedIndex;
+  }
+
+  function showSlideAtIndex(requestedIndex) {
+    currentSlideIndex = clampSlideIndex(requestedIndex);
+    slides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle("is-active", slideIndex === currentSlideIndex);
+    });
+    countElement.textContent = (currentSlideIndex + 1) + " / " + slides.length;
+    previousButton.disabled = currentSlideIndex === 0;
+    nextButton.disabled = currentSlideIndex === slides.length - 1;
+    progressElement.style.width = (((currentSlideIndex + 1) / slides.length) * 100) + "%";
+    var allDots = dotsContainer.querySelectorAll(".bar-dot");
+    allDots.forEach(function (dot, dotIndex) {
+      dot.classList.toggle("is-current", dotIndex === currentSlideIndex);
+    });
+  }
+
+  function buildDotNavigation() {
+    slides.forEach(function (slide, slideIndex) {
+      var dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "bar-dot";
+      dot.setAttribute("aria-label", "Slayt " + (slideIndex + 1));
+      dot.addEventListener("click", function () { showSlideAtIndex(slideIndex); });
+      dotsContainer.appendChild(dot);
+    });
+  }
+
+  function goToNextSlide() { showSlideAtIndex(currentSlideIndex + 1); }
+  function goToPreviousSlide() { showSlideAtIndex(currentSlideIndex - 1); }
+
+  function readInitialSlideIndex() {
+    var hashMatch = /^#slide-(\d+)$/.exec(window.location.hash);
+    if (!hashMatch) { return 0; }
+    return parseInt(hashMatch[1], 10) - 1;
+  }
+
+  function handleKeyboardNavigation(event) {
+    var target = event.target;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) { return; }
+
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+      event.preventDefault();
+      goToNextSlide();
+    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      goToPreviousSlide();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      showSlideAtIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      showSlideAtIndex(slides.length - 1);
+    } else if (event.key === "p" || event.key === "P") {
+      startPrinting();
+    } else if (event.key === "f" || event.key === "F") {
+      toggleFullscreen();
+    }
+  }
+
+  /* ---------- Fit the 1280x720 canvas to the window ---------- */
+  function updateStageScale() {
+    var horizontalPadding = window.innerWidth < 760 ? 16 : 48;
+    var verticalPadding = 108;
+    var availableWidth = window.innerWidth - horizontalPadding;
+    var availableHeight = window.innerHeight - verticalPadding;
+    var fitScale = Math.min(availableWidth / 1280, availableHeight / 720);
+    if (!isFinite(fitScale) || fitScale <= 0) { fitScale = 1; }
+    stageElement.style.transform = "translate(-50%, -50%) scale(" + fitScale + ")";
+  }
+
+  /* ---------- Full screen ---------- */
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(function () {});
+      }
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch(function () {});
+    }
+  }
+
+  function updatePresentButtonLabel() {
+    presentButton.querySelector("span").textContent = document.fullscreenElement ? "Çık" : "Sunum";
+  }
+
+  /* ---------- Photos ---------- */
+  function showToast(message) {
+    toastElement.textContent = message;
+    toastElement.classList.add("is-visible");
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () {
+      toastElement.classList.remove("is-visible");
+    }, 3800);
+  }
+
+  function applyPhoto(photoKey, dataUrl) {
+    document.querySelectorAll('.photo-slot[data-key="' + photoKey + '"]').forEach(function (slot) {
+      var image = slot.querySelector(".slot-img");
+      if (!image) { return; }
+      if (dataUrl) {
+        image.style.display = "";
+        image.src = dataUrl;
+        slot.classList.add("has-photo");
+      } else if (slot.dataset.default) {
+        image.style.display = "";
+        image.src = slot.dataset.default;
+        slot.classList.add("has-photo");
+      } else {
+        image.removeAttribute("src");
+        slot.classList.remove("has-photo");
+      }
+    });
+    if (photoKey === "logo") {
+      var defaultLogo = "centrecanada-logo.png";
+      document.querySelectorAll(".brand-logo").forEach(function (logoImage) {
+        logoImage.style.display = "";
+        logoImage.src = dataUrl || defaultLogo;
+      });
+    }
+  }
+
+  function persistPhotos() {
+    try {
+      window.localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(savedPhotos));
+    } catch (error) {
+      showToast("Fotoğraf eklendi, ancak tarayıcı depolaması dolu. Sayfayı kapatmadan önce yazdırarak PDF kaydedin.");
+    }
+  }
+
+  function handleLogoLoadError(imageElement) {
+    if (imageElement.classList.contains("brand-logo")) {
+      imageElement.style.display = "none";
+      return;
+    }
+    var photoSlot = imageElement.closest(".photo-slot");
+    if (!photoSlot || savedPhotos[photoSlot.dataset.key]) { return; }
+    imageElement.removeAttribute("src");
+    imageElement.style.display = "none";
+    photoSlot.classList.remove("has-photo");
+  }
+
+  function wireLogoFallback() {
+    document.querySelectorAll(".cover-logo .slot-img, .brand-logo").forEach(function (logoImage) {
+      logoImage.addEventListener("error", function () { handleLogoLoadError(logoImage); });
+    });
+  }
+
+  function restoreSavedPhotos() {
+    var storedPhotos = null;
+    try {
+      storedPhotos = window.localStorage.getItem(PHOTO_STORAGE_KEY);
+    } catch (error) {
+      storedPhotos = null;
+    }
+    if (!storedPhotos) { return; }
+    try {
+      savedPhotos = JSON.parse(storedPhotos) || {};
+    } catch (error) {
+      savedPhotos = {};
+      return;
+    }
+    Object.keys(savedPhotos).forEach(function (photoKey) {
+      applyPhoto(photoKey, savedPhotos[photoKey]);
+    });
+  }
+
+  function importPhotoFile(file, photoKey) {
+    if (!file) { return; }
+    if (file.type.indexOf("image/") !== 0) {
+      showToast("Lütfen bir görsel dosyası seçin.");
+      return;
+    }
+    var fileReader = new FileReader();
+    fileReader.onload = function () {
+      var sourceImage = new Image();
+      sourceImage.onload = function () {
+        var downscaleRatio = Math.min(1, MAX_PHOTO_EDGE / Math.max(sourceImage.width, sourceImage.height));
+        var canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(sourceImage.width * downscaleRatio));
+        canvas.height = Math.max(1, Math.round(sourceImage.height * downscaleRatio));
+        var context = canvas.getContext("2d");
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+        var dataUrl = canvas.toDataURL("image/jpeg", PHOTO_JPEG_QUALITY);
+        applyPhoto(photoKey, dataUrl);
+        savedPhotos[photoKey] = dataUrl;
+        persistPhotos();
+      };
+      sourceImage.onerror = function () {
+        showToast("Bu görsel okunamadı. Lütfen başka bir dosya deneyin.");
+      };
+      sourceImage.src = fileReader.result;
+    };
+    fileReader.readAsDataURL(file);
+  }
+
+  function openPhotoPicker(photoKey) {
+    pendingPhotoKey = photoKey;
+    fileInput.value = "";
+    fileInput.click();
+  }
+
+  function clearPhoto(photoKey) {
+    delete savedPhotos[photoKey];
+    applyPhoto(photoKey, null);
+    persistPhotos();
+    showToast("Fotoğraf kaldırıldı.");
+  }
+
+  function wirePhotoSlots() {
+    document.querySelectorAll(".photo-slot").forEach(function (slot) {
+      var photoKey = slot.dataset.key;
+
+      slot.addEventListener("click", function (event) {
+        if (event.target.closest(".photo-clear")) { return; }
+        openPhotoPicker(photoKey);
+      });
+
+      slot.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openPhotoPicker(photoKey);
+        }
+      });
+
+      slot.addEventListener("dragover", function (event) {
+        event.preventDefault();
+        slot.classList.add("is-dragover");
+      });
+
+      slot.addEventListener("dragleave", function () {
+        slot.classList.remove("is-dragover");
+      });
+
+      slot.addEventListener("drop", function (event) {
+        event.preventDefault();
+        slot.classList.remove("is-dragover");
+        var droppedFile = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null;
+        importPhotoFile(droppedFile, photoKey);
+      });
+
+      var clearButton = slot.querySelector(".photo-clear");
+      if (clearButton) {
+        clearButton.addEventListener("click", function (event) {
+          event.stopPropagation();
+          clearPhoto(photoKey);
+        });
+      }
+    });
+
+    fileInput.addEventListener("change", function () {
+      var selectedFile = fileInput.files ? fileInput.files[0] : null;
+      if (selectedFile && pendingPhotoKey) {
+        importPhotoFile(selectedFile, pendingPhotoKey);
+      }
+      pendingPhotoKey = null;
+    });
+  }
+
+  /* ---------- Yazdırma ---------- */
+  function startPrinting() {
+    showToast("Yazdırma penceresinde: PDF olarak kaydet, Yatay, Kenar boşlukları: Yok, Arka plan grafikleri açık.");
+    window.setTimeout(function () { window.print(); }, 700);
+  }
+
+  /* ---------- Wiring ---------- */
+  previousButton.addEventListener("click", goToPreviousSlide);
+  nextButton.addEventListener("click", goToNextSlide);
+  presentButton.addEventListener("click", toggleFullscreen);
+  printButton.addEventListener("click", startPrinting);
+  document.addEventListener("keydown", handleKeyboardNavigation);
+  document.addEventListener("fullscreenchange", function () {
+    updatePresentButtonLabel();
+    updateStageScale();
+  });
+  window.addEventListener("resize", updateStageScale);
+
+  /* Swipe navigation for touch screens */
+  var touchStartX = null;
+  var touchStartY = null;
+  stageElement.addEventListener("touchstart", function (event) {
+    if (event.touches.length !== 1) { return; }
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+  }, { passive: true });
+  stageElement.addEventListener("touchend", function (event) {
+    if (touchStartX === null) { return; }
+    var touchEndX = event.changedTouches[0].clientX;
+    var touchEndY = event.changedTouches[0].clientY;
+    var horizontalDistance = touchEndX - touchStartX;
+    var verticalDistance = touchEndY - touchStartY;
+    if (Math.abs(horizontalDistance) > 55 && Math.abs(horizontalDistance) > Math.abs(verticalDistance)) {
+      if (horizontalDistance < 0) { goToNextSlide(); } else { goToPreviousSlide(); }
+    }
+    touchStartX = null;
+    touchStartY = null;
+  }, { passive: true });
+
+  buildDotNavigation();
+  wirePhotoSlots();
+  wireLogoFallback();
+  restoreSavedPhotos();
+  updateStageScale();
+  showSlideAtIndex(readInitialSlideIndex());
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Asset Drive - Technical Source of Truth</title>
+  <!--
+  ────────────────────────────────────────────────────────────────────────────
+  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
+
+  HOW TO USE THIS TEMPLATE
+  0. The canonical rules entry point is _docs/DOCUMENTATION-RULES.md. This
+     template is the STRUCTURE; the rules document is the GOVERNANCE.
+  1. This template is copied into every tool folder as docs/ssot.html by
+     scripts/init-docs.js - never create a tool SSOT by hand.
+  2. Replace every [PLACEHOLDER] in the document.
+  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
+     Every decision row uses <prefix>-NN in order (01, 02, ...).
+  4. Remove all TEMPLATE comments (like this one) before the first publish.
+  5. Bump "Document version" on EVERY update, with "Last updated" date.
+  6. Never inline styles or scripts - the design lives in
+     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
+     linked below through ../../../../../../_docs/assets/.
+  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
+     marked ONE PUSH must ship in a single push and must never be split; a
+     RELATED group must not be broken across releases either. Each task
+     shows its main name collapsed and full details on click; the done
+     checkbox is remembered by the browser per document.
+  8. The right task panel (always visible on wide screens) is generated from
+     section 15 - never write tasks twice. Edit the board in section 15 and
+     the panel, progress bars, and sidebar counter follow automatically.
+  9. Task statuses: give a task `data-task-status` - `not-started` (default),
+     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
+     done checkbox switches the task to done; unticking returns it to the
+     previous status. Browser ticks stay in that browser only. PERMANENT
+     DONE is written into the file: set `data-task-status="done"` on the
+     task div (or `checked` on its checkbox) - `npm run rel` writes this
+     automatically for every pushed group.
+ 10. Ideas (section 16): future ideas are discussed there before they become
+     work. An agreed idea moves to the task list (section 15); a rejected one
+     is marked `data-idea-status="ignored"` with the reason in its details.
+     Done / waiting / ignored statistics update automatically.
+ 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
+     change is written in the risk register and linked to its release group
+     (`data-group`). Before every push, re-evaluate every OPEN risk of the
+     groups being pushed: solve them one by one (tick the checkbox), or mark
+     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
+     date, and update the `Last re-evaluation` line. Risk levels:
+     `critical` (mandatory - blocks every push until solved), `high` (blocks
+     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
+     A group shows PUSH READY in the task panel only when its tasks are done
+     AND it has no open risks.
+ 12. Push provenance: when running `npm run rel`, set
+     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
+     task in the shipped groups is stamped with the version, commit and
+     date-time of that push, and the groups move to "pushed".
+ 13. Satellite documents: docs/webpage.html, docs/help.html,
+     docs/presentation.html, docs/social.html are GENERATED from this file +
+     the code by scripts/generate-docs.js (run by npm run rel). They are
+     satellites - when they disagree with this SSOT, this SSOT wins.
+     docs/updates.html is maintained automatically by npm run rel.
+
+  GOVERNANCE RULES (apply to every tool SSOT in this repo)
+  - A tool SSOT is the REAL single source of truth for one tool (app,
+    listing, or reporting). There is exactly one SSOT per tool folder.
+  - No tool code change is made without updating the related document in
+    the SAME change. A decision that is not in section 11 did not happen.
+  - The decision register is APPEND-ONLY. Never delete rows; reverse a
+    decision by marking it "Reversed (date)" with a reason.
+  - When the code and the document disagree, the document is updated first to
+    capture the final decision, then the code follows. Never silently leave
+    them divergent.
+  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
+    always expanded next to their use.
+  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+    Status) - the automated change-documentation reads these rows.
+  - When a tool exposes a profileConfig parameter or a profiles/ preset
+    library, section 4.1 (Profile configuration usage) is MANDATORY and the
+    profile-usage task type in section 15 must be used. The Profiles copy
+    page (docs/profiles.html) is a convenience; section 4.1 is the
+    authoritative statement of which profile an application uses.
+  ────────────────────────────────────────────────────────────────────────────
+  -->
+  <!-- Optional: nicer webfont (Inter) when online; falls back to the system
+       font stack in ssot.css when offline. Remove this line to stay fully offline. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <!-- ── Table of contents - a CLOSED drawer opened with the ☰ button ── -->
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">Asset Drive</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.1</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <!-- ── Task list - ALWAYS visible on the right on wide screens; on narrow
+       screens it becomes a drawer opened with the Tasks button. The list is
+       generated by ssot.js from section 15 - edit tasks ONLY in section 15. ── -->
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>Asset Drive</h1>
+  <p class="meta">
+    SOURCE OF TRUTH for the Asset Drive html-tool: the field-value data model,
+    folder derivation from file paths, copy rules, one-by-one downloads,
+    upload and overwrite handling, locked records and read-only gating. The
+    tool runs inside the CMS sandbox and never touches Firestore directly;
+    every file record lives in this field's value. Decisions are logged in
+    section 11 and this document changes in the same change as the code.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.1</td></tr>
+    <tr><th>Last updated</th><td>2026-11-17</td></tr>
+    <!-- TEMPLATE: pick one class - status-active (work in progress),
+         status-implemented (shipped), status-proposal (plan not approved). -->
+    <tr><th>Status</th><td><span class="doc-status status-active">BUILT - PENDING FIRST PUSH</span></td></tr>
+    <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (AssetDrive).</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/AssetDrive.css</code>, <code>app/AssetDrive.html</code>, <code>app/AssetDrive.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>ZIP archive creation (deferred by D-AD-06), direct storage deletion, Google Drive or OneDrive OAuth browsing, built-in document editors, real-time multi-user sync and Firebase permission dialogs.</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel). Optional profile companion: <code>profiles.html</code> (copy presets; usage truth stays section 4.1).</td></tr>
+  </table>
+
+  <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one tool and one set of invariants around
+  browsing and managing a CMS asset library that is stored entirely in this
+  field's value - and it is the <strong>single source of truth for
+  every decision we make</strong> about this tool, now and in the future.
+  No decision is considered made until it is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this tool, the decision is added to section 11 with
+    a date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the
+    code disagree, the discrepancy is resolved in this document first (with a
+    dated decision), then applied to the code - never the other way around,
+    and never silently left divergent.</li>
+    <li><strong>Check before changing.</strong> Before changing any behavior
+    covered here, read the relevant section and the register; after the
+    change, update this document in the same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function, and code snippet in any update uses understandable names. No
+    cryptic abbreviations. Short names are allowed only for loop indexes and
+    universally known abbreviations (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use - in
+    prose, tables, and headings. Literal identifiers stay as they are.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> A drive record is always read
+  back into a normalised shape, and the browser never invents a folder record:
+  folders exist only because a file path or an explicitly created empty folder
+  says so, so the tree, the breadcrumb and the file list can never disagree.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <p>Every file involved in this tool: what it is for, and exactly which
+  parts of it belong to this tool (write "whole file" when everything
+  applies). Links open the file in VS Code. Keep this block in sync with the
+  <code>Primary code areas</code> row above.</p>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <!-- TEMPLATE: one row per file. Link format:
+         vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path]  (append
+         #L123 to jump to a specific line). -->
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/file-media/file-management-storage/AssetDrive/app/AssetDrive.html"><code>app/AssetDrive.html</code></a></td>
+      <td>Static body markup: header, toolbar, breadcrumb, split body, bulk bar, context menu and modal shells.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/file-media/file-management-storage/AssetDrive/app/AssetDrive.css"><code>app/AssetDrive.css</code></a></td>
+      <td>All visual design: layout, cards, list rows, tree, detail panel, menus, modal, responsive rules.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/file-media/file-management-storage/AssetDrive/app/AssetDrive.js"><code>app/AssetDrive.js</code></a></td>
+      <td>Value normalisation, folder model, rendering, selection, copy, download, upload, records, permissions and persistence.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/file-media/file-management-storage/AssetDrive/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Mock window.tool SDK, sample drive, role and read-only switches, embedded HTML fallback.</td>
+      <td>Whole file; mock and sample never ship to the CMS</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/file-media/file-management-storage/AssetDrive/docs/ssot.html"><code>docs/ssot.html</code></a></td>
+      <td>This document - decisions, tasks, questions, risks and the release log.</td>
+      <td>Whole file</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <p>The starting picture of this tool: what is <strong>already
+  developed, shipped and in effect right now</strong>, before any new work.
+  This section is the factual baseline - when a planned change (sections
+  5-8) ships, its result moves here, and the release log (section 19) keeps
+  the full history. Planned work never appears in this table - planned work
+  belongs in the task list (section 15) and the ideas backlog (section 16).</p>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <!-- TEMPLATE: one row per capability that is ALREADY developed and in
+         effect today. "Where it lives" = the code path or file that
+         implements it. "In effect since" = the version or date it shipped.
+         "Known from" = the evidence - decision ID (section 11), release-log
+         row (section 19), or code verified on a date. When a capability
+         ships, move its finished task here from section 15. -->
+    <tr><td>C-01</td><td>Folder tree derived from file paths, with recursive file counts</td><td><code>buildFolderTree()</code>, <code>renderTree()</code> in <code>app/AssetDrive.js</code></td><td>2026-11-17</td><td>D-AD-02, verified 2026-11-17</td></tr>
+    <tr><td>C-02</td><td>Breadcrumb that always matches the current path; navigation clears selection and detail</td><td><code>renderBreadcrumb()</code>, <code>navigateTo()</code></td><td>2026-11-17</td><td>verified 2026-11-17</td></tr>
+    <tr><td>C-03</td><td>Grid and list views, sortable by name, modified date and size</td><td><code>renderContent()</code>, <code>sortedFiles()</code></td><td>2026-11-17</td><td>verified 2026-11-17</td></tr>
+    <tr><td>C-04</td><td>Search across every folder with the source folder shown on each result</td><td><code>matchesSearch()</code>, <code>fileCardHtml()</code></td><td>2026-11-17</td><td>verified 2026-11-17</td></tr>
+    <tr><td>C-05</td><td>Type filter for images, documents, spreadsheets, presentations, PDFs, video and audio</td><td><code>classifyType()</code>, <code>filteredFiles()</code></td><td>2026-11-17</td><td>D-AD-03</td></tr>
+    <tr><td>C-06</td><td>Select mode, Ctrl/Cmd toggle, Shift range, Select all / None and a bulk action bar</td><td><code>selectSingle()</code>, <code>toggleSelection()</code>, <code>selectRange()</code>, <code>renderBulkBar()</code></td><td>2026-11-17</td><td>verified 2026-11-17</td></tr>
+    <tr><td>C-07</td><td>Per-file Copy URL plus copy menus for folder, recursive folder, image URLs, image thumbnails and selection</td><td><code>copyFilesToClipboard()</code>, <code>renderCopyMenu()</code></td><td>2026-11-17</td><td>D-AD-03, D-AD-07</td></tr>
+    <tr><td>C-08</td><td>One-by-one downloads for a folder, a recursive folder or a selection</td><td><code>downloadFilesOneByOne()</code></td><td>2026-11-17</td><td>D-AD-06</td></tr>
+    <tr><td>C-09</td><td>Upload into the current folder, host upload via <code>tool.requestUpload</code>, size limit and overwrite versions</td><td><code>requestUploadNow()</code></td><td>2026-11-17</td><td>D-AD-04</td></tr>
+    <tr><td>C-10</td><td>Empty folders persisted in <code>value.emptyFolders</code></td><td><code>addEmptyFolder()</code>, <code>preserveEmptyChain()</code></td><td>2026-11-17</td><td>D-AD-02</td></tr>
+    <tr><td>C-11</td><td>Display-name rename, move, duplicate, star, lock, colour label, tags and record delete</td><td><code>saveDetailName()</code>, <code>openMoveModal()</code>, <code>duplicateFile()</code>, <code>setStarForIds()</code>, <code>toggleLock()</code>, <code>setColor()</code>, <code>deleteFilesByIds()</code></td><td>2026-11-17</td><td>D-AD-05</td></tr>
+    <tr><td>C-12</td><td>Detail panel with preview, editable name, URL and thumbnail copy, metadata, actions and versions</td><td><code>renderDetail()</code></td><td>2026-11-17</td><td>D-AD-03, D-AD-04</td></tr>
+    <tr><td>C-13</td><td>File and folder context menus plus a reusable in-tool modal</td><td><code>openFileContextMenu()</code>, <code>openFolderContextMenu()</code>, <code>openModal()</code></td><td>2026-11-17</td><td>D-AD-10</td></tr>
+    <tr><td>C-14</td><td>Read-only mode keeps browsing, search, selection, copy and download while hiding every mutation</td><td><code>canWrite()</code>, <code>renderToolbar()</code>, <code>openFileContextMenu()</code></td><td>2026-11-17</td><td>D-AD-08</td></tr>
+    <tr><td>C-15</td><td>Normalisation of null, JSON-string and malformed values; 900 KB size warning</td><td><code>normalizeValue()</code>, <code>checkValueSize()</code></td><td>2026-11-17</td><td>D-AD-09</td></tr>
+    <tr><td>C-16</td><td>Identity polling with a no-identity fallback; editor/admin gating for mutations</td><td><code>initIdentity()</code>, <code>canWrite()</code></td><td>2026-11-17</td><td>verified 2026-11-17</td></tr>
+  </table>
+  <p class="note">These are the capabilities of build 2026-11-17-1. Section 17 records the evidence; a future change moves its finished task here from section 15.</p>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <p>Terms used in this document, with the exact meaning used here. Add a row
+  whenever a discussion introduces a term - one meaning per term, so every
+  reader and every AI sees the same definition.</p>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <!-- TEMPLATE: one row per term. -->
+    <tr><td>Folder</td><td>A virtual directory path derived from file record paths. There are no folder records.</td></tr>
+    <tr><td>Empty folder</td><td>A folder path with no file records, kept in <code>value.emptyFolders</code> so it survives a reload.</td></tr>
+    <tr><td>File record</td><td>One entry in <code>value.files</code>: id, name, path, URL, optional thumbnail/CDN URL, type, size, timestamps, flags, tags, colour and versions.</td></tr>
+    <tr><td>Effective URL</td><td><code>file.cdnUrl || file.url</code> - the URL used for copy, open, share and download.</td></tr>
+    <tr><td>Thumbnail URL</td><td><code>file.thumb_url || file.cdnUrl || file.url</code> - used for image previews.</td></tr>
+    <tr><td>Version</td><td>An older URL/size/updatedAt pair kept when the same path is uploaded again; maximum three.</td></tr>
+    <tr><td>Locked record</td><td>A file whose record cannot be moved or deleted until it is unlocked. It can still be renamed, starred and coloured.</td></tr>
+    <tr><td>Colour label</td><td>One of red, orange, yellow, green, blue, purple, or none. Metadata only.</td></tr>
+    <tr><td>Placeholder record</td><td>A record named <code>.gitkeep</code>. It is never copied or downloaded.</td></tr>
+    <tr><td>Read-only</td><td><code>tool.isReadOnly()</code> true or a viewer-only identity: every mutation is hidden, browsing and export stay available.</td></tr>
+  </table>
+
+  <h3 id="sec-profile-usage">4.1 Profile configuration usage</h3>
+  <p class="note"><strong>Required when this tool exposes a
+  <code>profileConfig</code> parameter or a <code>profiles/</code> preset
+  library.</strong> Remove this section only when neither exists. When
+  present, this table is the authoritative register of which profile a
+  consuming application uses. The generated <code>docs/profiles.html</code>
+  copy page and its browser-local usage reminder are convenience tools and
+  are not the source of truth.</p>
+  <table>
+    <tr><th>Profile / config</th><th>Mode</th><th>Segments</th><th>Usage status</th><th>Application / notes</th><th>Decision</th></tr>
+    <tr><td>Not applicable</td><td>-</td><td>-</td><td>not-reviewed</td><td>Asset Drive has no <code>profileConfig</code> parameter and no <code>profiles/</code> preset library.</td><td>-</td></tr>
+  </table>
+  <p><strong>Usage status vocabulary:</strong> <code>not-reviewed</code> means
+  no decision yet; <code>available</code> means the profile is usable but not
+  selected; <code>planned</code> means selected for a future application;
+  <code>in-use</code> means a real application configuration depends on it;
+  <code>retired</code> means kept for history but no longer selected. Change
+  a status only in the same change that updates the application
+  configuration.</p>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <!-- TEMPLATE: list concrete observed behaviors with dates, NOT guesses. -->
+  <ul>
+    <li>2026-11-17: the CMS had no generic in-field asset browser; media URLs were copied from raw records or from an external drive.</li>
+    <li>The owner asked for a tool that behaves like the existing Asset Drive (FolderManager): folders from file paths, image previews, URL lists, downloads and basic file management.</li>
+    <li>Users need one place to browse, preview, copy URL lists and download files without leaving the CMS record, while the tool stores no binary data of its own.</li>
+  </ul>
+  <h3>5.2 Current implementation (verified in code)</h3>
+  <!-- TEMPLATE: paste the exact current code that causes the problem. -->
+  <pre>
+// app/AssetDrive.js - the normalized field value (authoritative shape)
+{
+  folderId: string,
+  name: string,
+  files: [{
+    id: string, name: string, displayName: string, path: string,
+    url: string, thumb_url: string, cdnUrl: string, contentType: string,
+    size: number, updatedAt: number, firstUploadedAt: number,
+    starred: boolean, locked: boolean, tags: string[],
+    colorLabel: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | '',
+    versions: [{ url: string, size: number, updatedAt: number }]
+  }],
+  emptyFolders: [string]
+}
+  </pre>
+  <h3>5.3 Structural flaws</h3>
+  <!-- TEMPLATE: numbered list - each flaw explains WHY the current code
+       fails, not just that it fails. -->
+  <ol>
+    <li><strong>No folder records.</strong> A folder only exists while a path or an empty-folder entry references it, so a naive folder table would drift from the files.</li>
+    <li><strong>Opaque URLs.</strong> Effective and thumbnail URLs follow a fallback chain; any code path that reads <code>url</code> directly would miss a CDN override or a thumbnail.</li>
+    <li><strong>Sandbox limits.</strong> No direct fetch, no storage APIs and no browser dialogs; every outside action must go through the tool SDK.</li>
+  </ol>
+  <p class="risk"><strong>Root cause:</strong> the asset index must be one normalised metadata value whose folders are a pure function of the file paths, with a single URL rule shared by every action. A second folder table or a direct-URL shortcut would immediately create two disagreeing views of the same drive.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li><strong>R-01 Field-value only.</strong> The drive lives entirely in this field's value; no Firestore call and no <code>requestObjects</code> is made.</li>
+    <li><strong>R-02 Folder consistency.</strong> The tree, the breadcrumb and the file list are all derived from the same path model and must always agree.</li>
+    <li><strong>R-03 URL rule.</strong> Copy, open, share and download use <code>cdnUrl || url</code>; previews use <code>thumb_url || cdnUrl || url</code>.</li>
+    <li><strong>R-04 Safe rendering.</strong> Every file and folder name is escaped before it enters markup; no HTML from a record is executed.</li>
+    <li><strong>R-05 Read-only.</strong> <code>tool.isReadOnly()</code> and a viewer-only identity hide every mutation, while browsing, copy and download stay fully available.</li>
+    <li><strong>R-06 Malformed values.</strong> A null, JSON-string or incomplete value renders an empty drive instead of throwing.</li>
+    <li><strong>R-07 Size discipline.</strong> Only metadata is saved; a warning appears when the value approaches 900 KB.</li>
+    <li><strong>R-08 No browser dialogs.</strong> New folder, rename, move and delete use the in-tool modal; feedback uses <code>tool.notify</code>.</li>
+    <li><strong>R-09 Upload contract.</strong> Uploads use <code>tool.requestUpload</code>, respect the MB limit and turn the same path into an overwrite with at most three versions.</li>
+    <li><strong>R-10 Build freshness.</strong> The visible build badge, the boot log and the first-line stamps identify the running build.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <!-- TEMPLATE: one row per considered option; keep the VERDICT cells with
+         one of: ADOPTED / REJECTED (reason) / DEFERRED (decision ID). -->
+    <tr>
+      <td><strong>A. Field-value asset browser with path-derived folders</strong></td>
+      <td>Store file metadata and an empty-folder list in this field; derive the tree, breadcrumb and lists from the paths.</td>
+      <td>Yes - the whole requested workflow with zero CMS configuration.</td>
+      <td>Low - one folder, three files and a harness.</td>
+      <td class="status-adopted">ADOPTED</td>
+    </tr>
+    <tr>
+      <td><strong>B. Separate folder records</strong></td>
+      <td>Store folder objects beside the files and maintain both sides on every mutation.</td>
+      <td>Partially - adds a second source of truth that can drift from the paths.</td>
+      <td>Medium - every move, delete and upload must patch two collections.</td>
+      <td class="status-rejected">REJECTED (D-AD-02)</td>
+    </tr>
+    <tr>
+      <td><strong>C. One CMS object per file via requestObjects</strong></td>
+      <td>Keep each file record as a separate CMS document queried by the tool.</td>
+      <td>No - requires allowObjectCRUD and per-type configuration; the tool is meant to be installable with no setup.</td>
+      <td>High - permissions, queries and a 1 MB object per record.</td>
+      <td class="status-rejected">REJECTED (D-AD-01)</td>
+    </tr>
+    <tr>
+      <td><strong>D. Google Drive or OneDrive OAuth browser</strong></td>
+      <td>Authenticate to an external drive and browse it natively.</td>
+      <td>No - outside the CMS data model and outside this tool's purpose.</td>
+      <td>High - OAuth, tokens and third-party APIs.</td>
+      <td class="status-rejected">REJECTED (out of scope)</td>
+    </tr>
+    <tr>
+      <td><strong>E. ZIP packing in the first build</strong></td>
+      <td>Load JSZip and pack the selected files into an archive.</td>
+      <td>Partially - useful, but the owner asked to defer it.</td>
+      <td>Medium - CDN or relay strategy plus binary handling.</td>
+      <td class="status-deferred">DEFERRED (D-AD-06)</td>
+    </tr>
+  </table>
+  <p><strong>Decision: A.</strong> Build the drive on the field value with path-derived folders; keep one-by-one downloads in the first build and defer ZIP to I-01. Options B-D are rejected for the first release and E is deferred rather than dropped.</p>
+  <h3>7.1 Answers to open questions</h3>
+  <!-- TEMPLATE: every open question raised during evaluation becomes a dated
+       answer here, and later a row in section 11. -->
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Should folders be real records?</td><td>No. Paths are the only folder source; empty folders live in <code>emptyFolders</code> (D-AD-02).</td></tr>
+    <tr><td>Should ZIP ship in the first build?</td><td>No. Deferred by the owner; one-by-one downloads only (D-AD-06).</td></tr>
+    <tr><td>Should deleting a file delete storage?</td><td>No. The tool has no storage-delete channel; the record is removed and the URL becomes unmanaged (D-AD-05).</td></tr>
+    <tr><td>How is read-only detected?</td><td><code>tool.isReadOnly()</code> plus the pre-merged roles/effectiveAccess from <code>tool.getUser()</code> (D-AD-08).</td></tr>
+  </table>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <!-- TEMPLATE: the core of the document. Split into sub-sections as the
+       tool needs - invariants, server logic, client contract, callers
+       table, edge cases. Use <h3> per topic. -->
+  <h3>8.1 Core invariant</h3>
+  <p class="note"><strong>Invariant AD-INV-1.</strong> The tree, breadcrumb and file list are pure functions of <code>value.files[].path</code> plus <code>value.emptyFolders</code>. No UI action may create a folder that is not backed by one of those two sources.</p>
+  <h3>8.2 Folder and record model</h3>
+  <pre>
+// app/AssetDrive.js - source of truth for folders
+function buildFolderTree() {
+  const root = { path: '', name: 'Root', children: [], direct: 0, total: 0 }
+  files.forEach(file => ensure(dirNameOf(file.path)).direct += 1)
+  emptyFolders.forEach(folder => ensure(folder))
+  computeTotals(root) // recursive total = direct + children totals
+  return { root, map }
+}
+  </pre>
+  <ul>
+    <li>Every navigation targets a path from that model; an unknown path is ignored.</li>
+    <li>Creating a folder only appends to <code>emptyFolders</code>; uploading into it removes that entry.</li>
+    <li>Moving or deleting the last file in a folder calls <code>preserveEmptyChain</code> so the folder stays visible.</li>
+  </ul>
+  <h3>8.3 Caller contract table</h3>
+  <table>
+    <tr><th>Caller</th><th>Required change</th></tr>
+    <tr><td><code>renderContent()</code></td><td>Reads only <code>directFilesOf(currentPath)</code> and the current node's children; never invents rows.</td></tr>
+    <tr><td><code>requestUploadNow()</code></td><td>Uses <code>joinPath(currentPath, file.name)</code>; exact path exists = overwrite; similar name elsewhere = warning banner.</td></tr>
+    <tr><td><code>openMoveModal()</code></td><td>Rewrites <code>file.path</code> only; the URL and storage path never change; locked files are skipped.</td></tr>
+    <tr><td><code>deleteFilesByIds()</code></td><td>Removes records only; preserves emptied ancestors; never calls the network.</td></tr>
+    <tr><td><code>copyFilesToClipboard()</code> / <code>downloadFilesOneByOne()</code></td><td>Uses the effective URL rule and skips <code>.gitkeep</code> and records without a URL.</td></tr>
+  </table>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <!-- TEMPLATE: every scenario has exactly ONE outcome. "Sometimes" is not
+         an acceptable cell value. -->
+    <tr><td>Value is null, a JSON string, or has no files array</td><td>The drive renders empty (Root) with no console error; the field is saved only after a user action.</td></tr>
+    <tr><td>Upload channel unavailable (<code>allowUpload</code> off)</td><td>Warning toast; no record is created; the rest of the tool keeps working.</td></tr>
+    <tr><td>Upload larger than <code>maxUploadSizeMb</code></td><td>Error toast naming the file and limit; no record is created.</td></tr>
+    <tr><td>Upload to an existing exact path</td><td>The record is overwritten, its id stays, the old URL enters <code>versions</code> (max three), all other flags survive.</td></tr>
+    <tr><td>Upload with a similar name in another folder</td><td>Both records exist; a dismissible warning banner names the existing folder.</td></tr>
+    <tr><td>Move or delete a locked record</td><td>The record is skipped and a warning reports the locked count; nothing changes for it.</td></tr>
+    <tr><td>Clipboard API rejected</td><td>The hidden-textarea fallback is used; if both fail an error toast is shown and no copied state is applied.</td></tr>
+    <tr><td>Image URL fails to load</td><td>The image is removed and the coloured type icon is shown instead; the card keeps its layout.</td></tr>
+    <tr><td>External value change while a detail or selection exists</td><td>The view re-renders, unknown paths fall back to Root, deleted selections and detail are pruned.</td></tr>
+    <tr><td>Value grows beyond 900 KB</td><td>A one-time warning toast appears; the save still goes through; the warning resets below the threshold.</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>ZIP downloads are not implemented in build 2026-11-17-1.</td><td>Users download files one at a time. Large folders are slower to export and the browser may ask to allow multiple downloads.</td><td>Deferred by D-AD-06; idea I-01</td></tr>
+    <tr><td>L-02</td><td>Deleting a record never deletes the stored file.</td><td>The storage URL becomes unmanaged and can still be requested by anyone who has it.</td><td>Accepted by D-AD-05</td></tr>
+    <tr><td>L-03</td><td>The whole drive is one field value with a 1 MB Firestore limit.</td><td>Thousands of records with long URLs and tags can approach the limit; the tool warns at 900 KB but does not block the save.</td><td>Accepted; warning implemented</td></tr>
+    <tr><td>L-04</td><td>There is no real-time multi-user sync.</td><td>Two editors can overwrite each other by saving in sequence; <code>onValueChange</code> refreshes the other view but does not merge.</td><td>Out of scope</td></tr>
+    <tr><td>L-05</td><td>Locked is a record flag enforced by this UI, not a storage permission.</td><td>Another tool or direct edit can still change the record.</td><td>Accepted by D-AD-05</td></tr>
+    <tr><td>L-06</td><td>Thumbnail URLs are not generated on upload.</td><td>Image cards use the full URL unless a record already carries <code>thumb_url</code>.</td><td>Idea I-06</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <!-- TEMPLATE: replace D-AD below with the tool's unique prefix once,
+       then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr><td>D-AD-01</td><td>2026-11-17</td><td>The tool stores its entire drive in this field's value and never calls Firestore or <code>tool.requestObjects</code>.</td><td>An asset index is metadata; keeping it in one field makes the tool installable with zero CMS configuration and no permission setup. Risk: the 1 MB field limit (L-03).</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-02</td><td>2026-11-17</td><td>Folders are derived from file paths only; explicitly created empty folders are persisted in <code>value.emptyFolders</code>.</td><td>A second folder table could disagree with the paths. The empty-folder list is the smallest addition that keeps newly created folders after a reload.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-03</td><td>2026-11-17</td><td>Effective URL = <code>cdnUrl || url</code>; thumbnail URL = <code>thumb_url || cdnUrl || url</code>; images are detected by MIME prefix or extension.</td><td>One rule used by copy, preview, open, share and download prevents different features from linking to different files.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-04</td><td>2026-11-17</td><td>Re-uploading the same path overwrites the record: keep id, firstUploadedAt, flags, tags, colour and CDN override; append the old URL to versions, keep at most three.</td><td>Preserves links to the record and gives a short rollback history without growing the field value without bound.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-05</td><td>2026-11-17</td><td>Delete removes the record only; locked records are skipped; folder delete removes unlocked records and keeps locked ones.</td><td>The tool has no storage-delete channel. Locking protects records from accidental removal in the UI; the host remains the real security boundary.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-06</td><td>2026-11-17</td><td>ZIP downloads are deferred. Build 2026-11-17-1 ships one-by-one downloads only.</td><td>The owner asked to defer ZIP until the packing approach is discussed. A STORE-only writer or the parent fetch relay are the candidate options (I-01).</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-07</td><td>2026-11-17</td><td>Clipboard writes use <code>navigator.clipboard.writeText</code> first and a hidden textarea with <code>execCommand('copy')</code> as fallback.</td><td>The CMS iframe may not have clipboard permission; the fallback keeps copy working in that case.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-08</td><td>2026-11-17</td><td><code>tool.isReadOnly()</code> true disables every mutation but keeps browsing, search, selection, copy and download. A viewer-only identity is treated the same.</td><td>Read-only users still need to find and use assets; hiding the edit surfaces is safer than disabling the whole tool.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-09</td><td>2026-11-17</td><td><code>normalizeValue</code> accepts <code>null</code>, a JSON string, or an object with missing fields and always returns <code>{ folderId, name, files, emptyFolders }</code>; a 900 KB warning is shown once.</td><td>Field values arrive in different shapes; a single normaliser prevents render crashes and silent data loss.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-10</td><td>2026-11-17</td><td>All confirmations and prompts are in-tool modals; feedback uses <code>tool.notify</code>. No browser dialog is ever used.</td><td>Browser dialogs are blocked in the sandbox and look foreign inside the CMS.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-11</td><td>2026-11-17</td><td>Visible tool build badge (<code>2026-11-17-1</code>), boot console line and first-line build stamps in all three files.</td><td>Stale CMS uploads were the most common cause of an apparently dead tool in this repo.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-AD-12</td><td>2026-11-17</td><td>A similar-name upload shows a non-blocking warning banner; both records are kept.</td><td>Two different folders may legitimately hold files with the same name. Blocking would be wrong; warning prevents accidental duplicates.</td><td class="status-adopted">Adopted</td></tr>
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li><strong>This document is the single source of truth for every decision
+    about this tool.</strong> Every decision is recorded in section 11 with
+    a date, and the affected section is updated in the same change as the
+    code. A decision that is not in the register did not happen.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
+    delete rows.</li>
+    <li><strong>Folder invariant.</strong> Every folder shown by the UI must come from a file path or <code>emptyFolders</code>; a new folder UI must never create a third source.</li>
+    <li><strong>URL invariant.</strong> Every consumer of a file URL uses <code>effectiveUrl()</code> or <code>thumbnailUrl()</code>; no direct <code>file.url</code> read is allowed in a new feature.</li>
+    <li><strong>Read-only invariant.</strong> <code>canWrite()</code> is the only mutation gate; a new mutation path must call it and must be re-evaluated by <code>onReadonlyChange</code>.</li>
+    <li>Global naming rule: any update - code or documentation - MUST use
+    understandable, self-explanatory names. No cryptic abbreviations. Existing
+    misleading names are renamed when their code is touched.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Three app files + test harness scaffolded with build stamps</td><td><code>app/AssetDrive.html</code>, <code>app/AssetDrive.css</code>, <code>app/AssetDrive.js</code>, <code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>2</td><td>Value normalisation, persistence and 900 KB warning</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Path-derived tree, breadcrumb and navigation</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Grid/list views, type filter and sorting</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>5</td><td>Global search with folder hints</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Selection, bulk bar and bulk actions</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Copy URL rules and copy menus</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>8</td><td>One-by-one downloads with progress</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>9</td><td>Upload, size limit, overwrite versions and duplicate warning</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>10</td><td>New folder, rename, move, duplicate, star, lock, colour, tags, delete</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>11</td><td>Detail panel, context menus and reusable modal</td><td><code>app/AssetDrive.js</code>, <code>app/AssetDrive.css</code> - DONE</td></tr>
+    <tr><td>12</td><td>Read-only and identity gating</td><td><code>app/AssetDrive.js</code> - DONE</td></tr>
+    <tr><td>13</td><td>Harness with mock SDK and sample drive</td><td><code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>14</td><td>ZIP downloads</td><td><code>app/AssetDrive.js</code> - PENDING (D-AD-06, I-01)</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <p>Decision points we resolve together before or during implementation.
+  Every answer becomes a dated row in section 11.</p>
+  <ol>
+    <li><strong>ZIP downloads.</strong> Which approach should replace the deferred ZIP feature: a small built-in STORE-only ZIP writer, the parent CMS relay, or no ZIP at all? The current build offers one-by-one downloads only.</li>
+    <li><strong>Placeholder records.</strong> Should <code>.gitkeep</code> records stay visible as tiny files, or be hidden from the grid while remaining in the value?</li>
+    <li><strong>Folder deletion semantics.</strong> Deleting a folder currently removes its empty-folder entries; should a different behaviour preserve the folder while deleting its records?</li>
+    <li><strong>Empty folders after a move.</strong> Moving the last file out of a folder keeps that folder as an empty folder. Is that the desired drive behaviour?</li>
+    <li><strong>Bulk and drag-drop upload.</strong> Should a later version accept multiple files or drag-and-drop into the grid? The current host channel uploads one file at a time.</li>
+    <li><strong>Automatic thumbnails.</strong> Should the tool generate a thumbnail URL on upload (I-06), or is a record-level <code>thumb_url</code> always supplied by the host?</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE push (the badge
+  says so) or is a related set that must not be broken across releases.
+  Click a task to expand its full details. Tick the checkbox when a task is
+  done - progress is remembered by the browser per document and shown in the
+  sidebar.</p>
+
+  <p class="note"><strong>Profile usage management task type.</strong> When
+  this tool exposes a <code>profileConfig</code> parameter or a
+  <code>profiles/</code> preset library, add a release group with
+  <code>data-release-group="profile-usage"</code> and put
+  <code>data-task-type="profile-usage"</code> on every task in that group.
+  The group covers: registering selected profiles in section 4.1, keeping
+  <code>docs/profiles.html</code> and the test-harness preset selector in
+  sync, and testing segment switching plus answer preservation. See the
+  commented sample below.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong> - a task starts only when:
+      <ul>
+        <li>Its requirement is written in section 6.</li>
+        <li>Options are evaluated and the decision is logged (section 11).</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong> - a group is done only when:
+      <ul>
+        <li>All its tasks are checked.</li>
+        <li>Its open risks are solved or accepted (section 18).</li>
+        <li>Tests you chose to track pass (if any).</li>
+        <li>The document version is bumped and PUSH READY shows.</li>
+      </ul>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the
+    core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong
+    benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap
+    cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> -
+    unclear benefit or a product decision is required; see section 14.</li>
+  </ul>
+
+  <!-- Auto-updated by ssot.js: done / waiting percentages of ALL tasks below. -->
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <!-- TEMPLATE: copy one .task-group block per release group. The group name,
+       the "ships together" reason, and the tasks inside form one unit.
+       Badge variants: "ONE PUSH - do not split" for groups that must ship in
+       a single push, or "RELATED - do not split" for groups that must not be
+       broken across releases.
+       data-group-status: planned | in-progress | testing | pushed.
+       PUSH READY is computed automatically by ssot.js. -->
+  <!-- PROFILE USAGE TASK TYPE SAMPLE (commented out - uncomment only when
+       this tool has profileConfig or profiles/). Keep the data-task-type
+       attribute on each task so reports can find profile-usage work.
+  <section class="task-group" data-release-group="profile-usage" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Profile usage management</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="profile-usage">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="profile-usage"></div></div>
+    <p class="task-group-note">Why these belong together: the profile register,
+    the copy page, the harness preset and the application configuration must
+    tell the same story.</p>
+    <div class="task-item" data-task-id="T-PU-01" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-01</span><span class="task-title">Register profile usage in section 4.1</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> nobody can tell which preset an application uses.</p><p><strong>How we will solve it:</strong> fill every row in section 4.1 with mode, segments, status and decision id.</p><p><strong>Files:</strong> <code>docs/ssot.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-02" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-02</span><span class="task-title">Keep profiles page and harness preset in sync</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-02 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run <code>npm run docs:profiles -- &lt;Tool&gt;</code> and <code>node app/build-harness-presets.js</code> after every preset change.</p><p><strong>Files:</strong> <code>profiles/index.json</code>, <code>docs/profiles.html</code>, <code>app/test-harness.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-03" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-03</span><span class="task-title">Test segment switching and answer preservation</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-03 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> load the preset in the harness, switch every segment, verify the visible form and that saved values remain in the record.</p><p><strong>Files:</strong> <code>app/qa-segments.js</code>, <code>app/qa-presets.js</code></p></div></details>
+    </div>
+  </section>
+  END PROFILE USAGE TASK TYPE SAMPLE -->
+
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
+       uncomment it, and edit).
+  <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: [Group name]</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="[GROUP-KEY]">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="[GROUP-KEY]"></div></div>
+    <p class="task-group-note">Why these belong together: [the shared dependency -
+    e.g. "T-01 changes the protocol; T-02 and T-03 adapt every caller.
+    Publishing T-01 alone breaks all writers."]</p>
+
+    TEMPLATE (inside the commented sample): one .task-item block per task.
+    data-task-id must be unique across the whole document; data-group matches
+    the group key above. data-task-status: not-started | in-progress | ignored.
+    Done is the checkbox. The status chip is rendered by ssot.js.
+    PERMANENT DONE: write data-task-status="done" on the task div (or
+    checked="checked" on the checkbox) to mark it done for every browser;
+    npm run rel does this for pushed groups.
+    <div class="task-item" data-task-id="T-01" data-group="[GROUP-KEY]" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">[Short task name - the main name]</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> [why this task exists]</p>
+          <p><strong>How we will solve it:</strong> [approach, files]</p>
+          <p><strong>Benefit:</strong> [what the user or system gains]</p>
+          <p><strong>Files:</strong> <code>[file paths]</code></p>
+          <p><strong>Status:</strong> [edit data-task-status above - the chip updates automatically]</p>
+        </div>
+      </details>
+    </div>
+
+    TEMPLATE (inside the commented sample): duplicate the .task-item block above for T-02, T-03, ...
+  </section>
+  END OF TEMPLATE SAMPLE -->
+
+  <section class="task-group" data-release-group="asset-drive-core" data-group-status="in-progress">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Asset Drive core build</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="asset-drive-core">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="asset-drive-core"></div></div>
+    <p class="task-group-note">Why these belong together: the whole feature set shares one value shape, one folder model and one URL rule. Shipping part of the group would leave the tree, the breadcrumb and the actions disagreeing.</p>
+    <div class="task-item" data-task-id="T-AD-01" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-01</span><span class="task-title">Value model, normalisation and persistence</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> values arrive as null, a JSON string or an object with missing fields.</p><p><strong>How we will solve it:</strong> a single <code>normalizeValue</code> and <code>serializeFile</code> pair; every mutation calls <code>persist()</code> and <code>tool.setValue</code>.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-02" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-02</span><span class="task-title">Path-derived folder tree and breadcrumb</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-02 as done" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> a folder table would drift from the file paths.</p><p><strong>How we will solve it:</strong> <code>buildFolderTree</code> derives nodes and recursive counts from paths plus <code>emptyFolders</code>; navigation and breadcrumb read the same model.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-03" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-03</span><span class="task-title">Grid and list views with sorting</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-03 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> one renderer per view; folders first; stable tie-breaks by path and id.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code>, <code>app/AssetDrive.css</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-04" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-04</span><span class="task-title">Global search and type filter</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-04 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> token search over display name, name and tags across all folders, with the source folder shown on every result; type classification by MIME and extension.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-05" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-05</span><span class="task-title">Selection and bulk action bar</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-05 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> select mode, Ctrl/Cmd toggle, Shift range, All/None, and star, copy, download, move and delete bulk actions; selections clear on navigation.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-06" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-06</span><span class="task-title">Copy URL rules and copy menus</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-06 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> one copy helper using the effective/thumbnail rules, the clipboard API with a textarea fallback, counts per row and transient feedback.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-07" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-07</span><span class="task-title">One-by-one downloads</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-07 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> sequential <code>tool.openUrl</code> calls with a 350 ms gap, progress text and a final started/failed notice.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-08" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-08</span><span class="task-title">Upload, size limit, overwrite versions and duplicate warning</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-08 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> <code>tool.requestUpload</code> into the current path; exact path overwrites and keeps three versions; a similar name elsewhere raises a dismissible banner.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-09" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-09</span><span class="task-title">New folder, rename, move and duplicate</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-09 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> empty folders in <code>emptyFolders</code>; rename edits <code>displayName</code> only; move rewrites the path only; duplicate copies the record with a new id and a safe file name.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-10" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-10</span><span class="task-title">Star, lock, colour, tags and record delete</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-10 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> record-level metadata with locked records protected from move/delete and delete removing the record only, never storage.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-11" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-11</span><span class="task-title">Detail panel, context menus and modal</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-11 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> a right-side detail panel with preview, URL copy, metadata, actions and versions; file/folder context menus; one reusable modal for all prompts and confirmations.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code>, <code>app/AssetDrive.css</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-12" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-12</span><span class="task-title">Read-only and identity gating</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-12 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> <code>canWrite()</code> combines <code>tool.isReadOnly()</code>, merged roles and <code>effectiveAccess</code>; every mutation is hidden for viewers while browse/copy/download stay.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-13" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-13</span><span class="task-title">Test harness and interaction probes</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-13 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> mock SDK with role and read-only switches, sample drive, fresh reset; scripted probes cover navigation, views, search, selection, menus, detail, records, upload, folder delete and narrow layout.</p><p><strong>Files:</strong> <code>app/test-harness.html</code>, probe pages in <code>ship-out/assetdrive-qa/</code> (gitignored)</p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-14" data-group="asset-drive-core" data-task-status="done">
+      <details><summary><span class="task-id">T-AD-14</span><span class="task-title">Documentation scaffold</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" checked="checked" aria-label="Mark T-AD-14 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> <code>npm run docs:init -- --tool AssetDrive</code> created the seven documents; this SSOT is filled with the build facts.</p><p><strong>Files:</strong> <code>docs/</code></p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="asset-drive-zip" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: ZIP downloads (deferred)</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="asset-drive-zip">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="asset-drive-zip"></div></div>
+    <p class="task-group-note">Why these belong together: the packing approach decides whether the tool ships a built-in writer or uses the parent relay; both tasks change the same download menu.</p>
+    <div class="task-item" data-task-id="T-AD-20" data-group="asset-drive-zip" data-task-status="not-started">
+      <details><summary><span class="task-id">T-AD-20</span><span class="task-title">Decide the ZIP packing approach</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-optional">Optional - needs decision</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-AD-20 as done" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> the first build has one-by-one downloads only.</p><p><strong>How we will solve it:</strong> choose a built-in STORE-only writer or the parent relay; record the choice in section 11.</p><p><strong>Files:</strong> <code>docs/ssot.html</code>, <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-AD-21" data-group="asset-drive-zip" data-task-status="not-started">
+      <details><summary><span class="task-id">T-AD-21</span><span class="task-title">Implement ZIP download rows and progress</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-optional">Optional - needs decision</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-AD-21 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> add the two ZIP rows, pack sequentially, sanitise entry paths, report skipped files and keep one-by-one downloads available.</p><p><strong>Files:</strong> <code>app/AssetDrive.js</code></p></div></details>
+    </div>
+  </section>
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. We discuss each idea and
+  write the outcome inside its details. An agreed idea moves to the task list
+  (section 15) with a priority; a rejected idea is marked Ignored with the
+  reason. Tick the checkbox when an idea is done - progress is remembered by
+  the browser per document.</p>
+
+  <!-- Auto-updated by ssot.js: done / waiting / ignored percentages. -->
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
+       data-idea-status: new | discussing | ignored. Done = the checkbox. -->
+  <!-- Idea sample removed after the first build; the live ideas are above. -->
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">ZIP downloads with a built-in STORE writer</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> pack the current folder, a recursive folder or a selection into one archive, with progress and skipped-file reporting.</p>
+        <p><strong>Why:</strong> one download is easier than many browser download prompts, especially for large folders.</p>
+        <p><strong>Discussion / outcome:</strong> deferred by the owner (D-AD-06). Candidate approaches: a small built-in STORE-only ZIP writer plus CRC32, or the parent fetch relay. Decide in T-AD-20.</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="ignored">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Delete the stored file from CMS storage</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> remove the binary as well as the record.</p>
+        <p><strong>Why:</strong> avoids orphaned storage files.</p>
+        <p><strong>Discussion / outcome:</strong> Ignored - the tool SDK exposes no storage-delete channel and the host keeps the real security boundary. Record-level removal is the contract (D-AD-05).</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Multi-file and drag-and-drop upload</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> drop files onto the grid or select several at once.</p>
+        <p><strong>Why:</strong> faster for a new folder with many assets.</p>
+        <p><strong>Discussion / outcome:</strong> The host channel currently returns one file per picker call. Needs a host capability or a sequential upload loop (Q5).</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Inline image editing</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> crop, resize or watermark an image from the detail panel and upload the result as a new version.</p>
+        <p><strong>Why:</strong> avoids a separate image-editing trip for simple fixes.</p>
+        <p><strong>Discussion / outcome:</strong> out of scope for the first build; a future tool or an integration with Image Editing Toolkit could cover it.</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Folder rename</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> rename a folder path and rewrite every descendant file path in one action.</p>
+        <p><strong>Why:</strong> renaming is common when a folder is created quickly.</p>
+        <p><strong>Discussion / outcome:</strong> not in the first build; it needs a careful path rewrite plus empty-folder cleanup.</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Automatic thumbnails on upload</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> ask the host to generate a thumbnail and store its URL in <code>thumb_url</code>.</p>
+        <p><strong>Why:</strong> large images currently load their full URL in the grid.</p>
+        <p><strong>Discussion / outcome:</strong> needs a host capability; the current fallback chain already supports a supplied thumbnail.</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">Starred and recent views</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> quick filters for starred files, recently modified files and maybe a trash view.</p>
+        <p><strong>Why:</strong> large drives need fast access to favourites.</p>
+        <p><strong>Discussion / outcome:</strong> the star flag already exists; a filter row could be added without changing the value shape.</p>
+      </div>
+    </details>
+  </div>
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>[Preparation: what accounts, tenants, browsers, and test data the pass
+  needs. Keep the browser console open and filter by [trace keyword] - every
+  [operation] writes a trace line.]</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>AD-T-01 - first load.</strong> Open the harness with no value. PASS if the Root view renders with the empty state and no console error.</li>
+    <li><strong>AD-T-02 - folder navigation.</strong> Open <code>products</code>, then <code>2026</code>, then use the breadcrumb. PASS if the tree, breadcrumb, title and file count always match.</li>
+    <li><strong>AD-T-03 - views and sorting.</strong> Switch grid/list and sort by name, size and modified. PASS if both views keep the same files and folders first.</li>
+    <li><strong>AD-T-04 - search and filter.</strong> Search <code>catalogue</code> and apply each type filter. PASS if the results show their source folder and clearing restores the current folder.</li>
+    <li><strong>AD-T-05 - selection.</strong> Use Select, Ctrl/Cmd click, Shift click, All and None. PASS if the bulk count matches and navigation clears the selection.</li>
+    <li><strong>AD-T-06 - copy.</strong> Copy a single URL, this folder, this folder plus subfolders, image URLs and image thumbnails. PASS if every list is newline-separated, skips <code>.gitkeep</code> and shows the copied label.</li>
+    <li><strong>AD-T-07 - downloads.</strong> Download a folder one by one. PASS if one host URL call per file is started and the final notice counts them.</li>
+    <li><strong>AD-T-08 - upload.</strong> Upload a new file, then upload the same name again. PASS if the second upload keeps the record id and adds one version; an oversized file must be rejected with a toast.</li>
+    <li><strong>AD-T-09 - records.</strong> Rename, move, duplicate, star, lock, colour, tag and delete. PASS if each change survives a reload and locked records cannot be moved or deleted.</li>
+    <li><strong>AD-T-10 - folder lifecycle.</strong> Create an empty folder, upload into it, move out and delete the folder. PASS if the tree and record list stay consistent.</li>
+    <li><strong>AD-T-11 - read-only.</strong> Switch to a viewer or enable <code>isReadOnly</code>. PASS if upload, new folder and all mutations disappear while browse, copy and download remain.</li>
+    <li><strong>AD-T-12 - narrow layout.</strong> Load the harness at 420 px. PASS if there is no horizontal overflow, the tree opens as an off-canvas drawer and the grid uses two columns.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>AD-T-01 to AD-T-12 (headless Edge probes, 2026-11-17)</td><td>PASS</td><td>Interaction probe: 41 checks green; upload probe: 22 checks green; narrow probe: 0 overflow, 405 px body, 179 px cards, tree drawer 280 px.</td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when every AD-T scenario passes, the build badge shows the uploaded build, and the open risks of <code>asset-drive-core</code> are solved or accepted. ZIP is deliberately outside the first release (D-AD-06).</p>
+  <p><strong>Progress log:</strong> 2026-11-17 - initial build verified headlessly: 41 interaction checks, 22 upload/record checks, save-button probe and a 420 px layout probe all green; console clean.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is NOT pushed yet lives here,
+  linked to its release group (section 15). <strong>Before every push</strong>
+  re-evaluate every OPEN risk of the groups being pushed: solve them one by
+  one (tick the checkbox), or mark the risk Accepted
+  (<code>data-risk-status="accepted"</code>) with a reason and the date, and
+  update the <code>Last re-evaluation</code> line inside the risk. A group is
+  push-ready when its tasks are done AND it has no OPEN risks - the task
+  panel shows a PUSH READY badge per group and the open-risk count.</p>
+
+  <!-- Auto-updated by ssot.js: open / solved / accepted counts. -->
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <!-- TEMPLATE: one .risk-item per risk or side effect. data-risk-id unique;
+       data-group = the release group it belongs to (must match a
+       data-release-group in section 15; leave empty for cross-cutting risks).
+       data-risk-level: critical (mandatory - blocks every push until solved)
+       | high (blocks unless accepted) | medium (warns) | low (nice-to-have,
+       reported only).
+       data-risk-status: open | accepted. Solved = the checkbox. -->
+  <!-- Risk sample removed after the first build; the live register is below. -->
+  <div class="risk-item" data-risk-id="R-01" data-group="asset-drive-core" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">1 MB field-value limit</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-AD-01, T-AD-08</p>
+        <p><strong>What can go wrong:</strong> a drive with thousands of records and long URLs approaches the Firestore limit and the save can fail host-side.</p>
+        <p><strong>Likelihood / impact:</strong> Low for normal drives, high for large media libraries.</p>
+        <p><strong>Mitigation:</strong> metadata only; 900 KB warning; no binary or base64 in the value. Monitor the field size before the first large import.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 - warning implemented, risk accepted as a documented limitation (L-03).</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-02" data-group="asset-drive-core" data-risk-level="high" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">Deleting a record leaves the stored file and its URL alive</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-AD-10</p>
+        <p><strong>What can go wrong:</strong> a shared URL keeps working after the record is removed, so the drive no longer reflects every live asset.</p>
+        <p><strong>Likelihood / impact:</strong> Expected behaviour; medium impact on governance.</p>
+        <p><strong>Mitigation:</strong> the delete confirmation says explicitly that the stored URL becomes unmanaged; the tool never claims to delete storage.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 - accepted by D-AD-05 (no storage-delete channel exists).</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-03" data-group="asset-drive-core" data-risk-level="low" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">Read-only gating relies on the host identity</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-AD-12</p>
+        <p><strong>What can go wrong:</strong> a missing <code>getUser</code> API falls back to a no-identity mode; a UI-level user could attempt edits the host would normally reject.</p>
+        <p><strong>Likelihood / impact:</strong> Low - the host enforces storage permissions and <code>isReadOnly</code> stays authoritative.</p>
+        <p><strong>Mitigation:</strong> both <code>tool.isReadOnly()</code> and merged roles are checked; no write is attempted when the host is read-only.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 - accepted by D-AD-08.</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-04" data-group="asset-drive-core" data-risk-level="medium" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-04</span>
+        <span class="risk-title">Locked is only a record flag</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-AD-10</p>
+        <p><strong>What can go wrong:</strong> another tool or a direct record edit can change a locked record.</p>
+        <p><strong>Likelihood / impact:</strong> Low inside this drive; medium if other tools share the field.</p>
+        <p><strong>Mitigation:</strong> the UI blocks move/delete for locked records and reports the skipped count; the limitation is documented (L-05).</p>
+        <p><strong>Last re-evaluation:</strong> 2026-11-17 - accepted.</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-05" data-group="asset-drive-core" data-risk-level="low" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-05</span>
+        <span class="risk-title">Similar-name uploads create two records</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" />
+      </summary>
+      <div class="risk-details"><p><strong>Applies to:</strong> T-AD-08</p><p><strong>What can go wrong:</strong> the same asset exists in two folders under slightly different names.</p><p><strong>Mitigation:</strong> a dismissible warning banner names the other folder; both records are intentionally kept (D-AD-12).</p><p><strong>Last re-evaluation:</strong> 2026-11-17 - accepted.</p></div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-06" data-group="asset-drive-core" data-risk-level="medium" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-06</span>
+        <span class="risk-title">Stale CMS upload shows an old build</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-06 as solved" />
+      </summary>
+      <div class="risk-details"><p><strong>Applies to:</strong> the whole group</p><p><strong>What can go wrong:</strong> the CMS serves an older JS file, so fixes appear missing.</p><p><strong>Mitigation:</strong> the visible build badge, the boot log and per-file stamps; re-upload only the files whose stamp changed.</p><p><strong>Last re-evaluation:</strong> 2026-11-17 - accepted (D-AD-11).</p></div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-07" data-group="asset-drive-zip" data-risk-level="medium" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-07</span>
+        <span class="risk-title">ZIP downloads are absent from the first release</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-07 as solved" />
+      </summary>
+      <div class="risk-details"><p><strong>Applies to:</strong> the whole core group</p><p><strong>What can go wrong:</strong> users expecting a single archive must download files one by one and may face browser download prompts.</p><p><strong>Mitigation:</strong> the download menu carries the one-file-at-a-time hint; ZIP is tracked as I-01 / T-AD-20.</p><p><strong>Last re-evaluation:</strong> 2026-11-17 - accepted by D-AD-06.</p></div>
+    </details>
+  </div>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. The <code>npm run rel</code> script appends
+  a row here automatically after every successful push - do not edit or remove
+  the marker comment below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Asset Drive - single source of truth for all decisions about this
+    tool. Version 0.1, 2026-11-17.
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync. Tasks stamped by <code>npm run rel</code> show the push version
+    they shipped in.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks. Critical risks block every push until solved; high
+    risks block unless accepted; medium risks warn; low risks are reported
+    only.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved
+    state. Tick the checkbox here or in section 18 - both stay in sync.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>

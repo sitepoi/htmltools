@@ -1,0 +1,290 @@
+{
+  "meta": {
+    "schema": "uniconhub-folder-taxonomy",
+    "version": "1.0.1",
+    "updatedAt": "2026-11-17",
+    "versionHistory": [
+      {
+        "version": "1.0.1",
+        "exportedAt": "2026-11-17",
+        "note": "Updated the Management folder description to clarify that its roles are leadership destinations, most reached after experience."
+      },
+      {
+        "version": "1.0.0",
+        "exportedAt": "2026-11-15",
+        "note": "Initial occupation folder tree - 5 groups and 20 leaf industry folders, imported into the CMS."
+      }
+    ],
+    "importNote": "The CMS import consumes the folders array. The top-level meta and scalingRules keys are tooling metadata. Each folder carries extra code and slug fields - stable identifiers used by the CMS. The occupation catalogue uses the same industry slugs. Never rename or reuse a code."
+  },
+  "scalingRules": [
+    "CMS folders are created ONLY by importing this file. Never create, rename or delete folders manually in the CMS UI - change this file first, then re-import.",
+    "Split rule - when an industry leaf passes 60 occupations, split it into narrower child leaf folders under the same group. New folder codes take the next unused number. Existing codes are never renamed or reused.",
+    "Each occupation belongs to exactly one leaf industry folder. The occupation object's industry slug must match the leaf folder slug.",
+    "A new group or leaf folder is a deliberate decision made in this file first (new code), followed by re-importing the file.",
+    "Boundary rules - groups are navigation only; the leaf industry folder is the folder that owns the occupation objects.",
+    "Tags and search facets are managed inside the occupations application, not in this hierarchy."
+  ],
+  "folders": [
+    {
+      "name": "Work and business",
+      "code": "WB",
+      "slug": "work-business",
+      "order": 10,
+      "categories": [
+        "occupations"
+      ],
+      "description": "Management, money, offices and sales.",
+      "children": [
+        {
+          "name": "Management",
+          "code": "IND-01",
+          "slug": "management",
+          "order": 10,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Leadership roles, most reached after experience in a related occupation."
+        },
+        {
+          "name": "Business, finance and accounting",
+          "code": "IND-02",
+          "slug": "business-finance",
+          "order": 20,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Money, risk, investment and professional advice."
+        },
+        {
+          "name": "Office and administration",
+          "code": "IND-03",
+          "slug": "office-administration",
+          "order": 30,
+          "categories": [
+            "occupations"
+          ],
+          "description": "The administrative backbone of every organisation."
+        },
+        {
+          "name": "Sales and retail",
+          "code": "IND-13",
+          "slug": "sales-retail",
+          "order": 40,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Sell, merchandise and manage customer accounts."
+        }
+      ]
+    },
+    {
+      "name": "Technology and engineering",
+      "code": "TE",
+      "slug": "technology-engineering",
+      "order": 20,
+      "categories": [
+        "occupations"
+      ],
+      "description": "IT, engineering and production.",
+      "children": [
+        {
+          "name": "Information technology",
+          "code": "IND-04",
+          "slug": "information-technology",
+          "order": 10,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Software, data, systems and security."
+        },
+        {
+          "name": "Engineering and applied science",
+          "code": "IND-05",
+          "slug": "engineering-science",
+          "order": 20,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Design, build and research the physical world."
+        },
+        {
+          "name": "Manufacturing, utilities and processing",
+          "code": "IND-20",
+          "slug": "manufacturing-utilities",
+          "order": 30,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Make products and run utilities."
+        }
+      ]
+    },
+    {
+      "name": "People and society",
+      "code": "PS",
+      "slug": "people-society",
+      "order": 30,
+      "categories": [
+        "occupations"
+      ],
+      "description": "Health, community, education and public service.",
+      "children": [
+        {
+          "name": "Health care",
+          "code": "IND-07",
+          "slug": "health-care",
+          "order": 10,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Direct patient care, therapy and health technology."
+        },
+        {
+          "name": "Social and community services",
+          "code": "IND-08",
+          "slug": "social-community",
+          "order": 20,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Support people, families and communities."
+        },
+        {
+          "name": "Education and training",
+          "code": "IND-09",
+          "slug": "education-training",
+          "order": 30,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Teach, train and design learning."
+        },
+        {
+          "name": "Legal, public safety and government",
+          "code": "IND-10",
+          "slug": "legal-public-safety",
+          "order": 40,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Law, enforcement and public administration."
+        }
+      ]
+    },
+    {
+      "name": "Culture and service",
+      "code": "CS",
+      "slug": "culture-service",
+      "order": 40,
+      "categories": [
+        "occupations"
+      ],
+      "description": "Arts, sport, hospitality, food and personal service.",
+      "children": [
+        {
+          "name": "Arts, culture and media",
+          "code": "IND-11",
+          "slug": "arts-culture-media",
+          "order": 10,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Create, perform and communicate."
+        },
+        {
+          "name": "Sports and recreation",
+          "code": "IND-12",
+          "slug": "sports-recreation",
+          "order": 20,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Sport, fitness and outdoor recreation."
+        },
+        {
+          "name": "Hospitality and tourism",
+          "code": "IND-14",
+          "slug": "hospitality-tourism",
+          "order": 30,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Hotels, travel and guest experience."
+        },
+        {
+          "name": "Food service and culinary",
+          "code": "IND-15",
+          "slug": "food-service",
+          "order": 40,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Kitchens, service and food production."
+        },
+        {
+          "name": "Personal and customer service",
+          "code": "IND-16",
+          "slug": "personal-service",
+          "order": 50,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Personal care and everyday customer service."
+        }
+      ]
+    },
+    {
+      "name": "Trades and natural resources",
+      "code": "TN",
+      "slug": "trades-natural-resources",
+      "order": 50,
+      "categories": [
+        "occupations"
+      ],
+      "description": "Trades, transport, natural resources and environment.",
+      "children": [
+        {
+          "name": "Trades and construction",
+          "code": "IND-17",
+          "slug": "trades-construction",
+          "order": 10,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Build, install and maintain the built environment."
+        },
+        {
+          "name": "Transportation and logistics",
+          "code": "IND-18",
+          "slug": "transport-logistics",
+          "order": 20,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Move people, goods and information."
+        },
+        {
+          "name": "Agriculture, forestry, fishing and mining",
+          "code": "IND-19",
+          "slug": "agriculture-natural-resources",
+          "order": 30,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Farms, forests, fisheries and mining."
+        },
+        {
+          "name": "Environment and conservation",
+          "code": "IND-06",
+          "slug": "environmental-science",
+          "order": 40,
+          "categories": [
+            "occupations"
+          ],
+          "description": "Protect air, water, land and wildlife."
+        }
+      ]
+    }
+  ]
+}

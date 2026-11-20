@@ -1,5 +1,5 @@
-<!-- build 2026-10-10-5 -->
-<div id="js-boot-banner" role="alert">⚠ WebpageBuilder JS NOT running — HTML build 2026-10-10-5 loaded but the [JS] block never booted. Update and re-save the JS block in the CMS Tool Builder; the JS field must END with WEBPAGEBUILDER-JS-END (self-contained — no CDN/external scripts allowed).</div>
+<!-- build 2026-10-10-7 -->
+<div id="js-boot-banner" role="alert">⚠ WebpageBuilder JS NOT running — HTML build 2026-10-10-7 loaded but the [JS] block never booted. Update and re-save the JS block in the CMS Tool Builder; the JS field must END with WEBPAGEBUILDER-JS-END (self-contained — no CDN/external scripts allowed).</div>
 <div id="app">
   <!-- NO EXTERNAL SCRIPTS: self-contained line diff in WebpageBuilder.js.
        An external <script src> blocks every later inline script until it
@@ -18,7 +18,7 @@
       <button class="btn btn-sm btn-ghost" id="btn-config" title="Settings &amp; Export">⚙️ Settings</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
-      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-10-5</span>
+      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-10-7</span>
       <span class="version-badge" id="tool-version" title="Page version — the generated page's version (click to change, increment only)">v1.0.0</span>
       <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
     </div>
@@ -91,6 +91,7 @@
       <div class="chat-input-area">
         <div class="chat-input-toolbar">
           <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a reference file (mockup, logo, spec doc…)">📎 Attach</button>
+          <button class="btn btn-sm btn-ghost" id="btn-import-url" title="Import an existing page (URL or pasted HTML) — the AI rebuilds it as a new page with a better design">📥 Import</button>
           <button class="guided-toggle active" id="btn-agentic-mode" title="Agentic Mode — large requests become a task plan and run step by step (avoids timeouts)">🧠 Agentic</button>
           <button class="guided-toggle" id="btn-guided-mode" title="Guided Mode — AI interviews you about your page">🪄 Guided</button>
         </div>
@@ -293,6 +294,37 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- Import Page Modal (L1: URL / pasted HTML → AI REDESIGN) -->
+  <div class="modal" id="modal-import-url" style="display:none">
+    <div class="modal-header">
+      <h3>📥 Import an existing page</h3>
+      <button class="btn-close" id="btn-import-cancel">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-sub">Fetch a live page, keep its real content, and let the AI rebuild it as a brand-new page for this site.</p>
+      <label class="field-label">Page URL</label>
+      <input type="url" id="import-url" class="import-url" placeholder="https://example.com/services" autocomplete="off" spellcheck="false" />
+      <p class="import-hint">The request is relayed through the CMS (tool.requestFetch) — the host must be allowlisted by the platform.</p>
+      <div class="import-actions">
+        <button class="btn btn-primary" id="btn-import-fetch">🔄 Fetch &amp; redesign</button>
+        <label class="import-check"><input type="checkbox" id="import-reuse-images" checked /> reuse the site's images</label>
+        <span class="import-status" id="import-status"></span>
+      </div>
+      <label class="field-label">Extra facts (optional — paste text that only exists inside an image, e.g. the menu)</label>
+      <textarea id="import-extra" class="import-paste" rows="4" spellcheck="false" placeholder="Paste menu text, price list or any fact the page only shows in pictures…"></textarea>
+      <details class="import-paste-wrap">
+        <summary>No relay access? Paste the page HTML instead</summary>
+        <label class="field-label">Page HTML (browser: Ctrl+U → select all → copy)</label>
+        <textarea id="import-html" class="import-paste" rows="7" spellcheck="false" placeholder="Paste the full HTML of the page…"></textarea>
+        <div class="import-actions">
+          <button class="btn btn-outline" id="btn-import-paste">✂️ Use this HTML</button>
+        </div>
+      </details>
+      <p class="import-note import-note-warn" id="import-note" hidden>⚠ This page already has code. The redesign will replace it — export a copy first if you want to keep the current version.</p>
+      <p class="import-note">Only import pages you own or are allowed to reuse. The content is extracted for a REDESIGN — the old markup, scripts and image URLs are not copied.</p>
+    </div>
   </div>
 
   <!-- History Modal -->
@@ -1273,7 +1305,7 @@ Rules:
      boot sets data-wb-ready on <body>. -->
 <script>
 (function() {
-  var BUILD = '2026-10-10-5';
+  var BUILD = '2026-10-10-7';
   try { console.log('[WEBPAGEBUILDER:HTML-PROBE] inline script executed — html build ' + BUILD + ' — ' + new Date().toLocaleTimeString()); } catch (e) {}
   try {
     window.__wbHtmlProbe = true;

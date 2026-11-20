@@ -1,4 +1,4 @@
-<!-- html build 2026-10-18-1 -->
+<!-- html build 2026-11-18-29 -->
 <div id="app">
   <!-- HEADER -->
   <header class="app-header">
@@ -8,7 +8,7 @@
     <div class="header-right">
       <span class="role-badge" id="role-badge"></span>
       <span class="curriculum-id-badge" id="curriculum-id-badge" title="Copy this ID → paste as curriculumSourceId in the Student tool">🔗 Copy Curriculum ID</span>
-      <span class="tool-build-badge" id="tool-build-badge" title="Tool code build"></span>
+      <span class="tool-build-badge" id="tool-build-badge" title="Tool code build">JS not running</span>
     </div>
   </header>
 
@@ -62,7 +62,10 @@
 
   <!-- LESSON EDITOR PANEL -->
   <div class="lesson-editor-panel" id="lesson-editor-panel" style="display:none">
-    <h4 class="lesson-editor-heading" id="lesson-editor-heading">Add Lesson</h4>
+    <div class="lesson-drawer-header">
+      <h4 class="lesson-editor-heading" id="lesson-editor-heading">Add Lesson</h4>
+      <button type="button" class="lesson-drawer-close" id="btn-lesson-drawer-close" title="Close (Esc)">✕</button>
+    </div>
     <div class="lesson-tabs">
       <button class="lesson-tab active" data-lesson-tab="info">📋 Main Info</button>
       <button class="lesson-tab" data-lesson-tab="videos">🎬 Videos</button>
@@ -70,32 +73,34 @@
       <button class="lesson-tab" data-lesson-tab="studyHtml">🌐 Study Content</button>
       <button class="lesson-tab" data-lesson-tab="presentation">🎞️ Presentation</button>
       <button class="lesson-tab" data-lesson-tab="flashcards">🃏 Flashcards</button>
-      <button class="lesson-tab" data-lesson-tab="content">📝 Content</button>
       <button class="lesson-tab" data-lesson-tab="questions">❓ Questions</button>
     </div>
     <div class="lesson-tab-panel active" data-lesson-panel="info">
-      <div class="form-group">
+      <div class="main-info-card">
         <label class="form-label">Lesson Title <span class="required">*</span></label>
-        <input class="form-input" id="edit-lesson-title" placeholder="e.g. Introduction to Fractions">
+        <input class="form-input main-info-title" id="edit-lesson-title" placeholder="e.g. Introduction to Fractions">
+        <span class="form-hint">The lesson name students see in the course flow.</span>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Order #</label>
           <input class="form-input" type="number" id="edit-lesson-order" placeholder="1" min="1">
+          <span class="form-hint">Position of this lesson inside its section.</span>
         </div>
         <div class="form-group">
-          <label class="form-label">Est. Minutes</label>
+          <label class="form-label">Estimated Minutes</label>
           <input class="form-input" type="number" id="edit-lesson-minutes" placeholder="15" min="1">
+          <span class="form-hint">Shown as "Estimated: X min" in the student study flow.</span>
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Additional Source Links</label>
+        <label class="form-label">🔗 Additional Resources</label>
         <div class="managed-list-header">
           <span id="source-links-editor-count">0 link(s)</span>
           <button type="button" class="btn btn-sm btn-primary" id="btn-add-source-link">+ Add Link</button>
         </div>
         <div class="managed-list-items" id="source-links-editor-list"></div>
-        <span class="form-hint">Add reference links that appear as Additional Resources below the lesson content.</span>
+        <span class="form-hint">Extra reference links students see below the lesson in Self-Paced Education (the "Additional Resources" list).</span>
       </div>
     </div>
     <div class="lesson-tab-panel" data-lesson-panel="videos">
@@ -114,64 +119,15 @@
     </div>
     <div class="lesson-tab-panel" data-lesson-panel="documents">
       <div class="form-group">
-        <label class="form-label">📊 Presentation Slides (PDF)</label>
         <div class="managed-list-header">
-          <span id="pdf-count-presentation">0 file(s)</span>
+          <span id="pdf-count-all">0 document(s)</span>
           <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            <button type="button" class="btn btn-sm vis-tab-toggle" id="vis-toggle-presDocs" data-vis-key="slides" title="Toggle visibility for students" style="padding:3px 8px;font-size:10px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;font-family:inherit">👁️</button>
-            <button type="button" class="btn btn-sm btn-primary" data-add-pdf="presentation">+ Add</button>
+            <button type="button" class="btn btn-sm btn-outline" id="btn-upload-document" title="Upload a file to CMS storage and add it as a document">⬆ Upload</button>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-add-document" title="Add a document by URL">+ Add URL</button>
           </div>
         </div>
-        <div class="managed-list-items" id="pdf-list-presentation"></div>
-        <span class="form-hint">Lesson presentation slide decks. Students review after watching videos.</span>
-      </div>
-      <div class="form-group">
-        <label class="form-label">📖 Study Documents (PDF)</label>
-        <div class="managed-list-header">
-          <span id="pdf-count-studyDoc">0 file(s)</span>
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            <button type="button" class="btn btn-sm vis-tab-toggle" id="vis-toggle-studyDocs" data-vis-key="studyDocs" title="Toggle visibility for students" style="padding:3px 8px;font-size:10px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;font-family:inherit">👁️</button>
-            <button type="button" class="btn btn-sm btn-primary" data-add-pdf="studyDoc">+ Add</button>
-          </div>
-        </div>
-        <div class="managed-list-items" id="pdf-list-studyDoc"></div>
-        <span class="form-hint">Reading materials, textbook chapters, handouts. Main study content.</span>
-      </div>
-      <div class="form-group">
-        <label class="form-label">📝 Worksheets (PDF)</label>
-        <div class="managed-list-header">
-          <span id="pdf-count-worksheet">0 file(s)</span>
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            <button type="button" class="btn btn-sm vis-tab-toggle" id="vis-toggle-worksheets" data-vis-key="worksheets" title="Toggle visibility for students" style="padding:3px 8px;font-size:10px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;font-family:inherit">👁️</button>
-            <button type="button" class="btn btn-sm btn-primary" data-add-pdf="worksheet">+ Add</button>
-          </div>
-        </div>
-        <div class="managed-list-items" id="pdf-list-worksheet"></div>
-        <span class="form-hint">Practice worksheets and exercises for students to complete.</span>
-      </div>
-      <div class="form-group">
-        <label class="form-label">🔑 Answer Keys (PDF)</label>
-        <div class="managed-list-header">
-          <span id="pdf-count-answerKey">0 file(s)</span>
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            <button type="button" class="btn btn-sm vis-tab-toggle" id="vis-toggle-answerKeys" data-vis-key="answerKeys" title="Toggle visibility for students" style="padding:3px 8px;font-size:10px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;font-family:inherit">👁️</button>
-            <button type="button" class="btn btn-sm btn-primary" data-add-pdf="answerKey">+ Add</button>
-          </div>
-        </div>
-        <div class="managed-list-items" id="pdf-list-answerKey"></div>
-        <span class="form-hint">Answer keys for worksheets. Shown after the worksheet step.</span>
-      </div>
-      <div class="form-group">
-        <label class="form-label">🌐 Web Documents</label>
-        <div class="managed-list-header">
-          <span id="pdf-count-htmlDoc">0 file(s)</span>
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            <button type="button" class="btn btn-sm vis-tab-toggle" id="vis-toggle-htmlDocs" data-vis-key="webDocs" title="Toggle visibility for students" style="padding:3px 8px;font-size:10px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;font-family:inherit">👁️</button>
-            <button type="button" class="btn btn-sm btn-primary" data-add-pdf="htmlDoc">+ Add</button>
-          </div>
-        </div>
-        <div class="managed-list-items" id="pdf-list-htmlDoc"></div>
-        <span class="form-hint">Upload standalone HTML pages to display inline in the lesson (e.g. interactive content, charts, custom layouts).</span>
+        <div class="managed-list-items" id="pdf-list-all"></div>
+        <span class="form-hint">✅ Ready = your processed file, shown to students and used for AI content generation. 🧭 Sample = an outside sample used only to create your own Ready document. ✏️ edits a document (role, visibility, URL, delete). ⚙️ processes a document - extracts and uploads its images, then generates the study content. Deleting never affects content already generated.</span>
       </div>
     </div>
     <div class="lesson-tab-panel" data-lesson-panel="studyHtml">
@@ -212,29 +168,6 @@
         </div>
       </div>
     </div>
-    <div class="lesson-tab-panel" data-lesson-panel="content">
-      <div class="form-group">
-        <label class="form-label" style="display:flex;align-items:center;gap:8px">📄 Content (HTML) — Optional <button type="button" class="btn btn-sm vis-tab-toggle" id="vis-toggle-content" data-vis-key="notes" title="Toggle visibility for students" style="padding:3px 10px;font-size:11px;border:1px solid var(--border);border-radius:14px;background:#fff;cursor:pointer;font-family:inherit">👁️</button></label>
-        <div class="html-editor-wrap" id="html-editor-wrap">
-          <div class="html-editor-toolbar" id="html-editor-toolbar">
-            <button type="button" class="html-tb-btn" data-cmd="bold" title="Bold"><strong>B</strong></button>
-            <button type="button" class="html-tb-btn" data-cmd="italic" title="Italic"><em>I</em></button>
-            <button type="button" class="html-tb-btn" data-cmd="underline" title="Underline"><u>U</u></button>
-            <span class="html-tb-sep"></span>
-            <button type="button" class="html-tb-btn" data-cmd="formatBlock" data-val="h2" title="Heading 2">H2</button>
-            <button type="button" class="html-tb-btn" data-cmd="formatBlock" data-val="h3" title="Heading 3">H3</button>
-            <span class="html-tb-sep"></span>
-            <button type="button" class="html-tb-btn" data-cmd="insertUnorderedList" title="Bullet List">•≡</button>
-            <button type="button" class="html-tb-btn" data-cmd="insertOrderedList" title="Numbered List">1≡</button>
-            <span class="html-tb-sep"></span>
-            <button type="button" class="html-tb-btn" data-cmd="formatBlock" data-val="blockquote" title="Blockquote">❝</button>
-            <button type="button" class="html-tb-btn" data-cmd="createlink" title="Insert Link">🔗</button>
-          </div>
-          <div class="html-editor-content" id="html-editor-content" contenteditable="true" placeholder="Start typing your lesson content... (optional)"></div>
-        </div>
-        <span class="form-hint">Optional written lesson content. Use the toolbar to format text.</span>
-      </div>
-    </div>
     <div class="lesson-tab-panel" data-lesson-panel="questions">
       <div class="form-group" style="text-align:center;padding:4px 0;display:flex;align-items:center;justify-content:center;gap:6px">
         <button type="button" class="btn btn-outline btn-generate-quiz" id="btn-generate-quiz-from-pdf-2" title="Read all PDFs and generate quiz questions via AI">🤖 Generate Quiz Questions from PDFs</button>
@@ -259,6 +192,50 @@
 
   <div class="lesson-editor-backdrop" id="sub-modal-backdrop"></div>
 
+  <!-- DOCUMENT STUDIO DRAWER - full-height workspace for one document -->
+  <div class="sd-drawer" id="sd-studio-drawer">
+    <div class="sd-drawer-header">
+      <div style="min-width:0">
+        <div class="sd-drawer-title" id="sd-drawer-title">🧰 Document Studio</div>
+        <div class="sd-muted" id="sd-drawer-subtitle"></div>
+      </div>
+      <button type="button" class="sd-drawer-close" id="btn-sd-drawer-close" title="Close (Esc)">✕</button>
+    </div>
+    <div class="sd-drawer-body">
+      <div class="sd-row" style="margin-bottom:12px">
+        <button type="button" class="btn btn-sm btn-outline" id="btn-sd-open-doc" title="Open the document in a new tab">👁 Open File</button>
+        <button type="button" class="btn btn-sm btn-outline" id="btn-sd-download-pdf" title="Download this file to your device (any size, any type)">⬇ Download File</button>
+        <button type="button" class="btn btn-sm btn-outline" id="btn-sd-make-role" title="Switch this document between Ready and Sample">🔄 To Sample</button>
+        <button type="button" class="btn btn-sm btn-outline" id="btn-sd-add-image" title="Upload an image directly to this document's gallery (reachable CMS URL)">🖼 Add Image</button>
+        <button type="button" class="btn btn-sm btn-outline" id="btn-sd-generate-image" title="Generate a new image with AI and add it to this document's gallery">🎨 New AI Image</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-sd-process" title="One-click pipeline: extract the images, upload them to CMS storage, then regenerate the study content">⚙️ Process Document</button>
+        <button type="button" class="btn btn-sm btn-outline" id="btn-sd-extract" title="Read the PDF from CMS storage and extract its images (needs the CMS relay)">🧩 Extract Images</button>
+        <button type="button" class="btn btn-sm btn-outline" id="btn-sd-extract-local" title="Read a PDF from your device in the browser - no CMS relay, no size limit">📁 From Local PDF</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-sd-generate" title="AI rephrases the document from scratch and weaves its images into the study content">✨ Generate Study Content</button>
+        <button type="button" class="btn btn-sm btn-outline" id="btn-sd-compare" title="Show the original document and the generated Study Content side by side">⇔ Side by Side</button>
+      </div>
+      <div class="sd-status" id="sd-status" style="display:none"></div>
+      <div class="sd-section-title">🖼 Document Images <span class="sd-muted" id="sd-images-count">0 image(s)</span>
+        <span style="margin-left:auto;display:inline-flex;gap:6px">
+          <button type="button" class="btn btn-sm btn-outline" id="btn-sd-select-all">☑ All</button>
+          <button type="button" class="btn btn-sm btn-outline" id="btn-sd-regen-selected" title="AI-regenerate the selected images">🎨 Regenerate Selected</button>
+        </span>
+      </div>
+      <div class="sd-images-grid" id="sd-images-grid"><div class="sd-empty">No images yet. Click "Extract Images" or "Add Image", or press Ctrl+V to paste a screenshot of a drawing.</div></div>
+      <div class="sd-preview-columns" id="sd-preview-columns">
+        <div class="sd-preview-column">
+          <div class="sd-section-title">📄 Document Preview <span class="sd-muted" id="sd-preview-note"></span></div>
+          <iframe class="sd-preview" id="sd-doc-preview" title="Document Preview"></iframe>
+        </div>
+        <div class="sd-preview-column">
+          <div class="sd-section-title">📝 Generated Study Content <span class="sd-muted" id="sd-gen-status"></span></div>
+          <iframe class="study-html-preview-iframe sd-preview" id="sd-gen-preview" sandbox="allow-scripts allow-same-origin allow-modals" title="Generated Study Content Preview"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sd-drawer-backdrop" id="sd-studio-backdrop"></div>
+
   <!-- MANAGED EDITOR PANELS -->
   <div class="managed-editor-panel" id="youtube-editor-panel" style="display:none">
     <h4 class="managed-editor-heading" id="youtube-editor-heading">Add YouTube Video</h4>
@@ -272,14 +249,56 @@
     </div>
   </div>
   <div class="managed-editor-panel" id="pdf-editor-panel" style="display:none">
-    <h4 class="managed-editor-heading" id="pdf-editor-heading">Add PDF</h4>
+    <h4 class="managed-editor-heading" id="pdf-editor-heading">Add Document</h4>
+    <div class="form-group" id="pdf-editor-type-group">
+      <label class="form-label">Document Type <span class="required">*</span></label>
+      <select class="form-input" id="edit-pdf-item-type">
+        <option value="presentation">📊 Presentation Slides</option>
+        <option value="studyDoc">📖 Study Document</option>
+        <option value="worksheet">📝 Worksheet</option>
+        <option value="answerKey">🔑 Answer Key</option>
+        <option value="htmlDoc">🌐 Web Document</option>
+      </select>
+      <span class="form-hint">Choose the document type. You can change the role (Ready / Sample) and the student visibility with the switches below.</span>
+    </div>
+    <div class="form-group" id="pdf-editor-role-group">
+      <div class="doc-switch-row">
+        <div class="doc-switch-info">
+          <span class="form-label">Document Role</span>
+          <span class="form-hint" id="pdf-editor-role-hint">Ready = your own processed file, shown to students and used for AI content generation in the other tabs.</span>
+        </div>
+        <div class="doc-switch-side">
+          <label class="switch" title="Switch between Ready and Sample">
+            <input type="checkbox" id="edit-pdf-item-role">
+            <span class="switch-slider"></span>
+          </label>
+          <span class="doc-switch-state" id="pdf-editor-role-state">Ready</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group" id="pdf-editor-vis-group">
+      <div class="doc-switch-row">
+        <div class="doc-switch-info">
+          <span class="form-label">Student Visibility</span>
+          <span class="form-hint">Visible = students can open this document. Hidden = kept only for AI generation.</span>
+        </div>
+        <div class="doc-switch-side">
+          <label class="switch" title="Switch between Visible and Hidden">
+            <input type="checkbox" id="edit-pdf-item-vis">
+            <span class="switch-slider"></span>
+          </label>
+          <span class="doc-switch-state" id="pdf-editor-vis-state">Visible</span>
+        </div>
+      </div>
+    </div>
     <div class="form-group">
-      <label class="form-label">PDF URL <span class="required">*</span></label>
+      <label class="form-label">Document URL <span class="required">*</span></label>
       <input class="form-input" id="edit-pdf-item-url" placeholder="https://example.com/document.pdf">
     </div>
     <div class="managed-editor-actions">
+      <button type="button" class="btn btn-danger" id="btn-pdf-editor-delete" style="display:none">🗑 Delete</button>
       <button type="button" class="btn btn-outline" id="btn-pdf-editor-cancel">Cancel</button>
-      <button type="button" class="btn btn-primary" id="btn-pdf-editor-save">Save PDF</button>
+      <button type="button" class="btn btn-primary" id="btn-pdf-editor-save">Save Document</button>
     </div>
   </div>
   <div class="managed-editor-panel" id="source-link-editor-panel" style="display:none">

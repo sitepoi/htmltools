@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AssetDrive - Test Harness</title>
+<link rel="stylesheet" href="AssetDrive.css">
+<style>
+	html, body { margin: 0; padding: 0; background: #eef2f7; }
+	body { padding-top: 44px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+	#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 14px; background: #0f172a; color: #e6edf5; font-size: 11px; }
+	#th-bar strong { color: #a5b4fc; letter-spacing: 0.5px; }
+	#th-bar .sep { color: #475569; }
+	#th-bar .hint { color: #94a3b8; font-size: 10px; }
+	#th-bar select { font-size: 11px; padding: 3px 5px; border: 1px solid #334155; border-radius: 4px; background: #1e293b; color: #e6edf5; }
+	#th-bar button { border: none; border-radius: 4px; padding: 4px 10px; font-size: 10px; font-weight: 600; cursor: pointer; }
+	#th-bar button.th-btn-a { background: #4f46e5; color: #fff; }
+	#th-bar button.th-btn-b { background: #334155; color: #e6edf5; }
+	#th-bar label { display: inline-flex; align-items: center; gap: 4px; color: #cbd5e1; font-size: 10px; }
+	#th-status { color: #a5b4fc; font-size: 10px; }
+	#th-last-notify { color: #fbbf24; font-size: 10px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	#th-log { position: fixed; right: 12px; bottom: 12px; z-index: 9999; width: 340px; max-height: 190px; overflow: auto; padding: 8px 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.94); color: #e2e8f0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; line-height: 1.5; }
+	#th-log p { margin: 0 0 2px; }
+	#app-container { padding: 0 0 20px; }
+	@media (max-width: 900px) {
+		body { padding-top: 96px; }
+	}
+</style>
+</head>
+<body>
+<div id="th-bar">
+	<strong>HARNESS - AssetDrive</strong><span class="sep">|</span>
+	<span class="hint">Role:</span>
+	<select id="th-role">
+		<option value="admin">Admin</option>
+		<option value="editor">Editor</option>
+		<option value="viewer">Viewer</option>
+		<option value="none">No identity</option>
+	</select>
+	<label><input type="checkbox" id="th-ro"> read-only (isReadOnly)</label>
+	<button class="th-btn-a" id="th-sample">Load sample drive</button>
+	<button class="th-btn-b" id="th-empty">Clear value</button>
+	<button class="th-btn-b" id="th-reinit">Re-run onReady</button>
+	<span class="sep">|</span>
+	<span id="th-status">Loading...</span>
+	<span class="sep">|</span>
+	<span id="th-last-notify"></span>
+</div>
+
+<div id="app-container"></div>
+<div id="th-log"></div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────────
+   Mock window.tool SDK - installed BEFORE the tool script loads.
+   ───────────────────────────────────────────────────────────────────── */
+(function () {
+	var STORAGE_KEY = 'assetdrive_harness_value';
+	var query = new URLSearchParams(window.location.search);
+	var roleFromQuery = query.get('role');
+	var roles = ['admin', 'editor', 'viewer', 'none'];
+	if (roles.indexOf(roleFromQuery) < 0) { roleFromQuery = localStorage.getItem(STORAGE_KEY + '_role') || 'admin'; }
+	var params = {
+		driveLabel: new URLSearchParams(window.location.search).get('label') || 'Asset Drive',
+		maxUploadSizeMb: query.get('maxmb') || '5'
+	};
+	if (query.get('save') === '1') { params.showSaveButton = 'yes'; }
+	var users = {
+		admin: { id: 'u-admin', name: 'Ada Admin', email: 'ada@example.org', roles: ['admin'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+		editor: { id: 'u-editor', name: 'Eddie Editor', email: 'eddie@example.org', roles: ['viewer', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+		viewer: { id: 'u-viewer', name: 'Vera Viewer', email: 'vera@example.org', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } }
+	};
+	var state = {
+		role: roleFromQuery,
+		readOnly: query.get('ro') === '1',
+		value: null,
+		readyCallback: null,
+		valueChangeListeners: [],
+		readonlyListeners: [],
+		userChangeListeners: [],
+		openUrlCount: 0,
+		uploadCount: 0
+	};
+	if (query.get('fresh') === '1') {
+		try { localStorage.removeItem(STORAGE_KEY); } catch (error) { }
+	}
+	try {
+		var storedValue = localStorage.getItem(STORAGE_KEY);
+		state.value = storedValue ? JSON.parse(storedValue) : null;
+	} catch (error) { state.value = null; }
+
+	if (query.get('empty') === '1') { state.value = null; }
+	var sampleRequested = query.get('sample') === '1';
+
+	function logLine(message) {
+		var log = document.getElementById('th-log');
+		if (!log) { return; }
+		var line = document.createElement('p');
+		line.textContent = new Date().toISOString().slice(11, 19) + '  ' + message;
+		log.appendChild(line);
+		log.scrollTop = log.scrollHeight;
+	}
+
+	function setLastNotify(message) {
+		var element = document.getElementById('th-last-notify');
+		if (element) { element.textContent = message; element.title = message; }
+	}
+
+	function persistStoredValue(value) {
+		try {
+			if (value === null || value === undefined) { localStorage.removeItem(STORAGE_KEY); }
+			else { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); }
+		} catch (error) { }
+	}
+
+	window.thLog = logLine;
+
+	window.tool = {
+		onReady: function (callback) {
+			state.readyCallback = callback;
+			if (sampleRequested && !state.value) {
+				state.value = window.AD_CREATE_SAMPLE ? window.AD_CREATE_SAMPLE() : null;
+				sampleRequested = false;
+			}
+			window.setTimeout(function () { callback(state.value, null); }, 0);
+		},
+		getValue: function () { return state.value; },
+		setValue: function (nextValue) {
+			state.value = nextValue;
+			persistStoredValue(nextValue);
+			state.valueChangeListeners.forEach(function (listener) { try { listener(nextValue); } catch (error) { logLine('listener error: ' + error.message); } });
+		},
+		onValueChange: function (listener) { state.valueChangeListeners.push(listener); },
+		getFields: function () { return { id: 'harness-record', name: 'Asset Drive record', cmsObjectType: 'harness' }; },
+		onFieldsChange: function () { },
+		watchField: function () { },
+		setField: function () { logLine('setField called'); },
+		setFields: function () { logLine('setFields called'); },
+		param: function (name, fallback) {
+			if (Object.prototype.hasOwnProperty.call(params, name) && params[name] !== undefined && params[name] !== null && params[name] !== '') { return params[name]; }
+			return fallback;
+		},
+		isReadOnly: function () { return state.readOnly; },
+		onReadonlyChange: function (listener) { state.readonlyListeners.push(listener); },
+		getUser: function () { return users[state.role] || null; },
+		onUserChange: function (listener) { state.userChangeListeners.push(listener); },
+		getPermittedUsers: function () { return [users.admin, users.editor, users.viewer]; },
+		reportValid: function () { },
+		notify: function (message, severity) {
+			logLine('notify(' + (severity || 'info') + '): ' + message);
+			setLastNotify(message);
+		},
+		resize: function () { },
+		declareOutput: function (schema) { logLine('declareOutput: ' + (schema ? Object.keys(schema.properties || {}).join(', ') : '')); },
+		declareParams: function (list) { logLine('declareParams: ' + (Array.isArray(list) ? list.length : 0) + ' parameter(s)'); },
+		reportMissingParams: function (missing) { logLine('reportMissingParams: ' + ((missing && missing.length) || 0)); },
+		openUrl: function (url) {
+			state.openUrlCount += 1;
+			logLine('openUrl #' + state.openUrlCount + ': ' + url);
+		},
+		requestSave: function (callback) {
+			logLine('requestSave');
+			window.setTimeout(function () { callback(null, true); }, 40);
+		},
+		requestUpload: function (accept, callback) {
+			logLine('requestUpload(' + accept + ')');
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.accept = accept || '*/*';
+			input.style.position = 'fixed';
+			input.style.left = '-9999px';
+			document.body.appendChild(input);
+			input.addEventListener('change', function () {
+				var file = input.files && input.files[0];
+				document.body.removeChild(input);
+				if (!file) { callback('No file selected', null); return; }
+				state.uploadCount += 1;
+				var url = URL.createObjectURL(file);
+				logLine('uploaded: ' + file.name + ' (' + file.size + ' bytes, ' + (file.type || 'no type') + ')');
+				callback(null, { name: file.name, url: url, size: file.size, type: file.type });
+			});
+			input.click();
+		},
+		_tools: {
+			setRole: function (role) {
+				state.role = role;
+				try { localStorage.setItem(STORAGE_KEY + '_role', role); } catch (error) { }
+				state.userChangeListeners.forEach(function (listener) { try { listener(users[role] || null); } catch (error) { } });
+			},
+			setReadOnly: function (readOnly) {
+				state.readOnly = !!readOnly;
+				state.readonlyListeners.forEach(function (listener) { try { listener(state.readOnly); } catch (error) { } });
+			},
+			setValue: function (value) { window.tool.setValue(value); },
+			createSample: function () { return window.AD_CREATE_SAMPLE ? window.AD_CREATE_SAMPLE() : null; },
+			runReadyAgain: function () { if (state.readyCallback) { state.readyCallback(state.value, null); } },
+			stats: function () { return { openUrlCount: state.openUrlCount, uploadCount: state.uploadCount, stored: state.value }; }
+		}
+	};
+})();
+</script>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────────
+   Sample drive - a realistic asset library with nested folders,
+   an image set, versions, tags, colours, stars, locks and placeholders.
+   ───────────────────────────────────────────────────────────────────── */
+(function () {
+	function thumb(label, from, to) {
+		var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">' +
+			'<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+			'<stop offset="0" stop-color="' + from + '"/><stop offset="1" stop-color="' + to + '"/></linearGradient></defs>' +
+			'<rect width="320" height="200" fill="url(#g)"/>' +
+			'<circle cx="255" cy="38" r="62" fill="rgba(255,255,255,0.16)"/>' +
+			'<circle cx="60" cy="176" r="46" fill="rgba(0,0,0,0.12)"/>' +
+			'<text x="24" y="112" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#ffffff">' + label + '</text>' +
+			'<text x="24" y="138" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.8)">sample asset</text>' +
+			'</svg>';
+		return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+	}
+
+	function file(id, name, path, url, extra) {
+		var record = { id: id, name: name, path: path, url: url, thumb_url: '', cdnUrl: '', contentType: '', size: 0, updatedAt: Date.parse('2026-11-12T10:15:00Z'), firstUploadedAt: Date.parse('2026-10-02T08:30:00Z'), starred: false, locked: false, tags: [], colorLabel: '', versions: [] };
+		if (extra) {
+			Object.keys(extra).forEach(function (key) { record[key] = extra[key]; });
+		}
+		return record;
+	}
+
+	window.AD_CREATE_SAMPLE = function () {
+		var logoLight = thumb('Logo primary', '#4f46e5', '#7c3aed');
+		var logoDark = thumb('Logo dark', '#0f172a', '#334155');
+		var catalogFront = thumb('Catalogue front', '#0ea5e9', '#4f46e5');
+		var catalogBack = thumb('Catalogue back', '#f97316', '#dc2626');
+		var heroBanner = thumb('Hero banner', '#059669', '#0d9488');
+		var winterPoster = thumb('Winter poster', '#6366f1', '#0f172a');
+		var rootHero = thumb('Homepage hero', '#8b5cf6', '#ec4899');
+		return {
+			folderId: 'drive-demo',
+			name: 'Asset Drive',
+			emptyFolders: ['campaigns/spring', 'archive/2025'],
+			files: [
+				file('a1', 'logo-primary.svg', 'brand/logo-primary.svg', 'https://cdn.example.com/brand/logo-primary.svg', {
+					thumb_url: logoLight, contentType: 'image/svg+xml', size: 18420, starred: true, colorLabel: 'blue', tags: ['logo', 'primary'],
+					updatedAt: Date.parse('2026-11-10T09:20:00Z')
+				}),
+				file('a2', 'logo-dark.svg', 'brand/logo-dark.svg', 'https://cdn.example.com/brand/logo-dark.svg', {
+					cdnUrl: 'https://cdn.example.com/brand/logo-dark.svg', thumb_url: logoDark, contentType: 'image/svg+xml', size: 17610, tags: ['logo', 'dark'],
+					updatedAt: Date.parse('2026-11-10T09:24:00Z')
+				}),
+				file('a3', 'brand-guidelines-2026.pdf', 'brand/brand-guidelines-2026.pdf', 'https://cdn.example.com/brand/brand-guidelines-2026.pdf', {
+					contentType: 'application/pdf', size: 4820000, locked: true, tags: ['guidelines', 'approved'],
+					updatedAt: Date.parse('2026-10-18T14:00:00Z')
+				}),
+				file('a4', '.gitkeep', 'brand/.gitkeep', '', { size: 0, updatedAt: Date.parse('2026-10-01T00:00:00Z') }),
+				file('b1', 'catalogue-front.jpg', 'products/2026/catalogue-front.jpg', 'https://cdn.example.com/products/2026/catalogue-front.jpg', {
+					thumb_url: catalogFront, contentType: 'image/jpeg', size: 912000, starred: true, colorLabel: 'green', tags: ['catalogue', 'print'], firstUploadedAt: Date.parse('2026-09-14T11:00:00Z'),
+					updatedAt: Date.parse('2026-11-08T16:40:00Z'),
+					versions: [
+						{ url: 'https://cdn.example.com/products/2026/catalogue-front-v1.jpg', size: 884000, updatedAt: Date.parse('2026-09-14T11:00:00Z') },
+						{ url: 'https://cdn.example.com/products/2026/catalogue-front-v2.jpg', size: 899000, updatedAt: Date.parse('2026-10-12T09:10:00Z') }
+					]
+				}),
+				file('b2', 'catalogue-back.jpg', 'products/2026/catalogue-back.jpg', 'https://cdn.example.com/products/2026/catalogue-back.jpg', {
+					thumb_url: catalogBack, contentType: 'image/jpeg', size: 887000, colorLabel: 'orange', tags: ['catalogue', 'print'],
+					updatedAt: Date.parse('2026-11-08T16:42:00Z')
+				}),
+				file('b3', 'price-list-2026.xlsx', 'products/2026/price-list-2026.xlsx', 'https://cdn.example.com/products/2026/price-list-2026.xlsx', {
+					contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 64200, tags: ['pricing'],
+					updatedAt: Date.parse('2026-11-05T12:30:00Z')
+				}),
+				file('c1', 'summer-hero-banner.webp', 'campaigns/summer/summer-hero-banner.webp', 'https://cdn.example.com/campaigns/summer/summer-hero-banner.webp', {
+					thumb_url: heroBanner, contentType: 'image/webp', size: 431000, starred: true, tags: ['summer', 'web'],
+					updatedAt: Date.parse('2026-11-01T08:05:00Z')
+				}),
+				file('c2', 'summer-social-copy.docx', 'campaigns/summer/summer-social-copy.docx', 'https://cdn.example.com/campaigns/summer/summer-social-copy.docx', {
+					contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: 38400, tags: ['summer', 'copy'],
+					updatedAt: Date.parse('2026-10-29T15:45:00Z')
+				}),
+				file('c3', 'winter-poster.png', 'campaigns/winter/winter-poster.png', 'https://cdn.example.com/campaigns/winter/winter-poster.png', {
+					thumb_url: winterPoster, contentType: 'image/png', size: 1520000, tags: ['winter', 'poster'],
+					updatedAt: Date.parse('2026-11-14T17:20:00Z')
+				}),
+				file('d1', 'service-agreement-2026.pdf', 'documents/contracts/service-agreement-2026.pdf', 'https://cdn.example.com/documents/contracts/service-agreement-2026.pdf', {
+					contentType: 'application/pdf', size: 318000, locked: true, tags: ['contract', 'legal'], colorLabel: 'red',
+					updatedAt: Date.parse('2026-10-22T10:10:00Z')
+				}),
+				file('d2', 'brand-guide-for-agencies.docx', 'documents/brand-guide-for-agencies.docx', 'https://cdn.example.com/documents/brand-guide-for-agencies.docx', {
+					contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: 128000, tags: ['agencies'],
+					updatedAt: Date.parse('2026-10-11T13:00:00Z')
+				}),
+				file('e1', 'intro-video.mp4', 'media/intro-video.mp4', 'https://cdn.example.com/media/intro-video.mp4', {
+					contentType: 'video/mp4', size: 18200000, tags: ['video'],
+					updatedAt: Date.parse('2026-09-30T09:00:00Z')
+				}),
+				file('e2', 'podcast-episode-1.mp3', 'media/podcast-episode-1.mp3', 'https://cdn.example.com/media/podcast-episode-1.mp3', {
+					contentType: 'audio/mpeg', size: 9400000, tags: ['podcast'],
+					updatedAt: Date.parse('2026-10-06T07:15:00Z')
+				}),
+				file('f1', 'contacts-export.csv', 'data/contacts-export.csv', 'https://cdn.example.com/data/contacts-export.csv', {
+					contentType: 'text/csv', size: 24800, tags: ['data'],
+					updatedAt: Date.parse('2026-11-16T08:00:00Z')
+				}),
+				file('g1', 'homepage-hero.jpg', 'homepage-hero.jpg', 'https://cdn.example.com/homepage-hero.jpg', {
+					thumb_url: rootHero, contentType: 'image/jpeg', size: 604000, colorLabel: 'purple', tags: ['homepage'],
+					updatedAt: Date.parse('2026-11-15T11:30:00Z')
+				}),
+				file('g2', 'readme.txt', 'readme.txt', 'https://cdn.example.com/readme.txt', {
+					contentType: 'text/plain', size: 1420,
+					updatedAt: Date.parse('2026-10-02T08:30:00Z')
+				})
+			]
+		};
+	};
+})();
+</script>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────────
+   Loader: live HTML when served, embedded copy for file://, and an
+   inline-JS mode (?inlinejs=1) that reproduces the CMS tokenisation.
+   ───────────────────────────────────────────────────────────────────── */
+(function () {
+	var status = document.getElementById('th-status');
+	var container = document.getElementById('app-container');
+	var inlineMode = /[?&]inlinejs=1/.test(window.location.search);
+	var EMBEDDED_HTML = "\u003c!-- html build 2026-11-17-1 -->\r\n\u003cdiv class=\"ad\" id=\"ad-root\" data-tool-build=\"2026-11-17-1\">\r\n\t\u003csvg class=\"ad-sprite\" aria-hidden=\"true\" focusable=\"false\" width=\"0\" height=\"0\">\r\n\t\t\u003csymbol id=\"ad-i-folder\" viewBox=\"0 0 24 24\">\u003cpath d=\"M3 6.5h6.5l2 2.5H21v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-folder-plus\" viewBox=\"0 0 24 24\">\u003cpath d=\"M3 6.5h6.5l2 2.5H21v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>\u003cpath d=\"M12 12v5M9.5 14.5h5\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-upload\" viewBox=\"0 0 24 24\">\u003cpath d=\"M12 16V4\"/>\u003cpath d=\"M7 9l5-5 5 5\"/>\u003cpath d=\"M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-search\" viewBox=\"0 0 24 24\">\u003ccircle cx=\"10.5\" cy=\"10.5\" r=\"6.5\"/>\u003cpath d=\"M15.5 15.5L21 21\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-x\" viewBox=\"0 0 24 24\">\u003cpath d=\"M6 6l12 12M18 6L6 18\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-chevron-down\" viewBox=\"0 0 24 24\">\u003cpath d=\"M6 9l6 6 6-6\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-chevron-right\" viewBox=\"0 0 24 24\">\u003cpath d=\"M9 6l6 6-6 6\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-grid\" viewBox=\"0 0 24 24\">\u003crect x=\"4\" y=\"4\" width=\"7\" height=\"7\" rx=\"1\"/>\u003crect x=\"13\" y=\"4\" width=\"7\" height=\"7\" rx=\"1\"/>\u003crect x=\"4\" y=\"13\" width=\"7\" height=\"7\" rx=\"1\"/>\u003crect x=\"13\" y=\"13\" width=\"7\" height=\"7\" rx=\"1\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-list\" viewBox=\"0 0 24 24\">\u003cpath d=\"M8 6h12M8 12h12M8 18h12\"/>\u003cpath d=\"M4 6h.01M4 12h.01M4 18h.01\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-check\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4.5 12.5l5 5 10-11\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-copy\" viewBox=\"0 0 24 24\">\u003crect x=\"9\" y=\"9\" width=\"10\" height=\"11\" rx=\"1.5\"/>\u003cpath d=\"M5 15V4h10\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-star\" viewBox=\"0 0 24 24\">\u003cpath d=\"M12 3.6l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-lock\" viewBox=\"0 0 24 24\">\u003crect x=\"6.5\" y=\"10.5\" width=\"11\" height=\"9.5\" rx=\"1.5\"/>\u003cpath d=\"M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-unlock\" viewBox=\"0 0 24 24\">\u003crect x=\"6.5\" y=\"10.5\" width=\"11\" height=\"9.5\" rx=\"1.5\"/>\u003cpath d=\"M8.5 10.5V7.5a3.5 3.5 0 0 1 6.6-1.6\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-download\" viewBox=\"0 0 24 24\">\u003cpath d=\"M12 4v12\"/>\u003cpath d=\"M7 11l5 5 5-5\"/>\u003cpath d=\"M4 19h16\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-trash\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4 7h16\"/>\u003cpath d=\"M9 7V5h6v2\"/>\u003cpath d=\"M6.5 7l1 13h9l1-13\"/>\u003cpath d=\"M10 11v6M14 11v6\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-move\" viewBox=\"0 0 24 24\">\u003cpath d=\"M3 6.5h6.5l2 2.5H21v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>\u003cpath d=\"M12 11.5v4M10 13.5l2-2 2 2\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-edit\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4 20h4L20 8l-4-4L4 16z\"/>\u003cpath d=\"M14 6l4 4\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-more\" viewBox=\"0 0 24 24\">\u003cpath d=\"M5 12h.01M12 12h.01M19 12h.01\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-image\" viewBox=\"0 0 24 24\">\u003crect x=\"4\" y=\"5\" width=\"16\" height=\"14\" rx=\"1.5\"/>\u003cpath d=\"M4 16l5-5 4 4 3-3 4 4\"/>\u003cpath d=\"M15.5 9.5h.01\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-doc\" viewBox=\"0 0 24 24\">\u003cpath d=\"M7 3h7l4 4v14H7z\"/>\u003cpath d=\"M14 3v5h5\"/>\u003cpath d=\"M9.5 12h5M9.5 15.5h5\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-sheet\" viewBox=\"0 0 24 24\">\u003cpath d=\"M7 3h7l4 4v14H7z\"/>\u003cpath d=\"M14 3v5h5\"/>\u003cpath d=\"M7 11h10M7 15h10M12 11v6\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-slides\" viewBox=\"0 0 24 24\">\u003crect x=\"4\" y=\"5\" width=\"16\" height=\"11\" rx=\"1.5\"/>\u003cpath d=\"M12 16v4M8 20h8\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-video\" viewBox=\"0 0 24 24\">\u003crect x=\"4\" y=\"6\" width=\"16\" height=\"12\" rx=\"1.5\"/>\u003cpath d=\"M10 9.5l5 2.5-5 2.5z\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-audio\" viewBox=\"0 0 24 24\">\u003cpath d=\"M9 18V6l10-2v12\"/>\u003ccircle cx=\"6.5\" cy=\"18\" r=\"2.5\"/>\u003ccircle cx=\"16.5\" cy=\"16\" r=\"2.5\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-file\" viewBox=\"0 0 24 24\">\u003cpath d=\"M7 3h7l4 4v14H7z\"/>\u003cpath d=\"M14 3v5h5\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-external\" viewBox=\"0 0 24 24\">\u003cpath d=\"M14 4h6v6\"/>\u003cpath d=\"M20 4l-9 9\"/>\u003cpath d=\"M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-link\" viewBox=\"0 0 24 24\">\u003cpath d=\"M10.5 13.5l3-3\"/>\u003cpath d=\"M8.5 16.5l-1 1a3.5 3.5 0 0 1-5-5l3-3a3.5 3.5 0 0 1 5 0\"/>\u003cpath d=\"M15.5 7.5l1-1a3.5 3.5 0 0 1 5 5l-3 3a3.5 3.5 0 0 1-5 0\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-tag\" viewBox=\"0 0 24 24\">\u003cpath d=\"M4 4h7l9 9-7 7-9-9z\"/>\u003cpath d=\"M8 8h.01\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-sort-asc\" viewBox=\"0 0 24 24\">\u003cpath d=\"M8 18V6M5 9l3-3 3 3\"/>\u003cpath d=\"M14 7h6M14 12h4M14 17h2\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-sort-desc\" viewBox=\"0 0 24 24\">\u003cpath d=\"M8 6v12M5 15l3 3 3-3\"/>\u003cpath d=\"M14 7h2M14 12h4M14 17h6\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-info\" viewBox=\"0 0 24 24\">\u003ccircle cx=\"12\" cy=\"12\" r=\"9\"/>\u003cpath d=\"M12 11v5M12 8h.01\"/>\u003c/symbol>\r\n\t\t\u003csymbol id=\"ad-i-alert\" viewBox=\"0 0 24 24\">\u003cpath d=\"M12 4l9 16H3z\"/>\u003cpath d=\"M12 10v4M12 17h.01\"/>\u003c/symbol>\r\n\t\u003c/svg>\r\n\r\n\t\u003cheader class=\"ad-header\">\r\n\t\t\u003cdiv class=\"ad-brand\">\r\n\t\t\t\u003cspan class=\"ad-brand-mark\" aria-hidden=\"true\">\u003csvg class=\"ad-ico\">\u003cuse href=\"#ad-i-folder\">\u003c/use>\u003c/svg>\u003c/span>\r\n\t\t\t\u003cdiv class=\"ad-brand-text\">\r\n\t\t\t\t\u003cdiv class=\"ad-title-row\">\r\n\t\t\t\t\t\u003cbutton type=\"button\" class=\"ad-title-button\" id=\"ad-title-button\" title=\"Click to rename this drive\">\r\n\t\t\t\t\t\t\u003cspan class=\"ad-title-text\" id=\"ad-title-text\">Asset Drive\u003c/span>\r\n\t\t\t\t\t\t\u003csvg class=\"ad-ico ad-title-pencil\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-edit\">\u003c/use>\u003c/svg>\r\n\t\t\t\t\t\u003c/button>\r\n\t\t\t\t\t\u003cinput type=\"text\" class=\"ad-title-input\" id=\"ad-title-input\" maxlength=\"80\" aria-label=\"Drive title\" hidden>\r\n\t\t\t\t\u003c/div>\r\n\t\t\t\t\u003cp class=\"ad-subtitle\" id=\"ad-subtitle\">0 files\u003c/p>\r\n\t\t\t\u003c/div>\r\n\t\t\u003c/div>\r\n\t\t\u003cdiv class=\"ad-header-actions\">\r\n\t\t\t\u003cbutton type=\"button\" class=\"ad-btn ad-btn-primary\" id=\"ad-save-button\" hidden>Save\u003c/button>\r\n\t\t\t\u003cspan class=\"ad-build\" id=\"ad-build-badge\">tool build\u003c/span>\r\n\t\t\u003c/div>\r\n\t\u003c/header>\r\n\r\n\t\u003cdiv class=\"ad-toolbar\" role=\"toolbar\" aria-label=\"Asset Drive actions\">\r\n\t\t\u003cbutton type=\"button\" class=\"ad-btn ad-btn-primary ad-tool-upload\" data-ad-act=\"upload\" id=\"ad-upload-button\">\r\n\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-upload\">\u003c/use>\u003c/svg>\u003cspan>Upload\u003c/span>\r\n\t\t\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-btn ad-tool-newfolder\" data-ad-act=\"new-folder\" id=\"ad-new-folder-button\">\r\n\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-folder-plus\">\u003c/use>\u003c/svg>\u003cspan>New folder\u003c/span>\r\n\t\t\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-btn ad-tree-toggle\" data-ad-act=\"toggle-tree\" id=\"ad-tree-toggle-button\" aria-expanded=\"false\" aria-controls=\"ad-tree-panel\">\r\n\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-folder\">\u003c/use>\u003c/svg>\u003cspan>Folders\u003c/span>\r\n\t\t\u003c/button>\r\n\r\n\t\t\u003cdiv class=\"ad-search-field\">\r\n\t\t\t\u003csvg class=\"ad-ico ad-search-icon\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-search\">\u003c/use>\u003c/svg>\r\n\t\t\t\u003cinput type=\"search\" class=\"ad-search-input\" id=\"ad-search-input\" placeholder=\"Search all files\" aria-label=\"Search all files\" autocomplete=\"off\" spellcheck=\"false\">\r\n\t\t\t\u003cbutton type=\"button\" class=\"ad-search-clear\" data-ad-act=\"clear-search\" id=\"ad-search-clear\" aria-label=\"Clear search\" hidden>\r\n\t\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-x\">\u003c/use>\u003c/svg>\r\n\t\t\t\u003c/button>\r\n\t\t\u003c/div>\r\n\r\n\t\t\u003clabel class=\"ad-select-field\">\r\n\t\t\t\u003cspan class=\"ad-select-label\">Type\u003c/span>\r\n\t\t\t\u003cselect class=\"ad-select\" id=\"ad-type-filter\" aria-label=\"Filter by file type\">\r\n\t\t\t\t\u003coption value=\"all\">All files\u003c/option>\r\n\t\t\t\t\u003coption value=\"image\">Images\u003c/option>\r\n\t\t\t\t\u003coption value=\"document\">Documents\u003c/option>\r\n\t\t\t\t\u003coption value=\"spreadsheet\">Spreadsheets\u003c/option>\r\n\t\t\t\t\u003coption value=\"presentation\">Presentations\u003c/option>\r\n\t\t\t\t\u003coption value=\"pdf\">PDFs\u003c/option>\r\n\t\t\t\t\u003coption value=\"video\">Video\u003c/option>\r\n\t\t\t\t\u003coption value=\"audio\">Audio\u003c/option>\r\n\t\t\t\u003c/select>\r\n\t\t\u003c/label>\r\n\r\n\t\t\u003clabel class=\"ad-select-field\">\r\n\t\t\t\u003cspan class=\"ad-select-label\">Sort\u003c/span>\r\n\t\t\t\u003cselect class=\"ad-select\" id=\"ad-sort-select\" aria-label=\"Sort files\">\r\n\t\t\t\t\u003coption value=\"name\">Name\u003c/option>\r\n\t\t\t\t\u003coption value=\"modified\">Modified\u003c/option>\r\n\t\t\t\t\u003coption value=\"size\">Size\u003c/option>\r\n\t\t\t\u003c/select>\r\n\t\t\u003c/label>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-icon-btn\" data-ad-act=\"toggle-sort-dir\" id=\"ad-sort-dir-button\" title=\"Sort ascending\" aria-label=\"Sort ascending\">\r\n\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-sort-asc\">\u003c/use>\u003c/svg>\r\n\t\t\u003c/button>\r\n\r\n\t\t\u003cdiv class=\"ad-view-switch\" role=\"group\" aria-label=\"View mode\">\r\n\t\t\t\u003cbutton type=\"button\" class=\"ad-view-btn is-active\" data-ad-act=\"set-grid\" id=\"ad-view-grid\" aria-pressed=\"true\" title=\"Grid view\">\r\n\t\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-grid\">\u003c/use>\u003c/svg>\r\n\t\t\t\u003c/button>\r\n\t\t\t\u003cbutton type=\"button\" class=\"ad-view-btn\" data-ad-act=\"set-list\" id=\"ad-view-list\" aria-pressed=\"false\" title=\"List view\">\r\n\t\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-list\">\u003c/use>\u003c/svg>\r\n\t\t\t\u003c/button>\r\n\t\t\u003c/div>\r\n\r\n\t\t\u003cbutton type=\"button\" class=\"ad-btn\" data-ad-act=\"toggle-select-mode\" id=\"ad-select-mode-button\" aria-pressed=\"false\">Select\u003c/button>\r\n\r\n\t\t\u003cdiv class=\"ad-menu-wrap\">\r\n\t\t\t\u003cbutton type=\"button\" class=\"ad-btn\" data-ad-act=\"toggle-copy-menu\" id=\"ad-copy-menu-button\" aria-haspopup=\"true\" aria-expanded=\"false\" title=\"Copy file URLs\">\r\n\t\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-copy\">\u003c/use>\u003c/svg>\u003cspan>Copy URLs\u003c/span>\r\n\t\t\t\t\u003csvg class=\"ad-ico ad-chevron\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-chevron-down\">\u003c/use>\u003c/svg>\r\n\t\t\t\u003c/button>\r\n\t\t\t\u003cdiv class=\"ad-menu\" id=\"ad-copy-menu\" role=\"menu\" hidden>\u003c/div>\r\n\t\t\u003c/div>\r\n\r\n\t\t\u003cdiv class=\"ad-menu-wrap\">\r\n\t\t\t\u003cbutton type=\"button\" class=\"ad-btn\" data-ad-act=\"toggle-download-menu\" id=\"ad-download-menu-button\" aria-haspopup=\"true\" aria-expanded=\"false\" title=\"Download files one by one\">\r\n\t\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-download\">\u003c/use>\u003c/svg>\u003cspan>Download\u003c/span>\r\n\t\t\t\t\u003csvg class=\"ad-ico ad-chevron\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-chevron-down\">\u003c/use>\u003c/svg>\r\n\t\t\t\u003c/button>\r\n\t\t\t\u003cdiv class=\"ad-menu\" id=\"ad-download-menu\" role=\"menu\" hidden>\u003c/div>\r\n\t\t\u003c/div>\r\n\t\u003c/div>\r\n\r\n\t\u003cnav class=\"ad-breadcrumb\" id=\"ad-breadcrumb\" aria-label=\"Folder path\">\u003c/nav>\r\n\r\n\t\u003cdiv class=\"ad-body\">\r\n\t\t\u003caside class=\"ad-tree-panel\" id=\"ad-tree-panel\" aria-label=\"Folders\">\r\n\t\t\t\u003cdiv class=\"ad-tree-head\">\r\n\t\t\t\t\u003cspan>Folders\u003c/span>\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"ad-icon-btn ad-tree-close\" data-ad-act=\"toggle-tree\" aria-label=\"Close folders\">\r\n\t\t\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-x\">\u003c/use>\u003c/svg>\r\n\t\t\t\t\u003c/button>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cdiv class=\"ad-tree\" id=\"ad-tree\">\u003c/div>\r\n\t\t\u003c/aside>\r\n\r\n\t\t\u003cmain class=\"ad-main\" id=\"ad-main\">\r\n\t\t\t\u003cdiv class=\"ad-banner\" id=\"ad-duplicate-banner\" hidden>\r\n\t\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-alert\">\u003c/use>\u003c/svg>\r\n\t\t\t\t\u003cp class=\"ad-banner-text\" id=\"ad-duplicate-text\">\u003c/p>\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"ad-banner-dismiss\" data-ad-act=\"dismiss-duplicate\">Dismiss\u003c/button>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cdiv class=\"ad-main-head\">\r\n\t\t\t\t\u003cdiv class=\"ad-main-heading\">\r\n\t\t\t\t\t\u003cp class=\"ad-main-title\" id=\"ad-main-title\">Root\u003c/p>\r\n\t\t\t\t\t\u003cp class=\"ad-main-sub\" id=\"ad-main-sub\">0 files\u003c/p>\r\n\t\t\t\t\u003c/div>\r\n\t\t\t\t\u003cp class=\"ad-main-hint\" id=\"ad-main-hint\">\u003c/p>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cdiv class=\"ad-files ad-files-grid\" id=\"ad-files\" role=\"list\" tabindex=\"0\" aria-label=\"Files\">\u003c/div>\r\n\t\t\u003c/main>\r\n\r\n\t\t\u003caside class=\"ad-detail-panel\" id=\"ad-detail-panel\" aria-label=\"File details\" hidden>\u003c/aside>\r\n\t\u003c/div>\r\n\r\n\t\u003cdiv class=\"ad-bulk-bar\" id=\"ad-bulk-bar\" hidden>\r\n\t\t\u003cspan class=\"ad-bulk-count\" id=\"ad-bulk-count\">0 selected\u003c/span>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-bulk-btn\" data-ad-act=\"select-all\">All\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-bulk-btn\" data-ad-act=\"select-none\">None\u003c/button>\r\n\t\t\u003cspan class=\"ad-bulk-sep\" aria-hidden=\"true\">\u003c/span>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-bulk-btn\" data-ad-act=\"bulk-star\">Star\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-bulk-btn\" data-ad-act=\"bulk-unstar\">Unstar\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-bulk-btn\" data-ad-act=\"bulk-copy\">\r\n\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-copy\">\u003c/use>\u003c/svg>\u003cspan>Copy URLs\u003c/span>\r\n\t\t\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-bulk-btn\" data-ad-act=\"bulk-download\">\r\n\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-download\">\u003c/use>\u003c/svg>\u003cspan>Download\u003c/span>\r\n\t\t\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-bulk-btn\" data-ad-act=\"bulk-move\">\r\n\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-move\">\u003c/use>\u003c/svg>\u003cspan>Move\u003c/span>\r\n\t\t\u003c/button>\r\n\t\t\u003cbutton type=\"button\" class=\"ad-bulk-btn ad-bulk-danger\" data-ad-act=\"bulk-delete\">\r\n\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-trash\">\u003c/use>\u003c/svg>\u003cspan>Delete\u003c/span>\r\n\t\t\u003c/button>\r\n\t\u003c/div>\r\n\r\n\t\u003cdiv class=\"ad-menu ad-context-menu\" id=\"ad-context-menu\" role=\"menu\" hidden>\u003c/div>\r\n\r\n\t\u003cdiv class=\"ad-modal-overlay\" id=\"ad-modal\" hidden>\r\n\t\t\u003cdiv class=\"ad-modal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"ad-modal-title\">\r\n\t\t\t\u003cdiv class=\"ad-modal-head\">\r\n\t\t\t\t\u003ch2 class=\"ad-modal-title\" id=\"ad-modal-title\">Title\u003c/h2>\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"ad-icon-btn\" data-ad-act=\"modal-close\" aria-label=\"Close dialog\">\r\n\t\t\t\t\t\u003csvg class=\"ad-ico\" aria-hidden=\"true\">\u003cuse href=\"#ad-i-x\">\u003c/use>\u003c/svg>\r\n\t\t\t\t\u003c/button>\r\n\t\t\t\u003c/div>\r\n\t\t\t\u003cdiv class=\"ad-modal-body\" id=\"ad-modal-body\">\u003c/div>\r\n\t\t\t\u003cdiv class=\"ad-modal-actions\">\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"ad-btn\" data-ad-act=\"modal-cancel\">Cancel\u003c/button>\r\n\t\t\t\t\u003cbutton type=\"button\" class=\"ad-btn ad-btn-primary\" data-ad-act=\"modal-confirm\" id=\"ad-modal-confirm\">Confirm\u003c/button>\r\n\t\t\t\u003c/div>\r\n\t\t\u003c/div>\r\n\t\u003c/div>\r\n\r\n\t\u003cp class=\"ad-param-warning\" id=\"ad-param-warning\" hidden>\u003c/p>\r\n\u003c/div>\r\n\u003cnoscript>\u003cp class=\"ad-noscript\">This asset manager needs JavaScript. Enable it to browse the drive.\u003c/p>\u003c/noscript>\r\n";
+
+	function loadExternalJS() {
+		var script = document.createElement('script');
+		script.src = 'AssetDrive.js';
+		script.onload = function () { status.textContent = 'ready (external js)'; };
+		script.onerror = function () { status.textContent = 'JS FAILED - check the console'; };
+		document.body.appendChild(script);
+	}
+
+	function loadInlineJS() {
+		window.fetch('AssetDrive.js')
+			.then(function (response) {
+				if (!response.ok) { throw new Error('HTTP ' + response.status); }
+				return response.text();
+			})
+			.then(function (code) {
+				var script = document.createElement('script');
+				script.textContent = code;
+				document.body.appendChild(script);
+				status.textContent = 'ready (inline js)';
+			})
+			.catch(function () {
+				status.textContent = 'inline fetch failed - external js';
+				loadExternalJS();
+			});
+	}
+
+	function inject(html) {
+		container.innerHTML = html;
+		if (inlineMode) { loadInlineJS(); } else { loadExternalJS(); }
+	}
+
+	var fallbackTimer = window.setTimeout(function () {
+		inject(EMBEDDED_HTML);
+	}, 1200);
+
+	window.fetch('AssetDrive.html')
+		.then(function (response) {
+			if (!response.ok) { throw new Error('HTTP ' + response.status); }
+			return response.text();
+		})
+		.then(function (html) {
+			window.clearTimeout(fallbackTimer);
+			inject(html);
+		})
+		.catch(function () { /* the fallback timer injects the embedded copy */ });
+})();
+</script>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────────
+   Harness controls.
+   ───────────────────────────────────────────────────────────────────── */
+(function () {
+	var query = new URLSearchParams(window.location.search);
+	var roleSelect = document.getElementById('th-role');
+	var readOnlyCheckbox = document.getElementById('th-ro');
+	var status = document.getElementById('th-status');
+
+	roleSelect.value = query.get('role') || localStorage.getItem('assetdrive_harness_value_role') || 'admin';
+	readOnlyCheckbox.checked = query.get('ro') === '1';
+	if (roleSelect.value === 'none') { roleSelect.value = 'none'; }
+
+	roleSelect.addEventListener('change', function () {
+		window.tool._tools.setRole(roleSelect.value);
+		window.thLog('role switched to ' + roleSelect.value);
+	});
+
+	readOnlyCheckbox.addEventListener('change', function () {
+		window.tool._tools.setReadOnly(readOnlyCheckbox.checked);
+		window.thLog('isReadOnly changed to ' + readOnlyCheckbox.checked);
+	});
+
+	document.getElementById('th-sample').addEventListener('click', function () {
+		var sample = window.tool._tools.createSample();
+		window.tool.setValue(sample);
+		window.thLog('sample drive loaded (' + sample.files.length + ' files)');
+	});
+
+	document.getElementById('th-empty').addEventListener('click', function () {
+		window.tool.setValue(null);
+		window.thLog('value cleared');
+	});
+
+	document.getElementById('th-reinit').addEventListener('click', function () {
+		window.tool._tools.runReadyAgain();
+		window.thLog('onReady ran again');
+	});
+
+	status.textContent = 'value ' + (window.tool.getValue() ? 'present' : 'empty') + ' - role ' + roleSelect.value;
+})();
+</script>
+</body>
+</html>

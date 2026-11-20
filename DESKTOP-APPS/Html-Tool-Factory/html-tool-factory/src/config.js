@@ -13,13 +13,17 @@ const fs = require('fs')
 const { readJsonFile } = require('./util')
 
 const APP_ROOT = path.resolve(__dirname, '..')
+// The repository this factory is installed in. Tool roots and catalogues are
+// resolved against it, never against the factory folder.
+const REPOSITORY_ROOT = path.resolve(APP_ROOT, '..', '..', '..')
 // The idea list SSOT: the JSON catalog, not the generated catalog-data.js.
-const DEFAULT_CATALOG_PATH = path.resolve(APP_ROOT, '..', '..', '..', 'UNICON-TOOLS', 'tools-catalog', 'tool-ideas-catalog.json')
+const DEFAULT_CATALOG_PATH = path.join(REPOSITORY_ROOT, 'UNICON-TOOLS', 'tools-catalog', 'tool-ideas-catalog.json')
+const DEFAULT_STORE_MAP_PATH = path.join(REPOSITORY_ROOT, 'UNICON-TOOLS', 'tools-catalog', 'store-map.json')
 
 // The build of the factory itself. It is served to the dashboard so a page left
 // open across a change can say so instead of quietly showing old markup. Keep it
 // equal to the document version in docs/ssot.html (a source check enforces it).
-const APP_BUILD = '0.12.2'
+const APP_BUILD = '0.13.12'
 
 const BUILT_IN_DEFAULTS = {
   host: '127.0.0.1',
@@ -57,6 +61,20 @@ const BUILT_IN_DEFAULTS = {
     taskRetries: 2,
     maxSourceFileChars: 90000,
     maxCodemapChars: 9000
+  },
+  // Studio (SSOT 8.12). One build worker, deliberately: serial first, parallel
+  // later when the queue has real history behind it (D-HTF-52). The clamp keeps
+  // a stray value from ever starting an unbounded number of runs.
+  studio: {
+    workers: 1,
+    maxWorkers: 8,
+    // How many characters of SSOT plus code one chat question may carry. The
+    // chat is useful when it reads the tool; it is expensive when it reads all
+    // of it on every message.
+    chatContextChars: 120000,
+    // The model the Studio chat asks for. Empty means "whatever the provider
+    // default is". deepseek-flash is the operator's Unicon AI gateway model.
+    chatModel: 'deepseek-flash'
   },
   // Repository knowledge injected into the two prompts that decide what to
   // build: the tool rules, the publish checklist and the lessons of past runs.
@@ -125,6 +143,44 @@ const BUILT_IN_DEFAULTS = {
     mockInRepo: false
   },
   taxonomyFile: '',
+  // Release platform (SSOT 8.5): where tools may live. An empty root means the
+  // repository itself; an external root is read only unless it is marked writable.
+  toolRoots: [
+    {
+      label: 'repo',
+      root: '',
+      taxonomyFile: 'UNICON-TOOLS/tools-catalog/folder-hierarchy-import.json',
+      writable: true
+    }
+  ],
+  // Every cmsObjectType, field id, folder id and slug rule lives here as data
+  // (SSOT 8.6). No id is hardcoded in src.
+  storeMapPath: 'UNICON-TOOLS/tools-catalog/store-map.json',
+  // The file that holds the store keys. Empty means ~/.unicon-secrets.json,
+  // which is outside this repository on purpose. The assistant and the dashboard
+  // never read it: only src/cms/secrets.js does, and only fingerprints leave it.
+  secretsPath: '',
+  cms: {
+    baseUrl: 'https://applicationstore.uniconhub.com',
+    // header (preferred) or url-token (legacy, being retired)
+    authMode: 'header',
+    apiKey: '',
+    writeKey: '',
+    keyHeader: 'x-api-key',
+    tenantHeader: '',
+    tenantValue: '',
+    readPath: '/api/v2/objects',
+    legacy: {
+      readFn: 'query',
+      readFnById: 'get',
+      writeFn: 'updateObject',
+      createFn: 'createObject'
+    },
+    timeoutMs: 20000,
+    retries: 2,
+    // 900 KB per payload, measured before the request (SSOT 8.7).
+    maxPayloadBytes: 921600
+  },
   docs: {
     // The repository documentation generator, relative to the repository root.
     generator: 'scripts/init-docs.js'
@@ -162,6 +218,9 @@ function applyEnvironment(configValue) {
   if (env.APP_FACTORY_HOST) config.host = env.APP_FACTORY_HOST
   if (env.APP_FACTORY_PROVIDER) config.provider = env.APP_FACTORY_PROVIDER
   if (env.APP_FACTORY_CATALOG) config.ideasCatalogPath = env.APP_FACTORY_CATALOG
+  if (env.APP_FACTORY_STUDIO_WORKERS) {
+    config.studio = Object.assign({}, config.studio, { workers: clampWorkers(env.APP_FACTORY_STUDIO_WORKERS) })
+  }
 
   // Unicon Gateway (same variable names as scripts/releaseContext.js so one
   // environment works for both tools).
@@ -217,11 +276,26 @@ function applyEnvironment(configValue) {
   return config
 }
 
+// One worker is the floor, never zero and never negative: a queue that silently
+// runs nothing because of a typo is exactly the silent no-op this design forbids.
+function clampWorkers(value) {
+  const number = Math.round(Number(value))
+  if (!Number.isFinite(number)) return 1
+  return Math.max(1, Math.min(8, number))
+}
+
 function normalizeConfig(configValue) {
   const config = mergeDeep({}, configValue)
   const allowedProviders = ['mock', 'unicon-gateway', 'openai-compatible', 'ollama']
   if (!allowedProviders.includes(config.provider)) config.provider = 'mock'
   config.port = Number(config.port) || 4173
+  config.studio = Object.assign({}, config.studio, {
+    workers: clampWorkers(config.studio && config.studio.workers),
+    maxWorkers: Math.max(1, Math.min(32, Number(config.studio && config.studio.maxWorkers) || 8)),
+    chatContextChars: Math.max(20000, Math.min(400000, Number(config.studio && config.studio.chatContextChars) || 120000)),
+    chatModel: String(config.studio && config.studio.chatModel != null ? config.studio.chatModel : 'deepseek-flash').slice(0, 80)
+  })
+  if (config.studio.workers > config.studio.maxWorkers) config.studio.workers = config.studio.maxWorkers
   config.ideasCatalogPath = path.resolve(APP_ROOT, String(config.ideasCatalogPath || DEFAULT_CATALOG_PATH))
   if (!fs.existsSync(config.ideasCatalogPath) && fs.existsSync(DEFAULT_CATALOG_PATH)) {
     config.ideasCatalogPath = DEFAULT_CATALOG_PATH
@@ -244,6 +318,40 @@ function normalizeConfig(configValue) {
   config.limits.requestTimeoutMs = Math.max(10000, Number(config.limits.requestTimeoutMs) || 180000)
   config.limits.maxRequestTimeoutMs = Math.max(config.limits.requestTimeoutMs,
     Number(config.limits.maxRequestTimeoutMs) || 600000)
+  // Release platform settings: a root list with unique labels, a store map path
+  // and a store client that never carries a secret into a payload.
+  const rootEntries = Array.isArray(config.toolRoots) && config.toolRoots.length
+    ? config.toolRoots
+    : BUILT_IN_DEFAULTS.toolRoots
+  const seenLabels = new Set()
+  config.toolRoots = rootEntries
+    .filter((entry) => entry && typeof entry === 'object')
+    .map((entry, index) => {
+      const baseLabel = String(entry.label || ('root' + (index + 1))).trim() || ('root' + (index + 1))
+      let label = baseLabel
+      let suffix = 2
+      while (seenLabels.has(label)) {
+        label = baseLabel + '-' + suffix
+        suffix += 1
+      }
+      seenLabels.add(label)
+      return {
+        label,
+        root: String(entry.root || ''),
+        taxonomyFile: String(entry.taxonomyFile || ''),
+        writable: entry.writable === true
+      }
+    })
+  config.storeMapPath = config.storeMapPath
+    ? path.resolve(REPOSITORY_ROOT, String(config.storeMapPath))
+    : DEFAULT_STORE_MAP_PATH
+  config.cms = Object.assign({}, BUILT_IN_DEFAULTS.cms, config.cms, {
+    baseUrl: String((config.cms && config.cms.baseUrl) || '').replace(/\/+$/, ''),
+    authMode: config.cms && config.cms.authMode === 'url-token' ? 'url-token' : 'header',
+    timeoutMs: Math.max(2000, Number(config.cms && config.cms.timeoutMs) || 20000),
+    retries: Math.max(0, Math.min(5, Number(config.cms && config.cms.retries) || 2)),
+    maxPayloadBytes: Math.max(65536, Number(config.cms && config.cms.maxPayloadBytes) || 921600)
+  })
   // Push is never allowed from this application, regardless of configuration.
   config.git.allowPush = false
   return config
@@ -336,6 +444,37 @@ function maskSecret(secretValue) {
   return value.slice(0, 4) + '••••' + value.slice(value.length - 4)
 }
 
+// The release settings a page may see. The credential is reduced to a boolean,
+// the source name and a masked fingerprint per purpose (RM-04, SSOT 8.8).
+function cmsPublicView(config) {
+  const { describeKeys } = require('./cms/secrets')
+  const cms = config.cms || {}
+  const keys = describeKeys(config, process.env)
+  return {
+    baseUrl: cms.baseUrl || '',
+    authMode: cms.authMode || 'header',
+    keyHeader: cms.keyHeader || 'x-api-key',
+    tenantHeader: cms.tenantHeader || '',
+    tenantValue: cms.tenantValue || '',
+    readPath: cms.readPath || '/api/v2/objects',
+    maxPayloadBytes: cms.maxPayloadBytes,
+    secretsPath: keys.secretsFile,
+    secretsFileExists: keys.secretsFileExists,
+    secretsFileProblem: keys.secretsFileProblem,
+    separateKeys: keys.separateKeys,
+    read: keys.read,
+    write: keys.write,
+    // Kept for older callers: one folded view of the read key.
+    credential: {
+      present: keys.read.present,
+      source: keys.read.source,
+      fingerprint: keys.read.fingerprint,
+      reason: keys.read.reason,
+      questionRef: keys.read.present ? '' : 'Q-01, Q-03'
+    }
+  }
+}
+
 function publicConfigView(config) {
   const localConfigPath = path.join(APP_ROOT, 'config.local.json')
   return {
@@ -360,11 +499,17 @@ function publicConfigView(config) {
     ollama: config.ollama,
     models: config.models,
     limits: config.limits,
+    studio: config.studio,
     agentic: config.agentic,
     stream: config.stream,
     apply: config.apply,
     review: config.review,
     knowledge: config.knowledge,
+    // The store settings that are safe to show. The key is never returned: only
+    // whether one exists, where it came from and a masked fingerprint.
+    toolRoots: config.toolRoots,
+    storeMapPath: config.storeMapPath,
+    cms: cmsPublicView(config),
     target: config.target,
     catalog: config.catalog,
     tool: config.tool,
@@ -388,8 +533,11 @@ function saveLocalConfig(patchValue) {
 module.exports = {
   APP_ROOT,
   APP_BUILD,
+  REPOSITORY_ROOT,
   DEFAULT_CATALOG_PATH,
+  DEFAULT_STORE_MAP_PATH,
   loadConfig,
+  clampWorkers,
   normalizeConfig,
   describeProvider,
   modelSummary,

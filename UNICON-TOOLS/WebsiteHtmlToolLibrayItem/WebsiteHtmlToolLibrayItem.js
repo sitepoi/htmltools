@@ -55,7 +55,8 @@
   var _user = null;
   var _noIdentity = false;
   var _readOnly = false;
-  var _saveTimer = null;
+  var _echoResetTimer = null;
+  var _sizeMeterTimer = null;
   var _saving = false;
   var _polled = false;
   var _activeTab = 'details';
@@ -247,16 +248,22 @@
      Persist (staged draft in this tool's own value)
   -------------------------------------------------------- */
   function persist() {
-    clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(function () {
-      _saving = true;
-      try {
-        tool.setValue(JSON.parse(JSON.stringify(DB)));
-        setSaveState('staged');
-        updateSizeMeter();
-      } catch (error) {}
-      setTimeout(function () { _saving = false; }, 400);
-    }, 350);
+    // Stage immediately, not on a debounce timer. A timer meant the
+    // latest edit could still be waiting when the user clicked the
+    // parent form Save button, so the CMS found no staged change and
+    // reported "no change to save". Synchronous tool.setValue makes
+    // the parent form dirty the moment the user edits anything.
+    clearTimeout(_echoResetTimer);
+    _saving = true;
+    try {
+      tool.setValue(JSON.parse(JSON.stringify(DB)));
+      setSaveState('staged');
+    } catch (error) {
+      logDiagnostics('persist-error', String(error && error.message ? error.message : error));
+    }
+    _echoResetTimer = setTimeout(function () { _saving = false; }, 400);
+    clearTimeout(_sizeMeterTimer);
+    _sizeMeterTimer = setTimeout(updateSizeMeter, 300);
   }
   function setSaveState(kind) {
     var element = $('wht-save-state');
@@ -818,6 +825,10 @@
     var lineNumbers = [];
     for (var lineNumber = 1; lineNumber <= lineCount; lineNumber++) lineNumbers.push(lineNumber);
     gutter.textContent = lineNumbers.join('\n');
+    // Writing textContent resets the gutter's scroll to the top. Re-apply
+    // the textarea's scroll so the numbers stay aligned after a paste
+    // scrolled the editor to the end of the content.
+    gutter.scrollTop = textarea.scrollTop;
   }
   function bindCodeEditor(codeKey) {
     var textarea = $('wht-code-' + codeKey);
@@ -1227,6 +1238,9 @@
     var lineNumbers = [];
     for (var lineNumber = 1; lineNumber <= lineCount; lineNumber++) lineNumbers.push(lineNumber);
     gutter.textContent = lineNumbers.join('\n');
+    // Keep the doc gutter aligned with the textarea after the numbers
+    // are rebuilt (textContent assignment resets its scroll to 0).
+    gutter.scrollTop = textarea.scrollTop;
   }
   function handleDocInput(event) {
     var target = event.target;
@@ -1567,6 +1581,16 @@
     lockUI();
     refreshUser();
     reportValidation();
+
+    // Last-chance flush when the form is closed or hidden: never leave
+    // the newest edit unstaged because of an edge-case timing gap.
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', function () { if (!_readOnly) persist(); });
+      window.addEventListener('beforeunload', function () { if (!_readOnly) persist(); });
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden' && !_readOnly) persist();
+      });
+    }
 
     tool.onValueChange(function (newValue) {
       if (_saving) return;

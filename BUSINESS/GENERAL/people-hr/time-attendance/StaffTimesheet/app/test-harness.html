@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TimeLedger - Staff Timesheet - Test Harness</title>
+<link rel="stylesheet" href="StaffTimesheet.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #eef2f7; }
+  body { padding-top: 38px; font-family: "Segoe UI", system-ui, sans-serif; }
+  #th-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+    padding: 6px 14px; background: #0b2530; color: #d9eef0;
+    font-size: 11px; box-shadow: 0 2px 8px rgba(8,24,32,.25);
+  }
+  #th-bar strong { color: #2dd4bf; letter-spacing: .5px; }
+  #th-bar .sep { color: #476b73; }
+  #th-bar .hint { color: #84a9b1; font-size: 10.5px; }
+  #th-bar button {
+    border: 0; border-radius: 5px; padding: 4px 10px; cursor: pointer;
+    font: 700 10.5px "Segoe UI", system-ui, sans-serif;
+  }
+  #th-bar .btn-load { background: #0d9488; color: #fff; }
+  #th-bar .btn-clear { background: #b91c1c; color: #fff; }
+  #th-bar .btn-reload { background: #16a34a; color: #fff; }
+  #th-bar .btn-dump { background: #334155; color: #fff; }
+  #th-bar select {
+    border: 1px solid #335b64; border-radius: 5px; background: #123a44;
+    color: #e6f6f7; font: 11px "Segoe UI", system-ui, sans-serif; padding: 3px 5px;
+  }
+  #th-status { margin-left: auto; color: #2dd4bf; font-weight: 700; }
+  #app-container { min-height: 100vh; }
+  #th-dump {
+    position: fixed; right: 14px; bottom: 14px; z-index: 9999;
+    width: min(560px, 92vw); max-height: 55vh; display: none;
+    background: #0b2530; color: #d9eef0; border-radius: 9px;
+    padding: 10px; box-shadow: 0 16px 40px rgba(8,24,32,.35);
+  }
+  #th-dump.is-open { display: block; }
+  #th-dump textarea {
+    width: 100%; height: 42vh; background: #081c24; color: #d9eef0;
+    border: 1px solid #335b64; border-radius: 6px; font: 11px Consolas, monospace;
+    padding: 8px; resize: vertical;
+  }
+  #th-dump .dump-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  #th-dump .dump-head b { flex: 1; color: #2dd4bf; font-size: 11px; }
+  #th-dump button { border: 0; border-radius: 5px; padding: 4px 10px; cursor: pointer; font: 700 10.5px "Segoe UI", system-ui, sans-serif; background: #334155; color: #fff; }
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>TIME LEDGER HARNESS</strong>
+  <span class="sep">|</span>
+  <button type="button" class="btn-load" id="th-load-sample">Load sample</button>
+  <button type="button" class="btn-clear" id="th-clear">Clear</button>
+  <button type="button" class="btn-reload" id="th-reload">Reload</button>
+  <button type="button" class="btn-dump" id="th-dump-btn">Dump value</button>
+  <span class="sep">|</span>
+  <span class="hint">User</span>
+  <select id="th-user">
+    <option value="u-admin">Alex Admin (admin)</option>
+    <option value="u-manager">Morgan Manager (manager)</option>
+    <option value="u-worker">Sam Worker (editor)</option>
+    <option value="u-viewer">Vic Viewer (viewer)</option>
+    <option value="u-none">Not signed in</option>
+  </select>
+  <span class="sep">|</span>
+  <label class="hint"><input type="checkbox" id="th-readonly"> Read-only</label>
+  <span class="hint">Ctrl+Shift+D = dump</span>
+  <span id="th-status">Ready</span>
+</div>
+
+<div id="th-dump">
+  <div class="dump-head"><b>Saved tool value</b><button type="button" id="th-dump-close">Close</button></div>
+  <textarea id="th-dump-text" readonly></textarea>
+</div>
+
+<div id="app-container"></div>
+<div id="th-boot-log" style="display:none"></div>
+
+<template id="tool-html-template">
+<!-- TOOL-HTML-START -->
+<!-- html build 2026-11-10-1 -->
+<div id="tms-app" class="tms-app">
+
+  <aside class="tms-sidebar" id="tms-sidebar">
+    <div class="tms-brand">
+      <div class="tms-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 7v5l3 2"></path>
+        </svg>
+      </div>
+      <div class="tms-brand-text">
+        <div class="tms-brand-name">TimeLedger</div>
+        <div class="tms-brand-sub">Staff timesheet</div>
+      </div>
+    </div>
+
+    <nav class="tms-nav" id="tms-nav" aria-label="Sections">
+      <button type="button" class="tms-nav-item is-active" data-tab="timesheet">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M4 9h16M8 13h3M8 16h6"></path></svg>
+        <span>Timesheet</span>
+        <span class="tms-nav-badge" id="tms-nav-entries">0</span>
+      </button>
+      <button type="button" class="tms-nav-item" data-tab="clock">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        <span>Clock in / out</span>
+      </button>
+      <button type="button" class="tms-nav-item" data-tab="reports">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19V5M5 19h14"></path><path d="M9 15v-4M13 15V8M17 15v-6"></path></svg>
+        <span>Reports</span>
+      </button>
+      <button type="button" class="tms-nav-item" data-tab="settings">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 2.1a7 7 0 0 0-1.7 1l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.1h4l.4-2.1a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5a7 7 0 0 0 .1-1z"></path></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="tms-side-status" id="tms-side-status"></div>
+    <div class="tms-side-foot" id="tms-user-chip"></div>
+  </aside>
+
+  <main class="tms-main">
+
+    <header class="tms-topbar">
+      <div class="tms-topbar-title">
+        <h1 id="tms-page-title">Timesheet</h1>
+        <div class="tms-topbar-meta" id="tms-period-label"></div>
+      </div>
+      <div class="tms-topbar-actions">
+        <span class="tms-build" id="tms-build" title="Tool build number"></span>
+        <button type="button" class="tms-btn tms-btn-primary" id="tms-btn-add-entry">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+          Add entry
+        </button>
+        <button type="button" class="tms-btn" id="tms-btn-submit">Submit</button>
+        <div class="tms-menu-wrap">
+          <button type="button" class="tms-btn tms-btn-ghost" id="tms-btn-more" aria-haspopup="true" aria-expanded="false">More</button>
+          <div class="tms-menu" id="tms-more-menu">
+            <button type="button" class="tms-menu-item" data-action="copy-day">Copy previous day</button>
+            <button type="button" class="tms-menu-item" data-action="print-timesheet">Print timesheet</button>
+            <button type="button" class="tms-menu-item" data-action="export-csv">Export CSV</button>
+            <button type="button" class="tms-menu-item" data-action="export-json">Export JSON backup</button>
+            <div class="tms-menu-sep"></div>
+            <button type="button" class="tms-menu-item" data-action="import">Import entries</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div id="tms-banner"></div>
+
+    <section class="tms-pane is-active" data-pane="timesheet">
+      <div class="tms-stats" id="tms-stats"></div>
+      <div class="tms-alerts" id="tms-alerts"></div>
+
+      <div class="tms-card">
+        <div class="tms-card-head">
+          <div class="tms-card-head-main">
+            <h2>Time entries</h2>
+            <p id="tms-entries-sub">Every entry inside this period.</p>
+          </div>
+          <div class="tms-card-actions">
+            <input type="search" class="tms-input tms-search" id="tms-search" placeholder="Search project, note or tag" aria-label="Search entries">
+            <select class="tms-select" id="tms-filter-category" aria-label="Filter by category">
+              <option value="all">All categories</option>
+            </select>
+            <select class="tms-select" id="tms-filter-billable" aria-label="Filter by billable state">
+              <option value="all">Billable + non-billable</option>
+              <option value="billable">Billable only</option>
+              <option value="nonbillable">Non-billable only</option>
+            </select>
+          </div>
+        </div>
+        <div id="tms-entries" class="tms-entries"></div>
+      </div>
+    </section>
+
+    <section class="tms-pane" data-pane="clock">
+      <div class="tms-clock-grid">
+        <div class="tms-clock-card">
+          <div class="tms-clock-kicker" id="tms-clock-kicker">Ready to start</div>
+          <div class="tms-clock-now" id="tms-clock-now">00:00:00</div>
+          <div class="tms-clock-date" id="tms-clock-date"></div>
+          <div class="tms-clock-status" id="tms-clock-status"></div>
+
+          <div class="tms-clock-fields">
+            <label class="tms-field">
+              <span>Project</span>
+              <select class="tms-select" id="tms-clock-project"></select>
+            </label>
+            <label class="tms-field">
+              <span>Activity</span>
+              <select class="tms-select" id="tms-clock-activity"></select>
+            </label>
+            <label class="tms-field">
+              <span>Unpaid break (minutes)</span>
+              <input type="number" class="tms-input" id="tms-clock-break" min="0" max="600" step="5">
+            </label>
+            <label class="tms-field">
+              <span>Note (optional)</span>
+              <input type="text" class="tms-input" id="tms-clock-notes" maxlength="240" placeholder="What are you working on?">
+            </label>
+          </div>
+
+          <button type="button" class="tms-clock-btn" id="tms-btn-clock">
+            <span class="tms-clock-btn-dot" aria-hidden="true"></span>
+            <span id="tms-clock-btn-label">Clock in</span>
+          </button>
+          <div class="tms-clock-hint" id="tms-clock-hint"></div>
+        </div>
+
+        <div class="tms-clock-side">
+          <div class="tms-card tms-today-card">
+            <div class="tms-card-head">
+              <div class="tms-card-head-main">
+                <h2>Today</h2>
+                <p id="tms-today-sub">No entries yet</p>
+              </div>
+            </div>
+            <div id="tms-today-entries" class="tms-today-entries"></div>
+          </div>
+          <div class="tms-card">
+            <div class="tms-card-head">
+              <div class="tms-card-head-main">
+                <h2>This week</h2>
+                <p id="tms-week-sub"></p>
+              </div>
+            </div>
+            <div id="tms-week-strip" class="tms-week-strip"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tms-pane" data-pane="reports">
+      <div class="tms-report-toolbar">
+        <div class="tms-report-tabs" id="tms-report-tabs" role="tablist">
+          <button type="button" class="tms-report-tab is-active" data-report="summary">Summary</button>
+          <button type="button" class="tms-report-tab" data-report="day">By day</button>
+          <button type="button" class="tms-report-tab" data-report="project">By project</button>
+          <button type="button" class="tms-report-tab" data-report="week">By week</button>
+          <button type="button" class="tms-report-tab" data-report="audit">Audit log</button>
+        </div>
+        <div class="tms-report-actions">
+          <button type="button" class="tms-btn tms-btn-ghost" id="tms-btn-print-report">Print / PDF</button>
+          <button type="button" class="tms-btn tms-btn-ghost" id="tms-btn-report-csv">CSV</button>
+        </div>
+      </div>
+      <div id="tms-report-body" class="tms-report-body"></div>
+    </section>
+
+    <section class="tms-pane" data-pane="settings">
+      <div id="tms-settings-body" class="tms-settings"></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="tms-modal-overlay" id="tms-modal-overlay" aria-hidden="true">
+  <div class="tms-modal" id="tms-modal" role="dialog" aria-modal="true" aria-labelledby="tms-modal-title">
+    <div class="tms-modal-head">
+      <h3 id="tms-modal-title">Entry</h3>
+      <button type="button" class="tms-modal-close" id="tms-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="tms-modal-body" id="tms-modal-body"></div>
+    <div class="tms-modal-foot" id="tms-modal-foot"></div>
+  </div>
+</div>
+
+<div class="tms-toasts" id="tms-toasts" aria-live="polite"></div>
+
+<!-- TOOL-HTML-END -->
+</template>
+
+<script>
+/* ── Mock tool SDK ── */
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "staff_timesheet_test_db_v1";
+  var USER_KEY = "staff_timesheet_test_user_v1";
+  var RO_KEY = "staff_timesheet_test_ro_v1";
+  var listeners = { value: [], readonly: [], user: [] };
+  var _value = null;
+  var _readOnly = false;
+  var _user = null;
+  var _statusEl = document.getElementById("th-status");
+
+  var USERS = {
+    "u-admin": { id: "u-admin", name: "Alex Admin", email: "alex@example.com", roles: ["admin", "editor"], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+    "u-manager": { id: "u-manager", name: "Morgan Manager", email: "morgan@example.com", roles: ["user-manager", "editor"], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+    "u-worker": { id: "u-worker", name: "Sam Worker", email: "sam@example.com", roles: ["editor"], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+    "u-viewer": { id: "u-viewer", name: "Vic Viewer", email: "vic@example.com", roles: ["viewer"], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } },
+    "u-none": null
+  };
+
+  function readJSON(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function writeJSON(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+  function setStatus(text) { if (_statusEl) _statusEl.textContent = text; }
+
+  _value = readJSON(STORAGE_KEY, null);
+  _user = readJSON(USER_KEY, USERS["u-admin"]);
+  _readOnly = localStorage.getItem(RO_KEY) === "1";
+
+  var params = new URLSearchParams(window.location.search);
+
+  function param(name, fallback) {
+    if (!params.has(name)) return fallback;
+    return params.get(name);
+  }
+
+  window.tool = {
+    onReady: function (cb) { if (cb) cb(_value, {}); },
+    getValue: function () { return _value; },
+    setValue: function (value) {
+      _value = value;
+      writeJSON(STORAGE_KEY, value);
+      listeners.value.forEach(function (cb) { try { cb(value); } catch (e) { console.error(e); } });
+      setStatus("Value saved locally");
+    },
+    onValueChange: function (cb) { listeners.value.push(cb); },
+    getFields: function () { return {}; },
+    setField: function () {},
+    setFields: function () {},
+    watchField: function () {},
+    onFieldsChange: function () {},
+    param: param,
+    isReadOnly: function () { return _readOnly; },
+    onReadonlyChange: function (cb) { listeners.readonly.push(cb); },
+    getUser: function () { return _user; },
+    onUserChange: function (cb) { listeners.user.push(cb); },
+    getPermittedUsers: function () { return Object.keys(USERS).filter(function (k) { return USERS[k]; }).map(function (k) { return USERS[k]; }); },
+    onPermittedUsersChange: function () {},
+    reportValid: function () {},
+    notify: function (message, severity) {
+      setStatus(String(message || ""));
+      console.log("[notify:" + (severity || "info") + "] " + message);
+    },
+    resize: function () {},
+    declareOutput: function () {},
+    declareParams: function () {},
+    reportMissingParams: function () {},
+    requestSave: function (cb) {
+      setStatus("requestSave accepted");
+      if (cb) setTimeout(function () { cb(null, true); }, 20);
+    },
+    requestExportPdf: function (options, cb) {
+      try {
+        var blob = new Blob([options.html || ""], { type: "text/html;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        setStatus("Print view created");
+        if (cb) cb(null, { name: (options.filename || "export") + ".html", url: url, size: (options.html || "").length, type: "text/html" });
+      } catch (e) {
+        if (cb) cb("Print mock failed", null);
+      }
+    },
+    openUrl: function (url) {
+      setStatus("Opening " + String(url).slice(0, 48));
+      try { window.open(url, "_blank"); } catch (e) {}
+    },
+    requestUpload: function (accept, cb) { if (cb) cb("Uploads are not used by this harness", null); },
+    requestFileContent: function (url, cb) { if (cb) cb("File content is not used by this harness", null); },
+    requestAI: function (prompt, context, cb) { if (cb) cb("AI is not used by this harness", null); },
+    requestAIStream: function (prompt, context, callbacks) { if (callbacks && callbacks.onError) callbacks.onError("AI is not used by this harness"); },
+    requestSendEmail: function (options, cb) { if (cb) cb("Email is not used by this harness", null); },
+    setReadOnly: function (value) {
+      _readOnly = !!value;
+      localStorage.setItem(RO_KEY, _readOnly ? "1" : "0");
+      listeners.readonly.forEach(function (cb) { try { cb(_readOnly); } catch (e) {} });
+      setStatus(_readOnly ? "Read-only ON" : "Read-only OFF");
+    },
+    setUser: function (id) {
+      _user = USERS[id] || null;
+      if (_user) writeJSON(USER_KEY, _user); else localStorage.removeItem(USER_KEY);
+      listeners.user.forEach(function (cb) { try { cb(_user); } catch (e) {} });
+      setStatus(_user ? _user.name : "Not signed in");
+    },
+    __storageKey: STORAGE_KEY
+  };
+
+  /* Keep the select in sync with the persisted user. */
+  function initialUserKey() {
+    if (!_user) return "u-none";
+    for (var key in USERS) if (USERS[key] && USERS[key].id === _user.id) return key;
+    return "u-admin";
+  }
+  var userSelect = document.getElementById("th-user");
+  if (userSelect) {
+    userSelect.value = initialUserKey();
+    userSelect.addEventListener("change", function () {
+      window.tool.setUser(userSelect.value);
+      window.location.reload();
+    });
+  }
+  var roCheck = document.getElementById("th-readonly");
+  if (roCheck) {
+    roCheck.checked = _readOnly;
+    roCheck.addEventListener("change", function () {
+      window.tool.setReadOnly(roCheck.checked);
+    });
+  }
+
+  /* ── Sample data ── */
+  function iso(date) {
+    return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+  }
+  function todayISO() { return iso(new Date()); }
+  function startOfMonth() {
+    var d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  }
+  function endOfMonth() {
+    var d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  }
+  function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+
+  function buildSample() {
+    var mode = param("mode", "work");
+    if (["work", "billing", "volunteer", "mixed"].indexOf(mode) === -1) mode = "work";
+    var projects = [];
+    if (mode === "billing" || mode === "mixed" || mode === "work") {
+      projects = [
+        { id: "p-atlas", name: "Atlas Rollout", client: "Northwind", code: "ATL", rate: 95, budgetHours: 80, active: true },
+        { id: "p-support", name: "Client Support", client: "Contoso", code: "SUP", rate: 75, budgetHours: 40, active: true },
+        { id: "p-internal", name: "Internal Operations", client: "", code: "INT", rate: 0, budgetHours: 0, active: true }
+      ];
+    }
+    var activities = [
+      { id: "a-general", name: "General", billableDefault: true, active: true },
+      { id: "a-meetings", name: "Meetings", billableDefault: true, active: true },
+      { id: "a-admin", name: "Administration", billableDefault: false, active: true },
+      { id: "a-training", name: "Training", billableDefault: false, active: true },
+      { id: "a-travel", name: "Travel", billableDefault: false, active: true },
+      { id: "a-client", name: "Client work", billableDefault: true, active: true },
+      { id: "a-other", name: "Other", billableDefault: false, active: true }
+    ];
+    var settings = {
+      mode: mode,
+      workerName: "Sam Worker",
+      employeeId: "EMP-1042",
+      department: "Operations",
+      organizationName: "Example Organization",
+      periodType: "monthly",
+      periodStart: iso(startOfMonth()),
+      periodEnd: iso(endOfMonth()),
+      weekStart: 1,
+      currency: "CAD",
+      hourlyRate: 42,
+      standardDayHours: 8,
+      overtimeEnabled: true,
+      weeklyOvertimeAfter: 40,
+      dailyOvertimeAfter: 0,
+      overtimeMultiplier: 1.5,
+      rounding: "nearest6",
+      breakDefaultMinutes: 30,
+      breakAutoDeduct: true,
+      requireProject: false,
+      requireNotes: false,
+      allowFutureEntries: false,
+      approverName: "Morgan Manager",
+      approverEmail: "morgan@example.com",
+      volunteerProgram: "Community Learning Program",
+      volunteerRole: "Program mentor",
+      volunteerSupervisor: "Jordan Supervisor",
+      volunteerGoalHours: 40,
+      projects: projects,
+      activities: activities
+    };
+    var entries = [];
+    var cursor = new Date(startOfMonth());
+    var dayIndex = 0;
+    while (cursor <= endOfMonth()) {
+      var dow = cursor.getDay();
+      var date = iso(cursor);
+      if (dow !== 0 && dow !== 6) {
+        if (mode === "volunteer") {
+          if (dayIndex % 3 === 0 || dayIndex % 5 === 0) {
+            entries.push(makeEntry(date, "09:00", "12:30", 0, "", "a-general", "volunteer", false, "Program session", "community, mentoring"));
+          }
+          if (dayIndex % 7 === 0) {
+            entries.push(makeEntry(date, "13:30", "15:00", 0, "", "a-training", "training", false, "Volunteer training", ""));
+          }
+        } else if (mode === "billing") {
+          entries.push(makeEntry(date, "09:00", "12:00", 0, "p-atlas", "a-client", "work", true, "Discovery workshop", "atlas"));
+          entries.push(makeEntry(date, "13:00", "16:30", 30, "p-support", "a-meetings", "work", false, "Internal standup and planning", "internal"));
+          if (dayIndex % 6 === 0) entries.push(makeEntry(date, "16:30", "18:00", 0, "p-atlas", "a-general", "work", true, "Follow-up call", "atlas"));
+        } else if (mode === "mixed") {
+          entries.push(makeEntry(date, "08:30", "12:00", 0, "p-atlas", "a-client", "work", true, "Client delivery", "atlas"));
+          entries.push(makeEntry(date, "13:00", "16:00", 30, "p-internal", "a-admin", "admin", false, "Team admin", ""));
+          if (dayIndex % 4 === 0) entries.push(makeEntry(date, "17:00", "19:00", 0, "", "a-general", "volunteer", false, "Community session", "volunteer"));
+        } else {
+          entries.push(makeEntry(date, "09:00", "12:00", 0, "p-atlas", "a-client", "work", true, "Project work", "atlas"));
+          entries.push(makeEntry(date, "13:00", "17:30", 30, "p-atlas", "a-general", "work", true, "Delivery and review", "atlas"));
+          if (dayIndex % 7 === 3) entries.push(makeEntry(date, "17:30", "19:00", 0, "p-internal", "a-admin", "admin", false, "Admin catch-up", "internal"));
+        }
+      }
+      if (mode === "work" && dow === 6 && dayIndex % 14 === 5) {
+        entries.push(makeEntry(date, "09:00", "13:00", 0, "p-support", "a-client", "work", true, "Weekend support", "weekend"));
+      }
+      cursor = addDays(cursor, 1);
+      dayIndex += 1;
+    }
+    if (param("open", "0") === "1") {
+      entries.push(makeEntry(todayISO(), "08:45", "", 30, "p-atlas", "a-client", "work", true, "Open shift for QA", "open"));
+    }
+    var status = param("status", "draft");
+    if (["draft", "submitted", "approved", "rejected"].indexOf(status) === -1) status = "draft";
+    var timesheet = {
+      status: status,
+      submittedAt: status === "submitted" || status === "approved" ? new Date().toISOString() : "",
+      submittedBy: status === "submitted" || status === "approved" ? "Sam Worker" : "",
+      approvedAt: status === "approved" ? new Date().toISOString() : "",
+      approvedBy: status === "approved" ? "Morgan Manager" : "",
+      rejectedAt: status === "rejected" ? new Date().toISOString() : "",
+      rejectedBy: status === "rejected" ? "Morgan Manager" : "",
+      rejectionReason: status === "rejected" ? "Please check Tuesday and add the missing project." : ""
+    };
+    var audit = [
+      { at: new Date(Date.now() - 86400000).toISOString(), by: "Sam Worker", action: "Entry added", detail: "Sample data loaded" },
+      { at: new Date(Date.now() - 3600000).toISOString(), by: "Sam Worker", action: "Timesheet saved", detail: "Timesheet saved with " + entries.length + " entries" }
+    ];
+    if (status === "submitted" || status === "approved") audit.push({ at: new Date().toISOString(), by: "Sam Worker", action: "Timesheet submitted", detail: "Submitted for approval" });
+    if (status === "approved") audit.push({ at: new Date().toISOString(), by: "Morgan Manager", action: "Timesheet approved", detail: "Approved" });
+    return {
+      version: 2,
+      settings: settings,
+      entries: entries,
+      timesheet: timesheet,
+      audit: audit,
+      ui: { tab: param("tab", "timesheet"), reportTab: param("report", "summary"), clockProjectId: "p-atlas", clockActivityId: "a-client", clockBreakMinutes: 30 },
+      meta: { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    };
+  }
+
+  function makeEntry(date, start, end, breakMinutes, projectId, activityId, category, billable, notes, tags) {
+    return {
+      id: "e-" + date + "-" + start.replace(":", "") + "-" + Math.random().toString(36).slice(2, 6),
+      date: date,
+      start: start,
+      end: end,
+      breakMinutes: breakMinutes,
+      breakPaid: false,
+      projectId: projectId,
+      activityId: activityId,
+      category: category,
+      billable: billable,
+      rate: null,
+      notes: notes || "",
+      tags: tags ? tags.split(",").map(function (t) { return t.trim(); }).filter(Boolean) : [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: "Sam Worker",
+      updatedBy: "Sam Worker"
+    };
+  }
+
+  function loadSample() {
+    var sample = buildSample();
+    _value = sample;
+    writeJSON(STORAGE_KEY, sample);
+    setStatus("Sample loaded (" + sample.settings.mode + ", " + sample.entries.length + " entries)");
+    // Initial ?sample=1 load happens before the mount script exists; a manual
+    // button click should do a clean full reload instead.
+    if (window.__tmsMount) window.location.reload();
+  }
+
+  function reloadTool() {
+    var container = document.getElementById("app-container");
+    if (container) container.innerHTML = "";
+    if (window.__tmsMount) window.__tmsMount();
+  }
+
+  window.__tmsReload = reloadTool;
+  window.__tmsLoadSample = loadSample;
+
+  /* Tools for the bar. */
+  var loadBtn = document.getElementById("th-load-sample");
+  if (loadBtn) loadBtn.addEventListener("click", loadSample);
+  var clearBtn = document.getElementById("th-clear");
+  if (clearBtn) clearBtn.addEventListener("click", function () {
+    localStorage.removeItem(STORAGE_KEY);
+    _value = null;
+    setStatus("Storage cleared");
+    window.location.reload();
+  });
+  var reloadBtn = document.getElementById("th-reload");
+  if (reloadBtn) reloadBtn.addEventListener("click", function () { window.location.reload(); });
+
+  var dumpBtn = document.getElementById("th-dump-btn");
+  var dumpPanel = document.getElementById("th-dump");
+  var dumpText = document.getElementById("th-dump-text");
+  function showDump() {
+    if (!dumpPanel || !dumpText) return;
+    dumpText.value = JSON.stringify(_value, null, 2);
+    dumpPanel.classList.add("is-open");
+  }
+  if (dumpBtn) dumpBtn.addEventListener("click", showDump);
+  var dumpClose = document.getElementById("th-dump-close");
+  if (dumpClose) dumpClose.addEventListener("click", function () { dumpPanel.classList.remove("is-open"); });
+  document.addEventListener("keydown", function (event) {
+    if (event.ctrlKey && event.shiftKey && (event.key === "D" || event.key === "d")) {
+      event.preventDefault();
+      showDump();
+    }
+  });
+
+  /* QA deep links. */
+  if (params.get("fresh") === "1") {
+    localStorage.removeItem(STORAGE_KEY);
+    _value = null;
+    setStatus("Fresh storage");
+  }
+  if (params.get("sample") === "1" && !_value) loadSample();
+  if (params.get("ro") === "1") { _readOnly = true; localStorage.setItem(RO_KEY, "1"); if (roCheck) roCheck.checked = true; }
+  if (params.get("user") && USERS[params.get("user")] !== undefined) {
+    window.tool.setUser(params.get("user"));
+    if (userSelect) userSelect.value = params.get("user");
+  }
+
+  window.__tmsParams = params;
+})();
+</script>
+
+<script>
+/* Runtime probe: keep boot logs and errors visible in the dumped DOM. */
+(function () {
+  function report(kind, text) {
+    var log = document.getElementById("th-boot-log");
+    if (log) log.textContent += kind + ": " + text + "\n";
+    if (kind === "ERROR" || kind === "REJECTION") {
+      var status = document.getElementById("th-status");
+      if (status) status.textContent = kind + ": " + text;
+      document.title = "HARNESS " + kind;
+    }
+  }
+  window.addEventListener("error", function (event) {
+    report("ERROR", event.message + " @ " + (event.filename || "") + ":" + (event.lineno || ""));
+  });
+  window.addEventListener("unhandledrejection", function (event) {
+    report("REJECTION", event.reason && event.reason.message ? event.reason.message : String(event.reason));
+  });
+  var originalLog = console.log;
+  console.log = function () {
+    var args = Array.prototype.slice.call(arguments);
+    report("LOG", args.join(" "));
+    originalLog.apply(console, args);
+  };
+})();
+</script>
+
+<script>
+/* Mount the tool HTML from the template, then load the tool script. */
+(function () {
+  var template = document.getElementById("tool-html-template");
+  var container = document.getElementById("app-container");
+  if (!template || !container) return;
+
+  function mount() {
+    container.innerHTML = "";
+    container.appendChild(template.content.cloneNode(true));
+    if (!document.getElementById("tms-tool-script")) {
+      var script = document.createElement("script");
+      script.id = "tms-tool-script";
+      script.src = "StaffTimesheet.js";
+      script.onerror = function () {
+        container.innerHTML = '<div style="padding:24px;font-family:system-ui">Could not load StaffTimesheet.js. Serve this folder over HTTP or keep the file next to the harness.</div>';
+      };
+      document.body.appendChild(script);
+    } else {
+      // Re-run the tool by replacing the script with a fresh node.
+      var oldScript = document.getElementById("tms-tool-script");
+      var newScript = document.createElement("script");
+      newScript.id = "tms-tool-script";
+      newScript.src = "StaffTimesheet.js?t=" + Date.now();
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    }
+  }
+
+  window.__tmsMount = mount;
+  mount();
+})();
+</script>
+
+</body>
+</html>

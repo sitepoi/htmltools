@@ -401,8 +401,175 @@ Environment variables: `APP_FACTORY_PROVIDER`, `APP_FACTORY_PORT`,
 `APP_FACTORY_MAX_ITERATIONS`, `APP_FACTORY_CATALOG_WRITEBACK=no`,
 `APP_FACTORY_NO_BROWSER=yes`.
 
-## Token and cost control
+## Studio — browsing and managing the repository
 
+`npm start` serves two pages on `127.0.0.1:4173`:
+
+| Page | Address | What it is |
+| --- | --- | --- |
+| Factory | `/` | one build run: plan, patch, validate, diff, review, restart |
+| Studio | `/studio/` | the workspace: projects, chat and results |
+
+Studio is three columns, one job each:
+
+| Column | Holds |
+| --- | --- |
+| left | **Projects** (the registry as cards: status, package and publish meters) and **Files** (the folder tree), switchable, plus a close icon for the whole panel |
+| middle | **Chat** for the selected project |
+| right | **File** (preview first, code one click away, Code / Test / Docs sub-tabs), **Tasks** (the tool's SSOT task list) and **Search** |
+
+Selecting a project in the list, or any file inside a tool folder in the tree,
+makes that tool the selected project everywhere: the chat target, the task list
+and the registry highlight. The folder tree keeps working exactly like a VS Code
+explorer, and the tool panel keeps the numbers the tree cannot show.
+
+**The chat reads, it never writes.** `POST /api/studio/chat` builds the context
+server side - the tool SSOT (trimmed so its task list survives), the three code
+files, the file you have open and a focus task - inside `studio.chatContextChars`
+(120k default), sends it to the configured provider and returns the answer. A
+path sent from the browser is never trusted as a location. A task in the Tasks
+tab has a `chat` button that puts it into the conversation as the focus task.
+
+Studio reads the real disk because the server runs as you; a page inside the
+CMS cannot, and never will. The read side lives in one module,
+`src/workspace.js`, and it is bounded: a path is resolved inside the repository
+or refused before any IO, a listing stops at 500 entries, a read stops at 1 MB
+and refuses binaries, a search stops at 200 hits over 3000 files.
+
+```
+GET  /api/workspace/tree?path=BUSINESS      one directory level
+GET  /api/workspace/file?path=package.json  one text file, capped
+GET  /api/workspace/search?q=toolRegistry   literal, case insensitive
+GET  /api/workspace/tools                   every project + package/publish state
+GET  /api/workspace/tasks?path=<tool>       that tool's SSOT task list
+GET  /repo/<path>                           a file for the preview iframe
+POST /api/studio/chat                       ask about one project (read only)
+```
+
+**Preview first.** Every `.html` (documents, `ssot.html`, `test-harness.html`,
+`index.html`) opens in a preview by default and renders with its own CSS, JS and
+images, because `/repo/<path>` serves the real file. Code is one click away, and
+images, pdf, markdown and text preview the same way. The preview route is jailed
+like every other one and additionally refuses `config.local.json`, `.env*`,
+`.git`, `node_modules`, `runs`, `selftest-output` and `.vscode` — the text reader
+refuses the same names.
+
+**Tasks is the tool's own backlog.** Selecting `tasks` on a tool reads section 15
+of that tool's `docs/ssot.html` and shows state, id, title, group, points and
+priority with filters and counts. Studio never invents tasks and never edits the
+SSOT; it reads it.
+
+**Serial by decision.** Studio builds one tool at a time. `studio.workers`
+defaults to `1`, is clamped to 1..8 and can never be `0` (D-HTF-52); override it
+with `APP_FACTORY_STUDIO_WORKERS` or `config.local.json` when parallel work is
+deliberately enabled later. The option comparison is in
+[`docs/STUDIO-DESIGN.md`](docs/STUDIO-DESIGN.md) §6.
+
+The **tool registry** joins the two facts the factory already knows: the folder
+scan (`toolRoots`) and the publish ledger (`tool-catalog-bundle.json`). Each row
+carries the folder trail, the build stamp, a package meter (which of the 8
+subjects exist), a publish meter (which the ledger says are in the store) and one
+derived label: `draft`, `in-progress`, `documented` (7 of 8), `ready` (8 of 8
+local) or `published`.
+
+Studio is **read only**. AI chat with diff proposals, a test runner, the parallel
+build queue and the publish surface are phases P2 to P5 in
+[`docs/STUDIO-DESIGN.md`](docs/STUDIO-DESIGN.md) and SSOT §8.12.
+
+## Release platform (in progress)
+
+The factory is becoming a build **and** release platform: build a tool, publish it
+to the application store, publish its documents, verify by reading back. The
+binding design is in `docs/ssot.html` sections 6.2, 8.5 to 8.11 and 14.
+
+**Phase 1 is shipped and it only reads.** No store write exists yet, because the
+store answers in section 14.3 are still open.
+
+### Tool roots
+
+```json
+"toolRoots": [
+  { "label": "repo", "root": "", "taxonomyFile": "UNICON-TOOLS/tools-catalog/folder-hierarchy-import.json", "writable": true },
+  { "label": "external", "root": "D:/PROJECTS/EXTERNAL-TOOLS", "writable": false }
+]
+```
+
+An empty `root` means this repository. An external root is **read only** unless
+`writable: true`. `src/toolRoots.js` walks each root (bounded depth, skip list,
+nothing written) and recognises a tool as an `app` folder holding one html, one
+css and one js that share a base name — which is why listing/reporting tools and
+folders whose files are not named after the folder still resolve. Each entry
+carries the stable `slug` (the folder name), parts, code files, harness, the
+document set (`webpage`, `help`, `presentation`, `updates`, `social`, `ssot`,
+`index`), screenshot count, `toolBuild`, per file stamps, `modifiedAt` and
+`writable`.
+
+### The store map (ids are data)
+
+`UNICON-TOOLS/tools-catalog/store-map.json` holds one row per publish target:
+`cmsObjectType`, `fieldPath`, `folderId` or `folderCode`, slug rule, enabled
+field, `questionRef` and `confirmed`. A target is usable **only when it is filled
+and confirmed**; otherwise `src/cms/storeMap.js` returns the row id, the missing
+values and the question to answer, and nothing is written. No id appears in `src`.
+
+Every id in the map was read out of the working **HTML Tool Item Editor**
+(`UNICON-TOOLS/HtmlToolLibraryItem`), which already manages these records in the store:
+
+| Target | Store type | Where the content goes | Folder |
+| --- | --- | --- | --- |
+| webpage, help, updates, presentation | `website-builder-uniconbaseapps` | `webpageContentWithBuilder.code {html, css, js}` plus `seo` and `pageMeta` | `www.uniconhub.com`, help uses `help.uniconhub.com` |
+| social | `tool-social-content-uniconbaseapps` | `name`, `slug`, `contentHtml` | the app default |
+| versions | `tool-code-versions-uniconbaseapps` | one row per published version | the app default |
+
+The tool record, the library record and the application stay **blocked** with a named
+question, because their type, container and folder are still unconfirmed. A blocked target
+is never a silent no-op: it reports the missing value and the question id.
+
+### The store client
+
+`src/cms/storeClient.js`, read only for now:
+
+| Concern | Behaviour |
+| --- | --- |
+| Credential | a **read** key and a **write** key, resolved separately: environment, then the secrets file, then `cms.apiKey` / `cms.writeKey` in the gitignored `config.local.json`. Otherwise `MISSING_CREDENTIAL` names the setting and the file, before any request |
+| Auth forms | header (`cms.keyHeader`, default `x-api-key`) or legacy `/api/object/{token}/{fn}/{type}` |
+| Redaction | every string leaving the module is scrubbed; the dashboard sees only present / source / masked fingerprint |
+| List shapes | `array`, `{items}`, `{objects}`, `{data}`, `{results}` |
+| Detail shapes | `{object}`, `{data}` or the record itself |
+| Retries | 429 and 5xx only, bounded, honouring `retry-after`; a 4xx body is surfaced verbatim |
+| Field map | the real keys inside `productData.data_categoriesBased`, so a wrong type is visible before a write |
+
+### Keys and secrets
+
+Two keys, kept apart on purpose: a read key can list and fetch, a write key can also
+create and update. Supply them in **either** place — the environment wins, the file is
+the fallback.
+
+| Key | Environment variable | Secrets file field | Local config field |
+| --- | --- | --- | --- |
+| read | `APP_FACTORY_STORE_READ_KEY`, `APP_FACTORY_STORE_KEY`, `UNICON_STORE_API_KEY`, `UNICONBASEAPPS_API_KEY` | `storeReadKey` | `cms.apiKey` |
+| write | `APP_FACTORY_STORE_WRITE_KEY`, `APP_FACTORY_STORE_KEY`, `UNICON_STORE_WRITE_KEY`, `UNICONBASEAPPS_API_KEY` | `storeWriteKey` | `cms.writeKey` |
+
+The secrets file lives **outside the repository** so it can never be committed, read by
+the AI, or shown in a chat: `%USERPROFILE%/.unicon-secrets.json` by default, or wherever
+`APP_FACTORY_SECRETS_FILE` / `cms.secretsPath` points.
+
+```json
+{
+  "storeReadKey": "the read key",
+  "storeWriteKey": "the write key"
+}
+```
+
+Settings shows the file path, whether it exists, and for each key only *present*, *source*
+(`env`, `secrets-file` or `config-local`) and a masked fingerprint. No endpoint returns a
+key, and a source check fails the build if a key-shaped literal ever appears in `src/` or `ui/`.
+
+```
+APP_FACTORY_STORE_READ_KEY=... npm start   # read the store from the factory or a script
+```
+
+## Token and cost control
 Designed so a run costs a few thousand tokens per iteration, not hundreds of thousands:
 
 - structured state instead of chat history (each call gets a compact digest)

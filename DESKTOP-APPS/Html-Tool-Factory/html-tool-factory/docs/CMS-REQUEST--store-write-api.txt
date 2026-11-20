@@ -1,0 +1,225 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CMS REQUEST — APPLICATION STORE WRITE API FOR THE RELEASE ENGINE
+One page to hand to the CMS team. Every answer below unblocks a
+numbered factory question (Q-04 to Q-18 in the factory SSOT 14.3).
+Please answer by editing this file under each "ANSWER:" line.
+
+UPDATED 2026-11-18. The CMS API v2 integration document
+(PROJECTS/UNICONHUB/CODE/sitepoicms/_docs/rules/desktop-first-party-api-v2-integration.html)
+answers the transport: base URL, both credentials, the seven endpoints,
+create and PATCH bodies, compare-and-swap, rate limits and the error table.
+The extract the factory relies on is docs/STORE-API-V2.md in this folder.
+Sections marked ANSWERED below are kept for traceability only - do not
+answer them again. What is still open is listed at the end of this file.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+0. WHAT WE ALREADY KNOW (verified, no answer needed)
+
+Reads work today against the Public API v2 with an API key header:
+
+    GET  {base}/api/v2/objects/{cmsObjectType}          list
+    GET  {base}/api/v2/objects/{cmsObjectType}/{id}     one object
+    header: x-api-key: <key>
+    host:   applicationstore.uniconhub.com
+
+Field values live in productData.data_categoriesBased.
+
+The HTML Tool Item Editor (UNICON-TOOLS/HtmlToolLibraryItem) already writes
+tool records and documents, but only from inside the CMS, through the relay:
+
+    tool.requestObjects('query' | 'get' | 'create' | 'update' | 'delete', {...})
+
+It creates a document with:
+    { mainObjectType, name, productData: { data_categoriesBased: payload }, typeId }
+and updates one with:
+    { mainObjectType, objectId, productData: { data_categoriesBased: payload } }
+
+Document targets it uses:
+    webpage / help / updates / presentation -> website-builder-uniconbaseapps
+        field webpageContentWithBuilder: { code: { html, css, js }, seo, pageMeta, version }
+        folder typeId: www.uniconhub.com   (help uses help.uniconhub.com)
+    social  -> tool-social-content-uniconbaseapps
+        fields name, slug, contentHtml   (no folder; application default)
+    versions -> tool-code-versions-uniconbaseapps
+
+Our engine runs in Node on the operator's machine (no CMS session), so it
+needs the equivalent of requestObjects over HTTP.
+
+──────────────────────────────────────────────────────────
+Q-04 (factory). THE WRITE ENDPOINTS  --  ANSWERED 2026-11-18
+Answered by the v2 integration document, not by this sheet. Summary:
+
+    POST  /api/v2/objects/{cmsObjectType}                  create  -> 201
+    GET   /api/v2/objects/{cmsObjectType}/{objectId}       read
+    PATCH /api/v2/objects/{cmsObjectType}/{objectId}       merge update
+    PUT   /api/v2/objects/{cmsObjectType}/{objectId}       replace content
+    POST  /api/v2/objects/{cmsObjectType}/query            query
+    POST  /api/v2/objects/{cmsObjectType}/bulk             500 ops, no deletes
+    GET   /health
+
+Same host for reads and writes, base https://<tenant-host>/api/v2.
+PATCH and PUT are compare-and-swap on version through If-Match; a missing
+base is 409 CAS_CONFLICT and never writes. Deletes are not available.
+Full detail: docs/STORE-API-V2.md sections 3, 5 and 6.
+
+──────────────────────────────────────────────────────────
+Q-05 (factory). REQUEST BODY AND UPDATE SEMANTICS
+6. Is the object id of an update in the URL, in the body, or both?
+7. Does an update REPLACE the whole object (fields not sent are cleared)
+   or PATCH only the keys that are sent? We need PATCH: our tool record has
+   ~13 sibling fields and 20+ other keys we must never touch.
+8. If the write needs a read-modify-write, confirm that sending back
+   productData.data_categoriesBased with only our own key changed is safe.
+9. For a nested key such as html_tool_definition or webpageContentWithBuilder,
+   is the whole nested object replaced when sent, and are sibling nested
+   objects under data_categoriesBased preserved?
+
+ANSWER:
+6.
+7.
+8.
+9.
+
+──────────────────────────────────────────────────────────
+Q-07, Q-08 (factory). THE TOOL RECORD ITSELF
+10. Confirm the cmsObjectType of the record the HTML Tool Item Editor runs
+    inside (we assume tools-applicationstore). Please paste a real object id.
+11. Are the editor's sibling fields (toolName, toolStatus, toolHtmlCode,
+    toolCssCode, toolJsCode, toolParams, toolOutputSchema, ...) stored at
+    productData.data_categoriesBased.<fieldId>, or nested inside a container
+    such as html_tool_definition.<fieldId>?
+12. Which field enables/disables a tool record for use, and which values?
+    The editor offers toolStatus = active | draft. Is that the switch the
+    store UI reads, or is there another (isEnabled) field?
+13. Is there any field on the tool record we may use to store a stable
+    repository slug (we propose repoToolSlug), and is it filterable in a
+    query? If adding a field is possible, please name it and its type.
+
+ANSWER:
+10.
+11.
+12.
+13.
+
+──────────────────────────────────────────────────────────
+Q-09, Q-10, Q-11 (factory). PLACEMENT AND REQUIRED FIELDS
+14. For a create: are typeId (folder), parentId, or both required?
+    Confirm that typeId values "www.uniconhub.com" and "help.uniconhub.com"
+    are folder type ids and not host names.
+15. What is the folder typeId for a NEW tool record, and for a new
+    website-html-tool-library-applicationstore record?
+16. Which fields are mandatory on create besides productData: name, slug,
+    contentId, cmsObjectType, status? Who generates name/slug/contentId -
+    the client or the store?
+17. Are object ids and folder type ids the same across deployments, or must
+    every id be read at runtime?
+
+ANSWER:
+14.
+15.
+16.
+17.
+
+──────────────────────────────────────────────────────────
+Q-13, Q-18 (factory). IDENTITY AND DUPLICATES
+18. Which field is unique for a tool record: name, slug, toolName, gwAppName?
+    Is uniqueness global or per folder?
+19. Is there a lookup by slug (query param) we can use before creating, so a
+    re-publish updates instead of duplicating? Please give the exact query
+    form, e.g. GET /api/v2/objects/{type}?slug=...
+
+ANSWER:
+18.
+19.
+
+──────────────────────────────────────────────────────────
+Q-27, Q-28 (factory). MEDIA AND VERSIONS
+20. Is there a media upload endpoint for screenshots, or are images only
+    URLs inside the record?
+21. Should every publish write a tool-code-versions-uniconbaseapps object?
+    If yes, which fields, which version number format, and what retention?
+
+ANSWER:
+20.
+21.
+
+──────────────────────────────────────────────────────────
+Q-06 (factory). LIMITS - answered as "do not care for now"
+The operator has said limits are not a concern. Skip unless there is a
+hard body size limit per request we must respect (we cap a payload at
+900 KB and never inline documents into the tool record).
+
+ANSWER:
+(hard body limit if any):
+
+──────────────────────────────────────────────────────────
+WHAT WE WILL DO WITH THE ANSWERS
+
+- Fill UNICON-TOOLS/tools-catalog/store-map.json: cmsObjectType,
+  field id, folder typeId, slug rule, enabled field per target, and mark
+  the target confirmed so the engine may write it.
+- Implement the write path in src/cms/storeClient.js (create, update,
+  enable) and keep the dry-run plan, the 900 KB guard, the release ledger
+  and the read-back verification as they are designed in SSOT 8.7.
+- Nothing is published until a dry run is approved with --yes.
+
+
+──────────────────────────────────────────────────────────
+STILL OPEN AFTER 2026-11-18 (these are the real blockers)
+
+Q-35. THE STORE OBJECT EXPORT
+The operator has said a full folder and object list can be downloaded.
+We need it to resolve ids instead of inventing them, because a tool record's
+id must equal the repository slug (D-HTF-55). Please state:
+    a. which screen or endpoint produces the complete download;
+    b. whether it lists folders as well as objects;
+    c. the fields it contains per object - we need at least
+       id, cmsObjectType, typeId, name, slug and version (Q-41);
+    d. whether it is a snapshot or a live query.
+Until it exists, every tool is reported as unmatched and nothing is written.
+
+Q-43. WHO OWNS THE ID ON A FIRST CREATE
+The v2 document discourages sending object.id, but the id must equal the
+slug. May we create a record with a client-supplied id equal to the slug,
+or must the store generate the id and the export be refreshed first?
+
+Q-36. NAME AND SLUG FIELD ON tools-applicationstore
+Which field holds the display name, and which holds the slug? The create
+body accepts slug; the HTML Tool Item Editor never writes one.
+
+Q-37. WHERE THE CODE FIELDS LIVE
+Are toolHtmlCode, toolCssCode and toolJsCode inside
+productData.data_categoriesBased (one layer), or siblings on the object?
+The v2 create body shows the one-layer form; the editor uses flat field ids.
+
+Q-38. WHICH CREDENTIAL WRITES
+We propose a managed tenant API key scoped objects:write, sent in
+x-api-key exactly as the read side already does, because a first-party
+service token needs a private key that must not live in a desktop app.
+Please confirm the key is accepted for POST and PATCH on
+tools-applicationstore, website-builder-uniconbaseapps and
+tool-social-content-uniconbaseapps, and that the key's app permission is
+editor on each.
+
+Q-39. DOCUMENTS IN THE SAME CLICK
+The update button has three modes (D-HTF-53): code only, code + docs,
+code + docs + screenshots. Confirm that the five documents may be created
+and updated in the same release, and whether each needs its own folder id
+and enabled flag before the tool record is switched on.
+
+Q-40. CONFLICT POLICY
+On 409 CAS_CONFLICT should the engine re-read, re-diff and retry once, or
+stop and show the operator the diff? Both are safe with PATCH; only one
+matches how the platform expects clients to behave.
+
+Q-41. VERSION IN THE EXPORT
+Does the export or the list expose version per object, so If-Match can be
+sent without an extra read on every publish?
+
+Q-42. PROOF OF A WRITE
+What should the release ledger store: the returned version, a hash of the
+read-back content, or both?
+
+Q-27. SCREENSHOTS
+A media endpoint is not reachable with a first-party service token. Which
+endpoint and which credential uploads a screenshot for update mode 3?
