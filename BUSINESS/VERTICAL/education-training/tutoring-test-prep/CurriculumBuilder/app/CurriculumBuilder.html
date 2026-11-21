@@ -1,4 +1,4 @@
-<!-- html build 2026-11-18-46 -->
+<!-- html build 2026-11-18-47 -->
 <div id="app">
   <!-- HEADER -->
   <header class="app-header">
@@ -240,69 +240,90 @@
       </div>
     </div>
 
-    <div class="sd-app-toolbar" id="sd-app-toolbar">
-      <span class="sd-tab-actions" data-tab-group="content">
-        <button type="button" class="sd-btn sd-btn-primary" id="btn-sd-generate" title="AI rephrases this source document into a Generated document (nothing student-facing changes yet)">✨ Generate New Content</button>
-        <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-process" title="One click: capture the pictures, upload them, then generate the new content">⚙️ Process Document</button>
-        <button type="button" class="sd-mini-btn" id="btn-sd-quality" title="Compare the source and the generated content: coverage, similarity (copyright risk) and unverifiable additions">🔍 Quality Check</button>
-        <button type="button" class="sd-mini-btn" id="btn-sd-publish" title="Append this generated content to the lesson Study Content (student-facing)">⬆ Add to Study Content</button>
-        <button type="button" class="sd-mini-btn" id="btn-sd-replace-study" title="Replace the lesson Study Content with this generated content">⇄ Replace</button>
-        <span class="sd-language">
-          <label class="sd-language-label" for="sd-ocr-language">🔍 OCR language</label>
-          <select class="sd-select" id="sd-ocr-language" title="Language used to read this document's scanned pages and pictures. Overrides the curriculum language for this document.">
-            <option value="">Curriculum language</option>
-            <option value="eng">English (eng)</option>
-            <option value="tur">Turkish (tur)</option>
-            <option value="deu">German (deu)</option>
-            <option value="fra">French (fra)</option>
-            <option value="spa">Spanish (spa)</option>
-            <option value="ita">Italian (ita)</option>
-            <option value="por">Portuguese (por)</option>
-            <option value="nld">Dutch (nld)</option>
-            <option value="rus">Russian (rus)</option>
-            <option value="ara">Arabic (ara)</option>
-            <option value="fas">Persian (fas)</option>
-            <option value="urd">Urdu (urd)</option>
-            <option value="hin">Hindi (hin)</option>
-            <option value="chi_sim">Chinese Simplified (chi_sim)</option>
-            <option value="chi_tra">Chinese Traditional (chi_tra)</option>
-            <option value="jpn">Japanese (jpn)</option>
-            <option value="kor">Korean (kor)</option>
-            <option value="ell">Greek (ell)</option>
-            <option value="heb">Hebrew (heb)</option>
-            <option value="pol">Polish (pol)</option>
-            <option value="ukr">Ukrainian (ukr)</option>
-            <option value="ron">Romanian (ron)</option>
-            <option value="bul">Bulgarian (bul)</option>
-            <option value="srp">Serbian (srp)</option>
-            <option value="aze">Azerbaijani (aze)</option>
-            <option value="kaz">Kazakh (kaz)</option>
-          </select>
-        </span>
-      </span>
-      <span class="sd-tab-actions" data-tab-group="document">
-        <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-open-doc" title="Open the source document in a new tab">👁 Open</button>
-        <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-download-pdf" title="Download the source document to your device (any size, any type)">⬇ Download</button>
-      </span>
-      <span class="sd-tab-actions" data-tab-group="pictures">
-        <button type="button" class="sd-btn" id="btn-sd-extract" title="Capture the pictures in this document: embedded images keep their original quality, drawings and illustrations are cropped from the page">🧩 Get Pictures</button>
-        <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-add-image" title="Upload an image to this document's pictures">🖼 Add Image</button>
-        <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-generate-image" title="Create the AI generated version of the selected pictures (select at least one picture first)">🎨 Generate Image</button>
-        <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-extract-local" title="Read a PDF from your device in the browser - no download limit">📁 Local PDF</button>
-        <button type="button" class="sd-mini-btn" id="btn-sd-select-all" title="Select or unselect every picture">☑ All</button>
-      </span>
-    </div>
-
-    <div class="sd-status" id="sd-status"></div>
-
     <div class="sd-app-body">
-      <main class="sd-app-workspace">
-        <div class="sd-tabs" role="tablist">
-          <button type="button" class="sd-tab sd-tab-active" id="btn-sd-tab-document" role="tab" aria-selected="true">📄 Source</button>
-          <button type="button" class="sd-tab" id="btn-sd-tab-content" role="tab" aria-selected="false">✨ Generated</button>
-          <button type="button" class="sd-tab" id="btn-sd-compare" role="tab" aria-selected="false">⇔ Side by Side</button>
-          <button type="button" class="sd-tab" id="btn-sd-tab-pictures" role="tab" aria-selected="false">🖼 Pictures <span class="sd-tab-count" id="sd-pictures-tab-count">0</span></button>
+      <aside class="sd-side-rail" id="sd-side-rail" aria-label="Document studio navigation">
+        <div class="sd-rail-block">
+          <div class="sd-rail-label">Workspace</div>
+          <div class="sd-tabs" role="tablist" aria-orientation="vertical">
+            <button type="button" class="sd-tab sd-tab-active" id="btn-sd-tab-document" role="tab" aria-selected="true">
+              <span class="sd-tab-icon" aria-hidden="true">📄</span>
+              <span class="sd-tab-text"><strong>Source</strong><em>The original document</em></span>
+            </button>
+            <button type="button" class="sd-tab" id="btn-sd-tab-content" role="tab" aria-selected="false">
+              <span class="sd-tab-icon" aria-hidden="true">✨</span>
+              <span class="sd-tab-text"><strong>Generated</strong><em>AI content from this source</em></span>
+            </button>
+            <button type="button" class="sd-tab" id="btn-sd-compare" role="tab" aria-selected="false">
+              <span class="sd-tab-icon" aria-hidden="true">⇔</span>
+              <span class="sd-tab-text"><strong>Side by Side</strong><em>Source next to Generated</em></span>
+            </button>
+            <button type="button" class="sd-tab" id="btn-sd-tab-pictures" role="tab" aria-selected="false">
+              <span class="sd-tab-icon" aria-hidden="true">🖼</span>
+              <span class="sd-tab-text"><strong>Pictures</strong><em>Real and Source pictures</em></span>
+              <span class="sd-tab-count" id="sd-pictures-tab-count">0</span>
+            </button>
+          </div>
         </div>
+
+        <div class="sd-rail-block">
+          <div class="sd-rail-label">Actions</div>
+          <div class="sd-app-toolbar" id="sd-app-toolbar">
+            <span class="sd-tab-actions" data-tab-group="content">
+              <button type="button" class="sd-btn sd-btn-primary" id="btn-sd-generate" title="AI rephrases this source document into a Generated document (nothing student-facing changes yet)">✨ Generate New Content</button>
+              <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-process" title="One click: capture the pictures, upload them, then generate the new content">⚙️ Process Document</button>
+              <button type="button" class="sd-mini-btn" id="btn-sd-quality" title="Compare the source and the generated content: coverage, similarity (copyright risk) and unverifiable additions">🔍 Quality Check</button>
+              <button type="button" class="sd-mini-btn" id="btn-sd-publish" title="Append this generated content to the lesson Study Content (student-facing)">⬆ Add to Study Content</button>
+              <button type="button" class="sd-mini-btn" id="btn-sd-replace-study" title="Replace the lesson Study Content with this generated content">⇄ Replace</button>
+              <span class="sd-language">
+                <label class="sd-language-label" for="sd-ocr-language">🔍 OCR language</label>
+                <select class="sd-select" id="sd-ocr-language" title="Language used to read this document's scanned pages and pictures. Overrides the curriculum language for this document.">
+                  <option value="">Curriculum language</option>
+                  <option value="eng">English (eng)</option>
+                  <option value="tur">Turkish (tur)</option>
+                  <option value="deu">German (deu)</option>
+                  <option value="fra">French (fra)</option>
+                  <option value="spa">Spanish (spa)</option>
+                  <option value="ita">Italian (ita)</option>
+                  <option value="por">Portuguese (por)</option>
+                  <option value="nld">Dutch (nld)</option>
+                  <option value="rus">Russian (rus)</option>
+                  <option value="ara">Arabic (ara)</option>
+                  <option value="fas">Persian (fas)</option>
+                  <option value="urd">Urdu (urd)</option>
+                  <option value="hin">Hindi (hin)</option>
+                  <option value="chi_sim">Chinese Simplified (chi_sim)</option>
+                  <option value="chi_tra">Chinese Traditional (chi_tra)</option>
+                  <option value="jpn">Japanese (jpn)</option>
+                  <option value="kor">Korean (kor)</option>
+                  <option value="ell">Greek (ell)</option>
+                  <option value="heb">Hebrew (heb)</option>
+                  <option value="pol">Polish (pol)</option>
+                  <option value="ukr">Ukrainian (ukr)</option>
+                  <option value="ron">Romanian (ron)</option>
+                  <option value="bul">Bulgarian (bul)</option>
+                  <option value="srp">Serbian (srp)</option>
+                  <option value="aze">Azerbaijani (aze)</option>
+                  <option value="kaz">Kazakh (kaz)</option>
+                </select>
+              </span>
+            </span>
+            <span class="sd-tab-actions" data-tab-group="document">
+              <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-open-doc" title="Open the source document in a new tab">👁 Open Document</button>
+              <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-download-pdf" title="Download the source document to your device (any size, any type)">⬇ Download File</button>
+            </span>
+            <span class="sd-tab-actions" data-tab-group="pictures">
+              <button type="button" class="sd-btn" id="btn-sd-extract" title="Capture the pictures in this document: embedded images keep their original quality, drawings and illustrations are cropped from the page">🧩 Get Pictures</button>
+              <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-add-image" title="Upload an image to this document's pictures">🖼 Add Image</button>
+              <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-generate-image" title="Create the AI generated version of the selected pictures (select at least one picture first)">🎨 Generate Image</button>
+              <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-extract-local" title="Read a PDF from your device in the browser - no download limit">📁 Local PDF</button>
+              <button type="button" class="sd-mini-btn" id="btn-sd-select-all" title="Select or unselect every picture">☑ All</button>
+            </span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="sd-app-workspace">
+        <div class="sd-status" id="sd-status"></div>
         <div class="sd-preview-columns" id="sd-preview-columns" data-tab="document">
           <section class="sd-pane" id="sd-pane-document">
             <div class="sd-pane-head"><span>Source document</span><span class="sd-muted" id="sd-preview-note"></span></div>

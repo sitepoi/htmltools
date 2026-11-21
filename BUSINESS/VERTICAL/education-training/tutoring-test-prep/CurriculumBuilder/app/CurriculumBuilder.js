@@ -1,4 +1,4 @@
-/* js build 2026-11-18-46 */
+/* js build 2026-11-18-47 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-46';
+var TOOL_BUILD = '2026-11-18-47';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 // Boot diagnostic: is the large-file download channel present in this CMS build?
 (function logFileChannelAvailability() {
@@ -7261,13 +7261,10 @@ function setStudioActionButtonsBusy(isBusy) {
   if (processButton) processButton.disabled = !!isBusy;
 }
 
-/** Put the contextual action bar directly under the tab strip (layout only) */
+/** Drawer layout defaults - the workspace rail (tabs + actions) is part of the HTML */
 function arrangeStudioDrawerLayout() {
   var studioDrawer = el('sd-studio-drawer');
-  var actionBar = el('sd-app-toolbar');
-  var tabsEl = document.querySelector('#sd-studio-drawer .sd-tabs');
-  if (!studioDrawer || !actionBar || !tabsEl || !tabsEl.parentNode) return;
-  if (actionBar.parentNode !== tabsEl.parentNode) tabsEl.parentNode.insertBefore(actionBar, tabsEl.nextSibling);
+  if (!studioDrawer) return;
   if (!studioDrawer.getAttribute('data-active-tab')) studioDrawer.setAttribute('data-active-tab', 'document');
 }
 
