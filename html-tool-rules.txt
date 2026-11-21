@@ -1,13 +1,20 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-html-tool-rules.txt — VERSION 3.0 — 2026-11-18
+html-tool-rules.txt — VERSION 3.5 — 2026-11-20
 
-CHANGELOG v3: merged the platform global requirements (visible tool build
-number, inline-script tokenizer safety, external content via parent CMS
-relay, helper application ids) with the CMS channels already shipped here
-(autosave, AI image generation, binary upload, allow-all-fetch-hosts).
-Conflicts resolved per the merge report (old CDN allowance removed,
-localStorage cache changed to in-memory, getFields/setField formalized).
-Previous version: v2 (2026-10-10 — formalized getFields/setField contracts).
+CHANGELOG v3.5: Field Group Designer config overhaul (D-HTMLT-24 / D-FREG-07).
+(a) The legacy server fetch relay settings (allowFetchRelay / allowedFetchHosts
+/ allowAllFetchHosts) are GONE from the designer UI — no tool used them. The
+relay itself is unchanged at runtime: requestFetch still works, platform
+*.uniconhub.com hosts stay allowed, and stored values in existing field
+groups are still honoured. (b) allowedObjectTypes is now a PICKER that reads
+every registered CMS object type and writes the same JSON list — nobody
+types type ids. (c) toolParams is now a key/value editor instead of a raw
+JSON box, and it flags keys that a channel switch already controls.
+Previous version: v3.4 (2026-11-20 - OCR language catalog + dropdown).
+Earlier: v3.3 (2026-11-20 - client-side OCR via hosted Tesseract.js).
+Earlier: v3.1 (2026-11-20 - large-file binary download, PDF.js rendering).
+Earlier: v3.0 (2026-11-18 - merged platform global requirements).
+Earlier: v2 (2026-10-10 - formalized getFields/setField contracts).
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -200,6 +207,11 @@ images, fonts, API data — MUST come through the PARENT CMS. Two channels:
   https-only, GET-only, private/reserved-IP blocking, 15 s timeout and the
   response byte cap (default 500 KB, env-configurable) still apply. Default
   remains: platform hosts + the admin's Allowed Fetch Hosts list.
+  NOTE (D-HTMLT-24): these two relay keys are no longer exposed in the Field
+  Group Designer because no shipped tool uses them. They keep working exactly
+  as described for every field that already stores them, and an advanced user
+  can still set them in the field JSON tab. New tools should use
+  requestFileBinary / requestObjects instead of the relay.
 
   LARGE-FILE BINARY DOWNLOAD — tool.requestFileBinary(options, callback)
   For COMPLETE files (40 MB PDFs, DOCX, ZIP, images) use the streaming
@@ -232,6 +244,101 @@ images, fonts, API data — MUST come through the PARENT CMS. Two channels:
   unreachable or missing CORS headers (Access-Control-Allow-Origin) — there
   is NO silent server fallback. Default cap settings.maxFileFetchBytes =
   104857600 (100 MB), enforced client-side.
+
+  AUTOMATIC CORS MIRROR (optional, admin-enabled)
+  If the target host does not send Access-Control-Allow-Origin the browser
+  cannot read the file. When the field setting
+  allowMirrorFallback = 'yes' the CMS server downloads the file ONCE, stores
+  it in the tenant's Firebase Storage (content-addressed by sha256) and the
+  browser re-downloads it from that public storage URL. The server never
+  processes bytes; repeated downloads hit the stored copy. Requires
+  allowFileFetch = 'yes'.
+  Admin settings for the download channel: Large-file download,
+  Allowed File Fetch Hosts (chip editor), Allow All File Fetch Hosts,
+  Max download size (MB editor), Auto-mirror CORS-blocked files.
+  If the mirror is disabled or also fails, the callback fires with
+  'network' and result.detail explains the cause. When the mirror is used,
+  the result contains mirrored: true, sourceUrl and mirrorCached.
+
+  PDF RENDERING INSIDE TOOL FRAMES
+  Sandboxed iframes can NEVER use the browser's built-in PDF viewer —
+  <iframe>/<embed> pointing at https:, blob: or data:application/pdf all
+  fail. PDFs must be rasterized in JavaScript. When the admin enables
+  settings.allowPdfRender = 'yes', the CMS injects the hosted UMD build
+  pdfjs-dist@3.11.174 BEFORE your tool code:
+
+    if (window.pdfjsLib) {            // PDF rendering available
+      tool.param('pdfPreviewScale')   // number-like string, default 1.2
+      tool.param('pdfjsWorkerUrl')    // worker path already wired by the CMS
+      pdfjsLib.getDocument({ data: bytes }).promise.then(function (pdf) {
+        // render pages to <canvas> — the tool chooses pages and scale
+      })
+    } else {
+      // degrade gracefully: show a "preview unavailable" placeholder
+    }
+
+  The library is served from the CMS origin ONLY (/vendor/pdfjs/3.11.174/)
+  — never add a CDN to script-src; the tool frame is same-origin with the
+  CMS, so third-party scripts would run with admin privileges. The worker
+  is same-origin; do not replace workerSrc with a cross-origin URL.
+
+  CLIENT-SIDE OCR INSIDE TOOL FRAMES
+  Scanned PDFs (pages that are images with no text layer) can be OCRed
+  entirely in the browser. When the admin enables
+  settings.allowOcr = 'yes', the CMS injects the hosted Tesseract.js UMD
+  build BEFORE your tool code, so window.Tesseract exists at boot:
+
+    if (window.Tesseract) {           // OCR available
+      tool.param('ocrWorkerPath')     // /vendor/tesseract/5.1.0/worker.min.js
+      tool.param('ocrCorePath')       // /vendor/tesseract/5.1.0/tesseract-core-simd.wasm.js
+      tool.param('ocrLanguagePath')   // /vendor/tesseract/5.1.0/tessdata
+      tool.param('ocrLanguage')       // 'eng' (default)
+      Tesseract.createWorker(tool.param('ocrLanguage') || 'eng', 1, {
+        workerPath: tool.param('ocrWorkerPath'),
+        corePath: tool.param('ocrCorePath'),
+        langPath: tool.param('ocrLanguagePath')
+      }).then(function (worker) {
+        // worker.recognize(canvas) — pages are rasterized by PDF.js first
+      })
+      // or: Tesseract.recognize(canvas, language, { langPath: ... })
+    } else {
+      // degrade gracefully: show a "OCR unavailable" message
+    }
+
+  The engine is hosted at /vendor/tesseract/<version>/ on the CMS origin —
+  NEVER a CDN. tesseract.js defaults to public CDNs for worker, core and
+  language data; those defaults must never be used. Always pass the three
+  paths above into createWorker / recognize options. OCR runs entirely in
+  the browser: no OCR API route, no server cost, no third-party origins.
+  Requires settings.allowPdfRender = 'yes' for page rasterization.
+
+  OCR LANGUAGE (D-HTMLT-23) — Tesseract uses 3-letter ISO 639-2/T codes:
+  Turkish is `tur`, NOT `tr`; German is `deu`, not `de`; Chinese needs the
+  script suffix (`chi_sim` / `chi_tra`). The admin picks the language from a
+  DROPDOWN in the field settings — nobody types a code by hand, and the
+  dropdown only offers languages whose .traineddata.gz is actually hosted:
+
+    eng English · tur Turkish · deu German · fra French · spa Spanish
+    ita Italian · por Portuguese · nld Dutch · rus Russian · ara Arabic
+    fas Persian · urd Urdu · hin Hindi · chi_sim Chinese Simplified
+    chi_tra Chinese Traditional · jpn Japanese · kor Korean · ell Greek
+    heb Hebrew · pol Polish · ukr Ukrainian · ron Romanian · bul Bulgarian
+    srp Serbian · aze Azerbaijani · kaz Kazakh
+
+  Read it with tool.param('ocrLanguage') || 'eng'. An empty setting resolves
+  to 'eng'. At boot (and whenever TOOL_PARAMS delivers a different value)
+  the frame prints:
+
+    [TOOL:BOOT] OCR engine: Tesseract 5.1.0 injected
+      { ocrLanguageParam, ocrLanguageResolved, ocrLanguagePath,
+        ocrWorkerPath, ocrCorePath, ocrLanguagesHosted }
+
+  so support can see the exact language that will be loaded. A language that
+  is set but not hosted logs a warning and fails at OCR time — if you add a
+  new language, ship <code>.traineddata.gz in the tessdata folder AND add it
+  to the shared OCR_LANGUAGES constant at the same time. Multiple languages
+  in one worker call ('eng+tur') still work at the API level, but the
+  dropdown configures one language per field.
 
   TOOL-SIDE RULES:
      - NEVER fetch/XHR outside hosts directly from the 3 files.
