@@ -1,0 +1,2454 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NCF Education — Tek çatı, beş eğitim alanı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #121318;
+    --ink-2: #2d3038;
+    --muted: #6b6f79;
+    --paper: #f7f4ee;
+    --white: #ffffff;
+    --line: #e3ded4;
+    --line-strong: #c9c2b6;
+    --red: #d7263d;
+    --red-deep: #a8172b;
+    --navy: #1f3a5f;
+    --teal: #2d7d6e;
+    --amber: #b7791f;
+    --plum: #6d4c91;
+    --radius: 15px;
+    --font-head: "Manrope", "Segoe UI", system-ui, sans-serif;
+    --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: radial-gradient(circle at 50% 15%, #2b2d34 0%, #17181c 68%);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px 22px 66px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- shell ---------- */
+  .deck-stage {
+    position: relative;
+    width: min(1320px, 94vw);
+    max-width: calc((100vh - 110px) * 16 / 9);
+    aspect-ratio: 16 / 9;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--paper);
+    box-shadow: 0 26px 80px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .07);
+  }
+  .deck-slide {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: var(--paper);
+    overflow: hidden;
+  }
+  .deck-slide.deck-active { display: block; }
+
+  .slide-frame {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 18px 44px 46px;
+  }
+  .slide-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .logo-plate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 5px 9px;
+    min-height: 36px;
+  }
+  .slide-logo { display: block; height: 26px; width: auto; }
+  .logo-fallback {
+    font-family: var(--font-head);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .slide-head-name {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .17em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: right;
+  }
+  .slide-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 22px 0 6px;
+    min-height: 0;
+  }
+  .center-body { justify-content: center; }
+  .slide-foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 0 8px;
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .foot-brand { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+  .foot-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); flex: 0 0 6px; }
+  .foot-num { font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+  /* ---------- type ---------- */
+  .slide-kicker {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .19em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 8px;
+  }
+  .slide-body h1,
+  .slide-body h2 {
+    font-family: var(--font-head);
+    color: var(--ink);
+    margin: 0 0 12px;
+    line-height: 1.08;
+    letter-spacing: -.035em;
+  }
+  .slide-body h2 { font-size: clamp(29px, 3vw, 39px); max-width: 1020px; }
+  .slide-lead {
+    font-size: clamp(15px, 1.4vw, 18.5px);
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0 0 18px;
+    max-width: 950px;
+  }
+  .slide-note {
+    margin: 14px 0 0;
+    padding-left: 12px;
+    border-left: 3px solid var(--red);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 980px;
+  }
+  strong { color: var(--ink); font-weight: 700; }
+
+  /* ---------- cover ---------- */
+  .deck-cover {
+    background:
+      radial-gradient(circle at 88% 18%, rgba(215, 38, 61, .26) 0%, transparent 42%),
+      radial-gradient(circle at 8% 92%, rgba(215, 38, 61, .12) 0%, transparent 40%),
+      #111216;
+    color: #fff;
+  }
+  .deck-cover .slide-frame { padding: 26px 52px 52px; }
+  .deck-cover .slide-head { border-bottom-color: rgba(255,255,255,.14); }
+  .deck-cover .slide-head-name { color: rgba(255,255,255,.58); }
+  .cover-plate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border-radius: 11px;
+    padding: 8px 13px;
+  }
+  .cover-logo { display: block; height: 46px; width: auto; }
+  .cover-logo-fallback {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -.03em;
+  }
+  .cover-body { justify-content: center; position: relative; }
+  .cover-kicker {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: #ff7b88;
+    margin-bottom: 18px;
+  }
+  .slide-body .cover-title {
+    font-family: var(--font-head);
+    font-size: clamp(46px, 5.8vw, 76px);
+    line-height: 1.01;
+    letter-spacing: -.055em;
+    color: #fff;
+    margin: 0 0 20px;
+    max-width: 930px;
+  }
+  .cover-rule { width: 64px; height: 4px; border-radius: 3px; background: var(--red); margin-bottom: 20px; }
+  .cover-sub {
+    font-size: clamp(17px, 1.5vw, 20px);
+    line-height: 1.5;
+    color: rgba(255,255,255,.72);
+    max-width: 780px;
+    margin: 0;
+  }
+  .cover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    margin-top: 30px;
+    font-size: 12.5px;
+    color: rgba(255,255,255,.52);
+  }
+  .cover-mark {
+    position: absolute;
+    right: -18px;
+    bottom: -70px;
+    font-family: var(--font-head);
+    font-size: 300px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -.1em;
+    color: rgba(255,255,255,.035);
+    pointer-events: none;
+  }
+  .deck-cover .slide-foot { border-top-color: rgba(255,255,255,.14); color: rgba(255,255,255,.55); }
+  .deck-cover .foot-num { color: #fff; }
+
+  /* ---------- section divider ---------- */
+  .deck-section { background: #111216; color: #fff; }
+  .deck-section .slide-head { border-bottom-color: rgba(255,255,255,.14); }
+  .deck-section .slide-head-name { color: rgba(255,255,255,.58); }
+  .deck-section .slide-foot { border-top-color: rgba(255,255,255,.14); color: rgba(255,255,255,.55); }
+  .deck-section .foot-num { color: #fff; }
+  .section-number {
+    font-family: var(--font-head);
+    font-size: clamp(88px, 11vw, 142px);
+    line-height: .84;
+    font-weight: 800;
+    letter-spacing: -.08em;
+    color: var(--accent-soft, #ff7b88);
+    margin-bottom: 12px;
+  }
+  .deck-section h2 {
+    color: #fff;
+    font-size: clamp(38px, 5vw, 58px);
+    margin-bottom: 12px;
+  }
+  .deck-section .slide-kicker { color: var(--accent-soft, #ff7b88); }
+  .deck-section .slide-lead { color: rgba(255,255,255,.68); max-width: 820px; }
+  .section-chips, .cover-meta { display: flex; flex-wrap: wrap; gap: 7px 8px; }
+  .section-chips span {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 999px;
+    font-size: 11.5px;
+    color: rgba(255,255,255,.72);
+    background: rgba(255,255,255,.04);
+  }
+
+  /* ---------- agenda ---------- */
+  .agenda { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; border-top: 1px solid var(--line); }
+  .agenda li {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .agenda-no {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--accent, var(--red));
+    letter-spacing: .04em;
+  }
+  .agenda b {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 17px;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+  .agenda small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .agenda-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 9px;
+    white-space: nowrap;
+    background: #fff;
+  }
+
+  /* ---------- cards & grids ---------- */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    min-width: 0;
+  }
+  .card.accent { border-top: 3px solid var(--accent, var(--red)); }
+  .card .card-no {
+    display: inline-block;
+    font-family: var(--font-head);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    color: var(--accent, var(--red));
+    margin-bottom: 4px;
+  }
+  .card h3 {
+    font-family: var(--font-head);
+    font-size: 16.5px;
+    line-height: 1.24;
+    letter-spacing: -.02em;
+    color: var(--ink);
+    margin: 0 0 5px;
+  }
+  .card p { font-size: 12.8px; line-height: 1.45; color: var(--muted); margin: 0; }
+  .card ul { margin: 0; padding-left: 15px; }
+  .card ul.bullets { padding-left: 0; }
+  .card ul.bullets li { margin-bottom: 0; }
+  .card li { font-size: 12.2px; line-height: 1.42; color: var(--muted); margin-bottom: 3px; }
+  .card .tool-line {
+    margin: 9px 0 0;
+    padding-top: 7px;
+    border-top: 1px solid var(--line);
+    font-size: 10.6px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  .card .tool-line strong { color: var(--ink-2); }
+  .card.core-card {
+    background: #111216;
+    border-color: #111216;
+    border-top-color: var(--red);
+  }
+  .card.core-card h3 { color: #fff; }
+  .card.core-card p { color: rgba(255,255,255,.68); }
+  .card.core-card .card-no { color: #ff7b88; }
+  .card.core-card .tool-line { border-top-color: rgba(255,255,255,.14); color: rgba(255,255,255,.55); }
+  .card.core-card .tool-line strong { color: #fff; }
+
+  .icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: var(--accent, var(--red));
+    color: #fff;
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+
+  /* ---------- ecosystem diagram ---------- */
+  .eco { margin-top: 2px; }
+  .eco-root {
+    position: relative;
+    z-index: 2;
+    width: min(430px, 72%);
+    margin: 0 auto;
+    padding: 9px 16px;
+    border-radius: 12px;
+    background: #111216;
+    color: #fff;
+    text-align: center;
+  }
+  .eco-root strong {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .eco-root span {
+    display: block;
+    font-size: 10.5px;
+    color: rgba(255,255,255,.62);
+    margin-top: 2px;
+  }
+  .eco-trunk { width: 1px; height: 16px; margin: 0 auto; background: var(--line-strong); }
+  .eco-branches {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    padding-top: 16px;
+  }
+  .eco-branches::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    border-top: 1px solid var(--line-strong);
+  }
+  .eco-branch { position: relative; min-width: 0; }
+  .eco-branch::before {
+    content: "";
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    height: 16px;
+    border-left: 1px solid var(--line-strong);
+  }
+  .eco-card {
+    min-height: 116px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    border-radius: 11px;
+    padding: 10px 10px 9px;
+  }
+  .eco-no {
+    font-family: var(--font-head);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    color: var(--accent);
+  }
+  .eco-card h3 {
+    font-family: var(--font-head);
+    font-size: 14px;
+    line-height: 1.2;
+    letter-spacing: -.02em;
+    color: var(--ink);
+    margin: 2px 0 4px;
+  }
+  .eco-card p { font-size: 10.8px; line-height: 1.34; color: var(--muted); margin: 0; }
+  .eco-children { display: flex; flex-direction: column; gap: 4px; margin-top: 7px; }
+  .eco-child {
+    display: block;
+    padding: 4px 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+    font-size: 9.8px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .eco-support {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 5px 6px;
+    margin-top: 12px;
+    padding-top: 9px;
+    border-top: 1px dashed var(--line-strong);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .eco-support b {
+    font-size: 9.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    margin-right: 3px;
+  }
+  .eco-support span {
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    white-space: nowrap;
+  }
+  .eco-core {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin-top: 11px;
+    padding: 8px 13px;
+    border-radius: 11px;
+    background: #111216;
+    color: #fff;
+    text-align: center;
+  }
+  .eco-core-badge {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--red);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: .12em;
+  }
+  .eco-core strong {
+    font-family: var(--font-head);
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: #fff;
+  }
+  .eco-core-desc { font-size: 10.2px; color: rgba(255,255,255,.62); }
+
+  /* ---------- student file core ---------- */
+  .file-layout {
+    display: grid;
+    grid-template-columns: 1.04fr .96fr;
+    gap: 20px;
+    align-items: center;
+  }
+  .file-card {
+    background: #111216;
+    color: #fff;
+    border-radius: 15px;
+    padding: 15px 17px;
+  }
+  .file-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .file-card-head strong {
+    font-family: var(--font-head);
+    font-size: 17px;
+    letter-spacing: -.03em;
+    color: #fff;
+  }
+  .file-card-badge {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--red);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    white-space: nowrap;
+  }
+  .file-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .file-item {
+    padding: 6px 8px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 8px;
+    background: rgba(255,255,255,.04);
+    font-size: 9.8px;
+    line-height: 1.3;
+    color: rgba(255,255,255,.62);
+  }
+  .file-item b {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 10.8px;
+    color: #fff;
+    margin-bottom: 1px;
+  }
+  .file-card-foot {
+    margin-top: 9px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,.13);
+    font-size: 9.6px;
+    line-height: 1.35;
+    color: rgba(255,255,255,.55);
+  }
+  .flow { display: grid; gap: 9px; }
+  .flow-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+  .flow-chip {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent, var(--red));
+    border-radius: 9px;
+    padding: 8px;
+    font-size: 9.8px;
+    line-height: 1.3;
+    color: var(--muted);
+  }
+  .flow-chip b {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 11.2px;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .flow-core {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 13px;
+    border-radius: 10px;
+    background: #111216;
+    color: #fff;
+  }
+  .flow-core strong {
+    font-family: var(--font-head);
+    font-size: 14px;
+    letter-spacing: -.02em;
+    color: #fff;
+  }
+  .flow-core span { font-size: 9.8px; color: rgba(255,255,255,.58); }
+  .flow-arrow { text-align: center; color: var(--muted); font-size: 12px; line-height: 1; }
+  .flow-out { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .flow-out div {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 10px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .flow-out b {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 11px;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+
+  /* ---------- video ---------- */
+  .video-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 520px) 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .video-frame {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    aspect-ratio: 16 / 9;
+    border-radius: 13px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid var(--line);
+  }
+  .video-poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: #000;
+    cursor: pointer;
+    display: block;
+  }
+  .video-poster img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: .82;
+  }
+  .video-play {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(215, 38, 61, .95);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    padding-left: 3px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  }
+  .video-poster-label {
+    position: absolute;
+    left: 10px;
+    bottom: 9px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+  }
+  .video-iframe { display: block; width: 100%; height: 100%; border: 0; }
+  .video-side { display: grid; gap: 8px; }
+  .video-side .card { padding: 10px 12px; }
+  .video-side .card h3 { font-size: 13.5px; margin-bottom: 3px; }
+  .video-side .card p { font-size: 11px; line-height: 1.4; }
+  .video-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--red);
+    text-decoration: none;
+  }
+  .video-link:hover { text-decoration: underline; }
+  .video-caption { margin: 7px 0 0; font-size: 9.5px; color: var(--muted); }
+
+  /* ---------- table ---------- */
+  table.deck-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.2px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table.deck-table th,
+  table.deck-table td {
+    text-align: left;
+    padding: 8px 11px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    line-height: 1.38;
+  }
+  table.deck-table th {
+    font-size: 9.6px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 800;
+    border-bottom: 2px solid var(--ink);
+    background: var(--paper);
+  }
+  table.deck-table td { color: var(--muted); }
+  table.deck-table td:first-child { color: var(--ink); }
+  table.deck-table tr:last-child td { border-bottom: 0; }
+  table.deck-table strong { color: var(--ink); }
+  .accent-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    background: var(--accent, var(--red));
+    margin-right: 7px;
+    vertical-align: 1px;
+  }
+
+  /* ---------- bullets ---------- */
+  .bullets { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .bullets li {
+    position: relative;
+    padding-left: 17px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--ink-2);
+  }
+  .bullets li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+    background: var(--accent, var(--red));
+  }
+  .bullets.cols-2 { grid-template-columns: 1fr 1fr; gap: 7px 22px; }
+  .bullets.tight { gap: 5px; }
+  .bullets.tight li { font-size: 12.6px; }
+
+  /* ---------- steps ---------- */
+  .steps { display: grid; gap: 9px; }
+  .steps-5 { grid-template-columns: repeat(5, 1fr); }
+  .steps-4 { grid-template-columns: repeat(4, 1fr); }
+  .step {
+    border-top: 2px solid var(--accent, var(--red));
+    padding-top: 8px;
+    min-width: 0;
+  }
+  .step .step-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: var(--accent, var(--red));
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .step b {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 12.8px;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+  .step span {
+    display: block;
+    margin-top: 3px;
+    font-size: 10.8px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+
+  /* ---------- facts strip ---------- */
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 14px;
+  }
+  .fact { padding: 10px 13px; border-right: 1px solid var(--line); }
+  .fact:last-child { border-right: 0; }
+  .fact b {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 18px;
+    line-height: 1.15;
+    letter-spacing: -.03em;
+    color: var(--ink);
+  }
+  .fact span { display: block; margin-top: 2px; font-size: 10.4px; color: var(--muted); }
+
+  /* ---------- school cards ---------- */
+  .school-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .school-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    min-width: 0;
+  }
+  .school-head { display: flex; align-items: center; gap: 11px; margin-bottom: 9px; }
+  .school-logo { display: block; height: 40px; width: auto; max-width: 150px; object-fit: contain; }
+  .school-monogram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 11px;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--font-head);
+    font-size: 19px;
+    font-weight: 800;
+  }
+  .school-head h3 {
+    font-family: var(--font-head);
+    font-size: 19px;
+    line-height: 1.15;
+    letter-spacing: -.03em;
+    color: var(--ink);
+    margin: 0;
+  }
+  .school-sub {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .school-card ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
+  .school-card li {
+    position: relative;
+    padding-left: 13px;
+    font-size: 12.3px;
+    line-height: 1.4;
+    color: var(--ink-2);
+  }
+  .school-card li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .school-photo-wrap {
+    position: relative;
+    margin: 0 0 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #e9e4da;
+  }
+  .school-photo {
+    display: block;
+    width: 100%;
+    height: 112px;
+    object-fit: cover;
+    object-position: center;
+  }
+  .school-photo-credit {
+    position: absolute;
+    right: 7px;
+    bottom: 6px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .48);
+    color: rgba(255, 255, 255, .88);
+    font-size: 8px;
+    line-height: 1.3;
+  }
+
+  /* ---------- service / closing ---------- */
+  .deck-closing { background: #111216; color: #fff; }
+  .deck-closing .slide-head { border-bottom-color: rgba(255,255,255,.14); }
+  .deck-closing .slide-head-name { color: rgba(255,255,255,.58); }
+  .deck-closing .slide-foot { border-top-color: rgba(255,255,255,.14); color: rgba(255,255,255,.55); }
+  .deck-closing .foot-num { color: #fff; }
+  .deck-closing h2 {
+    color: #fff;
+    font-size: clamp(36px, 4.6vw, 56px);
+    max-width: 900px;
+  }
+  .deck-closing .slide-lead { color: rgba(255,255,255,.7); }
+  .closing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-top: 14px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,.16);
+  }
+  .closing-grid h3 {
+    font-family: var(--font-head);
+    font-size: 10.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #ff7b88;
+    margin: 0 0 5px;
+  }
+  .closing-grid p { font-size: 14px; line-height: 1.45; color: #fff; margin: 0; }
+
+  /* ---------- controls ---------- */
+  .deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+    z-index: 10;
+    max-width: calc(100vw - 30px);
+    white-space: nowrap;
+  }
+  .deck-btn {
+    border: 1px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 7px;
+    padding: 4px 11px;
+    cursor: pointer;
+  }
+  .deck-btn:hover { background: var(--paper); }
+  .deck-btn:disabled { opacity: .3; cursor: default; }
+  .deck-counter {
+    min-width: 62px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .deck-help { margin-left: 3px; font-size: 10.5px; color: var(--muted); }
+  .deck-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: var(--red);
+    z-index: 20;
+    transition: width .2s ease;
+  }
+
+  /* ---------- accents ---------- */
+  .sec-school { --accent: var(--navy); --accent-soft: #86a9d8; }
+  .sec-tutoring { --accent: var(--red); --accent-soft: #ff7b88; }
+  .sec-ece { --accent: var(--teal); --accent-soft: #6ec7b7; }
+  .sec-teachers { --accent: var(--amber); --accent-soft: #e7b45a; }
+  .sec-turkish { --accent: var(--plum); --accent-soft: #b89ade; }
+  .sec-shared { --accent: var(--ink); --accent-soft: #b9b9b9; }
+  .a-school { --accent: var(--navy); }
+  .a-tutoring { --accent: var(--red); }
+  .a-ece { --accent: var(--teal); }
+  .a-teachers { --accent: var(--amber); }
+  .a-turkish { --accent: var(--plum); }
+  .a-red { --accent: var(--red); }
+
+  /* ---------- print ---------- */
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+    html, body { height: auto !important; }
+    body {
+      display: block;
+      padding: 0;
+      overflow: visible;
+      background: #fff;
+    }
+    .deck-stage {
+      page-break-after: avoid;
+      break-after: avoid;
+      position: static;
+      display: block;
+      width: auto;
+      max-width: none;
+      aspect-ratio: auto;
+      height: auto;
+      border-radius: 0;
+      box-shadow: none;
+      background: transparent;
+      overflow: visible;
+    }
+    .deck-slide {
+      display: block !important;
+      position: relative;
+      inset: auto;
+      height: 99.5vh;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+    }
+    .deck-slide:last-child { page-break-after: auto; break-after: auto; }
+    .slide-frame { padding-bottom: 20px; }
+    .deck-controls, .deck-progress { display: none; }
+    .deck-cover, .deck-section, .deck-closing { background: #fff !important; color: var(--ink) !important; }
+    .deck-cover .cover-title, .deck-section h2, .deck-closing h2 { color: var(--ink) !important; }
+    .deck-cover .cover-sub, .deck-section .slide-lead, .deck-closing .slide-lead { color: var(--muted) !important; }
+    .cover-kicker, .deck-section .slide-kicker, .closing-grid h3 { color: var(--red) !important; }
+    .deck-cover .slide-head, .deck-cover .slide-foot,
+    .deck-section .slide-head, .deck-section .slide-foot,
+    .deck-closing .slide-head, .deck-closing .slide-foot { border-color: var(--line); color: var(--muted) !important; }
+    .deck-cover .slide-head-name, .deck-section .slide-head-name, .deck-closing .slide-head-name { color: var(--muted) !important; }
+    .deck-cover .foot-num, .deck-section .foot-num, .deck-closing .foot-num { color: var(--ink) !important; }
+    .section-chips span { border-color: var(--line); color: var(--muted); background: #fff; }
+    .closing-grid { border-top-color: var(--line); }
+    .closing-grid p { color: var(--ink) !important; }
+    .eco-root { background: #fff !important; color: var(--ink) !important; border: 1px solid var(--line-strong); }
+    .eco-root strong { color: var(--ink) !important; }
+    .eco-root span { color: var(--muted) !important; }
+    .eco-core, .file-card, .card.core-card {
+      background: #fff !important;
+      color: var(--ink) !important;
+      border: 1px solid var(--line-strong) !important;
+    }
+    .eco-core strong, .file-card-head strong, .file-item b, .card.core-card h3 { color: var(--ink) !important; }
+    .eco-core-desc, .file-item, .file-card-foot,
+    .card.core-card p, .card.core-card .tool-line { color: var(--muted) !important; }
+    .card.core-card .card-no { color: var(--red) !important; }
+    .card.core-card .tool-line strong { color: var(--ink) !important; }
+    .file-item { background: #fff !important; border-color: var(--line) !important; }
+    .video-poster img { opacity: 1 !important; }
+    .card, .school-card, .eco-card, .fact, .deck-table, .file-card, .video-frame { break-inside: avoid; }
+    .deck-cover .cover-plate { border: 1px solid var(--line); }
+    .deck-cover .cover-mark { display: none !important; }
+    .deck-cover { height: 96vh; }
+    .deck-cover .slide-frame { padding-bottom: 24px; }
+  }
+
+  @media (max-width: 1000px) {
+    body { padding: 12px 12px 62px; }
+    .deck-stage {
+      width: 96vw;
+      max-width: none;
+      aspect-ratio: auto;
+      height: calc(100vh - 80px);
+    }
+    .deck-slide { overflow-y: auto; }
+    .slide-frame { padding: 14px 22px 24px; min-height: 100%; height: auto; }
+    .slide-body { padding-top: 16px; }
+    .slide-body h2 { font-size: 27px; }
+    .grid-2, .grid-3, .grid-4, .grid-5, .grid-6, .school-grid, .closing-grid,
+    .steps-5, .steps-4, .facts, .file-layout, .video-layout, .flow-row, .flow-out { grid-template-columns: 1fr; }
+    .video-frame { max-width: 100%; }
+    .fact { border-right: 0; border-bottom: 1px solid var(--line); }
+    .fact:last-child { border-bottom: 0; }
+    .eco-branches { grid-template-columns: 1fr; gap: 8px; padding-top: 0; }
+    .eco-branches::before, .eco-branch::before { display: none; }
+    .eco-root { width: 100%; }
+    .deck-help { display: none; }
+    .bullets.cols-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck-stage" id="deck-stage">
+  <div class="deck-progress" id="deck-progress"></div>
+
+  <!-- 1 · Kapak -->
+  <section class="deck-slide deck-cover deck-active" data-slide-number="1">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="cover-plate">
+          <img class="cover-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="cover-logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">Kurumsal sunum · 2026</span>
+      </div>
+      <div class="slide-body cover-body">
+        <div class="cover-kicker">NCF Education · Eğitim ekosistemi</div>
+        <h1 class="cover-title">Tek çatı,<br>beş eğitim alanı.</h1>
+        <div class="cover-rule"></div>
+        <p class="cover-sub">Okullar, dersanecilik, okul öncesi, öğretmenler ve Türkçe eğitimi: aynı öğrenci yolculuğunun beş uzmanlık alanı. Yeni çekirdek: Öğrenci Dosyası.</p>
+        <div class="cover-meta">
+          <span>Kasım 2026</span>
+          <span>Kanada</span>
+          <span>Nile Academy · Nebula Academy · Future Bridge Academy</span>
+        </div>
+        <div class="cover-mark" aria-hidden="true">05</div>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Gündem -->
+  <section class="deck-slide" data-slide-number="2">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Gündem</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">Gündem</div>
+        <h2>Önce bütünü, sonra her birimi</h2>
+        <p class="slide-lead">Beş alanın birlikte kurduğu ekosistemi gördükten sonra her birime kendi kapsamı, modeli ve çıktısıyla bakacağız.</p>
+        <ol class="agenda">
+          <li><span class="agenda-no">01</span><div><b>Okullar</b><small>Nile Academy ve Nebula Academy</small></div><span class="agenda-tag">JK–12 · Pre-K–9</span></li>
+          <li><span class="agenda-no">02</span><div><b>Dersanecilik</b><small>Future Bridge Academy</small></div><span class="agenda-tag">Grades 4–12</span></li>
+          <li><span class="agenda-no">03</span><div><b>Okul Öncesi</b><small>Kurum açma ve ECE öğretmenleri</small></div><span class="agenda-tag">0–6 yaş</span></li>
+          <li><span class="agenda-no">04</span><div><b>Öğretmenler</b><small>İşe alım, gelişim ve mentorluk</small></div><span class="agenda-tag">Tüm birimler</span></li>
+          <li><span class="agenda-no">05</span><div><b>Türkçe Eğitimi</b><small>Dil, kültür ve ölçme</small></div><span class="agenda-tag">A1–C1</span></li>
+        </ol>
+        <p class="slide-note">Her bölüm kendi içinde kapsam, işleyiş ve ölçülebilir çıktı üzerinden ilerler. Öğrenci Dosyası, beş alanın ortak çekirdeği olarak ayrıca açılır; sunumun sonunda ortak hizmetler ve yol haritası yer alır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Neden beş birim -->
+  <section class="deck-slide" data-slide-number="3">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Ortak mantık</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">Neden beş birim?</div>
+        <h2>Bir öğrenci, tek bir kurumdan fazlasını hak eder</h2>
+        <p class="slide-lead">NCF Education, farklı yaş ve ihtiyaçlara aynı standartla cevap vermek için beş uzmanlık alanına ayrıldı. Alanlar birbirini tamamlar; birbirinin yerine geçmez.</p>
+        <div class="grid-3">
+          <div class="card accent a-red">
+            <span class="card-no">01 · SÜREKLİLİK</span>
+            <h3>Okul öncesinden mezuniyete</h3>
+            <p>Aynı öğrenci yolculuğu farklı kademelerde devam eder: erken çocukluk, okul, akademik destek ve dil eğitimi birbirine bağlanır.</p>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">02 · DERİNLİK</span>
+            <h3>Her alan kendi uzmanlığını ister</h3>
+            <p>Okul işletmeciliği, dersanecilik, okul öncesi ve Türkçe eğitimi farklı bilgi ve deneyim gerektirir. Tek tip model her ihtiyaca cevap vermez.</p>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">03 · KAPASİTE</span>
+            <h3>Öğretmen ve kurum kalitesi</h3>
+            <p>Öğretmen gelişimi ile kurum açma desteği tüm birimlerin altına yerleşir; kaliteyi tek bir sınıfta değil, sistemde yükseltir.</p>
+          </div>
+        </div>
+        <p class="slide-note">Beş birim birbirinin rakibi değil; aynı ailenin farklı ihtiyaçlarına cevap veren tamamlayıcı parçalardır. Yeni Öğrenci Dosyası, bu parçaları tek kayıtta birleştirir.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Ekosistem diyagramı -->
+  <section class="deck-slide" data-slide-number="4">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Ekosistem haritası</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">Ekosistem haritası</div>
+        <h2>NCF Education: beş alan, tek çatı</h2>
+        <div class="eco">
+          <div class="eco-root">
+            <strong>NCF Education</strong>
+            <span>Ortak standart · öğretmen kalitesi · kurumsal destek</span>
+          </div>
+          <div class="eco-trunk" aria-hidden="true"></div>
+          <div class="eco-branches">
+            <div class="eco-branch a-school">
+              <div class="eco-card">
+                <span class="eco-no">01</span>
+                <h3>Okullar</h3>
+                <p>JK–12 özel okul işletmeciliği ve akademik program.</p>
+                <div class="eco-children">
+                  <span class="eco-child">Nile Academy · Toronto</span>
+                  <span class="eco-child">Nebula Academy · Edmonton</span>
+                </div>
+              </div>
+            </div>
+            <div class="eco-branch a-tutoring">
+              <div class="eco-card">
+                <span class="eco-no">02</span>
+                <h3>Dersanecilik</h3>
+                <p>Akademik destek, sınav hazırlığı ve mentorluk.</p>
+                <div class="eco-children">
+                  <span class="eco-child">Future Bridge Academy</span>
+                </div>
+              </div>
+            </div>
+            <div class="eco-branch a-ece">
+              <div class="eco-card">
+                <span class="eco-no">03</span>
+                <h3>Okul Öncesi</h3>
+                <p>Kurum açma ve ECE öğretmen gelişimi.</p>
+                <div class="eco-children">
+                  <span class="eco-child">0–6 yaş</span>
+                </div>
+              </div>
+            </div>
+            <div class="eco-branch a-teachers">
+              <div class="eco-card">
+                <span class="eco-no">04</span>
+                <h3>Öğretmenler</h3>
+                <p>İşe alım, gelişim, gözlem ve mentorluk.</p>
+                <div class="eco-children">
+                  <span class="eco-child">Tüm birimler</span>
+                </div>
+              </div>
+            </div>
+            <div class="eco-branch a-turkish">
+              <div class="eco-card">
+                <span class="eco-no">05</span>
+                <h3>Türkçe Eğitimi</h3>
+                <p>Dil, kültür, ölçme ve öğretmen gelişimi.</p>
+                <div class="eco-children">
+                  <span class="eco-child">A1–C1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="eco-core">
+            <span class="eco-core-badge">YENİ ÇEKİRDEK</span>
+            <strong>Öğrenci Dosyası</strong>
+            <span class="eco-core-desc">Tek öğrenci · tek dosya · tüm birimler aynı kayda bağlanır</span>
+          </div>
+          <div class="eco-support">
+            <b>Ortak altyapı</b>
+            <span>Kayıt</span><span>Finans</span><span>İnsan kaynakları</span><span>Kalite &amp; uyum</span><span>Veri</span><span>İletişim</span>
+          </div>
+        </div>
+        <p class="slide-note">Her alan kendi markası ve uzmanlığıyla çalışır; kayıt, kalite ve öğretmen standardı NCF çatısı altında ortaktır. Yeni çekirdek, bu beş alanın tüm verisini Öğrenci Dosyası'nda birleştirir.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Tek bakışta -->
+  <section class="deck-slide" data-slide-number="5">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Tek bakışta</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">Tek bakışta</div>
+        <h2>Her birimin sahibi olduğu iş</h2>
+        <p class="slide-lead">Beş alan, tek bir öğrenci yolculuğunun farklı aşamalarına hizmet eder. Aşağıdaki tablo, birimlerin kapsamını ve birincil çıktısını özetler.</p>
+        <table class="deck-table">
+          <thead>
+            <tr><th>Alan</th><th>Neyi kapsar?</th><th>Birincil çıktı</th><th>Marka / kapsam</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="accent-dot a-school"></span><strong>Okullar</strong></td><td>JK–12 özel okul işletmeciliği; müfredat, öğretmen, kayıt ve kampüs yönetimi.</td><td>Öğrenci kaydı, akademik ilerleme ve mezuniyet.</td><td>Nile Academy · Nebula Academy</td></tr>
+            <tr><td><span class="accent-dot a-tutoring"></span><strong>Dersanecilik</strong></td><td>Ücretsiz dersler, deneme sınavları, mentorluk ve sınav hazırlığı.</td><td>Akademik güven, ölçülebilir ilerleme ve hazırlık.</td><td>Future Bridge Academy</td></tr>
+            <tr><td><span class="accent-dot a-ece"></span><strong>Okul Öncesi</strong></td><td>Kurum açma süreci, lisans, program ve ECE öğretmen gelişimi.</td><td>Güvenli, nitelikli ve sürdürülebilir erken çocukluk eğitimi.</td><td>NCF bünyesinde</td></tr>
+            <tr><td><span class="accent-dot a-teachers"></span><strong>Öğretmenler</strong></td><td>İşe alım, oryantasyon, mesleki gelişim, gözlem ve mentorluk.</td><td>Her sınıfta tutarlı öğretmen kalitesi.</td><td>NCF bünyesinde</td></tr>
+            <tr><td><span class="accent-dot a-turkish"></span><strong>Türkçe Eğitimi</strong></td><td>Dil programı, kültür, ölçme-değerlendirme ve öğretmen eğitimi.</td><td>Türkçe yeterliliği, aidiyet ve kuşaklar arası bağ.</td><td>NCF bünyesinde</td></tr>
+          </tbody>
+        </table>
+        <p class="slide-note">Rakamlar ve ayrıntılar, ilgili birimin kendi bölümünde ele alınır. Ortak çekirdek Öğrenci Dosyası'dır; ortak hizmetler ve yol haritası sunumun sonunda yer alır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Yeni çekirdek: Öğrenci Dosyası -->
+  <section class="deck-slide sec-core" data-slide-number="6">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Öğrenci Dosyası</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">Yeni çekirdek</div>
+        <h2>Her şey Öğrenci Dosyası'nın üstüne kurulacak</h2>
+        <p class="slide-lead">Öğrenci Dosyası, bir öğrencinin NCF içindeki tüm kayıtlarını tek yerde toplayan yeni çekirdek. Okul, dersane, okul öncesi, öğretmen ve Türkçe programı aynı dosyaya bağlanır.</p>
+        <div class="file-layout">
+          <div>
+            <ul class="bullets">
+              <li><strong>Tek kimlik, tek kayıt:</strong> Öğrenci her birimde yeniden tanıtılmaz; aynı dosya devam eder.</li>
+              <li><strong>Birimler ekler, dosya birleştirir:</strong> Her birim kendi verisini yazar; dosya bütünü tek resimde gösterir.</li>
+              <li><strong>Mentor ve süpervizör aynı resmi görür:</strong> Eksikler, hedefler ve sonraki adım aynı yerden yönetilir.</li>
+            </ul>
+          </div>
+          <div class="file-card">
+            <div class="file-card-head">
+              <strong>Öğrenci Dosyası</strong>
+              <span class="file-card-badge">YENİ</span>
+            </div>
+            <div class="file-grid">
+              <div class="file-item"><b>Kimlik &amp; iletişim</b>Öğrenci, aile, dil, izinler</div>
+              <div class="file-item"><b>Akademik kayıt</b>Karne, dersler, devamsızlık</div>
+              <div class="file-item"><b>Başvurular &amp; hedefler</b>Üniversite, college, trades</div>
+              <div class="file-item"><b>Portföy &amp; başarılar</b>Projeler, ödüller, sertifikalar</div>
+              <div class="file-item"><b>Referanslar</b>Öğretmen ve mentor notları</div>
+              <div class="file-item"><b>Görüşme notları</b>Kararlar ve sonraki adımlar</div>
+              <div class="file-item"><b>Belgeler</b>Transkript, kimlik, izinler</div>
+              <div class="file-item"><b>Son tarihler</b>Başvuru ve sınav takvimi</div>
+            </div>
+            <div class="file-card-foot">Tek öğrenci, tek dosya: beş alanın verisi aynı kayıtta birleşir.</div>
+          </div>
+        </div>
+        <p class="slide-note">Dosya bir belge deposu değil; karar, takip ve raporlama için tek kaynak. Yeni hizmetler ve süreçler bu çekirdeğin üstüne kurulacak.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · Öğrenci Dosyası işleyişi -->
+  <section class="deck-slide sec-core" data-slide-number="7">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Öğrenci Dosyası</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">Öğrenci Dosyası · İşleyiş</div>
+        <h2>Tek dosya, beş birim, tek gerçek</h2>
+        <p class="slide-lead">Her birim kendi uzmanlığını dosyaya ekler; öğrenci, mentor ve aile aynı resmi görür.</p>
+        <div class="flow">
+          <div class="flow-row">
+            <div class="flow-chip a-school"><b>Okullar</b>Karne, ders seçimi, devamsızlık, gelişim notu.</div>
+            <div class="flow-chip a-tutoring"><b>Dersanecilik</b>Ders katılımı, deneme sonuçları, mentor notu.</div>
+            <div class="flow-chip a-ece"><b>Okul Öncesi</b>Gelişim gözlemi, portfolyo, aile görüşmesi.</div>
+            <div class="flow-chip a-teachers"><b>Öğretmenler</b>Gözlem, geri bildirim, gelişim planı.</div>
+            <div class="flow-chip a-turkish"><b>Türkçe</b>Seviye, beceri gelişimi, portfolyo.</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-core"><strong>Öğrenci Dosyası</strong><span>tek kayıt · tek zaman çizelgesi · tek kaynak</span></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-out">
+            <div><b>Mentor görünümü</b>Eksikler, hedefler ve sonraki adım.</div>
+            <div><b>Veli raporu</b>Anlaşılır özet ve ilerleme.</div>
+            <div><b>Başvuru / kayıt</b>Portföy, referans ve son tarihler.</div>
+          </div>
+        </div>
+        <p class="slide-note">Her birim aynı dosyaya yazar; hiçbir veri ikinci kez istenmez. Yeni süreçler bu tek kaynağın üzerine eklenir.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · Bölüm 01 -->
+  <section class="deck-slide deck-section sec-school" data-slide-number="8">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Okullar</span>
+      </div>
+      <div class="slide-body center-body">
+        <div class="section-number">01</div>
+        <div class="slide-kicker">Bölüm 01</div>
+        <h2>Okullar</h2>
+        <p class="slide-lead">Nile Academy ve Nebula Academy: iki kampüs, iki topluluk, ortak akademik standart.</p>
+        <div class="section-chips">
+          <span>Toronto · Ontario</span>
+          <span>Edmonton · Alberta</span>
+          <span>JK–12 · Pre-K–9</span>
+          <span>Küçük sınıflar</span>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · İki okul -->
+  <section class="deck-slide sec-school" data-slide-number="7">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Okullar</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">01 · Okullar</div>
+        <h2>İki okul, iki kampüs, iki güçlü kimlik</h2>
+        <p class="slide-lead">Nile Academy ve Nebula Academy farklı şehirlerde, farklı topluluklara hizmet eder. Ortak noktaları akademik titizlik, karakter eğitimi ve aile ortaklığıdır.</p>
+        <div class="school-grid">
+          <article class="school-card" style="--accent: var(--navy);">
+            <div class="school-photo-wrap">
+              <img class="school-photo" src="assets/nile-academy-elementary.jpg" alt="Nile Academy sınıfı" />
+              <span class="school-photo-credit">nileacademy.ca</span>
+            </div>
+            <div class="school-head">
+              <img class="school-logo" src="../FutureBridgeAcademy_ca/images/logos/nile-academy-logo.png" alt="Nile Academy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+              <span class="school-monogram" style="display:none;">N</span>
+              <div>
+                <h3>Nile Academy</h3>
+                <span class="school-sub">Toronto, Ontario · 2005'ten beri</span>
+              </div>
+            </div>
+            <ul>
+              <li>JK–Grade 12; Ontario Ministry of Education müfredatı.</li>
+              <li>Fen bilimleri ve bilgi-iletişim teknolojileri vurgusu.</li>
+              <li>Küçük sınıflar ve düşük öğrenci-öğretmen oranı.</li>
+              <li>Uluslararası öğrenciler için yatılılık; gece okulu.</li>
+              <li>Farklı inanç ve kültürlerden ailelere açık bir topluluk.</li>
+            </ul>
+          </article>
+          <article class="school-card" style="--accent: var(--red);">
+            <div class="school-photo-wrap">
+              <img class="school-photo" src="assets/nebula-academy-campus.jpg" alt="Nebula Academy kampüsü" />
+              <span class="school-photo-credit">nebulaacademy.ca</span>
+            </div>
+            <div class="school-head">
+              <img class="school-logo" src="assets/nebula-academy-logo.png" alt="Nebula Academy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+              <span class="school-monogram" style="display:none;">N</span>
+              <div>
+                <h3>Nebula Academy</h3>
+                <span class="school-sub">Edmonton, Alberta · Pre-K–Grade 9</span>
+              </div>
+            </div>
+            <ul>
+              <li>Alberta müfredatı ile İslami programı birlikte yürütür.</li>
+              <li>Kur'an, Arapça ve İslam etiği günlük öğrenimin parçası.</li>
+              <li>3–5 yaş için İslami okul öncesi programı.</li>
+              <li>2026–27: 305 öğrenci, 16 sınıf, 24 öğretmen.</li>
+              <li>Ortalama sınıf mevcudu 18–19,7; öğrenci-öğretmen oranı 12,7:1.</li>
+            </ul>
+          </article>
+        </div>
+        <p class="slide-note">NCF çatısı altında her okul kendi yerel kimliğini korur; akademik standart ve kalite süreçleri ortaktır. Nebula verileri 2026–27 sınıf özetine dayanır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · Okul işletim modeli -->
+  <section class="deck-slide sec-school" data-slide-number="8">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Okullar</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">01 · Okul işletim modeli</div>
+        <h2>İyi okul, beş günlük rutinin toplamıdır</h2>
+        <p class="slide-lead">İyi sonuç; müfredat, öğretmen, aile iletişimi, güvenlik ve veri aynı yönde çalıştığında ortaya çıkar.</p>
+        <div class="grid-5">
+          <div class="card accent a-school">
+            <span class="icon-badge">A</span>
+            <h3>Akademik program</h3>
+            <p>Müfredat haritası, ders planı, ölçme ve düzenli geri bildirim.</p>
+          </div>
+          <div class="card accent a-school">
+            <span class="icon-badge">Ö</span>
+            <h3>Öğretmen ve sınıf</h3>
+            <p>İşe alım, yerleştirme, sınıf gözlemi ve mentorluk.</p>
+          </div>
+          <div class="card accent a-school">
+            <span class="icon-badge">K</span>
+            <h3>Kayıt ve aile</h3>
+            <p>Başvuru, oryantasyon ve düzenli veli iletişimi.</p>
+          </div>
+          <div class="card accent a-school">
+            <span class="icon-badge">G</span>
+            <h3>Uyum ve güvenlik</h3>
+            <p>Lisans, politikalar, çocuk koruma ve tesis güvenliği.</p>
+          </div>
+          <div class="card accent a-school">
+            <span class="icon-badge">V</span>
+            <h3>Kalite ve veri</h3>
+            <p>Sonuçlar, memnuniyet ve iyileştirme planı.</p>
+          </div>
+        </div>
+        <p class="slide-note">NCF'nin rolü, her okulun günlük işleyişini yönetmesine destek olurken ortak standardı görünür kılmaktır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · Öğrenci yolculuğu -->
+  <section class="deck-slide sec-school" data-slide-number="9">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Okullar</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">01 · Öğrenci yolculuğu</div>
+        <h2>Kayıttan mezuniyete tek iz</h2>
+        <p class="slide-lead">Öğrencinin her adımı aynı dosyada, aynı hedef etrafında ve aynı veli diliyle izlenir.</p>
+        <div class="steps steps-5">
+          <div class="step a-school"><span class="step-no">1</span><b>Tanışma ve başvuru</b><span>Aile görüşmesi, ihtiyaç ve beklenti analizi.</span></div>
+          <div class="step a-school"><span class="step-no">2</span><b>Seviye ve oryantasyon</b><span>Hazırbulunuşluk, sınıf yerleştirme ve okul kültürü.</span></div>
+          <div class="step a-school"><span class="step-no">3</span><b>Akademik plan</b><span>Ders seçimi, hedefler ve destek ihtiyacı.</span></div>
+          <div class="step a-school"><span class="step-no">4</span><b>Dönem izleme</b><span>Karne, veli görüşmesi ve erken müdahale.</span></div>
+          <div class="step a-school"><span class="step-no">5</span><b>Mezuniyet ve sonraki adım</b><span>Üniversite, college, trades veya kariyer planı.</span></div>
+        </div>
+        <p class="slide-note">Bu iz, veli görüşmesinden dönem sonu raporuna kadar aynı veriyi kullanır; her kademede öğrenci dosyası devam eder.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · Bölüm 02 -->
+  <section class="deck-slide deck-section sec-tutoring" data-slide-number="10">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Dersanecilik</span>
+      </div>
+      <div class="slide-body center-body">
+        <div class="section-number">02</div>
+        <div class="slide-kicker">Bölüm 02</div>
+        <h2>Dersanecilik</h2>
+        <p class="slide-lead">Future Bridge Academy: ücretsiz öğretim önce gelir; merkez, mentorluk ve dijital araçlar öğrencinin ihtiyacı büyüdükçe eklenir.</p>
+        <div class="section-chips">
+          <span>Grades 4–12</span>
+          <span>Vancouver bölgesi</span>
+          <span>Gönüllü model</span>
+          <span>Ücretsiz başlangıç</span>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · FBA modeli -->
+  <section class="deck-slide sec-tutoring" data-slide-number="11">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Dersanecilik</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">02 · Future Bridge Academy</div>
+        <h2>Önce ücretsiz öğretim</h2>
+        <p class="slide-lead">Future Bridge Academy, ailelerin bütçesinden bağımsız olarak öğrencilere ücretsiz ders ve deneme sınavı sunan bir topluluk programıdır. Program, üç ayak üzerinde yükselir.</p>
+        <div class="grid-3">
+          <div class="card accent a-tutoring">
+            <span class="icon-badge">A</span>
+            <h3>Akademik destek</h3>
+            <p>Haftalık online matematik dersi, aylık gerçek deneme sınavı, okul konusuna eşleşen pratik ve anında mentor düzeltmesi.</p>
+          </div>
+          <div class="card accent a-tutoring">
+            <span class="icon-badge">Y</span>
+            <h3>Yol rehberliği</h3>
+            <p>Üniversite, college, trades, IB ve AP seçenekleri; burs ve veli seminerleriyle karar desteği.</p>
+          </div>
+          <div class="card accent a-tutoring">
+            <span class="icon-badge">M</span>
+            <h3>Çalışma mekânı</h3>
+            <p>Merkez: odalar, rutinler ve gözetim. Program büyüdükçe açılır; çalışmanın kendi evi olur.</p>
+          </div>
+        </div>
+        <div class="eco-core" style="margin-top:11px;">
+          <span class="eco-core-badge">YENİ ÇEKİRDEK</span>
+          <strong>Öğrenci Dosyası</strong>
+          <span class="eco-core-desc">Akademik destek, mentorluk ve yol rehberliği aynı öğrenci dosyasında birleşir.</span>
+        </div>
+        <div class="facts">
+          <div class="fact"><b>Grades 4–12</b><span>Her seviyeden öğrenci</span></div>
+          <div class="fact"><b>Haftalık</b><span>Online matematik dersi</span></div>
+          <div class="fact"><b>Aylık</b><span>Yüz yüze deneme sınavı</span></div>
+          <div class="fact"><b>Gönüllü</b><span>Üniversite ve lise mentorları</span></div>
+        </div>
+        <p class="slide-note">CentreCanada Newcomer Services Society, kayıtlı bir hayır kurumudur; program Vancouver bölgesinde, New Westminster merkezinden başlar ve partner kuruluşlarla yürütülür. Ücretsiz programlar ücretsiz kalır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · FBA program portföyü -->
+  <section class="deck-slide sec-tutoring" data-slide-number="12">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Dersanecilik</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">02 · Program portföyü</div>
+        <h2>Bugün çalışanlar ve merkezle açılacaklar</h2>
+        <p class="slide-lead">Future Bridge Academy iki aşamalı büyür: önce ücretsiz erişim, sonra merkezle birlikte daha derin destek. İki aşama birbirine karıştırılmaz.</p>
+        <table class="deck-table">
+          <thead>
+            <tr><th>Bugün çalışıyor</th><th>Durum</th><th>Merkezle açılacak</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Haftalık online matematik dersleri</strong><br>Okul konusuna eşleşen canlı ders.</td><td>Ücretsiz</td><td><strong>Küçük grup dersleri</strong><br>Matematik ve İngilizce, merkezde.</td></tr>
+            <tr><td><strong>Aylık yüz yüze deneme sınavı</strong><br>Gerçek sınav koşullarında.</td><td>Ücretsiz</td><td><strong>Birebir mentorluk</strong><br>Aylık gelişim raporuyla.</td></tr>
+            <tr><td><strong>Burs ve veli seminerleri</strong><br>Somut sonraki adımlarla.</td><td>Ücretsiz</td><td><strong>Yazılı yol planı</strong><br>Başvuru ve portföy takibi.</td></tr>
+            <tr><td><strong>Gönüllü mentor topluluğu</strong><br>Eğitimli üniversite ve lise öğrencileri.</td><td>Gönüllü</td><td><strong>CEMC yarışma kulübü</strong><br>Ayrı bir ileri matematik izi.</td></tr>
+            <tr><td><strong>Drone pilot sertifika kursu</strong><br>Transport Canada RPAS hazırlığı.</td><td>Sertifika</td><td><strong>IB/AP ve trades hazırlığı</strong><br>Akademik ve mesleki yollar.</td></tr>
+            <tr><td><strong>Topluluk ve mentor ağı</strong><br>Dersler arasında süreklilik.</td><td>Ücretsiz</td><td><strong>İngilizce ve yazma</strong><br>Okuma, yapı ve düzeltme.</td></tr>
+          </tbody>
+        </table>
+        <p class="slide-note">Ücretsiz programlar ücretsiz kalır. Ücretli bir hizmet varsa, aile kabul etmeden önce açıkça açıklanır; web sitesinde fiyat yayınlanmaz.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · FBA video -->
+  <section class="deck-slide sec-tutoring" data-slide-number="14">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Dersanecilik</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">02 · Saha örneği</div>
+        <h2>CEMC yarışmalarıyla açılan kapı</h2>
+        <p class="slide-lead">CentreCanada Future Bridge Academy'nin CEMC matematik yarışmaları deneyimi: yeni gelen öğrenciler nasıl güçleniyor?</p>
+        <div class="video-layout">
+          <div>
+            <div class="video-frame">
+              <button class="video-poster" id="fba-video-poster" type="button" aria-label="Videoyu oynat: How Newcomer Students Thrive Through CEMC Math Contests">
+                <img src="assets/fba-cemc-video-thumb.jpg" alt="CEMC matematik yarışmaları videosu" />
+                <span class="video-play" aria-hidden="true">▶</span>
+                <span class="video-poster-label">Videoyu oynat · 7:25</span>
+              </button>
+            </div>
+            <p class="video-caption">Video: CentreCanada · "How Newcomer Students Thrive Through CEMC Math Contests"</p>
+          </div>
+          <div class="video-side">
+            <div class="card accent a-tutoring">
+              <h3>Neden CEMC?</h3>
+              <p>Yarışma matematiği, öğrencinin okul konusunun ötesine geçmesini ve kendine güven kazanmasını sağlar.</p>
+            </div>
+            <div class="card accent a-tutoring">
+              <h3>Yeni gelen öğrenci</h3>
+              <p>Dil ve sistem farkına rağmen öğrenci, somut bir hedef ve düzenli çalışmayla ilerler.</p>
+            </div>
+            <div class="card accent a-tutoring">
+              <h3>Öğrenci Dosyası'na bağ</h3>
+              <p>Deneme sonuçları, yarışma hazırlığı ve mentor notları aynı dosyada izlenir.</p>
+            </div>
+            <a class="video-link" href="https://www.youtube.com/watch?v=pI24FKBE9eA" target="_blank" rel="noopener">YouTube'da aç →</a>
+          </div>
+        </div>
+        <p class="slide-note">Video, Future Bridge Academy'nin CEMC yarışma kulübü yaklaşımını ve yeni gelen öğrencilerin bu yolla nasıl güçlendiğini gösteriyor.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 · FBA dijital hizmetler -->
+  <section class="deck-slide sec-tutoring" data-slide-number="15">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Dersanecilik</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">02 · Öğrenci dosyası merkezli hizmetler</div>
+        <h2>Yeni hizmetlerin merkezinde Öğrenci Dosyası var</h2>
+        <p class="slide-lead">Student Files yeni çekirdek; diğer iki hizmet bu dosyaya veri üretir. Mentor ve süpervizör aynı kaydı görür; öğretmen tanımlar, öğrenci üretir, mentor onaylar.</p>
+        <div class="grid-3">
+          <div class="card core-card">
+            <span class="card-no">YENİ ÇEKİRDEK</span>
+            <h3>Student Files</h3>
+            <p>Öğrenci başına tek dosya: profil, başvurular, portföy, notlar, referanslar ve son tarihler. Mentor aynı dosyadan eksikleri ister.</p>
+            <p class="tool-line"><strong>Araç:</strong> Student File Builder For Applications</p>
+          </div>
+          <div class="card accent a-tutoring">
+            <span class="card-no">HİZMET 02</span>
+            <h3>Self-Paced Courses</h3>
+            <p>Bölümler sırayla açılır; dersler, kısa sınavlar, bilgi kartları ve sunum görünümüyle ilerleme izlenir. Süpervizör ilerlemeyi görür ve çalışmayı onaylar.</p>
+            <p class="tool-line"><strong>Araçlar:</strong> Curriculum Builder + Self-Paced Education By Section</p>
+          </div>
+          <div class="card accent a-tutoring">
+            <span class="card-no">HİZMET 03</span>
+            <h3>English Article Writing</h3>
+            <p>Öğrenci yazar, rubrikle puan alır ve somut geri bildirimle kendi metnini düzeltir. Araç öğrencinin yazısını asla yeniden yazmaz.</p>
+            <p class="tool-line"><strong>Araçlar:</strong> Essay Subject Builder + Essay Writing Educator</p>
+          </div>
+        </div>
+        <p class="slide-note">Student Files yeni çekirdek; Self-Paced Courses ve English Article Writing bu çekirdeğe bağlanır. Her hizmet tarayıcıda çalışır; kurulum gerekmez.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · Bölüm 03 -->
+  <section class="deck-slide deck-section sec-ece" data-slide-number="14">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Okul Öncesi</span>
+      </div>
+      <div class="slide-body center-body">
+        <div class="section-number">03</div>
+        <div class="slide-kicker">Bölüm 03</div>
+        <h2>Okul Öncesi</h2>
+        <p class="slide-lead">Kurum açma ve ECE öğretmenleri: doğru mekân, doğru program ve doğru öğretmenle güvenli bir başlangıç.</p>
+        <div class="section-chips">
+          <span>0–6 yaş</span>
+          <span>Kurum açma</span>
+          <span>Lisans &amp; uyum</span>
+          <span>ECE kariyer yolu</span>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 · Kurum açma yol haritası -->
+  <section class="deck-slide sec-ece" data-slide-number="15">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Okul Öncesi</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">03 · Kurum açma</div>
+        <h2>Bir okul öncesi kurumun altı adımı</h2>
+        <p class="slide-lead">Kurum açmak bir mekân kiralamaktan fazlasıdır. NCF, her adımı uygulanabilir bir kontrol listesi ve yerel mevzuata uyum çerçevesinde ele alır.</p>
+        <div class="grid-6">
+          <div class="card accent a-ece">
+            <span class="card-no">01 · İHTİYAÇ</span>
+            <h3>İhtiyaç ve konum</h3>
+            <p>Bölgedeki aile ihtiyacı, yaş grubu, kapasite ve ulaşım analizi.</p>
+          </div>
+          <div class="card accent a-ece">
+            <span class="card-no">02 · LİSANS</span>
+            <h3>Lisans ve mevzuat</h3>
+            <p>Eyalet gereklilikleri, başvuru dosyası, denetim ve kayıt süreçleri.</p>
+          </div>
+          <div class="card accent a-ece">
+            <span class="card-no">03 · MEKÂN</span>
+            <h3>Mekân ve güvenlik</h3>
+            <p>Yaş grubuna uygun alan, oyun donanımı, hijyen ve acil durum planı.</p>
+          </div>
+          <div class="card accent a-ece">
+            <span class="card-no">04 · PROGRAM</span>
+            <h3>Program ve materyal</h3>
+            <p>Oyun temelli, gelişim odaklı müfredat; günlük akış ve kaynak seti.</p>
+          </div>
+          <div class="card accent a-ece">
+            <span class="card-no">05 · EKİP</span>
+            <h3>Ekip ve oranlar</h3>
+            <p>ECE sertifikaları, personel oranları, işe alım ve oryantasyon.</p>
+          </div>
+          <div class="card accent a-ece">
+            <span class="card-no">06 · AÇILIŞ</span>
+            <h3>Açılış ve izleme</h3>
+            <p>Aile iletişimi, ilk hafta planı, kalite takibi ve sürekli iyileştirme.</p>
+          </div>
+        </div>
+        <p class="slide-note">Eyalet mevzuatı belirleyicidir; NCF süreci yerel gerekliliklere göre yönetir ve her adımda uygulanabilir bir kontrol listesi sunar.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 · ECE kariyer yolu -->
+  <section class="deck-slide sec-ece" data-slide-number="16">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Okul Öncesi</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">03 · ECE öğretmenleri</div>
+        <h2>ECE öğretmeni için görünür bir kariyer yolu</h2>
+        <p class="slide-lead">Erken çocukluk eğitiminde kalite, öğretmenin bilgisi ve sürekliliğiyle başlar. NCF, bu yolu sertifikasyondan kurum yöneticiliğine kadar açar.</p>
+        <div class="steps steps-4">
+          <div class="step a-ece"><span class="step-no">1</span><b>Destek personeli</b><span>Sertifikasyon öncesi destek; gölgeleme ve temel eğitim.</span></div>
+          <div class="step a-ece"><span class="step-no">2</span><b>ECE öğretmeni</b><span>Sertifikalı erken çocukluk eğitimcisi; sınıf içi uygulama.</span></div>
+          <div class="step a-ece"><span class="step-no">3</span><b>Oda lideri / süpervizör</b><span>Program liderliği, mentorluk ve aile ilişkileri.</span></div>
+          <div class="step a-ece"><span class="step-no">4</span><b>Kurum müdürü</b><span>Kurum yönetimi, uyum, ekip gelişimi ve kalite.</span></div>
+        </div>
+        <div class="facts">
+          <div class="fact"><b>Sertifikasyon</b><span>ECE gereklilikleri ve rehberlik</span></div>
+          <div class="fact"><b>Mentorluk</b><span>Deneyimli öğretmenle birebir destek</span></div>
+          <div class="fact"><b>Gözlem</b><span>Sınıf içi geri bildirim döngüsü</span></div>
+          <div class="fact"><b>Kariyer</b><span>Liderlik ve yöneticilik basamakları</span></div>
+        </div>
+        <p class="slide-note">NCF desteği: sertifikasyon rehberliği, mentorluk, ders gözlemi, atölyeler ve bireysel kariyer planı. Yatırım öğretmene yapılır; kalite sınıfta başlar.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17 · Bölüm 04 -->
+  <section class="deck-slide deck-section sec-teachers" data-slide-number="17">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Öğretmenler</span>
+      </div>
+      <div class="slide-body center-body">
+        <div class="section-number">04</div>
+        <div class="slide-kicker">Bölüm 04</div>
+        <h2>Öğretmenler</h2>
+        <p class="slide-lead">NCF Öğretmen Gelişim Modeli: işe alımdan mentorluğa, her sınıfta aynı kalite.</p>
+        <div class="section-chips">
+          <span>Tüm birimler</span>
+          <span>Oryantasyon</span>
+          <span>Gözlem</span>
+          <span>Kariyer yolu</span>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 · Öğretmen gelişim modeli -->
+  <section class="deck-slide sec-teachers" data-slide-number="18">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Öğretmenler</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">04 · Gelişim modeli</div>
+        <h2>Öğren, uygula, liderlik et, yetiştir</h2>
+        <p class="slide-lead">Öğretmen gelişimi tek seferlik bir eğitim değil, kariyer boyunca devam eden bir döngüdür. Her aşama bir sonrakinin zeminini hazırlar.</p>
+        <div class="grid-4">
+          <div class="card accent a-teachers">
+            <span class="card-no">AŞAMA 01</span>
+            <h3>Aday</h3>
+            <p>Oryantasyon, gölgeleme ve temel pedagoji. NCF kültürü ve sınıf standardı burada kurulur.</p>
+          </div>
+          <div class="card accent a-teachers">
+            <span class="card-no">AŞAMA 02</span>
+            <h3>Uygulayıcı</h3>
+            <p>Planlama, sınıf yönetimi ve düzenli geri bildirim. Öğretmen kendi pratiğini güvenle kurar.</p>
+          </div>
+          <div class="card accent a-teachers">
+            <span class="card-no">AŞAMA 03</span>
+            <h3>Lider</h3>
+            <p>Program tasarımı, akran gözlemi ve mentorluk. Sınıfının ötesinde etki üretir.</p>
+          </div>
+          <div class="card accent a-teachers">
+            <span class="card-no">AŞAMA 04</span>
+            <h3>Mentor</h3>
+            <p>Öğretmen eğitimi, kalite standardı ve yeni liderlerin yetiştirilmesi.</p>
+          </div>
+        </div>
+        <p class="slide-note">Sürekli döngü: planla → uygula → gözlemle → geri bildirim ver → yeniden planla. Değerlendirme bir ceza değil, destek planının başlangıcıdır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19 · İşe alım ve elde tutma -->
+  <section class="deck-slide sec-teachers" data-slide-number="19">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Öğretmenler</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">04 · İnsan kaynakları</div>
+        <h2>Doğru öğretmeni bulmak ve tutmak</h2>
+        <p class="slide-lead">İyi öğretmen yalnızca işe alımda seçilmez; ilk yılda desteklenir, geri bildirimle büyür ve kariyer yoluyla kurumda kalır.</p>
+        <div class="grid-3">
+          <div class="card accent a-teachers">
+            <span class="icon-badge">1</span>
+            <h3>İşe alım</h3>
+            <ul class="bullets tight">
+              <li>Yetkinlik temelli görüşme ve demo ders.</li>
+              <li>Referans kontrolü ve çocuk koruma taraması.</li>
+              <li>Okul kültürüne uyum ve rol netliği.</li>
+            </ul>
+          </div>
+          <div class="card accent a-teachers">
+            <span class="icon-badge">2</span>
+            <h3>Gelişim</h3>
+            <ul class="bullets tight">
+              <li>Bireysel gelişim planı ve yıllık hedefler.</li>
+              <li>Atölyeler, mentorluk ve akran gözlemi.</li>
+              <li>Öğrenci sonuçlarına dayalı geri bildirim.</li>
+            </ul>
+          </div>
+          <div class="card accent a-teachers">
+            <span class="icon-badge">3</span>
+            <h3>Elde tutma</h3>
+            <ul class="bullets tight">
+              <li>Görünür kariyer basamakları.</li>
+              <li>Tanınma, takdir ve makul iş yükü.</li>
+              <li>Sürekli geri bildirim ve aidiyet.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="slide-note">NCF'nin öğretmen standardı tüm okul ve programlarda ortaktır; uygulama yerel ihtiyaçlara ve mevzuata göre uyarlanır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20 · Bölüm 05 -->
+  <section class="deck-slide deck-section sec-turkish" data-slide-number="20">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Türkçe Eğitimi</span>
+      </div>
+      <div class="slide-body center-body">
+        <div class="section-number">05</div>
+        <div class="slide-kicker">Bölüm 05</div>
+        <h2>Türkçe Eğitimi</h2>
+        <p class="slide-lead">Dil, kültür ve aidiyet: Türkçeyi yalnızca bir ders değil, kuşaklar arası bir bağ olarak ele alıyoruz.</p>
+        <div class="section-chips">
+          <span>Okul öncesi–lise</span>
+          <span>A1–C1</span>
+          <span>Dört beceri</span>
+          <span>Aile katılımı</span>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21 · Türkçe program çerçevesi -->
+  <section class="deck-slide sec-turkish" data-slide-number="21">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Türkçe Eğitimi</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">05 · Program çerçevesi</div>
+        <h2>Dört beceri, üç seviye</h2>
+        <p class="slide-lead">Program, öğrencinin yaşına ve mevcut seviyesine göre dinleme, konuşma, okuma ve yazmayı birlikte geliştirir; dil bilgisi ve kültür her seviyeye dokunur.</p>
+        <div class="grid-3">
+          <div class="card accent a-turkish">
+            <span class="card-no">A1–A2 · TEMEL</span>
+            <h3>Günlük iletişim</h3>
+            <p>Temel kelime ve dil bilgisi, kısa metinler, günlük konuşma ve okuma alışkanlığı.</p>
+          </div>
+          <div class="card accent a-turkish">
+            <span class="card-no">B1–B2 · BAĞIMSIZ</span>
+            <h3>Metin ve tartışma</h3>
+            <p>Metin okuma, görüş bildirme, yapılandırılmış yazma ve sunum becerileri.</p>
+          </div>
+          <div class="card accent a-turkish">
+            <span class="card-no">C1 · İLERİ</span>
+            <h3>Akademik ve edebi Türkçe</h3>
+            <p>Eleştirel okuma, akademik yazma, sunum ve edebi metinlerle derinleşme.</p>
+          </div>
+        </div>
+        <div class="facts">
+          <div class="fact"><b>Dinleme</b><span>Anlama ve not alma</span></div>
+          <div class="fact"><b>Konuşma</b><span>Akıcılık ve özgüven</span></div>
+          <div class="fact"><b>Okuma</b><span>Metin ve kültür</span></div>
+          <div class="fact"><b>Yazma</b><span>Yapı ve anlatım</span></div>
+        </div>
+        <p class="slide-note">Oyun, hikâye, proje ve dijital kaynaklar yaş grubuna göre uyarlanır; aile etkinlikleri öğrenilen dili günlük hayata taşır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22 · Türkçe ölçme ve öğretmen -->
+  <section class="deck-slide sec-turkish" data-slide-number="22">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Türkçe Eğitimi</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">05 · Kalite</div>
+        <h2>Ölçülebilir ilerleme, yetkin öğretmen</h2>
+        <p class="slide-lead">Türkçe programının kalitesi üç şeye bağlıdır: doğru ölçme, iyi yetişmiş öğretmen ve tutarlı kaynak.</p>
+        <div class="grid-3">
+          <div class="card accent a-turkish">
+            <span class="icon-badge">Ö</span>
+            <h3>Değerlendirme</h3>
+            <p>Seviye belirleme, dönem izleme, portföy ve CEFR referansı. Sınav tek başına değil, bütüncül olarak okunur.</p>
+          </div>
+          <div class="card accent a-turkish">
+            <span class="icon-badge">T</span>
+            <h3>Öğretmen</h3>
+            <p>Türkçe öğretmeni eğitimi, mentorluk ve ders gözlemi. Öğretmen, programın en güçlü taşıyıcısıdır.</p>
+          </div>
+          <div class="card accent a-turkish">
+            <span class="icon-badge">K</span>
+            <h3>Kaynak</h3>
+            <p>Ortak müfredat, dijital kütüphane, yaşa uygun metinler ve aile etkinlikleri.</p>
+          </div>
+        </div>
+        <p class="slide-note">Tek bir sınav yeterli değil; portföy, sınıf içi performans ve öğretmen gözlemi birlikte değerlendirilir.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23 · Ortak hizmetler -->
+  <section class="deck-slide sec-shared" data-slide-number="23">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Ortak hizmetler</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">Tek çatı</div>
+        <h2>Beş birim, altı ortak hizmet</h2>
+        <p class="slide-lead">Birimler kendi uzmanlığını korur; altyapıyı paylaşarak daha hızlı ve daha tutarlı büyür.</p>
+        <div class="grid-6">
+          <div class="card accent a-red">
+            <span class="card-no">01</span>
+            <h3>Kayıt ve iletişim</h3>
+            <p>Tek başvuru deneyimi, veli iletişimi ve ilişki yönetimi.</p>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">02</span>
+            <h3>Finans</h3>
+            <p>Bütçe, ücretlendirme politikası ve düzenli raporlama.</p>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">03</span>
+            <h3>İnsan kaynakları</h3>
+            <p>İşe alım, sözleşme, oryantasyon ve gelişim süreçleri.</p>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">04</span>
+            <h3>Kalite ve uyum</h3>
+            <p>Lisans, politika, denetim ve çocuk koruma standartları.</p>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">05</span>
+            <h3>Veri ve raporlama</h3>
+            <p>Öğrenci sonuçları, memnuniyet ve karar panosu.</p>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">06</span>
+            <h3>Pazarlama ve topluluk</h3>
+            <p>Marka, içerik, etkinlik ve gönüllülük yönetimi.</p>
+          </div>
+        </div>
+        <p class="slide-note">Ortak hizmet, merkezi kontrol değil; birimlere hız ve standart kazandıran bir altyapıdır.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 24 · Yol haritası -->
+  <section class="deck-slide sec-shared" data-slide-number="24">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="logo-plate">
+          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Yol haritası</span>
+      </div>
+      <div class="slide-body">
+        <div class="slide-kicker">Öncelikler</div>
+        <h2>12 aylık yol haritası</h2>
+        <p class="slide-lead">Beş alanı aynı anda büyütmek yerine, ölçülebilir adımlarla ilerlemek: önce envanter ve standart, sonra pilot, sonra ölçekleme.</p>
+        <div class="grid-3">
+          <div class="card accent a-red">
+            <span class="card-no">0–90 GÜN</span>
+            <h3>Envanter ve standart</h3>
+            <ul class="bullets tight">
+              <li>Beş birimin mevcut durumu ve öncelikleri.</li>
+              <li>Ortak öğretmen ve kalite ölçütleri.</li>
+              <li>Öncelikli pilot alanlarının seçimi.</li>
+            </ul>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">3–6 AY</span>
+            <h3>Pilot ve gelişim</h3>
+            <ul class="bullets tight">
+              <li>Öğretmen gelişim programının başlatılması.</li>
+              <li>Okul öncesi açılış kontrol listesi.</li>
+              <li>Türkçe programı için pilot sınıf.</li>
+            </ul>
+          </div>
+          <div class="card accent a-red">
+            <span class="card-no">6–12 AY</span>
+            <h3>Ölçekleme</h3>
+            <ul class="bullets tight">
+              <li>Pilot sonuçlarının ölçülmesi.</li>
+              <li>İyi uygulamanın diğer birimlere yayılması.</li>
+              <li>Yıllık etki ve kalite raporu.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="slide-note">Ölçmeden ölçekleme yok: her adımın net bir başarı göstergesi, her göstergenin bir sahibi olmalı.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25 · Kapanış -->
+  <section class="deck-slide deck-closing" data-slide-number="25">
+    <div class="slide-frame">
+      <div class="slide-head">
+        <span class="cover-plate">
+          <img class="cover-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+          <span class="cover-logo-fallback" style="display:none;">NCF Education</span>
+        </span>
+        <span class="slide-head-name">NCF Education · Teşekkürler</span>
+      </div>
+      <div class="slide-body center-body">
+        <div class="slide-kicker" style="color:#ff7b88;">Birlikte büyüyen bir ekosistem</div>
+        <h2>Okuldan dersaneye,<br>tek dosyada tek standart.</h2>
+        <p class="slide-lead">NCF Education; okullar, dersanecilik, okul öncesi, öğretmenler ve Türkçe eğitimiyle öğrencinin yanında. Hepsinin ortak çekirdeği: Öğrenci Dosyası.</p>
+        <div class="closing-grid">
+          <div>
+            <h3>Okullar</h3>
+            <p>nileacademy.ca<br>nebulaacademy.ca</p>
+          </div>
+          <div>
+            <h3>Dersanecilik</h3>
+            <p>futurebridgeacademy.ca<br>Ücretsiz ders ve deneme sınavı</p>
+          </div>
+          <div>
+            <h3>Sonraki adım</h3>
+            <p>Beş birimin ortak yol haritasını ve önceliklerini netleştirmek.</p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
+        <span class="foot-num"></span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="deck-controls">
+  <button class="deck-btn" id="deck-prev-button" type="button">Önceki</button>
+  <button class="deck-btn" id="deck-next-button" type="button">Sonraki</button>
+  <span class="deck-counter" id="deck-counter">1 / 1</span>
+  <span class="deck-help">Ok tuşları veya boşluk ile ilerleyin · P ile yazdırın</span>
+  <button class="deck-btn" id="deck-fullscreen-button" type="button">Tam ekran</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var allSlides = Array.prototype.slice.call(document.querySelectorAll(".deck-slide"));
+  var currentSlideIndex = 0;
+  var progressBarElement = document.getElementById("deck-progress");
+  var slideCounterElement = document.getElementById("deck-counter");
+  var previousButton = document.getElementById("deck-prev-button");
+  var nextButton = document.getElementById("deck-next-button");
+  var fullscreenButton = document.getElementById("deck-fullscreen-button");
+
+  allSlides.forEach(function (slide, index) {
+    var footNumber = slide.querySelector(".foot-num");
+    if (footNumber) { footNumber.textContent = (index + 1) + " / " + allSlides.length; }
+  });
+
+  function clampSlideIndex(requestedIndex) {
+    if (requestedIndex < 0) { return 0; }
+    if (requestedIndex > allSlides.length - 1) { return allSlides.length - 1; }
+    return requestedIndex;
+  }
+
+  function updateControls() {
+    slideCounterElement.textContent = (currentSlideIndex + 1) + " / " + allSlides.length;
+    previousButton.disabled = currentSlideIndex === 0;
+    nextButton.disabled = currentSlideIndex === allSlides.length - 1;
+    progressBarElement.style.width = ((currentSlideIndex + 1) / allSlides.length) * 100 + "%";
+  }
+
+  function showSlideAtIndex(requestedIndex) {
+    currentSlideIndex = clampSlideIndex(requestedIndex);
+    allSlides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle("deck-active", slideIndex === currentSlideIndex);
+    });
+    updateControls();
+    try {
+      window.history.replaceState(null, "", "#" + (currentSlideIndex + 1));
+    } catch (error) {
+      window.location.hash = String(currentSlideIndex + 1);
+    }
+  }
+
+  function goToNextSlide() { showSlideAtIndex(currentSlideIndex + 1); }
+  function goToPreviousSlide() { showSlideAtIndex(currentSlideIndex - 1); }
+
+  function toggleFullscreen() {
+    var rootElement = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      if (document.exitFullscreen) { document.exitFullscreen(); }
+      else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+    } else if (rootElement.requestFullscreen) {
+      rootElement.requestFullscreen();
+    } else if (rootElement.webkitRequestFullscreen) {
+      rootElement.webkitRequestFullscreen();
+    }
+  }
+
+  function handleKeyboardNavigation(event) {
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " " || event.key === "Enter") {
+      event.preventDefault();
+      goToNextSlide();
+    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      goToPreviousSlide();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      showSlideAtIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      showSlideAtIndex(allSlides.length - 1);
+    } else if (event.key === "p" || event.key === "P") {
+      window.print();
+    } else if (event.key === "f" || event.key === "F") {
+      toggleFullscreen();
+    }
+  }
+
+  previousButton.addEventListener("click", goToPreviousSlide);
+  nextButton.addEventListener("click", goToNextSlide);
+  fullscreenButton.addEventListener("click", toggleFullscreen);
+  document.addEventListener("keydown", handleKeyboardNavigation);
+
+  var videoPoster = document.getElementById("fba-video-poster");
+  if (videoPoster) {
+    videoPoster.addEventListener("click", function () {
+      var videoFrame = document.createElement("iframe");
+      videoFrame.className = "video-iframe";
+      videoFrame.src = "https://www.youtube.com/embed/pI24FKBE9eA?autoplay=1&rel=0";
+      videoFrame.title = "How Newcomer Students Thrive Through CEMC Math Contests";
+      videoFrame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      videoFrame.allowFullscreen = true;
+      videoPoster.parentNode.replaceChild(videoFrame, videoPoster);
+    });
+  }
+
+  var requestedSlide = parseInt((window.location.hash || "").replace("#", ""), 10);
+  showSlideAtIndex(isNaN(requestedSlide) ? 0 : requestedSlide - 1);
+})();
+</script>
+
+</body>
+</html>
