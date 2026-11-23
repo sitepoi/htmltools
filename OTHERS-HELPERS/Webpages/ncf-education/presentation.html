@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NCF Education — Tek çatı, beş eğitim alanı</title>
+<title>NCF Education Unit — Bilgilendirme sunumu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
@@ -670,6 +670,130 @@
     margin-bottom: 2px;
   }
 
+  /* ---------- student file hub ---------- */
+  .student-hub {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr 1fr;
+    gap: 0 32px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .hub-side { display: grid; gap: 10px; }
+  .hub-activity {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent, var(--red));
+    border-radius: 11px;
+    padding: 9px 11px;
+    min-width: 0;
+  }
+  .hub-activity::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 32px;
+    border-top: 1px dashed var(--line-strong);
+  }
+  .hub-left .hub-activity::after { right: -32px; }
+  .hub-right .hub-activity::after { left: -32px; }
+  .hub-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    flex: 0 0 27px;
+    border-radius: 8px;
+    background: var(--accent, var(--red));
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .hub-activity b {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 12.5px;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+  .hub-activity span {
+    display: block;
+    margin-top: 2px;
+    font-size: 10.2px;
+    line-height: 1.3;
+    color: var(--muted);
+  }
+  .hub-center {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    position: relative;
+    z-index: 2;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 20px 18px;
+    border-radius: 18px;
+    background: #111216;
+    color: #fff;
+    text-align: center;
+    box-shadow: 0 0 0 7px rgba(215, 38, 61, .08), 0 18px 38px rgba(0, 0, 0, .18);
+  }
+  .hub-center::before {
+    content: "";
+    position: absolute;
+    inset: -13px;
+    border: 1px dashed rgba(215, 38, 61, .45);
+    border-radius: 26px;
+    pointer-events: none;
+  }
+  .hub-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--red);
+    color: #fff;
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    margin-bottom: 8px;
+  }
+  .hub-center strong {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 23px;
+    line-height: 1.1;
+    letter-spacing: -.035em;
+    color: #fff;
+  }
+  .hub-center p {
+    margin: 7px 0 0;
+    font-size: 11px;
+    line-height: 1.4;
+    color: rgba(255,255,255,.65);
+  }
+  .hub-center ul {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+  .hub-center li {
+    padding: 3px 7px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 999px;
+    font-size: 9px;
+    color: rgba(255,255,255,.82);
+  }
+
   /* ---------- video ---------- */
   .video-layout {
     display: grid;
@@ -1157,10 +1281,10 @@
     background: #e9e4da;
   }
   .deck-cover .cover-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1.32fr) minmax(0, .68fr);
-    gap: clamp(24px, 2vw, 40px);
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
     position: relative;
   }
   .cover-text { min-width: 0; }
@@ -1239,20 +1363,23 @@
     .eco-root { background: #fff !important; color: var(--ink) !important; border: 1px solid var(--line-strong); }
     .eco-root strong { color: var(--ink) !important; }
     .eco-root span { color: var(--muted) !important; }
-    .eco-core, .file-card, .card.core-card {
+    .eco-core, .file-card, .card.core-card, .hub-center {
       background: #fff !important;
       color: var(--ink) !important;
       border: 1px solid var(--line-strong) !important;
     }
-    .eco-core strong, .file-card-head strong, .file-item b, .card.core-card h3 { color: var(--ink) !important; }
+    .eco-core strong, .file-card-head strong, .file-item b, .card.core-card h3,
+    .hub-center strong { color: var(--ink) !important; }
     .eco-core-desc, .file-item, .file-card-foot,
-    .card.core-card p, .card.core-card .tool-line { color: var(--muted) !important; }
+    .card.core-card p, .card.core-card .tool-line,
+    .hub-center p, .hub-center li { color: var(--muted) !important; }
+    .hub-center li { border-color: var(--line) !important; }
     .card.core-card .card-no { color: var(--red) !important; }
     .card.core-card .tool-line strong { color: var(--ink) !important; }
     .file-item { background: #fff !important; border-color: var(--line) !important; }
     .video-poster img { opacity: 1 !important; }
     .card, .school-card, .eco-card, .fact, .deck-table, .file-card, .video-frame,
-    .media-card, .split-media, .photo-band { break-inside: avoid; }
+    .media-card, .split-media, .photo-band, .hub-center, .hub-activity { break-inside: avoid; }
     .cover-visual img { height: 74px; }
     .deck-cover .cover-plate { border: 1px solid var(--line); }
     .deck-cover .cover-mark { display: none !important; }
@@ -1283,7 +1410,9 @@
     .slide-body h2 { font-size: 27px; }
     .grid-2, .grid-3, .grid-4, .grid-5, .grid-6, .school-grid, .closing-grid,
     .steps-5, .steps-4, .facts, .file-layout, .video-layout, .flow-row, .flow-out,
-    .split-media, .num-chips, .photo-band, .deck-cover .cover-body { grid-template-columns: 1fr; }
+    .split-media, .num-chips, .photo-band, .student-hub, .deck-cover .cover-body { grid-template-columns: 1fr; }
+    .hub-center { grid-column: auto; grid-row: auto; }
+    .hub-activity::after { display: none; }
     .video-frame { max-width: 100%; }
     .fact { border-right: 0; border-bottom: 1px solid var(--line); }
     .fact:last-child { border-bottom: 0; }
@@ -1308,55 +1437,14 @@
           <img class="cover-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
           <span class="cover-logo-fallback" style="display:none;">NCF Education</span>
         </span>
-        <span class="slide-head-name">Kurumsal sunum · 2026</span>
+        <span class="slide-head-name">Bilgilendirme sunumu · 2026</span>
       </div>
       <div class="slide-body cover-body">
         <div class="cover-text">
-          <div class="cover-kicker">NCF Education · Beş eğitim alanı</div>
-          <h1 class="cover-title">Tek çatı,<br>beş eğitim alanı.</h1>
+          <div class="cover-kicker">NCF Education · Bilgilendirme sunumu</div>
+          <h1 class="cover-title">NCF Education Unit</h1>
           <div class="cover-rule"></div>
-          <p class="cover-sub">Okullar, okul öncesi, öğretmenler, Türkçe eğitimi ve dersanecilik: beş bağımsız alan. Future Bridge Academy'nin çekirdeği: Öğrenci Dosyası.</p>
-          <div class="cover-meta">
-            <span>Kasım 2026</span>
-            <span>Kanada</span>
-            <span>Nile Academy · Nebula Academy · Future Bridge Academy</span>
-          </div>
         </div>
-        <div class="cover-visual" aria-hidden="true">
-          <img src="assets/nile-academy-elementary.jpg" alt="" />
-          <img src="assets/nebula-academy-campus.jpg" alt="" />
-          <img src="https://images.pexels.com/photos/8423075/pexels-photo-8423075.jpeg?auto=compress&cs=tinysrgb&w=600" alt="" />
-          <img src="https://images.pexels.com/photos/8192244/pexels-photo-8192244.jpeg?auto=compress&cs=tinysrgb&w=600" alt="" />
-        </div>
-        <div class="cover-mark" aria-hidden="true">05</div>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 2 · Gündem -->
-  <section class="deck-slide" data-slide-number="2">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Gündem</span>
-      </div>
-      <div class="slide-body">
-        <div class="slide-kicker">Gündem</div>
-        <h2>Beş bağımsız alan</h2>
-        <ol class="agenda">
-          <li><span class="agenda-no">01</span><div><b>Okullar</b><small>Nile Academy ve Nebula Academy</small></div><span class="agenda-tag">JK–12 · Pre-K–9</span></li>
-          <li><span class="agenda-no">02</span><div><b>Okul Öncesi</b><small>Kurum açma ve ECE öğretmenleri</small></div><span class="agenda-tag">0–6 yaş</span></li>
-          <li><span class="agenda-no">03</span><div><b>Öğretmenler</b><small>İşe alım, gelişim ve mentorluk</small></div><span class="agenda-tag">Tüm birimler</span></li>
-          <li><span class="agenda-no">04</span><div><b>Türkçe Eğitimi</b><small>Anadil eğitimi</small></div><span class="agenda-tag">Weekend school</span></li>
-          <li><span class="agenda-no">05</span><div><b>Future Bridge Academy</b><small>Dersanecilik · ana bölüm</small></div><span class="agenda-tag">Grades 4–12</span></li>
-        </ol>
       </div>
       <div class="slide-foot">
         <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
@@ -1373,11 +1461,9 @@
           <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
           <span class="logo-fallback" style="display:none;">NCF Education</span>
         </span>
-        <span class="slide-head-name">NCF Education · Ekosistem haritası</span>
+        <span class="slide-head-name">NCF Education · Birimler</span>
       </div>
       <div class="slide-body">
-        <div class="slide-kicker">Ekosistem haritası</div>
-        <h2>NCF Education: beş alan, tek çatı</h2>
         <div class="eco eco-full">
           <div class="eco-root">
             <strong>NCF Education</strong>
@@ -1400,7 +1486,7 @@
               <div class="eco-card">
                 <span class="eco-no">02</span>
                 <h3>Okul Öncesi</h3>
-                <p>Kurum açma ve ECE öğretmen gelişimi.</p>
+                <p>ECE eğitimi, koordinasyon ve birlikte kurum açma.</p>
                 <div class="eco-children">
                   <span class="eco-child">0–6 yaş</span>
                 </div>
@@ -1410,7 +1496,7 @@
               <div class="eco-card">
                 <span class="eco-no">03</span>
                 <h3>Öğretmenler</h3>
-                <p>İşe alım, gelişim, gözlem ve mentorluk.</p>
+                <p>Geri dönüş, eyalet rehberliği ve mesleki gelişim.</p>
                 <div class="eco-children">
                   <span class="eco-child">Tüm birimler</span>
                 </div>
@@ -1420,7 +1506,7 @@
               <div class="eco-card">
                 <span class="eco-no">04</span>
                 <h3>Türkçe Eğitimi</h3>
-                <p>Anadil eğitimi, weekend school ve aile.</p>
+                <p>Anadil eğitimi, hafta sonu okulu ve aile.</p>
                 <div class="eco-children">
                   <span class="eco-child">Anadil</span>
                 </div>
@@ -1446,78 +1532,6 @@
     </div>
   </section>
 
-  <!-- 4 · Tek bakışta -->
-  <section class="deck-slide" data-slide-number="4">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Tek bakışta</span>
-      </div>
-      <div class="slide-body">
-        <div class="slide-kicker">Tek bakışta</div>
-        <h2>Her birimin sahibi olduğu iş</h2>
-        <div class="grid-5 grid-fill">
-          <div class="media-card accent a-school">
-            <img class="media-shot" src="assets/nile-academy-elementary.jpg" alt="Nile Academy sınıfı" />
-            <div class="media-body"><span class="media-tag">Okullar</span><h3>JK–12</h3><p>Nile · Nebula</p></div>
-          </div>
-          <div class="media-card accent a-ece">
-            <img class="media-shot" src="https://images.pexels.com/photos/8423075/pexels-photo-8423075.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Okul öncesi sınıfı" />
-            <div class="media-body"><span class="media-tag">Okul Öncesi</span><h3>0–6 yaş</h3><p>Kurum · ECE</p></div>
-          </div>
-          <div class="media-card accent a-teachers">
-            <img class="media-shot" src="https://images.pexels.com/photos/8424451/pexels-photo-8424451.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Öğretmen sunumu" />
-            <div class="media-body"><span class="media-tag">Öğretmenler</span><h3>Tüm birimler</h3><p>Gelişim · mentorluk</p></div>
-          </div>
-          <div class="media-card accent a-turkish">
-            <img class="media-shot" src="https://images.pexels.com/photos/5676746/pexels-photo-5676746.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Yazı yazan öğrenciler" />
-            <div class="media-body"><span class="media-tag">Türkçe</span><h3>Anadil</h3><p>Weekend school · aile</p></div>
-          </div>
-          <div class="media-card accent a-tutoring">
-            <img class="media-shot" src="https://images.pexels.com/photos/8192244/pexels-photo-8192244.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Online matematik dersi" />
-            <div class="media-body"><span class="media-tag">Dersanecilik</span><h3>Grades 4–12</h3><p>Future Bridge</p></div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 5 · Bölüm 01 -->
-  <section class="deck-slide deck-section sec-school" data-slide-number="5">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Okullar</span>
-      </div>
-      <div class="slide-body center-body">
-        <div class="section-number">01</div>
-        <div class="slide-kicker">Bölüm 01</div>
-        <h2>Okullar</h2>
-        <p class="slide-lead">Nile Academy ve Nebula Academy: iki kampüs, iki topluluk.</p>
-        <div class="section-chips">
-          <span>Toronto · Ontario</span>
-          <span>Edmonton · Alberta</span>
-          <span>JK–12 · Pre-K–9</span>
-          <span>Küçük sınıflar</span>
-        </div>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
   <!-- 6 · İki okul -->
   <section class="deck-slide sec-school" data-slide-number="6">
     <div class="slide-frame">
@@ -1530,8 +1544,8 @@
       </div>
       <div class="slide-body">
         <div class="slide-kicker">01 · Okullar</div>
-        <h2>İki okul, iki kampüs, iki güçlü kimlik</h2>
-        <p class="slide-lead">İki şehir, iki topluluk, iki güçlü kimlik.</p>
+        <h2>Nile Academy ve Nebula Academy</h2>
+        <p class="slide-lead">İki okulun konumu, programı ve öğrenci yapısı.</p>
         <div class="school-grid">
           <article class="school-card" style="--accent: var(--navy);">
             <div class="school-photo-wrap">
@@ -1547,9 +1561,10 @@
               </div>
             </div>
             <ul>
-              <li>JK–Grade 12; Ontario müfredatı.</li>
-              <li>Fen ve teknoloji vurgusu.</li>
-              <li>Yatılılık ve gece okulu.</li>
+              <li>JK–12 eğitim; Ontario müfredatı uygulanır.</li>
+              <li><strong>Fen ve Teknoloji Eğitimi:</strong> Fen bilimleri ve bilgi-iletişim teknolojileri dersleri.</li>
+              <li><strong>Yatılılık:</strong> Uluslararası öğrenciler için konaklama imkânı.</li>
+              <li><strong>Rehberlik:</strong> Tam zamanlı rehberlik ve üniversite başvuru desteği.</li>
             </ul>
           </article>
           <article class="school-card" style="--accent: var(--red);">
@@ -1566,111 +1581,12 @@
               </div>
             </div>
             <ul>
-              <li>Alberta müfredatı + İslami program.</li>
-              <li>2026–27: 305 öğrenci, 24 öğretmen.</li>
-              <li>Öğrenci-öğretmen oranı 12,7:1.</li>
+              <li>Alberta müfredatı ve İslami program birlikte yürütülür.</li>
+              <li>2026–27: 345 öğrenci.</li>
+              <li>Her sınıfta ortalama 18–19 öğrenci.</li>
             </ul>
           </article>
         </div>
-        <p class="slide-note">Her okul kendi yerel kimliğini korur.</p>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 7 · Öğrenci yolculuğu -->
-  <section class="deck-slide sec-school" data-slide-number="7">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Okullar</span>
-      </div>
-      <div class="slide-body">
-        <div class="slide-kicker">01 · Öğrenci yolculuğu</div>
-        <h2>Kayıttan mezuniyete tek iz</h2>
-        <p class="slide-lead">Her adım aynı dosyada, aynı hedef etrafında izlenir.</p>
-        <div class="steps steps-5">
-          <div class="step a-school"><span class="step-no">1</span><b>Tanışma</b><span>Aile görüşmesi ve ihtiyaç analizi.</span></div>
-          <div class="step a-school"><span class="step-no">2</span><b>Oryantasyon</b><span>Seviye, sınıf ve okul kültürü.</span></div>
-          <div class="step a-school"><span class="step-no">3</span><b>Akademik plan</b><span>Ders seçimi ve hedefler.</span></div>
-          <div class="step a-school"><span class="step-no">4</span><b>Dönem izleme</b><span>Karne ve erken müdahale.</span></div>
-          <div class="step a-school"><span class="step-no">5</span><b>Sonraki adım</b><span>Üniversite, college veya kariyer.</span></div>
-        </div>
-        <div class="photo-band band-fill">
-          <img src="assets/nile-academy-elementary.jpg" alt="Nile Academy sınıfı" />
-          <img src="assets/nebula-academy-campus.jpg" alt="Nebula Academy kampüsü" />
-          <img src="https://images.pexels.com/photos/8423075/pexels-photo-8423075.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Sınıf içi çalışma" />
-        </div>
-        <p class="slide-note">Veli görüşmesinden dönem sonu raporuna kadar aynı veri kullanılır.</p>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 8 · Bölüm 02 -->
-  <section class="deck-slide deck-section sec-ece" data-slide-number="8">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Okul Öncesi</span>
-      </div>
-      <div class="slide-body center-body">
-        <div class="section-number">02</div>
-        <div class="slide-kicker">Bölüm 02</div>
-        <h2>Okul Öncesi</h2>
-        <p class="slide-lead">Kurum açma ve ECE öğretmenleri: doğru mekân, doğru program ve doğru öğretmenle güvenli bir başlangıç.</p>
-        <div class="section-chips">
-          <span>0–6 yaş</span>
-          <span>Kurum açma</span>
-          <span>Lisans &amp; uyum</span>
-          <span>ECE kariyer yolu</span>
-        </div>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 9 · Kurum açma yol haritası -->
-  <section class="deck-slide sec-ece" data-slide-number="9">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Okul Öncesi</span>
-      </div>
-      <div class="slide-body">
-        <div class="slide-kicker">02 · Kurum açma</div>
-        <h2>Bir okul öncesi kurumun altı adımı</h2>
-        <p class="slide-lead">Mekân kiralamaktan fazlası: ihtiyaç, lisans, ekip ve açılış.</p>
-        <div class="split-media grid-fill">
-          <img class="split-photo" src="https://images.pexels.com/photos/8423075/pexels-photo-8423075.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Okul öncesi sınıfı" />
-          <div class="num-chips">
-            <span class="num-chip">01 · İhtiyaç ve konum<small>Yaş grubu, kapasite, ulaşım</small></span>
-            <span class="num-chip">02 · Lisans ve mevzuat<small>Başvuru, denetim, kayıt</small></span>
-            <span class="num-chip">03 · Mekân ve güvenlik<small>Alan, donanım, acil plan</small></span>
-            <span class="num-chip">04 · Program ve materyal<small>Oyun temelli müfredat</small></span>
-            <span class="num-chip">05 · Ekip ve oranlar<small>ECE, işe alım, oryantasyon</small></span>
-            <span class="num-chip">06 · Açılış ve izleme<small>İlk hafta, kalite takibi</small></span>
-          </div>
-        </div>
-        <p class="slide-note">Eyalet mevzuatı belirleyicidir; her adım uygulanabilir bir kontrol listesiyle yürür.</p>
       </div>
       <div class="slide-foot">
         <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
@@ -1691,56 +1607,27 @@
       </div>
       <div class="slide-body">
         <div class="slide-kicker">02 · ECE öğretmenleri</div>
-        <h2>ECE öğretmeni için görünür bir kariyer yolu</h2>
-        <p class="slide-lead">Sertifikasyondan kurum yöneticiliğine dört adım; her adımda mentorluk ve gözlem.</p>
+        <h2>ECE öğretmenleriyle çalışma hedefleri</h2>
+        <p class="slide-lead">ECE eğitimi, mevcut öğretmenlerin koordinasyonu, mesleki gelişim ve birlikte kurum açma.</p>
         <div class="grid-4 grid-fill">
           <div class="media-card accent a-ece">
-            <img class="media-shot" src="https://images.pexels.com/photos/8423075/pexels-photo-8423075.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Destek personeli" />
-            <div class="media-body"><span class="media-tag">1</span><h3>Destek personeli</h3><p>Gölgeleme ve temel eğitim.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/8423075/pexels-photo-8423075.jpeg?auto=compress&cs=tinysrgb&w=600" alt="ECE eğitimi" />
+            <div class="media-body"><span class="media-tag">EĞİTİM</span><h3>ECE eğitimi</h3><p>ECE olmak isteyenler için eğitim ve sertifikasyon desteği.</p></div>
           </div>
           <div class="media-card accent a-ece">
-            <img class="media-shot" src="https://images.pexels.com/photos/5676746/pexels-photo-5676746.jpeg?auto=compress&cs=tinysrgb&w=600" alt="ECE öğretmeni" />
-            <div class="media-body"><span class="media-tag">2</span><h3>ECE öğretmeni</h3><p>Sertifikalı sınıf uygulaması.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/5676746/pexels-photo-5676746.jpeg?auto=compress&cs=tinysrgb&w=600" alt="ECE öğretmenleri arası koordinasyon" />
+            <div class="media-body"><span class="media-tag">KOORDİNASYON</span><h3>Öğretmenler arası koordinasyon</h3><p>Mevcut ECE öğretmenleri arasında iletişim ve ortak çalışma.</p></div>
           </div>
           <div class="media-card accent a-ece">
-            <img class="media-shot" src="https://images.pexels.com/photos/8926900/pexels-photo-8926900.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Oda lideri" />
-            <div class="media-body"><span class="media-tag">3</span><h3>Oda lideri</h3><p>Program liderliği ve mentorluk.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/8926900/pexels-photo-8926900.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Mesleki gelişim" />
+            <div class="media-body"><span class="media-tag">GELİŞİM</span><h3>Mesleki gelişim</h3><p>Öğretmenlerin kendini geliştirmesi için eğitim ve mentorluk.</p></div>
           </div>
           <div class="media-card accent a-ece">
-            <img class="media-shot" src="https://images.pexels.com/photos/5940706/pexels-photo-5940706.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Kurum müdürü" />
-            <div class="media-body"><span class="media-tag">4</span><h3>Kurum müdürü</h3><p>Uyum, ekip ve kalite.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/5940706/pexels-photo-5940706.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Birlikte kurum açma" />
+            <div class="media-body"><span class="media-tag">İŞBİRLİĞİ</span><h3>Birlikte kurum açma</h3><p>İleride birlikte daycare ve anaokulu açmak için işbirliği.</p></div>
           </div>
         </div>
-        <p class="slide-note">Destek: sertifikasyon rehberliği, mentorluk, ders gözlemi ve bireysel kariyer planı.</p>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 11 · Bölüm 03 -->
-  <section class="deck-slide deck-section sec-teachers" data-slide-number="11">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Öğretmenler</span>
-      </div>
-      <div class="slide-body center-body">
-        <div class="section-number">03</div>
-        <div class="slide-kicker">Bölüm 03</div>
-        <h2>Öğretmenler</h2>
-        <p class="slide-lead">NCF Öğretmen Gelişim Modeli: işe alımdan mentorluğa, her sınıfta aynı kalite.</p>
-        <div class="section-chips">
-          <span>Tüm birimler</span>
-          <span>Oryantasyon</span>
-          <span>Gözlem</span>
-          <span>Kariyer yolu</span>
-        </div>
+        <p class="slide-note">Amaç, ECE olmak isteyenleri desteklemek; mevcut öğretmenlerin birlikte çalışmasını ve ileride ortak kurum açmasını sağlamak.</p>
       </div>
       <div class="slide-foot">
         <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
@@ -1760,93 +1647,28 @@
         <span class="slide-head-name">NCF Education · Öğretmenler</span>
       </div>
       <div class="slide-body">
-        <div class="slide-kicker">03 · Gelişim modeli</div>
-        <h2>Öğren, uygula, liderlik et, yetiştir</h2>
-        <p class="slide-lead">Tek seferlik eğitim değil, kariyer boyunca döngü: her aşama bir sonrakini hazırlar.</p>
+        <div class="slide-kicker">03 · Öğretmenler</div>
+        <h2>Öğretmenler için dört destek alanı</h2>
+        <p class="slide-lead">Eski öğretmenlerin geri dönüşü, yeni öğretmen adayları, eyalet bazında rehberlik ve mevcut öğretmenlerin gelişimi.</p>
         <div class="grid-4 grid-fill">
           <div class="media-card accent a-teachers">
-            <img class="media-shot" src="https://images.pexels.com/photos/8424451/pexels-photo-8424451.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Aday öğretmen" />
-            <div class="media-body"><span class="media-tag">Aşama 01</span><h3>Aday</h3><p>Oryantasyon ve temel pedagoji.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/8424451/pexels-photo-8424451.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Geri dönen öğretmen" />
+            <div class="media-body"><span class="media-tag">GERİ DÖNÜŞ</span><h3>Geri dönen öğretmenler</h3><p>Öğretmenliğe geri dönmek isteyenler için yönlendirme ve destek.</p></div>
           </div>
           <div class="media-card accent a-teachers">
-            <img class="media-shot" src="https://images.pexels.com/photos/5676746/pexels-photo-5676746.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Uygulayıcı öğretmen" />
-            <div class="media-body"><span class="media-tag">Aşama 02</span><h3>Uygulayıcı</h3><p>Planlama, sınıf yönetimi, geri bildirim.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/5676746/pexels-photo-5676746.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Yeni öğretmen adayı" />
+            <div class="media-body"><span class="media-tag">YENİ NESİL</span><h3>Yeni öğretmen adayları</h3><p>Gençlerin öğretmenlik yolunu öğrenmesi ve adım adım ilerlemesi.</p></div>
           </div>
           <div class="media-card accent a-teachers">
-            <img class="media-shot" src="https://images.pexels.com/photos/8199134/pexels-photo-8199134.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Lider öğretmen" />
-            <div class="media-body"><span class="media-tag">Aşama 03</span><h3>Lider</h3><p>Program tasarımı ve akran gözlemi.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/8199134/pexels-photo-8199134.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Eyalet bazında rehberlik" />
+            <div class="media-body"><span class="media-tag">REHBERLİK</span><h3>Eyalet bazında rehberlik</h3><p>Her eyalette öğretmen olma koşulları ve sertifikasyon süreci hakkında destek.</p></div>
           </div>
           <div class="media-card accent a-teachers">
-            <img class="media-shot" src="https://images.pexels.com/photos/6150530/pexels-photo-6150530.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Mentor öğretmen" />
-            <div class="media-body"><span class="media-tag">Aşama 04</span><h3>Mentor</h3><p>Öğretmen eğitimi ve kalite standardı.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/6150530/pexels-photo-6150530.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Mevcut öğretmenler" />
+            <div class="media-body"><span class="media-tag">GELİŞİM</span><h3>Mevcut öğretmenler</h3><p>Öğretmenlerin bir araya gelmesi ve mesleki gelişiminin desteklenmesi.</p></div>
           </div>
         </div>
-        <p class="slide-note">Döngü: planla → uygula → gözlemle → geri bildirim → yeniden planla.</p>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 13 · İşe alım ve elde tutma -->
-  <section class="deck-slide sec-teachers" data-slide-number="13">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Öğretmenler</span>
-      </div>
-      <div class="slide-body">
-        <div class="slide-kicker">03 · İnsan kaynakları</div>
-        <h2>Doğru öğretmeni bulmak ve tutmak</h2>
-        <p class="slide-lead">Doğru öğretmeni bulmak, desteklemek ve tutmak.</p>
-        <div class="grid-3 grid-fill">
-          <div class="media-card accent a-teachers">
-            <img class="media-shot" src="https://images.pexels.com/photos/5940706/pexels-photo-5940706.jpeg?auto=compress&cs=tinysrgb&w=900" alt="İşe alım görüşmesi" />
-            <div class="media-body"><span class="media-tag">1</span><h3>İşe alım</h3><p>Demo ders, referans ve çocuk koruma taraması.</p></div>
-          </div>
-          <div class="media-card accent a-teachers">
-            <img class="media-shot" src="https://images.pexels.com/photos/8424451/pexels-photo-8424451.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Mesleki gelişim" />
-            <div class="media-body"><span class="media-tag">2</span><h3>Gelişim</h3><p>Bireysel plan, atölye, mentorluk, akran gözlemi.</p></div>
-          </div>
-          <div class="media-card accent a-teachers">
-            <img class="media-shot" src="https://images.pexels.com/photos/8199134/pexels-photo-8199134.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Kariyer yolu" />
-            <div class="media-body"><span class="media-tag">3</span><h3>Elde tutma</h3><p>Görünür kariyer basamakları ve aidiyet.</p></div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 14 · Bölüm 04 -->
-  <section class="deck-slide deck-section sec-turkish" data-slide-number="14">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Türkçe Eğitimi</span>
-      </div>
-      <div class="slide-body center-body">
-        <div class="section-number">04</div>
-        <div class="slide-kicker">Bölüm 04</div>
-        <h2>Türkçe Eğitimi</h2>
-        <p class="slide-lead">Anadil eğitimi: weekend school ve aile içinde Türkçe konuşmanın teşviki.</p>
-        <div class="section-chips">
-          <span>Anadil</span>
-          <span>Weekend school</span>
-          <span>Aile içi konuşma</span>
-          <span>Aile bilinçlenmesi</span>
-        </div>
+        <p class="slide-note">NCF, bu dört alanda öğretmenlere destek olmayı ve öğretmenlerin bir araya gelmesini hedefliyor.</p>
       </div>
       <div class="slide-foot">
         <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
@@ -1866,85 +1688,30 @@
         <span class="slide-head-name">NCF Education · Türkçe Eğitimi</span>
       </div>
       <div class="slide-body">
-        <div class="slide-kicker">04 · Kapsam</div>
+        <div class="slide-kicker">04 · Türkçe eğitimi</div>
         <h2>Anadil Eğitimi</h2>
-        <div class="grid-2 grid-fill">
-          <div class="media-card accent a-turkish">
-            <img class="media-shot" src="https://images.pexels.com/photos/6150530/pexels-photo-6150530.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Aile bilgilendirme oturumu" />
-            <div class="media-body"><span class="media-tag">01</span><h3>Ailelerin bilinçlenmesi</h3></div>
+        <p class="slide-lead">Türkçe eğitimi iki alanda yürütülüyor: aile bilinçlendirme ve hafta sonu okulu.</p>
+        <div class="grid-2">
+          <div class="card accent a-turkish">
+            <span class="card-no">01</span>
+            <h3>Ailelerin bilinçlenmesi</h3>
+            <ul class="bullets tight" style="margin-top:8px;">
+              <li>Türkçe eğitiminin önemi ve evde dil kullanımı.</li>
+              <li>Ailelerin sürece katılımı ve destek yolları.</li>
+              <li>Öğrencinin dil gelişiminin evde izlenmesi.</li>
+            </ul>
           </div>
-          <div class="media-card accent a-turkish">
-            <img class="media-shot" src="https://images.pexels.com/photos/5676746/pexels-photo-5676746.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Hafta sonu Türkçe sınıfı" />
-            <div class="media-body"><span class="media-tag">02</span><h3>Weekend school'da Türkçe eğitimi</h3></div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 16 · Yol haritası -->
-  <section class="deck-slide sec-shared" data-slide-number="16">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Yol haritası</span>
-      </div>
-      <div class="slide-body">
-        <div class="slide-kicker">Öncelikler</div>
-        <h2>12 aylık yol haritası</h2>
-        <p class="slide-lead">Aynı anda büyütmek yerine ölçülebilir adımlar: envanter, pilot, ölçekleme.</p>
-        <div class="grid-3 grid-fill">
-          <div class="media-card accent a-red">
-            <img class="media-shot" src="https://images.pexels.com/photos/39190907/pexels-photo-39190907.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Envanter çalışması" />
-            <div class="media-body"><span class="media-tag">0–90 gün</span><h3>Envanter ve standart</h3><p>Beş birimin durumu ve öncelikleri.</p></div>
-          </div>
-          <div class="media-card accent a-red">
-            <img class="media-shot" src="https://images.pexels.com/photos/8926900/pexels-photo-8926900.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Pilot program" />
-            <div class="media-body"><span class="media-tag">3–6 ay</span><h3>Pilot ve gelişim</h3><p>Öğretmen gelişimi, ECE açılışı, Türkçe pilotu.</p></div>
-          </div>
-          <div class="media-card accent a-red">
-            <img class="media-shot" src="https://images.pexels.com/photos/8424451/pexels-photo-8424451.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Ölçekleme" />
-            <div class="media-body"><span class="media-tag">6–12 ay</span><h3>Ölçekleme</h3><p>Sonuçları ölç, iyi uygulamayı yay.</p></div>
+          <div class="card accent a-turkish">
+            <span class="card-no">02</span>
+            <h3>Hafta sonu okulunda Türkçe eğitimi</h3>
+            <ul class="bullets tight" style="margin-top:8px;">
+              <li>Hafta sonu okulunda yürütülen Türkçe dersleri.</li>
+              <li>Seviye takibi ve öğrenci gelişimi.</li>
+              <li>Öğretmen desteği ve aile ile iletişim.</li>
+            </ul>
           </div>
         </div>
-        <p class="slide-note">Ölçmeden ölçekleme yok: her adımın bir göstergesi ve bir sahibi olmalı.</p>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- 17 · Bölüm 05 -->
-  <section class="deck-slide deck-section sec-tutoring" data-slide-number="17">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Future Bridge Academy</span>
-      </div>
-      <div class="slide-body center-body">
-        <div class="section-number">05</div>
-        <div class="slide-kicker">Bölüm 05 · Ana bölüm</div>
-        <h2>Future Bridge Academy</h2>
-        <p class="slide-lead">Dersanecilik: ücretsiz öğretimle başlayan, deneme sınavı, mentorluk ve dijital araçlarla büyüyen program.</p>
-        <div class="section-chips">
-          <span>Grades 4–12</span>
-          <span>Vancouver bölgesi</span>
-          <span>Gönüllü model</span>
-          <span>Ücretsiz başlangıç</span>
-          <span>Öğrenci Dosyası merkezli</span>
-        </div>
+        <p class="slide-note">Amaç, öğrencinin Türkçe dil becerilerini okul ve aile ortamında birlikte geliştirmek.</p>
       </div>
       <div class="slide-foot">
         <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
@@ -1965,8 +1732,8 @@
       </div>
       <div class="slide-body">
         <div class="slide-kicker">05 · Future Bridge Academy</div>
-        <h2>Önce ücretsiz öğretim</h2>
-        <p class="slide-lead">Ailelerin bütçesinden bağımsız: ücretsiz ders, ücretsiz deneme sınavı, gönüllü mentor.</p>
+        <h2>Future Bridge Academy'nin yapısı</h2>
+        <p class="slide-lead">Ücretsiz dersler, aylık deneme sınavları ve gönüllü mentorluk.</p>
         <div class="grid-3 grid-fill">
           <div class="media-card accent a-tutoring">
             <img class="media-shot" src="https://images.pexels.com/photos/8192244/pexels-photo-8192244.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Online matematik dersi" />
@@ -1977,12 +1744,12 @@
             <div class="media-body"><h3>Yol rehberliği</h3><p>Üniversite, college, trades, IB ve AP; burs seminerleri.</p></div>
           </div>
           <div class="media-card accent a-tutoring">
-            <img class="media-shot" src="https://images.pexels.com/photos/8926900/pexels-photo-8926900.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Çalışma mekânı" />
-            <div class="media-body"><h3>Çalışma mekânı</h3><p>Merkez: odalar, rutinler ve gözetim.</p></div>
+            <img class="media-shot" src="https://images.pexels.com/photos/8926900/pexels-photo-8926900.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Deneme sınavı" />
+            <div class="media-body"><h3>Deneme sınavları</h3><p>Aylık yüz yüze deneme sınavları; sınav için fiziki salon kullanılır.</p></div>
           </div>
         </div>
         <div class="eco-core" style="margin-top:11px;">
-          <span class="eco-core-badge">YENİ ÇEKİRDEK</span>
+          <span class="eco-core-badge">YENİ</span>
           <strong>Öğrenci Dosyası</strong>
           <span class="eco-core-desc">Akademik destek, mentorluk ve yol rehberliği aynı öğrenci dosyasında birleşir.</span>
         </div>
@@ -2013,8 +1780,8 @@
       </div>
       <div class="slide-body">
         <div class="slide-kicker">05 · Program portföyü</div>
-        <h2>Bugün çalışanlar ve merkezle açılacaklar</h2>
-        <p class="slide-lead">Önce ücretsiz erişim, sonra merkezle daha derin destek.</p>
+        <h2>Bugün çalışan programlar</h2>
+        <p class="slide-lead">Dört program bugün çalışıyor; yeni hizmetler planlanıyor.</p>
         <div class="split-media grid-fill">
           <img class="split-photo" src="https://images.pexels.com/photos/8192244/pexels-photo-8192244.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Online matematik dersi" />
           <div>
@@ -2024,7 +1791,7 @@
               <span class="num-chip">Burs semineri<small>Somut sonraki adımlar</small></span>
               <span class="num-chip">Mentor ağı<small>Gönüllü üniversite öğrencileri</small></span>
             </div>
-            <p class="mini-note">Merkezle açılacak: küçük grup dersleri · birebir mentorluk · yazılı yol planı · CEMC kulübü · IB/AP · İngilizce ve yazma.</p>
+            <p class="mini-note">Planlanan hizmetler: birebir mentorluk · yazılı yol planı · CEMC kulübü · IB/AP · İngilizce ve yazma.</p>
           </div>
         </div>
         <p class="slide-note">Ücretsiz programlar ücretsiz kalır; ücretli hizmet varsa aileye önceden açıkça söylenir.</p>
@@ -2048,36 +1815,49 @@
       </div>
       <div class="slide-body">
         <div class="slide-kicker">05 · Öğrenci Dosyası</div>
-        <h2>Future Bridge'in merkezinde Öğrenci Dosyası var</h2>
-        <p class="slide-lead">Öğrencinin tüm kayıtları tek yerde: profil, başvurular, portföy ve son tarihler.</p>
-        <div class="file-layout">
-          <div>
-            <img class="side-photo" src="https://images.pexels.com/photos/5940706/pexels-photo-5940706.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Mentor ve öğrenci birlikte çalışıyor" />
-            <ul class="bullets">
-              <li><strong>Tek öğrenci, tek dosya.</strong></li>
-              <li><strong>Mentor ve öğrenci aynı kaydı görür.</strong></li>
-              <li><strong>Eksikler ve sonraki adım görünür kalır.</strong></li>
+        <h2>Öğrenci Dosyası</h2>
+        <p class="slide-lead">Öğrencinin hedefleri ve ihtiyaçları dosyada tanımlanır; matematik dersi, deneme sınavı, makale yarışması ve diğer etkinlikler buna göre seçilir.</p>
+        <div class="student-hub">
+          <div class="hub-side hub-left">
+            <div class="hub-activity a-tutoring">
+              <span class="hub-icon">∑</span>
+              <div><b>Matematik dersi</b><span>Konu ve seviye ihtiyaca göre</span></div>
+            </div>
+            <div class="hub-activity a-tutoring">
+              <span class="hub-icon">✓</span>
+              <div><b>Deneme sınavı</b><span>Sıklık ve içerik hedefe göre</span></div>
+            </div>
+            <div class="hub-activity a-turkish">
+              <span class="hub-icon">✎</span>
+              <div><b>Makale yarışması</b><span>İlgi ve hedefe göre seçim</span></div>
+            </div>
+          </div>
+          <div class="hub-center">
+            <span class="hub-badge">MERKEZ</span>
+            <strong>Öğrenci Dosyası</strong>
+            <p>Hedefler, ihtiyaçlar ve gelişim burada tanımlanır.</p>
+            <ul>
+              <li>Akademik hedefler</li>
+              <li>Başvuru ve portföy</li>
+              <li>Mentor notları</li>
             </ul>
           </div>
-          <div class="file-card">
-            <div class="file-card-head">
-              <strong>Öğrenci Dosyası</strong>
-              <span class="file-card-badge">YENİ</span>
+          <div class="hub-side hub-right">
+            <div class="hub-activity a-teachers">
+              <span class="hub-icon">◎</span>
+              <div><b>CEMC hazırlığı</b><span>Öğrencinin ilgisine göre</span></div>
             </div>
-            <div class="file-grid">
-              <div class="file-item"><b>Kimlik &amp; iletişim</b>Öğrenci, aile, dil, izinler</div>
-              <div class="file-item"><b>Başvurular &amp; hedefler</b>Üniversite, college, trades</div>
-              <div class="file-item"><b>Portföy &amp; başarılar</b>Projeler, ödüller, sertifikalar</div>
-              <div class="file-item"><b>Referanslar</b>Öğretmen ve mentor notları</div>
-              <div class="file-item"><b>Görüşme notları</b>Kararlar ve sonraki adımlar</div>
-              <div class="file-item"><b>Belgeler</b>Transkript, kimlik, izinler</div>
-              <div class="file-item"><b>Son tarihler</b>Başvuru ve sınav takvimi</div>
-              <div class="file-item"><b>Mentor notları</b>Güçlü yönler ve eksikler</div>
+            <div class="hub-activity a-school">
+              <span class="hub-icon">◇</span>
+              <div><b>Mentorluk</b><span>İhtiyaç duyulan alanlarda</span></div>
             </div>
-            <div class="file-card-foot">Future Bridge'in çekirdeği: tek öğrenci, tek dosya.</div>
+            <div class="hub-activity a-red">
+              <span class="hub-icon">→</span>
+              <div><b>Başvuru / portföy</b><span>Hedefe göre planlanır</span></div>
+            </div>
           </div>
         </div>
-        <p class="slide-note">Dosya bir belge deposu değil; mentorluk, başvuru ve portföy için tek kaynak.</p>
+        <p class="slide-note">Öğrenci hangi etkinliğe, hangi sıklıkta ve hangi seviyede katılacağını dosyadaki hedeflere göre belirler.</p>
       </div>
       <div class="slide-foot">
         <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
@@ -2098,7 +1878,7 @@
       </div>
       <div class="slide-body">
         <div class="slide-kicker">05 · Saha örneği</div>
-        <h2>CEMC yarışmalarıyla açılan kapı</h2>
+        <h2>CEMC matematik yarışmaları videosu</h2>
         <p class="slide-lead">CentreCanada Future Bridge Academy'nin CEMC matematik yarışmaları deneyimi: yeni gelen öğrenciler nasıl güçleniyor?</p>
         <div class="video-layout">
           <div>
@@ -2148,12 +1928,12 @@
       </div>
       <div class="slide-body">
         <div class="slide-kicker">05 · Dijital hizmetler</div>
-        <h2>Üç araç, tek çekirdek</h2>
-        <p class="slide-lead">Student Files çekirdek; Self-Paced Courses ve English Article Writing bu dosyaya veri üretir.</p>
+        <h2>Dijital hizmetler ve Öğrenci Dosyası</h2>
+        <p class="slide-lead">Student Files ana kayıt; Self-Paced Courses ve English Article Writing bu dosyaya veri sağlar.</p>
         <div class="grid-3 grid-fill">
           <div class="card core-card">
             <img class="card-shot" src="../FutureBridgeAcademy_ca/Presentations/activities/screenshots/student-file.png" alt="Student Files ekran görüntüsü" />
-            <span class="card-no">YENİ ÇEKİRDEK</span>
+            <span class="card-no">YENİ</span>
             <h3>Student Files</h3>
             <p>Profil, başvuru, portföy ve son tarihler tek dosyada.</p>
             <p class="tool-line"><strong>Araç:</strong> Student File Builder For Applications</p>
@@ -2182,41 +1962,6 @@
     </div>
   </section>
 
-  <!-- 23 · FBA öğrenci yolculuğu -->
-  <section class="deck-slide sec-tutoring" data-slide-number="23">
-    <div class="slide-frame">
-      <div class="slide-head">
-        <span class="logo-plate">
-          <img class="slide-logo" src="../FutureBridgeAcademy_ca/images/logos/ncf-education-logo.png" alt="NCF Education" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;">NCF Education</span>
-        </span>
-        <span class="slide-head-name">NCF Education · Future Bridge Academy</span>
-      </div>
-      <div class="slide-body">
-        <div class="slide-kicker">05 · Öğrenci yolculuğu</div>
-        <h2>Ücretsiz dersten başvuru dosyasına tek iz</h2>
-        <p class="slide-lead">Beş adım, tek dosya: her adım Öğrenci Dosyası'na yazılır.</p>
-        <div class="steps steps-5">
-          <div class="step a-tutoring"><span class="step-no">1</span><b>Ücretsiz ders</b><span>Haftalık online matematik.</span></div>
-          <div class="step a-tutoring"><span class="step-no">2</span><b>Deneme sınavı</b><span>Aylık, gerçek koşullarda.</span></div>
-          <div class="step a-tutoring"><span class="step-no">3</span><b>Mentorluk</b><span>Birebir düzeltme ve rutin.</span></div>
-          <div class="step a-tutoring"><span class="step-no">4</span><b>Yol planı</b><span>Üniversite, IB/AP, burs takvimi.</span></div>
-          <div class="step a-tutoring"><span class="step-no">5</span><b>Dosyada süreklilik</b><span>Sonuçlar ve sonraki adım.</span></div>
-        </div>
-        <div class="photo-band band-fill">
-          <img src="https://images.pexels.com/photos/8192244/pexels-photo-8192244.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Ücretsiz online ders" />
-          <img src="https://images.pexels.com/photos/8423075/pexels-photo-8423075.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Deneme sınavı" />
-          <img src="https://images.pexels.com/photos/5940706/pexels-photo-5940706.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Mentorluk görüşmesi" />
-        </div>
-        <p class="slide-note">Yol planı ve portföy takibi aynı dosyada yürür; ücretli hizmet varsa önceden açıklanır.</p>
-      </div>
-      <div class="slide-foot">
-        <span class="foot-brand"><span class="foot-dot"></span>NCF Education</span>
-        <span class="foot-num"></span>
-      </div>
-    </div>
-  </section>
-
   <!-- 24 · Kapanış -->
   <section class="deck-slide deck-closing" data-slide-number="24">
     <div class="slide-frame">
@@ -2228,9 +1973,9 @@
         <span class="slide-head-name">NCF Education · Teşekkürler</span>
       </div>
       <div class="slide-body center-body">
-        <div class="slide-kicker" style="color:#ff7b88;">Beş alan, tek çatı</div>
-        <h2>Beş alan,<br>beş ayrı uzmanlık.</h2>
-        <p class="slide-lead">NCF Education; okullar, okul öncesi, öğretmenler, Türkçe eğitimi ve dersanecilik: beş bağımsız alan. Future Bridge Academy'nin çekirdeği: Öğrenci Dosyası.</p>
+        <div class="slide-kicker" style="color:#ff7b88;">Bilgilendirme sunumu</div>
+        <h2>Teşekkürler</h2>
+        <p class="slide-lead">NCF Education birimleri ve Future Bridge Academy hakkında sorularınızı alabiliriz.</p>
         <div class="closing-grid">
           <div>
             <h3>Okullar</h3>
@@ -2242,7 +1987,7 @@
           </div>
           <div>
             <h3>Sonraki adım</h3>
-            <p>Future Bridge Academy'nin program ve merkez planını netleştirmek.</p>
+            <p>Future Bridge Academy'nin program ve Öğrenci Dosyası planını netleştirmek.</p>
           </div>
         </div>
         <div class="photo-band band-fill">

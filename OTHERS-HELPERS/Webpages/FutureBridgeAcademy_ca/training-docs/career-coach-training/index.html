@@ -1,0 +1,3245 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Career Coach Eğitim El Kitabı · Future Bridge Academy</title>
+<meta name="description" content="Future Bridge Academy için yeni başlayan career coach eğitim el kitabı: program bilgisi, rol sınırları, Student File, Kanada eğitim yolları, görüşme yönetimi, başvuru süreci, kriz protokolleri, şablonlar ve değerlendirme.">
+<style>
+  :root {
+    --ink: #12202e;
+    --ink-soft: #263848;
+    --muted: #5b6775;
+    --paper: #f4f1ea;
+    --card: #ffffff;
+    --line: #dce3ea;
+    --line-strong: #b9c5d1;
+    --brand: #ff6b35;
+    --brand-deep: #d94d1d;
+    --navy: #004e89;
+    --navy-deep: #07324f;
+    --gold: #ffd23f;
+    --mint: #06d6a0;
+    --red: #b83a2f;
+    --soft-blue: #eaf3fb;
+    --soft-orange: #fff1ea;
+    --soft-gold: #fff8dc;
+    --soft-green: #e9f8f2;
+    --soft-red: #fbeceb;
+    --radius: 16px;
+    --shadow: 0 10px 28px rgba(18, 32, 46, .07);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      radial-gradient(1000px 600px at 100% -10%, rgba(255, 107, 53, .09), transparent 55%),
+      radial-gradient(800px 500px at -10% 30%, rgba(0, 78, 137, .07), transparent 55%),
+      #eef2f6;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  a { color: var(--navy); text-underline-offset: 3px; }
+  a:hover { color: var(--brand-deep); }
+  strong { color: var(--ink); }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: .88em;
+    background: #eef2f6;
+    border: 1px solid #dbe3eb;
+    border-radius: 5px;
+    padding: 1px 5px;
+    overflow-wrap: anywhere;
+  }
+
+  .skip {
+    position: absolute;
+    left: -9999px;
+    top: 8px;
+    z-index: 100;
+    background: var(--ink);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+  }
+  .skip:focus { left: 12px; }
+
+  .shell {
+    width: min(1480px, 100%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 282px minmax(0, 1fr);
+    gap: 0;
+    align-items: start;
+  }
+
+  /* ---------- rail ---------- */
+  .rail {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: auto;
+    background:
+      radial-gradient(500px 380px at 20% 0%, rgba(255, 107, 53, .28), transparent 60%),
+      linear-gradient(165deg, #0a2a40 0%, #07324f 52%, #061e2e 100%);
+    color: #fff;
+    padding: 26px 20px 28px;
+    scrollbar-width: thin;
+  }
+  .rail-brand {
+    display: flex;
+    gap: 11px;
+    align-items: center;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255,255,255,.14);
+    margin-bottom: 18px;
+  }
+  .rail-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, var(--brand), var(--gold));
+    color: #1b1208;
+    font-weight: 900;
+    font-size: 13.5px;
+    letter-spacing: -.03em;
+    flex: 0 0 36px;
+  }
+  .rail-brand strong {
+    display: block;
+    color: #fff;
+    font-size: 13.5px;
+    line-height: 1.3;
+    letter-spacing: .02em;
+  }
+  .rail-brand span {
+    display: block;
+    color: rgba(255,255,255,.62);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    margin-top: 3px;
+  }
+  .rail nav { display: grid; gap: 2px; }
+  .rail nav a {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 7px;
+    align-items: start;
+    color: rgba(255,255,255,.8);
+    text-decoration: none;
+    font-size: 12.8px;
+    line-height: 1.4;
+    padding: 8px 9px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+  }
+  .rail nav a:hover, .rail nav a:focus-visible {
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    border-color: rgba(255,255,255,.12);
+    outline: none;
+  }
+  .rail nav b {
+    color: var(--gold);
+    font-size: 11px;
+    letter-spacing: .06em;
+    padding-top: 2px;
+  }
+  .rail-foot {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,.14);
+    color: rgba(255,255,255,.62);
+    font-size: 11.5px;
+    line-height: 1.55;
+  }
+  .print-btn {
+    width: 100%;
+    margin-top: 12px;
+    border: 1px solid rgba(255,255,255,.24);
+    background: rgba(255,255,255,.09);
+    color: #fff;
+    border-radius: 9px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .print-btn:hover { background: rgba(255,255,255,.16); }
+
+  main { min-width: 0; }
+  .main-inner {
+    width: min(1040px, 100%);
+    margin: 0 auto;
+    padding: 32px 40px 96px;
+  }
+
+  /* ---------- cover ---------- */
+  .cover {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0 0 28px 28px;
+    background:
+      radial-gradient(850px 430px at 86% 6%, rgba(255, 107, 53, .38), transparent 60%),
+      radial-gradient(620px 400px at 8% 100%, rgba(6, 214, 160, .14), transparent 60%),
+      linear-gradient(145deg, #081f2f 0%, #07324f 48%, #0a2a40 100%);
+    color: #fff;
+    padding: 58px 50px 48px;
+    box-shadow: 0 22px 55px rgba(7, 50, 79, .22);
+  }
+  .cover::after {
+    content: "";
+    position: absolute;
+    right: -120px;
+    top: -130px;
+    width: 420px;
+    height: 420px;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 50%;
+    box-shadow: 0 0 0 40px rgba(255,255,255,.03), 0 0 0 80px rgba(255,255,255,.02);
+    pointer-events: none;
+  }
+  .cover > * { position: relative; z-index: 1; }
+  .cover .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 800;
+    margin-bottom: 15px;
+  }
+  .cover .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 2px;
+    background: var(--brand);
+    display: inline-block;
+  }
+  .cover h1 {
+    margin: 0;
+    font-size: clamp(2.1rem, 5vw, 3.35rem);
+    line-height: 1.03;
+    letter-spacing: -.045em;
+    max-width: 760px;
+  }
+  .cover .sub {
+    margin: 20px 0 0;
+    max-width: 720px;
+    color: rgba(255,255,255,.78);
+    font-size: 1.12rem;
+    line-height: 1.7;
+  }
+  .cover .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .cover .meta span {
+    border: 1px solid rgba(255,255,255,.22);
+    background: rgba(255,255,255,.08);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,.85);
+  }
+  .cover .cover-note {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    max-width: 810px;
+  }
+  .cover .cover-note div {
+    border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.06);
+    border-radius: 12px;
+    padding: 11px 13px;
+  }
+  .cover .cover-note b {
+    display: block;
+    color: #fff;
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+  .cover .cover-note span {
+    display: block;
+    color: rgba(255,255,255,.62);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  /* ---------- module ---------- */
+  .module {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 34px 38px 32px;
+    margin-top: 24px;
+    box-shadow: var(--shadow);
+    scroll-margin-top: 18px;
+  }
+  .module-head {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+    margin-bottom: 22px;
+  }
+  .module-no {
+    width: 58px;
+    height: 58px;
+    border-radius: 15px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, var(--soft-orange), #ffe0d2);
+    border: 1px solid #ffd2c1;
+    color: var(--brand-deep);
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: -.02em;
+  }
+  .module h2 {
+    margin: 0;
+    font-size: clamp(1.55rem, 2.7vw, 2.05rem);
+    line-height: 1.12;
+    letter-spacing: -.03em;
+  }
+  .module-sub {
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  .module h3 {
+    margin: 32px 0 12px;
+    font-size: 1.3rem;
+    line-height: 1.3;
+    letter-spacing: -.015em;
+    color: var(--navy-deep);
+  }
+  .module h4 {
+    margin: 22px 0 8px;
+    font-size: 1.06rem;
+    line-height: 1.4;
+  }
+  .module p { margin: 0 0 13px; }
+  .module ul, .module ol { margin: 0 0 16px 1.3rem; padding: 0; }
+  .module li { margin: 0 0 7px; }
+  .module li::marker { color: var(--brand); }
+  .lead {
+    font-size: 1.09rem;
+    color: var(--ink-soft);
+    margin-bottom: 18px !important;
+  }
+  .small { font-size: .9rem; color: var(--muted); }
+  .nowrap { white-space: nowrap; }
+
+  /* ---------- layout helpers ---------- */
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .card {
+    background: #fbfcfd;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 17px 18px;
+  }
+  .card h4 { margin: 0 0 6px; font-size: 1.03rem; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+  .card .pill { margin-bottom: 7px; }
+  .card-accent { border-top: 3px solid var(--brand); }
+  .card-navy { border-top: 3px solid var(--navy); }
+  .card-green { border-top: 3px solid var(--mint); }
+  .card-gold { border-top: 3px solid var(--gold); }
+
+  .callout {
+    border-left: 4px solid var(--navy);
+    background: var(--soft-blue);
+    border-radius: 0 11px 11px 0;
+    padding: 15px 18px;
+    margin: 16px 0;
+    font-size: .99rem;
+    line-height: 1.65;
+  }
+  .callout strong:first-child { display: inline-block; margin-bottom: 2px; }
+  .callout.info { border-left-color: var(--navy); background: var(--soft-blue); }
+  .callout.warn { border-left-color: #c98900; background: var(--soft-gold); }
+  .callout.stop { border-left-color: var(--red); background: var(--soft-red); }
+  .callout.ok { border-left-color: #0b8a67; background: var(--soft-green); }
+  .callout.practice { border-left-color: var(--brand); background: var(--soft-orange); }
+
+  .pill {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--soft-blue);
+    color: var(--navy);
+    white-space: nowrap;
+  }
+  .pill.orange { background: var(--soft-orange); color: var(--brand-deep); }
+  .pill.green { background: var(--soft-green); color: #087758; }
+  .pill.gold { background: var(--soft-gold); color: #8a6100; }
+  .pill.red { background: var(--soft-red); color: var(--red); }
+  .pill.gray { background: #eef2f6; color: var(--muted); }
+
+  .check {
+    list-style: none;
+    margin-left: 0 !important;
+  }
+  .check li {
+    position: relative;
+    padding-left: 27px;
+  }
+  .check li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 15px;
+    height: 15px;
+    border: 1.6px solid var(--line-strong);
+    border-radius: 4px;
+    background: #fff;
+  }
+  .plain {
+    list-style: none;
+    margin-left: 0 !important;
+  }
+  .plain li { position: relative; padding-left: 18px; }
+  .plain li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--brand);
+  }
+  .dont li::before { background: var(--red); }
+  .do li::before { background: #0b8a67; }
+
+  .quote {
+    margin: 16px 0;
+    padding: 15px 18px;
+    background: #f8fafc;
+    border-left: 4px solid var(--brand);
+    border-radius: 0 11px 11px 0;
+    color: var(--ink-soft);
+    font-size: .98rem;
+    line-height: 1.65;
+  }
+  .quote b { color: var(--ink); }
+
+  /* ---------- tables ---------- */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 14px 0 18px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .94rem;
+    line-height: 1.55;
+    background: #fff;
+  }
+  th {
+    text-align: left;
+    background: #f1f5f9;
+    color: var(--navy-deep);
+    font-size: .78rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: bottom;
+  }
+  td {
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:nth-child(even) td { background: #fbfcfd; }
+  td.yes { color: #087758; font-weight: 700; }
+  td.no { color: var(--red); font-weight: 700; }
+  .table-note { font-size: .84rem; color: var(--muted); margin-top: -6px; line-height: 1.55; }
+
+  /* ---------- toc ---------- */
+  .toc {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px 30px;
+    margin-top: 24px;
+    box-shadow: var(--shadow);
+  }
+  .toc h2 {
+    margin: 0 0 6px;
+    font-size: 1.32rem;
+    letter-spacing: -.02em;
+  }
+  .toc p { margin: 0 0 16px; color: var(--muted); font-size: .98rem; }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 24px;
+  }
+  .toc-grid a {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: .96rem;
+    padding: 6px 0;
+    border-bottom: 1px dashed #e6ebf0;
+  }
+  .toc-grid a:hover { color: var(--brand-deep); }
+  .toc-grid b { color: var(--brand-deep); font-size: .82rem; padding-top: 3px; }
+
+  /* ---------- kpi ---------- */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 16px 0 20px;
+  }
+  .kpi {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 15px 16px;
+  }
+  .kpi b {
+    display: block;
+    font-size: 1.4rem;
+    line-height: 1.1;
+    color: var(--navy-deep);
+    letter-spacing: -.02em;
+  }
+  .kpi span {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: .85rem;
+    line-height: 1.45;
+  }
+
+  /* ---------- student file diagram ---------- */
+  .hub {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr 1fr;
+    gap: 0 24px;
+    align-items: stretch;
+    margin: 18px 0 12px;
+  }
+  .hub-side { display: grid; gap: 9px; align-content: center; }
+  .hub-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brand);
+    border-radius: 10px;
+    padding: 9px 10px;
+  }
+  .hub-item::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 24px;
+    border-top: 1px dashed var(--line-strong);
+  }
+  .hub-left .hub-item::after { right: -24px; }
+  .hub-right .hub-item::after { left: -24px; }
+  .hub-icon {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    background: var(--brand);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .hub-item b { display: block; font-size: .86rem; line-height: 1.3; }
+  .hub-item span { display: block; color: var(--muted); font-size: .76rem; line-height: 1.35; margin-top: 2px; }
+  .hub-center {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 18px 16px;
+    border-radius: 16px;
+    background: #101820;
+    color: #fff;
+    box-shadow: 0 0 0 6px rgba(255, 107, 53, .08), 0 14px 30px rgba(16, 24, 32, .16);
+  }
+  .hub-center::before {
+    content: "";
+    position: absolute;
+    inset: -10px;
+    border: 1px dashed rgba(255, 107, 53, .45);
+    border-radius: 22px;
+    pointer-events: none;
+  }
+  .hub-center .mini {
+    display: inline-block;
+    background: var(--brand);
+    color: #fff;
+    font-size: 9px;
+    letter-spacing: .12em;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-bottom: 7px;
+  }
+  .hub-center strong { color: #fff; font-size: 1.15rem; line-height: 1.2; }
+  .hub-center p { color: rgba(255,255,255,.7); font-size: .8rem; line-height: 1.45; margin: 7px 0 0; }
+  .hub-center ul {
+    list-style: none;
+    margin: 9px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+  .hub-center li {
+    margin: 0;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 999px;
+    padding: 2px 7px;
+    font-size: .7rem;
+    color: rgba(255,255,255,.84);
+  }
+
+  /* ---------- steps ---------- */
+  .steps { display: grid; gap: 9px; margin: 14px 0; }
+  .step {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 11px;
+    align-items: start;
+    background: #fbfcfd;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 11px 13px;
+  }
+  .step-no {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--navy);
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+  }
+  .step b { display: block; font-size: .99rem; line-height: 1.35; }
+  .step span { display: block; color: var(--muted); font-size: .9rem; line-height: 1.5; margin-top: 2px; }
+
+  /* ---------- cases ---------- */
+  .case {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 16px 0;
+    background: #fff;
+  }
+  .case-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 15px;
+    background: #f2f7fb;
+    border-bottom: 1px solid var(--line);
+  }
+  .case-head b { font-size: 1rem; }
+  .case-head .pill { margin-left: auto; }
+  .case-body { padding: 16px 18px 8px; }
+  .case-body h4 { margin-top: 8px; }
+  .case-body ul { margin-bottom: 10px; }
+
+  /* ---------- misc ---------- */
+  .two-col {
+    columns: 2;
+    column-gap: 30px;
+  }
+  .two-col li { break-inside: avoid; }
+  .divider { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
+  .back {
+    display: inline-block;
+    margin-top: 16px;
+    font-size: .82rem;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .back:hover { color: var(--brand-deep); }
+  .footer {
+    margin-top: 32px;
+    padding: 24px 4px 0;
+    border-top: 1px dashed var(--line-strong);
+    color: var(--muted);
+    font-size: .85rem;
+    line-height: 1.65;
+  }
+  .footer b { color: var(--ink); }
+  .status {
+    display: inline-block;
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 5px;
+  }
+  .status.now { background: var(--soft-green); color: #087758; }
+  .status.planned { background: var(--soft-gold); color: #8a6100; }
+  .status.no { background: var(--soft-red); color: var(--red); }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 1120px) {
+    .shell { grid-template-columns: 1fr; }
+    .rail {
+      position: relative;
+      height: auto;
+      padding: 18px 20px;
+    }
+    .rail nav {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 3px 12px;
+    }
+    .rail-foot { display: none; }
+    .main-inner { padding: 22px 18px 70px; }
+    .cover { padding: 40px 28px 34px; border-radius: 0 0 20px 20px; }
+    .cover .cover-note { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 780px) {
+    body { font-size: 16px; }
+    .rail { display: none; }
+    .module { padding: 24px 20px 22px; border-radius: 13px; }
+    .module-head { grid-template-columns: 46px 1fr; gap: 12px; }
+    .module-no { width: 46px; height: 46px; border-radius: 12px; font-size: 13px; }
+    .grid-2, .grid-3, .grid-4, .kpi-grid { grid-template-columns: 1fr; }
+    .toc-grid { grid-template-columns: 1fr; }
+    .hub { grid-template-columns: 1fr; gap: 10px; }
+    .hub-left, .hub-right { order: 2; }
+    .hub-center { order: 1; }
+    .hub-item::after { display: none; }
+    .two-col { columns: 1; }
+    .cover h1 { font-size: 2rem; }
+    .rail nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; }
+    .rail nav a { font-size: 11px; padding: 5px 6px; grid-template-columns: 20px 1fr; }
+    .rail nav b { font-size: 9.5px; }
+  }
+
+  /* ---------- print ---------- */
+  @page { size: A4; margin: 14mm; }
+  @media print {
+    body {
+      background: #fff;
+      font-size: 11.2pt;
+      line-height: 1.55;
+    }
+    table { font-size: .9rem; }
+    th { font-size: .74rem; padding: 8px 10px; }
+    td { padding: 8px 10px; }
+    .shell { display: block; width: auto; }
+    .rail, .skip, .print-btn, .back, .no-print { display: none !important; }
+    .main-inner { width: auto; max-width: none; padding: 0; }
+    .cover {
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0 0 12mm;
+      background: #fff !important;
+      color: var(--ink) !important;
+      break-after: page;
+    }
+    .cover::after { display: none; }
+    .cover .eyebrow { color: var(--brand-deep) !important; }
+    .cover h1 { font-size: 32pt; }
+    .cover .sub { color: var(--muted) !important; font-size: 12pt; }
+    .cover .meta span { border-color: var(--line); background: #fff; color: var(--muted); }
+    .cover .cover-note div { border-color: var(--line); background: #fff; }
+    .cover .cover-note b { color: var(--ink); }
+    .cover .cover-note span { color: var(--muted); }
+    .toc { box-shadow: none; break-after: page; }
+    .module {
+      box-shadow: none;
+      border: 0;
+      border-top: 2px solid var(--brand);
+      border-radius: 0;
+      padding: 0 0 10mm;
+      margin: 0 0 8mm;
+      break-before: page;
+    }
+    .module:first-of-type { break-before: auto; }
+    .module-head { break-after: avoid; }
+    h2, h3, h4 { break-after: avoid; }
+    table, .callout, .card, .case, .step, .hub { break-inside: avoid; }
+    a { color: var(--ink); text-decoration: none; }
+    .pill { border: 1px solid var(--line); }
+    .hub-center { background: #fff !important; color: var(--ink) !important; border: 1px solid var(--line-strong); }
+    .hub-center strong { color: var(--ink) !important; }
+    .hub-center p, .hub-center li { color: var(--muted) !important; }
+    .hub-center li { border-color: var(--line) !important; }
+
+    /* A4 portrait: restore the grid layouts that the screen mobile rules collapse. */
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .toc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .two-col { columns: 2; column-gap: 24px; }
+    .hub { grid-template-columns: 1fr 1.15fr 1fr; gap: 0 18px; }
+    .hub-left, .hub-right, .hub-center { order: 0; }
+    .hub-item::after { display: block; width: 18px; }
+    .hub-left .hub-item::after { right: -18px; }
+    .hub-right .hub-item::after { left: -18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">İçeriğe geç</a>
+
+<div class="shell">
+  <aside class="rail" aria-label="El kitabı içindekiler">
+    <div class="rail-brand">
+      <div class="rail-mark">FBA</div>
+      <div>
+        <strong>Career Coach<br>Eğitim El Kitabı</strong>
+        <span>Future Bridge Academy</span>
+      </div>
+    </div>
+    <nav>
+      <a href="#m0"><b>00</b><span>Hızlı başlangıç</span></a>
+      <a href="#m1"><b>01</b><span>FBA'yı tanı</span></a>
+      <a href="#m2"><b>02</b><span>Rol ve başarı</span></a>
+      <a href="#m3"><b>03</b><span>Sınırlar, etik, güvenlik</span></a>
+      <a href="#m4"><b>04</b><span>Kanada eğitim sistemi</span></a>
+      <a href="#m5"><b>05</b><span>Student File</span></a>
+      <a href="#m6"><b>06</b><span>Hedef belirleme</span></a>
+      <a href="#m7"><b>07</b><span>Görüşme yönetimi</span></a>
+      <a href="#m8"><b>08</b><span>Görev ve hesap verebilirlik</span></a>
+      <a href="#m9"><b>09</b><span>Başvuru dosyası ve kanıt</span></a>
+      <a href="#m10"><b>10</b><span>Başvuru süreci</span></a>
+      <a href="#m11"><b>11</b><span>Para ve burslar</span></a>
+      <a href="#m12"><b>12</b><span>Aile ve okul</span></a>
+      <a href="#m13"><b>13</b><span>Zor durumlar</span></a>
+      <a href="#m14"><b>14</b><span>Vaka laboratuvarı</span></a>
+      <a href="#m15"><b>15</b><span>Onboarding ve değerlendirme</span></a>
+      <a href="#m16"><b>16</b><span>Şablonlar ve sözlük</span></a>
+    </nav>
+    <div class="rail-foot">
+      Resmi program bilgisi için programme lead onayı esastır.
+      <button class="print-btn" type="button" onclick="window.print()">Yazdır / PDF olarak kaydet</button>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div class="main-inner">
+
+      <header class="cover">
+        <div class="eyebrow">Future Bridge Academy · Volunteer training</div>
+        <h1>Career Coach<br>Eğitim El Kitabı</h1>
+        <p class="sub">
+          Career coach rolü için uygulama el kitabı: FBA, Student File, Kanada eğitim yolları, görüşme yönetimi,
+          başvuru süreci ve rol sınırları.
+        </p>
+      </header>
+
+      <section class="toc" id="toc">
+        <h2>İçindekiler</h2>
+        <div class="toc-grid">
+          <a href="#m0"><b>00</b><span>Hızlı başlangıç: 60 saniyede rol</span></a>
+          <a href="#m1"><b>01</b><span>Future Bridge Academy'yi tanı</span></a>
+          <a href="#m2"><b>02</b><span>Career Coach rolün ve başarı tanımın</span></a>
+          <a href="#m3"><b>03</b><span>Sınırlar, etik, safeguarding ve gizlilik</span></a>
+          <a href="#m4"><b>04</b><span>Kanada eğitim sistemi ve pathway okuryazarlığı</span></a>
+          <a href="#m5"><b>05</b><span>Student File: tek gerçek kayıt</span></a>
+          <a href="#m6"><b>06</b><span>Öğrenciyi tanıma ve hedef belirleme</span></a>
+          <a href="#m7"><b>07</b><span>Görüşme yönetimi</span></a>
+          <a href="#m8"><b>08</b><span>Görev yönetimi ve hesap verebilirlik</span></a>
+          <a href="#m9"><b>09</b><span>Başvuru dosyası, kanıt ve referanslar</span></a>
+          <a href="#m10"><b>10</b><span>Başvuru süreci ve karar yönetimi</span></a>
+          <a href="#m11"><b>11</b><span>Para, burs ve finansal yardım</span></a>
+          <a href="#m12"><b>12</b><span>Aile ve okul ile iletişim</span></a>
+          <a href="#m13"><b>13</b><span>Zor durumlar ve kriz protokolleri</span></a>
+          <a href="#m14"><b>14</b><span>Vaka laboratuvarı</span></a>
+          <a href="#m15"><b>15</b><span>Onboarding, süpervizyon ve yeterlilik</span></a>
+          <a href="#m16"><b>16</b><span>Şablonlar, kontrol listeleri, sözlük ve kaynaklar</span></a>
+        </div>
+      </section>
+
+      <section class="module" id="m0">
+        <div class="module-head">
+          <div class="module-no">00</div>
+          <div>
+            <h2>Hızlı başlangıç: 60 saniyede rol</h2>
+          </div>
+        </div>
+
+        <p class="lead">
+          Bir career coach olarak, bir lise öğrencisinin <strong>kendi hedefini</strong> netleştirmesine, bu hedefi
+          <strong>Student File</strong> içinde kanıtlarla takip etmesine ve başvuruya ya da bir sonraki adıma
+          <strong>zamanında hazır olmasına</strong> yardım edeceksin. Öğrencinin yerine karar vermeyecek, dosyayı
+          onun adına doldurmayacak veya essay yazmayacaksın.
+        </p>
+
+        <div class="kpi-grid">
+          <div class="kpi"><b>1</b><span>aynı anda yöneteceğin öğrenci modeli: birebir, online</span></div>
+          <div class="kpi"><b>0</b><span>vereceğin kabul, burs veya vize garantisi</span></div>
+          <div class="kpi"><b>1</b><span>kullanacağın tek kayıt: Student File</span></div>
+          <div class="kpi"><b>2</b><span>görüşme çıktısı: net hedef ve tarihli sonraki adım</span></div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card card-accent">
+            <span class="pill orange">Her zaman</span>
+            <h4>Yap</h4>
+            <ul class="plain do">
+              <li>Öğrencinin kendi sözleriyle hedefini yaz.</li>
+              <li>Her görüşmede tek bir sonraki adım ve tarih belirle.</li>
+              <li>Dosyayı öğrenciyle birlikte aç; öğrenciye yaptır.</li>
+              <li>Kanıtı ve kaynağı kontrol et; varsayımı not etme.</li>
+              <li>Şüphede kalınca programme lead'e sor.</li>
+            </ul>
+          </div>
+          <div class="card card-navy">
+            <span class="pill red">Asla</span>
+            <h4>Yapma</h4>
+            <ul class="plain dont">
+              <li>“Kesin kabul alırsın” veya “bu bursu alırsın” deme.</li>
+              <li>Öğrencinin essay'ini yazma veya cümlelerini yeniden yazma.</li>
+              <li>Fiziki merkez, kampüs veya açılış tarihi vaat etme.</li>
+              <li>Göçmenlik, hukuk veya tıbbi tavsiye verme.</li>
+              <li>Öğrenci verisini kişisel cihaz veya özel mesaja taşıma.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout ok">
+          <strong>İlk öğrenci öncesi kontrol.</strong> Bu el kitabının 1, 2, 3 ve 5. bölümlerini oku; Student File ekranını aç;
+          programme lead ile bir örnek dosya inşa et; deneyimli bir coach'un iki görüşmesini izle; ilk öğrencini ancak yeterlilik kontrolünden
+          sonra al.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m1">
+        <div class="module-head">
+          <div class="module-no">01</div>
+          <div>
+            <h2>Future Bridge Academy'yi tanı</h2>
+            <p class="module-sub">FBA'nın ne olduğunu, kime hizmet ettiğini, neyin çalıştığını ve neyin asla vaat edilmediğini öğren.</p>
+          </div>
+        </div>
+
+        <h3>1.1 Tek cümlede FBA</h3>
+        <p>
+          Future Bridge Academy (FBA), Kanada'daki lise ve ortaokul öğrencilerine
+          <strong>ücretsiz haftalık online matematik dersleri</strong>, <strong>aylık ücretsiz deneme sınavları</strong>,
+          seminerler ve gönüllü mentorluk sunan; öğrencinin hedeflerini ve başvuru kanıtlarını
+          <strong>Student File</strong> içinde birleştiren bir eğitim programıdır.
+        </p>
+        <p>
+          FBA bir okul değildir, üniversite değildir ve diploma vermez. NCF Education altında yürütülen bir
+          programdır; Vancouver'da CentreCanada Newcomer Services Society, diğer şehirlerde ise yerel partner dernekler
+          altında yürütülür.
+        </p>
+
+        <div class="grid grid-3">
+          <div class="card card-accent">
+            <span class="pill orange">Odak</span>
+            <h4>Önce ücretsiz</h4>
+            <p>Haftalık online matematik, aylık deneme sınavı, seminerler ve topluluk ücretsizdir. Ücretli bir hizmet
+              varsa aileye önceden açıkça söylenir; fiyat bilgisini sen vermezsin, programme lead verir.</p>
+          </div>
+          <div class="card card-navy">
+            <span class="pill">Yöntem</span>
+            <h4>Öğrencinin gündemine hizala</h4>
+            <p>Ders ve deneme, mümkün olduğunca öğrencinin o hafta okulda gördüğü konuya bağlanır; ancak bu her zaman
+              mümkün olmayabilir. Bazı haftalarda ders dışı etkinlikler, ek kurslar, yarışmalar veya gönüllü faaliyetler
+              öne çıkar ve yönlendirme buna göre yapılır. Rastgele worksheet veya yılın tamamını kapsayan tek bir sınav
+              yoktur.</p>
+          </div>
+          <div class="card card-green">
+            <span class="pill green">Kayıt</span>
+            <h4>Student File merkezde</h4>
+            <p>Profil, hedefler, başvurular, portföy, notlar, referanslar ve son tarihler aynı dosyada tutulur.
+              Koç ayrı bir takip sistemi açmaz.</p>
+          </div>
+        </div>
+
+        <h3>1.2 Kime hizmet ettiğini bil</h3>
+        <ul>
+          <li><strong>Grades 4-12</strong> öğrencileri; matematik ilk ve ana ders.</li>
+          <li>Kanada okul sistemini öğrenmek isteyen aileler; velilerin sistemi öğrenmesi de desteklenir.</li>
+          <li>College, trades, university, IB veya AP yollarından birine hazırlanan lise öğrencileri.</li>
+          <li>Ücretsiz derse veya aylık deneme sınavına tek başına katılmak isteyen, başka bir programa bağlı
+            olmayan aileler.</li>
+        </ul>
+
+        <h3>1.3 Çalışan hizmetler, planlananlar ve fiziki mekân</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Başlık</th><th>Durum</th><th>Senin için doğru dil</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Haftalık online matematik dersi</td>
+                <td><span class="status now">Çalışıyor</span></td>
+                <td>“Her hafta canlı, online ve ücretsiz bir matematik dersi var.”</td>
+              </tr>
+              <tr>
+                <td>Aylık deneme sınavı</td>
+                <td><span class="status now">Çalışıyor</span></td>
+                <td>“Ayda bir, okulda işlenen konudan, yüz yüze ve ücretsiz bir deneme sınavı yapılır; online versiyonu yoktur.”</td>
+              </tr>
+              <tr>
+                <td>Burs ve veli seminerleri</td>
+                <td><span class="status now">Çalışıyor</span></td>
+                <td>“Seminerler ücretsizdir; tarihler topluluk kanalından duyurulur.”</td>
+              </tr>
+              <tr>
+                <td>Gönüllü mentor ağı ve career coaching</td>
+                <td><span class="status now">Çalışıyor</span></td>
+                <td>“Birebir career coaching online yürür; saatler programme lead ile kararlaştırılır.”</td>
+              </tr>
+              <tr>
+                <td>CEMC trial exam</td>
+                <td><span class="status now">Etkinlik bazlı</span></td>
+                <td>“CEMC denemesi resmi yarışma değildir; okulun sipariş ettiği asıl sınavdan ayrı bir pratik
+                  oturumudur.”</td>
+              </tr>
+              <tr>
+                <td>Yazılı yol planı, CEMC kulübü, IB/AP hazırlığı, İngilizce ve yazma</td>
+                <td><span class="status planned">Planlanan / aşamalı</span></td>
+                <td>“Şu anda hangi hizmetin açık olduğunu programme lead söyler; ben tarih vermem.”</td>
+              </tr>
+              <tr>
+                <td>Fiziki merkez / kampüs</td>
+                <td><span class="status no">Plan yok</span></td>
+                <td>“FBA'nın fiziki merkez planı yoktur. Fiziki mekân yalnızca aylık deneme sınavı için kullanılır.
+                  ‘Merkez açılınca’ gibi bir vaat vermeyin.”</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">Not: Hizmet durumu değişebilir. Bir hizmeti “açık” diye anlatmadan önce programme
+          lead'in o dönemki onayını al.</p>
+
+        <div class="callout info">
+          <strong>Dijital araçlar.</strong> Student Files (başvuru dosyası), Self-Paced Courses ve English Article
+          Writing FBA'nın dijital hizmetleridir. Hangi öğrenciye hangi aracın açık olduğunu programme lead söyler;
+          sen erişim, ücret veya tarih vaat etmezsin.
+        </div>
+
+        <div class="callout warn">
+          <strong>CEMC kısa notu.</strong> CEMC, University of Waterloo'nın yarışma programıdır. Tipik kâğıtlar:
+          Gauss (Grade 7-8), Pascal/Cayley/Fermat (Grade 9-11), Fryer/Galois/Hypatia (yazılı), Euclid (Grade 12),
+          Beaver (bilgisayar, Grade 5-10). Resmi yarışmayı okul sipariş eder; öğrenci tek başına kaydolamaz. FBA'nın
+          CEMC trial exam'i resmi yarışma değil, pratik oturumudur. Güncel eşleşmeyi cemc.uwaterloo.ca'dan doğrula.
+        </div>
+
+        <div class="callout stop">
+          <strong>Kritik düzeltme.</strong> FBA planlarında fiziki mekân hedefi yoktur. Sadece aylık deneme sınavı
+          fiziki bir topluluk mekânında yapılır. “Merkez”, “kampüs”, “sınıf açılacak”, “yüz yüze mentorluk” gibi
+          ifadeler kullanılmaz. Web sitesindeki eski sayfalarda “centre” geçiyorsa bu el kitabı ve programme lead'in
+          onayı esastır.
+        </div>
+
+        <h3>1.4 FBA'yı farklı yapan şeyi gör</h3>
+        <ul>
+          <li><strong>Ücretsiz olan gerçekten ücretsizdir.</strong> Ücretsiz ders, deneme ve seminerler bir satış
+            hunisi değildir.</li>
+          <li><strong>Kanıt esastır.</strong> Çalışmayan bir şey “çalışıyor” diye anlatılmaz; açılmayan bir tarih
+            açıklanmaz.</li>
+          <li><strong>Öğrenci dosyası öğrencinin aracıdır.</strong> Sen dosyayı öğrenci adına doldurmazsın; öğrencinin
+            kendi kanıtını üretmesine yardım eder.</li>
+          <li><strong>Gönüllülük ciddiye alınır.</strong> Saatler yazılıdır, eğitim vardır, geri bildirim vardır ve
+            referans gerçek işi anlatır.</li>
+        </ul>
+
+        <h3>1.5 Senin söyleyebileceğin ve söyleyemeyeceğin şeyler</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Güvenli dil</th><th>Yasak dil</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>“Bu hedef için hangi ön koşullar gerektiğini birlikte kontrol edelim.”</td>
+                <td>“Bu notlarla kesin kabul alırsın.”</td>
+              </tr>
+              <tr>
+                <td>“Bu bursun resmi sayfasını açıp son tarihi ve uygunluğu doğrulayalım.”</td>
+                <td>“Bu bursu sana ben ayarlarım.”</td>
+              </tr>
+              <tr>
+                <td>“Bu hafta tek bir sonraki adım seçelim; hangisi senin için gerçekçi?”</td>
+                <td>“Sen şunu yap, gerisini ben hallederim.”</td>
+              </tr>
+              <tr>
+                <td>“Bu konu benim rolümün dışında; doğru uzmana yönlendireceğim.”</td>
+                <td>“Göçmenlik/vize konusunda şöyle yapmalısın.”</td>
+              </tr>
+              <tr>
+                <td>“FBA'nın fiziki merkez planı yok; deneme sınavı bir topluluk mekânında yapılıyor.”</td>
+                <td>“Merkez açılınca orada yüz yüze çalışacağız.”</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>1.6 FBA sözlüğü: öğrenmen gereken 10 terim</h3>
+        <div class="grid grid-2">
+          <div class="card"><h4>Student File</h4><p>Öğrencinin profili, başvuruları, kanıtları, notları ve son
+            tarihlerini tutan merkezi uygulama.</p></div>
+          <div class="card"><h4>Mock exam</h4><p>Aylık, yüz yüze, okul konusundan, ücretsiz deneme sınavı. Online
+            versiyonu yoktur; resmi sınav değildir.</p></div>
+          <div class="card"><h4>CEMC</h4><p>University of Waterloo'nın matematik ve bilgisayar yarışma programı.
+            Okul sipariş eder; öğrenci tek başına resmi sınava kaydolamaz.</p></div>
+          <div class="card"><h4>Pathway</h4><p>Lise sonrası yol: university, college, trades, IB veya AP gibi
+            seçeneklerden biri.</p></div>
+          <div class="card"><h4>Prerequisite</h4><p>Bir dersi veya programı almadan önce tamamlanması gereken ders
+            ya da koşul.</p></div>
+          <div class="card"><h4>Transcript</h4><p>Resmi veya güncel not dökümü. Başvuruda genellikle okul gönderir.</p></div>
+          <div class="card"><h4>Predicted grade</h4><p>Öğretmenin/okulun dönem sonu için öngördüğü not; özellikle
+            IB/AP ve erken başvurularda kullanılır.</p></div>
+          <div class="card"><h4>Bursary / scholarship</h4><p>Burs: çoğunlukla ihtiyaç veya topluluk temelli destek.
+            Scholarship: çoğunlukla başarı/yarışma temelli. Her ikisinin de kuralı farklıdır.</p></div>
+          <div class="card"><h4>Waitlist</h4><p>Kabul edilmediğin ama tamamen reddedilmediğin ara durum. Yedek
+            plan ve kabul tarihi yönetilir.</p></div>
+          <div class="card"><h4>Readiness</h4><p>Student File'daki gereksinimlerin tamamlanma oranı. Kabul tahmini
+            değildir; eksikleri görünür kılan bir araçtır.</p></div>
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m2">
+        <div class="module-head">
+          <div class="module-no">02</div>
+          <div>
+            <h2>Career Coach rolün ve başarı tanımın</h2>
+            <p class="module-sub">Ne yapacağını, ne yapmayacağını, başarıyı nasıl ölçeceğini ve saatlerin nasıl belirleneceğini öğren.</p>
+          </div>
+        </div>
+
+        <h3>2.1 Senin rolünün amacı</h3>
+        <p class="lead">
+          Bir öğrencinin “bilmiyorum”dan, <strong>kendi gerekçesi olan bir hedefe</strong> ve
+          <strong>kanıtlanmış bir başvuru dosyasına</strong> geçmesine yardım edeceksin. Hedefi sen seçmezsin;
+          öğrencinin seçmesine, test etmesine ve sonuçlandırmasına eşlik edersin.
+        </p>
+
+        <div class="grid grid-2">
+          <div class="card card-accent">
+            <span class="pill orange">Rolün kapsamı</span>
+            <h4>Senin işin</h4>
+            <ul class="plain do">
+              <li>Öğrenciyle hedefi ve gerekçesini netleştirmek.</li>
+              <li>Student File'ı açmak, hedefe bağlı gereksinimleri kurmak.</li>
+              <li>Düzenli görüşmek ve görevleri birlikte yürütmek.</li>
+              <li>Kanıtı, son tarihi ve durumu takip etmek.</li>
+              <li>Hedef değiştiğinde bunu dosyaya ve plana yansıtmak.</li>
+              <li>Öğrenciyi bir sonraki adıma hazırlamak.</li>
+            </ul>
+          </div>
+          <div class="card card-navy">
+            <span class="pill red">Kapsam dışı</span>
+            <h4>Senin işin değil</h4>
+            <ul class="plain dont">
+              <li>Essay, personal statement veya başvuru formu yazmak.</li>
+              <li>Öğrenci adına başvuru göndermek.</li>
+              <li>Kabul, burs, vize veya iş garantisi vermek.</li>
+              <li>Terapi, kariyer testi yorumu veya tıbbi tavsiye vermek.</li>
+              <li>Göçmenlik/hukuk/finans danışmanlığı yapmak.</li>
+              <li>Aile ile öğrenci arasındaki gizli bilgiyi paylaşmak.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>2.2 Başarıyı neyle ölçeriz?</h3>
+        <p>Kabul oranını başarı ölçüsü olarak kullanma; öğrencinin kontrolünde olmayan çok sayıda değişken vardır.
+          FBA'da senin için süreç göstergeleri esastır:</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Gösterge</th><th>Hedef</th><th>Nerede görünür</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Öğrenci hedefini kendi cümlesiyle söyleyebiliyor</td><td>İlk 2 görüşme</td><td>Student File profili + mentor notu</td></tr>
+              <tr><td>Hedefe bağlı uygulama dosyası ve gereksinimler kurulu</td><td>İlk 2-3 görüşme</td><td>Applications sekmesi</td></tr>
+              <tr><td>Her görüşmede en az bir somut ilerleme</td><td>Her oturum</td><td>Görev/kanıt/not</td></tr>
+              <tr><td>Yaklaşan son tarihler görünür ve sahiplenilmiş</td><td>Sürekli</td><td>Dashboard + request/target</td></tr>
+              <tr><td>Öğrenci kararlarını ve başvuru hikâyesini anlatabiliyor</td><td>Başvuru öncesi</td><td>Mock interview / mentor notu</td></tr>
+              <tr><td>Dosya başka bir coach'a devredilebilir</td><td>Her ay</td><td>Güncel notlar + açık talepler</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>2.3 Sorumluluk matrisi</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Karar / iş</th><th>Öğrenci</th><th>Sen (Coach)</th><th>Veli</th><th>Programme lead</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Hedefi seçmek</td><td class="yes">Karar verir</td><td>Sorular sorar, seçenekleri açar</td><td>Destekler, baskı kurmaz</td><td>Uyuşmazlıkta hakem</td></tr>
+              <tr><td>Dosyayı doldurmak</td><td class="yes">Yapar</td><td>Rehberlik eder, request açar</td><td>Gerekli bilgiyi sağlar</td><td>Erişim/istisna onayı</td></tr>
+              <tr><td>Essay yazmak</td><td class="yes">Yazar</td><td>Yapı ve geri bildirim verir</td><td>Okur, yazmaz</td><td>İntihal/uygunsuzluk kararı</td></tr>
+              <tr><td>Başvuruyu göndermek</td><td class="yes">Gönderir</td><td>Son kontrolü yapar</td><td>Ödeme/izin desteği</td><td>İstisna onayı</td></tr>
+              <tr><td>Göçmenlik/vize sorusu</td><td>Sorar</td><td>Yetkili uzmana yönlendirir</td><td>Karar verir</td><td>Yönlendirme listesi</td></tr>
+              <tr><td>Kriz / güvenlik</td><td>Bildirir</td><td>Derhal protokolü uygular</td><td>Bilgilendirilir</td><td>Olay yönetimi</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>2.4 Saatler, caseload ve sınırlar</h3>
+        <ul>
+          <li><strong>Saatler programme lead ile yazılı olarak kararlaştırılır.</strong> Bu el kitabı sabit bir saat
+            sayısı koymaz; saatler, düzenli olarak üstlenebileceğin görüşme yüküne göre belirlenir.</li>
+          <li>Caseload, senin kapasiten ve öğrencinin ihtiyacına göre belirlenir. Aynı anda kaç öğrenci
+            alacağını programme lead onaylar.</li>
+          <li>Görüşme sıklığı öğrencinin ihtiyacına göre haftalık veya iki haftada bir olabilir; başlangıçta daha
+            sık, başvuru döneminde daha yoğun olabilir.</li>
+          <li>Kendi kapasiteni aşan bir taahhüt verme. Az öğrenciyi iyi yönetmen, çok öğrenciyi yarım
+            bırakmandan iyidir.</li>
+        </ul>
+
+        <h3>2.5 Senin rolün ile diğer rollerin farkı</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Rol</th><th>Odak</th><th>Ne yapar</th><th>Ne yapmaz</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Career Coach</strong></td><td>Tek öğrenci, hedef ve başvuru dosyası</td><td>Hedef belirleme, dosya, görev takibi, başvuruya hazırlık</td><td>Essay yazma, kabul garantisi, terapi</td></tr>
+              <tr><td><strong>Career Path Presenter</strong></td><td>Meslek tanıtımı</td><td>Kendi mesleğini öğrenciye ve veliye anlatır</td><td>Birebir öğrenci dosyası yönetmez</td></tr>
+              <tr><td><strong>Academic Writing Guide</strong></td><td>Yazma becerisi</td><td>Konu, yapı ve geri bildirim verir</td><td>Öğrencinin metnini yazmaz</td></tr>
+              <tr><td><strong>Online Maths Teacher</strong></td><td>Haftalık matematik dersi</td><td>Ders anlatır, pratik yaptırır</td><td>Başvuru dosyası yönetmez</td></tr>
+              <tr><td><strong>Mock Exam Organiser</strong></td><td>Aylık sınav operasyonu</td><td>Kayıt, salon, kağıt, sonuç</td><td>Öğrencinin pathway planını yönetmez</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>2.6 İyi bir coach profili: sana uygun mu?</h3>
+        <div class="grid grid-2">
+          <div class="card card-green">
+            <span class="pill green">Aranan</span>
+            <h4>Bu rol sana uygun mu?</h4>
+            <ul class="plain do">
+              <li>Kendi university, college veya trades yolunu yürümüşsün.</li>
+              <li>Bir gence karşı dürüst, sabırlı ve tutarlısın.</li>
+              <li>Son tarihleri takip edersin; söz verdiğin zaman ulaşılabilirsin.</li>
+              <li>Aileyle net ve saygılı konuşursun; gerçekçi olanı söylersin.</li>
+              <li>Öğrencinin kararını kendi kararından ayırabilirsin.</li>
+            </ul>
+          </div>
+          <div class="card card-navy">
+            <span class="pill red">Uygun değil</span>
+            <h4>Bu rol sana uygun değilse</h4>
+            <ul class="plain dont">
+              <li>Öğrencinin yerine başvuru/essay yazmak istersin.</li>
+              <li>Kesin kabul, burs veya vize vaadi verirsin.</li>
+              <li>Kendi mesleğini/başarını öne çıkarmak istersin.</li>
+              <li>Düzenli takip ve belgelemeyi yük görürsün.</li>
+              <li>Sınır koymakta zorlanırsın.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>2.7 Programın sana sağladıkları</h3>
+        <ul>
+          <li><strong>Eğitim:</strong> Bu el kitabı, deneyimli coach gözlemi, süpervizyon ve yeterlilik kontrolü.</li>
+          <li><strong>Yazılı saat kaydı:</strong> Verdiğin saatler talep ettiğinde yazılı olarak verilir.</li>
+          <li><strong>Referans:</strong> Gerçekten ne yaptığını anlatan, kontrol edilebilir bir referans.</li>
+          <li><strong>Destek mektubu:</strong> Uygun olduğunda, talep üzerine.</li>
+          <li><strong>Dönem sonu değerlendirmesi:</strong> Güçlü yönler ve gelişim alanları.</li>
+        </ul>
+
+        <h3>2.8 Seni bekleyen başvuru ve seçim süreci</h3>
+        <ol>
+          <li>Volunteer formunu doldur ve Career Coach rolünü seç.</li>
+          <li>Kısa görüşme; ardından bir örnek vaka: bir öğrencinin durumunu okuyup hedefi, ilk beş görevi ve planı
+            hangi durumda değiştireceğini anlat.</li>
+          <li>İki referansın kontrol edilir; karar olumlu veya olumsuz bildirilir.</li>
+        </ol>
+
+        <div class="callout info">
+          <strong>Altın kuralın.</strong> Öğrencinin adına değil, öğrenciyle birlikte çalış. Her görüşmeden
+          sonra sor: “Bu oturumda öğrenci neyi kendi başına yapabildi?” Cevap yoksa oturum fazla konuşma olmuş
+          olabilir.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m3">
+        <div class="module-head">
+          <div class="module-no">03</div>
+          <div>
+            <h2>Sınırlar, etik, safeguarding ve gizlilik</h2>
+            <p class="module-sub">Öğrencinle güvenli çalışmanın kurallarını öğren. Bu bölümde pazarlık yok.</p>
+          </div>
+        </div>
+
+        <h3>3.1 Öğrenci dosyanın sahibidir</h3>
+        <p>
+          Student File'da <strong>mentor görünümü</strong> öğrenci içeriğini read-only gösterir. Sen not ekleyebilir,
+          veri talebi açabilir ve yorum bırakabilir; ancak öğrencinin başvuru, portföy veya not içeriğini onun adına
+          doldurmaz. Bu bir teknik kısıt değil, rolün etik çekirdeğidir: öğrenci kendi dosyasını anlatabilmelidir.
+        </p>
+
+        <h3>3.2 Onay ve gizlilik</h3>
+        <ul>
+          <li>Öğrenci 18 yaşından küçükse veli/guardian onayı alınır; görüşmelerin amacı, sıklığı ve paylaşılacak
+            bilgiler açıklanır.</li>
+          <li>Öğrenciye “benimle konuştukların” ile “velinle paylaşacaklarım” arasındaki fark baştan söylenir.</li>
+          <li>Güvenlik riski yoksa öğrencinin kişisel paylaşımları veliye aynen aktarılmaz; gelişim ve sonraki adım
+            paylaşılır.</li>
+          <li>Notlarda yalnızca süreç için gerekli bilgi tutulur; gereksiz sağlık, aile veya kimlik detayı yazılmaz.</li>
+          <li>Öğrenci fotoğrafı, alıntısı veya başarısı yazılı izin olmadan hiçbir yerde kullanılmaz.</li>
+        </ul>
+
+        <h3>3.3 Reşit olmayan öğrenciyle online çalışırken uyacakların</h3>
+        <div class="grid grid-2">
+          <div class="card card-green">
+            <span class="pill green">Zorunlu</span>
+            <h4>Güvenli çalışma</h4>
+            <ul class="plain do">
+              <li>Yalnızca FBA'nın onayladığı platformda görüş.</li>
+              <li>Görüşme saatini veliyle paylaşılan takvimde tut.</li>
+              <li>Kamera açık, uygun bir ortamda ol; öğrenci kamerası zorunlu değil.</li>
+              <li>İlk ve son 5 dakikada velinin katılmasını teklif et.</li>
+              <li>Öğrenciyle özel sosyal medya, kişisel telefon veya gizli mesajlaşma kurma.</li>
+            </ul>
+          </div>
+          <div class="card card-navy">
+            <span class="pill red">Yasak</span>
+            <h4>Kırmızı çizgiler</h4>
+            <ul class="plain dont">
+              <li>Öğrenciyle yalnız başına kapalı fiziki ortamda buluşma.</li>
+              <li>Hediye, para veya özel iyilik alışverişi.</li>
+              <li>Öğrenciyi özel aracınla taşıma.</li>
+              <li>Duygusal/sırdaş ilişki kurma; koçluk sınırını aşma.</li>
+              <li>Öğrencinin rızası olmadan ekran görüntüsü alma.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>3.4 Acil durum ve safeguarding protokolü</h3>
+        <p>Öğrenci kendine zarar verme, istismar, ihmal, evsizlik veya yakın tehlike bildirirse:</p>
+        <div class="steps">
+          <div class="step"><div class="step-no">1</div><div><b>Sakin kal ve dinle.</b><span>Yargılamadan, sözünü kesmeden dinle; ayrıntılı sorguya girme.</span></div></div>
+          <div class="step"><div class="step-no">2</div><div><b>Doğrudan sor.</b><span>“Şu anda kendine zarar verme düşüncen var mı?” gibi net bir soru sor. Cevabı not et.</span></div></div>
+          <div class="step"><div class="step-no">3</div><div><b>Acil tehlike varsa 911'i ara.</b><span>Hayati veya yakın tehlike varsa önce 911, sonra programme lead. Öğrenciyi yalnız bırakma.</span></div></div>
+          <div class="step"><div class="step-no">4</div><div><b>Programme lead'e bildir.</b><span>Aynı gün içinde olayı, söylenenleri ve attığın adımları yazılı bildir.</span></div></div>
+          <div class="step"><div class="step-no">5</div><div><b>Kendi başına soruşturma yapma.</b><span>Kanıt toplama, tanıkla konuşma veya aileyle yüzleştirme; protokolü takip et.</span></div></div>
+        </div>
+        <div class="callout stop">
+          <strong>Yetki sınırı.</strong> Sen terapist, sosyal hizmet uzmanı, avukat veya göçmenlik danışmanı değilsin.
+          Kriz anında rolün “güvenli yönlendirme ve bildirim”dir; tedavi veya hukuki karar vermek değildir.
+        </div>
+
+        <h3>3.5 Veri ve dijital güvenlik</h3>
+        <ul>
+          <li>Öğrenci bilgisi yalnızca onaylı Student File ve FBA sistemlerinde tutulur; kişisel e-posta, WhatsApp
+            veya kişisel drive'a kopyalanmaz.</li>
+          <li>Ekran görüntüsü, dosya indirme ve paylaşım yalnızca programme lead'in onayladığı yöntemle yapılır.</li>
+          <li>Şifreler paylaşılmaz; oturumlar kilitli cihazda tutulur.</li>
+          <li>Yanlış kişiye e-posta veya dosya giderse derhal programme lead'e bildir; sessizce silmeye çalışma.</li>
+          <li>Kanada gizlilik ilkeleri ve FBA'nın veri koruma kurallarına uy; şüphede kalırsan paylaşmadan önce sor.</li>
+        </ul>
+
+        <h3>3.6 AI kullanımı</h3>
+        <p>Student File içindeki AI Mentor Assistant bir fikir ve kontrol aracıdır; karar mercii değildir.</p>
+        <ul>
+          <li>AI çıktısını doğrulamadan öğrenciye “gerçek” diye aktarma.</li>
+          <li>Öğrencinin kişisel verisini onaylı olmayan dış AI araçlarına yapıştırma.</li>
+          <li>AI'ya essay yazdırma; öğrencinin kendi sesi ve emeği korunur.</li>
+          <li>AI'nın önerdiği burs, tarih veya program bilgisini resmi kaynaktan kontrol et.</li>
+        </ul>
+
+        <h3>3.7 Eşitlik, erişilebilirlik ve kültürel hassasiyet</h3>
+        <ul>
+          <li>Aile yapısı, din, göçmenlik durumu, dil, engellilik veya gelir hakkında varsayım yapma; sor ve öğren.</li>
+          <li>Dil desteği gerekiyorsa tercüman/çeviri kullan; öğrencinin veya velinin anlamadığı dili kullanma.</li>
+          <li>Görüşme materyallerini erişilebilir biçimde sun: büyük yazı, captions, ek süre, sade dil.</li>
+          <li>Öğrencinin güçlü yönlerini ve bağlamını gör; yalnızca not ortalamasına indirgeme.</li>
+        </ul>
+
+        <h3>3.8 Çıkar çatışması ve sınır ihlalleri</h3>
+        <ul>
+          <li>FBA öğrencisine ücretli özel koçluk/danışmanlık satma.</li>
+          <li>Yönlendirdiğin bir kurumdan komisyon veya kişisel çıkar alma.</li>
+          <li>Öğrencinin velisiyle veya yakınıyla ikili iş ilişkisi kurma; varsa programme lead'e bildir.</li>
+          <li>Öğrencinin yerine karar verecek kadar yakınlaşma; “benim öğrencim” değil, “birlikte çalıştığım öğrenci”
+            dili kullan.</li>
+        </ul>
+
+        <h3>3.9 Ne zaman escalate edilir?</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Durum</th><th>İlk adım</th><th>Kime</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Yakın tehlike / kendine zarar</td><td>911 (gerekirse), öğrenciyi yalnız bırakma</td><td>Programme lead, aynı gün</td></tr>
+              <tr><td>İstismar/ihmal şüphesi</td><td>Dinle, not et, soruşturma yapma</td><td>Programme lead / safeguarding sorumlusu</td></tr>
+              <tr><td>Göçmenlik, vize, hukuk</td><td>“Bu alanın uzmanına yönlendireceğim”</td><td>Yetkili danışman/avukat</td></tr>
+              <tr><td>Ücret, ödeme, burs kuralı</td><td>Fiyat verme, söz verme</td><td>Programme lead</td></tr>
+              <tr><td>Veri ihlali</td><td>Yayılmayı durdur, kaydet</td><td>Programme lead, derhal</td></tr>
+              <tr><td>Akademik dürüstlük ihlali</td><td>Dur, öğrencinin kendi işini iste</td><td>Programme lead</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout practice">
+          <strong>Şüphede kalırsan cümlesi:</strong> “Bu konuda sana doğru bilgiyi vermek istiyorum. Benim rolüm
+          burada bitiyor; seni doğru kişiye yönlendireceğim ve programme lead'i de bilgilendireceğim.”
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m4">
+        <div class="module-head">
+          <div class="module-no">04</div>
+          <div>
+            <h2>Kanada eğitim sistemi ve pathway okuryazarlığı</h2>
+            <p class="module-sub">Eyalete göre değişen kuralları doğru kaynaktan nasıl kontrol edeceğini öğren.</p>
+          </div>
+        </div>
+
+        <h3>4.1 Temel yapı</h3>
+        <p>
+          Kanada'da eğitim eyalet ve bölge sorumluluğundadır. Bu yüzden mezuniyet kredisi, zorunlu dersler, sınavlar,
+          okul takvimi ve başvuru portalları eyaletten eyalete değişir. Senin işin tüm eyaletleri ezberlemek değil,
+          <strong>öğrencinin eyaletini, mezuniyet yılını ve hedef programını</strong> belirleyip doğru resmi kaynaktan
+          doğrulamaktır.
+        </p>
+
+        <div class="grid grid-3">
+          <div class="card card-accent"><h4>K-12</h4><p>İlkokul ve lise. Grade 12 sonunda diploma veya eyalet
+            mezuniyet belgesi alınır.</p></div>
+          <div class="card card-navy"><h4>Post-secondary</h4><p>University (lisans), college (diploma/advanced
+            diploma), trades/apprenticeship ve diğer sertifika programları.</p></div>
+          <div class="card card-green"><h4>Özel programlar</h4><p>IB Diploma Programme, Advanced Placement (AP),
+            dual credit, French immersion, coop ve specialist programs.</p></div>
+        </div>
+
+        <h3>4.2 Her öğrenci için yapacağın eyalet kontrolü</h3>
+        <p>İlk görüşmede şu altı soruyu netleştir ve Student File'a yaz:</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Soru</th><th>Neden önemli</th><th>Nerede doğrulanır</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Hangi eyalet/bölge ve hangi okul?</td><td>Mezuniyet ve başvuru kuralları eyalete bağlı.</td><td>Okul rehberliği + eyalet eğitim bakanlığı</td></tr>
+              <tr><td>Hangi mezuniyet yılı?</td><td>Kurallar yıl içinde değişebilir; öğrencinin kohortu esastır.</td><td>Eyalet mezuniyet sayfası</td></tr>
+              <tr><td>Kaç kredi ve hangi zorunlu dersler?</td><td>Eksik ders mezuniyeti ve başvuruyu geciktirir.</td><td>Eyalet mezuniyet gereksinimleri</td></tr>
+              <tr><td>Hangi değerlendirmeler var?</td><td>Literacy/numeracy assessment veya diploma exam olabilir.</td><td>Eyalet sınav sayfası</td></tr>
+              <tr><td>Hedef program hangi dersleri istiyor?</td><td>Prerequisite zinciri Grade 11'de başlar.</td><td>Üniversite/college program sayfası</td></tr>
+              <tr><td>Başvuru hangi portal/doğrudan mı?</td><td>Yanlış portal veya tarih başvuruyu kaçırır.</td><td>Eyalet portalı + kurum sitesi</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>4.3 Ders ve prerequisite mantığı</h3>
+        <ul>
+          <li><strong>Prerequisite</strong>, bir sonraki dersi almadan önce tamamlanması gereken derstir. Örneğin
+            Grade 11 matematik olmadan bazı Grade 12 matematik dersleri alınamaz.</li>
+          <li>Lise dersleri genellikle academic/university, college ve workplace hedeflerine göre farklı kodlanır;
+            isimler eyalete göre değişir.</li>
+          <li>Grade 11 final notları ve Grade 12 predicted/interim notları başvuruda birlikte kullanılabilir.</li>
+          <li>Bir dersin “alınmış” olması, hedef program için yeterli not alındığı anlamına gelmez; programın minimum
+            not ortalaması ve ders notu eşiği ayrıdır.</li>
+          <li>Yaz okulu, online ders, night school veya upgrading ile eksik ders telafi edilebilir; ancak kontenjan,
+            tarih ve kabul koşulları okuldan doğrulanır.</li>
+        </ul>
+
+        <div class="callout warn">
+          <strong>Ezberleme, doğrula.</strong> Mezuniyet kredisi sayısı, sınav adı veya portal bilgisi her yıl
+          değişebilir. Bu el kitabındaki örnekler yön gösterir; resmi gereklilik için mutlaka öğrencinin eyaletinin güncel
+          sayfasını ve hedef kurumun program sayfasını aç.
+        </div>
+
+        <h3>4.4 Grade bazında izleyeceğin yol haritası</h3>
+        <div class="timeline">
+          <div class="step"><div class="step-no">9</div><div><b>Temel ve keşif</b><span>Ders alışkanlığı, okuma-yazma, matematik temeli; kulüp, gönüllülük ve ilgi alanı denemeleri. Not: erken kapatılan kapılar sonra pahalıdır.</span></div></div>
+          <div class="step"><div class="step-no">10</div><div><b>Yön ve ders seçimi</b><span>İlgi alanlarını daralt; Grade 11 ders planını prerequisite'lere göre kur; matematik/fen/dil dengesini kontrol et.</span></div></div>
+          <div class="step"><div class="step-no">11</div><div><b>Kritik yıl</b><span>Hedef program listesi, prerequisite kontrolü, test planı, referans adayları, burs araştırması, portföy başlangıcı.</span></div></div>
+          <div class="step"><div class="step-no">12</div><div><b>Başvuru ve karar</b><span>Son başvuru listesi, essay'ler, son tarihler, finansal yardım, teklifler, koşullu kabul ve kayıt kararı.</span></div></div>
+        </div>
+
+        <h3>4.5 Eyalet ve portal hızlı referansın</h3>
+        <p>Aşağıdaki tablo yalnızca <strong>nereden kontrol edileceğini</strong> gösterir; kesin kural değildir.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Eyalet / bölge</th><th>Mezuniyet ve K-12 kontrolü</th><th>Lise sonrası başvuru</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>British Columbia</td><td>gov.bc.ca → Education and training → K-12</td><td>EducationPlannerBC; bazı kurumlar doğrudan</td></tr>
+              <tr><td>Ontario</td><td>ontario.ca → High school graduation requirements</td><td>OUAC (101/105); college için ontariocolleges.ca</td></tr>
+              <tr><td>Alberta</td><td>alberta.ca → Graduation requirements</td><td>ApplyAlberta; bazı kurumlar doğrudan</td></tr>
+              <tr><td>Manitoba</td><td>edu.gov.mb.ca → K-12</td><td>Kurumların kendi başvuru sayfaları</td></tr>
+              <tr><td>Saskatchewan</td><td>saskatchewan.ca → Education</td><td>Kurumların kendi başvuru sayfaları</td></tr>
+              <tr><td>Nova Scotia</td><td>ednet.ns.ca</td><td>Kurumların kendi başvuru sayfaları</td></tr>
+              <tr><td>New Brunswick</td><td>gnb.ca → Education</td><td>Kurumların kendi başvuru sayfaları</td></tr>
+              <tr><td>Newfoundland and Labrador</td><td>gov.nl.ca → Education</td><td>Kurumların kendi başvuru sayfaları</td></tr>
+              <tr><td>Prince Edward Island</td><td>princeedwardisland.ca → Education</td><td>Kurumların kendi başvuru sayfaları</td></tr>
+              <tr><td>Quebec</td><td>quebec.ca → Education</td><td>CEGEP ve üniversite başvuruları; sistem farklıdır</td></tr>
+              <tr><td>Yukon / NWT / Nunavut</td><td>İlgili bölge eğitim bakanlığı</td><td>Kurumların kendi başvuru sayfaları</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">Ontario'da 101/105 ayrımı öğrencinin liseyi Ontario'da okuyup okumamasına göre değişir;
+          hangi başvuru tipinin geçerli olduğunu OUAC sayfasından doğrula.</p>
+
+        <h3>4.6 Üç ana yol: university, college, trades</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Yol</th><th>Ne sunar?</th><th>Tipik süre</th><th>Başvuruda ne önemli?</th><th>Senin kontrolün</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>University</strong></td><td>Lisans/degree; teori, araştırma ve geniş kariyer yolları</td><td>3-4 yıl (programa göre)</td><td>Akademik ortalama, prerequisite, essay/supplement, bazen test</td><td>Programın ders ve not eşiğini resmi sayfadan doğrula.</td></tr>
+              <tr><td><strong>College</strong></td><td>Certificate, diploma, advanced diploma, applied degree; uygulamalı eğitim</td><td>1-3 yıl (programa göre)</td><td>Program prerequisite'i, portföy/mülakat, bazen placement test</td><td>Program türünü ve transfer/degree pathway'ini kontrol et.</td></tr>
+              <tr><td><strong>Trades / apprenticeship</strong></td><td>İş başında eğitim + sınıf eğitimi; Red Seal'e giden yol</td><td>2-5 yıl (mesleğe göre)</td><td>Employer sponsorluğu, matematik/İngilizce, safety tickets, işe hazırlık</td><td>Pre-apprenticeship, sponsor ve eyalet gerekliliklerini araştır.</td></tr>
+              <tr><td><strong>IB</strong></td><td>16-19 yaş için iki yıllık diploma programı; altı ders + core</td><td>2 yıl (Grade 11-12)</td><td>Yetkili IB World School, subject seçimi, predicted grades, EE/TOK/CAS</td><td>FBA'nın diploma vermediğini; okulun yetkili olması gerektiğini bil.</td></tr>
+              <tr><td><strong>AP</strong></td><td>College Board dersleri/sınavları; bazı üniversitelerde kredi/placement</td><td>Ders bazlı</td><td>Okulun AP sunması, sınav tarihi, kurumun credit politikası</td><td>Kredi/placement politikasını hedef kurumdan doğrula.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">IB ve AP bir üniversite derecesi değildir; lise deneyimini güçlendiren programlardır. Her
+          kurumun kredi/placement politikası farklıdır.</p>
+
+        <h3>4.7 Okul sistemine geçişte ek olarak kontrol edeceklerin</h3>
+        <ul>
+          <li>Önceki ülke transkriptleri ve çevirileri; okulun istediği resmi format.</li>
+          <li>Dil değerlendirmesi ve EAL/ESL desteği; öğrencinin akademik İngilizce ihtiyacı.</li>
+          <li>Yaş/grade yerleştirmesi ve okul kaydı; okul bölgesi ve guardian gereksinimleri.</li>
+          <li>Credential assessment gerekiyorsa kurumun onaylı değerlendirme kuruluşu; sen yönlendirirsin, sonucu
+            yorumlamaz.</li>
+          <li>Göçmenlik statüsü veya vize süresi başvuruyu etkileyebilir; bu konuda yetkili danışmana yönlendir.</li>
+        </ul>
+
+        <div class="callout practice">
+          <strong>Alıştırma.</strong> Kendi eyaletinde olmayan bir öğrenci seç. Eyaletinin mezuniyet sayfasını,
+          hedef üniversitenin program sayfasını ve başvuru portalını aç. Üç bilgiyi yaz: toplam kredi, zorunlu
+          derslerden biri, başvuru son tarihi. Kaynağı ve erişim tarihini dosyaya ekle.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m5">
+        <div class="module-head">
+          <div class="module-no">05</div>
+          <div>
+            <h2>Student File: tek gerçek kayıt</h2>
+            <p class="module-sub">Öğrencinin hedefleri, başvuruları ve kanıtları tek yerde. Senin günlük çalışma aracın.</p>
+          </div>
+        </div>
+
+        <h3>5.1 Neden merkezde?</h3>
+        <p class="lead">
+          Öğrencinin hedefleri ve ihtiyaçları Student File'da tanımlanır; matematik dersi, deneme sınavı, makale
+          yarışması, CEMC hazırlığı, mentorluk ve başvuru/portföy çalışmaları buna göre seçilir. Yani dosya pasif bir
+          arşiv değil, <strong>karar ve görev merkezi</strong>dir.
+        </p>
+
+        <div class="hub" aria-label="Student File merkez diagram">
+          <div class="hub-side hub-left">
+            <div class="hub-item"><span class="hub-icon">∑</span><div><b>Matematik dersi</b><span>Konu ve seviye ihtiyaca göre</span></div></div>
+            <div class="hub-item"><span class="hub-icon" style="background:var(--navy);">✓</span><div><b>Deneme sınavı</b><span>Sıklık ve içerik hedefe göre</span></div></div>
+            <div class="hub-item"><span class="hub-icon" style="background:#7a4bb3;">✎</span><div><b>Makale yarışması</b><span>İlgi ve hedefe göre seçim</span></div></div>
+          </div>
+          <div class="hub-center">
+            <span class="mini">MERKEZ</span>
+            <strong>Student File</strong>
+            <p>Hedefler, ihtiyaçlar ve gelişim burada tanımlanır.</p>
+            <ul><li>Akademik hedefler</li><li>Başvuru ve portföy</li><li>Mentor notları</li></ul>
+          </div>
+          <div class="hub-side hub-right">
+            <div class="hub-item"><span class="hub-icon" style="background:#c98900;">◎</span><div><b>CEMC hazırlığı</b><span>Öğrencinin ilgisine göre</span></div></div>
+            <div class="hub-item"><span class="hub-icon" style="background:#0b5d7a;">◇</span><div><b>Mentorluk</b><span>İhtiyaç duyulan alanlarda</span></div></div>
+            <div class="hub-item"><span class="hub-icon" style="background:var(--red);">→</span><div><b>Başvuru / portföy</b><span>Hedefe göre planlanır</span></div></div>
+          </div>
+        </div>
+        <p class="table-note">Etkinliklerin hepsi her öğrenci için zorunlu değildir. Hedef ve ihtiyaç neyi gerektiriyorsa
+          o seçilir; dosya bu seçimin gerekçesini taşır.</p>
+
+        <h3>5.2 Öğrenci dosyasına girenler</h3>
+        <div class="grid grid-2">
+          <div class="card card-green">
+            <span class="pill green">Girer</span>
+            <h4>Kanıtlanabilir ve gerekli bilgi</h4>
+            <ul class="plain">
+              <li>Kimlik ve iletişim (yalnızca gerekli alanlar)</li>
+              <li>Okul, grade, hedef programlar ve ilgi alanları</li>
+              <li>Başvuru hedefleri, son tarihler, gereksinimler</li>
+              <li>Ders notları, predicted grades, test sonuçları</li>
+              <li>Ödüller, etkinlikler, gönüllülük, projeler</li>
+              <li>Portföy parçaları ve destekleyici dosyalar</li>
+              <li>Referans kişileri ve durumları</li>
+              <li>Senin notların, açık veri talepleri, kararlar</li>
+            </ul>
+          </div>
+          <div class="card card-navy">
+            <span class="pill red">Girmez</span>
+            <h4>Gereksiz veya riskli bilgi</h4>
+            <ul class="plain dont">
+              <li>Öğrencinin özel sağlık detayları (acil durum bilgisi hariç)</li>
+              <li>Aile içi çatışmaların dedikodu niteliğinde anlatımı</li>
+              <li>Üçüncü kişiler hakkında kanıtsız suçlama</li>
+              <li>Şifre, tam kart numarası, kimlik numarası gibi hassas veriler</li>
+              <li>Öğrencinin rızası olmadan alınmış ekran görüntüleri</li>
+              <li>Başka öğrencilerin kişisel bilgileri</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>5.3 Uygulama haritası</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Bölüm</th><th>Ne tutar</th><th>Sen ne yaparsın?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Dashboard</strong></td><td>Başvuru sayısı, tamamlanan gereksinimler, portföy, açık talepler, yaklaşan son tarihler, son mentor notları</td><td>Her görüşme öncesi oku; yaklaşan 45 günü, 7 gün ve altı amber, geçmiş tarihleri kırmızı olarak not et.</td></tr>
+              <tr><td><strong>Student Profile</strong></td><td>Ad, okul, grade, iletişim, mentor bilgisi, hedef programlar, ilgi ve güçlü yönler, notlar</td><td>Öğrencinin kendi cümlesiyle doldurmasına yardım et; eksik alanları tamamlat.</td></tr>
+              <tr><td><strong>Applications</strong></td><td>University, college, trades, high school, IB, other dosyaları; hedefler, gereksinimler, durumlar, bağlantılı kanıtlar</td><td>Şablon seç, hedef ekle, gereksinimleri gözden geçir, kanıt bağla.</td></tr>
+              <tr><td><strong>Portfolio</strong></td><td>Projeler, essay'ler, araştırma, yaratıcı/teknik işler; draft/in-progress/complete</td><td>Kanıtın kalitesini ve öğrencinin katkısını sor; dosyayı öğrenci yükler.</td></tr>
+              <tr><td><strong>Achievements</strong></td><td>Akademik, yarışma, liderlik, topluluk, spor, teknik, sanat</td><td>Başlık, tarih, rol, sonuç ve kanıt iste; kanıtla desteklenmeyen ifadeleri çıkar.</td></tr>
+              <tr><td><strong>Grades &amp; Scores</strong></td><td>Ders notları, predicted, standart testler</td><td>Resmi kaynağı kontrol et; notu değiştirme, bağlamı not et.</td></tr>
+              <tr><td><strong>References</strong></td><td>Referans kişisi, durum (requested/in-progress/received/declined)</td><td>Erken sorulmasını sağla; brag sheet hazırlat; takip et.</td></tr>
+              <tr><td><strong>Documents</strong></td><td>Transkript, sertifika, essay, portföy, destek dosyaları</td><td>Dosya adı ve sürüm düzenini kontrol et; eksik belgeyi request aç.</td></tr>
+              <tr><td><strong>Requests</strong></td><td>Senin eksik veri/kanıt talebin; öğrenciyle konuşma</td><td>Net, tek konulu, tarihli talep aç; çözülünce kapat.</td></tr>
+              <tr><td><strong>Mentor</strong></td><td>Mentor notları, AI Mentor Assistant</td><td>Görüşme notu ekle; AI çıktısını doğrula.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="table-note">Request durumları: Open → In Progress → Resolved. Reference durumları: Requested →
+          In Progress → Received veya Declined.</p>
+
+        <h3>5.4 Readiness sayısı nasıl çalışır?</h3>
+        <ul>
+          <li><strong>Genel readiness</strong>: tamamlanan gereksinim / (toplam gereksinim − “not needed”). Yüzde,
+            eksiklerin görünürlüğüdür; kabul olasılığı değildir.</li>
+          <li><strong>Uygulama kartındaki score</strong>: tamamlanan gereksinimler + devam edenlerin yarısı + bağlanan
+            her kanıt kategorisi için küçük bir katkı. Bu nedenle kanıt bağladıkça skor yükselebilir.</li>
+          <li><strong>%100, “hazır” demek değildir.</strong> Başvurunun kalitesi, essay'in öğrenciye ait olması,
+            referansların zamanında gelmesi ve son tarihin tutması ayrıca kontrol edilir.</li>
+          <li>“Not needed” işaretini yalnızca gerçekten gerekmiyorsa ve gerekçesiyle kullan; her şeyi kapatıp skoru
+            olduğundan yüksek gösterme.</li>
+        </ul>
+
+        <h3>5.5 Senin dosya kurma akışın</h3>
+        <div class="steps">
+          <div class="step"><div class="step-no">1</div><div><b>Profili doğrula.</b><span>Ad, okul, grade, hedef programlar ve iletişim bilgisi tam mı? Öğrencinin kendi cümlesiyle hedefi yazılı mı?</span></div></div>
+          <div class="step"><div class="step-no">2</div><div><b>Pathway seç.</b><span>University, college, trades, high school, IB veya other. Birden fazla yol varsa her biri ayrı dosya olur.</span></div></div>
+          <div class="step"><div class="step-no">3</div><div><b>Hedefleri ekle.</b><span>Kurum/program, hedef yıl, son tarih. Belirsiz hedefi “planning” olarak işaretle; sahte tarih koyma.</span></div></div>
+          <div class="step"><div class="step-no">4</div><div><b>Gereksinimleri gözden geçir.</b><span>Şablondan gelen maddeleri programın resmi sayfasıyla karşılaştır. Gerekmeyeni gerekçeyle “not needed” yap.</span></div></div>
+          <div class="step"><div class="step-no">5</div><div><b>Kanıtları bağla.</b><span>Her başvuruya ilgili achievement, portfolio, reference ve document'i bağla. Alakasız kanıtı bağlama.</span></div></div>
+          <div class="step"><div class="step-no">6</div><div><b>Eksikler için request aç.</b><span>Tek konulu, net ve tarihli. “Transkriptini yükle” değil, “2025-26 resmi transkriptini 15 Mart'a kadar PDF yükle.”</span></div></div>
+          <div class="step"><div class="step-no">7</div><div><b>Görüşme notunu ekle.</b><span>Karar, görev, tarih ve risk. Öğrencinin ne yapacağını kendi cümlesiyle yaz.</span></div></div>
+          <div class="step"><div class="step-no">8</div><div><b>Dashboard'u kontrol et.</b><span>Yaklaşan son tarihler, açık talepler ve son notlar bir sonraki görüşmenin gündemini verir.</span></div></div>
+        </div>
+
+        <figure style="margin:18px 0 8px;">
+          <img src="../../Presentations/activities/screenshots/student-file.png" alt="Student File uygulamasında başvuru dosyaları, hazırlık yüzdeleri ve genel hazırlık oranı" style="width:100%;height:auto;border:1px solid var(--line);border-radius:14px;display:block;">
+          <figcaption class="small" style="margin-top:7px;">Student File örnek ekranı. Görünen veriler örnektir; gerçek öğrenci bilgisi değildir.</figcaption>
+        </figure>
+
+        <h3>5.6 Veri kalitesi kuralları</h3>
+        <ul>
+          <li><strong>Tarih:</strong> YYYY-MM-DD veya açık “15 Mart 2027” biçimi kullan; belirsiz tarih yazma.</li>
+          <li><strong>Başlık:</strong> Kurum + program + hedef yıl bir bakışta anlaşılsın.</li>
+          <li><strong>Durum:</strong> Her görüşmeden sonra güncelle; “preparing”de unutulan dosya yanlış güven verir.</li>
+          <li><strong>Kanıt:</strong> Dosya adı, tarih ve kaynak belli olsun; “final-final-2.pdf” gibi isimler kullanma.</li>
+          <li><strong>Not:</strong> Görüşme notunda karar, görev, sahip ve tarih olsun; konuşma dökümü olmasın.</li>
+          <li><strong>Request:</strong> Çözülünce kapat; çözülmeyen talebi haftalarca açık bırakma.</li>
+        </ul>
+
+        <h3>5.7 Dosya denetimi: her ay 10 dakika</h3>
+        <ul class="check">
+          <li>Profil ve hedef programlar güncel mi?</li>
+          <li>Her başvurunun en az bir net hedefi ve son tarihi var mı?</li>
+          <li>Gereksinimler resmi program sayfasıyla kontrol edildi mi?</li>
+          <li>“Not needed” işaretlerinin gerekçesi var mı?</li>
+          <li>Kanıtlar başvurulara bağlı mı, yoksa boşta mı duruyor?</li>
+          <li>Açık request'lerin sahibi ve tarihi belli mi?</li>
+          <li>Referans durumları güncel mi?</li>
+          <li>Son mentor notu bir sonraki adımı içeriyor mu?</li>
+          <li>Dosya başka bir coach'a devredilebilir mi?</li>
+          <li>Öğrenci kendi dosyasını açıp anlatabiliyor mu?</li>
+        </ul>
+
+        <h3>5.8 Devir teslim</h3>
+        <p>Sen değişeceksen veya izin kullanacaksan şu üç şeyi bırak:</p>
+        <ol>
+          <li><strong>Durum özeti:</strong> Hedef, son 3 görüşmede ne yapıldı, şu an nerede.</li>
+          <li><strong>Açık işler:</strong> Yaklaşan son tarihler, açık request'ler, beklenen belgeler, riskler.</li>
+          <li><strong>İlişki notu:</strong> Öğrencinin nasıl motive olduğu, hassas konular, veliyle iletişim tercihi —
+            yalnızca gerekli ve saygılı ölçüde.</li>
+        </ol>
+
+        <div class="callout stop">
+          <strong>Yaygın hata.</strong> Dosyayı öğrenci adına doldurman. Mentor görünümü read-only'dir; sen
+          öğrencinin başvuru, portföy ve not içeriğini yazmazsın. Senin işin soru sormak, request açmak, geri
+          bildirim vermek ve öğrencinin kendi kanıtını üretmesini sağlamaktır.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m6">
+        <div class="module-head">
+          <div class="module-no">06</div>
+          <div>
+            <h2>Öğrenciyi tanıma ve hedef belirleme</h2>
+            <p class="module-sub">Hedef öğrencinin olmalı; senin görevin hedefi açmak, test etmek ve gerçekçi kılmak.</p>
+          </div>
+        </div>
+
+        <h3>6.1 Temel ilke</h3>
+        <p class="lead">
+          “Ne olmak istiyorsun?” sorusu tek başına yetmez. Öğrencinin <strong>neden</strong> o hedefi istediğini,
+          <strong>hangi kanıtın</strong> onu desteklediğini ve <strong>hangi kısıtların</strong> olduğunu birlikte
+          anlamalısın. Sen hedefi seçmezsin; öğrencinin seçimini netleştirirsin.
+        </p>
+
+        <h3>6.2 Keşif soruları</h3>
+        <div class="grid grid-2">
+          <div class="card">
+            <h4>İlgi ve motivasyon</h4>
+            <ul class="plain">
+              <li>Hangi ders/etkinlik seni enerjiyle dolduruyor?</li>
+              <li>Bir problemi çözerken en çok neyi seviyorsun: fikri bulmak mı, uygulamak mı, anlatmak mı?</li>
+              <li>Şu anda hangi konuda daha fazla bilgi sahibi olmak istiyorsun?</li>
+              <li>Başarılı bir günün sonunda neyi farklı yapmış olurdun?</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>Gerçeklik ve kısıtlar</h4>
+            <ul class="plain">
+              <li>Hangi derslerde zorlanıyorsun; destek alsan nasıl değişir?</li>
+              <li>Haftada kaç saat gerçekçi olarak çalışabilirsin?</li>
+              <li>Aile, iş, ulaşım veya dil konusunda hangi sınırlar var?</li>
+              <li>Maddi olarak hangi seçenekler mümkün; hangileri belirsiz?</li>
+              <li>Hangi şehirde okumak istersin; taşınabilir misin?</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>Geçmiş ve kanıt</h4>
+            <ul class="plain">
+              <li>Bugüne kadar en gurur duyduğun iş hangisi; neden?</li>
+              <li>Bir projede hangi rolü üstlendin; neyi sen yaptın?</li>
+              <li>Hangi geri bildirimi aldın; ne değiştirdin?</li>
+              <li>Daha önce bir hedefi tamamladığın bir örnek anlat.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>Gelecek ve anlam</h4>
+            <ul class="plain">
+              <li>5 yıl sonra hangi işi yapıyor olmak seni mutlu eder?</li>
+              <li>Hangi tür ortamda çalışmak istersin: ofis, saha, laboratuvar, insanlarla, tek başına?</li>
+              <li>Para, denge, etki, güvenlik veya özgürlükten hangisi senin için daha önemli?</li>
+              <li>Bu hedef olmazsa hangi alternatif seni yine heyecanlandırır?</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>6.3 Kanıt toplama</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Alan</th><th>Neyi kontrol et?</th><th>Nereden?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Akademik</td><td>Ders notları, trend, eksik prerequisite, dil desteği</td><td>Transcript, okul portalı, öğretmen geri bildirimi</td></tr>
+              <tr><td>Test</td><td>Hangi test gerekli, hangi tarih, hangi sonuç geçerli</td><td>Kurumun resmi test politikası</td></tr>
+              <tr><td>İlgi/deneyim</td><td>Kulüp, gönüllülük, iş, proje, yarışma</td><td>Öğrencinin kanıtları + referans</td></tr>
+              <tr><td>Yetenek</td><td>Yazma, sunum, kodlama, teknik beceri, takım çalışması</td><td>Portföy, örnek iş, gözlem</td></tr>
+              <tr><td>Kısıt</td><td>Maddi durum, ulaşım, aile sorumluluğu, göçmenlik, sağlık</td><td>Öğrenci/veli beyanı; gerekli uzmana yönlendirme</td></tr>
+              <tr><td>Destek</td><td>Öğretmen, rehber, mentor, aile, topluluk</td><td>Öğrencinin ağı</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>6.4 Hedef hiyerarşisi</h3>
+        <div class="steps">
+          <div class="step"><div class="step-no">A</div><div><b>North Star (2-5 yıl)</b><span>“Ne yapmak istiyorum?” Örn. hemşirelik, elektrik apprenticeship, bilgisayar bilimi.</span></div></div>
+          <div class="step"><div class="step-no">B</div><div><b>12 aylık milestone</b><span>“Bu yıl sonunda hangi somut şey tamam olacak?” Örn. 3 programa başvuru, prerequisite tamamlama.</span></div></div>
+          <div class="step"><div class="step-no">C</div><div><b>90 günlük goal</b><span>“Önümüzdeki 3 ayda hangi engel kalkacak?” Örn. program araştırması + not yükseltme + referans seçimi.</span></div></div>
+          <div class="step"><div class="step-no">D</div><div><b>2 haftalık action</b><span>“Bu hafta tam olarak ne yapacaksın?” Örn. 5 programın prerequisite tablosunu doldurmak.</span></div></div>
+        </div>
+
+        <h3>6.5 İyi hedef kontrolü</h3>
+        <ul class="check">
+          <li>Öğrencinin kendi cümlesiyle yazıldı mı?</li>
+          <li>Hedef somut mu: hangi program, hangi yıl, hangi kurum türü?</li>
+          <li>Öğrencinin “neden”i en az bir cümleyle açıklanıyor mu?</li>
+          <li>Ön koşullar ve kanıtlar belli mi?</li>
+          <li>Gerçekçi bir tarih var mı; tarih kimin taahhüdü?</li>
+          <li>İlk 2 haftanın somut adımı yazılı mı?</li>
+          <li>Alternatif plan ve karar tarihi var mı?</li>
+          <li>Öğrenci bu hedefi başkası istediği için mi seçiyor?</li>
+        </ul>
+
+        <h3>6.6 Gerçekçilik konuşması</h3>
+        <p>Bir hedef öğrencinin mevcut kanıtlarıyla uyuşmuyorsa iki hatadan kaçın: yanlış umut vermek ve hedefi
+          küçümsemek. Üç adımlı konuşma yap:</p>
+        <ol>
+          <li><strong>Kanıtı göster:</strong> “Şu an Grade 11 kimya notun 62; bu programın tipik kabul aralığı daha
+            yüksek. Bunu birlikte kontrol edelim.”</li>
+          <li><strong>Seçenekleri aç:</strong> Notu yükseltmek, prerequisite'i yaz okulunda tekrar almak, benzer bir
+            programı araştırmak, college üzerinden geçiş planı yapmak.</li>
+          <li><strong>Karar tarihi koy:</strong> “Bu seçenekleri 3 hafta içinde araştırıp 15 Mart'ta karar verelim.”
+            Kararı öğrenci verir; sen süreci tutarsın.</li>
+        </ol>
+        <div class="quote">
+          <b>Örnek dil:</b> “Hedefini senden duyuyorum ve ciddiye alıyorum. Şu anki kanıtla bu hedef zor; ama tek bir
+          yol yok. Önümüzde üç seçenek var. Hangisini araştırmak istersin?”
+        </div>
+
+        <h3>6.7 Hedef ne zaman değişir?</h3>
+        <ul>
+          <li>Yeni ve güçlü bir kanıt çıktığında (not, test, ilgi, sağlık, aile durumu).</li>
+          <li>Prerequisite veya mezuniyet koşulu sağlanamadığında.</li>
+          <li>Maddi, ulaşım veya göçmenlik kısıtı hedefi imkânsız kıldığında.</li>
+          <li>Öğrenci hedefi artık istemediğini açıkça söylediğinde.</li>
+          <li>Başvuru sonucu (waitlist/rejection) yeni bir plan gerektirdiğinde.</li>
+        </ul>
+        <p>Değişiklikte dosyayı güncelle, gerekçeyi yaz, eski hedefi silme; “changed” olarak işaretle. Veliye
+          paylaşılacak bilgiyi öğrenciyle konuş.</p>
+
+        <h3>6.8 Örnek hedef planı</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Katman</th><th>Örnek</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>North Star</td><td>Kanada'da hemşirelik lisansına giden yolu tamamlamak.</td></tr>
+              <tr><td>12 aylık milestone</td><td>3 hemşirelik programına başvuru; Grade 12 biyoloji/kimya ve matematik prerequisite'lerini tamamlamak.</td></tr>
+              <tr><td>90 günlük goal</td><td>5 programın prerequisite tablosunu doldurmak; eksik ders için yaz okulu seçeneklerini araştırmak; 2 referans adayı belirlemek.</td></tr>
+              <tr><td>2 haftalık action</td><td>Her programın resmi sayfasından minimum not ve ders listesini alıp Student File'a girmek; okul rehberiyle 30 dakikalık görüşme ayarlamak.</td></tr>
+              <tr><td>Kanıt</td><td>Program sayfası ekran görüntüsü yerine resmi link + not; güncel transcript; yaz okulu broşürü; referans kişilerinin onayı.</td></tr>
+              <tr><td>Karar tarihi</td><td>15 Mart: hedef program listesini 3'e indir; alternatif college geçiş planını değerlendir.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout practice">
+          <strong>Alıştırma.</strong> Kendi örnek öğrencin için bir North Star, bir 12 aylık milestone, bir 90 günlük
+          goal ve iki haftalık iki action yaz. Her action'ın sahibi ve tarihi olsun. Hedefin öğrencinin ağzından mı,
+          yoksa senin ağzından mı yazıldığını kontrol et.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m7">
+        <div class="module-head">
+          <div class="module-no">07</div>
+          <div>
+            <h2>Görüşme yönetimi</h2>
+            <p class="module-sub">Öncesi, sırası ve sonrasıyla her görüşmeyi verimli ve güvenli yürütmeyi öğren.</p>
+          </div>
+        </div>
+
+        <h3>7.1 Görüşme sıklığı ve süre</h3>
+        <ul>
+          <li>İlk görüşme daha uzun: tanışma, hedef, profil ve dosya kurulumu.</li>
+          <li>Düzenli görüşmeler: haftalık veya iki haftada bir; öğrencinin ihtiyacı ve başvuru takvimi belirler.</li>
+          <li>Başvuru döneminde kısa kontrol görüşmeleri eklenebilir; son tarih haftasında yeni konu açılmaz.</li>
+          <li>Her görüşme için sabit bir gündem ve bitiş saati vardır; sen konuşmayı dağıtmazsın.</li>
+        </ul>
+
+        <h3>7.2 Görüşme öncesi: 10 dakikalık hazırlık</h3>
+        <ul class="check">
+          <li>Student File dashboard: açık request, yaklaşan son tarih, son not.</li>
+          <li>Öğrencinin son taahhütleri: ne yapacağını söylemişti, ne yaptı?</li>
+          <li>Bu görüşmenin tek hedefi: hangi soru/karar/görev?</li>
+          <li>Gerekli belge/ekran: program sayfası, transcript, essay taslağı, portföy.</li>
+          <li>Güvenlik/veli bilgisi: görüşmeye kim katılıyor, veli onayı var mı?</li>
+        </ul>
+
+        <h3>7.3 45 dakikalık görüşme iskeleti</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Süre</th><th>Adım</th><th>Sen ne yaparsın?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>0-5 dk</td><td>Check-in ve gündem</td><td>Bir iyi gelişme sor; bu oturumun tek hedefini söyle; öğrencinin gündemine yer aç.</td></tr>
+              <tr><td>5-15 dk</td><td>Taahhüt kontrolü</td><td>Geçen görüşmeden beri ne yapıldı? Kanıt nerede? Engeller ne?</td></tr>
+              <tr><td>15-30 dk</td><td>Birlikte çalışma</td><td>Tek bir görevi birlikte yap: program sayfası okumak, requirement tablosu doldurmak, essay outline çıkarmak, request yazmak.</td></tr>
+              <tr><td>30-40 dk</td><td>Sonraki adım</td><td>Öğrenci ne yapacak, ne zaman, nerede, kanıt ne olacak? Dosyaya işle.</td></tr>
+              <tr><td>40-45 dk</td><td>Özet ve kapanış</td><td>Öğrenci kendi cümlesiyle özetlesin; güven puanı (1-5); sonraki görüşme tarihi.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>7.4 İlk görüşme (60-75 dakika)</h3>
+        <ol>
+          <li><strong>Tanışma ve rol:</strong> Ne yapıp ne yapmadığını, gizlilik sınırlarını ve veli
+            iletişimini açıkla.</li>
+          <li><strong>Öğrencinin hikâyesi:</strong> Okul, ilgi, güçlü yön, zorluk, hedef; not almadan dinle.</li>
+          <li><strong>Hedef taslağı:</strong> North Star + 12 aylık milestone; öğrencinin kendi cümlesiyle.</li>
+          <li><strong>Dosya kurulumu:</strong> Profil, pathway, hedef, ilk gereksinimler; öğrenci ekranda yapar.</li>
+          <li><strong>İlk iki hafta:</strong> En fazla 2 action; her biri tarihli ve kanıtlı.</li>
+          <li><strong>Kapanış:</strong> Öğrenci özetler; veliye ne söyleneceğini birlikte belirle.</li>
+        </ol>
+
+        <h3>7.5 Aylık review (30 dakika)</h3>
+        <ul>
+          <li>Son 4 haftanın kanıtları: tamamlanan, geciken, iptal edilen.</li>
+          <li>Readiness ve eksik gereksinimler; hangi kanıt bağlanmadı?</li>
+          <li>Yaklaşan 45 günün son tarihleri; hangisi riskli?</li>
+          <li>Hedef hâlâ doğru mu? Değişecekse karar tarihi.</li>
+          <li>Veliye gidecek 3 maddelik özet.</li>
+        </ul>
+
+        <h3>7.6 Online görüşme kurulumu</h3>
+        <ul>
+          <li>Onaylı platform; kamera ve mikrofon testi; yedek iletişim yöntemi.</li>
+          <li>Sessiz, aydınlık, kişisel bilgi görünmeyen bir ortam.</li>
+          <li>Ekran paylaşımı: öğrenci kendi dosyasını açsın; sen “ben yapayım” deme.</li>
+          <li>Captions/alt yazı açık; bağlantı koparsa ne yapılacağı baştan söylenir.</li>
+          <li>Görüşme kaydı ancak onay varsa ve FBA politikası izin veriyorsa alınır.</li>
+        </ul>
+
+        <h3>7.7 Temel koçluk becerileri</h3>
+        <div class="grid grid-2">
+          <div class="card">
+            <h4>Dinleme ve anlama</h4>
+            <ul class="plain">
+              <li>Açık uçlu soru: “Nasıl?”, “Ne?”, “Bunu biraz açar mısın?”</li>
+              <li>Yansıtma: “Yani en çok ... konusunda endişelisin.”</li>
+              <li>Özetleme: “İki seçenek var: ... Hangisi sana daha yakın?”</li>
+              <li>Sessizlik: cevabı hemen doldurma.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>Nazik meydan okuma</h4>
+            <ul class="plain">
+              <li>“Bu hedefi 3 ayda bitirmek için haftada kaç saat gerekiyor?”</li>
+              <li>“Bunu yapmayı ne engelliyor: zaman mı, bilgi mi, cesaret mi?”</li>
+              <li>“Bu kararı versen, 6 ay sonra kendine ne söylerdin?”</li>
+              <li>“Bunu yapmak istediğini söylüyorsun; takvimde yeri var mı?”</li>
+            </ul>
+          </div>
+        </div>
+        <p><strong>Kaçınılacaklar:</strong> “Ben olsam ...” diye başlayan uzun tavsiyeler, öğrencinin sözünü kesme,
+          “kolay”, “sadece”, “neden yapmadın?” gibi utandırıcı ifadeler, kendi başarı hikâyeni öne çıkarma.</p>
+
+        <h3>7.8 Görüşme notu standardı</h3>
+        <div class="quote">
+          <b>Şablon:</b> Tarih · Katılımcılar · Bu oturumun hedefi · Öğrencinin iyi gelişmesi · Konuşulan kararlar ·
+          Öğrencinin taahhütleri (ne, ne zaman, kanıt) · Senin taahhütlerin · Riskler · Bir sonraki görüşme.
+        </div>
+        <p>Notu aynı gün, en geç 24 saat içinde ekle. Not “ne oldu”yu değil, “ne karar verildi ve sırada ne var”ı
+          anlatsın. Duygusal yorum ve kişisel değerlendirme yazma.</p>
+
+        <h3>7.9 Katılımı yükseltme</h3>
+        <ul>
+          <li>Öğrenci konuşmuyorsa: “Bugün hangi konu senin için en acil?” diye başla.</li>
+          <li>Öğrenci sıkılıyorsa: görevi 10 dakikalık parçaya böl; ekranda birlikte yap.</li>
+          <li>Öğrenci yorgunsa: 15 dakikalık kısa oturum yap; yine tek bir adım çıkar.</li>
+          <li>Öğrenci hedefe inanmıyorsa: kanıtı birlikte kontrol et; alternatif planı aç.</li>
+          <li>Öğrenci sadece velisini memnun etmek için geliyorsa: kendi hedefini söylemesini iste; yoksa
+            motivasyon planı kur.</li>
+        </ul>
+
+        <div class="callout warn">
+          <strong>Görüşme sonu testi.</strong> Öğrenci “Bu görüşmede ne karar verdik?” sorusuna kendi cümlesiyle cevap
+          veremiyorsa, görüşme kapanmamıştır. Son 5 dakikayı buna ayır.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m8">
+        <div class="module-head">
+          <div class="module-no">08</div>
+          <div>
+            <h2>Görev yönetimi ve hesap verebilirlik</h2>
+            <p class="module-sub">Öğrenciyi azarlamadan, takip ederek ve küçük adımlarla ilerlet.</p>
+          </div>
+        </div>
+
+        <h3>8.1 Tek sonraki adım kuralı</h3>
+        <p>
+          Her görüşme en fazla <strong>bir ana görev</strong> ve onun kanıtıyla bitmeli. Çok sayıda görev vermek
+          öğrenciyi felç eder. Görev; öğrencinin kendi seçtiği, gerçekçi ve tarihli olmalı.
+        </p>
+        <div class="quote">
+          <b>İyi görev:</b> “Cuma 17:00'e kadar BC'deki 5 hemşirelik programının prerequisite tablosunu doldur;
+          her satırda resmi link ve son başvuru tarihi olsun. Kanıt: Student File'a 5 satırlık tablo.”
+        </div>
+        <div class="quote">
+          <b>Kötü görev:</b> “Biraz araştırma yap.” — Ne, ne zaman, hangi kanıt, hangi kapsam belirsiz.
+        </div>
+
+        <h3>8.2 Görev kalite kontrolü</h3>
+        <ul class="check">
+          <li>Fiille başlıyor mu: ara, yaz, sor, doldur, yükle, görüş?</li>
+          <li>Kapsamı belli mi: kaç program, kaç kelime, hangi bölüm?</li>
+          <li>Tarihi ve saati var mı?</li>
+          <li>Kanıtı belli mi: dosya, ekran, not, onay e-postası?</li>
+          <li>Öğrencinin tek başına yapabileceği büyüklükte mi?</li>
+          <li>Öğrenci “neden bunu yapıyorum?” diye açıklayabiliyor mu?</li>
+        </ul>
+
+        <h3>8.3 Takip ritmi</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Zaman</th><th>Ne yapılır?</th><th>Kanal</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Görev verildikten hemen sonra</td><td>Öğrenci kendi cümlesiyle tekrar eder; tarih dosyaya yazılır.</td><td>Görüşme + Student File</td></tr>
+              <tr><td>Teslimden 24 saat önce</td><td>Kısa hatırlatma: “Yarın ... var mı, bir engel var mı?”</td><td>Onaylı mesaj kanalı</td></tr>
+              <tr><td>Teslim günü</td><td>Kanıtı kontrol et; yoksa suçlama değil, engel sorusu.</td><td>Student File / mesaj</td></tr>
+              <tr><td>Gecikmede</td><td>Yeni tarih + küçültülmüş görev + destek; tekrar gecikirse escalate.</td><td>Görüşme</td></tr>
+              <tr><td>Sonraki görüşmede</td><td>Tamamlananı görünür kıl; öğrencinin emeğini adlandır.</td><td>Görüşme</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>8.4 Engel teşhisi</h3>
+        <p>Öğrenci görevi yapmadığında “motivasyon yok” demek kolaydır ama çoğu zaman yanlıştır. Şu dört engeli ayır:</p>
+        <div class="grid grid-4">
+          <div class="card card-accent"><h4>Bilmiyor</h4><p>Görevi nasıl yapacağını bilmiyor. Çözüm: birlikte örnek yap, adımları küçült.</p></div>
+          <div class="card card-navy"><h4>Yapamıyor</h4><p>Zaman, ulaşım, teknoloji veya dil engeli var. Çözüm: kaynak/erteleme/alternatif.</p></div>
+          <div class="card card-gold"><h4>İstemiyor</h4><p>Hedefi kendi seçmedi veya anlamını görmüyor. Çözüm: hedefi yeniden konuş.</p></div>
+          <div class="card card-green"><h4>Korkuyor</h4><p>Başarısız olmaktan, reddedilmekten veya mükemmel olmamaktan korkuyor. Çözüm: küçük deneme, güvenli geri bildirim.</p></div>
+        </div>
+
+        <h3>8.5 Motivasyonu konuşma</h3>
+        <p>İki kısa ölçek kullan:</p>
+        <ul>
+          <li><strong>Önem:</strong> “Bu hedefi 1-10 arasında ne kadar önemli buluyorsun? Neden 10 değil?”</li>
+          <li><strong>Güven:</strong> “Bunu bu hafta yapabileceğine 1-10 arasında ne kadar güveniyorsun? Neyi
+            değiştirirsek bir puan artar?”</li>
+        </ul>
+        <p>Düşük önem → hedefi yeniden değerlendir. Düşük güven → görevi küçült, destek ekle, ilk adımı birlikte
+          yap.</p>
+
+        <h3>8.6 Gecikme ve tekrarlayan uyumsuzluk</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Durum</th><th>Senin yaklaşımın</th><th>Dosya aksiyonu</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>İlk gecikme</td><td>Engeli sor; yeni tarih ve küçültülmüş görev.</td><td>Not + yeni tarih</td></tr>
+              <tr><td>İkinci gecikme</td><td>Deseni adlandır; planı birlikte değiştir; veli bilgisini konuş.</td><td>Risk notu + revize plan</td></tr>
+              <tr><td>Üçüncü gecikme / görüşmeye gelmeme</td><td>Programme lead'e bildir; öğrencinin devam isteğini netleştir.</td><td>Escalation notu</td></tr>
+              <tr><td>Sağlık/kriz nedeni</td><td>Baskı yapma; güvenlik protokolü ve uygun yönlendirme.</td><td>Yalnızca gerekli not</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>8.7 Öğrenci adına yapmama</h3>
+        <p>Sen şunları yapmazsın: öğrencinin yerine e-posta yazmak, form doldurmak, essay yazmak, başvuru göndermek,
+          veliyle öğrenci adına pazarlık etmek. Sen yaparsın: birlikte taslak çıkarmak, kontrol listesi vermek,
+          hatırlatmak, geri bildirim vermek, gerektiğinde öğrenciyi doğru kişiye yönlendirmek.</p>
+
+        <div class="callout practice">
+          <strong>Alıştırma.</strong> Bir öğrencinin “ödevimi yapamadım” dediğini düşün. Dört engelden hangisi olduğunu
+          ayırt etmek için üç soru yaz. Sonra görevi daha küçük, tarihli ve kanıtlı hale getir.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m9">
+        <div class="module-head">
+          <div class="module-no">09</div>
+          <div>
+            <h2>Başvuru dosyası, kanıt ve referanslar</h2>
+            <p class="module-sub">Başvuruyu “doldurulmuş form” değil, kanıtlanmış bir hikâye haline getir.</p>
+          </div>
+        </div>
+
+        <h3>9.1 Gereksinim kategorileri</h3>
+        <p>Student File'daki uygulama şablonları altı ana pathway için gelir: university, college, trades, high school,
+          IB ve other. Gereksinimler şu kategorilere ayrılır:</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Kategori</th><th>Tipik örnekler</th><th>Senin rolün</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Academic</td><td>Transcript, predicted grades, diploma, prerequisite kanıtı</td><td>Resmi kaynağı ve tarihi kontrol et; notu değiştirme.</td></tr>
+              <tr><td>Tests &amp; scores</td><td>IELTS/TOEFL, SAT/ACT, placement test, language proficiency</td><td>Hangi testin gerçekten gerektiğini program sayfasından doğrula.</td></tr>
+              <tr><td>Essays &amp; statements</td><td>Personal statement, supplemental essay, “why this school”</td><td>Yapı ve geri bildirim ver; yazma.</td></tr>
+              <tr><td>References &amp; letters</td><td>Öğretmen, counsellor, işveren referansı</td><td>Erken planla; brag sheet ve takip.</td></tr>
+              <tr><td>Documents &amp; forms</td><td>Başvuru formu, CV, ID, fee waiver, safety certificates</td><td>Eksik belgeyi request aç; dosya adını kontrol et.</td></tr>
+              <tr><td>Portfolio &amp; work</td><td>Sanat, tasarım, teknik iş, araştırma, proje</td><td>Öğrencinin katkısını ve kanıtı sor.</td></tr>
+              <tr><td>Financial &amp; scholarships</td><td>Financial aid form, burs başvurusu, sponsorluk</td><td>Son tarihi ve resmi kaynağı kontrol et; finansal tavsiye verme.</td></tr>
+              <tr><td>Interview</td><td>Admissions/alumni interview, site visit</td><td>Pratik yap; soru hazırlat; geri bildirim ver.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>9.2 Kanıt kalitesi: dört soru</h3>
+        <div class="grid grid-4">
+          <div class="card card-accent"><h4>İlgili mi?</h4><p>Hedef programla bağlantısı var mı, yoksa sadece “iyi görünen” bir etkinlik mi?</p></div>
+          <div class="card card-navy"><h4>Güncel mi?</h4><p>Son 2-3 yıl mı, yoksa çok eski ve bağlamsız mı? Tarih ve süre belli mi?</p></div>
+          <div class="card card-gold"><h4>Öğrencinin mi?</h4><p>Öğrencinin gerçek katkısı ne? “Biz yaptık” değil, “ben şunu yaptım”.</p></div>
+          <div class="card card-green"><h4>Doğrulanabilir mi?</h4><p>Sertifika, referans, ürün, link veya üçüncü kişi onayı var mı?</p></div>
+        </div>
+
+        <h3>9.3 Achievement kaydı</h3>
+        <p>Her başarı kaydı şu altı alanı taşımalı:</p>
+        <ol>
+          <li><strong>Başlık:</strong> Ne yapıldı? Örn. “Okul robotik kulübü — bölgesel finalist”.</li>
+          <li><strong>Kategori:</strong> academic, competition, leadership, community, sports, technical, arts, other.</li>
+          <li><strong>Tarih ve süre:</strong> Ne zaman, ne kadar sürdü?</li>
+          <li><strong>Rol:</strong> Öğrenci neydi: kurucu, takım üyesi, gönüllü, kaptan?</li>
+          <li><strong>Katkı ve sonuç:</strong> Hangi işi yaptı, ne değişti, sayısal sonuç var mı?</li>
+          <li><strong>Kanıt:</strong> Sertifika, fotoğraf, referans, proje linki, rapor.</li>
+        </ol>
+        <div class="callout warn">
+          <strong>Kanıt testi.</strong> Öğrenci “liderlik” diyorsa sor: “Sen olmasaydın ne eksik kalırdı?” Cevap net
+          değilse rolü daralt veya kanıt iste. Kanıtla desteklenmeyen bir satır, mülakatta savunulamaz.
+        </div>
+
+        <h3>9.4 Portföy</h3>
+        <ul>
+          <li>Her parça için: soru/hedef, süreç, öğrencinin rolü, sonuç ve yansıma.</li>
+          <li>Görsel/teknik işlerde süreç fotoğrafı ve son ürün birlikte olsun.</li>
+          <li>Essay/araştırmada taslak, kaynakça ve revizyon izi olsun.</li>
+          <li>Başkasının işi veya AI üretimi varsa açıkça belirt; öğrencinin katkısını ayır.</li>
+          <li>Portföy “çok parça” değil, <strong>hedefle ilgili güçlü parça</strong> demektir. 3 güçlü parça, 15
+            zayıf parçadan iyidir.</li>
+        </ul>
+
+        <h3>9.5 Notlar ve testler</h3>
+        <ul>
+          <li>Resmi transcript ile öğrencinin söylediği notu ayır; dosyaya resmi olanı yaz.</li>
+          <li>Predicted grade varsa kimin verdiğini ve tarihini not et.</li>
+          <li>Test sonuçlarında test adı, tarih ve score raporu olsun; sözlü beyan yeterli değildir.</li>
+          <li>Düşük notu gizleme; bağlamı (dil geçişi, sağlık, müfredat farkı) öğrencinin izniyle açıkla.</li>
+          <li>Not yükseltme planı varsa (yaz okulu, tekrar, upgrading) tarih ve kanıt ekle.</li>
+        </ul>
+
+        <h3>9.6 Referanslar</h3>
+        <div class="steps">
+          <div class="step"><div class="step-no">1</div><div><b>Doğru kişiyi seç.</b><span>Öğrenciyi gerçekten tanıyan, dersine/çalışmasına yakın ve zamanında yazabilecek biri.</span></div></div>
+          <div class="step"><div class="step-no">2</div><div><b>Erken sor.</b><span>Son tarihten en az 4-6 hafta önce; nazik bir e-posta ve kısa bir özgeçmiş/brag sheet ile.</span></div></div>
+          <div class="step"><div class="step-no">3</div><div><b>Net bilgi ver.</b><span>Hangi program, neden bu kişi, son tarih, gönderim yöntemi, öğrencinin güçlü yönleri.</span></div></div>
+          <div class="step"><div class="step-no">4</div><div><b>Durumu takip et.</b><span>requested → in-progress → received; son tarihe 1 hafta kala kibarca kontrol et.</span></div></div>
+          <div class="step"><div class="step-no">5</div><div><b>Teşekkür et.</b><span>Sonuçtan bağımsız olarak teşekkür e-postası; kabul/red bilgisini paylaş.</span></div></div>
+        </div>
+
+        <h3>9.7 Essay ve personal statement: senin rolün</h3>
+        <p><strong>Sen yazmazsın.</strong> Sen; soruyu anlamayı, beyin fırtınasını, outline'ı, taslak planını ve geri
+          bildirimi yönetirsin. Öğrencinin kendi sesi korunur.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Rubrik</th><th>1 — Zayıf</th><th>2 — Gelişiyor</th><th>3 — Güçlü</th><th>4 — Hazır</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Prompt'a cevap</td><td>Konu dışı</td><td>Kısmen cevaplıyor</td><td>Net cevap</td><td>Doğrudan, özgün, eksiksiz</td></tr>
+              <tr><td>Kanıt</td><td>Genel ifadeler</td><td>Bir örnek var</td><td>Somut örnekler</td><td>Somut, öğrenciye özgü, sonuçlu</td></tr>
+              <tr><td>Ses</td><td>Klişe / başkasının sesi</td><td>Zaman zaman öğrenci sesi</td><td>Çoğunlukla öğrenci sesi</td><td>Tutarlı, doğal, öğrenciye ait</td></tr>
+              <tr><td>Yapı</td><td>Dağınık</td><td>Geçişler zayıf</td><td>Mantıklı akış</td><td>Net açılış, gelişme, kapanış</td></tr>
+              <tr><td>Dil</td><td>Anlaşılması zor</td><td>Hatalar anlamı bozuyor</td><td>Az hata</td><td>Akıcı, doğru, sade</td></tr>
+              <tr><td>Dürüstlük</td><td>Kanıtsız iddia/başkasının işi</td><td>Belirsiz</td><td>Büyük ölçüde özgün</td><td>Öğrencinin kendi işi, kaynaklı</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout stop">
+          <strong>AI ve intihal.</strong> Öğrenci essay'i AI'ya yazdırıyorsa dur. Beyin fırtınası ve dil kontrolü
+          için sınırlı destek olabilir; ancak başvuruda öğrencinin kendi sesi ve kendi işi olmalı. Okulun/kurumun AI
+          politikasını kontrol et; şüpheyi programme lead'e bildir.
+        </div>
+
+        <h3>9.8 Mülakat hazırlığı</h3>
+        <ul>
+          <li>Kurumu ve programı araştır; “neden bu program?” sorusuna somut cevap hazırla.</li>
+          <li>3-4 hikâye hazırla: zorluk, liderlik, öğrenme, takım çalışması. Her hikâyede durum, görev, eylem,
+            sonuç ve öğrenme olsun.</li>
+          <li>Kısa cevap pratiği yap; ezber değil, doğal konuşma.</li>
+          <li>Öğrencinin soracağı 2-3 soru olsun: program yapısı, destek hizmetleri, coop/placement.</li>
+          <li>Görüşme sonrası teşekkür e-postası taslağı hazırlat.</li>
+        </ul>
+
+        <h3>9.9 Belgeler ve dosya düzeni</h3>
+        <ul>
+          <li>Dosya adı: <code>soyad_ad_belge_tarih.pdf</code>; boşluk yerine alt çizgi, Türkçe karakter yerine
+            İngilizce harf.</li>
+          <li>PDF tercih et; taranmış belge okunaklı ve yönü doğru olsun.</li>
+          <li>Resmi transcript'i açma/değiştirme; öğrenci okulun verdiği dosyayı yükler.</li>
+          <li>Her belgeyi doğru başvuruya bağla; alakasız dosya yüklemeyi engelle.</li>
+          <li>Son tarihten önce tüm belgelerin açıldığını ve okunabildiğini kontrol et.</li>
+        </ul>
+
+        <h3>9.10 Başvuru durumları ve sonraki adım</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Durum</th><th>Anlamı</th><th>Senin aksiyonun</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Planning</td><td>Hedef var, gereksinimler kuruluyor</td><td>Program araştırması, prerequisite, ilk kanıt</td></tr>
+              <tr><td>Preparing</td><td>Dosya aktif olarak dolduruluyor</td><td>Haftalık görev, request, essay/referans takibi</td></tr>
+              <tr><td>Submitted</td><td>Başvuru gönderildi</td><td>Portal kontrolü, eksik belge, interview, mid-year report</td></tr>
+              <tr><td>Accepted</td><td>Kabul geldi</td><td>Koşullar, kabul tarihi, burs, residence, karar</td></tr>
+              <tr><td>Waitlisted</td><td>Yedek listede</td><td>Kabul et, güncelleme mektubu, yedek plan</td></tr>
+              <tr><td>Rejected</td><td>Red</td><td>Duyguyu kabul et, öğren, alternatif/gelecek yıl planı</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>9.11 Başvuru kalite kontrolü</h3>
+        <ul class="check">
+          <li>Her başvurunun resmi son tarihi ve saat dilimi doğrulandı mı?</li>
+          <li>Gereksinimler program sayfasıyla eşleşiyor mu?</li>
+          <li>Transkript, test, referans ve essay doğru formatta mı?</li>
+          <li>Essay öğrencinin kendi sesiyle mi; prompt'a cevap veriyor mu?</li>
+          <li>Referansların gönderim yöntemi ve tarihi net mi?</li>
+          <li>Portföy/kanıt bağlantıları çalışıyor mu?</li>
+          <li>Öğrenci başvuruyu kendi gönderdi mi; onay e-postasını aldı mı?</li>
+          <li>Sonraki adım (interview, mid-year, burs) takvime eklendi mi?</li>
+        </ul>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m10">
+        <div class="module-head">
+          <div class="module-no">10</div>
+          <div>
+            <h2>Başvuru süreci ve karar yönetimi</h2>
+            <p class="module-sub">Portalları, son tarihleri, teklifleri ve sonuç sonrası planı yönet.</p>
+          </div>
+        </div>
+
+        <h3>10.1 Grade bazında başvuru takvimi</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Dönem</th><th>Ana işler</th><th>Senin kontrolün</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Grade 9-10</td><td>Ders alışkanlığı, keşif, kulüp/gönüllülük, matematik ve dil temeli</td><td>Not trendi, ilgi alanı, Grade 11 ders planı</td></tr>
+              <tr><td>Grade 11 sonu</td><td>Hedef program listesi, prerequisite, test planı, referans adayları, burs araştırması</td><td>Program tablosu, son tarihler, yaz planı</td></tr>
+              <tr><td>Grade 12 başı</td><td>Başvuru listesi, essay'ler, formlar, finansal yardım, portföy</td><td>Haftalık dosya kontrolü, referans takibi</td></tr>
+              <tr><td>Son tarih dönemi</td><td>Gönderim, eksik belge, interview, scholarship</td><td>Günlük kontrol; yeni konu açmama</td></tr>
+              <tr><td>Sonrası</td><td>Portal, mid-year report, teklifler, kabul, residence, burs</td><td>Karar matrisi, koşullar, kayıt tarihi</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>10.2 Başvuru kanalları</h3>
+        <ul>
+          <li><strong>British Columbia:</strong> EducationPlannerBC ve bazı kurumların kendi portalları.</li>
+          <li><strong>Ontario:</strong> OUAC (101/105) ve college başvuruları için ontariocolleges.ca; hangisinin
+            geçerli olduğunu öğrencinin lise geçmişi belirler.</li>
+          <li><strong>Alberta:</strong> ApplyAlberta veya kurumun kendi portalı.</li>
+          <li><strong>Diğer eyaletler:</strong> çoğunlukla kurumların kendi başvuru sayfaları.</li>
+          <li><strong>ABD:</strong> Common App veya kurumun kendi portalı; bazı kurumlar Coalition App kullanabilir.</li>
+          <li><strong>İngiltere:</strong> UCAS; program bazlı ek sınavlar olabilir.</li>
+          <li><strong>IB:</strong> Öğrenci IB Diploma'sını yetkili bir IB World School üzerinden alır; FBA diploma
+            vermez, yalnızca hazırlık desteği sağlayabilir.</li>
+        </ul>
+
+        <div class="callout info">
+          <strong>IB/AP hızlı not.</strong> IB Diploma, 16-19 yaş için iki yıllık bir programdır: altı ders (3-4'ü
+          higher level) + TOK, extended essay ve CAS. 24 puan diploma için, 45 maksimumdur. Diploma'yı IB verir;
+          yetkili IB World School aday gösterir. AP ise College Board dersleri/sınavlarıdır; üniversite kredisi veya
+          placement kuruma göre değişir. İkisi de “kabul garantisi” değildir.
+        </div>
+
+        <h3>10.3 Son tarihleri yönetme</h3>
+        <ul>
+          <li>Her son tarihi saat dilimiyle birlikte yaz; “15 Ocak” gece 23:59'u farklı saat diliminde olabilir.</li>
+          <li>Erken başvuru (early action/decision) ile normal başvuruyu ayır; bağlayıcılık farkını öğrenciye açıkla.</li>
+          <li>Burs, residence ve financial aid tarihleri ana başvurudan önce olabilir; ayrı takip et.</li>
+          <li>Önerilen iç hedef: resmi son tarihten 7 gün önce gönderim; son 48 saatte essay yazma.</li>
+          <li>Son tarih kaçırıldıysa panik yapma; kurumun geç başvuru/ikinci dönem politikasını kontrol et.</li>
+        </ul>
+
+        <h3>10.4 Gönderim sonrası</h3>
+        <ul class="check">
+          <li>Başvuru onay e-postasını ve portal durumunu kontrol et.</li>
+          <li>Eksik belge/test skoru uyarısı var mı?</li>
+          <li>Referansların gönderildiğini doğrula.</li>
+          <li>Mid-year report gerekiyorsa okulla tarihi ayarla.</li>
+          <li>Interview davetini ve son tarihini takvime ekle.</li>
+          <li>Burs/financial aid başvurusunu ayrı takip et.</li>
+        </ul>
+
+        <h3>10.5 Teklifleri karşılaştırma</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Kriter</th><th>Sorulacak soru</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Program</td><td>Ders yapısı, coop/placement, mezuniyet süresi hedefe uyuyor mu?</td></tr>
+              <tr><td>Maliyet</td><td>Net maliyet ne: burs çıktıktan sonra kalan tuition + yaşam?</td></tr>
+              <tr><td>Konum</td><td>Ulaşım, barınma, aile desteği, iklim ve topluluk uygun mu?</td></tr>
+              <tr><td>Destek</td><td>Akademik destek, accessibility, international student support var mı?</td></tr>
+              <tr><td>Sonuç</td><td>Mezun istihdam/graduate school verisi resmi olarak paylaşılıyor mu?</td></tr>
+              <tr><td>Koşul</td><td>Kabul koşullu mu; hangi notu/sınavı tamamlamak gerekiyor?</td></tr>
+              <tr><td>His</td><td>Öğrenci kampüsü/programı ziyaret ettiğinde kendini nasıl hissetti?</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>10.6 Waitlist, rejection ve alternatifler</h3>
+        <div class="grid grid-2">
+          <div class="card card-gold">
+            <span class="pill gold">Waitlist</span>
+            <h4>Yedek liste</h4>
+            <ul class="plain">
+              <li>Teklif varsa kabul tarihini kaçırma; yedekte kalmak için kabulü reddetme.</li>
+              <li>Kurumun izin verdiği ölçüde kısa bir güncelleme mektubu gönder.</li>
+              <li>Yeni not, ödül veya sorumluluk varsa ekle; kanıtı olmayan bilgi ekleme.</li>
+              <li>Yedek planı hazır tut; belirsizliği öğrenciyle açık konuş.</li>
+            </ul>
+          </div>
+          <div class="card card-navy">
+            <span class="pill red">Red</span>
+            <h4>Red cevabı</h4>
+            <ul class="plain">
+              <li>Önce duyguyu kabul et; hemen “plan B” konuşmasına atlama.</li>
+              <li>Nedenini öğrenmek için kurumun geri bildirim politikasını kontrol et.</li>
+              <li>Alternatifleri gözden geçir: başka program, college geçişi, gap year, yeniden başvuru.</li>
+              <li>Öğrencinin değerini bir kabul kararına indirgeme.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>10.7 Gap year, transfer ve yeniden başvuru</h3>
+        <ul>
+          <li><strong>Gap year:</strong> hedefi, bütçeyi, sorumlulukları ve bir sonraki başvuru tarihini yazılı planla.
+            “Dinlenmek” tek başına plan değildir.</li>
+          <li><strong>College → university transfer:</strong> hedef üniversitenin transfer kredi politikasını ve
+            minimum notunu doğrula.</li>
+          <li><strong>Yeniden başvuru:</strong> önceki başvurudan ne değiştiğini kanıtla; aynı dosyayı kopyalama.</li>
+          <li><strong>Trades/apprenticeship:</strong> işveren sponsorluğu, pre-apprenticeship, safety ticket ve
+            Red Seal yolunu ayrı planla.</li>
+        </ul>
+
+        <h3>10.8 Uluslararası öğrenci notu</h3>
+        <ul>
+          <li>Study permit, vize, sağlık sigortası ve proof of funds konuları göçmenlik/hukuk uzmanına aittir; sen
+            yalnızca başvuru takvimini hatırlatır.</li>
+          <li>Kurumun international student sayfasındaki son tarihleri ayrıca kontrol et.</li>
+          <li>İngilizce yeterlilik ve credential assessment gereksinimlerini resmi kaynaktan doğrula.</li>
+          <li>Kabul ile vize aynı şey değildir; öğrenciye bunu net söyle.</li>
+        </ul>
+
+        <div class="callout practice">
+          <strong>Alıştırma.</strong> Bir öğrencinin 3 hedefi için başvuru portalını, son tarihini ve eksik belgesini
+          tabloya yaz. Sonra “son 7 gün” kontrol listesi oluştur.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m11">
+        <div class="module-head">
+          <div class="module-no">11</div>
+          <div>
+            <h2>Para, burs ve finansal yardım</h2>
+            <p class="module-sub">Öğrencinin bütçesini konuş, doğru kaynağı bul ve kendi sınırını koru.</p>
+          </div>
+        </div>
+
+        <h3>11.1 Maliyet kalemleri</h3>
+        <div class="grid grid-3">
+          <div class="card"><h4>Doğrudan eğitim</h4><p>Tuition, zorunlu ücretler, lab/malzeme, sınav ve başvuru ücretleri.</p></div>
+          <div class="card"><h4>Yaşam</h4><p>Barınma, yemek, ulaşım, telefon, sigorta, kitap ve kişisel harcama.</p></div>
+          <div class="card"><h4>Geçiş</h4><p>Taşınma, uçak bileti, ilk ay depozito, eşya ve kurulum maliyeti.</p></div>
+        </div>
+
+        <h3>11.2 Finansman kaynakları</h3>
+        <ul>
+          <li>Aile birikimi ve gelir desteği.</li>
+          <li>Federal/eyalet öğrenci yardımı: grant, loan ve work-study.</li>
+          <li>Üniversite/college entrance scholarship ve bursary.</li>
+          <li>Dış burslar: topluluk, dernek, işveren, etnik/kültürel kuruluşlar.</li>
+          <li>Coop, part-time iş, apprenticeship maaşı ve employer sponsorship.</li>
+          <li>Bazı programlarda research/teaching assistantship veya burslu pozisyon.</li>
+        </ul>
+
+        <h3>11.3 Burs türleri</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Tür</th><th>Neye bakar?</th><th>Senin rolün</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Merit scholarship</td><td>Akademik başarı, liderlik, yetenek, yarışma</td><td>Uygunluğu kontrol et; essay/referans takvimini kur.</td></tr>
+              <tr><td>Need-based bursary</td><td>Aile geliri, finansal ihtiyaç</td><td>Belge listesini ve son tarihi takip et; finansal karar verme.</td></tr>
+              <tr><td>Program-specific</td><td>Belirli fakülte/program/alan</td><td>Program sayfasından doğrula; başvuru otomatik mi ayrı mı?</td></tr>
+              <tr><td>Community/identity</td><td>Topluluk, dil, kültür, gönüllülük, engellilik</td><td>Uygunluk ve kanıt iste; öğrencinin hikâyesini kendi yazmasını sağla.</td></tr>
+              <tr><td>Competition/essay</td><td>Yarışma performansı</td><td>Takvimi kur; özgün iş kuralını koru.</td></tr>
+              <tr><td>External/employer</td><td>İşveren, sendika, dernek</td><td>Resmi kaynağı ve başvuru kanalını doğrula.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>11.4 Burs arama iş akışı</h3>
+        <div class="steps">
+          <div class="step"><div class="step-no">1</div><div><b>Profili netleştir.</b><span>Program, yıl, eyalet, ortalama, ilgi alanı, topluluk bağlantısı, finansal ihtiyaç.</span></div></div>
+          <div class="step"><div class="step-no">2</div><div><b>Resmi kaynaklardan ara.</b><span>Kurumun financial aid sayfası, eyalet/federal kaynak, güvenilir dış kuruluşlar.</span></div></div>
+          <div class="step"><div class="step-no">3</div><div><b>Uygunluğu doğrula.</b><span>Kim başvurabilir, hangi belge, hangi son tarih, yenilenebilir mi?</span></div></div>
+          <div class="step"><div class="step-no">4</div><div><b>Takvime ekle.</b><span>Her burs için ayrı satır: tutar, son tarih, eksik belge, durum.</span></div></div>
+          <div class="step"><div class="step-no">5</div><div><b>Başvuruyu öğrenci yapsın.</b><span>Sen kontrol edersin, göndermezsin; essay öğrencinin olur.</span></div></div>
+        </div>
+
+        <h3>11.5 Burs dolandırıcılığı kırmızı bayrakları</h3>
+        <ul class="plain dont">
+          <li>Başvurmak için önce ücret isteyen “burs”lar.</li>
+          <li>“Kesin kazanırsın” veya “son 2 kontenjan” baskısı.</li>
+          <li>Kredi kartı, SIN, banka şifresi veya tam kimlik bilgisi isteyen e-postalar.</li>
+          <li>Resmi olmayan alan adı, yazım hatası, kişisel Gmail/WhatsApp iletişimi.</li>
+          <li>Başvuru yapmadığın halde “kazandın” diyen mesajlar.</li>
+        </ul>
+        <div class="callout stop">
+          <strong>Kural.</strong> Şüpheli bursu öğrenciye gönderme. Resmi kaynağı doğrula; gerekirse programme lead'e
+          bildir. Senin görevin burs bulmak değil, güvenilir bursu bulma yöntemini öğretmek ve takvimi yönetmektir.
+        </div>
+
+        <h3>11.6 Burs başvuru malzemeleri</h3>
+        <ul class="check">
+          <li>Güncel transcript ve not ortalaması.</li>
+          <li>Özgeçmiş / aktivite listesi.</li>
+          <li>Essay veya kişisel statement (öğrencinin kendi metni).</li>
+          <li>Referans mektubu veya referans kişisi bilgisi.</li>
+          <li>Finansal ihtiyaç belgeleri (gerekiyorsa).</li>
+          <li>Portföy / kanıt (sanat, proje, yarışma).</li>
+          <li>Başvuru formu ve varsa ücret/waiver.</li>
+        </ul>
+
+        <h3>11.7 Net maliyet karşılaştırması</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Kalem</th><th>Seçenek A</th><th>Seçenek B</th><th>Seçenek C</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Yıllık tuition + fees</td><td></td><td></td><td></td></tr>
+              <tr><td>Barınma + yemek</td><td></td><td></td><td></td></tr>
+              <tr><td>Ulaşım + sigorta + diğer</td><td></td><td></td><td></td></tr>
+              <tr><td>Toplam maliyet</td><td></td><td></td><td></td></tr>
+              <tr><td>Burs / grant</td><td></td><td></td><td></td></tr>
+              <tr><td>Net maliyet</td><td></td><td></td><td></td></tr>
+              <tr><td>Mezuniyet süresi</td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">Bu tabloyu öğrenci/veli doldurur; sen yalnızca soruları sorarsın. Finansal karar
+          danışmanlığı değildir.</p>
+
+        <h3>11.8 Senin sınırın</h3>
+        <p>Sen; faiz, yatırım, kredi stratejisi, vergi veya iflas gibi konularda tavsiye vermezsin. Öğrenciyi kurumun
+          financial aid office'ine, eyalet/federal student aid sayfasına veya yetkili finansal danışmana yönlendirirsin.
+          Burs başvurusunda yalnızca süreç, belge ve son tarih takibini yaparsın.</p>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m12">
+        <div class="module-head">
+          <div class="module-no">12</div>
+          <div>
+            <h2>Aile ve okul ile iletişim</h2>
+            <p class="module-sub">Veliyle güven kur, okulla koordinasyonu doğru kur ve sınırları koru.</p>
+          </div>
+        </div>
+
+        <h3>12.1 Veli/guardian rolü</h3>
+        <ul>
+          <li>Veli destekler, öğrencinin yerine başvuru yapmaz.</li>
+          <li>Öğrencinin hedefi, velinin hedefi değildir; ikisi farklıysa açık konuşulur.</li>
+          <li>Veli, öğrencinin izniyle gelişim özeti alır; özel görüşmelerin ayrıntısı paylaşılmaz.</li>
+          <li>Acil güvenlik durumunda veli bilgilendirilir; protokol programme lead tarafından yürütülür.</li>
+        </ul>
+
+        <h3>12.2 İlk veli görüşmesi</h3>
+        <ol>
+          <li>Senin rolün ve sınırların: ne yaparsın, ne yapmazsın.</li>
+          <li>Öğrencinin hedefi ve motivasyonu; velinin beklentisi.</li>
+          <li>Görüşme sıklığı, iletişim kanalı ve acil durum yöntemi.</li>
+          <li>Bilgi paylaşımı: neyi, ne sıklıkla, hangi kanaldan alacak?</li>
+          <li>Öğrencinin sorumlulukları: dosya, görev, başvuru, iletişim.</li>
+          <li>Velinin sorumlulukları: belge, ödeme/izin, ulaşım, moral desteği.</li>
+        </ol>
+
+        <h3>12.3 İlerleme güncellemesi</h3>
+        <div class="quote">
+          <b>3 maddelik format:</b> (1) Bu ay tamamlanan somut iş. (2) Şu anki engel/risk. (3) Önümüzdeki ayın
+          öğrenci taahhüdü ve veliden beklenen destek.
+        </div>
+        <p>Güncelleme suçlama veya karşılaştırma içermez. “Diğer öğrenciler ...” ifadesi kullanılmaz. Öğrencinin
+          emeği adlandırılır; eksikler somut ve çözüm odaklı anlatılır.</p>
+
+        <h3>12.4 Zor veli konuşmaları</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Durum</th><th>Yaklaşım</th><th>Kaçınılacak</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Veli gerçekçi olmayan hedef istiyor</td><td>Kanıtı göster, seçenekleri aç, karar tarihi koy.</td><td>Gerekçesiz kesin ret vermek.</td></tr>
+              <tr><td>Veli öğrencinin yerine karar veriyor</td><td>Öğrencinin görüşünü ayrıca al; ortak görüşme yap.</td><td>Öğrenciyi dinlemeden veliyle plan yapmak.</td></tr>
+              <tr><td>Veli özel notları istiyor</td><td>Gizlilik sınırını açıkla; gelişim özeti paylaş.</td><td>Öğrencinin özel paylaşımlarını aynen aktarmak.</td></tr>
+              <tr><td>Veli ücret/burs konusunda baskı yapıyor</td><td>“Bu konuyu programme lead yönetir” de; yönlendir.</td><td>Fiyat veya garanti vermek.</td></tr>
+              <tr><td>Veli öğrencinin motivasyonundan şikâyetçi</td><td>Engel teşhisi yap; öğrenciyle ayrı konuş.</td><td>Öğrenciyi velinin önünde eleştirmek.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>12.5 Okul ve öğretmenlerle koordinasyon</h3>
+        <ul>
+          <li>Okul counsellor'ı; transcript, ders seçimi, mezuniyet ve referans konusunda ana kaynaktır.</li>
+          <li>Sen okulun yerine karar vermezsin; okulun verdiği bilgiyi doğrular ve öğrenciyi doğru kişiye yönlendirirsin.</li>
+          <li>Öğretmenle iletişimde öğrenci öndedir; sen ancak öğrencinin izniyle ve gerekliyse katılırsın.</li>
+          <li>Okulun son tarihleri ile başvuru son tarihlerini ayrı takip et.</li>
+          <li>Okulun resmi belgelerini sen değiştirmezsin; eksik/hatalıysa okulla öğrenci ilgilenir.</li>
+        </ul>
+
+        <h3>12.6 Dil, kültür ve erişilebilirlik</h3>
+        <ul>
+          <li>Veliyle anlaşılır dilde konuş; gerekirse tercüman veya yazılı özet kullan.</li>
+          <li>Aile kararlarına saygı göster; ancak öğrencinin kendi sesini duymayı ihmal etme.</li>
+          <li>Dini/kültürel takvimleri (ramazan, bayram, tatiller) plan yaparken sor.</li>
+          <li>Engellilik/accessibility ihtiyacı varsa kurumun destek ofisine yönlendir; tanı koyma.</li>
+        </ul>
+
+        <h3>12.7 Hazır iletişim taslakları</h3>
+        <h4>Veliye ilk tanışma e-postası</h4>
+        <div class="quote">
+          Sayın [Veli adı],<br><br>
+          Future Bridge Academy Career Coach olarak [Öğrenci] ile birebir çalışacağım. Amacım; hedefini netleştirmesi,
+          Student File'ı öğrencinin kendisinin doldurması ve başvuru/portföy adımlarını zamanında tamamlamasına eşlik
+          etmek. Görüşmeler online ve [sıklık] olacak. İlk görüşmede hedefi, iletişim sıklığını ve bilgi paylaşımını
+          birlikte netleştireceğiz.<br><br>
+          Öğrencinin kendi kararlarını vermesi bizim için önemli; ben onun yerine başvuru yapmıyor veya essay yazmıyorum.
+          Sorularınız için bana [iletişim kanalı] üzerinden ulaşabilirsiniz.<br><br>
+          Saygılarımla,<br>[Adın]
+        </div>
+
+        <h4>Öğrenciye görüşme özeti</h4>
+        <div class="quote">
+          Bugünkü görüşmede: [1-2 cümle].<br>
+          Senin taahhüdün: [görev] — [tarih] — kanıt: [ne].<br>
+          Benim taahhüdüm: [ne] — [tarih].<br>
+          Sıradaki görüşme: [tarih/saat].<br>
+          Bir engel çıkarsa bana [kanal] üzerinden haber ver.
+        </div>
+
+        <h4>Gecikme takibi</h4>
+        <div class="quote">
+          Merhaba [Öğrenci], [görev] için [tarih] konuşmuştuk. Bugün kontrol ediyorum: görevde bir engel mi çıktı,
+          yoksa yeni bir tarihe mi ihtiyacın var? Engeli birlikte küçültelim; ama bir sonraki adımı netleştirelim.
+        </div>
+
+        <div class="callout info">
+          <strong>İletişim standardı.</strong> Öğrenci ve veliye aynı gün içinde yanıt ver; en geç 1-2 iş günü.
+          Acil güvenlik mesajlarında bekleme; 911/protokol. Tüm önemli kararlar Student File'a yazılır, yalnızca mesajda
+          kalmaz.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m13">
+        <div class="module-head">
+          <div class="module-no">13</div>
+          <div>
+            <h2>Zor durumlar ve kriz protokolleri</h2>
+            <p class="module-sub">Baskı, kopukluk, etik ihlal ve güvenlik riski karşısında ne yapacağını öğren.</p>
+          </div>
+        </div>
+
+        <h3>13.1 Genel tepki çerçevesi</h3>
+        <div class="steps">
+          <div class="step"><div class="step-no">1</div><div><b>Fark et.</b><span>Davranış değişikliği, kaçınma, öfke, umutsuzluk veya tutarsızlık bir sinyaldir; hemen etiketleme.</span></div></div>
+          <div class="step"><div class="step-no">2</div><div><b>Dur ve dinle.</b><span>Savunmaya geçmeden, çözüm önermeden önce ne olduğunu anla.</span></div></div>
+          <div class="step"><div class="step-no">3</div><div><b>Sınırı hatırla.</b><span>Senin rolün nedir, nerede biter? Terapi, hukuk, göçmenlik veya finans değil.</span></div></div>
+          <div class="step"><div class="step-no">4</div><div><b>Belgeleyi.</b><span>Ne söylendi, ne yapıldı, kime bildirildi? Yalnızca gerekli ve saygılı bilgi.</span></div></div>
+          <div class="step"><div class="step-no">5</div><div><b>Escalate et.</b><span>Güvenlik, etik, veri veya program kararı gerekiyorsa programme lead'e aynı gün bildir.</span></div></div>
+        </div>
+
+        <h3>13.2 Öğrenci kopuk / isteksiz</h3>
+        <ul>
+          <li>“Son iki görüşmede zorlanıyorsun. Bu benim için önemli; neyin değişmesi gerekir?” diye aç.</li>
+          <li>Hedefi öğrencinin mi, velinin mi seçtiğini kontrol et.</li>
+          <li>Görevi küçült; 10 dakikalık ilk adım belirle.</li>
+          <li>İki görüşme üst üste gelinmiyorsa programme lead'e bildir; devam isteğini netleştir.</li>
+          <li>Öğrenci tamamen bırakmak istiyorsa saygı göster; dosyayı kapatma sürecini programme lead yürütür.</li>
+        </ul>
+
+        <h3>13.3 Tekrarlayan gecikmeler</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Seviye</th><th>Ne yapılır?</th><th>Ne yapılmaz?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1. gecikme</td><td>Engeli sor, yeni tarih, küçük görev.</td><td>Utandırma, “neden yapmadın?”</td></tr>
+              <tr><td>2. gecikme</td><td>Deseni konuş, planı değiştir, veli desteğini netleştir.</td><td>Aynı görevi aynen tekrar vermek.</td></tr>
+              <tr><td>3. gecikme</td><td>Programme lead'e bildir; devam/çıkış kararı.</td><td>Senin tek başına caseload'dan çıkarman.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>13.4 Veli baskısı ve gerçekçi olmayan hedef</h3>
+        <ul>
+          <li>Önce veliyi dinle; hedefin arkasındaki korkuyu/umudu anla.</li>
+          <li>Kanıtı göster: not, prerequisite, program ortalaması, son tarih.</li>
+          <li>Öğrencinin görüşünü ayrı al; ortak görüşmede ikisini de duy.</li>
+          <li>Plan A / Plan B ve karar tarihi öner; kararı öğrenciye bırak.</li>
+          <li>Veli öğrencinin yerine karar vermeye çalışıyorsa sınır koy: “Ben öğrencinin kendi kararını
+            desteklemek zorundayım.”</li>
+        </ul>
+
+        <h3>13.5 Mental sağlık endişesi</h3>
+        <p>Sen terapist değilsin. Belirtiler varsa (umutsuzluk, panik, uyku/eğitimde ciddi düşüş, kendine zarar
+          konuşması):</p>
+        <ul>
+          <li>Doğrudan ve sakin sor: “Kendine zarar vermeyi düşünüyor musun?”</li>
+          <li>Acil tehlike varsa 911; öğrenciyi yalnız bırakma.</li>
+          <li>Acil değilse okul counsellor'ına, aile hekimine veya uygun ruh sağlığı hizmetine yönlendir.</li>
+          <li>Programme lead'e bildir; yalnızca gerekli bilgiyi paylaş.</li>
+          <li>Teşhis koyma, ilaç/terapi önerme, “geçer” deme.</li>
+        </ul>
+
+        <h3>13.6 İstismar / ihmal şüphesi</h3>
+        <ul>
+          <li>Dinle, güvence ver, ayrıntılı sorgulama yapma.</li>
+          <li>Not al: söylenen sözler, tarih, saat; yorum ekleme.</li>
+          <li>Programme lead / safeguarding sorumlusuna aynı gün bildir.</li>
+          <li>Eyaletin çocuk koruma gerekliliklerine ve FBA protokolüne uy.</li>
+          <li>Aileyle yüzleştirme veya kanıt toplama; bu uzmanın işidir.</li>
+        </ul>
+
+        <h3>13.7 Göçmenlik, vize ve hukuk</h3>
+        <div class="callout stop">
+          <strong>Yetki yok.</strong> Sen; study permit, vize, kalıcı oturum, sponsorluk, sığınma, çalışma izni veya
+          hukuki itiraz konusunda tavsiye vermez. “Yetkili göçmenlik danışmanı/avukat”a yönlendirir; yalnızca başvuru
+          takvimini hatırlatır.
+        </div>
+
+        <h3>13.8 Akademik dürüstlük ve AI</h3>
+        <ul>
+          <li>Öğrenci essay'i tamamen AI'ya yazdırıyorsa dur; kendi sesiyle yeniden yazmasını iste.</li>
+          <li>AI'yı fikir, dil kontrolü veya yapı için sınırlı kullanabilir; kurumun AI politikası esastır.</li>
+          <li>Başkasının işini kopyalama, sahte sertifika, gerçek dışı aktivite → dur, programme lead'e bildir.</li>
+          <li>Öğrencinin kendi emeği olmadan hazırlanan başvuru, kabul edilse bile sürdürülemez.</li>
+        </ul>
+
+        <h3>13.9 Burs dolandırıcılığı / sahte kurum</h3>
+        <ul>
+          <li>Ödeme, banka bilgisi, SIN veya şifre isteniyorsa dur.</li>
+          <li>Resmi alan adı, iletişim ve başvuru koşullarını doğrula.</li>
+          <li>“Kesin kazanç” vaadi varsa öğrenciyi uyar.</li>
+          <li>Şüpheli durumu programme lead'e ve gerekirse Canadian Anti-Fraud Centre'a bildir.</li>
+        </ul>
+
+        <h3>13.10 Veri ihlali</h3>
+        <ul>
+          <li>Yanlış alıcıya giden e-posta/dosyayı durdur; geri çağırma varsa kullan.</li>
+          <li>Ne paylaşıldı, kime gitti, ne zaman — kaydet.</li>
+          <li>Programme lead'e derhal bildir; talimat olmadan öğrenciye/veliye açıklama yapma.</li>
+          <li>Kanıtı silme; olay kaydı için sakla.</li>
+        </ul>
+
+        <h3>13.11 Sen ulaşamıyorsan / izin kullanacaksan</h3>
+        <ul>
+          <li>En az 24 saat önce programme lead'e ve öğrenciye haber ver (acil durum hariç).</li>
+          <li>Yerine bakan coach'a durum özeti, açık işler ve riskleri bırak.</li>
+          <li>Görüşmeyi öğrencinin takvimine uygun yeni tarihe taşı.</li>
+          <li>Uzun izinlerde caseload devri programme lead tarafından onaylanır.</li>
+        </ul>
+
+        <h3>13.12 Hızlı karar tablosu</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Durum</th><th>İlk 10 dakika</th><th>Sonra</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Kendine zarar / yakın tehlike</td><td>911, öğrenciyi yalnız bırakma, sakin konuş</td><td>Programme lead, olay kaydı</td></tr>
+              <tr><td>İstismar/ihmal</td><td>Dinle, not et, soruşturma yapma</td><td>Safeguarding/lead, eyalet protokolü</td></tr>
+              <tr><td>Essay'i sen yaz</td><td>Reddet, nedeni açıkla</td><td>Yazma desteği/akademik writing guide'a yönlendir</td></tr>
+              <tr><td>Veli özel not istiyor</td><td>Gizlilik sınırını açıkla</td><td>Gelişim özeti paylaş; lead'e danış</td></tr>
+              <tr><td>Göçmenlik sorusu</td><td>Rol sınırını söyle</td><td>Yetkili uzmana yönlendir</td></tr>
+              <tr><td>Veri ihlali</td><td>Yayılmayı durdur</td><td>Lead'e derhal bildir</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m14">
+        <div class="module-head">
+          <div class="module-no">14</div>
+          <div>
+            <h2>Vaka laboratuvarı</h2>
+            <p class="module-sub">Gerçek coaching kararlarını güvenli sınırlar içinde prova et.</p>
+          </div>
+        </div>
+        <p class="lead">Her vakayı önce kendi başına oku ve cevapla; sonra aşağıdaki yaklaşımla karşılaştır. Amaç tek
+          “doğru” cevap değil, <strong>güvenli, öğrenci sahipliğini koruyan ve belgelenebilir</strong> bir yaklaşım
+          kurmak.</p>
+
+        <div class="case">
+          <div class="case-head"><b>Vaka 1 — Grade 11, tıp hedefi, düşük fen notları</b><span class="pill orange">Baskı</span></div>
+          <div class="case-body">
+            <p><strong>Durum:</strong> Öğrenci Kanada'ya 1 yıl önce geldi. Tıp istiyor; biyoloji 58, kimya 61.
+              Veli “kesin tıp okuyacak” diyor. Öğrenci henüz IELTS'e girmemiş.</p>
+            <h4>İlk 10 dakika</h4>
+            <ul>
+              <li>Öğrencinin kendi hedefini ve nedenini sor; velinin hedefiyle ayrı tut.</li>
+              <li>Kanıtı göster: tıp programlarının tipik prerequisite ve not aralıkları; dil yeterliliği.</li>
+              <li>“Şu an tek yol yok” çerçevesi kur: not yükseltme, dil, alternate health pathways.</li>
+            </ul>
+            <h4>Dosya aksiyonu</h4>
+            <ul>
+              <li>University dosyası aç; hedef programları “planning” olarak ekle.</li>
+              <li>Grade 12 biyoloji/kimya/matematik prerequisite'lerini ve dil testi tarihini requirement yap.</li>
+              <li>Not yükseltme planı için okul counsellor'ı ve yaz okulu seçeneklerini request aç.</li>
+              <li>90 günlük hedef: 3 sağlık programı + 3 alternatif pathway araştırması; karar tarihi koy.</li>
+            </ul>
+            <p><strong>Kaçınılacak:</strong> “Tıp olmaz” demek; veliyle öğrenciyi karşı karşıya getirmek; kabul
+              garantisi vermek.</p>
+            <p><strong>Escalate:</strong> Veli baskısı sürerse programme lead; dil/göçmenlik konusu yetkili uzman.</p>
+          </div>
+        </div>
+
+        <div class="case">
+          <div class="case-head"><b>Vaka 2 — Grade 12, iyi notlar, “ne istediğimi bilmiyorum”</b><span class="pill">Keşif</span></div>
+          <div class="case-body">
+            <p><strong>Durum:</strong> Öğrenci 85 ortalama, matematik ve İngilizce güçlü. Aile “business” istiyor;
+              öğrenci ne istediğini bilmiyor.</p>
+            <h4>İlk 10 dakika</h4>
+            <ul>
+              <li>“Hangi ders/etkinlik seni enerjiyle dolduruyor?” ile başla; meslek adı sorma.</li>
+              <li>İlgi, değer, çalışma ortamı ve güçlü yönleri kısa bir tabloya dök.</li>
+              <li>3 keşif seçeneği belirle: business, data/analytics, education/communication gibi.</li>
+            </ul>
+            <h4>Dosya aksiyonu</h4>
+            <ul>
+              <li>“Other/undecided” dosyası açma; 2-3 pathway dosyası oluştur ve karşılaştır.</li>
+              <li>Her yol için 2 program, prerequisite ve kariyer çıktısı araştırma görevi ver.</li>
+              <li>Bir informational interview veya career path presenter oturumu ayarla.</li>
+              <li>2 hafta sonunda 1 hedef + 1 yedek seç; karar gerekçesini öğrenci yazsın.</li>
+            </ul>
+            <p><strong>Kaçınılacak:</strong> “Sen business oku” demek; test sonucunu kader gibi sunmak.</p>
+          </div>
+        </div>
+
+        <div class="case">
+          <div class="case-head"><b>Vaka 3 — Trades mi university mi?</b><span class="pill">Aile çatışması</span></div>
+          <div class="case-body">
+            <p><strong>Durum:</strong> Öğrenci elektrik apprenticeship istiyor; veli “üniversite olmazsa olmaz”
+              diyor. Öğrenci matematikte iyi, uygulamalı işleri seviyor.</p>
+            <h4>İlk 10 dakika</h4>
+            <ul>
+              <li>Her iki tarafı da dinle; velinin korkusunu (gelecek/güvence) adlandır.</li>
+              <li>Trades yolunu somutlaştır: pre-apprenticeship, employer sponsorluğu, Red Seal, matematik, safety
+                tickets, kazanç ve süre.</li>
+              <li>University yolunu da somutlaştır: program, maliyet, süre, kariyer.</li>
+            </ul>
+            <h4>Dosya aksiyonu</h4>
+            <ul>
+              <li>Trades ve university için ayrı dosya aç; iki yolun gereksinimlerini yan yana koy.</li>
+              <li>Bir elektrikçi/employer ile informational interview veya career path presenter ayarla.</li>
+              <li>Ortak veli görüşmesi yap; kararı öğrencinin vereceğini net söyle.</li>
+              <li>Karar tarihi ve yedek plan koy.</li>
+            </ul>
+            <p><strong>Kaçınılacak:</strong> Trades'i “daha kolay” veya university'i “tek saygın yol” gibi sunmak.</p>
+          </div>
+        </div>
+
+        <div class="case">
+          <div class="case-head"><b>Vaka 4 — Üç görüşmeye gelmedi</b><span class="pill red">Devamsızlık</span></div>
+          <div class="case-body">
+            <p><strong>Durum:</strong> Öğrenci son 3 görüşmeye katılmadı; mesajlara kısa cevap veriyor. Dosyada
+              açık request'ler birikmiş.</p>
+            <h4>İlk 10 dakika</h4>
+            <ul>
+              <li>Suçlama değil, merak: “Son üç randevuya gelemedin; bu benim için önemli. Ne oldu?”</li>
+              <li>Engeli ayır: sağlık, aile, okul, motivasyon, teknoloji, hedefin yanlış olması.</li>
+              <li>Tek bir küçük adım öner: 15 dakikalık kısa görüşme veya tek request.</li>
+            </ul>
+            <h4>Dosya aksiyonu</h4>
+            <ul>
+              <li>Devamsızlık ve iletişim denemelerini not et.</li>
+              <li>Açık request'leri önceliklendir; gereksiz olanı kapat.</li>
+              <li>Yeni tarih yoksa programme lead'e bildir; devam kararını birlikte ver.</li>
+            </ul>
+            <p><strong>Kaçınılacak:</strong> Israrla aynı mesajı tekrarlamak; veliye suçlayıcı mesaj atmak; dosyayı
+              sessizce kapatmak.</p>
+          </div>
+        </div>
+
+        <div class="case">
+          <div class="case-head"><b>Vaka 5 — “Essay'imi sen yaz”</b><span class="pill red">Etik</span></div>
+          <div class="case-body">
+            <p><strong>Durum:</strong> Öğrenci son tarihe 3 gün kala “sen daha iyi yazarsın, sen yap” diyor.</p>
+            <h4>İlk 10 dakika</h4>
+            <ul>
+              <li>Reddet: “Senin adına yazamam; bu başvurunun sana ait olması gerekir.”</li>
+              <li>Nedenini açıkla: kurum kuralları, doğruluk, mülakat tutarlılığı.</li>
+              <li>Hemen yapısal destek ver: prompt'u ayır, 3 ana fikir, outline, ilk paragrafı birlikte kur.</li>
+            </ul>
+            <h4>Dosya aksiyonu</h4>
+            <ul>
+              <li>Essay requirement'ine “student draft needed” request aç.</li>
+              <li>24 saat içinde taslak; 48 saat içinde geri bildirim; 72 saat içinde son kontrol.</li>
+              <li>Gerekirse academic writing guide'a yönlendir.</li>
+            </ul>
+            <p><strong>Kaçınılacak:</strong> “Sadece bu sefer” diyerek yazmak; AI'ya tam metin yazdırmak.</p>
+          </div>
+        </div>
+
+        <div class="case">
+          <div class="case-head"><b>Vaka 6 — Burs son tarihi 5 gün, referans yok</b><span class="pill gold">Kriz planı</span></div>
+          <div class="case-body">
+            <p><strong>Durum:</strong> Öğrenci yeni bir burs buldu; son tarih 5 gün sonra, 2 referans ve essay
+              gerekiyor. Referanslardan biri henüz sorulmamış.</p>
+            <h4>İlk 10 dakika</h4>
+            <ul>
+              <li>Gereksinimleri resmi sayfadan doğrula; tarih/saat dilimini kontrol et.</li>
+              <li>Öncelik sırası: essay mi, referans mı, form mu? Paralel mi yürüyebilir?</li>
+              <li>Öğrenciye “yapılabilir / kısmi / yetişmez” gerçekçi değerlendirme yap.</li>
+            </ul>
+            <h4>Dosya aksiyonu</h4>
+            <ul>
+              <li>Bursu ayrı requirement olarak ekle; her belgeye tarih koy.</li>
+              <li>Referans kişisine öğrenci hemen nazik bir e-posta göndersin; brag sheet ekle.</li>
+              <li>Essay için 24 saatte outline, 48 saatte taslak; sen geri bildirim verirsin.</li>
+              <li>Yetişmeyen belge varsa başvuruyu riske atma; sonraki dönem/alternatif burs planı yap.</li>
+            </ul>
+            <p><strong>Kaçınılacak:</strong> Kendi referansını yazman; öğrenci adına form doldurmak;
+              “kesin yetişir” demek.</p>
+          </div>
+        </div>
+
+        <div class="case">
+          <div class="case-head"><b>Vaka 7 — Hayal okuldan waitlist, güvenli okuldan kabul</b><span class="pill">Karar</span></div>
+          <div class="case-body">
+            <p><strong>Durum:</strong> Öğrenci hayal okulundan waitlist, güvenli okuldan kabul aldı. Veli “waitlist
+              için kabulü reddet” diyor.</p>
+            <h4>İlk 10 dakika</h4>
+            <ul>
+              <li>Duyguyu kabul et; acele karar verme.</li>
+              <li>Kabul teklifinin son kabul tarihini ve depozito koşulunu kontrol et.</li>
+              <li>Waitlist'in bağlayıcı olmadığını; kabulü reddetmenin riskini açıkla.</li>
+            </ul>
+            <h4>Dosya aksiyonu</h4>
+            <ul>
+              <li>İki seçeneği karar matrisiyle karşılaştır: program, net maliyet, konum, destek, sonuç.</li>
+              <li>Waitlist için kısa güncelleme mektubu taslağı; yeni kanıt varsa ekle.</li>
+              <li>Kabul için son tarih ve kayıt adımlarını takvime ekle.</li>
+              <li>Karar tarihini öğrenciyle birlikte koy.</li>
+            </ul>
+            <p><strong>Kaçınılacak:</strong> “Waitlist kesin döner” demek; kabulü reddetmeyi teşvik etmek.</p>
+          </div>
+        </div>
+
+        <div class="case">
+          <div class="case-head"><b>Vaka 8 — Dosya %90 ama son tarih yok</b><span class="pill">Veri kalitesi</span></div>
+          <div class="case-body">
+            <p><strong>Durum:</strong> Student File'da readiness %90; ancak iki başvurunun son tarihi boş, bir
+              referans “requested”de kalmış, essay taslağı yok.</p>
+            <h4>İlk 10 dakika</h4>
+            <ul>
+              <li>Skoru kutlama; eksik veriyi göster.</li>
+              <li>Readiness'in kabul tahmini olmadığını hatırlat.</li>
+              <li>Üç kritik eksiği sırala: tarih, referans, essay.</li>
+            </ul>
+            <h4>Dosya aksiyonu</h4>
+            <ul>
+              <li>Her başvuruya resmi son tarihi ekle; yoksa “unknown” olarak işaretle ve araştırma görevi ver.</li>
+              <li>Referans için takip tarihi ve alternatif kişi belirle.</li>
+              <li>Essay taslağı için 48 saatlik plan; öğrenci yazar.</li>
+              <li>Dosya denetimini tamamla; “not needed” işaretlerini gözden geçir.</li>
+            </ul>
+            <p><strong>Kaçınılacak:</strong> “Dosyan hazır” demek; yalnızca yüzdeye bakmak.</p>
+          </div>
+        </div>
+
+        <div class="callout practice">
+          <strong>Vaka değerlendirme rubriği.</strong> Her vakada şu üç soruya cevap ver: (1) Öğrencinin sahipliğini
+          korudum mu? (2) Güvenlik/etik sınırı uyguladım mı? (3) Dosyada kanıtlanabilir bir sonraki adım bıraktım mı?
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m15">
+        <div class="module-head">
+          <div class="module-no">15</div>
+          <div>
+            <h2>Onboarding, süpervizyon ve yeterlilik</h2>
+            <p class="module-sub">Okumak yetmez; deneyimli bir coach'un görüşmelerini izle, birlikte çalış ve imzalı kontrolle ilerle.</p>
+          </div>
+        </div>
+
+        <h3>15.1 Öğrenme yolu</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Aşama</th><th>Ne yapılır?</th><th>Kanıt</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1. Oku</td><td>Bu el kitabının 0-6. bölümleri; sözlük ve kaynaklar.</td><td>Kısa not + knowledge check</td></tr>
+              <tr><td>2. Gözlemle</td><td>Deneyimli bir coach'un en az 2 görüşmesini izle; gözlem formunu doldur.</td><td>Gözlem notu</td></tr>
+              <tr><td>3. Birlikte yap</td><td>Bir örnek dosyayı programme lead ile kur; bir görüşmeyi birlikte yönet.</td><td>Dosya denetimi</td></tr>
+              <tr><td>4. Gözetimli yönet</td><td>1-2 öğrenciyi haftalık süpervizyonla yönet.</td><td>Görüşme notları + review</td></tr>
+              <tr><td>5. Bağımsız</td><td>Yeterlilik kontrolünden sonra kendi caseload'unu yönet.</td><td>İmzalı sign-off</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>15.2 30-60-90 gün planı</h3>
+        <div class="grid grid-3">
+          <div class="card card-accent">
+            <span class="pill orange">0-30 gün</span>
+            <h4>Temel</h4>
+            <ul class="plain">
+              <li>FBA ve rol sınırlarını öğren.</li>
+              <li>Student File'da örnek dosya kur.</li>
+              <li>Deneyimli bir coach'un 2 görüşmesini izle.</li>
+              <li>Güvenlik/gizlilik senaryolarını çalış.</li>
+            </ul>
+          </div>
+          <div class="card card-navy">
+            <span class="pill">31-60 gün</span>
+            <h4>Gözetimli uygulama</h4>
+            <ul class="plain">
+              <li>1-2 öğrenciyle birlikte çalış.</li>
+              <li>Her görüşme sonrası kısa süpervizyon.</li>
+              <li>Dosya denetimi ve geri bildirim.</li>
+              <li>Zor konuşma rol-play'i.</li>
+            </ul>
+          </div>
+          <div class="card card-green">
+            <span class="pill green">61-90 gün</span>
+            <h4>Bağımsızlık</h4>
+            <ul class="plain">
+              <li>Kendi caseload'unu yönet.</li>
+              <li>Aylık vaka review'ına katıl.</li>
+              <li>Dosya kalitesi ve öğrenci geri bildirimi.</li>
+              <li>Yeterlilik sign-off'u.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>15.3 Süpervizyon</h3>
+        <ul>
+          <li>Haftalık kısa check-in: aktif vakalar, riskler, takıldığın yer.</li>
+          <li>Aylık vaka review: bir dosyayı birlikte aç; hedef, kanıt, son tarih, sınır kontrolü.</li>
+          <li>Çeyrek değerlendirme: güçlü yönler, gelişim alanı, sonraki eğitim.</li>
+          <li>Acil durumlarda süpervizyon bekleme; protokolü uygula ve derhal bildir.</li>
+        </ul>
+
+        <h3>15.4 Yeterlilik rubriğin</h3>
+        <p>Her ölçüt 1-4 arası değerlendirilir. Bağımsız çalışma için tüm ölçütlerde en az 3; güvenlik ve gizlilikte 4
+          gerekir.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Ölçüt</th><th>1 — Başlangıç</th><th>2 — Gelişiyor</th><th>3 — Gözetimle hazır</th><th>4 — Bağımsız</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>FBA bilgisi</td><td>Karıştırıyor</td><td>Temel doğru</td><td>Doğru anlatıyor</td><td>Nuansı ve sınırı açıklıyor</td></tr>
+              <tr><td>Rol sınırları</td><td>Sık aşıyor</td><td>Hatırlatmayla</td><td>Tutarlı</td><td>Örnek davranış</td></tr>
+              <tr><td>Student File</td><td>Kullanamıyor</td><td>Temel işlemler</td><td>Doğru kuruyor</td><td>Denetim ve devir yapıyor</td></tr>
+              <tr><td>Hedef belirleme</td><td>Hedefi sen seçiyorsun</td><td>Sorular eksik</td><td>Öğrenci sahipliği var</td><td>Gerçekçi, kanıtlı, esnek</td></tr>
+              <tr><td>Görüşme yönetimi</td><td>Dağınık</td><td>Gündem var</td><td>Zamanında ve odaklı</td><td>Öğrenciyi konuşturuyor</td></tr>
+              <tr><td>Görev takibi</td><td>Takipsiz</td><td>Düzensiz</td><td>Düzenli</td><td>Engel teşhisi + revize plan</td></tr>
+              <tr><td>Belgeleme</td><td>Yok/gecikmiş</td><td>Eksik</td><td>Zamanında ve net</td><td>Devredilebilir kalite</td></tr>
+              <tr><td>İletişim</td><td>Belirsiz/savunmacı</td><td>Kibar ama yüzeysel</td><td>Net ve saygılı</td><td>Zor konuşmayı yönetiyor</td></tr>
+              <tr><td>Safeguarding</td><td>Protokolü bilmiyor</td><td>Hatırlatmayla</td><td>Doğru uygular</td><td>Önleyici ve sakin</td></tr>
+              <tr><td>Eşitlik/erişilebilirlik</td><td>Varsayım yapıyor</td><td>Farkında</td><td>Uyarlıyor</td><td>Kapsayıcı tasarlıyor</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>15.5 Bilgi kontrolün</h3>
+        <p>Aşağıdaki soruları cevapla; sonra cevap anahtarıyla karşılaştır. 15/18 altındaysa ilgili bölümleri yeniden
+          oku.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Soru</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>FBA'nın fiziki merkez planı var mı? Fiziki mekân nerede kullanılır?</td></tr>
+              <tr><td>2</td><td>Sen hangi üç şeyi garanti edemezsin?</td></tr>
+              <tr><td>3</td><td>Student File'da mentor görünümü neyi değiştirebilir, neyi değiştiremez?</td></tr>
+              <tr><td>4</td><td>Readiness yüzdesi neyi ölçer, neyi ölçmez?</td></tr>
+              <tr><td>5</td><td>İlk görüşmenin dört çıktısı ne olmalı?</td></tr>
+              <tr><td>6</td><td>Öğrenci “essay'imi sen yaz” derse ne yaparsın?</td></tr>
+              <tr><td>7</td><td>Veli öğrencinin özel görüşme notlarını isterse ne yaparsın?</td></tr>
+              <tr><td>8</td><td>Öğrenci kendine zarar vermeyi düşündüğünü söylerse ilk üç adım ne?</td></tr>
+              <tr><td>9</td><td>Göçmenlik/vize sorusunda senin rolün nedir?</td></tr>
+              <tr><td>10</td><td>Görev iki kez üst üste yapılmazsa ne yaparsın?</td></tr>
+              <tr><td>11</td><td>Burs dolandırıcılığının üç kırmızı bayrağı nedir?</td></tr>
+              <tr><td>12</td><td>IB Diploma'sını kim verir? FBA'nın rolü nedir?</td></tr>
+              <tr><td>13</td><td>CEMC resmi sınavına öğrenci tek başına kaydolabilir mi?</td></tr>
+              <tr><td>14</td><td>Trades yolunda hangi üç somut adım vardır?</td></tr>
+              <tr><td>15</td><td>Saatler ve caseload nasıl belirlenir?</td></tr>
+              <tr><td>16</td><td>Öğrenci hedefi değiştiğinde dosyada ne yapılır?</td></tr>
+              <tr><td>17</td><td>Görüşme notu ne zaman ve nasıl yazılır?</td></tr>
+              <tr><td>18</td><td>Kendi kapasiteni aştığında ne yaparsın?</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Cevap anahtarı</h4>
+        <ol class="two-col small">
+          <li>Yok. Fiziki mekân yalnızca aylık deneme sınavı için kullanılır.</li>
+          <li>Kabul, burs ve vize/immigration sonucu.</li>
+          <li>Not, request ve yorum ekleyebilir; öğrenci içeriğini değiştiremez.</li>
+          <li>Gereksinim tamamlama/kanıt durumunu; kabul olasılığını ölçmez.</li>
+          <li>Güven, hedef, profil/dosya, ilk 2 haftalık action.</li>
+          <li>Reddet; yapı/outline/geri bildirim ver; öğrenci yazar.</li>
+          <li>Gizlilik sınırını açıkla; gelişim özeti paylaş; lead'e danış.</li>
+          <li>911 (gerekirse), yalnız bırakma, programme lead'e bildir.</li>
+          <li>Yetkili uzmana yönlendirmek; tavsiye vermemek.</li>
+          <li>Deseni konuş, planı revize et, veli desteğini netleştir; 3.'de lead'e bildir.</li>
+          <li>Önce ödeme, kesin kazanç vaadi, hassas bilgi/şüpheli alan adı.</li>
+          <li>IB verir; yetkili IB World School girer; FBA diploma vermez.</li>
+          <li>Hayır; okul sipariş eder. Trial exam resmi sınav değildir.</li>
+          <li>Pre-apprenticeship/uygunluk, employer sponsorluğu, Red Seal/safety tickets.</li>
+          <li>Yazılı olarak, programme lead ile ve düzenli görüşme yüküne göre.</li>
+          <li>Gerekçeyi yaz, eski hedefi silme, yeni plan/tarih koy.</li>
+          <li>Aynı gün, en geç 24 saat; karar/görev/tarih/risk formatında.</li>
+          <li>Programme lead'e söyler; caseload'u büyütmez, devir/plan yapar.</li>
+        </ol>
+
+        <h3>15.6 Bağımsız çalışma sign-off'un</h3>
+        <ul class="check">
+          <li>Bu el kitabını okudum ve knowledge check'i geçtim.</li>
+          <li>Deneyimli bir coach'un en az 2 görüşmesini izledim; gözlem formunu doldurdum.</li>
+          <li>Programme lead ile örnek Student File kurdum ve denetledim.</li>
+          <li>Bir zor konuşma rol-play'ini tamamladım.</li>
+          <li>Güvenlik, gizlilik ve veri ihlali senaryolarını çalıştım.</li>
+          <li>Yeterlilik rubriğinde tüm ölçütlerden en az 3, güvenlik/gizlilikten 4 aldım.</li>
+          <li>Süpervizörümle ilk 30 gün planını imzaladım.</li>
+        </ul>
+        <p class="small">Adın: ____________________ · Süpervizör: ____________________ · Tarih: ____________</p>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <section class="module" id="m16">
+        <div class="module-head">
+          <div class="module-no">16</div>
+          <div>
+            <h2>Şablonlar, kontrol listeleri, sözlük ve kaynaklar</h2>
+            <p class="module-sub">Günlük işinde doğrudan kullanacağın kısa araçlar.</p>
+          </div>
+        </div>
+
+        <h3>16.1 İlk görüşme kontrol listen</h3>
+        <ul class="check">
+          <li>Rol, gizlilik ve veli iletişimi açıklandı.</li>
+          <li>Öğrencinin kendi hedefi ve “neden”i dinlendi.</li>
+          <li>Profil, okul, grade ve iletişim bilgisi doğrulandı.</li>
+          <li>Pathway ve ilk application dosyası açıldı.</li>
+          <li>İlk 2-3 gereksinim ve son tarih eklendi.</li>
+          <li>En fazla 2 action, tarih ve kanıtla belirlendi.</li>
+          <li>Sonraki görüşme tarihi ve kanalı netleşti.</li>
+          <li>Görüşme notu ve veli özeti yazıldı.</li>
+        </ul>
+
+        <h3>16.2 Her görüşme öncesi kontrolün</h3>
+        <ul class="check">
+          <li>Dashboard ve son not okundu.</li>
+          <li>Önceki taahhütler kontrol edildi.</li>
+          <li>Bu oturumun tek hedefi belirlendi.</li>
+          <li>Gerekli belge/ekran hazır.</li>
+          <li>Veli katılımı/onayı net.</li>
+        </ul>
+
+        <h3>16.3 Görüşme notu şablonun</h3>
+        <div class="quote">
+          <b>Tarih:</b> [YYYY-MM-DD] · <b>Katılımcılar:</b> [öğrenci/veli/sen]<br>
+          <b>Oturum hedefi:</b> [tek cümle]<br>
+          <b>İyi gelişme:</b> [öğrencinin yaptığı somut şey]<br>
+          <b>Kararlar:</b> [1-3 madde]<br>
+          <b>Öğrenci taahhüdü:</b> [görev] — [tarih] — [kanıt]<br>
+          <b>Senin taahhüdün:</b> [ne] — [tarih]<br>
+          <b>Riskler/açık konular:</b> [varsa]<br>
+          <b>Sonraki görüşme:</b> [tarih/saat]
+        </div>
+
+        <h3>16.4 Hedef planı şablonun</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Alan</th><th>Öğrencinin cevabı</th></tr></thead>
+            <tbody>
+              <tr><td>North Star (2-5 yıl)</td><td></td></tr>
+              <tr><td>Neden bu hedef?</td><td></td></tr>
+              <tr><td>12 aylık milestone</td><td></td></tr>
+              <tr><td>90 günlük goal</td><td></td></tr>
+              <tr><td>Bu hafta 2 action</td><td></td></tr>
+              <tr><td>Kanıt ne olacak?</td><td></td></tr>
+              <tr><td>Olası engel + çözüm</td><td></td></tr>
+              <tr><td>Alternatif plan</td><td></td></tr>
+              <tr><td>Karar tarihi</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>16.5 Aylık dosya denetimin</h3>
+        <ul class="check">
+          <li>Profil/hedef güncel.</li>
+          <li>Her başvuruda son tarih var.</li>
+          <li>Gereksinimler resmi kaynakla eşleşiyor.</li>
+          <li>Kanıtlar bağlı; boşta dosya yok.</li>
+          <li>Açık request'lerin sahibi/tarihi var.</li>
+          <li>Referanslar takip ediliyor.</li>
+          <li>Son not bir sonraki adımı içeriyor.</li>
+          <li>Dosya devredilebilir durumda.</li>
+        </ul>
+
+        <h3>16.6 Veli ilerleme özetin</h3>
+        <div class="quote">
+          Sayın [Veli],<br><br>
+          [Ay] döneminde [Öğrenci] ile [sayı] görüşme yaptık. Tamamlanan somut iş: [1-2 madde].<br>
+          Şu anki odak/risk: [1 madde].<br>
+          Önümüzdeki ay öğrencinin taahhüdü: [görev/tarih]. Sizden beklenen destek: [belge/izin/ulaşım].<br><br>
+          Sorularınız için [kanal] üzerinden ulaşabilirsiniz.<br>
+          [Adın]
+        </div>
+
+        <h3>16.7 Devir teslim şablonun</h3>
+        <div class="quote">
+          <b>Öğrenci:</b> [ad] · <b>Hedef:</b> [program/yıl] · <b>Son görüşme:</b> [tarih]<br>
+          <b>Durum:</b> [2-3 cümle]<br>
+          <b>Yaklaşan son tarihler:</b> [tarih + iş]<br>
+          <b>Açık request'ler:</b> [ne, kimden, ne zaman]<br>
+          <b>Riskler:</b> [varsa]<br>
+          <b>İlişki/motivasyon notu:</b> [saygılı, gerekli ölçüde]<br>
+          <b>Önerilen sonraki adım:</b> [tek cümle]
+        </div>
+
+        <h3>16.8 Acil durum konuşma script'in</h3>
+        <div class="quote">
+          “Bunu benimle paylaştığın için teşekkür ederim. Şu anda güvende misin? Kendine zarar vermeyi düşünüyor
+          musun? [Cevabı dinle.] Benim rolüm seni güvende tutmak ve doğru desteğe yönlendirmek. Şimdi [911 / programme
+          lead / veli] ile iletişime geçiyorum. Seni yalnız bırakmayacağım.”
+        </div>
+
+        <h3>16.9 Sözlük</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Terim</th><th>Anlam</th></tr></thead>
+            <tbody>
+              <tr><td>AP</td><td>Advanced Placement; College Board sınavları. Üniversite kredisi/placement politikası kuruma göre değişir.</td></tr>
+              <tr><td>Apprenticeship</td><td>İş başında eğitim + sınıf eğitimiyle meslek öğrenme; genellikle employer sponsorluğu gerekir.</td></tr>
+              <tr><td>Bursary</td><td>Çoğunlukla ihtiyaç/topluluk temelli hibe; geri ödenmez.</td></tr>
+              <tr><td>CEMC</td><td>University of Waterloo'nın matematik/bilgisayar yarışma programı.</td></tr>
+              <tr><td>College</td><td>Uygulamalı diploma, certificate veya degree programları sunan kurum; ülkeye/eyalete göre anlamı değişir.</td></tr>
+              <tr><td>Coop</td><td>Eğitimle ücretli iş deneyimini birleştiren program.</td></tr>
+              <tr><td>Dual credit</td><td>Lise öğrencisinin aynı anda college/üniversite kredisi alması.</td></tr>
+              <tr><td>IB</td><td>International Baccalaureate; Diploma Programme 16-19 yaş için iki yıllık program.</td></tr>
+              <tr><td>OSAP</td><td>Ontario Student Assistance Program; Ontario öğrenci yardımı.</td></tr>
+              <tr><td>OUAC</td><td>Ontario Universities' Application Centre; Ontario üniversite başvuru merkezi.</td></tr>
+              <tr><td>Pathway</td><td>Lise sonrası eğitim/kariyer yolu.</td></tr>
+              <tr><td>Prerequisite</td><td>Bir ders/program için önkoşul.</td></tr>
+              <tr><td>Predicted grade</td><td>Okulun/öğretmenin dönem sonu için öngördüğü not.</td></tr>
+              <tr><td>Red Seal</td><td>Kanada'da trades mesleklerinde eyaletler arası sertifika standardı.</td></tr>
+              <tr><td>Scholarship</td><td>Çoğunlukla merit/yarışma temelli hibe; geri ödenmez.</td></tr>
+              <tr><td>Transcript</td><td>Resmi not dökümü.</td></tr>
+              <tr><td>Trades</td><td>Elektrik, tesisat, marangozluk gibi uygulamalı meslekler; apprenticeship yolu.</td></tr>
+              <tr><td>UCAS</td><td>İngiltere üniversite başvuru sistemi.</td></tr>
+              <tr><td>Waitlist</td><td>Kabul/red arası yedek liste.</td></tr>
+              <tr><td>Work-study</td><td>Kampüs içi/iş bağlantılı finansal yardım programı.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>16.10 Resmi kaynaklar</h3>
+        <p>Bu el kitabındaki bilgiler zamanla değişebilir. Aşağıdaki kaynakları her dönem başında kontrol et:</p>
+        <ul>
+          <li><strong>FBA iç sayfaları:</strong> <a href="../../about-us.html">About us</a>, <a href="../../programs.html">Programmes</a>, <a href="../../how-it-works.html">How it works</a>, <a href="../../mock-exams.html">Mock exams</a>, <a href="../../cemc-trial-exams.html">CEMC trial exams</a>, <a href="../../ib-diploma.html">IB Diploma</a>, <a href="../../volunteer-role-career-coach.html">Career coach role</a>.</li>
+          <li><strong>Student File:</strong> FBA içindeki “StudentFile · Application Prep” uygulaması ve bu el kitabının 5. bölümü.</li>
+          <li><strong>B.C. K-12:</strong> <a href="https://www2.gov.bc.ca/gov/content/education-training/k-12" target="_blank" rel="noopener">gov.bc.ca</a> · <a href="https://educationplannerbc.ca/" target="_blank" rel="noopener">EducationPlannerBC</a></li>
+          <li><strong>Ontario:</strong> <a href="https://www.ontario.ca/page/high-school-graduation-requirements" target="_blank" rel="noopener">Ontario graduation requirements</a> · <a href="https://www.ouac.on.ca/" target="_blank" rel="noopener">OUAC</a></li>
+          <li><strong>Alberta:</strong> <a href="https://www.alberta.ca/graduation-requirements" target="_blank" rel="noopener">Alberta graduation requirements</a> · <a href="https://applyalberta.ca/" target="_blank" rel="noopener">ApplyAlberta</a></li>
+          <li><strong>Kanada öğrenci yardımı:</strong> <a href="https://www.canada.ca/en/services/benefits/education/student-aid.html" target="_blank" rel="noopener">Canada student aid</a></li>
+          <li><strong>CEMC:</strong> <a href="https://cemc.uwaterloo.ca/contests" target="_blank" rel="noopener">cemc.uwaterloo.ca/contests</a></li>
+          <li><strong>IB:</strong> <a href="https://www.ibo.org/programmes/diploma-programme/" target="_blank" rel="noopener">ibo.org Diploma Programme</a></li>
+          <li><strong>AP:</strong> <a href="https://ap.collegeboard.org/" target="_blank" rel="noopener">ap.collegeboard.org</a></li>
+          <li><strong>Red Seal:</strong> <a href="https://www.red-seal.ca/" target="_blank" rel="noopener">red-seal.ca</a></li>
+          <li><strong>Gizlilik:</strong> <a href="https://www.priv.gc.ca/" target="_blank" rel="noopener">Office of the Privacy Commissioner of Canada</a></li>
+        </ul>
+        <div class="callout warn">
+          <strong>Kaynak kuralı.</strong> Bir tarih, ücret, kontenjan veya kabul koşulu konuşuyorsan mutlaka resmi
+          kaynağı aç ve erişim tarihini not et. Blog, forum, eski YouTube videosu veya kulaktan duyma bilgi kaynak
+          değildir.
+        </div>
+
+        <div class="callout ok">
+          <strong>Senin taahhüdün.</strong> Öğrencinin adına değil, öğrenciyle çalışacağım. Hedefi onun seçmesine,
+          kanıtı onun üretmesine ve kararı onun vermesine yardım edeceğim. Kabul, burs veya vize garantisi vermeyeceğim.
+          Şüphede kaldığımda sınırı koruyup programme lead'e soracağım.
+        </div>
+        <a class="back" href="#toc">↑ İçindekiler</a>
+      </section>
+
+      <footer class="footer">
+        <p><b>Career Coach Eğitim El Kitabı</b> · Future Bridge Academy</p>
+        <p>Bu el kitabı iç eğitim amaçlıdır. Hukuki, tıbbi veya finansal tavsiye değildir. Resmi gereklilikler
+          için ilgili kurumun güncel sayfası ve programme lead'in onayı esastır. FBA'nın fiziki merkez planı yoktur;
+          fiziki mekân yalnızca aylık deneme sınavı için kullanılır.</p>
+      </footer>
+
+    </div>
+  </main>
+</div>
+</body>
+</html>
