@@ -1,4 +1,4 @@
-/* js build 2026-11-18-49 */
+/* js build 2026-11-18-60 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-49';
+var TOOL_BUILD = '2026-11-18-60';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 // Boot diagnostic: is the large-file download channel present in this CMS build?
 (function logFileChannelAvailability() {
@@ -15,7 +15,6 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
     console.log('[TOOL:BOOT] large-file download channel: ' + (channelPresent ? 'requestFileBinary available' : 'requestFileBinary MISSING'));
     console.log('[TOOL:BOOT] PDF renderer: ' + (pdfJsLibraryAvailable() ? 'PDF.js injected' : 'PDF.js NOT injected (PDF page preview disabled)'));
     console.log('[TOOL:BOOT] OCR engine: ' + describeOcrEngine());
-    console.log('[TOOL:BOOT] file settings probe: ' + JSON.stringify(collectToolCapabilitySnapshot().paramProbe));
     var bootBadge = document.getElementById('tool-build-badge');
     if (bootBadge) bootBadge.textContent = 'build ' + TOOL_BUILD + ' · waiting for CMS…';
   } catch (probeError) { console.warn('[TOOL:BOOT] could not probe the download channel:', probeError); }
@@ -74,6 +73,7 @@ function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
 var sections = [];               // section tree from curriculum (sections can nest via `children`)
+var mainDocuments = [];          // reference PDFs in CMS storage: { id, name, url, sizeKb, addedAt }
 var curriculumLanguage = '';     // language saved with the curriculum (default OCR language)
 var studioOcrLanguageOverride = ''; // per-document OCR language chosen in the Process drawer
 var editingSectionIdx = null;    // Index being edited in editingSectionParent
@@ -227,24 +227,24 @@ function canUseLessonDocs() {
   return typeof tool.requestObjects === 'function';
 }
 
-/** Extract heavy fields from a lesson object for the lesson doc */
+/** Build the lesson-doc payload from a lesson object.
+ *  Only fields the object actually OWNS are included: after the heavy fields
+ *  were moved to the lesson doc the main-doc copy no longer owns them, so an
+ *  update must not write null over the content already stored in the doc. */
 function extractHeavyLessonData(les) {
-  return {
+  var docPayload = {
     curriculumId: tool.param('builderObjectId', '') || null,
     lessonId: les.id || null,
-    title: les.title || '',
-    content: les.content || null,
-    htmlCode: les.htmlCode || null,
-    studyHtmlData: les.studyHtmlData || null,
-    studyDocSources: les.studyDocSources || null,
-    studyDocImages: les.studyDocImages || null,
-    studyDocGenerated: les.studyDocGenerated || null,
-    presentationHtml: les.presentationHtml || null,
-    flashcards: les.flashcards || null,
-    quiz: les.quiz || null,
-    sourceUrls: les.sourceUrls || null,
-    hiddenSections: les.hiddenSections || null
+    title: les.title || ''
   };
+  for (var fieldIndex = 0; fieldIndex < HEAVY_LESSON_FIELDS.length; fieldIndex++) {
+    var fieldName = HEAVY_LESSON_FIELDS[fieldIndex];
+    if (Object.prototype.hasOwnProperty.call(les, fieldName)) docPayload[fieldName] = les[fieldName];
+  }
+  // hiddenSections is small and stays in the main doc too, but the lesson doc
+  // keeps a copy. Only copy it when the object owns the field.
+  if (Object.prototype.hasOwnProperty.call(les, 'hiddenSections')) docPayload.hiddenSections = les.hiddenSections;
+  return docPayload;
 }
 
 /* ── 1MB Guard: heavy lesson content lives in lesson docs, NOT the main doc ──
@@ -252,6 +252,9 @@ function extractHeavyLessonData(les) {
    These helpers keep only light metadata in the main doc and mirror heavy
    fields (content, htmlCode, studyHtmlData, presentationHtml, flashcards,
    quiz, sourceUrls) exclusively to curriculum-lessons-uniconbase docs. */
+/* studyDocOrigins is deliberately NOT listed here: it is only a small map of
+   original URLs. Listing it made every already-optimized lesson look "heavy"
+   again on load, which re-ran the migration and overwrote the lesson docs. */
 var HEAVY_LESSON_FIELDS = ['content', 'htmlCode', 'studyHtmlData', 'presentationHtml', 'flashcards', 'quiz', 'sourceUrls', 'studyDocSources', 'studyDocImages', 'studyDocGenerated'];
 
 function hasHeavyLessonFields(les) {
@@ -405,6 +408,19 @@ function backfillLessonSummariesIfNeeded() {
   }
 }
 
+/** Merge a fresh lesson payload over the data already stored in the lesson
+ *  doc. Fields the lesson object no longer owns are absent from the payload,
+ *  so the stored values survive an update. */
+function mergeLessonDocPayload(existingDocData, freshDocPayload) {
+  var mergedDocData = (existingDocData && typeof existingDocData === 'object' && !Array.isArray(existingDocData)) ? existingDocData : {};
+  var payloadKeys = Object.keys(freshDocPayload);
+  for (var keyIndex = 0; keyIndex < payloadKeys.length; keyIndex++) {
+    var keyName = payloadKeys[keyIndex];
+    if (freshDocPayload[keyName] !== undefined) mergedDocData[keyName] = freshDocPayload[keyName];
+  }
+  return mergedDocData;
+}
+
 /** Create or update a lesson doc. Returns lessonDocId via callback. */
 function saveLessonDoc(lessonObj, callback) {
   if (!canUseLessonDocs()) {
@@ -415,16 +431,38 @@ function saveLessonDoc(lessonObj, callback) {
   var lessonDocId = lessonObj.lessonDocId;
   
   if (lessonDocId) {
-    // Update existing lesson doc
-    tool.requestObjects('update', {
+    // Update existing lesson doc: read first, then merge, so a lesson object
+    // whose heavy fields were already moved out can never erase the content.
+    tool.requestObjects('get', {
       mainObjectType: LESSON_DOC_TYPE,
-      objectId: lessonDocId,
-      name: lessonObj.title || 'Lesson',
-      productData: { data_categoriesBased: { lessonJson: JSON.stringify(heavyData) } }
-    }, function(err) {
-      if (err) { console.warn('Lesson doc update failed:', err); }
-      // Don't pass docId — it already exists, no need to re-save main doc
-      if (callback) callback(err);
+      objectId: lessonDocId
+    }, function(readErr, readResult) {
+      if (readErr) {
+        console.warn('Lesson doc update skipped - the existing doc could not be read:', readErr);
+        if (callback) callback(readErr);
+        return;
+      }
+      var existingDocData = {};
+      try {
+        var readProductData = readResult && readResult.object && readResult.object.productData;
+        var readLessonJson = readProductData && readProductData.data_categoriesBased && readProductData.data_categoriesBased.lessonJson;
+        existingDocData = readLessonJson ? JSON.parse(readLessonJson) : {};
+      } catch (readParseError) {
+        console.warn('Lesson doc update stopped - the existing doc data could not be parsed:', readParseError);
+        if (callback) callback(readParseError);
+        return;
+      }
+      var mergedDocData = mergeLessonDocPayload(existingDocData, heavyData);
+      tool.requestObjects('update', {
+        mainObjectType: LESSON_DOC_TYPE,
+        objectId: lessonDocId,
+        name: lessonObj.title || 'Lesson',
+        productData: { data_categoriesBased: { lessonJson: JSON.stringify(mergedDocData) } }
+      }, function(err) {
+        if (err) { console.warn('Lesson doc update failed:', err); }
+        // Don't pass docId — it already exists, no need to re-save main doc
+        if (callback) callback(err);
+      });
     });
   } else {
     // Create new lesson doc
@@ -461,19 +499,30 @@ function loadLessonDoc(lessonObj, callback) {
       var pd = result.object.productData;
       var raw = pd && pd.data_categoriesBased && pd.data_categoriesBased.lessonJson;
       var docData = raw ? JSON.parse(raw) : {};
-      // Merge: lesson doc data wins, fall back to main doc for any missing fields
+      // Merge: lesson doc data wins, but an EMPTY doc value must never hide
+      // real content that still lives in the main doc (a wiped or partial
+      // lesson doc would otherwise look like lost content).
       var merged = JSON.parse(JSON.stringify(lessonObj));
-      if (docData.content !== undefined) merged.content = docData.content;
-      if (docData.htmlCode !== undefined) merged.htmlCode = docData.htmlCode;
-      if (docData.studyHtmlData !== undefined) merged.studyHtmlData = docData.studyHtmlData;
-      if (docData.studyDocSources !== undefined) merged.studyDocSources = docData.studyDocSources;
-      if (docData.studyDocImages !== undefined) merged.studyDocImages = docData.studyDocImages;
-      if (docData.studyDocGenerated !== undefined) merged.studyDocGenerated = docData.studyDocGenerated;
-      if (docData.presentationHtml !== undefined) merged.presentationHtml = docData.presentationHtml;
-      if (docData.flashcards !== undefined) merged.flashcards = docData.flashcards;
-      if (docData.quiz !== undefined) merged.quiz = docData.quiz;
-      if (docData.sourceUrls !== undefined) merged.sourceUrls = docData.sourceUrls;
-      if (docData.hiddenSections !== undefined) merged.hiddenSections = docData.hiddenSections;
+      function applyDocField(fieldName) {
+        var docValue = docData[fieldName];
+        if (docValue === undefined) return;
+        var mainDocValue = merged[fieldName];
+        var docValueIsEmpty = (docValue === null || docValue === '' || (Array.isArray(docValue) && !docValue.length));
+        if (docValueIsEmpty && mainDocValue) return;
+        merged[fieldName] = docValue;
+      }
+      applyDocField('content');
+      applyDocField('htmlCode');
+      applyDocField('studyHtmlData');
+      applyDocField('studyDocSources');
+      applyDocField('studyDocImages');
+      applyDocField('studyDocGenerated');
+      applyDocField('studyDocOrigins');
+      applyDocField('presentationHtml');
+      applyDocField('flashcards');
+      applyDocField('quiz');
+      applyDocField('sourceUrls');
+      applyDocField('hiddenSections');
       if (callback) callback(null, merged);
     } catch(e) {
       console.warn('Lesson doc parse error, using main doc data:', e);
@@ -2876,6 +2925,8 @@ function loadCurriculum(val) {
     return;
   }
   sections = receivedSections ? curriculumValue.sections : [];
+  mainDocuments = normalizeMainDocumentList(curriculumValue && curriculumValue.mainDocuments);
+  renderMainDocumentsList();
   console.log('[CURRICULUM:LOAD] ' + sections.length + ' section(s) · value type: ' + (val === null ? 'null' : typeof val) + (receivedSections ? '' : ' · NO sections array in the CMS value'));
   if (val && typeof val === 'object' && !Array.isArray(val)) {
     console.log('[CURRICULUM:LOAD] value keys: ' + Object.keys(val).slice(0, 12).join(', '));
@@ -2935,6 +2986,9 @@ function requestParentSave() {
 function buildCurriculumValueForCms() {
   var curriculumValue = { sections: sections };
   if (curriculumLanguage) curriculumValue.language = curriculumLanguage;
+  // Reference documents live with the curriculum so every lesson can reach
+  // them. Only metadata is stored here - the files themselves stay in CMS storage.
+  if (mainDocuments.length) curriculumValue.mainDocuments = mainDocuments;
   return JSON.parse(JSON.stringify(curriculumValue));
 }
 
@@ -2955,18 +3009,32 @@ function syncStudioOcrLanguageSelect() {
   if (languageSelect) languageSelect.value = studioOcrLanguageOverride || '';
 }
 
+/** Single write path for the curriculum record.
+ *  Refuses to write an empty section list once this session has already seen
+ *  curriculum content: a failed load or a stripped in-memory copy must never
+ *  erase the saved record. */
+function writeCurriculumValueToCms(saveReason) {
+  if (!sections.length && curriculumHadSectionsThisSession) {
+    console.warn('[CURRICULUM:SAVE] blocked an empty write (' + saveReason + ') - the CMS record keeps its last saved content · build ' + TOOL_BUILD);
+    tool.notify('Save blocked: the tool would have written an empty curriculum. Use "Reload data" first.', 'warning');
+    return false;
+  }
+  tool.reportValid(true, '');
+  tool.setValue(buildCurriculumValueForCms());
+  return true;
+}
+
 function saveCurriculum(callback) {
   if (tool.isReadOnly()) {
     tool.notify('Cannot save — the form is in read-only mode.', 'warning');
     if (callback) callback('read-only');
     return;
   }
+  if (!writeCurriculumValueToCms('saveCurriculum')) {
+    if (callback) callback('empty-blocked');
+    return;
+  }
   lastSaveRequestedAt = Date.now();
-  // Deep-clone to avoid any reference issues
-  var data = buildCurriculumValueForCms();
-  // Ensure CMS validation passes
-  tool.reportValid(true, '');
-  tool.setValue(data);
   requestParentSave();  // immediate Firestore commit when the CMS allows it
   // Re-render immediately (onValueChange may only fire for external changes)
   renderSections();
@@ -3063,7 +3131,7 @@ function sectionCardHtml(s, depth) {
         var quizIndicator = quizCount > 0 ? '✅ ' + quizCount + ' Q' : '—';
         var docLinkBtn = (isDeveloper() && les.lessonDocId) ? '<button class="btn btn-sm" data-open-doc="' + esc(les.lessonDocId) + '" title="Open lesson Firestore document in new tab" style="padding:2px 8px;font-size:11px;border:1px solid #c4b5fd;border-radius:4px;background:#f5f3ff;color:#7c3aed;cursor:pointer;font-family:inherit">📄</button>' : '';
         return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong> ' + docLinkBtn + '</td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
-          '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les="' + secId + ':' + lesRealIdx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-les="' + secId + ':' + lesRealIdx + '">🗑</button><button class="btn btn-sm btn-gen" data-gen-les="' + secId + ':' + lesRealIdx + '" title="Serially generate missing AI content for this lesson — already-filled content is skipped">🚀</button></div></td></tr>';
+          '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les="' + secId + ':' + lesRealIdx + '">✏️</button><button class="btn btn-sm btn-outline" data-move-les="' + secId + ':' + lesRealIdx + '" title="Move this lesson to another section">↔</button><button class="btn btn-sm btn-danger" data-del-les="' + secId + ':' + lesRealIdx + '">🗑</button><button class="btn btn-sm btn-gen" data-gen-les="' + secId + ':' + lesRealIdx + '" title="Serially generate missing AI content for this lesson — already-filled content is skipped">🚀</button></div></td></tr>';
       }).join('') + '</tbody></table>'
       : '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No lessons yet. Click "+ Add Lesson" above to add one.</div>'
     ) +
@@ -3102,6 +3170,10 @@ function bindSectionTreeEvents(container) {
   each('[data-del-les]', function() {
     var parts = this.getAttribute('data-del-les').split(':');
     deleteLessonDirect(parts[0], parseInt(parts[1]));
+  });
+  each('[data-move-les]', function() {
+    var moveParts = this.getAttribute('data-move-les').split(':');
+    openMoveLessonDialog(moveParts[0], parseInt(moveParts[1], 10));
   });
   each('[data-gen-les]', function() {
     var parts = this.getAttribute('data-gen-les').split(':');
@@ -3292,6 +3364,7 @@ function startAddLesson() {
   editingStudyDocImages = [];
   editingStudyDocSources = [];
   editingStudyDocImagesMap = {};
+  editingStudyDocOriginMap = {};
   studioCurrentDocUrl = '';
   renderPdfEditorList();
   editingPresentationHtml = '';
@@ -3338,6 +3411,7 @@ function populateEditorFromLesson(les) {
   editingStudyDocSources = (les.studyDocSources && Array.isArray(les.studyDocSources)) ? JSON.parse(JSON.stringify(les.studyDocSources)) : [];
   editingStudyDocImagesMap = (les.studyDocImages && typeof les.studyDocImages === 'object' && !Array.isArray(les.studyDocImages)) ? JSON.parse(JSON.stringify(les.studyDocImages)) : {};
   editingStudyDocGeneratedHtmlMap = (les.studyDocGenerated && typeof les.studyDocGenerated === 'object' && !Array.isArray(les.studyDocGenerated)) ? JSON.parse(JSON.stringify(les.studyDocGenerated)) : {};
+  editingStudyDocOriginMap = (les.studyDocOrigins && typeof les.studyDocOrigins === 'object' && !Array.isArray(les.studyDocOrigins)) ? JSON.parse(JSON.stringify(les.studyDocOrigins)) : {};
   studioGeneratedHtml = '';
   editingStudyDocImages = [];
   studioCurrentDocUrl = '';
@@ -3414,6 +3488,7 @@ function saveLessonFromEditor() {
     studyDocSources: editingStudyDocSources.length > 0 ? JSON.parse(JSON.stringify(editingStudyDocSources)) : null,
     studyDocImages: Object.keys(editingStudyDocImagesMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocImagesMap)) : null,
     studyDocGenerated: Object.keys(editingStudyDocGeneratedHtmlMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocGeneratedHtmlMap)) : null,
+    studyDocOrigins: Object.keys(editingStudyDocOriginMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocOriginMap)) : null,
     presentationHtml: editingPresentationHtml || null,
     hiddenSections: editingHiddenSections.length > 0 ? JSON.parse(JSON.stringify(editingHiddenSections)) : null,
     flashcards: editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null,
@@ -3591,6 +3666,7 @@ function autoSaveCurrentLesson() {
   targetLesson.studyDocSources = editingStudyDocSources.length > 0 ? JSON.parse(JSON.stringify(editingStudyDocSources)) : null;
   targetLesson.studyDocImages = Object.keys(editingStudyDocImagesMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocImagesMap)) : null;
   targetLesson.studyDocGenerated = Object.keys(editingStudyDocGeneratedHtmlMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocGeneratedHtmlMap)) : null;
+  targetLesson.studyDocOrigins = Object.keys(editingStudyDocOriginMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocOriginMap)) : null;
   targetLesson.presentationHtml = editingPresentationHtml || null;
   targetLesson.flashcards = editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null;
   targetLesson.quiz = editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null;
@@ -3611,8 +3687,7 @@ function autoSaveCurrentLesson() {
   // limit. If lesson docs are unavailable or the write fails, the heavy
   // content stays in the main document as a fallback.
   if (!canUseLessonDocs()) {
-    tool.reportValid(true, '');
-    tool.setValue(buildCurriculumValueForCms());
+    if (!writeCurriculumValueToCms('lesson autosave without lesson docs')) { updateAllVisToggles(); return; }
     requestParentSave();
     updateAllVisToggles();
     return;
@@ -3631,9 +3706,7 @@ function autoSaveCurrentLesson() {
     } else {
       stripHeavyLessonFields(targetLesson);
     }
-    tool.reportValid(true, '');
-    tool.setValue(buildCurriculumValueForCms());
-    requestParentSave();
+    if (writeCurriculumValueToCms('lesson autosave')) requestParentSave();
     updateAllVisToggles();
   });
 }
@@ -3672,6 +3745,7 @@ function startAddLessonDirect(sectionId) {
   editingStudyDocImages = [];
   editingStudyDocSources = [];
   editingStudyDocImagesMap = {};
+  editingStudyDocOriginMap = {};
   studioCurrentDocUrl = '';
   renderPdfEditorList();
   editingPresentationHtml = '';
@@ -4242,6 +4316,7 @@ function renderPdfEditorList() {
     var roleBadge = row.role === 'real' ? '<span class="doc-role-badge real">✅ Ready</span>' : '<span class="doc-role-badge source">🧭 Sample</span>';
     var imageCount = studioDocImageCount(row.url);
     var imageNote = imageCount ? ' · 🖼 ' + imageCount + ' image(s)' : '';
+    var originUrl = studioDocOriginUrl(row.url);
     var visibilityChip = row.role === 'real'
       ? (isHidden ? '<span class="doc-vis-chip hidden" title="Students cannot see this document">🙈 Hidden</span>' : '<span class="doc-vis-chip" title="Students can see this document">👁 Visible</span>')
       : '';
@@ -4249,12 +4324,26 @@ function renderPdfEditorList() {
       ? '<button class="btn btn-sm btn-outline doc-icon-btn" data-edit-pdf="' + row.type + ':' + row.idx + '" title="Edit this document (role, visibility, URL, delete)">✏️</button>'
       : '<button class="btn btn-sm btn-outline doc-icon-btn" data-edit-source="' + esc(row.url) + '" title="Edit this sample document (role, URL, delete)">✏️</button>';
     var downloadButton = '<button class="btn btn-sm btn-outline doc-icon-btn" data-download-doc="' + esc(row.url) + '" title="Download this file to your device">⬇</button>';
+    var originButton = originUrl
+      ? '<button class="btn btn-sm btn-outline doc-icon-btn" data-open-origin="' + esc(originUrl) + '" title="Open the original outside source in a new tab">↗</button>'
+      : '';
     var processButton = '<button class="btn btn-sm btn-primary doc-icon-btn" data-process-doc="' + esc(row.url) + '" title="Open the processing drawer for this document (extract images, upload, generate content)">⚙️</button>';
     return '<div class="source-link-editor-item"><div class="source-link-editor-item-info">' +
       '<div class="source-link-editor-item-title">' + typeBadge + roleBadge + visibilityChip + esc(displayName) + '</div>' +
-      '<div class="source-link-editor-item-meta" title="' + esc(row.url) + '">' + esc(row.url.substring(0, 70)) + imageNote + '</div></div>' +
-      '<div class="source-link-editor-item-actions">' + downloadButton + editButton + processButton + '</div></div>';
+      '<div class="source-link-editor-item-meta" title="' + esc(row.url) + '">' + esc(row.url.substring(0, 70)) + imageNote + '</div>' +
+      (originUrl ? '<div class="doc-origin-note" title="' + esc(originUrl) + '">↗ Original source: ' + esc(originUrl) + '</div>' : '') +
+      '</div>' +
+      '<div class="source-link-editor-item-actions">' + downloadButton + originButton + editButton + processButton + '</div></div>';
   }).join('');
+
+  // ↗ Open the original outside source of an imported document
+  var openOriginBtns = list.querySelectorAll('[data-open-origin]');
+  for (var oB = 0; oB < openOriginBtns.length; oB++) {
+    openOriginBtns[oB].addEventListener('click', function(e) {
+      e.stopPropagation();
+      tool.openUrl(this.getAttribute('data-open-origin'));
+    });
+  }
 
   // ⬇ Download any document straight to the device
   var downloadBtns = list.querySelectorAll('[data-download-doc]');
@@ -4328,6 +4417,14 @@ function openPdfEditor(type, idx, sourceUrl) {
   }
   if (typeSelect && !editingPdfSourceUrl) typeSelect.value = type;
   el('edit-pdf-item-url').value = urlValue;
+  var originNoteEl = el('pdf-editor-origin-note');
+  if (originNoteEl) {
+    var importedFromUrl = studioDocOriginUrl(urlValue);
+    originNoteEl.style.display = importedFromUrl ? '' : 'none';
+    originNoteEl.textContent = importedFromUrl
+      ? '↗ Downloaded from ' + importedFromUrl + ' and stored in CMS storage. The original link is kept for information only.'
+      : '';
+  }
   updatePdfEditorRoleSwitch();
   updatePdfEditorVisSwitch();
   var deleteButton = el('btn-pdf-editor-delete');
@@ -4378,6 +4475,14 @@ function setDocHiddenState(docUrl, hidden) {
   var hidx = editingHiddenDocUrls.indexOf(docUrl);
   if (hidden && hidx === -1) editingHiddenDocUrls.push(docUrl);
   if (!hidden && hidx !== -1) editingHiddenDocUrls.splice(hidx, 1);
+}
+
+/** Move the imported-source note when a document URL is edited */
+function moveStudioDocOrigin(oldDocUrl, newDocUrl) {
+  if (!oldDocUrl || !newDocUrl || oldDocUrl === newDocUrl) return;
+  if (!editingStudyDocOriginMap[oldDocUrl]) return;
+  editingStudyDocOriginMap[newDocUrl] = editingStudyDocOriginMap[oldDocUrl];
+  delete editingStudyDocOriginMap[oldDocUrl];
 }
 
 function savePdfUrl() {
@@ -4431,10 +4536,12 @@ function savePdfUrl() {
     }
     if (wantSample) {
       editingStudyDocSources.push({ url: url, name: readableFileName(url), type: targetType });
+      moveStudioDocOrigin(editingPdfSourceUrl, url);
       tool.notify('Sample document saved.', 'success');
     } else {
       getPdfArray(targetType).push(url);
       setDocHiddenState(url, wantHidden);
+      moveStudioDocOrigin(editingPdfSourceUrl, url);
       tool.notify('Document saved as Ready - students will see it and AI generation may use it.', 'success');
     }
   } else if (editingPdfIdx !== null) {
@@ -4445,10 +4552,12 @@ function savePdfUrl() {
       arr.splice(editingPdfIdx, 1);
       setDocHiddenState(oldUrl, false);
       editingStudyDocSources.push({ url: url, name: readableFileName(url), type: targetType });
+      moveStudioDocOrigin(oldUrl, url);
       tool.notify('Document saved as Sample - it is now the input for creating your own Ready document and is not shown to students.', 'info');
     } else {
       arr[editingPdfIdx] = url;
       setDocHiddenState(url, wantHidden);
+      moveStudioDocOrigin(oldUrl, url);
       tool.notify('Document saved!', 'success');
     }
   } else {
@@ -4482,6 +4591,7 @@ function deletePdfFromEditor() {
         if (editingStudyDocSources[d1].url === sampleUrl) { editingStudyDocSources.splice(d1, 1); break; }
       }
       delete editingStudyDocImagesMap[sampleUrl];
+      delete editingStudyDocOriginMap[sampleUrl];
       if (studioCurrentDocUrl === sampleUrl) closeStudioDrawer();
       closePdfEditor();
       renderPdfEditorList();
@@ -4498,6 +4608,7 @@ function deletePdfFromEditor() {
   sandboxConfirm('Delete "' + readableFileName(delUrl) + '" (' + delLabel + ')? Students will no longer see it. Content already generated from this document keeps its embedded images and is not affected.', function() {
     arr.splice(editingPdfIdx, 1);
     setDocHiddenState(delUrl, false);
+    delete editingStudyDocOriginMap[delUrl];
     closePdfEditor();
     renderPdfEditorList();
     autoSaveLessonAfterDocumentChange('document deleted');
@@ -5604,6 +5715,7 @@ var studioGeneratedHtml = '';    // generated HTML of the document open in the d
 var lastStudioTextSourceLabel = ''; // how the last generation read its text (diagnostics + generated entry)
 var editingStudyDocSources = []; // [{url, name}] - processing inputs, never shown to students
 var editingStudyDocImagesMap = {}; // { docUrl: [images] } - persisted per document
+var editingStudyDocOriginMap = {}; // { storageUrl: original outside URL } - imported documents only
 var studioCurrentDocUrl = ''; // the document currently open in the studio drawer
 var studioLocalPdfUrl = '';    // document URL that the local PDF bytes belong to
 var studioLocalPdfBytes = null; // Uint8Array of the PDF read from the user's disk (browser only)
@@ -5631,26 +5743,6 @@ var studioFileBytesInflight = {};
  *  misconfigured field is obvious instead of looking like a file-size issue. */
 var lastFileChannelFailure = '';
 var lastFileChannelFailureCode = '';
-/** Which failure code already printed its diagnostic block (once per page) */
-var fileChannelDiagnosticsPrintedFor = '';
-
-/** Print the diagnostic block once per failure code per page load */
-function logFileChannelFailureOnce(failureCode, details) {
-  if (fileChannelDiagnosticsPrintedFor === failureCode) return;
-  fileChannelDiagnosticsPrintedFor = failureCode;
-  logFileChannelDiagnostics('automatic: ' + failureCode, details);
-}
-
-/** Names of every function the CMS SDK exposes (diagnostics only) */
-function describeToolMethodNames() {
-  var methodNames = [];
-  try {
-    for (var methodName in tool) {
-      if (typeof tool[methodName] === 'function') methodNames.push(methodName);
-    }
-  } catch (toolError) { /* ignore */ }
-  return methodNames.sort().join(', ') || '(none)';
-}
 
 /** Remember why the new channel was not used */
 function recordFileChannelFailure(failureCode, fetchResult) {
@@ -5673,163 +5765,9 @@ function describeFileChannelFailure() {
   return lastFileChannelFailure;
 }
 
-/* ── Download diagnostics (console only - never shown to end users) ── */
-
-/** Hide anything that looks like a credential before printing settings */
-function redactForDiagnostics(value) {
-  if (!value || typeof value !== 'object') return value;
-  var redacted = {};
-  var keyNames = Object.keys(value).slice(0, 40);
-  for (var keyIndex = 0; keyIndex < keyNames.length; keyIndex++) {
-    var keyName = keyNames[keyIndex];
-    if (/key|secret|token|password|auth|credential/i.test(keyName)) { continue; }
-    var keyValue = value[keyName];
-    if (keyValue === null || typeof keyValue !== 'object') redacted[keyName] = keyValue;
-    else if (Array.isArray(keyValue)) redacted[keyName] = keyValue.slice(0, 10);
-    else redacted[keyName] = '[object]';
-  }
-  return redacted;
-}
-
-/** Deep-ish, credential-free summary of any SDK object (2-3 levels) */
-function summarizeObjectForDiagnostics(value, depth) {
-  var remainingDepth = (typeof depth === 'number') ? depth : 2;
-  if (value === null || value === undefined) return value;
-  if (typeof value !== 'object') return value;
-  if (Array.isArray(value)) {
-    var arraySample = [];
-    for (var sampleIndex = 0; sampleIndex < Math.min(value.length, 5); sampleIndex++) {
-      arraySample.push(summarizeObjectForDiagnostics(value[sampleIndex], remainingDepth - 1));
-    }
-    return { arrayLength: value.length, sample: arraySample };
-  }
-  var summary = {};
-  var keyNames = Object.keys(value);
-  for (var keyIndex = 0; keyIndex < keyNames.length && keyIndex < 40; keyIndex++) {
-    var keyName = keyNames[keyIndex];
-    if (/key|secret|token|password|auth|credential/i.test(keyName)) continue;
-    var keyValue = value[keyName];
-    if (keyValue === null || typeof keyValue !== 'object') summary[keyName] = keyValue;
-    else if (remainingDepth > 0) summary[keyName] = summarizeObjectForDiagnostics(keyValue, remainingDepth - 1);
-    else summary[keyName] = Array.isArray(keyValue) ? ('array(' + keyValue.length + ')') : '[object]';
-  }
-  return summary;
-}
-
-/** Whatever the SDK exposes about download settings/capabilities */
-function collectToolCapabilitySnapshot() {
-  var snapshot = { build: TOOL_BUILD };
-  try {
-    snapshot.requestFileBinary = (typeof tool.requestFileBinary === 'function') ? 'function' : 'MISSING';
-  } catch (probeError) {
-    snapshot.requestFileBinary = 'tool threw: ' + probeError.message;
-  }
-  // Field definitions carry the settings block in most SDK builds - this shows
-  // which keys really reach the tool frame.
-  try {
-    if (typeof tool.getFields === 'function') snapshot.getFields = summarizeObjectForDiagnostics(tool.getFields(), 3);
-  } catch (fieldsError) {
-    snapshot.getFields = 'threw: ' + fieldsError.message;
-  }
-  var getterNames = ['getSettings', 'getFieldSettings', 'getCapabilities', 'getConfig', 'getParams'];
-  var settingsGetterFound = false;
-  for (var getterIndex = 0; getterIndex < getterNames.length; getterIndex++) {
-    var getterName = getterNames[getterIndex];
-    try {
-      if (typeof tool[getterName] === 'function') {
-        snapshot[getterName] = redactForDiagnostics(tool[getterName]());
-        settingsGetterFound = true;
-      }
-    } catch (getterError) {
-      snapshot[getterName] = 'threw: ' + getterError.message;
-    }
-  }
-  var settingKeys = ['allowFileFetch', 'maxFileFetchBytes', 'allowedFileFetchHosts', 'allowAllFileFetchHosts', 'allowFileContent', 'allowAllFetchHosts', 'allowedFetchHosts', 'maxFetchBytes', 'allowBinaryUpload'];
-  var paramProbe = {};
-  // Only probe params when the SDK has no settings getter (avoids SDK warnings)
-  if (!settingsGetterFound) {
-    for (var settingIndex = 0; settingIndex < settingKeys.length; settingIndex++) {
-      var settingKey = settingKeys[settingIndex];
-      try { paramProbe[settingKey] = tool.param(settingKey, '(not exposed)'); }
-      catch (paramError) { paramProbe[settingKey] = 'threw: ' + paramError.message; }
-    }
-  }
-  snapshot.paramProbe = paramProbe;
-  snapshot.toolMethods = describeToolMethodNames();
-  return snapshot;
-}
-
-/** Compact view of a requestFileBinary result (never prints the bytes) */
-function summarizeFileChannelResult(fetchResult) {
-  if (fetchResult === null || fetchResult === undefined) return null;
-  if (typeof fetchResult !== 'object') return { value: String(fetchResult).substring(0, 200) };
-  var summary = {};
-  var fieldNames = ['status', 'statusText', 'contentType', 'fileName', 'byteLength', 'encoding', 'etag', 'fromCache', 'elapsedMs', 'detail', 'message', 'reason', 'limitBytes', 'code', 'error', 'host', 'url'];
-  for (var fieldIndex = 0; fieldIndex < fieldNames.length; fieldIndex++) {
-    if (fetchResult[fieldNames[fieldIndex]] !== undefined) summary[fieldNames[fieldIndex]] = fetchResult[fieldNames[fieldIndex]];
-  }
-  if (fetchResult.bytes) {
-    summary.bytes = (typeof fetchResult.bytes === 'string')
-      ? 'string(' + fetchResult.bytes.length + ' chars)'
-      : ('ArrayBuffer(' + (fetchResult.bytes.byteLength || 0) + ' bytes)');
-  }
-  if (fetchResult.base64) summary.base64 = 'string(' + fetchResult.base64.length + ' chars)';
-  summary.resultKeys = Object.keys(fetchResult).slice(0, 20).join(', ');
-  return summary;
-}
-
-/** One copyable console block explaining what the channel saw */
-function logFileChannelDiagnostics(stageLabel, details) {
-  try {
-    console.log('===== CURRICULUM BUILDER - FILE CHANNEL DIAGNOSTICS =====');
-    console.log('stage: ' + stageLabel);
-    console.log('build: ' + TOOL_BUILD);
-    console.log('tool snapshot: ' + JSON.stringify(collectToolCapabilitySnapshot(), null, 2));
-    if (details) console.log('details: ' + JSON.stringify(details, null, 2));
-    console.log('===== END FILE CHANNEL DIAGNOSTICS =====');
-  } catch (diagnosticsError) {
-    console.warn('[STUDIO:DOWNLOAD] diagnostics could not be printed:', diagnosticsError);
-  }
-}
-
-/** Console helper: real download test (no cache), defaults to the open document.
- *  Usage: __curriculumBuilderFileDiag()  or  __curriculumBuilderFileDiag('https://…') */
-function runFileChannelSelfTest(testUrl) {
-  var targetUrl = testUrl || (typeof studioCurrentDocUrl === 'string' ? studioCurrentDocUrl : '');
-  logFileChannelDiagnostics('manual self-test start', {
-    url: targetUrl,
-    hasDocumentOpen: !!targetUrl,
-    requestOptions: { maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS }
-  });
-  if (!targetUrl) {
-    console.warn('[DIAG] No document URL. Open a document first, or call __curriculumBuilderFileDiag("https://…").');
-    return;
-  }
-  if (!binaryFileChannelAvailable()) {
-    console.warn('[DIAG] tool.requestFileBinary is not a function on this host.');
-    return;
-  }
-  var selfTestStartedAt = Date.now();
-  requestFileBinarySafely({ url: targetUrl, maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS }, function(errorCode, fetchResult) {
-    console.log('[DIAG] callback after ' + (Date.now() - selfTestStartedAt) + ' ms - errorCode: ' + (errorCode || 'none'));
-    console.log('[DIAG] result summary: ' + JSON.stringify(summarizeFileChannelResult(fetchResult), null, 2));
-    logFileChannelDiagnostics('manual self-test result', {
-      url: targetUrl,
-      errorCode: errorCode || null,
-      result: summarizeFileChannelResult(fetchResult)
-    });
-  });
-}
-
 if (typeof window !== 'undefined') {
-  window.__curriculumBuilderFileDiag = runFileChannelSelfTest;
   /** Console helper: reload the curriculum from the CMS without a page reload */
   window.__curriculumBuilderReload = reloadCurriculumFromCms;
-  /** Console helper: explain why the PDF page preview is not rendered */
-  window.__curriculumBuilderPdfDiag = function() {
-    logPdfPreviewDiagnostics('manual');
-    return collectPdfPreviewDiagnostics();
-  };
   /** Console helper: render the open document's page preview again */
   window.__curriculumBuilderRetryPreview = function() { loadStudioDocumentPreview(); };
   /** Console helper: explain why OCR is not running / which engine was injected */
@@ -5837,12 +5775,7 @@ if (typeof window !== 'undefined') {
     logOcrDiagnostics('manual');
     return collectOcrDiagnostics();
   };
-  window.__curriculumBuilderToolSnapshot = function() {
-    var snapshot = collectToolCapabilitySnapshot();
-    console.log(JSON.stringify(snapshot, null, 2));
-    return snapshot;
-  };
-  /** Console helper: what the tool currently holds (data + download settings) */
+  /** Console helper: what the tool currently holds */
   window.__curriculumBuilderDebug = function() {
     var rawValue = window.__curriculumLastVal;
     var debugInfo = {
@@ -5853,8 +5786,7 @@ if (typeof window !== 'undefined') {
       valueLength: (typeof rawValue === 'string') ? rawValue.length : null,
       sectionCount: sections.length,
       lastGoodSectionCount: (window.__curriculumLastGoodValue && window.__curriculumLastGoodValue.sections) ? window.__curriculumLastGoodValue.sections.length : 0,
-      secondsSinceLocalSave: lastSaveRequestedAt ? Math.round((Date.now() - lastSaveRequestedAt) / 1000) : null,
-      downloadChannel: collectToolCapabilitySnapshot()
+      secondsSinceLocalSave: lastSaveRequestedAt ? Math.round((Date.now() - lastSaveRequestedAt) / 1000) : null
     };
     console.log('===== CURRICULUM BUILDER DEBUG =====');
     console.log(JSON.stringify(debugInfo, null, 2));
@@ -6021,61 +5953,15 @@ function fileBytesFromFetchResult(fetchResult) {
   return null;
 }
 
-/** True when the first 1024 bytes contain the PDF signature */
-function bytesLookLikePdf(fileBytes) {
-  if (!fileBytes || fileBytes.length < 5) return false;
-  var scanLimit = Math.min(fileBytes.length - 4, 1024);
-  for (var index = 0; index < scanLimit; index++) {
-    if (fileBytes[index] === 0x25 && fileBytes[index + 1] === 0x50 && fileBytes[index + 2] === 0x44 &&
-        fileBytes[index + 3] === 0x46 && fileBytes[index + 4] === 0x2D) return true;
+/** Storage URL inside a mirrored download result (the copy the CMS stored in Firebase) */
+function mirroredStorageUrl(fetchResult) {
+  if (!fetchResult || !fetchResult.mirrored) return '';
+  var candidateNames = ['mirrorUrl', 'storageUrl', 'storedUrl', 'mirroredUrl', 'url'];
+  for (var candidateIndex = 0; candidateIndex < candidateNames.length; candidateIndex++) {
+    var candidateValue = fetchResult[candidateNames[candidateIndex]];
+    if (typeof candidateValue === 'string' && candidateValue.indexOf('http') === 0) return candidateValue;
   }
-  return false;
-}
-
-/** Last-resort download inside the tool frame: the browser reads the file
- *  itself (same-origin CMS storage or a CORS-enabled host). No server relay. */
-function downloadDocumentBytesDirectly(documentUrl, onDone) {
-  if (typeof fetch !== 'function') {
-    onDone('network', { detail: 'fetch is not available in this browser' });
-    return;
-  }
-  var responseContentType = '';
-  var responseStatus = 0;
-  fetch(documentUrl, { credentials: 'same-origin', cache: 'no-store' })
-    .then(function(response) {
-      responseStatus = response.status;
-      responseContentType = (response.headers && response.headers.get) ? (response.headers.get('content-type') || '') : '';
-      if (!response.ok) {
-        onDone('http_error', { status: response.status, detail: 'direct download HTTP ' + response.status });
-        return null;
-      }
-      return response.arrayBuffer();
-    })
-    .then(function(fileBuffer) {
-      if (!fileBuffer) return;
-      var directBytes = new Uint8Array(fileBuffer);
-      if (!directBytes.length) {
-        onDone('decode_failed', { detail: 'the direct download returned 0 bytes' });
-        return;
-      }
-      if (directBytes.length > STUDIO_BINARY_MAX_BYTES) {
-        onDone('too_large', { limitBytes: STUDIO_BINARY_MAX_BYTES, byteLength: directBytes.length });
-        return;
-      }
-      if (/\.pdf(\?|#|$)/i.test(String(documentUrl)) && !bytesLookLikePdf(directBytes)) {
-        onDone('decode_failed', { detail: 'the host returned a web page instead of the PDF (content-type: ' + (responseContentType || 'unknown') + ')' });
-        return;
-      }
-      onDone(null, directBytes, {
-        contentType: responseContentType,
-        fileName: safeDownloadFileName(documentUrl, 'document'),
-        byteLength: directBytes.length,
-        status: responseStatus
-      });
-    })
-    .catch(function(directError) {
-      onDone('network', { detail: 'direct download failed: ' + ((directError && directError.message) || directError) });
-    });
+  return '';
 }
 
 /** Turn a requestFileBinary result into bytes (arraybuffer or base64 form) */
@@ -6113,46 +5999,10 @@ function fetchDocumentBytes(sourceUrl, options, onDone) {
     return;
   }
   studioFileBytesInflight[cacheKey] = [];
-  var directDownloadTried = false;
-  /** When the CMS channel cannot deliver, try the browser's own download once */
-  function tryDirectDownloadFallback(fallbackErrorCode, fallbackResult) {
-    if (directDownloadTried) { finishDownload(fallbackErrorCode, null, fallbackResult); return; }
-    directDownloadTried = true;
-    console.warn('[STUDIO:DOWNLOAD] falling back to a direct browser download (' + fallbackErrorCode + ')');
-    downloadDocumentBytesDirectly(sourceUrl, function(directErrorCode, directBytes, directMeta) {
-      if (!directErrorCode && directBytes && directBytes.length) {
-        lastFileChannelFailure = '';
-        lastFileChannelFailureCode = '';
-        var directFileMeta = {
-          bytes: directBytes,
-          contentType: (directMeta && directMeta.contentType) || '',
-          fileName: (directMeta && directMeta.fileName) || safeDownloadFileName(sourceUrl, 'document'),
-          byteLength: directBytes.length,
-          status: (directMeta && directMeta.status) || 200,
-          fromDirectDownload: true
-        };
-        rememberStudioFileBytes(cacheKey, directFileMeta);
-        console.log('[STUDIO:DOWNLOAD] direct browser download succeeded · ' + directBytes.length + ' byte(s)');
-        finishDownload(null, directBytes, directFileMeta);
-        return;
-      }
-      console.warn('[STUDIO:DOWNLOAD] direct browser download failed too (' + directErrorCode + ') - ' + ((directMeta && directMeta.detail) || 'no detail'));
-      // An HTTP status or an unreadable file explains the failure better than
-      // the channel's "switched off / blocked" code.
-      var preferredErrorCode = fallbackErrorCode;
-      var preferredResult = fallbackResult;
-      if (directErrorCode === 'http_error' || directErrorCode === 'decode_failed' || directErrorCode === 'too_large') {
-        preferredErrorCode = directErrorCode;
-        preferredResult = directMeta || fallbackResult;
-      }
-      finishDownload(preferredErrorCode, null, preferredResult);
-    });
-  }
   if (!binaryFileChannelAvailable()) {
     recordFileChannelFailure('missing');
-    console.warn('[STUDIO:DOWNLOAD] tool.requestFileBinary is missing - tools available: ' + describeToolMethodNames());
-    logFileChannelFailureOnce('missing', { url: sourceUrl, note: 'The SDK running inside this tool frame has no requestFileBinary method.' });
-    tryDirectDownloadFallback('missing', null);
+    console.warn('[STUDIO:DOWNLOAD] tool.requestFileBinary is missing on this host');
+    finishDownload('missing', null, null);
     return;
   }
   var channelFinished = false;
@@ -6161,12 +6011,7 @@ function fetchDocumentBytes(sourceUrl, options, onDone) {
     channelFinished = true;
     recordFileChannelFailure('timeout');
     console.warn('[STUDIO:DOWNLOAD] requestFileBinary never called back within ' + (STUDIO_BINARY_TIMEOUT_MS + 30000) + ' ms');
-    logFileChannelFailureOnce('timeout', {
-      url: sourceUrl,
-      requestOptions: { maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS },
-      note: 'The SDK never invoked the callback.'
-    });
-    tryDirectDownloadFallback('timeout', null);
+    finishDownload('timeout', null, null);
   }, STUDIO_BINARY_TIMEOUT_MS + 30000);
   var binaryRequestOptions = {
     url: sourceUrl,
@@ -6195,26 +6040,25 @@ function fetchDocumentBytes(sourceUrl, options, onDone) {
           contentType: (fetchResult && fetchResult.contentType) || '',
           fileName: (fetchResult && fetchResult.fileName) || safeDownloadFileName(sourceUrl, 'document'),
           byteLength: fileBytes.length,
-          status: fetchResult ? fetchResult.status : 0
+          status: fetchResult ? fetchResult.status : 0,
+          // A mirrored external file was stored by the CMS in Firebase Storage
+          mirrored: !!(fetchResult && fetchResult.mirrored),
+          mirrorUrl: mirroredStorageUrl(fetchResult),
+          mirrorCached: !!(fetchResult && fetchResult.mirrorCached),
+          sourceUrl: (fetchResult && fetchResult.sourceUrl) || ''
         };
         rememberStudioFileBytes(cacheKey, fileMeta);
         finishDownload(null, fileBytes, fileMeta);
         return;
       }
       recordFileChannelFailure('channel_error', { detail: 'the channel returned no bytes' });
-      tryDirectDownloadFallback('decode_failed', fetchResult);
+      finishDownload('decode_failed', null, fetchResult);
       return;
     }
-    // html-tool-rules v3.1: there is NO server fallback. Report the channel
-    // error with its real reason; developer details stay in the console.
+    // html-tool-rules v3.1: there is NO server fallback inside the tool.
     recordFileChannelFailure(fetchErrorCode, fetchResult);
     console.warn('[STUDIO:DOWNLOAD] large-file channel did not deliver (' + fetchErrorCode + ') - ' + describeFileChannelFailure());
-    logFileChannelFailureOnce(fetchErrorCode, {
-      url: sourceUrl,
-      requestOptions: { maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS },
-      callback: { errorCode: fetchErrorCode, result: summarizeFileChannelResult(fetchResult) }
-    });
-    tryDirectDownloadFallback(fetchErrorCode, fetchResult);
+    finishDownload(fetchErrorCode, null, fetchResult);
   });
 }
 
@@ -6314,7 +6158,10 @@ function base64ToBytes(base64Text) {
 /* ── Raw DEFLATE inflater (RFC 1951, no zlib header) ──
    PDF image streams use raw deflate; the sandbox has no external
    libraries, so this compact inflater handles stored, fixed-Huffman and
-   dynamic-Huffman blocks. */
+   dynamic-Huffman blocks. A hard output cap keeps a malformed stream from
+   allocating an impossible array ("Invalid array length"). */
+var MAX_INFLATED_BYTES = 96 * 1024 * 1024;
+
 function inflateRawDeflate(inputBytes) {
   var sourcePos = 0;
   var output = [];
@@ -6387,6 +6234,7 @@ function inflateRawDeflate(inputBytes) {
 
   function decodeCompressedBlock() {
     while (true) {
+      if (output.length > MAX_INFLATED_BYTES) return 'inflated output too large';
       var symbol = decodeSymbol(literalTable);
       if (symbol < 0) return 'invalid literal code';
       if (symbol < 256) {
@@ -6410,6 +6258,7 @@ function inflateRawDeflate(inputBytes) {
 
   var finalBlock = false;
   while (!finalBlock) {
+    if (output.length > MAX_INFLATED_BYTES) return null;
     finalBlock = readBits(1) === 1;
     var blockType = readBits(2);
     if (blockType === 0) {
@@ -6513,6 +6362,408 @@ function inflatePdfFlateStreamAsync(flateBytes, onDone) {
     }
   }
   onDone(inflatePdfFlateStream(flateBytes));
+}
+
+/* ═══════════════════════════════════════════
+   PDF PAGE-RANGE SPLITTER (structure preserving)
+   Copies the selected pages and their resources into a new PDF. Streams are
+   copied byte for byte, so text, vectors and images stay exactly as in the
+   source - nothing is rendered, rasterized or recompressed.
+   ═══════════════════════════════════════════ */
+
+/** Every indirect reference (N G R) inside a PDF value or dictionary text */
+function pdfFindReferenceNumbers(valueText) {
+  var foundReferences = [];
+  if (!valueText) return foundReferences;
+  var referencePattern = /(^|[^\d])(\d+)\s+(\d+)\s+R(?![A-Za-z])/g;
+  var referenceMatch;
+  while ((referenceMatch = referencePattern.exec(valueText))) {
+    foundReferences.push({
+      number: parseInt(referenceMatch[2], 10),
+      generation: parseInt(referenceMatch[3], 10)
+    });
+  }
+  return foundReferences;
+}
+
+/** Raw text of one dictionary entry (the value only, brackets balanced) */
+function pdfDictionaryEntryText(dictionaryText, entryName) {
+  if (!dictionaryText) return null;
+  var keyPattern = new RegExp('/' + entryName + '(?![A-Za-z0-9])', 'g');
+  var keyMatch = keyPattern.exec(dictionaryText);
+  if (!keyMatch) return null;
+  var valueStart = keyMatch.index + keyMatch[0].length;
+  while (valueStart < dictionaryText.length && /\s/.test(dictionaryText.charAt(valueStart))) valueStart++;
+  var firstCharacter = dictionaryText.charAt(valueStart);
+  if (firstCharacter === '[') {
+    var bracketDepth = 0;
+    for (var arrayIndex = valueStart; arrayIndex < dictionaryText.length; arrayIndex++) {
+      var arrayCharacter = dictionaryText.charAt(arrayIndex);
+      if (arrayCharacter === '[') bracketDepth++;
+      else if (arrayCharacter === ']') {
+        bracketDepth--;
+        if (bracketDepth === 0) return dictionaryText.substring(valueStart, arrayIndex + 1);
+      }
+    }
+    return null;
+  }
+  if (firstCharacter === '<' && dictionaryText.charAt(valueStart + 1) === '<') {
+    var dictionaryDepth = 0;
+    for (var dictIndex = valueStart; dictIndex < dictionaryText.length - 1; dictIndex++) {
+      if (dictionaryText.charAt(dictIndex) === '<' && dictionaryText.charAt(dictIndex + 1) === '<') {
+        dictionaryDepth++;
+        dictIndex++;
+      } else if (dictionaryText.charAt(dictIndex) === '>' && dictionaryText.charAt(dictIndex + 1) === '>') {
+        dictionaryDepth--;
+        dictIndex++;
+        if (dictionaryDepth === 0) return dictionaryText.substring(valueStart, dictIndex + 1);
+      }
+    }
+    return null;
+  }
+  var tokenMatch = /^(\d+\s+\d+\s+R|\/[^\s<>\[\]()\/]+|[+-]?[\d.]+|\([^)]*\)|true|false|null)/.exec(dictionaryText.substring(valueStart));
+  return tokenMatch ? tokenMatch[0] : null;
+}
+
+/** Split the file text into its indirect objects (streams skipped, not parsed) */
+function pdfCollectClassicObjects(pdfText) {
+  var collectedObjects = {};
+  var objectHeaderPattern = /(\d+)\s+(\d+)\s+obj\b/g;
+  var headerMatch;
+  while ((headerMatch = objectHeaderPattern.exec(pdfText))) {
+    var objectNumber = parseInt(headerMatch[1], 10);
+    var objectGeneration = parseInt(headerMatch[2], 10);
+    var dictionaryStart = headerMatch.index + headerMatch[0].length;
+    var streamKeywordIndex = pdfText.indexOf('stream', dictionaryStart);
+    var endObjectIndex = pdfText.indexOf('endobj', dictionaryStart);
+    var dictionaryEnd;
+    var streamBytes = null;
+    if (streamKeywordIndex !== -1 && (endObjectIndex === -1 || streamKeywordIndex < endObjectIndex)) {
+      dictionaryEnd = streamKeywordIndex;
+      var payloadStart = streamKeywordIndex + 6;
+      if (pdfText.charAt(payloadStart) === '\r') payloadStart++;
+      if (pdfText.charAt(payloadStart) === '\n') payloadStart++;
+      var endStreamIndex = pdfText.indexOf('endstream', payloadStart);
+      if (endStreamIndex === -1) break;
+      var rawPayload = latin1StringToBytes(pdfText.substring(payloadStart, endStreamIndex));
+      var payloadFirst = 0;
+      var payloadLast = rawPayload.length;
+      while (payloadFirst < payloadLast && (rawPayload[payloadFirst] === 0x0d || rawPayload[payloadFirst] === 0x0a)) payloadFirst++;
+      while (payloadLast > payloadFirst && (rawPayload[payloadLast - 1] === 0x0d || rawPayload[payloadLast - 1] === 0x0a)) payloadLast--;
+      streamBytes = rawPayload.subarray(payloadFirst, payloadLast);
+      objectHeaderPattern.lastIndex = endStreamIndex + 9;
+    } else {
+      dictionaryEnd = endObjectIndex === -1 ? pdfText.length : endObjectIndex;
+      objectHeaderPattern.lastIndex = dictionaryEnd + 6;
+    }
+    // A later definition wins (incremental updates append newer objects).
+    collectedObjects[objectNumber] = {
+      number: objectNumber,
+      generation: objectGeneration,
+      dictionaryText: pdfText.substring(dictionaryStart, dictionaryEnd),
+      streamBytes: streamBytes
+    };
+  }
+  return collectedObjects;
+}
+
+/** Objects stored inside a compressed /Type /ObjStm container have no streams.
+ *  Inflate each container and register the embedded object dictionaries. */
+function pdfExpandPdfObjectStreams(pdfObjects) {
+  var containerNumbers = Object.keys(pdfObjects);
+  for (var containerIndex = 0; containerIndex < containerNumbers.length; containerIndex++) {
+    var containerObject = pdfObjects[containerNumbers[containerIndex]];
+    if (!containerObject || !containerObject.streamBytes) continue;
+    if (!/\/Type\s*\/ObjStm/.test(containerObject.dictionaryText || '')) continue;
+    var countMatch = /\/N\s+(\d+)/.exec(containerObject.dictionaryText);
+    var firstOffsetMatch = /\/First\s+(\d+)/.exec(containerObject.dictionaryText);
+    if (!countMatch || !firstOffsetMatch) continue;
+    var inflatedContainer = null;
+    try { inflatedContainer = inflatePdfFlateStream(containerObject.streamBytes); }
+    catch (inflateContainerError) {
+      console.warn('[PDF:SPLIT] an object stream could not be inflated:', inflateContainerError);
+      continue;
+    }
+    if (!inflatedContainer) continue;
+    var containerText = bytesToLatin1String(inflatedContainer);
+    var embeddedCount = parseInt(countMatch[1], 10);
+    var firstObjectOffset = parseInt(firstOffsetMatch[1], 10);
+    var headerText = containerText.substring(0, firstObjectOffset);
+    var embeddedHeaderEntries = [];
+    var headerPairPattern = /(\d+)\s+(\d+)/g;
+    var headerPairMatch;
+    while ((headerPairMatch = headerPairPattern.exec(headerText))) {
+      embeddedHeaderEntries.push({ number: parseInt(headerPairMatch[1], 10), offset: parseInt(headerPairMatch[2], 10) });
+    }
+    for (var embeddedIndex = 0; embeddedIndex < embeddedCount && embeddedIndex < embeddedHeaderEntries.length; embeddedIndex++) {
+      var embeddedNumber = embeddedHeaderEntries[embeddedIndex].number;
+      if (pdfObjects[embeddedNumber]) continue;
+      var embeddedStart = firstObjectOffset + embeddedHeaderEntries[embeddedIndex].offset;
+      var embeddedEnd = (embeddedIndex + 1 < embeddedHeaderEntries.length)
+        ? firstObjectOffset + embeddedHeaderEntries[embeddedIndex + 1].offset
+        : containerText.length;
+      pdfObjects[embeddedNumber] = {
+        number: embeddedNumber,
+        generation: 0,
+        dictionaryText: containerText.substring(embeddedStart, embeddedEnd),
+        streamBytes: null
+      };
+    }
+  }
+}
+
+/** Catalog object number from the trailer (classic or xref-stream) */
+function pdfFindCatalogNumber(pdfText) {
+  var rootPattern = /\/Root\s+(\d+)\s+(\d+)\s+R/g;
+  var rootMatch;
+  var lastRootNumber = null;
+  while ((rootMatch = rootPattern.exec(pdfText))) lastRootNumber = parseInt(rootMatch[1], 10);
+  return lastRootNumber;
+}
+
+/** Ordered page entries with the attributes they inherit from /Pages nodes */
+function pdfCollectPageEntries(pdfObjects, catalogNumber) {
+  var pageEntries = [];
+  var visitedNodes = {};
+  function visitPageTreeNode(nodeNumber, inheritedAttributes) {
+    if (!nodeNumber || visitedNodes[nodeNumber]) return;
+    visitedNodes[nodeNumber] = true;
+    var nodeObject = pdfObjects[nodeNumber];
+    if (!nodeObject) return;
+    var nodeDictionary = nodeObject.dictionaryText || '';
+    var nodeType = pdfDictionaryEntryText(nodeDictionary, 'Type') || '';
+    var nodeAttributes = {
+      resources: pdfDictionaryEntryText(nodeDictionary, 'Resources') || inheritedAttributes.resources,
+      mediaBox: pdfDictionaryEntryText(nodeDictionary, 'MediaBox') || inheritedAttributes.mediaBox,
+      cropBox: pdfDictionaryEntryText(nodeDictionary, 'CropBox') || inheritedAttributes.cropBox,
+      rotate: pdfDictionaryEntryText(nodeDictionary, 'Rotate') || inheritedAttributes.rotate
+    };
+    if (nodeType === '/Page') {
+      pageEntries.push({
+        number: nodeNumber,
+        dictionaryText: nodeDictionary,
+        resources: nodeAttributes.resources,
+        mediaBox: nodeAttributes.mediaBox,
+        cropBox: nodeAttributes.cropBox,
+        rotate: nodeAttributes.rotate
+      });
+      return;
+    }
+    var kidsText = pdfDictionaryEntryText(nodeDictionary, 'Kids');
+    if (!kidsText) return;
+    var kidReferences = pdfFindReferenceNumbers(kidsText);
+    for (var kidIndex = 0; kidIndex < kidReferences.length; kidIndex++) {
+      visitPageTreeNode(kidReferences[kidIndex].number, nodeAttributes);
+    }
+  }
+  var catalogObject = catalogNumber ? pdfObjects[catalogNumber] : null;
+  if (catalogObject) {
+    var pagesEntryText = pdfDictionaryEntryText(catalogObject.dictionaryText || '', 'Pages');
+    var pagesReferences = pagesEntryText ? pdfFindReferenceNumbers(pagesEntryText) : [];
+    if (pagesReferences.length) {
+      visitPageTreeNode(pagesReferences[0].number, { resources: null, mediaBox: null, cropBox: null, rotate: null });
+    }
+  }
+  if (!pageEntries.length) {
+    // Fallback for a damaged or missing catalog: file order wins.
+    var allNumbers = Object.keys(pdfObjects).map(function(numberText) { return parseInt(numberText, 10); });
+    allNumbers.sort(function(first, second) { return first - second; });
+    for (var objectIndex = 0; objectIndex < allNumbers.length; objectIndex++) {
+      var candidate = pdfObjects[allNumbers[objectIndex]];
+      if (!candidate) continue;
+      if (pdfDictionaryEntryText(candidate.dictionaryText || '', 'Type') !== '/Page') continue;
+      pageEntries.push({
+        number: candidate.number,
+        dictionaryText: candidate.dictionaryText || '',
+        resources: pdfDictionaryEntryText(candidate.dictionaryText || '', 'Resources'),
+        mediaBox: pdfDictionaryEntryText(candidate.dictionaryText || '', 'MediaBox'),
+        cropBox: pdfDictionaryEntryText(candidate.dictionaryText || '', 'CropBox'),
+        rotate: pdfDictionaryEntryText(candidate.dictionaryText || '', 'Rotate')
+      });
+    }
+  }
+  return pageEntries;
+}
+
+/** Rewrite every N G R reference with the new object numbers */
+function pdfRewriteObjectReferences(valueText, numberMap) {
+  if (!valueText) return valueText;
+  return valueText.replace(/(^|[^\d])(\d+)\s+(\d+)\s+R(?![A-Za-z])/g, function(wholeMatch, prefix, numberText) {
+    var oldNumber = parseInt(numberText, 10);
+    var newNumber = numberMap[oldNumber];
+    return prefix + (newNumber ? (newNumber + ' 0 R') : 'null');
+  });
+}
+
+/** Replace (or add) /Length with the real byte length of the copied stream */
+function pdfWithDirectStreamLength(dictionaryText, byteLength) {
+  var lengthPattern = /\/Length\s+(\d+\s+\d+\s+R|\d+)/;
+  if (lengthPattern.test(dictionaryText)) return dictionaryText.replace(lengthPattern, '/Length ' + byteLength);
+  var trimmedDictionary = String(dictionaryText).replace(/\s+$/, '');
+  if (trimmedDictionary.length > 2 && trimmedDictionary.substring(trimmedDictionary.length - 2) === '>>') {
+    return trimmedDictionary.substring(0, trimmedDictionary.length - 2) + ' /Length ' + byteLength + ' >>';
+  }
+  return trimmedDictionary;
+}
+
+/** Build a new PDF that contains only the requested page range. */
+function pdfSplitPdfPageRange(pdfBytes, firstPageNumber, lastPageNumber) {
+  if (!pdfBytes || !pdfBytes.length) throw new Error('The PDF file is empty.');
+  var pdfText = bytesToLatin1String(pdfBytes);
+  if (pdfText.substring(0, 5) !== '%PDF-') throw new Error('This file is not a PDF document.');
+  if (/\/Encrypt\s+(\d+\s+\d+\s+R|<<)/.test(pdfText)) {
+    throw new Error('This PDF is encrypted. Remove the password protection first, then split it.');
+  }
+
+  var pdfObjects = pdfCollectClassicObjects(pdfText);
+  var catalogNumber = pdfFindCatalogNumber(pdfText);
+  var pageEntries = pdfCollectPageEntries(pdfObjects, catalogNumber);
+  if (!pageEntries.length || pdfText.indexOf('/ObjStm') !== -1) {
+    // Pages and resources may live in compressed object streams - expand them,
+    // but never let one malformed stream break the whole split.
+    try { pdfExpandPdfObjectStreams(pdfObjects); }
+    catch (objectStreamError) { console.warn('[PDF:SPLIT] object streams could not be expanded:', objectStreamError); }
+    pageEntries = pdfCollectPageEntries(pdfObjects, catalogNumber);
+  }
+  if (!pageEntries.length) throw new Error('No page could be read from this PDF (its pages are stored in a format this tool cannot open).');
+
+  var pageCount = pageEntries.length;
+  var firstPageIndex = Math.max(1, parseInt(firstPageNumber, 10) || 1) - 1;
+  var lastPageIndex = Math.min(pageCount, parseInt(lastPageNumber, 10) || pageCount) - 1;
+  if (firstPageIndex > lastPageIndex) throw new Error('The start page must be before the end page.');
+  var selectedEntries = pageEntries.slice(firstPageIndex, lastPageIndex + 1);
+
+  // Numbering: 1 = catalog, 2 = pages node, 3.. = pages, then the resources.
+  var nextObjectNumber = 1;
+  var catalogNewNumber = nextObjectNumber++;
+  var pagesNewNumber = nextObjectNumber++;
+  var numberMap = {};
+  for (var pageIndex = 0; pageIndex < selectedEntries.length; pageIndex++) {
+    numberMap[selectedEntries[pageIndex].number] = nextObjectNumber++;
+  }
+
+  // Copy only what the selected pages need: their values and the resource
+  // objects those values reference (fonts, images, patterns, shading...).
+  var dependencyNumbers = [];
+  var dependencySeen = {};
+  function collectDependencyReferences(valueText) {
+    if (!valueText) return;
+    var valueReferences = pdfFindReferenceNumbers(valueText);
+    for (var referenceIndex = 0; referenceIndex < valueReferences.length; referenceIndex++) {
+      var referenceNumber = valueReferences[referenceIndex].number;
+      if (numberMap[referenceNumber] || dependencySeen[referenceNumber]) continue;
+      var referencedObject = pdfObjects[referenceNumber];
+      if (!referencedObject) continue;
+      var referencedDictionary = referencedObject.dictionaryText || '';
+      var referencedType = pdfDictionaryEntryText(referencedDictionary, 'Type') || '';
+      // Page-tree nodes belong to the new document, never to the copy.
+      if (referencedType === '/Page' || referencedType === '/Pages' || referencedType === '/ObjStm') continue;
+      dependencySeen[referenceNumber] = true;
+      dependencyNumbers.push(referenceNumber);
+      collectDependencyReferences(referencedDictionary);
+    }
+  }
+  for (var selectedIndex = 0; selectedIndex < selectedEntries.length; selectedIndex++) {
+    var selectedEntry = selectedEntries[selectedIndex];
+    collectDependencyReferences(selectedEntry.resources);
+    collectDependencyReferences(pdfDictionaryEntryText(selectedEntry.dictionaryText, 'Contents'));
+    collectDependencyReferences(pdfDictionaryEntryText(selectedEntry.dictionaryText, 'Group'));
+  }
+  for (var dependencyIndex = 0; dependencyIndex < dependencyNumbers.length; dependencyIndex++) {
+    numberMap[dependencyNumbers[dependencyIndex]] = nextObjectNumber++;
+  }
+
+  var pageDictionaryTexts = [];
+  for (var pageDictionaryIndex = 0; pageDictionaryIndex < selectedEntries.length; pageDictionaryIndex++) {
+    var pageEntry = selectedEntries[pageDictionaryIndex];
+    var pageDictionaryParts = ['<< /Type /Page /Parent ' + pagesNewNumber + ' 0 R'];
+    pageDictionaryParts.push('/MediaBox ' + pdfRewriteObjectReferences(pageEntry.mediaBox || '[0 0 612 792]', numberMap));
+    if (pageEntry.cropBox) pageDictionaryParts.push('/CropBox ' + pdfRewriteObjectReferences(pageEntry.cropBox, numberMap));
+    if (pageEntry.rotate) pageDictionaryParts.push('/Rotate ' + pdfRewriteObjectReferences(pageEntry.rotate, numberMap));
+    if (pageEntry.resources) pageDictionaryParts.push('/Resources ' + pdfRewriteObjectReferences(pageEntry.resources, numberMap));
+    var contentsText = pdfDictionaryEntryText(pageEntry.dictionaryText, 'Contents');
+    if (contentsText) pageDictionaryParts.push('/Contents ' + pdfRewriteObjectReferences(contentsText, numberMap));
+    var groupText = pdfDictionaryEntryText(pageEntry.dictionaryText, 'Group');
+    if (groupText) pageDictionaryParts.push('/Group ' + pdfRewriteObjectReferences(groupText, numberMap));
+    var userUnitText = pdfDictionaryEntryText(pageEntry.dictionaryText, 'UserUnit');
+    if (userUnitText) pageDictionaryParts.push('/UserUnit ' + pdfRewriteObjectReferences(userUnitText, numberMap));
+    pageDictionaryParts.push('>>');
+    pageDictionaryTexts.push(pageDictionaryParts.join(' '));
+  }
+
+  var outputChunks = [];
+  var outputLength = 0;
+  function appendTextBytes(textValue) {
+    var textBytes = latin1StringToBytes(textValue);
+    outputChunks.push(textBytes);
+    outputLength += textBytes.length;
+    if (outputLength > 512 * 1024 * 1024) throw new Error('The split result is too large to build in the browser.');
+  }
+  function appendRawBytes(rawValue) {
+    outputChunks.push(rawValue);
+    outputLength += rawValue.length;
+  }
+  var objectOffsets = {};
+  function writePdfObject(objectNumber, dictionaryText, streamBytes) {
+    objectOffsets[objectNumber] = outputLength;
+    appendTextBytes(objectNumber + ' 0 obj\n');
+    appendTextBytes(dictionaryText);
+    if (streamBytes) {
+      appendTextBytes('\nstream\n');
+      appendRawBytes(streamBytes);
+      appendTextBytes('\nendstream\n');
+    }
+    appendTextBytes('endobj\n');
+  }
+
+  appendTextBytes('%PDF-1.7\n%\xE2\xE3\xCF\xD3\n');
+  writePdfObject(catalogNewNumber, '<< /Type /Catalog /Pages ' + pagesNewNumber + ' 0 R >>', null);
+  var pagesKidsText = [];
+  for (var kidNumberIndex = 0; kidNumberIndex < selectedEntries.length; kidNumberIndex++) {
+    pagesKidsText.push(numberMap[selectedEntries[kidNumberIndex].number] + ' 0 R');
+  }
+  writePdfObject(pagesNewNumber,
+    '<< /Type /Pages /Count ' + selectedEntries.length + ' /Kids [' + pagesKidsText.join(' ') + '] >>', null);
+  for (var pageWriteIndex = 0; pageWriteIndex < selectedEntries.length; pageWriteIndex++) {
+    writePdfObject(numberMap[selectedEntries[pageWriteIndex].number], pageDictionaryTexts[pageWriteIndex], null);
+  }
+  for (var dependencyWriteIndex = 0; dependencyWriteIndex < dependencyNumbers.length; dependencyWriteIndex++) {
+    var dependencyObject = pdfObjects[dependencyNumbers[dependencyWriteIndex]];
+    var newObjectNumber = numberMap[dependencyNumbers[dependencyWriteIndex]];
+    var rewrittenDictionary = pdfRewriteObjectReferences(dependencyObject.dictionaryText || '', numberMap);
+    if (dependencyObject.streamBytes) {
+      writePdfObject(newObjectNumber, pdfWithDirectStreamLength(rewrittenDictionary, dependencyObject.streamBytes.length), dependencyObject.streamBytes);
+    } else {
+      writePdfObject(newObjectNumber, rewrittenDictionary, null);
+    }
+  }
+
+  var xrefOffset = outputLength;
+  var totalObjectCount = nextObjectNumber - 1;
+  var xrefText = 'xref\n0 ' + (totalObjectCount + 1) + '\n0000000000 65535 f \n';
+  for (var xrefIndex = 1; xrefIndex <= totalObjectCount; xrefIndex++) {
+    var objectOffsetText = String(objectOffsets[xrefIndex] || 0);
+    while (objectOffsetText.length < 10) objectOffsetText = '0' + objectOffsetText;
+    xrefText += objectOffsetText + ' 00000 n \n';
+  }
+  appendTextBytes(xrefText);
+  appendTextBytes('trailer\n<< /Size ' + (totalObjectCount + 1) + ' /Root ' + catalogNewNumber + ' 0 R >>\n' +
+    'startxref\n' + xrefOffset + '\n%%EOF\n');
+
+  var outputBytes = new Uint8Array(outputLength);  var outputPosition = 0;
+  for (var chunkIndex = 0; chunkIndex < outputChunks.length; chunkIndex++) {
+    outputBytes.set(outputChunks[chunkIndex], outputPosition);
+    outputPosition += outputChunks[chunkIndex].length;
+  }
+  console.log('[PDF:SPLIT] pages ' + (firstPageIndex + 1) + '-' + (lastPageIndex + 1) + ' of ' + pageCount +
+    ' · ' + totalObjectCount + ' object(s) · ' + outputBytes.length + ' byte(s)');
+  return {
+    bytes: outputBytes,
+    pageCount: pageCount,
+    firstPage: firstPageIndex + 1,
+    lastPage: lastPageIndex + 1,
+    objectCount: totalObjectCount
+  };
 }
 
 /* ── PDF image stream discovery ── */
@@ -7497,6 +7748,144 @@ function studioDocType(docUrl) {
   return '';
 }
 
+/** Original outside URL of an imported document ('' when it always lived in CMS storage) */
+function studioDocOriginUrl(docUrl) {
+  return (docUrl && editingStudyDocOriginMap[docUrl]) ? editingStudyDocOriginMap[docUrl] : '';
+}
+
+/** True when the document URL points to a host outside the CMS and its Firebase storage */
+function isExternalDocumentHost(docUrl) {
+  var hostName = '';
+  try {
+    hostName = String(new URL(docUrl).hostname || '').toLowerCase();
+  } catch (parseError) {
+    return false;
+  }
+  if (!hostName) return false;
+  if (typeof window !== 'undefined' && window.location && hostName === String(window.location.hostname || '').toLowerCase()) return false;
+  if (/(^|\.)uniconhub\.com$/.test(hostName)) return false;
+  if (/(^|\.)firebasestorage\.googleapis\.com$/.test(hostName)) return false;
+  if (/(^|\.)storage\.googleapis\.com$/.test(hostName)) return false;
+  return true;
+}
+
+/** Direct statement of what went wrong when the CMS could not read the file */
+function describeDocumentDownloadFailure(errorCode, fetchResult, documentUrl) {
+  if (!isExternalDocumentHost(documentUrl)) return describeFileFetchError(errorCode, fetchResult);
+  var hostName = '';
+  try { hostName = new URL(documentUrl).hostname; } catch (hostError) { hostName = ''; }
+  var hostText = hostName || 'This host';
+  if (errorCode === 'blocked_host') return 'The CMS is not allowed to download from ' + hostText + '.';
+  if (errorCode === 'not_configured') return 'File downloads are switched off for this tool.';
+  if (errorCode === 'too_large') {
+    var limitText = (fetchResult && fetchResult.limitBytes) ? formatFileSize(fetchResult.limitBytes) : 'the allowed size';
+    return 'The file on ' + hostText + ' is larger than ' + limitText + '.';
+  }
+  if (errorCode === 'http_error') return hostText + ' answered the CMS request with HTTP ' + ((fetchResult && fetchResult.status) || 'error') + '.';
+  if (errorCode === 'network') return hostText + ' does not allow the CMS to read the file (CORS).';
+  if (errorCode === 'timeout') return 'The download from ' + hostText + ' did not finish in time.';
+  if (errorCode === 'decode_failed') return 'The CMS received no usable data from ' + hostText + '.';
+  return describeFileFetchError(errorCode, fetchResult);
+}
+
+/** True when retrying this download cannot succeed */
+function isPermanentDocumentFetchFailure(errorCode, fetchResult) {
+  if (errorCode === 'blocked_host' || errorCode === 'not_configured' || errorCode === 'too_large') return true;
+  if (errorCode === 'http_error') {
+    var httpStatus = fetchResult && fetchResult.status;
+    return httpStatus === 400 || httpStatus === 401 || httpStatus === 403 || httpStatus === 404 || httpStatus === 410 || httpStatus === 451;
+  }
+  if (errorCode === 'network') {
+    var detailText = String((fetchResult && (fetchResult.detail || fetchResult.message || fetchResult.reason)) || '');
+    return /cors|access-control|content security/i.test(detailText);
+  }
+  return false;
+}
+
+/** Delete a document that this tool can never read (all lists + per-document data) */
+function removeStudioDocumentCompletely(documentUrl) {
+  if (!documentUrl) return;
+  removeRealDocumentUrl(documentUrl);
+  for (var sourceIndex = editingStudyDocSources.length - 1; sourceIndex >= 0; sourceIndex--) {
+    if (editingStudyDocSources[sourceIndex].url === documentUrl) editingStudyDocSources.splice(sourceIndex, 1);
+  }
+  setDocHiddenState(documentUrl, false);
+  delete editingStudyDocImagesMap[documentUrl];
+  delete editingStudyDocGeneratedHtmlMap[documentUrl];
+  delete editingStudyDocOriginMap[documentUrl];
+  if (studioCurrentDocUrl === documentUrl) closeStudioDrawer();
+  renderPdfEditorList();
+  autoSaveLessonAfterDocumentChange('unreadable document removed');
+  tool.notify('The document that could not be read was removed from this lesson.', 'info');
+}
+
+/** URL that already showed the "remove this document?" question this session */
+var unreadableDocumentPromptUrl = '';
+
+/** Ask once per document whether to remove a link the CMS can never read */
+function offerUnreadableStudioDocumentRemoval(documentUrl, errorCode, fetchResult) {
+  if (!documentUrl || unreadableDocumentPromptUrl === documentUrl) return;
+  unreadableDocumentPromptUrl = documentUrl;
+  var reasonText = describeDocumentDownloadFailure(errorCode, fetchResult, documentUrl);
+  sandboxConfirm(reasonText + ' Remove this document from the lesson? The link cannot be used here.', function() {
+    removeStudioDocumentCompletely(documentUrl);
+  }, 'Yes, Remove');
+}
+
+/** The CMS mirror stored an outside file in Firebase Storage: from now on the
+ *  storage URL is the document, the outside URL is information only. */
+function adoptMirroredStudioDocumentUrl(originalDocumentUrl, fileMeta) {
+  if (!fileMeta || !fileMeta.mirrored) return false;
+  var storageUrl = fileMeta.mirrorUrl || '';
+  if (!storageUrl) {
+    console.warn('[STUDIO:DOC] the CMS mirrored the file but did not return its storage URL - the original link is still used');
+    return false;
+  }
+  if (storageUrl === originalDocumentUrl) return false;
+  if (editingStudyDocOriginMap[storageUrl]) return false;
+  var originUrl = fileMeta.sourceUrl || studioDocOriginUrl(originalDocumentUrl) || originalDocumentUrl;
+
+  var typeKeys = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
+  for (var typeIndex = 0; typeIndex < typeKeys.length; typeIndex++) {
+    var typeUrls = getPdfArray(typeKeys[typeIndex]);
+    var urlIndex = typeUrls.indexOf(originalDocumentUrl);
+    if (urlIndex !== -1) typeUrls[urlIndex] = storageUrl;
+  }
+  for (var sourceIndex = 0; sourceIndex < editingStudyDocSources.length; sourceIndex++) {
+    if (editingStudyDocSources[sourceIndex].url === originalDocumentUrl) editingStudyDocSources[sourceIndex].url = storageUrl;
+  }
+  var hiddenIndex = editingHiddenDocUrls.indexOf(originalDocumentUrl);
+  if (hiddenIndex !== -1) editingHiddenDocUrls[hiddenIndex] = storageUrl;
+
+  if (editingStudyDocImagesMap[originalDocumentUrl] && !editingStudyDocImagesMap[storageUrl]) {
+    editingStudyDocImagesMap[storageUrl] = editingStudyDocImagesMap[originalDocumentUrl];
+    delete editingStudyDocImagesMap[originalDocumentUrl];
+  }
+  if (editingStudyDocGeneratedHtmlMap[originalDocumentUrl] && !editingStudyDocGeneratedHtmlMap[storageUrl]) {
+    editingStudyDocGeneratedHtmlMap[storageUrl] = editingStudyDocGeneratedHtmlMap[originalDocumentUrl];
+    delete editingStudyDocGeneratedHtmlMap[originalDocumentUrl];
+  }
+  editingStudyDocOriginMap[storageUrl] = originUrl;
+
+  if (studioLocalPdfUrl === originalDocumentUrl) studioLocalPdfUrl = storageUrl;
+  if (studioCurrentDocUrl === originalDocumentUrl) {
+    studioCurrentDocUrl = storageUrl;
+    if (editingStudyDocImagesMap[storageUrl]) {
+      editingStudyDocImages = JSON.parse(JSON.stringify(editingStudyDocImagesMap[storageUrl]));
+    }
+    var drawerTitle = el('sd-drawer-title');
+    if (drawerTitle) drawerTitle.textContent = readableFileName(storageUrl);
+    loadStudioGeneratedForDoc(storageUrl);
+    renderStudyDocImageGallery();
+    updateStudioOriginalSourceButton();
+  }
+  renderPdfEditorList();
+  autoSaveCurrentLesson();
+  console.log('[STUDIO:DOC] outside document stored in Firebase Storage · source: ' + originUrl + ' · stored: ' + storageUrl);
+  tool.notify('This outside document was copied into CMS storage. The stored copy is now used for preview, generation and students.', 'success');
+  return true;
+}
+
 /* ── PDF preview rendering (CMS-hosted PDF.js, html-tool-rules v3.1) ──
    Chrome refuses to run its built-in PDF viewer inside sandboxed frames, so a
    PDF cannot be embedded directly. When the field enables allowPdfRender the
@@ -7505,12 +7894,10 @@ function studioDocType(docUrl) {
 var STUDIO_PDF_PREVIEW_MAX_PAGES = 12;
 var STUDIO_PDF_PREVIEW_MIN_SCALE = 0.5;
 var STUDIO_PDF_PREVIEW_MAX_SCALE = 3;
-/** Why the last page preview could not be rendered (console + diagnostics) */
-var lastPdfPreviewFailure = '';
+/** Why the last page preview could not be rendered (console only) */
 var pdfPreviewRetryTimer = null;
 var pdfPreviewRetryAttempts = 0;
 var pdfPreviewRetryDocUrl = '';
-var pdfDiagnosticsLoggedForUrl = '';
 
 /** First bytes of a PDF as text - shows at a glance whether it is really a PDF */
 function describePdfBytesForConsole(pdfBytes) {
@@ -7522,60 +7909,10 @@ function describePdfBytesForConsole(pdfBytes) {
   return headerText.replace(/[^\x20-\x7e]/g, '.');
 }
 
-/** Global names that look like a PDF library (in case the CMS injects another name) */
-function listPdfLikeGlobals() {
-  var globalNames = [];
-  try {
-    for (var globalName in window) {
-      if (/pdf/i.test(globalName)) globalNames.push(globalName);
-    }
-  } catch (globalError) { /* ignore */ }
-  return globalNames.slice(0, 20).join(', ') || '(none)';
-}
-
-/** Read one SDK param without letting a broken SDK break the diagnostics */
+/** Read one SDK param without letting a broken SDK break the OCR diagnostics */
 function readParamForDiagnostics(paramName) {
   try { return tool.param(paramName, '(not exposed)'); }
   catch (paramError) { return 'threw: ' + paramError.message; }
-}
-
-/** Everything needed to explain a missing page preview */
-function collectPdfPreviewDiagnostics() {
-  var pdfLibrary = (typeof window !== 'undefined') ? window.pdfjsLib : null;
-  return {
-    build: TOOL_BUILD,
-    pdfjsLibPresent: !!pdfLibrary,
-    pdfjsVersion: pdfLibrary ? (pdfLibrary.version || '(unknown)') : '',
-    pdfjsWorkerWired: pdfJsWorkerDescription(),
-    pdfjsWorkerSrcConfigured: (pdfLibrary && pdfLibrary.GlobalWorkerOptions) ? String(pdfLibrary.GlobalWorkerOptions.workerSrc || '(not set)') : '',
-    pdfPreviewScaleParam: readParamForDiagnostics('pdfPreviewScale'),
-    allowPdfRenderProbe: readParamForDiagnostics('allowPdfRender'),
-    allowFileFetchProbe: readParamForDiagnostics('allowFileFetch'),
-    requestFileBinary: (typeof tool.requestFileBinary === 'function') ? 'function' : 'MISSING',
-    pdfLikeGlobals: listPdfLikeGlobals(),
-    fieldSettings: (function () {
-      try { return (typeof tool.getFields === 'function') ? summarizeObjectForDiagnostics(tool.getFields(), 3) : '(getFields not available)'; }
-      catch (fieldsError) { return 'threw: ' + fieldsError.message; }
-    })(),
-    lastPreviewFailure: lastPdfPreviewFailure || '(none recorded)',
-    lastFileChannelFailure: lastFileChannelFailure || '(none)',
-    lastFileChannelFailureCode: lastFileChannelFailureCode || '(none)',
-    directBrowserDownload: (typeof fetch === 'function') ? 'available' : 'MISSING',
-    documentUrl: studioCurrentDocUrl || '(none open)',
-    documentType: studioCurrentDocUrl ? studioDocType(studioCurrentDocUrl) : '(none open)'
-  };
-}
-
-/** Print a copyable console block explaining the preview state */
-function logPdfPreviewDiagnostics(stageLabel) {
-  try {
-    console.log('===== CURRICULUM BUILDER - PDF PREVIEW DIAGNOSTICS =====');
-    console.log('stage: ' + stageLabel);
-    console.log(JSON.stringify(collectPdfPreviewDiagnostics(), null, 2));
-    console.log('===== END PDF PREVIEW DIAGNOSTICS =====');
-  } catch (diagnosticsError) {
-    console.warn('[STUDIO:PREVIEW] diagnostics could not be printed:', diagnosticsError);
-  }
 }
 
 /** Re-check for PDF.js a few times - the CMS may inject it after the tool */
@@ -7621,9 +7958,7 @@ function setStudioPreviewRetryVisible(isVisible) {
 
 /** User-facing placeholder - technical reasons go to the console only */
 function showStudioPdfPreviewPlaceholder(previewFrame, noteEl, localPdfAvailable, diagnosticReason, userFacingHint) {
-  lastPdfPreviewFailure = diagnosticReason || '';
   if (diagnosticReason) console.warn('[STUDIO:PREVIEW] page preview unavailable - ' + diagnosticReason);
-  logPdfPreviewDiagnostics('placeholder shown');
   setStudioPreviewRetryVisible(true);
   previewFrame.src = 'about:blank';
   var hintLine = userFacingHint
@@ -7639,7 +7974,6 @@ function showStudioPdfPreviewPlaceholder(previewFrame, noteEl, localPdfAvailable
 
 /** Put the already-rasterized pages into the preview frame */
 function showStudioRenderedPdfPages(previewFrame, pageImages, totalPages) {
-  lastPdfPreviewFailure = '';
   pdfPreviewRetryAttempts = 0;
   setStudioPreviewRetryVisible(false);
   var pagesHtml = pageImages.map(function (pageImage, pageIndex) {
@@ -7732,6 +8066,7 @@ function loadStudioDocumentPreview() {
     if (noteEl) noteEl.textContent = '';
     return;
   }
+  var previewDocumentUrl = studioCurrentDocUrl;
   var docType = studioDocType(studioCurrentDocUrl);
   var lowerUrl = studioCurrentDocUrl.toLowerCase();
   var isHtmlDocument = docType === 'htmlDoc' || /\.(html?|htm)(\?|#|$)/.test(lowerUrl);
@@ -7752,6 +8087,7 @@ function loadStudioDocumentPreview() {
         return;
       }
       previewFrame.srcdoc = decodeTextBytes(documentBytes);
+      adoptMirroredStudioDocumentUrl(previewDocumentUrl, documentMeta);
       setStudioPreviewRetryVisible(false);
       if (noteEl) noteEl.textContent = 'HTML preview';
     });
@@ -7762,10 +8098,6 @@ function loadStudioDocumentPreview() {
   // injects it; otherwise a clear placeholder is shown.
   if (pdfJsLibraryAvailable()) {
     if (noteEl) noteEl.textContent = 'Rendering the PDF preview…';
-    if (pdfDiagnosticsLoggedForUrl !== studioCurrentDocUrl) {
-      pdfDiagnosticsLoggedForUrl = studioCurrentDocUrl;
-      logPdfPreviewDiagnostics('preview open');
-    }
     console.log('[STUDIO:PREVIEW] open · ' + studioCurrentDocUrl + ' · pdfjs ' +
       (window.pdfjsLib.version || '(unknown version)') + ' · requestFileBinary ' +
       (typeof tool.requestFileBinary === 'function' ? 'available' : 'MISSING'));
@@ -7777,11 +8109,16 @@ function loadStudioDocumentPreview() {
     }
     fetchDocumentBytes(studioCurrentDocUrl, { purpose: 'preview' }, function(previewFetchError, previewBytes, previewMeta) {
       if (previewFetchError || !previewBytes || !previewBytes.length) {
+        var previewFailureIsPermanent = isPermanentDocumentFetchFailure(previewFetchError, previewMeta) ||
+          (previewFetchError === 'network' && isExternalDocumentHost(previewDocumentUrl));
         showStudioPdfPreviewPlaceholder(previewFrame, noteEl, false,
           describeFileFetchFailureForConsole(previewFetchError, previewMeta),
-          describeFileFetchError(previewFetchError, previewMeta) + ' Press 🔄 Retry to download it again.');
+          describeDocumentDownloadFailure(previewFetchError, previewMeta, previewDocumentUrl) +
+            (previewFailureIsPermanent ? '' : ' Press 🔄 Retry to download it again.'));
+        if (previewFailureIsPermanent) offerUnreadableStudioDocumentRemoval(previewDocumentUrl, previewFetchError, previewMeta);
         return;
       }
+      adoptMirroredStudioDocumentUrl(previewDocumentUrl, previewMeta);
       console.log('[STUDIO:PREVIEW] bytes received · ' + previewBytes.length + ' byte(s) · type ' +
         ((previewMeta && previewMeta.contentType) || '?') + ' · header ' + describePdfBytesForConsole(previewBytes));
       renderPdfPreviewPages(previewBytes, previewFrame, noteEl);
@@ -7794,12 +8131,17 @@ function loadStudioDocumentPreview() {
   schedulePdfPreviewRetry();
 }
 
-/* ── Pictures from a PDF (smart capture through PDF.js) ──   A scanned page is one big picture, so the whole page is the right image. A
-   vector page is only ink: drawings and illustrations are the ink regions that
-   are NOT text lines. The page is rendered, ink cells are grouped into
-   connected regions, regions dominated by text are dropped and the rest are
-   cropped as JPEGs. No PDF internals are needed, so it works for every
-   producer (Illustrator, Word, LaTeX, scans). */
+/* ── Pictures from a PDF (smart capture through PDF.js) ──
+   Two independent sources are combined, so every layout is covered:
+   1) EMBEDDED IMAGES - the PDF itself says where each image is painted
+      (`getOperatorList()` + image operators). The placement rectangle is
+      exact, so the picture is never cut; the decoded image object is used
+      when PDF.js exposes it (original pixels, no crop at all).
+   2) VECTOR DRAWINGS - charts and shapes drawn with paths have no image
+      object, so the rendered page is analysed: ink cells that are not text
+      are grouped and cropped as pictures.
+   A page without a text layer and without a detected picture is a scan and
+   is kept as the whole page. */
 
 /** Text item boxes of one page, in rendered-canvas pixels */
 function pdfTextItemBoxes(textContent, pageViewport) {
@@ -7808,9 +8150,18 @@ function pdfTextItemBoxes(textContent, pageViewport) {
   for (var itemIndex = 0; itemIndex < textItems.length; itemIndex++) {
     var textItem = textItems[itemIndex];
     if (!textItem || !textItem.transform || !textItem.width) continue;
-    var transformedMatrix;
-    try { transformedMatrix = window.pdfjsLib.Util.transform(pageViewport.transform, textItem.transform); }
-    catch (transformError) { continue; }
+    var transformedMatrix = null;
+    try {
+      if (window.pdfjsLib && window.pdfjsLib.Util && typeof window.pdfjsLib.Util.transform === 'function') {
+        transformedMatrix = window.pdfjsLib.Util.transform(pageViewport.transform, textItem.transform);
+      } else if (pageViewport && pageViewport.transform) {
+        // Some CMS builds inject a trimmed pdf.js without Util - do the math.
+        transformedMatrix = multiplyPdfMatrices(pageViewport.transform, textItem.transform);
+      }
+    } catch (transformError) {
+      transformedMatrix = null;
+    }
+    if (!transformedMatrix) continue;
     var fontHeight = Math.hypot(transformedMatrix[2], transformedMatrix[3]) || 10;
     var textLeft = transformedMatrix[4];
     var textBaseline = transformedMatrix[5];
@@ -7856,9 +8207,292 @@ function mergeOverlappingPictureBoxes(pictureBoxes, gapPixels) {
   return mergedBoxes;
 }
 
-/** Ink regions of one rendered page that are not text (the pictures) */
-function detectPagePictureRegions(pageCanvas, textBoxes) {
+/** Multiply two PDF matrices (same convention as pdfjsLib.Util.transform) */
+function multiplyPdfMatrices(firstMatrix, secondMatrix) {
+  if (window.pdfjsLib && window.pdfjsLib.Util && typeof window.pdfjsLib.Util.transform === 'function') {
+    return window.pdfjsLib.Util.transform(firstMatrix, secondMatrix);
+  }
+  return [
+    firstMatrix[0] * secondMatrix[0] + firstMatrix[2] * secondMatrix[1],
+    firstMatrix[1] * secondMatrix[0] + firstMatrix[3] * secondMatrix[1],
+    firstMatrix[0] * secondMatrix[2] + firstMatrix[2] * secondMatrix[3],
+    firstMatrix[1] * secondMatrix[2] + firstMatrix[3] * secondMatrix[3],
+    firstMatrix[0] * secondMatrix[4] + firstMatrix[2] * secondMatrix[5] + firstMatrix[4],
+    firstMatrix[1] * secondMatrix[4] + firstMatrix[3] * secondMatrix[5] + firstMatrix[5]
+  ];
+}
+
+/** True when the matrix only moves/scales the picture (no rotation/skew) */
+function isAxisAlignedPdfMatrix(pdfMatrix) {
+  return Math.abs(pdfMatrix[1]) <= 0.001 && Math.abs(pdfMatrix[2]) <= 0.001;
+}
+
+/** Map a PDF user-space point to rendered-canvas pixels, with or without
+ *  the pdf.js viewport helper (some CMS builds inject a trimmed pdf.js). */
+function pdfUserPointToViewportPoint(pageViewport, userX, userY) {
+  if (pageViewport && typeof pageViewport.convertToViewportPoint === 'function') {
+    try {
+      var convertedPoint = pageViewport.convertToViewportPoint(userX, userY);
+      if (convertedPoint && !isNaN(convertedPoint[0]) && !isNaN(convertedPoint[1])) return convertedPoint;
+    } catch (convertError) { /* fall through to the manual transform */ }
+  }
+  var viewportMatrix = pageViewport && pageViewport.transform;
+  if (viewportMatrix && viewportMatrix.length === 6) {
+    return [
+      viewportMatrix[0] * userX + viewportMatrix[2] * userY + viewportMatrix[4],
+      viewportMatrix[1] * userX + viewportMatrix[3] * userY + viewportMatrix[5]
+    ];
+  }
+  var pageScale = (pageViewport && pageViewport.scale) || 1;
+  var pageHeight = (pageViewport && pageViewport.height) || 0;
+  return [userX * pageScale, pageHeight - userY * pageScale];
+}
+
+/** Where a PDF image is painted on the rendered page.
+ *  An image always paints the unit square transformed by the current matrix,
+ *  so the four corners give the exact rectangle - nothing is guessed and
+ *  nothing is trimmed. Returns rects in rendered-canvas pixels. */
+function pdfEmbeddedPictureRegions(operatorList, pageViewport) {
+  var ops = (window.pdfjsLib && window.pdfjsLib.OPS) || {};
+  var operationCodes = (operatorList && operatorList.fnArray) || [];
+  var operationArguments = (operatorList && operatorList.argsArray) || [];
+  var identityMatrix = [1, 0, 0, 1, 0, 0];
+  var savedMatrices = [];
+  var currentMatrix = identityMatrix;
+  var pageWidth = pageViewport.width;
+  var pageHeight = pageViewport.height;
+  var pageArea = Math.max(1, pageWidth * pageHeight);
+  var minimumSidePixels = Math.max(32, Math.round(pageViewport.scale * 18));
+  var picturePadding = Math.max(2, Math.round(pageViewport.scale * 1.5));
+  var pictureRegions = [];
+  var scanStats = { imageOperations: 0, inlineImageOperations: 0, maskOperations: 0, regionsKept: 0, regionsDroppedSmall: 0, regionsMapped: 0, operatorCount: operationCodes.length };
+
+  function boxOfUnitSquare(pdfMatrix) {
+    var unitCorners = [[0, 0], [1, 0], [0, 1], [1, 1]];
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (var cornerIndex = 0; cornerIndex < unitCorners.length; cornerIndex++) {
+      var unitX = unitCorners[cornerIndex][0];
+      var unitY = unitCorners[cornerIndex][1];
+      var userX = pdfMatrix[0] * unitX + pdfMatrix[2] * unitY + pdfMatrix[4];
+      var userY = pdfMatrix[1] * unitX + pdfMatrix[3] * unitY + pdfMatrix[5];
+      var viewportPoint = pdfUserPointToViewportPoint(pageViewport, userX, userY);
+      if (!viewportPoint || isNaN(viewportPoint[0]) || isNaN(viewportPoint[1])) return null;
+      if (viewportPoint[0] < minX) minX = viewportPoint[0];
+      if (viewportPoint[0] > maxX) maxX = viewportPoint[0];
+      if (viewportPoint[1] < minY) minY = viewportPoint[1];
+      if (viewportPoint[1] > maxY) maxY = viewportPoint[1];
+    }
+    return { left: minX, top: minY, right: maxX, bottom: maxY };
+  }
+
+  for (var operationIndex = 0; operationIndex < operationCodes.length; operationIndex++) {
+    var operationCode = operationCodes[operationIndex];
+    var operationArgs = operationArguments[operationIndex] || [];
+    if (operationCode === ops.save) {
+      savedMatrices.push(currentMatrix);
+      continue;
+    }
+    if (operationCode === ops.restore) {
+      if (savedMatrices.length) currentMatrix = savedMatrices.pop();
+      continue;
+    }
+    if (operationCode === ops.transform) {
+      if (operationArgs.length === 6) currentMatrix = multiplyPdfMatrices(currentMatrix, operationArgs);
+      continue;
+    }
+    if (operationCode === ops.paintFormXObjectBegin) {
+      savedMatrices.push(currentMatrix);
+      var formMatrix = operationArgs[0];
+      if (formMatrix && formMatrix.length === 6) currentMatrix = multiplyPdfMatrices(currentMatrix, formMatrix);
+      continue;
+    }
+    if (operationCode === ops.paintFormXObjectEnd) {
+      if (savedMatrices.length) currentMatrix = savedMatrices.pop();
+      continue;
+    }
+    var imageObjectId = null;
+    var inlineImageObject = null;
+    if (operationCode === ops.paintImageXObject || operationCode === ops.paintJpegXObject) {
+      imageObjectId = operationArgs[0];
+      scanStats.imageOperations++;
+    } else if (operationCode === ops.paintInlineImageXObject) {
+      inlineImageObject = operationArgs[0];
+      scanStats.inlineImageOperations++;
+    } else {
+      // Image masks, solid masks and repeated pattern images are not pictures.
+      if (operationCode === ops.paintImageMaskXObject || operationCode === ops.paintSolidColorImageMask) scanStats.maskOperations++;
+      continue;
+    }
+    if (!imageObjectId && !inlineImageObject) continue;
+    var pictureBox = boxOfUnitSquare(currentMatrix);
+    if (!pictureBox) continue;
+    var regionWidth = pictureBox.right - pictureBox.left;
+    var regionHeight = pictureBox.bottom - pictureBox.top;
+    if (regionWidth < minimumSidePixels || regionHeight < minimumSidePixels) { scanStats.regionsDroppedSmall++; continue; }
+    // A picture painted over the whole page is a page background or a scan.
+    // It is NOT dropped here: combinePictureRegionSources() keeps it only
+    // when the page has no text layer and no other picture.
+    var isPageBackground = regionWidth * regionHeight > pageArea * 0.85;
+    var regionLeft = Math.max(0, Math.floor(pictureBox.left - picturePadding));
+    var regionTop = Math.max(0, Math.floor(pictureBox.top - picturePadding));
+    var regionRight = Math.min(pageWidth, Math.ceil(pictureBox.right + picturePadding));
+    var regionBottom = Math.min(pageHeight, Math.ceil(pictureBox.bottom + picturePadding));
+    if (regionRight - regionLeft < 24 || regionBottom - regionTop < 24) { scanStats.regionsDroppedSmall++; continue; }
+    scanStats.regionsKept++;
+    pictureRegions.push({
+      left: regionLeft,
+      top: regionTop,
+      width: regionRight - regionLeft,
+      height: regionBottom - regionTop,
+      objectId: imageObjectId || null,
+      inlineImageObject: inlineImageObject || null,
+      isPageBackground: isPageBackground,
+      originalPlacementMatrix: isAxisAlignedPdfMatrix(currentMatrix) ? currentMatrix.slice(0, 6) : null
+    });
+  }
+
+  // The same image can be painted twice at the same spot (shadow + image).
+  pictureRegions.sort(function(firstRegion, secondRegion) {
+    if (Math.abs(firstRegion.top - secondRegion.top) > 4) return firstRegion.top - secondRegion.top;
+    return firstRegion.left - secondRegion.left;
+  });
+  var uniqueRegions = [];
+  for (var regionIndex = 0; regionIndex < pictureRegions.length; regionIndex++) {
+    var candidateRegion = pictureRegions[regionIndex];
+    var isDuplicateRegion = false;
+    for (var uniqueIndex = 0; uniqueIndex < uniqueRegions.length; uniqueIndex++) {
+      var knownRegion = uniqueRegions[uniqueIndex];
+      if (Math.abs(knownRegion.left - candidateRegion.left) <= 4 &&
+          Math.abs(knownRegion.top - candidateRegion.top) <= 4 &&
+          Math.abs(knownRegion.width - candidateRegion.width) <= 6 &&
+          Math.abs(knownRegion.height - candidateRegion.height) <= 6) {
+        isDuplicateRegion = true;
+        break;
+      }
+    }
+    if (!isDuplicateRegion) uniqueRegions.push(candidateRegion);
+  }
+  scanStats.regionsMapped = uniqueRegions.length;
+  uniqueRegions.stats = scanStats;
+  return uniqueRegions;
+}
+
+/** Turn one decoded PDF image object into a canvas. Returns null for shapes
+ *  that need page compositing (soft masks, inverted masks, exotic kinds) -
+ *  those are cropped from the rendered page instead. */
+function pdfImageObjectToCanvas(imageObject) {
+  if (!imageObject) return null;
+  try {
+    var imageWidth = Math.floor(imageObject.width || 0);
+    var imageHeight = Math.floor(imageObject.height || 0);
+    if (!imageWidth || !imageHeight) return null;
+    var isDrawable = (typeof imageObject.getContext === 'function') ||
+      (typeof ImageBitmap !== 'undefined' && imageObject instanceof ImageBitmap) ||
+      (typeof imageObject.src === 'string' && imageObject.src);
+    var sourceCanvas = document.createElement('canvas');
+    sourceCanvas.width = imageWidth;
+    sourceCanvas.height = imageHeight;
+    var sourceContext = sourceCanvas.getContext('2d');
+    if (isDrawable) {
+      sourceContext.drawImage(imageObject, 0, 0, imageWidth, imageHeight);
+      return sourceCanvas;
+    }
+    if (!imageObject.data || !imageObject.data.length) return null;
+    if (imageObject.smask || imageObject.inverted) return null;
+    var imageKind = imageObject.kind;
+    if (imageKind !== 2 && imageKind !== 3) return null;
+    var pixelCount = imageWidth * imageHeight;
+    if (imageObject.data.length < pixelCount * (imageKind === 3 ? 4 : 3)) return null;
+    var imageData = sourceContext.createImageData(imageWidth, imageHeight);
+    var targetPixels = imageData.data;
+    var sourcePixels = imageObject.data;
+    if (imageKind === 3) {
+      targetPixels.set(sourcePixels.subarray(0, pixelCount * 4));
+    } else {
+      for (var pixelIndex = 0, sourceOffset = 0, targetOffset = 0; pixelIndex < pixelCount; pixelIndex++, sourceOffset += 3, targetOffset += 4) {
+        targetPixels[targetOffset] = sourcePixels[sourceOffset];
+        targetPixels[targetOffset + 1] = sourcePixels[sourceOffset + 1];
+        targetPixels[targetOffset + 2] = sourcePixels[sourceOffset + 2];
+        targetPixels[targetOffset + 3] = 255;
+      }
+    }
+    sourceContext.putImageData(imageData, 0, 0);
+    // Flatten on white, exactly like the PDF page shows it (JPEG has no alpha).
+    var flattenedCanvas = document.createElement('canvas');
+    flattenedCanvas.width = imageWidth;
+    flattenedCanvas.height = imageHeight;
+    var flattenedContext = flattenedCanvas.getContext('2d');
+    flattenedContext.fillStyle = '#ffffff';
+    flattenedContext.fillRect(0, 0, imageWidth, imageHeight);
+    flattenedContext.drawImage(sourceCanvas, 0, 0);
+    return flattenedCanvas;
+  } catch (imageObjectError) {
+    console.warn('[STUDIO:PICTURES] decoded image object could not be used:', imageObjectError);
+    return null;
+  }
+}
+
+/** The decoded original of one embedded image, when PDF.js exposes it */
+function pdfPageImageCanvas(pdfPage, objectId) {
+  if (!pdfPage || !objectId || !pdfPage.objs || typeof pdfPage.objs.get !== 'function') return null;
+  var decodedObject = null;
+  try { decodedObject = pdfPage.objs.get(objectId); }
+  catch (notDecodedError) { return null; }
+  return pdfImageObjectToCanvas(decodedObject);
+}
+
+/** Overlap ratio between two page rectangles (0..1 of the first rectangle) */
+function pictureRegionOverlapRatio(firstRegion, secondRegion) {
+  var overlapWidth = Math.min(firstRegion.left + firstRegion.width, secondRegion.left + secondRegion.width) -
+    Math.max(firstRegion.left, secondRegion.left);
+  var overlapHeight = Math.min(firstRegion.top + firstRegion.height, secondRegion.top + secondRegion.height) -
+    Math.max(firstRegion.top, secondRegion.top);
+  if (overlapWidth <= 0 || overlapHeight <= 0) return 0;
+  var firstArea = Math.max(1, firstRegion.width * firstRegion.height);
+  return (overlapWidth * overlapHeight) / firstArea;
+}
+
+/** Combine the exact embedded-image rects with the vector-drawing regions:
+ *  a drawing inside an embedded picture is the same picture, not a second
+ *  one, and a whole-page region is only kept for a real scan. */
+function combinePictureRegionSources(embeddedPictureRegions, drawingPictureRegions, pageCanvas, textBoxes) {
   var pageWidth = pageCanvas.width;
+  var pageHeight = pageCanvas.height;
+  var pageArea = Math.max(1, pageWidth * pageHeight);
+  var hasTextLayer = !!(textBoxes && textBoxes.length);
+  var combinedRegions = [];
+  var pageBackgroundRegion = null;
+  var regionIndex;
+  for (regionIndex = 0; regionIndex < embeddedPictureRegions.length; regionIndex++) {
+    var embeddedRegion = embeddedPictureRegions[regionIndex];
+    // A page-sized image is the page itself (a scan) or a background. It is
+    // kept only when the page has no text and no other picture.
+    if (embeddedRegion.isPageBackground) {
+      if (!pageBackgroundRegion) pageBackgroundRegion = embeddedRegion;
+      continue;
+    }
+    combinedRegions.push(embeddedRegion);
+  }
+  for (regionIndex = 0; regionIndex < drawingPictureRegions.length; regionIndex++) {
+    var drawingRegion = drawingPictureRegions[regionIndex];
+    var drawingArea = drawingRegion.width * drawingRegion.height;
+    if (drawingArea > pageArea * 0.8 && (embeddedPictureRegions.length || hasTextLayer)) continue;
+    var drawingAlreadyCaptured = false;
+    for (var embeddedIndex = 0; embeddedIndex < embeddedPictureRegions.length; embeddedIndex++) {
+      if (pictureRegionOverlapRatio(drawingRegion, embeddedPictureRegions[embeddedIndex]) >= 0.45) { drawingAlreadyCaptured = true; break; }
+    }
+    if (drawingAlreadyCaptured) continue;
+    combinedRegions.push(drawingRegion);
+  }
+  if (!combinedRegions.length && !hasTextLayer && pageBackgroundRegion) combinedRegions.push(pageBackgroundRegion);
+  if (!combinedRegions.length && !hasTextLayer) {
+    return [{ left: 0, top: 0, width: pageWidth, height: pageHeight }];
+  }
+  return combinedRegions;
+}
+
+/** Ink regions of one rendered page that are not text (the pictures) */
+function detectPagePictureRegions(pageCanvas, textBoxes) {  var pageWidth = pageCanvas.width;
   var pageHeight = pageCanvas.height;
   if (!pageWidth || !pageHeight) return [];
   var cellSize = 24;
@@ -7870,100 +8504,263 @@ function detectPagePictureRegions(pageCanvas, textBoxes) {
     console.warn('[STUDIO:PICTURES] page pixels could not be read:', pixelError);
     return [];
   }
-  var inkCells = new Uint8Array(columnCount * rowCount);
+
+  // 1) Edge map: drawings have visible edges. Flat tinted boxes (formatted text
+  //    blocks) and page backgrounds have edges only on their outline, so they
+  //    are separated later by the internal-edge check.
+  var edgeCells = new Uint8Array(columnCount * rowCount);
   var sampledStep = 3;
+  var edgeThreshold = 60;
+  function colorDistance(redA, greenA, blueA, redB, greenB, blueB) {
+    var deltaRed = redA - redB;
+    var deltaGreen = greenA - greenB;
+    var deltaBlue = blueA - blueB;
+    return Math.sqrt(deltaRed * deltaRed + deltaGreen * deltaGreen + deltaBlue * deltaBlue);
+  }
   for (var pixelY = 0; pixelY < pageHeight; pixelY += sampledStep) {
     var rowOffset = pixelY * pageWidth * 4;
+    var nextRowOffset = Math.min(pageHeight - 1, pixelY + sampledStep) * pageWidth * 4;
     for (var pixelX = 0; pixelX < pageWidth; pixelX += sampledStep) {
       var pixelOffset = rowOffset + pixelX * 4;
       if (pagePixels[pixelOffset + 3] < 16) continue;
-      if (pagePixels[pixelOffset] > 245 && pagePixels[pixelOffset + 1] > 245 && pagePixels[pixelOffset + 2] > 245) continue;
-      inkCells[Math.floor(pixelY / cellSize) * columnCount + Math.floor(pixelX / cellSize)] = 1;
+      var rightOffset = rowOffset + Math.min(pageWidth - 1, pixelX + sampledStep) * 4;
+      var downOffset = nextRowOffset + pixelX * 4;
+      var rightDistance = colorDistance(
+        pagePixels[pixelOffset], pagePixels[pixelOffset + 1], pagePixels[pixelOffset + 2],
+        pagePixels[rightOffset], pagePixels[rightOffset + 1], pagePixels[rightOffset + 2]);
+      var downDistance = colorDistance(
+        pagePixels[pixelOffset], pagePixels[pixelOffset + 1], pagePixels[pixelOffset + 2],
+        pagePixels[downOffset], pagePixels[downOffset + 1], pagePixels[downOffset + 2]);
+      if (rightDistance > edgeThreshold || downDistance > edgeThreshold) {
+        edgeCells[Math.floor(pixelY / cellSize) * columnCount + Math.floor(pixelX / cellSize)] = 1;
+      }
     }
   }
+
+  // 2) Text map: cells covered by the PDF text layer items. The boxes are
+  //    padded because italic and overshooting glyphs can stick out of the
+  //    text item box and would otherwise be mistaken for drawing edges.
   var textCells = new Uint8Array(columnCount * rowCount);
+  var textPadding = Math.max(4, Math.round(cellSize / 4));
   for (var boxIndex = 0; boxIndex < textBoxes.length; boxIndex++) {
     var textBox = textBoxes[boxIndex];
-    var firstColumn = Math.max(0, Math.floor(textBox.left / cellSize));
-    var lastColumn = Math.min(columnCount - 1, Math.floor(textBox.right / cellSize));
-    var firstRow = Math.max(0, Math.floor(textBox.top / cellSize));
-    var lastRow = Math.min(rowCount - 1, Math.floor(textBox.bottom / cellSize));
+    var firstColumn = Math.max(0, Math.floor((textBox.left - textPadding) / cellSize));
+    var lastColumn = Math.min(columnCount - 1, Math.floor((textBox.right + textPadding) / cellSize));
+    var firstRow = Math.max(0, Math.floor((textBox.top - textPadding) / cellSize));
+    var lastRow = Math.min(rowCount - 1, Math.floor((textBox.bottom + textPadding) / cellSize));
     for (var textRow = firstRow; textRow <= lastRow; textRow++) {
       for (var textColumn = firstColumn; textColumn <= lastColumn; textColumn++) textCells[textRow * columnCount + textColumn] = 1;
     }
   }
-  // Connected components over the ink cells.
-  var visitedCells = new Uint8Array(columnCount * rowCount);
-  var inkComponents = [];
-  for (var startRow = 0; startRow < rowCount; startRow++) {
-    for (var startColumn = 0; startColumn < columnCount; startColumn++) {
-      var startIndex = startRow * columnCount + startColumn;
-      if (!inkCells[startIndex] || visitedCells[startIndex]) continue;
-      var pendingCells = [startIndex];
-      visitedCells[startIndex] = 1;
-      var inkComponent = {
-        minColumn: startColumn, maxColumn: startColumn, minRow: startRow, maxRow: startRow,
-        cellCount: 0, textCellCount: 0
-      };
-      while (pendingCells.length) {
-        var cellIndex = pendingCells.pop();
-        var cellRow = Math.floor(cellIndex / columnCount);
-        var cellColumn = cellIndex % columnCount;
-        inkComponent.cellCount++;
-        if (textCells[cellIndex]) inkComponent.textCellCount++;
-        if (cellColumn < inkComponent.minColumn) inkComponent.minColumn = cellColumn;
-        if (cellColumn > inkComponent.maxColumn) inkComponent.maxColumn = cellColumn;
-        if (cellRow < inkComponent.minRow) inkComponent.minRow = cellRow;
-        if (cellRow > inkComponent.maxRow) inkComponent.maxRow = cellRow;
-        var neighbourCells = [
-          cellColumn > 0 ? cellIndex - 1 : -1,
-          cellColumn < columnCount - 1 ? cellIndex + 1 : -1,
-          cellRow > 0 ? cellIndex - columnCount : -1,
-          cellRow < rowCount - 1 ? cellIndex + columnCount : -1
-        ];
-        for (var neighbourIndex = 0; neighbourIndex < neighbourCells.length; neighbourIndex++) {
-          var neighbourCell = neighbourCells[neighbourIndex];
-          if (neighbourCell < 0 || visitedCells[neighbourCell] || !inkCells[neighbourCell]) continue;
-          visitedCells[neighbourCell] = 1;
-          pendingCells.push(neighbourCell);
+
+  // 2b) Text blocks: group the text cells so every block can be excluded as a
+  //     whole. A formatted text block usually sits inside a tinted/bordered
+  //     panel; the wider ring around a paragraph also removes that panel edge.
+  var textBlockCells = new Uint8Array(columnCount * rowCount);
+  var visitedTextCells = new Uint8Array(columnCount * rowCount);
+  for (var clusterStartRow = 0; clusterStartRow < rowCount; clusterStartRow++) {
+    for (var clusterStartColumn = 0; clusterStartColumn < columnCount; clusterStartColumn++) {
+      var clusterStartIndex = clusterStartRow * columnCount + clusterStartColumn;
+      if (!textCells[clusterStartIndex] || visitedTextCells[clusterStartIndex]) continue;
+      var clusterQueue = [clusterStartIndex];
+      visitedTextCells[clusterStartIndex] = 1;
+      var textCluster = { minColumn: clusterStartColumn, maxColumn: clusterStartColumn, minRow: clusterStartRow, maxRow: clusterStartRow, cellCount: 0 };
+      while (clusterQueue.length) {
+        var clusterCell = clusterQueue.pop();
+        var clusterRow = Math.floor(clusterCell / columnCount);
+        var clusterColumn = clusterCell % columnCount;
+        textCluster.cellCount++;
+        if (clusterColumn < textCluster.minColumn) textCluster.minColumn = clusterColumn;
+        if (clusterColumn > textCluster.maxColumn) textCluster.maxColumn = clusterColumn;
+        if (clusterRow < textCluster.minRow) textCluster.minRow = clusterRow;
+        if (clusterRow > textCluster.maxRow) textCluster.maxRow = clusterRow;
+        for (var rowOffset = -1; rowOffset <= 1; rowOffset++) {
+          for (var columnOffset = -1; columnOffset <= 1; columnOffset++) {
+            // 4-connectivity keeps separate labels apart; only a real
+            // paragraph is treated as one text block.
+            if (Math.abs(rowOffset) + Math.abs(columnOffset) !== 1) continue;
+            var neighbourRow = clusterRow + rowOffset;
+            var neighbourColumn = clusterColumn + columnOffset;
+            if (neighbourRow < 0 || neighbourRow >= rowCount || neighbourColumn < 0 || neighbourColumn >= columnCount) continue;
+            var neighbourIndex = neighbourRow * columnCount + neighbourColumn;
+            if (!textCells[neighbourIndex] || visitedTextCells[neighbourIndex]) continue;
+            visitedTextCells[neighbourIndex] = 1;
+            clusterQueue.push(neighbourIndex);
+          }
         }
       }
-      inkComponents.push(inkComponent);
+      var clusterColumns = textCluster.maxColumn - textCluster.minColumn + 1;
+      var clusterRows = textCluster.maxRow - textCluster.minRow + 1;
+      // Multi-line paragraphs live inside panels: keep a wide ring so the
+      // panel padding and border are excluded with the text. Wide single
+      // lines keep a medium ring; short chart labels keep a narrow one.
+      var isParagraphBlock = clusterRows >= 3 && clusterColumns <= 18;
+      var blockMargin = isParagraphBlock ? 3 : (clusterColumns >= 6 ? 2 : 1);
+      var blockFirstColumn = Math.max(0, textCluster.minColumn - blockMargin);
+      var blockLastColumn = Math.min(columnCount - 1, textCluster.maxColumn + blockMargin);
+      var blockFirstRow = Math.max(0, textCluster.minRow - blockMargin);
+      var blockLastRow = Math.min(rowCount - 1, textCluster.maxRow + blockMargin);
+      for (var blockRow = blockFirstRow; blockRow <= blockLastRow; blockRow++) {
+        for (var blockColumn = blockFirstColumn; blockColumn <= blockLastColumn; blockColumn++) {
+          textBlockCells[blockRow * columnCount + blockColumn] = 1;
+        }
+      }
     }
   }
-  // Keep picture-like components: big enough and not dominated by text.
+
   var pageArea = pageWidth * pageHeight;
-  var pictureBoxes = [];
-  for (var componentIndex = 0; componentIndex < inkComponents.length; componentIndex++) {
-    var candidate = inkComponents[componentIndex];
-    var boxLeft = candidate.minColumn * cellSize;
-    var boxTop = candidate.minRow * cellSize;
-    var boxRight = Math.min(pageWidth, (candidate.maxColumn + 1) * cellSize);
-    var boxBottom = Math.min(pageHeight, (candidate.maxRow + 1) * cellSize);
-    var boxWidth = boxRight - boxLeft;
-    var boxHeight = boxBottom - boxTop;
-    if (boxWidth < 120 || boxHeight < 120) continue;
-    if (boxWidth * boxHeight < pageArea * 0.01) continue;
-    var textShare = candidate.cellCount ? (candidate.textCellCount / candidate.cellCount) : 0;
-    if (textShare > 0.45) continue;
-    pictureBoxes.push({ left: boxLeft, top: boxTop, right: boxRight, bottom: boxBottom });
-  }
-  // One region covering almost the whole page = a scanned page.
-  for (var pageBoxIndex = 0; pageBoxIndex < pictureBoxes.length; pageBoxIndex++) {
-    var pageBox = pictureBoxes[pageBoxIndex];
-    if ((pageBox.right - pageBox.left) * (pageBox.bottom - pageBox.top) > pageArea * 0.85) {
-      return [{ left: 0, top: 0, width: pageWidth, height: pageHeight }];
+
+  /** Connected regions of one cell map */
+  function collectInkComponents(sourceCells) {
+    var visitedCells = new Uint8Array(columnCount * rowCount);
+    var components = [];
+    for (var startRow = 0; startRow < rowCount; startRow++) {
+      for (var startColumn = 0; startColumn < columnCount; startColumn++) {
+        var startIndex = startRow * columnCount + startColumn;
+        if (!sourceCells[startIndex] || visitedCells[startIndex]) continue;
+        var pendingCells = [startIndex];
+        visitedCells[startIndex] = 1;
+        var component = {
+          minColumn: startColumn, maxColumn: startColumn, minRow: startRow, maxRow: startRow, cellCount: 0, cellIndices: []
+        };
+        while (pendingCells.length) {
+          var cellIndex = pendingCells.pop();
+          var cellRow = Math.floor(cellIndex / columnCount);
+          var cellColumn = cellIndex % columnCount;
+          component.cellCount++;
+          component.cellIndices.push(cellIndex);
+          if (cellColumn < component.minColumn) component.minColumn = cellColumn;
+          if (cellColumn > component.maxColumn) component.maxColumn = cellColumn;
+          if (cellRow < component.minRow) component.minRow = cellRow;
+          if (cellRow > component.maxRow) component.maxRow = cellRow;
+          var neighbourCells = [
+            cellColumn > 0 ? cellIndex - 1 : -1,
+            cellColumn < columnCount - 1 ? cellIndex + 1 : -1,
+            cellRow > 0 ? cellIndex - columnCount : -1,
+            cellRow < rowCount - 1 ? cellIndex + columnCount : -1
+          ];
+          for (var neighbourIndex = 0; neighbourIndex < neighbourCells.length; neighbourIndex++) {
+            var neighbourCell = neighbourCells[neighbourIndex];
+            if (neighbourCell < 0 || visitedCells[neighbourCell] || !sourceCells[neighbourCell]) continue;
+            visitedCells[neighbourCell] = 1;
+            pendingCells.push(neighbourCell);
+          }
+        }
+        components.push(component);
+      }
     }
+    return components;
   }
-  var mergedBoxes = mergeOverlappingPictureBoxes(pictureBoxes, 30);
+
+  /** Component -> loose pixel box (small parts merge into their drawing) */
+  function componentToCellBox(component) {
+    return {
+      left: component.minColumn * cellSize,
+      top: component.minRow * cellSize,
+      right: Math.min(pageWidth, (component.maxColumn + 1) * cellSize),
+      bottom: Math.min(pageHeight, (component.maxRow + 1) * cellSize)
+    };
+  }
+
+  var hasTextLayer = textBoxes.length > 0;
+  // 3) Drawings = edges that are NOT text and NOT part of a text block.
+  var drawingCells = new Uint8Array(columnCount * rowCount);
+  for (var drawingIndex = 0; drawingIndex < edgeCells.length; drawingIndex++) {
+    if (edgeCells[drawingIndex] && !textBlockCells[drawingIndex]) drawingCells[drawingIndex] = 1;
+  }
+  var pictureBoxes = [];
+  var drawingComponents = collectInkComponents(drawingCells);
+  for (var drawingComponentIndex = 0; drawingComponentIndex < drawingComponents.length; drawingComponentIndex++) {
+    var componentBox = componentToCellBox(drawingComponents[drawingComponentIndex]);
+    // Keep small parts too: bars, labels and icons merge into their drawing
+    // before the picture decision is made.
+    if ((componentBox.right - componentBox.left) < 12 || (componentBox.bottom - componentBox.top) < 12) continue;
+    pictureBoxes.push(componentBox);
+  }
+
+  // 4) The vector analyser never decides "this whole page is the picture" by
+  //    itself: combinePictureRegionSources() only does that for a real scan
+  //    (no text layer AND no embedded picture found). Otherwise a page whose
+  //    drawings were not separable would be captured as one full-page image.
+  if (!pictureBoxes.length) return [];
+
+  /** Does a merged box contain a real drawing (not a flat panel or frame)? */
+  function mergedBoxLooksLikePicture(mergedBox) {
+    var boxWidth = mergedBox.right - mergedBox.left;
+    var boxHeight = mergedBox.bottom - mergedBox.top;
+    if (boxWidth < 90 || boxHeight < 90) return false;
+    var boxArea = boxWidth * boxHeight;
+    if (boxArea < pageArea * 0.006) return false;
+    var firstColumn = Math.max(0, Math.floor(mergedBox.left / cellSize));
+    var lastColumn = Math.min(columnCount - 1, Math.floor((mergedBox.right - 1) / cellSize));
+    var firstRow = Math.max(0, Math.floor(mergedBox.top / cellSize));
+    var lastRow = Math.min(rowCount - 1, Math.floor((mergedBox.bottom - 1) / cellSize));
+    var totalCells = 0, edgeCellCount = 0, internalEdgeCount = 0, textCellCount = 0;
+    for (var rowIndex = firstRow; rowIndex <= lastRow; rowIndex++) {
+      for (var columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++) {
+        var cellIndex = rowIndex * columnCount + columnIndex;
+        totalCells++;
+        if (textCells[cellIndex]) textCellCount++;
+        if (!drawingCells[cellIndex]) continue;
+        edgeCellCount++;
+        // One cell of margin: a frame's inner edge lands one cell inside.
+        if (rowIndex > firstRow + 1 && rowIndex < lastRow - 1 && columnIndex > firstColumn + 1 && columnIndex < lastColumn - 1) internalEdgeCount++;
+      }
+    }
+    // A box that is mostly text is a formatted text block, not a picture.
+    if (!totalCells || (textCellCount / totalCells) > 0.55) return false;
+    if (internalEdgeCount >= Math.max(3, edgeCellCount * 0.15)) return true;
+    // Edges only on the outline: a panel/frame, unless its interior really
+    // carries picture content (varied colours or a strong colour fill).
+    var sampleFirstColumn = firstColumn + 1 < lastColumn ? firstColumn + 1 : firstColumn;
+    var sampleLastColumn = lastColumn - 1 > firstColumn ? lastColumn - 1 : lastColumn;
+    var sampleFirstRow = firstRow + 1 < lastRow ? firstRow + 1 : firstRow;
+    var sampleLastRow = lastRow - 1 > firstRow ? lastRow - 1 : lastRow;
+    var sumRed = 0, sumGreen = 0, sumBlue = 0, sumRedSquare = 0, sumGreenSquare = 0, sumBlueSquare = 0, sampledPixelCount = 0;
+    for (var sampleY = sampleFirstRow * cellSize; sampleY < Math.min(pageHeight, (sampleLastRow + 1) * cellSize); sampleY += 6) {
+      for (var sampleX = sampleFirstColumn * cellSize; sampleX < Math.min(pageWidth, (sampleLastColumn + 1) * cellSize); sampleX += 6) {
+        var sampledCell = Math.floor(sampleY / cellSize) * columnCount + Math.floor(sampleX / cellSize);
+        if (textBlockCells[sampledCell]) continue;
+        var sampledOffset = (sampleY * pageWidth + sampleX) * 4;
+        if (pagePixels[sampledOffset + 3] < 16) continue;
+        var sampledRedValue = pagePixels[sampledOffset];
+        var sampledGreenValue = pagePixels[sampledOffset + 1];
+        var sampledBlueValue = pagePixels[sampledOffset + 2];
+        sumRed += sampledRedValue;
+        sumGreen += sampledGreenValue;
+        sumBlue += sampledBlueValue;
+        sumRedSquare += sampledRedValue * sampledRedValue;
+        sumGreenSquare += sampledGreenValue * sampledGreenValue;
+        sumBlueSquare += sampledBlueValue * sampledBlueValue;
+        sampledPixelCount++;
+      }
+    }
+    if (!sampledPixelCount) return false;
+    var averageRed = sumRed / sampledPixelCount;
+    var averageGreen = sumGreen / sampledPixelCount;
+    var averageBlue = sumBlue / sampledPixelCount;
+    var redVariance = Math.max(0, (sumRedSquare / sampledPixelCount) - (averageRed * averageRed));
+    var greenVariance = Math.max(0, (sumGreenSquare / sampledPixelCount) - (averageGreen * averageGreen));
+    var blueVariance = Math.max(0, (sumBlueSquare / sampledPixelCount) - (averageBlue * averageBlue));
+    var colourDeviation = Math.sqrt((redVariance + greenVariance + blueVariance) / 3);
+    var averageColourDistance = colorDistance(averageRed, averageGreen, averageBlue, 255, 255, 255);
+    return colourDeviation >= 18 || averageColourDistance >= 110;
+  }
+
+  var mergedBoxes = mergeOverlappingPictureBoxes(pictureBoxes, 24);
   var pictureRegions = [];
   for (var mergedIndex = 0; mergedIndex < mergedBoxes.length; mergedIndex++) {
     var mergedBox = mergedBoxes[mergedIndex];
-    var padding = 10;
+    if (!mergedBoxLooksLikePicture(mergedBox)) continue;
+    // Keep the WHOLE merged box: trimming to the outermost edge cells ate the
+    // smooth top/bottom rows of photos (sky, plain background) and cut the
+    // picture. A small outward margin replaces the old inward tightening.
+    var padding = Math.max(6, Math.round(cellSize / 2));
     var regionLeft = Math.max(0, Math.floor(mergedBox.left - padding));
     var regionTop = Math.max(0, Math.floor(mergedBox.top - padding));
     var regionRight = Math.min(pageWidth, Math.ceil(mergedBox.right + padding));
     var regionBottom = Math.min(pageHeight, Math.ceil(mergedBox.bottom + padding));
+    if (regionRight - regionLeft < 90 || regionBottom - regionTop < 90) continue;
     pictureRegions.push({
       left: regionLeft, top: regionTop,
       width: Math.max(1, regionRight - regionLeft),
@@ -7986,19 +8783,31 @@ function captureDocumentPictures(onDone) {
   }
   var picturesBefore = editingStudyDocImages.length;
   function runWithBytes(pdfBytes) {
+    // PDF.js knows every picture the document paints - including images that
+    // live in compressed object streams, which a raw byte scan cannot see.
+    // The page capture is therefore the primary path; the raw scan is only a
+    // fallback for a CMS without the PDF renderer.
+    if (pdfJsLibraryAvailable()) {
+      importPdfIllustrations(pdfBytes, function() {
+        if (editingStudyDocImages.length > picturesBefore) { if (onDone) onDone(); return; }
+        console.log('[STUDIO:PICTURES] the page capture found nothing - trying the raw image scan');
+        runRawImageScanner(pdfBytes);
+      });
+      return;
+    }
+    runRawImageScanner(pdfBytes);
+  }
+
+  function runRawImageScanner(pdfBytes) {
     var candidates = [];
     try { candidates = findPdfImageStreams(pdfBytes); } catch (scanError) { candidates = []; }
     if (!candidates.length) {
-      console.log('[STUDIO:PICTURES] no raster image objects - capturing the drawings from the pages');
-      importPdfIllustrations(pdfBytes, onDone);
+      console.log('[STUDIO:PICTURES] no raster image objects and no PDF renderer - nothing to capture');
+      setStudioStatus('❌ No picture could be extracted from this document.', 'warn');
+      if (onDone) onDone();
       return;
     }
     decodeAndStorePdfImages(candidates, function() {
-      if (editingStudyDocImages.length === picturesBefore) {
-        console.log('[STUDIO:PICTURES] no embedded image could be decoded - capturing the drawings from the pages');
-        importPdfIllustrations(pdfBytes, onDone);
-        return;
-      }
       if (onDone) onDone();
     });
   }
@@ -8023,10 +8832,11 @@ function captureDocumentPictures(onDone) {
   }, function(fetchError, documentBytes, documentMeta) {
     if (fetchError || !documentBytes || !documentBytes.length) {
       console.warn('[STUDIO:PICTURES] download failed - ' + describeFileFetchFailureForConsole(fetchError, documentMeta));
-      setStudioStatus('❌ ' + describeFileFetchError(fetchError, documentMeta), 'warn');
+      setStudioStatus('❌ ' + describeDocumentDownloadFailure(fetchError, documentMeta, sourceUrl), 'warn');
       if (onDone) onDone();
       return;
     }
+    adoptMirroredStudioDocumentUrl(sourceUrl, documentMeta);
     runWithBytes(documentBytes);
   });
 }
@@ -8041,12 +8851,15 @@ function importPdfIllustrations(pdfBytes, onDone) {
   var pageScale = parseFloat(tool.param('pdfPageImageScale', '2'));
   if (!pageScale || isNaN(pageScale)) pageScale = 2;
   pageScale = Math.max(1, Math.min(3, pageScale));
-  var maxPages = parseInt(tool.param('pdfPageImageMaxPages', '20'), 10);
-  if (!maxPages || maxPages < 1) maxPages = 20;
+  var maxPages = parseInt(tool.param('pdfPageImageMaxPages', '40'), 10);
+  if (!maxPages || maxPages < 1) maxPages = 40;
+  var embeddedPictureCount = 0;
+  var drawingPictureCount = 0;
+  var scanSummary = 'build ' + TOOL_BUILD;
 
   function addRenderedPagesToGallery(renderedPageImages, renderedCount, totalPages) {
     if (!renderedPageImages.length) {
-      setStudioStatus('❌ None of the pages could be rendered.', 'warn');
+      setStudioStatus('❌ No picture could be found on the inspected pages (' + scanSummary + ').', 'warn');
       if (onDone) onDone();
       return;
     }
@@ -8080,6 +8893,7 @@ function importPdfIllustrations(pdfBytes, onDone) {
     var status = '✅ Added ' + addedImageCount + ' picture(s).';
     if (duplicateImageCount) status += ' ' + duplicateImageCount + ' already in the list.';
     if (renderedCount < totalPages) status += ' First ' + renderedCount + ' of ' + totalPages + ' pages only (page limit).';
+    status += ' [' + scanSummary + ']';
     setStudioStatus(status, 'ok');
     tool.notify(status, 'success');
     uploadUnhostedStudioImages(function(uploadedCount) {
@@ -8110,32 +8924,67 @@ function importPdfIllustrations(pdfBytes, onDone) {
       var pageCanvas = document.createElement('canvas');
       pageCanvas.width = Math.max(1, Math.floor(pageViewport.width));
       pageCanvas.height = Math.max(1, Math.floor(pageViewport.height));
-      pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: pageViewport }).promise.then(function() {
-        pdfPage.getTextContent().then(function(textContent) {
-          var textBoxes = pdfTextItemBoxes(textContent, pageViewport);
-          var pictureRegions = detectPagePictureRegions(pageCanvas, textBoxes);
-          if (!pictureRegions.length) {
-            // Text-only or blank page: keep the page itself so nothing is lost.
-            cropPictureRegion(pageCanvas, { left: 0, top: 0, width: pageCanvas.width, height: pageCanvas.height },
-              'page-' + pageNumber + '.jpg', collectedPictures, onPageDone);
-            return;
+      // 1) The PDF itself tells where every embedded picture is painted.
+      var readOperatorList = (typeof pdfPage.getOperatorList === 'function')
+        ? pdfPage.getOperatorList().catch(function(operatorListError) {
+            console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' operator list could not be read:', operatorListError);
+            return null;
+          })
+        : Promise.resolve(null);
+      readOperatorList.then(function(operatorList) {
+        var embeddedPictureRegions = operatorList ? pdfEmbeddedPictureRegions(operatorList, pageViewport) : [];
+        if (embeddedPictureRegions.stats) {
+          console.log('[STUDIO:PICTURES] page ' + pageNumber + ' PDF ops: ' + JSON.stringify(embeddedPictureRegions.stats));
+        } else if (!operatorList) {
+          console.warn('[STUDIO:PICTURES] page ' + pageNumber + ': no operator list (pdf.js getOperatorList is unavailable) - using the rendered page only');
+        }
+        pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: pageViewport }).promise.then(function() {
+          function capturePictureRegions(pictureRegions) {
+            if (!pictureRegions.length) { onPageDone(); return; }
+            var regionIndex = 0;
+            function captureNextRegion() {
+              if (regionIndex >= pictureRegions.length) { onPageDone(); return; }
+              var pictureRegion = pictureRegions[regionIndex];
+              regionIndex++;
+              var pictureName = 'page-' + pageNumber + '-' + regionIndex + '.jpg';
+              // Prefer the ORIGINAL image pixels: PDF.js has them decoded after
+              // the page render, so a photo is saved complete - no crop, no
+              // lost edge and the native resolution of the file.
+              var originalImageCanvas = null;
+              if (pictureRegion.objectId) originalImageCanvas = pdfPageImageCanvas(pdfPage, pictureRegion.objectId);
+              else if (pictureRegion.inlineImageObject) originalImageCanvas = pdfImageObjectToCanvas(pictureRegion.inlineImageObject);
+              if (originalImageCanvas) {
+                canvasToStudioImage(originalImageCanvas, pictureName, function(encodeError, pictureImage) {
+                  if (encodeError || !pictureImage) console.warn('[STUDIO:PICTURES] ' + pictureName + ' could not be encoded:', encodeError);
+                  else collectedPictures.push(pictureImage);
+                  captureNextRegion();
+                });
+                return;
+              }
+              cropPictureRegion(pageCanvas, pictureRegion, pictureName, collectedPictures, captureNextRegion);
+            }
+            captureNextRegion();
           }
-          var regionIndex = 0;
-          function cropNextRegion() {
-            if (regionIndex >= pictureRegions.length) { onPageDone(); return; }
-            var pictureRegion = pictureRegions[regionIndex];
-            regionIndex++;
-            cropPictureRegion(pageCanvas, pictureRegion, 'page-' + pageNumber + '-' + regionIndex + '.jpg', collectedPictures, cropNextRegion);
-          }
-          cropNextRegion();
-        }).catch(function(textError) {
-          console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' text boxes could not be read:', textError);
-          cropPictureRegion(pageCanvas, { left: 0, top: 0, width: pageCanvas.width, height: pageCanvas.height },
-            'page-' + pageNumber + '.jpg', collectedPictures, onPageDone);
+          pdfPage.getTextContent().then(function(textContent) {
+            var textBoxes = pdfTextItemBoxes(textContent, pageViewport);
+            // 2) Vector drawings (charts, shapes) have no image object.
+            var drawingPictureRegions = detectPagePictureRegions(pageCanvas, textBoxes);
+            console.log('[STUDIO:PICTURES] page ' + pageNumber + ': ' + embeddedPictureRegions.length +
+              ' embedded image(s), ' + drawingPictureRegions.length + ' drawing region(s), ' +
+              textBoxes.length + ' text item(s) of ' + ((textContent && textContent.items && textContent.items.length) || 0));
+            embeddedPictureCount += embeddedPictureRegions.length;
+            drawingPictureCount += drawingPictureRegions.length;
+            scanSummary = 'build ' + TOOL_BUILD + ' · ' + embeddedPictureCount + ' embedded image(s), ' +
+              drawingPictureCount + ' drawing region(s) on ' + pagesToInspect + ' page(s)';
+            capturePictureRegions(combinePictureRegionSources(embeddedPictureRegions, drawingPictureRegions, pageCanvas, textBoxes));
+          }).catch(function(textError) {
+            console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' text boxes could not be read:', textError);
+            capturePictureRegions(combinePictureRegionSources(embeddedPictureRegions, [], pageCanvas, []));
+          });
+        }).catch(function(renderError) {
+          console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' could not be rendered:', renderError);
+          onPageDone();
         });
-      }).catch(function(renderError) {
-        console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' could not be rendered:', renderError);
-        onPageDone();
       });
     }).catch(function(pageError) {
       console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' could not be opened:', pageError);
@@ -8464,10 +9313,11 @@ function downloadStudyDocFile(docUrl) {
   }, function(fetchError, fileBytes, fileMeta) {
     if (fetchError || !fileBytes || !fileBytes.length) {
       console.warn('[STUDIO:DOWNLOAD] download failed - ' + describeFileFetchFailureForConsole(fetchError, fileMeta));
-      setStudioStatus('❌ ' + describeFileFetchError(fetchError, fileMeta) + ' Opening it in a new tab instead.', 'warn');
+      setStudioStatus('❌ ' + describeDocumentDownloadFailure(fetchError, fileMeta, targetUrl) + ' Opening it in a new tab instead.', 'warn');
       tool.openUrl(toHostingUrl(targetUrl));
       return;
     }
+    adoptMirroredStudioDocumentUrl(targetUrl, fileMeta);
     var savedName = (fileMeta && fileMeta.fileName) || fallbackName;
     var savedToDisk = saveBytesToDisk(fileBytes, savedName, (fileMeta && fileMeta.contentType) || 'application/octet-stream');
     if (savedToDisk) {
@@ -8551,6 +9401,7 @@ function openStudioDrawerForDoc(docUrl) {
   if (titleEl) titleEl.textContent = readableFileName(docUrl);
   if (subtitleEl) subtitleEl.textContent = (role === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document') + ' · ' + editingStudyDocImages.length + ' image(s)';
   if (roleButton) roleButton.textContent = role === 'final' ? '🔄 To Sample' : '🔄 To Ready';
+  updateStudioOriginalSourceButton();
   setStudioStatus('', '');
   switchStudioTab('document');
   syncStudioOcrLanguageSelect();
@@ -8563,6 +9414,68 @@ function openStudioDrawerForDoc(docUrl) {
   if (drawerBackdrop) drawerBackdrop.classList.add('sd-drawer-backdrop-open');
   syncDrawerScrollLock();
   tool.resize();
+}
+
+/** Show "↗ Original Source" only when the open document is a CMS copy of an outside file */
+function updateStudioOriginalSourceButton() {
+  updateStudioDocumentSourceActions();
+}
+
+/** Show the document actions that match the open document */
+function updateStudioDocumentSourceActions() {
+  var openButton = el('btn-sd-open-doc');
+  var originalButton = el('btn-sd-open-original');
+  var storeButton = el('btn-sd-store-copy');
+  var documentUrl = studioCurrentDocUrl;
+  var isOutsideDocument = !!documentUrl && isExternalDocumentHost(documentUrl);
+  var originUrl = studioDocOriginUrl(documentUrl);
+
+  if (storeButton) storeButton.hidden = !(isOutsideDocument && !originUrl);
+  if (openButton) {
+    openButton.disabled = isOutsideDocument;
+    openButton.title = isOutsideDocument
+      ? 'There is no CMS copy of this outside document yet - use "↗ Original Source" or "☁ Import to CMS"'
+      : (originUrl
+        ? 'Open the CMS storage copy in a new tab (the original stays available with ↗ Original Source)'
+        : 'Open the source document in a new tab');
+  }
+  if (originalButton) {
+    var originalTarget = originUrl || (isOutsideDocument ? documentUrl : '');
+    originalButton.hidden = !originalTarget;
+    originalButton.title = originalTarget ? 'Open the original outside source: ' + originalTarget : '';
+  }
+}
+
+/** Download an outside document and store it in CMS storage, then use the stored URL */
+function storeStudioDocumentCopyInCms() {
+  var documentUrl = studioCurrentDocUrl;
+  if (!documentUrl) { tool.notify('Open a document first.', 'warning'); return; }
+  if (typeof tool.requestUploadBinary !== 'function') {
+    tool.notify('Storing a copy needs binary upload (allowBinaryUpload: yes in the field settings).', 'warning');
+    return;
+  }
+  setStudioStatus('⏳ Downloading the document to store a CMS copy…', 'busy');
+  fetchDocumentBytes(documentUrl, { purpose: 'store-copy' }, function(fetchError, documentBytes, documentMeta) {
+    if (fetchError || !documentBytes || !documentBytes.length) {
+      setStudioStatus('❌ ' + describeDocumentDownloadFailure(fetchError, documentMeta, documentUrl), 'warn');
+      return;
+    }
+    if (documentMeta && documentMeta.mirrored && documentMeta.mirrorUrl) {
+      adoptMirroredStudioDocumentUrl(documentUrl, documentMeta);
+      return;
+    }
+    setStudioStatus('⏳ Uploading the copy to CMS storage…', 'busy');
+    var copyName = safeDownloadFileName(documentUrl, 'document.pdf');
+    var copyContentType = (documentMeta && documentMeta.contentType) || (/\.pdf(\?|#|$)/i.test(documentUrl) ? 'application/pdf' : 'application/octet-stream');
+    tool.requestUploadBinary({ dataUrl: bytesToDataUrl(documentBytes, copyContentType), name: copyName, contentType: copyContentType }, function(uploadError, uploadResult) {
+      if (uploadError || !uploadResult || !uploadResult.url) {
+        setStudioStatus('❌ The copy could not be uploaded: ' + (uploadError || 'no URL returned'), 'warn');
+        return;
+      }
+      adoptMirroredStudioDocumentUrl(documentUrl, { mirrored: true, sourceUrl: documentUrl, mirrorUrl: uploadResult.url });
+      setStudioStatus('✅ Stored in CMS storage - the stored copy is now the document.', 'ok');
+    });
+  });
 }
 
 /** Load the Generated content saved for one document into the drawer */
@@ -8726,6 +9639,7 @@ function closeStudioDrawer() {
   editingStudyDocImages = [];
   studioOcrLanguageOverride = '';
   syncStudioOcrLanguageSelect();
+  updateStudioOriginalSourceButton();
   // Keep the local PDF bytes/blob for the session: reopening the same document
   // does not require picking the file again. They are released when a
   // different document is opened (see openStudioDrawerForDoc).
@@ -9267,6 +10181,611 @@ function extractStudyDocImages(onDone) {
   captureDocumentPictures(onDone);
 }
 
+/* ═══════════════════════════════════════════
+   SPLIT PDF DIALOG
+   ═══════════════════════════════════════════ */
+
+var splitPdfDialogSource = { mode: 'current', bytes: null, fileName: '', pageCount: 0 };
+var splitPdfDialogBusy = false;
+
+function setSplitPdfStatus(messageText, statusKind) {
+  var statusElement = el('split-pdf-status');
+  if (!statusElement) return;
+  statusElement.textContent = messageText || '';
+  if (statusKind === 'error') statusElement.style.color = '#b91c1c';
+  else if (statusKind === 'ok') statusElement.style.color = '#047857';
+  else statusElement.style.color = '';
+}
+
+/** Page count of a PDF byte array (no rendering) */
+function countPdfPages(pdfBytes) {
+  var pdfText = bytesToLatin1String(pdfBytes);
+  try {
+    var pdfObjects = pdfCollectClassicObjects(pdfText);
+    var catalogNumber = pdfFindCatalogNumber(pdfText);
+    var pageEntries = pdfCollectPageEntries(pdfObjects, catalogNumber);
+    if (!pageEntries.length && pdfText.indexOf('/ObjStm') !== -1) {
+      pdfExpandPdfObjectStreams(pdfObjects);
+      pageEntries = pdfCollectPageEntries(pdfObjects, catalogNumber);
+    }
+    if (pageEntries.length) return pageEntries.length;
+  } catch (pageCountError) {
+    console.warn('[PDF:SPLIT] page tree could not be parsed, counting page objects instead:', pageCountError);
+  }
+  // Never fail the dialog because of one unreadable structure.
+  var rawPageMatches = pdfText.match(/\/Type\s*\/Page(?![s])/g);
+  return rawPageMatches ? rawPageMatches.length : 0;
+}
+
+function applySplitPdfPageCount(pageCount, sourceLabel) {
+  splitPdfDialogSource.pageCount = pageCount;
+  var startInput = el('split-pdf-start-page');
+  var endInput = el('split-pdf-end-page');
+  if (startInput) { startInput.value = 1; startInput.max = pageCount || ''; }
+  if (endInput) { endInput.value = pageCount || 1; endInput.max = pageCount || ''; }
+  var infoElement = el('split-pdf-source-info');
+  if (infoElement) {
+    infoElement.textContent = pageCount
+      ? sourceLabel + ' · ' + pageCount + ' page(s). Choose the first and last page to copy.'
+      : sourceLabel + ' · the page count could not be read - type the page range manually.';
+  }
+}
+
+function loadSplitPdfSourceBytes(onLoaded) {
+  var sourceMode = splitPdfDialogSource.mode;
+  if (sourceMode === 'local') {
+    var fileInput = el('split-pdf-file');
+    var selectedFile = fileInput && fileInput.files && fileInput.files[0];
+    if (!selectedFile) { onLoaded('Choose a PDF file first.'); return; }
+    var fileReader = new FileReader();
+    fileReader.onload = function() {
+      try {
+        var localBytes = new Uint8Array(fileReader.result);
+        var localPageCount = countPdfPages(localBytes);
+        splitPdfDialogSource.bytes = localBytes;
+        splitPdfDialogSource.fileName = selectedFile.name || 'document.pdf';
+        applySplitPdfPageCount(localPageCount, selectedFile.name || 'Local PDF');
+        onLoaded(null);
+      } catch (pageCountError) {
+        onLoaded((pageCountError && pageCountError.message) || 'The PDF could not be read.');
+      }
+    };
+    fileReader.onerror = function() { onLoaded('The selected file could not be read.'); };
+    fileReader.readAsArrayBuffer(selectedFile);
+    return;
+  }
+  if (!studioCurrentDocUrl) {
+    onLoaded('Open a document in the Study Content drawer first, or choose a local PDF file.');
+    return;
+  }
+  if (studioLocalPdfBytes && studioLocalPdfUrl === studioCurrentDocUrl) {
+    try {
+      var documentPageCount = countPdfPages(studioLocalPdfBytes);
+      splitPdfDialogSource.bytes = studioLocalPdfBytes;
+      splitPdfDialogSource.fileName = studioLocalPdfName || 'document.pdf';
+      applySplitPdfPageCount(documentPageCount, studioLocalPdfName || 'Current document');
+      onLoaded(null);
+    } catch (localCountError) {
+      onLoaded((localCountError && localCountError.message) || 'The PDF could not be read.');
+    }
+    return;
+  }
+  setSplitPdfStatus('Downloading the open document…');
+  fetchDocumentBytes(studioCurrentDocUrl, { purpose: 'split' }, function(fetchError, documentBytes, documentMeta) {
+    if (fetchError || !documentBytes || !documentBytes.length) {
+      onLoaded(describeDocumentDownloadFailure(fetchError, documentMeta, studioCurrentDocUrl));
+      return;
+    }
+    try {
+      var downloadedPageCount = countPdfPages(documentBytes);
+      splitPdfDialogSource.bytes = documentBytes;
+      splitPdfDialogSource.fileName = (documentMeta && documentMeta.fileName) || safeDownloadFileName(studioCurrentDocUrl, 'document.pdf');
+      applySplitPdfPageCount(downloadedPageCount, splitPdfDialogSource.fileName);
+      onLoaded(null);
+    } catch (downloadedCountError) {
+      onLoaded((downloadedCountError && downloadedCountError.message) || 'The PDF could not be read.');
+    }
+  });
+}
+
+function openSplitPdfDialog() {
+  var overlay = el('split-pdf-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  splitPdfDialogSource = { mode: studioCurrentDocUrl ? 'current' : 'local', bytes: null, fileName: '', pageCount: 0 };
+  var sourceSelect = el('split-pdf-source');
+  if (sourceSelect) {
+    sourceSelect.value = splitPdfDialogSource.mode;
+    var currentOption = sourceSelect.querySelector ? sourceSelect.querySelector('option[value="current"]') : null;
+    if (currentOption) {
+      currentOption.disabled = !studioCurrentDocUrl;
+      currentOption.textContent = studioCurrentDocUrl ? 'Current document' : 'Current document (none open)';
+    }
+  }
+  setSplitPdfStatus('');
+  var infoElement = el('split-pdf-source-info');
+  if (!studioCurrentDocUrl) {
+    // Nothing open in the Studio drawer: ask for a local file right away.
+    if (infoElement) infoElement.textContent = 'Choose a PDF file to split.';
+    var emptyFileInput = el('split-pdf-file');
+    if (emptyFileInput) emptyFileInput.click();
+    return;
+  }
+  if (infoElement) infoElement.textContent = 'Reading the document…';
+  loadSplitPdfSourceBytes(function(loadError) {
+    if (loadError) setSplitPdfStatus('❌ ' + loadError, 'error');
+  });
+}
+
+function closeSplitPdfDialog() {
+  var overlay = el('split-pdf-overlay');
+  if (overlay) overlay.style.display = 'none';
+  splitPdfDialogBusy = false;
+}
+
+/** Run the split with the current dialog values; onDone(bytes, fileName) */
+function runSplitPdfFromDialog(onDone) {
+  if (splitPdfDialogBusy) return;
+  if (!splitPdfDialogSource.bytes) { setSplitPdfStatus('❌ No PDF source loaded yet.', 'error'); return; }
+  var startPage = parseInt((el('split-pdf-start-page') || {}).value, 10);
+  var endPage = parseInt((el('split-pdf-end-page') || {}).value, 10);
+  var pageCount = splitPdfDialogSource.pageCount || 0;
+  if (!startPage || startPage < 1) { setSplitPdfStatus('❌ The start page must be 1 or more.', 'error'); return; }
+  if (!endPage || endPage < 1) { setSplitPdfStatus('❌ The end page must be 1 or more.', 'error'); return; }
+  if (endPage < startPage) { setSplitPdfStatus('❌ The end page must be after the start page.', 'error'); return; }
+  if (pageCount && startPage > pageCount) { setSplitPdfStatus('❌ The PDF has only ' + pageCount + ' page(s).', 'error'); return; }
+  splitPdfDialogBusy = true;
+  setSplitPdfStatus('Splitting pages ' + startPage + '-' + Math.min(endPage, pageCount || endPage) + '…');
+  try {
+    var splitResult = pdfSplitPdfPageRange(splitPdfDialogSource.bytes, startPage, endPage);
+    var baseName = String(splitPdfDialogSource.fileName || 'document.pdf').replace(/\.pdf$/i, '');
+    var splitFileName = baseName + '-p' + splitResult.firstPage + '-' + splitResult.lastPage + '.pdf';
+    setSplitPdfStatus('✅ Ready: ' + (splitResult.lastPage - splitResult.firstPage + 1) + ' page(s), ' +
+      Math.max(1, Math.round(splitResult.bytes.length / 1024)) + ' KB. The pages are copied as they are (no scanning).', 'ok');
+    splitPdfDialogBusy = false;
+    if (onDone) onDone(splitResult.bytes, splitFileName);
+  } catch (splitError) {
+    splitPdfDialogBusy = false;
+    setSplitPdfStatus('❌ ' + ((splitError && splitError.message) || splitError), 'error');
+  }
+}
+
+function downloadSplitPdfBytes(pdfBytes, fileName) {
+  try {
+    var pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    var blobUrl = URL.createObjectURL(pdfBlob);
+    var downloadLink = document.createElement('a');
+    downloadLink.href = blobUrl;
+    downloadLink.download = fileName;
+    downloadLink.rel = 'noopener';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    setTimeout(function() {
+      if (downloadLink.parentNode) downloadLink.parentNode.removeChild(downloadLink);
+      URL.revokeObjectURL(blobUrl);
+    }, 5000);
+  } catch (downloadError) {
+    setSplitPdfStatus('❌ The file could not be prepared for download: ' + ((downloadError && downloadError.message) || downloadError), 'error');
+  }
+}
+
+function bindSplitPdfDialogEvents() {
+  var openButton = el('btn-split-pdf');
+  if (openButton) openButton.addEventListener('click', openSplitPdfDialog);
+  var closeButton = el('btn-split-pdf-close');
+  if (closeButton) closeButton.addEventListener('click', closeSplitPdfDialog);
+  var cancelButton = el('btn-split-pdf-cancel');
+  if (cancelButton) cancelButton.addEventListener('click', closeSplitPdfDialog);
+  var overlay = el('split-pdf-overlay');
+  if (overlay) overlay.addEventListener('click', function(event) { if (event.target === overlay) closeSplitPdfDialog(); });
+  var sourceSelect = el('split-pdf-source');
+  var fileInput = el('split-pdf-file');
+  if (sourceSelect) {
+    sourceSelect.addEventListener('change', function() {
+      splitPdfDialogSource.mode = sourceSelect.value;
+      splitPdfDialogSource.bytes = null;
+      splitPdfDialogSource.pageCount = 0;
+      setSplitPdfStatus('');
+      if (sourceSelect.value === 'local') {
+        if (fileInput) fileInput.click();
+        return;
+      }
+      loadSplitPdfSourceBytes(function(loadError) {
+        if (loadError) setSplitPdfStatus('❌ ' + loadError, 'error');
+      });
+    });
+  }
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      splitPdfDialogSource.mode = 'local';
+      if (sourceSelect) sourceSelect.value = 'local';
+      loadSplitPdfSourceBytes(function(loadError) {
+        if (loadError) setSplitPdfStatus('❌ ' + loadError, 'error');
+      });
+    });
+  }
+  var downloadButton = el('btn-split-pdf-download');
+  if (downloadButton) {
+    downloadButton.addEventListener('click', function() {
+      runSplitPdfFromDialog(function(pdfBytes, fileName) { downloadSplitPdfBytes(pdfBytes, fileName); });
+    });
+  }
+  var uploadButton = el('btn-split-pdf-upload');
+  if (uploadButton) {
+    uploadButton.addEventListener('click', function() {
+      if (typeof tool.requestUploadBinary !== 'function') {
+        setSplitPdfStatus('❌ Uploading is not enabled for this tool - use Download instead.', 'error');
+        return;
+      }
+      runSplitPdfFromDialog(function(pdfBytes, fileName) {
+        if (pdfBytes.length > 5 * 1024 * 1024) {
+          setSplitPdfStatus('❌ The split file is larger than 5 MB - use Download instead.', 'error');
+          return;
+        }
+        setSplitPdfStatus('Uploading the split PDF…');
+        tool.requestUploadBinary({
+          dataUrl: 'data:application/pdf;base64,' + bytesToBase64(pdfBytes),
+          name: fileName,
+          contentType: 'application/pdf'
+        }, function(uploadError, uploadResult) {
+          if (uploadError || !uploadResult) {
+            setSplitPdfStatus('❌ Upload failed: ' + (uploadError || 'unknown error'), 'error');
+            return;
+          }
+          setSplitPdfStatus('✅ Uploaded (' + uploadResult.sizeKb + ' KB). Opening the file…', 'ok');
+          tool.openUrl(uploadResult.url);
+        });
+      });
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════
+   REFERENCE DOCUMENTS (main page library)
+   The files are uploaded to CMS storage once; the curriculum only keeps
+   their metadata, so every lesson can use any page range of them.
+   ═══════════════════════════════════════════ */
+
+/** Clean the stored list into { id, name, url, sizeKb, addedAt } entries */
+function normalizeMainDocumentList(rawList) {
+  if (!rawList) return [];
+  if (typeof rawList === 'string') {
+    try { rawList = JSON.parse(rawList); } catch (parseListError) { return []; }
+  }
+  if (!Array.isArray(rawList)) return [];
+  var normalizedList = [];
+  for (var listIndex = 0; listIndex < rawList.length; listIndex++) {
+    var listEntry = rawList[listIndex];
+    if (!listEntry || typeof listEntry !== 'object' || !listEntry.url) continue;
+    normalizedList.push({
+      id: listEntry.id || genId(),
+      name: listEntry.name || 'Reference document',
+      url: listEntry.url,
+      sizeKb: listEntry.sizeKb || 0,
+      addedAt: listEntry.addedAt || ''
+    });
+  }
+  return normalizedList;
+}
+
+function renderMainDocumentsList() {
+  var container = el('ref-docs-list');
+  if (!container) return;
+  var countElement = el('ref-docs-count');
+  if (countElement) countElement.textContent = mainDocuments.length + ' document(s)';
+  if (!mainDocuments.length) {
+    container.innerHTML = '<div class="ref-docs-empty">No reference documents yet. Upload a PDF once, then any lesson can use a page range of it.</div>';
+    return;
+  }
+  var listHtml = '';
+  for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+    var documentEntry = mainDocuments[documentIndex];
+    var sizeLabel = documentEntry.sizeKb ? (Math.max(1, Math.round(documentEntry.sizeKb)) + ' KB') : 'PDF';
+    listHtml += '<div class="ref-doc-row">' +
+      '<div class="ref-doc-main"><strong>' + esc(documentEntry.name) + '</strong>' +
+      '<span class="ref-doc-meta">' + sizeLabel + '</span></div>' +
+      '<div class="ref-doc-actions">' +
+        '<button class="btn btn-sm btn-outline" data-ref-open="' + esc(documentEntry.id) + '">👁 Open</button>' +
+        '<button class="btn btn-sm btn-danger" data-ref-del="' + esc(documentEntry.id) + '">🗑</button>' +
+      '</div></div>';
+  }
+  container.innerHTML = listHtml;
+}
+
+function addMainDocumentEntry(documentName, documentUrl, documentSizeKb) {
+  mainDocuments.push({
+    id: genId(),
+    name: documentName || 'Reference document',
+    url: documentUrl,
+    sizeKb: documentSizeKb || 0,
+    addedAt: new Date().toISOString()
+  });
+  saveCurriculum();
+  renderMainDocumentsList();
+  tool.notify('Reference document added ✅', 'success');
+}
+
+function uploadMainDocument() {
+  if (typeof tool.requestUpload !== 'function') {
+    tool.notify('Uploading is not enabled for this tool (allowUpload).', 'warning');
+    return;
+  }
+  tool.requestUpload('.pdf,application/pdf', function(uploadError, uploadedFile) {
+    if (uploadError || !uploadedFile || !uploadedFile.url) {
+      tool.notify('Upload failed: ' + (uploadError || 'unknown error'), 'error');
+      return;
+    }
+    addMainDocumentEntry(uploadedFile.name, uploadedFile.url, Math.round((uploadedFile.size || 0) / 1024));
+  });
+}
+
+function addMainDocumentByUrl() {
+  var typedUrl = '';
+  try { typedUrl = window.prompt('Paste the PDF URL to add as a reference document:', 'https://') || ''; }
+  catch (promptError) { typedUrl = ''; }
+  typedUrl = String(typedUrl).trim();
+  if (!typedUrl) return;
+  if (!/^https?:\/\//i.test(typedUrl)) { tool.notify('Enter a full http(s) URL.', 'warning'); return; }
+  var urlFileName = typedUrl.split('/').pop().split('?')[0] || 'Reference document';
+  try { urlFileName = decodeURIComponent(urlFileName); } catch (decodeError) { /* keep the raw name */ }
+  addMainDocumentEntry(urlFileName, typedUrl, 0);
+}
+
+function deleteMainDocument(documentId) {
+  var foundDocument = null;
+  for (var searchIndex = 0; searchIndex < mainDocuments.length; searchIndex++) {
+    if (mainDocuments[searchIndex].id === documentId) foundDocument = mainDocuments[searchIndex];
+  }
+  if (!foundDocument) return;
+  sandboxConfirm('Remove "' + foundDocument.name + '" from the reference documents? The file stays in storage; only the link is removed.', function() {
+    mainDocuments = mainDocuments.filter(function(documentEntry) { return documentEntry.id !== documentId; });
+    saveCurriculum();
+    renderMainDocumentsList();
+    tool.notify('Reference document removed.', 'info');
+  }, 'Yes, Remove');
+}
+
+function bindReferenceDocumentEvents() {
+  var uploadButton = el('btn-upload-ref-doc');
+  if (uploadButton) uploadButton.addEventListener('click', uploadMainDocument);
+  var addUrlButton = el('btn-add-ref-url');
+  if (addUrlButton) addUrlButton.addEventListener('click', addMainDocumentByUrl);
+  var listContainer = el('ref-docs-list');
+  if (listContainer) {
+    listContainer.addEventListener('click', function(event) {
+      var openButton = event.target && event.target.closest ? event.target.closest('[data-ref-open]') : null;
+      if (openButton) {
+        var openId = openButton.getAttribute('data-ref-open');
+        for (var openIndex = 0; openIndex < mainDocuments.length; openIndex++) {
+          if (mainDocuments[openIndex].id === openId) tool.openUrl(mainDocuments[openIndex].url);
+        }
+        return;
+      }
+      var removeButton = event.target && event.target.closest ? event.target.closest('[data-ref-del]') : null;
+      if (removeButton) deleteMainDocument(removeButton.getAttribute('data-ref-del'));
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════
+   USE A PAGE RANGE OF A REFERENCE DOCUMENT
+   ═══════════════════════════════════════════ */
+
+var libraryRefBusy = false;
+
+function setLibraryRefStatus(messageText, statusKind) {
+  var statusElement = el('library-ref-status');
+  if (!statusElement) return;
+  statusElement.textContent = messageText || '';
+  if (statusKind === 'error') statusElement.style.color = '#b91c1c';
+  else if (statusKind === 'ok') statusElement.style.color = '#047857';
+  else statusElement.style.color = '';
+}
+
+function openLibraryRefDialog() {
+  if (!mainDocuments.length) {
+    tool.notify('Upload a reference document on the main page first.', 'warning');
+    return;
+  }
+  var overlay = el('library-ref-overlay');
+  if (!overlay) return;
+  var documentSelect = el('library-ref-document');
+  if (documentSelect) {
+    var optionHtml = '';
+    for (var optionIndex = 0; optionIndex < mainDocuments.length; optionIndex++) {
+      optionHtml += '<option value="' + esc(mainDocuments[optionIndex].id) + '">' + esc(mainDocuments[optionIndex].name) + '</option>';
+    }
+    documentSelect.innerHTML = optionHtml;
+  }
+  if (el('library-ref-start')) el('library-ref-start').value = 1;
+  if (el('library-ref-end')) el('library-ref-end').value = 1;
+  if (el('library-ref-type')) el('library-ref-type').value = 'studyDoc';
+  setLibraryRefStatus('Choose the document and the page range to copy into this lesson.');
+  overlay.style.display = 'flex';
+}
+
+function closeLibraryRefDialog() {
+  var overlay = el('library-ref-overlay');
+  if (overlay) overlay.style.display = 'none';
+  libraryRefBusy = false;
+}
+
+/** Add the uploaded page range to the lesson document lists */
+function addLibraryReferenceToLesson(documentType, splitUrl, libraryUrl) {
+  if (documentType === 'presentation') editingPresentationPdfUrls.push(splitUrl);
+  else if (documentType === 'worksheet') editingWorksheetPdfUrls.push(splitUrl);
+  else if (documentType === 'answerKey') editingAnswerKeyPdfUrls.push(splitUrl);
+  else if (documentType === 'htmlDoc') editingHtmlDocUrls.push(splitUrl);
+  else editingStudyDocPdfUrls.push(splitUrl);
+  // Keep the source visible: the Studio shows it as "Original Source".
+  if (documentType === 'studyDoc') editingStudyDocOriginMap[splitUrl] = libraryUrl;
+  renderPdfEditorList();
+  if (editingStudyDocPdfUrls.indexOf(splitUrl) !== -1) renderStudyDocStudio();
+}
+
+function confirmLibraryRefSplit() {
+  if (libraryRefBusy) return;
+  var documentSelect = el('library-ref-document');
+  var selectedDocumentId = documentSelect ? documentSelect.value : '';
+  var selectedDocument = null;
+  for (var findIndex = 0; findIndex < mainDocuments.length; findIndex++) {
+    if (mainDocuments[findIndex].id === selectedDocumentId) selectedDocument = mainDocuments[findIndex];
+  }
+  if (!selectedDocument) { setLibraryRefStatus('❌ Choose a reference document.', 'error'); return; }
+  var startPage = parseInt((el('library-ref-start') || {}).value, 10);
+  var endPage = parseInt((el('library-ref-end') || {}).value, 10);
+  var documentType = (el('library-ref-type') || {}).value || 'studyDoc';
+  if (!startPage || startPage < 1 || !endPage || endPage < startPage) {
+    setLibraryRefStatus('❌ Enter a valid page range (start 1 or more, end after the start).', 'error');
+    return;
+  }
+  if (typeof tool.requestUploadBinary !== 'function') {
+    setLibraryRefStatus('❌ Uploading is not enabled for this tool (allowBinaryUpload).', 'error');
+    return;
+  }
+  libraryRefBusy = true;
+  setLibraryRefStatus('Downloading the reference document…');
+  fetchDocumentBytes(selectedDocument.url, { purpose: 'library-reference' }, function(fetchError, documentBytes, documentMeta) {
+    if (fetchError || !documentBytes || !documentBytes.length) {
+      libraryRefBusy = false;
+      setLibraryRefStatus('❌ ' + describeDocumentDownloadFailure(fetchError, documentMeta, selectedDocument.url), 'error');
+      return;
+    }
+    var splitResult = null;
+    try {
+      splitResult = pdfSplitPdfPageRange(documentBytes, startPage, endPage);
+    } catch (splitError) {
+      libraryRefBusy = false;
+      setLibraryRefStatus('❌ ' + ((splitError && splitError.message) || splitError), 'error');
+      return;
+    }
+    if (splitResult.bytes.length > 5 * 1024 * 1024) {
+      libraryRefBusy = false;
+      setLibraryRefStatus('❌ Pages ' + splitResult.firstPage + '-' + splitResult.lastPage + ' are larger than 5 MB. Choose a smaller range.', 'error');
+      return;
+    }
+    setLibraryRefStatus('Uploading pages ' + splitResult.firstPage + '-' + splitResult.lastPage + ' to CMS storage…');
+    var baseName = String(selectedDocument.name || 'document.pdf').replace(/\.pdf$/i, '');
+    var splitFileName = baseName + '-p' + splitResult.firstPage + '-' + splitResult.lastPage + '.pdf';
+    tool.requestUploadBinary({
+      dataUrl: 'data:application/pdf;base64,' + bytesToBase64(splitResult.bytes),
+      name: splitFileName,
+      contentType: 'application/pdf'
+    }, function(uploadError, uploadResult) {
+      libraryRefBusy = false;
+      if (uploadError || !uploadResult || !uploadResult.url) {
+        setLibraryRefStatus('❌ Upload failed: ' + (uploadError || 'unknown error'), 'error');
+        return;
+      }
+      addLibraryReferenceToLesson(documentType, uploadResult.url, selectedDocument.url);
+      closeLibraryRefDialog();
+      tool.notify('Pages ' + splitResult.firstPage + '-' + splitResult.lastPage + ' added to this lesson ✅', 'success');
+    });
+  });
+}
+
+function bindLibraryRefEvents() {
+  var addButton = el('btn-add-library-doc');
+  if (addButton) addButton.addEventListener('click', openLibraryRefDialog);
+  var closeButton = el('btn-library-ref-close');
+  if (closeButton) closeButton.addEventListener('click', closeLibraryRefDialog);
+  var cancelButton = el('btn-library-ref-cancel');
+  if (cancelButton) cancelButton.addEventListener('click', closeLibraryRefDialog);
+  var createButton = el('btn-library-ref-create');
+  if (createButton) createButton.addEventListener('click', confirmLibraryRefSplit);
+  var overlay = el('library-ref-overlay');
+  if (overlay) overlay.addEventListener('click', function(event) { if (event.target === overlay) closeLibraryRefDialog(); });
+}
+
+/* ═══════════════════════════════════════════
+   MOVE A LESSON TO ANOTHER SECTION
+   ═══════════════════════════════════════════ */
+
+var moveLessonState = { fromSectionId: '', lessonIndex: -1 };
+
+/** Renumber a section's lessons 1..n after a move */
+function renumberSectionLessons(sectionObject) {
+  if (!sectionObject || !sectionObject.lessons) return;
+  sectionObject.lessons.sort(byOrder);
+  for (var lessonIndex = 0; lessonIndex < sectionObject.lessons.length; lessonIndex++) {
+    sectionObject.lessons[lessonIndex].order = lessonIndex + 1;
+  }
+}
+
+/** Move one lesson between sections and persist the curriculum */
+function moveLessonToSection(fromSectionId, lessonIndex, toSectionId) {
+  var fromSection = findSectionById(fromSectionId);
+  var toSection = findSectionById(toSectionId);
+  if (!fromSection || !toSection || fromSectionId === toSectionId) return false;
+  var lessonList = fromSection.section.lessons || [];
+  var movedLesson = lessonList[lessonIndex];
+  if (!movedLesson) return false;
+  lessonList.splice(lessonIndex, 1);
+  if (!toSection.section.lessons) toSection.section.lessons = [];
+  toSection.section.lessons.push(movedLesson);
+  renumberSectionLessons(fromSection.section);
+  renumberSectionLessons(toSection.section);
+  saveCurriculum();
+  renderSections();
+  tool.notify('Lesson "' + (movedLesson.title || 'Untitled') + '" moved to "' + (toSection.section.title || 'Untitled') + '" ✅', 'success');
+  return true;
+}
+
+function openMoveLessonDialog(fromSectionId, lessonIndex) {
+  var fromSection = findSectionById(fromSectionId);
+  if (!fromSection) return;
+  var lessonObject = (fromSection.section.lessons || [])[lessonIndex];
+  if (!lessonObject) return;
+  var targetSelect = el('move-lesson-target');
+  if (!targetSelect) return;
+  var optionHtml = '';
+  eachSection(function(sectionObject, parentArray, indexInParent, depth) {
+    if (!sectionObject || sectionObject.id === fromSectionId) return;
+    var indent = '';
+    for (var indentIndex = 0; indentIndex < depth; indentIndex++) indent += '— ';
+    optionHtml += '<option value="' + esc(sectionObject.id) + '">' + indent + esc(sectionObject.title || 'Untitled') +
+      ' (' + ((sectionObject.lessons || []).length) + ' lesson(s))</option>';
+  });
+  if (!optionHtml) {
+    tool.notify('Create another section first, then you can move this lesson.', 'warning');
+    return;
+  }
+  targetSelect.innerHTML = optionHtml;
+  moveLessonState.fromSectionId = fromSectionId;
+  moveLessonState.lessonIndex = lessonIndex;
+  var titleElement = el('move-lesson-name');
+  if (titleElement) titleElement.textContent = lessonObject.title || 'Untitled';
+  var sourceElement = el('move-lesson-source');
+  if (sourceElement) sourceElement.textContent = fromSection.section.title || 'Untitled';
+  var overlay = el('move-lesson-overlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function closeMoveLessonDialog() {
+  var overlay = el('move-lesson-overlay');
+  if (overlay) overlay.style.display = 'none';
+  moveLessonState = { fromSectionId: '', lessonIndex: -1 };
+}
+
+function confirmMoveLesson() {
+  var targetSelect = el('move-lesson-target');
+  var targetSectionId = targetSelect ? targetSelect.value : '';
+  if (!targetSectionId) return;
+  var moved = moveLessonToSection(moveLessonState.fromSectionId, moveLessonState.lessonIndex, targetSectionId);
+  if (moved) closeMoveLessonDialog();
+}
+
+function bindMoveLessonEvents() {
+  var confirmButton = el('btn-move-lesson-confirm');
+  if (confirmButton) confirmButton.addEventListener('click', confirmMoveLesson);
+  var cancelButton = el('btn-move-lesson-cancel');
+  if (cancelButton) cancelButton.addEventListener('click', closeMoveLessonDialog);
+  var closeButton = el('btn-move-lesson-close');
+  if (closeButton) closeButton.addEventListener('click', closeMoveLessonDialog);
+  var overlay = el('move-lesson-overlay');
+  if (overlay) overlay.addEventListener('click', function(event) { if (event.target === overlay) closeMoveLessonDialog(); });
+}
+
 /* ── Studio generation: AI rewrites the document into raw HTML ── */
 function buildStudioHtmlPrompt(sourceText, imageCount) {
   var prompt = 'You are an expert educational content editor. REPHRASE the document below into clean, well-structured HTML for a study guide. This is a rewriting step - the result is raw course content that will be edited and styled later.\n\n' +
@@ -9584,6 +11103,7 @@ function readSourceDocumentText(onDone) {
   }, function(fetchError, documentBytes, documentMeta) {
     var downloadedText = '';
     if (!fetchError && documentBytes && documentBytes.length) {
+      adoptMirroredStudioDocumentUrl(sourceUrl, documentMeta);
       readablePdfBytes = documentBytes;
       if (isTextDocumentUrl(sourceUrl)) {
         downloadedText = decodeTextBytes(documentBytes);
@@ -9890,6 +11410,10 @@ function checkManagerRole() {
 
 function bindEvents() {
   el('btn-add-section').addEventListener('click', function() { openSectionEditor(null, null); });
+  bindSplitPdfDialogEvents();
+  bindReferenceDocumentEvents();
+  bindLibraryRefEvents();
+  bindMoveLessonEvents();
   var btnGenAllCurr = el('btn-generate-all-curriculum');
   if (btnGenAllCurr) {
     btnGenAllCurr.addEventListener('click', function() {
@@ -9992,9 +11516,24 @@ function bindEvents() {
   if (btnSdOpenDoc) {
     btnSdOpenDoc.addEventListener('click', function() {
       if (!studioCurrentDocUrl) { tool.notify('No document is open.', 'warning'); return; }
+      if (isExternalDocumentHost(studioCurrentDocUrl)) {
+        tool.notify('There is no CMS copy of this outside document yet - use "↗ Original Source" or "☁ Import to CMS".', 'warning');
+        return;
+      }
       tool.openUrl(studioCurrentDocUrl);
     });
   }
+  var btnSdOpenOriginal = el('btn-sd-open-original');
+  if (btnSdOpenOriginal) {
+    btnSdOpenOriginal.addEventListener('click', function() {
+      var originalTarget = studioDocOriginUrl(studioCurrentDocUrl) ||
+        (isExternalDocumentHost(studioCurrentDocUrl) ? studioCurrentDocUrl : '');
+      if (!originalTarget) { tool.notify('This document has no original outside source.', 'info'); return; }
+      tool.openUrl(originalTarget);
+    });
+  }
+  var btnSdStoreCopy = el('btn-sd-store-copy');
+  if (btnSdStoreCopy) btnSdStoreCopy.addEventListener('click', storeStudioDocumentCopyInCms);
   var btnSdDownloadPdf = el('btn-sd-download-pdf');
   if (btnSdDownloadPdf) btnSdDownloadPdf.addEventListener('click', downloadOpenPdf);
   var btnSdMakeRole = el('btn-sd-make-role');
@@ -10246,7 +11785,7 @@ function startCurriculumTool(val, fields) {
     { name: 'tenantBaseUrl', label: 'Tenant Base URL', type: 'text', default: '', severity: 'optional', hint: 'Optional fallback for doc links when the tenant subdomain cannot be auto-detected from the parent page. Example: https://yourtenant.uniconbase.com' },
     { name: 'pdfPreviewScale', label: 'PDF Preview Quality', type: 'text', default: '1.2', severity: 'optional', hint: 'Optional page-render scale for the in-tool preview: 1.0 = normal, 1.2 = default, 1.5 = sharper but slower. The PDF.js worker and library are provided by the CMS - no other PDF setting is needed.' },
     { name: 'pdfPageImageScale', label: 'Picture Capture Scale', type: 'text', default: '2', severity: 'optional', hint: 'Render scale used by "🖼 Get Pictures" when it looks for drawings/illustrations on each page (2 = 200%).' },
-    { name: 'pdfPageImageMaxPages', label: 'Picture Capture Page Limit', type: 'text', default: '20', severity: 'optional', hint: 'Maximum number of pages "🖼 Get Pictures" inspects for drawings/illustrations.' },
+    { name: 'pdfPageImageMaxPages', label: 'Picture Capture Page Limit', type: 'text', default: '40', severity: 'optional', hint: 'Maximum number of pages "🖼 Get Pictures" inspects for pictures. Embedded images are read from the PDF structure, so a high limit is fast; only vector pages need a render.' },
     { name: 'ocrLanguage', label: 'OCR Language', type: 'select', default: 'eng', severity: 'optional', options: [
       { value: 'eng', label: 'English (eng)' },
       { value: 'tur', label: 'Turkish (tur)' },
