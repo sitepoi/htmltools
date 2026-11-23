@@ -1,4 +1,4 @@
-<!-- html build 2026-11-18-47 -->
+<!-- html build 2026-11-18-49 -->
 <div id="app">
   <!-- HEADER -->
   <header class="app-header">
@@ -264,16 +264,17 @@
             </button>
           </div>
         </div>
+      </aside>
 
-        <div class="sd-rail-block">
-          <div class="sd-rail-label">Actions</div>
+      <main class="sd-app-workspace">
           <div class="sd-app-toolbar" id="sd-app-toolbar">
             <span class="sd-tab-actions" data-tab-group="content">
-              <button type="button" class="sd-btn sd-btn-primary" id="btn-sd-generate" title="AI rephrases this source document into a Generated document (nothing student-facing changes yet)">✨ Generate New Content</button>
-              <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-process" title="One click: capture the pictures, upload them, then generate the new content">⚙️ Process Document</button>
+              <button type="button" class="sd-btn sd-btn-primary" id="btn-sd-generate" title="Capture the document's pictures when the gallery is empty, then let AI write the Generated version (nothing student-facing changes)">✨ Generate New Content</button>
+              <span class="sd-toolbar-divider" aria-hidden="true"></span>
               <button type="button" class="sd-mini-btn" id="btn-sd-quality" title="Compare the source and the generated content: coverage, similarity (copyright risk) and unverifiable additions">🔍 Quality Check</button>
               <button type="button" class="sd-mini-btn" id="btn-sd-publish" title="Append this generated content to the lesson Study Content (student-facing)">⬆ Add to Study Content</button>
               <button type="button" class="sd-mini-btn" id="btn-sd-replace-study" title="Replace the lesson Study Content with this generated content">⇄ Replace</button>
+              <span class="sd-toolbar-spacer" aria-hidden="true"></span>
               <span class="sd-language">
                 <label class="sd-language-label" for="sd-ocr-language">🔍 OCR language</label>
                 <select class="sd-select" id="sd-ocr-language" title="Language used to read this document's scanned pages and pictures. Overrides the curriculum language for this document.">
@@ -313,20 +314,19 @@
             </span>
             <span class="sd-tab-actions" data-tab-group="pictures">
               <button type="button" class="sd-btn" id="btn-sd-extract" title="Capture the pictures in this document: embedded images keep their original quality, drawings and illustrations are cropped from the page">🧩 Get Pictures</button>
+              <span class="sd-toolbar-divider" aria-hidden="true"></span>
               <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-add-image" title="Upload an image to this document's pictures">🖼 Add Image</button>
               <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-generate-image" title="Create the AI generated version of the selected pictures (select at least one picture first)">🎨 Generate Image</button>
               <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-extract-local" title="Read a PDF from your device in the browser - no download limit">📁 Local PDF</button>
+              <span class="sd-toolbar-spacer" aria-hidden="true"></span>
               <button type="button" class="sd-mini-btn" id="btn-sd-select-all" title="Select or unselect every picture">☑ All</button>
             </span>
           </div>
-        </div>
-      </aside>
 
-      <main class="sd-app-workspace">
         <div class="sd-status" id="sd-status"></div>
         <div class="sd-preview-columns" id="sd-preview-columns" data-tab="document">
           <section class="sd-pane" id="sd-pane-document">
-            <div class="sd-pane-head"><span>Source document</span><span class="sd-muted" id="sd-preview-note"></span></div>
+            <div class="sd-pane-head"><span>Source document</span><span class="sd-pane-tools"><span class="sd-muted" id="sd-preview-note"></span><button type="button" class="sd-mini-btn" id="btn-sd-refresh-preview" title="Download and render the page preview again" hidden>🔄 Retry</button></span></div>
             <iframe class="sd-preview" id="sd-doc-preview" title="Document Preview"></iframe>
           </section>
           <section class="sd-pane" id="sd-pane-content">

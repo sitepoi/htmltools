@@ -1,4 +1,4 @@
-/* css build 2026-11-18-47 */
+/* css build 2026-11-18-48 */
 /* ── Self-Paced Education by Section ── */
 /* ── Reset & Base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1592,16 +1592,18 @@ body.drawer-scroll-locked {
 
 #sd-studio-drawer .sd-app-toolbar {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 0;
+  padding: 0 0 10px;
   background: transparent;
-  border: 0;
+  border-bottom: 1px solid #e8edf5;
   flex-shrink: 0;
 }
 /* Per-tab action group: only the active tab's group is visible */
-#sd-studio-drawer .sd-tab-actions { display: none; flex-direction: column; align-items: stretch; gap: 8px; }
+#sd-studio-drawer .sd-tab-actions {
+  display: none; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%;
+}
 #sd-studio-drawer[data-active-tab="document"] .sd-tab-actions[data-tab-group="document"],
 #sd-studio-drawer[data-active-tab="content"] .sd-tab-actions[data-tab-group="content"],
 #sd-studio-drawer[data-active-tab="pictures"] .sd-tab-actions[data-tab-group="pictures"],
@@ -1627,26 +1629,14 @@ body.drawer-scroll-locked {
 #sd-studio-drawer .sd-btn-quiet { background: #f8fafc; color: #334155; }
 #sd-studio-drawer .sd-btn-ghost { border-color: transparent; background: transparent; color: #475569; }
 #sd-studio-drawer .sd-btn-ghost:hover { background: #f1f5f9; }
-/* Rail buttons stack vertically and use the full rail width */
-#sd-studio-drawer .sd-app-toolbar .sd-btn {
-  width: 100%;
-  justify-content: flex-start;
-  text-align: left;
-  white-space: normal;
-  line-height: 1.35;
-}
-#sd-studio-drawer .sd-app-toolbar .sd-mini-btn {
-  width: 100%;
-  text-align: left;
-  padding: 7px 10px;
-}
-#sd-studio-drawer .sd-app-toolbar .sd-language { flex-direction: column; align-items: stretch; gap: 5px; }
-#sd-studio-drawer .sd-app-toolbar .sd-select { width: 100%; max-width: none; }
+/* Toolbar buttons keep their natural width in the horizontal action bar */
+#sd-studio-drawer .sd-app-toolbar .sd-btn,
+#sd-studio-drawer .sd-app-toolbar .sd-mini-btn { white-space: nowrap; }
 #sd-studio-drawer .sd-toolbar-divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
 #sd-studio-drawer .sd-toolbar-spacer { flex: 1 1 auto; }
 
 #sd-studio-drawer .sd-status {
-  margin: 0 0 12px; padding: 9px 12px; border-radius: 10px;
+  margin: 10px 0 0; padding: 9px 12px; border-radius: 10px;
   font-size: 12.5px; border: 1px solid transparent;
   flex-shrink: 0;
 }
@@ -1713,7 +1703,7 @@ body.drawer-scroll-locked {
 #sd-studio-drawer .sd-app-workspace {
   display: flex; flex-direction: column; min-width: 0; min-height: 0;
   flex: 1 1 auto;
-  padding: 14px 18px 16px;
+  padding: 10px 18px 16px;
 }
 #sd-studio-drawer .sd-tabs {
   display: flex; flex-direction: column; gap: 4px;
@@ -1740,7 +1730,7 @@ body.drawer-scroll-locked {
 #sd-studio-drawer .sd-tab-text strong { font-size: 12.5px; font-weight: 700; }
 #sd-studio-drawer .sd-tab-text em { font-style: normal; font-size: 10.5px; font-weight: 500; color: #94a3b8; }
 #sd-studio-drawer .sd-tab.sd-tab-active .sd-tab-text em { color: #64748b; }
-#sd-studio-drawer .sd-preview-columns { flex: 1; display: grid; gap: 14px; min-height: 0; }
+#sd-studio-drawer .sd-preview-columns { flex: 1; display: grid; gap: 14px; min-height: 0; margin-top: 10px; }
 #sd-studio-drawer .sd-preview-columns[data-tab="document"],
 #sd-studio-drawer .sd-preview-columns[data-tab="content"] { grid-template-columns: 1fr; }
 #sd-studio-drawer .sd-preview-columns[data-tab="compare"] { grid-template-columns: 1fr 1fr; }
@@ -1800,23 +1790,21 @@ body.drawer-scroll-locked {
   #sd-studio-drawer .sd-app-body { flex-direction: column; }
   #sd-studio-drawer .sd-side-rail {
     flex: 0 0 auto; flex-direction: row; flex-wrap: wrap; align-items: center;
-    gap: 10px; padding: 10px 12px;
+    gap: 10px; padding: 8px 12px;
     border-right: 0; border-bottom: 1px solid #e8edf5;
     max-height: 42vh; overflow-y: auto;
   }
   #sd-studio-drawer .sd-rail-block { flex: 1 1 100%; min-width: 0; }
   #sd-studio-drawer .sd-rail-label { display: none; }
   #sd-studio-drawer .sd-tabs { flex-direction: row; flex-wrap: wrap; gap: 4px; }
-  #sd-studio-drawer .sd-tab { width: auto; padding: 7px 10px; }
+  #sd-studio-drawer .sd-tab { width: auto; padding: 7px 10px; border-radius: 8px; }
   #sd-studio-drawer .sd-tab-text em { display: none; }
   #sd-studio-drawer .sd-tab-count { margin-left: 2px; }
-  #sd-studio-drawer .sd-app-toolbar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; }
-  #sd-studio-drawer .sd-tab-actions { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; }
-  #sd-studio-drawer .sd-app-toolbar .sd-btn { width: auto; justify-content: center; white-space: nowrap; }
-  #sd-studio-drawer .sd-app-toolbar .sd-mini-btn { width: auto; }
-  #sd-studio-drawer .sd-app-toolbar .sd-language { flex-direction: row; align-items: center; }
-  #sd-studio-drawer .sd-app-toolbar .sd-select { width: auto; max-width: 190px; }
-  #sd-studio-drawer .sd-app-workspace { padding: 12px 12px 14px; }
+  /* The active tab sits on top: the accent belongs UNDER it, not on its left edge */
+  #sd-studio-drawer .sd-tab.sd-tab-active {
+    box-shadow: inset 0 -3px 0 #4f46e5, 0 1px 3px rgba(15, 23, 42, 0.1);
+  }
+  #sd-studio-drawer .sd-app-workspace { padding: 10px 12px 14px; }
   #sd-studio-drawer .sd-preview-columns[data-tab="compare"] { grid-template-columns: 1fr; }
 }
 

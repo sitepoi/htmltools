@@ -1,4 +1,4 @@
-/* js build 2026-11-18-47 */
+/* js build 2026-11-18-49 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-47';
+var TOOL_BUILD = '2026-11-18-49';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 // Boot diagnostic: is the large-file download channel present in this CMS build?
 (function logFileChannelAvailability() {
@@ -4505,7 +4505,7 @@ function deletePdfFromEditor() {
   }, 'Yes, Delete');
 }
 
-/* ── ⚙️ Process document: extract images, upload to storage, generate content ── */
+/* ── ✨ Generate New Content: capture the pictures, upload them, generate the content ── */
 
 /** True when an image already lives on CMS storage (a hosted URL) */
 function isImageHosted(image) {
@@ -4643,38 +4643,46 @@ function uploadUnhostedStudioImages(onDone) {
   uploadNext();
 }
 
-/** ⚙️ Process Document button INSIDE the studio drawer: confirm, then run the pipeline */
-function startDocumentProcessFromDrawer() {
+/** ✨ Generate New Content button: confirm, then capture the pictures and generate the content */
+function startStudioGenerateNewContent() {
   var docUrl = studioCurrentDocUrl;
   if (!docUrl) { tool.notify('No document is open.', 'warning'); return; }
-  var roleLabel = studioDocRole(docUrl) === 'final' ? 'Ready' : 'Sample';
-  sandboxConfirm('⚙️ Process "' + readableFileName(docUrl) + '" (' + roleLabel + ' document)? It reads the document, captures its pictures, uploads them to CMS storage when the platform supports it, and regenerates the lesson Study Content from it.', function() {
-    runDocumentProcessPipeline();
-  }, 'Yes, Process');
+  var pictureStepText = editingStudyDocImages.length
+    ? 'It uses the ' + editingStudyDocImages.length + ' picture(s) already in this document\'s gallery'
+    : 'It first captures the document\'s pictures';
+  sandboxConfirm('✨ Generate a new version of "' + readableFileName(docUrl) + '"? ' + pictureStepText +
+    ', then the AI rewrites the document into a Generated version with its picture links. Nothing student-facing changes - this can take several minutes.', function() {
+    runStudioContentGenerationPipeline();
+  }, 'Yes, Generate');
 }
 
-/** Extract (PDF) → upload images → generate study content, one chain */
-function runDocumentProcessPipeline() {
+/** Pictures first (only when the gallery is empty), then the AI generated content */
+function runStudioContentGenerationPipeline() {
   var docUrl = studioCurrentDocUrl;
   if (!docUrl) { tool.notify('No document is open.', 'warning'); return; }
   var lowerUrl = docUrl.toLowerCase();
   var docType = studioDocType(docUrl);
   var isHtmlDocument = docType === 'htmlDoc' || /\.(html?|htm)(\?|#|$)/.test(lowerUrl);
   var existingImages = editingStudyDocImagesMap[docUrl];
-  var hasImages = existingImages && existingImages.length > 0;
-  if (isHtmlDocument) {
-    setStudioStatus('⏳ Processing: HTML document - generating study content…', 'busy');
+  var hasImages = !!(existingImages && existingImages.length > 0);
+
+  function uploadPicturesThenGenerate(statusText) {
+    setStudioStatus(statusText, 'busy');
     uploadUnhostedStudioImages(function() { generateStudyGuideFromStudioDoc(); });
+  }
+
+  if (isHtmlDocument) {
+    uploadPicturesThenGenerate('⏳ Generating the new content…');
     return;
   }
   if (!hasImages) {
-    setStudioStatus('⏳ Processing: extracting images from the PDF…', 'busy');
+    setStudioStatus('⏳ Step 1 of 2: capturing the pictures in the document…', 'busy');
     extractStudyDocImages(function() {
-      uploadUnhostedStudioImages(function() { generateStudyGuideFromStudioDoc(); });
+      uploadPicturesThenGenerate('⏳ Step 2 of 2: writing the generated content…');
     });
     return;
   }
-  uploadUnhostedStudioImages(function() { generateStudyGuideFromStudioDoc(); });
+  uploadPicturesThenGenerate('⏳ Generating the new content from ' + editingStudyDocImages.length + ' picture(s)…');
 }
 
 /* ── 🎨 AI image generation (requestGenerateImage + requestUploadBinary) ── */
@@ -5822,6 +5830,8 @@ if (typeof window !== 'undefined') {
     logPdfPreviewDiagnostics('manual');
     return collectPdfPreviewDiagnostics();
   };
+  /** Console helper: render the open document's page preview again */
+  window.__curriculumBuilderRetryPreview = function() { loadStudioDocumentPreview(); };
   /** Console helper: explain why OCR is not running / which engine was injected */
   window.__curriculumBuilderOcrDiag = function() {
     logOcrDiagnostics('manual');
@@ -6011,6 +6021,63 @@ function fileBytesFromFetchResult(fetchResult) {
   return null;
 }
 
+/** True when the first 1024 bytes contain the PDF signature */
+function bytesLookLikePdf(fileBytes) {
+  if (!fileBytes || fileBytes.length < 5) return false;
+  var scanLimit = Math.min(fileBytes.length - 4, 1024);
+  for (var index = 0; index < scanLimit; index++) {
+    if (fileBytes[index] === 0x25 && fileBytes[index + 1] === 0x50 && fileBytes[index + 2] === 0x44 &&
+        fileBytes[index + 3] === 0x46 && fileBytes[index + 4] === 0x2D) return true;
+  }
+  return false;
+}
+
+/** Last-resort download inside the tool frame: the browser reads the file
+ *  itself (same-origin CMS storage or a CORS-enabled host). No server relay. */
+function downloadDocumentBytesDirectly(documentUrl, onDone) {
+  if (typeof fetch !== 'function') {
+    onDone('network', { detail: 'fetch is not available in this browser' });
+    return;
+  }
+  var responseContentType = '';
+  var responseStatus = 0;
+  fetch(documentUrl, { credentials: 'same-origin', cache: 'no-store' })
+    .then(function(response) {
+      responseStatus = response.status;
+      responseContentType = (response.headers && response.headers.get) ? (response.headers.get('content-type') || '') : '';
+      if (!response.ok) {
+        onDone('http_error', { status: response.status, detail: 'direct download HTTP ' + response.status });
+        return null;
+      }
+      return response.arrayBuffer();
+    })
+    .then(function(fileBuffer) {
+      if (!fileBuffer) return;
+      var directBytes = new Uint8Array(fileBuffer);
+      if (!directBytes.length) {
+        onDone('decode_failed', { detail: 'the direct download returned 0 bytes' });
+        return;
+      }
+      if (directBytes.length > STUDIO_BINARY_MAX_BYTES) {
+        onDone('too_large', { limitBytes: STUDIO_BINARY_MAX_BYTES, byteLength: directBytes.length });
+        return;
+      }
+      if (/\.pdf(\?|#|$)/i.test(String(documentUrl)) && !bytesLookLikePdf(directBytes)) {
+        onDone('decode_failed', { detail: 'the host returned a web page instead of the PDF (content-type: ' + (responseContentType || 'unknown') + ')' });
+        return;
+      }
+      onDone(null, directBytes, {
+        contentType: responseContentType,
+        fileName: safeDownloadFileName(documentUrl, 'document'),
+        byteLength: directBytes.length,
+        status: responseStatus
+      });
+    })
+    .catch(function(directError) {
+      onDone('network', { detail: 'direct download failed: ' + ((directError && directError.message) || directError) });
+    });
+}
+
 /** Turn a requestFileBinary result into bytes (arraybuffer or base64 form) */
 function fetchDocumentBytes(sourceUrl, options, onDone) {
   var requestOptions = options || {};
@@ -6046,11 +6113,46 @@ function fetchDocumentBytes(sourceUrl, options, onDone) {
     return;
   }
   studioFileBytesInflight[cacheKey] = [];
+  var directDownloadTried = false;
+  /** When the CMS channel cannot deliver, try the browser's own download once */
+  function tryDirectDownloadFallback(fallbackErrorCode, fallbackResult) {
+    if (directDownloadTried) { finishDownload(fallbackErrorCode, null, fallbackResult); return; }
+    directDownloadTried = true;
+    console.warn('[STUDIO:DOWNLOAD] falling back to a direct browser download (' + fallbackErrorCode + ')');
+    downloadDocumentBytesDirectly(sourceUrl, function(directErrorCode, directBytes, directMeta) {
+      if (!directErrorCode && directBytes && directBytes.length) {
+        lastFileChannelFailure = '';
+        lastFileChannelFailureCode = '';
+        var directFileMeta = {
+          bytes: directBytes,
+          contentType: (directMeta && directMeta.contentType) || '',
+          fileName: (directMeta && directMeta.fileName) || safeDownloadFileName(sourceUrl, 'document'),
+          byteLength: directBytes.length,
+          status: (directMeta && directMeta.status) || 200,
+          fromDirectDownload: true
+        };
+        rememberStudioFileBytes(cacheKey, directFileMeta);
+        console.log('[STUDIO:DOWNLOAD] direct browser download succeeded · ' + directBytes.length + ' byte(s)');
+        finishDownload(null, directBytes, directFileMeta);
+        return;
+      }
+      console.warn('[STUDIO:DOWNLOAD] direct browser download failed too (' + directErrorCode + ') - ' + ((directMeta && directMeta.detail) || 'no detail'));
+      // An HTTP status or an unreadable file explains the failure better than
+      // the channel's "switched off / blocked" code.
+      var preferredErrorCode = fallbackErrorCode;
+      var preferredResult = fallbackResult;
+      if (directErrorCode === 'http_error' || directErrorCode === 'decode_failed' || directErrorCode === 'too_large') {
+        preferredErrorCode = directErrorCode;
+        preferredResult = directMeta || fallbackResult;
+      }
+      finishDownload(preferredErrorCode, null, preferredResult);
+    });
+  }
   if (!binaryFileChannelAvailable()) {
     recordFileChannelFailure('missing');
     console.warn('[STUDIO:DOWNLOAD] tool.requestFileBinary is missing - tools available: ' + describeToolMethodNames());
     logFileChannelFailureOnce('missing', { url: sourceUrl, note: 'The SDK running inside this tool frame has no requestFileBinary method.' });
-    finishDownload('missing', null, null);
+    tryDirectDownloadFallback('missing', null);
     return;
   }
   var channelFinished = false;
@@ -6064,17 +6166,22 @@ function fetchDocumentBytes(sourceUrl, options, onDone) {
       requestOptions: { maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS },
       note: 'The SDK never invoked the callback.'
     });
-    finishDownload('timeout', null, null);
+    tryDirectDownloadFallback('timeout', null);
   }, STUDIO_BINARY_TIMEOUT_MS + 30000);
-  requestFileBinarySafely({
+  var binaryRequestOptions = {
     url: sourceUrl,
     maxBytes: STUDIO_BINARY_MAX_BYTES,
     timeoutMs: STUDIO_BINARY_TIMEOUT_MS,
-    cacheKey: cacheKey,
-    onProgress: function(loadedBytes, totalBytes) {
-      if (requestOptions.onProgress) requestOptions.onProgress(loadedBytes, totalBytes);
-    }
-  }, function(fetchErrorCode, fetchResult) {
+    cacheKey: cacheKey
+  };
+  // Only send a callback when progress is actually wanted: some SDK bridges
+  // cannot clone a function inside the options object.
+  if (requestOptions.onProgress) {
+    binaryRequestOptions.onProgress = function(loadedBytes, totalBytes) {
+      requestOptions.onProgress(loadedBytes, totalBytes);
+    };
+  }
+  requestFileBinarySafely(binaryRequestOptions, function(fetchErrorCode, fetchResult) {
     if (channelFinished) return;
     channelFinished = true;
     clearTimeout(channelWatchdog);
@@ -6095,7 +6202,7 @@ function fetchDocumentBytes(sourceUrl, options, onDone) {
         return;
       }
       recordFileChannelFailure('channel_error', { detail: 'the channel returned no bytes' });
-      finishDownload('decode_failed', null, fetchResult);
+      tryDirectDownloadFallback('decode_failed', fetchResult);
       return;
     }
     // html-tool-rules v3.1: there is NO server fallback. Report the channel
@@ -6107,7 +6214,7 @@ function fetchDocumentBytes(sourceUrl, options, onDone) {
       requestOptions: { maxBytes: STUDIO_BINARY_MAX_BYTES, timeoutMs: STUDIO_BINARY_TIMEOUT_MS },
       callback: { errorCode: fetchErrorCode, result: summarizeFileChannelResult(fetchResult) }
     });
-    finishDownload(fetchErrorCode, null, fetchResult);
+    tryDirectDownloadFallback(fetchErrorCode, fetchResult);
   });
 }
 
@@ -7253,12 +7360,10 @@ function renderStudioHtmlStreamPreview(rawHtml) {
 /** Disable the heavy actions while an AI run is streaming (visible on the button too) */
 function setStudioActionButtonsBusy(isBusy) {
   var generateButton = el('btn-sd-generate');
-  var processButton = el('btn-sd-process');
   if (generateButton) {
     generateButton.disabled = !!isBusy;
     generateButton.textContent = isBusy ? '⏳ Generating…' : '✨ Generate New Content';
   }
-  if (processButton) processButton.disabled = !!isBusy;
 }
 
 /** Drawer layout defaults - the workspace rail (tabs + actions) is part of the HTML */
@@ -7453,6 +7558,9 @@ function collectPdfPreviewDiagnostics() {
       catch (fieldsError) { return 'threw: ' + fieldsError.message; }
     })(),
     lastPreviewFailure: lastPdfPreviewFailure || '(none recorded)',
+    lastFileChannelFailure: lastFileChannelFailure || '(none)',
+    lastFileChannelFailureCode: lastFileChannelFailureCode || '(none)',
+    directBrowserDownload: (typeof fetch === 'function') ? 'available' : 'MISSING',
     documentUrl: studioCurrentDocUrl || '(none open)',
     documentType: studioCurrentDocUrl ? studioDocType(studioCurrentDocUrl) : '(none open)'
   };
@@ -7505,11 +7613,18 @@ function pdfJsWorkerDescription() {
   }
 }
 
+/** Show/hide the "Retry preview" action in the Source pane header */
+function setStudioPreviewRetryVisible(isVisible) {
+  var retryButton = el('btn-sd-refresh-preview');
+  if (retryButton) retryButton.hidden = !isVisible;
+}
+
 /** User-facing placeholder - technical reasons go to the console only */
 function showStudioPdfPreviewPlaceholder(previewFrame, noteEl, localPdfAvailable, diagnosticReason, userFacingHint) {
   lastPdfPreviewFailure = diagnosticReason || '';
   if (diagnosticReason) console.warn('[STUDIO:PREVIEW] page preview unavailable - ' + diagnosticReason);
   logPdfPreviewDiagnostics('placeholder shown');
+  setStudioPreviewRetryVisible(true);
   previewFrame.src = 'about:blank';
   var hintLine = userFacingHint
     ? '<div style="margin-top:6px;font-size:12px">' + esc(userFacingHint) + '</div>'
@@ -7517,7 +7632,7 @@ function showStudioPdfPreviewPlaceholder(previewFrame, noteEl, localPdfAvailable
   previewFrame.srcdoc = '<style>body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#475569;display:flex;align-items:center;justify-content:center;height:100%;padding:24px;text-align:center;font-size:13px;line-height:1.7}strong{color:#1e293b}</style>' +
     '<div><div style="font-size:30px;margin-bottom:6px">📄</div>' +
     '<div><strong>Page preview is not available for this document</strong></div>' +
-    '<div style="margin-top:4px">Use <strong>⬇ Download File</strong> or <strong>👁 Open File</strong> to view it.</div>' +
+    '<div style="margin-top:4px">Use <strong>⬇ Download File</strong> or <strong>👁 Open Document</strong> to view it.</div>' +
     hintLine + '</div>';
   if (noteEl) noteEl.textContent = localPdfAvailable ? 'Local PDF loaded - use Download File to save it.' : '';
 }
@@ -7526,6 +7641,7 @@ function showStudioPdfPreviewPlaceholder(previewFrame, noteEl, localPdfAvailable
 function showStudioRenderedPdfPages(previewFrame, pageImages, totalPages) {
   lastPdfPreviewFailure = '';
   pdfPreviewRetryAttempts = 0;
+  setStudioPreviewRetryVisible(false);
   var pagesHtml = pageImages.map(function (pageImage, pageIndex) {
     return '<div class="pdf-page"><img src="' + pageImage + '" alt="Page ' + (pageIndex + 1) + '"></div>';
   }).join('');
@@ -7612,6 +7728,7 @@ function loadStudioDocumentPreview() {
   if (!previewFrame) return;
   if (!studioCurrentDocUrl) {
     previewFrame.src = 'about:blank';
+    setStudioPreviewRetryVisible(false);
     if (noteEl) noteEl.textContent = '';
     return;
   }
@@ -7630,10 +7747,12 @@ function loadStudioDocumentPreview() {
       if (fetchError || !documentBytes || !documentBytes.length) {
         console.warn('[STUDIO:PREVIEW] inline HTML preview failed - ' + describeFileFetchFailureForConsole(fetchError, documentMeta));
         previewFrame.srcdoc = '';
-        if (noteEl) noteEl.textContent = 'The document could not be loaded here - use "Open File" or try again.';
+        setStudioPreviewRetryVisible(true);
+        if (noteEl) noteEl.textContent = describeFileFetchError(fetchError, documentMeta) + ' Use "Open Document" or press Retry.';
         return;
       }
       previewFrame.srcdoc = decodeTextBytes(documentBytes);
+      setStudioPreviewRetryVisible(false);
       if (noteEl) noteEl.textContent = 'HTML preview';
     });
     return;
@@ -7660,7 +7779,7 @@ function loadStudioDocumentPreview() {
       if (previewFetchError || !previewBytes || !previewBytes.length) {
         showStudioPdfPreviewPlaceholder(previewFrame, noteEl, false,
           describeFileFetchFailureForConsole(previewFetchError, previewMeta),
-          'The document could not be downloaded for preview.');
+          describeFileFetchError(previewFetchError, previewMeta) + ' Press 🔄 Retry to download it again.');
         return;
       }
       console.log('[STUDIO:PREVIEW] bytes received · ' + previewBytes.length + ' byte(s) · type ' +
@@ -9866,15 +9985,9 @@ function bindEvents() {
   var btnSdExtractLocal = el('btn-sd-extract-local');
   if (btnSdExtractLocal) btnSdExtractLocal.addEventListener('click', pickAndProcessLocalPdf);
   var btnSdGenerate = el('btn-sd-generate');
-  if (btnSdGenerate) {
-    btnSdGenerate.addEventListener('click', function() {
-      sandboxConfirm('✨ AI-rewrite the open document into a Generated version? The AI rephrases the document into semantic HTML with its image links and saves it as this source document\'s Generated content (nothing student-facing changes). This can take several minutes.', function() {
-        generateStudyGuideFromStudioDoc();
-      }, 'Yes, Generate');
-    });
-  }
-  var btnSdProcess = el('btn-sd-process');
-  if (btnSdProcess) btnSdProcess.addEventListener('click', startDocumentProcessFromDrawer);
+  if (btnSdGenerate) btnSdGenerate.addEventListener('click', startStudioGenerateNewContent);
+  var btnSdRefreshPreview = el('btn-sd-refresh-preview');
+  if (btnSdRefreshPreview) btnSdRefreshPreview.addEventListener('click', function() { loadStudioDocumentPreview(); });
   var btnSdOpenDoc = el('btn-sd-open-doc');
   if (btnSdOpenDoc) {
     btnSdOpenDoc.addEventListener('click', function() {
