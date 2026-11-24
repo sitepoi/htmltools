@@ -1,4 +1,4 @@
-/* js build 2026-11-18-103 */
+/* js build 2026-11-18-104 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-103';
+var TOOL_BUILD = '2026-11-18-104';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 // Boot diagnostic: is the large-file download channel present in this CMS build?
 (function logFileChannelAvailability() {
@@ -12360,8 +12360,20 @@ function openStudioModal(title, bodyHtml) {
 }
 
 function closeStudioModal() {
+  studioImageViewIndex = null;
   var overlay = el('sd-modal-overlay');
   if (overlay) overlay.remove();
+}
+
+/** Picture shown in the image viewer (-1 when the viewer is closed) */
+var studioImageViewIndex = null;
+
+/** Move the image viewer by one picture; wraps around the gallery */
+function stepStudioImageView(stepDirection) {
+  var pictureCount = editingStudyDocImages.length;
+  if (!pictureCount || studioImageViewIndex === null) return;
+  var nextIndex = (studioImageViewIndex + stepDirection + pictureCount) % pictureCount;
+  openStudioImageView(nextIndex);
 }
 
 function openStudioImageView(imageIndex) {
@@ -12371,13 +12383,21 @@ function openStudioImageView(imageIndex) {
   var imageRole = studioImageRole(image);
   var hasGenerated = studioImageHasGenerated(image);
   var generatedSrc = hasGenerated ? studioImageGeneratedSrc(image) : '';
+  var pictureTotal = editingStudyDocImages.length;
+  var navHtml = '<div class="sd-view-nav">' +
+    (pictureTotal > 1 ? '<button type="button" class="sd-mini-btn" data-sd-view-prev title="Previous picture (Left arrow)">◀ Previous</button>' : '') +
+    '<span class="sd-view-counter">' + (imageIndex + 1) + ' of ' + pictureTotal + '</span>' +
+    (pictureTotal > 1 ? '<button type="button" class="sd-mini-btn" data-sd-view-next title="Next picture (Right arrow)">Next ▶</button>' : '') +
+    '</div>';
   var roleLine = '<div class="sd-view-role">Role: <strong>' + (imageRole === 'source' ? '◐ Source' : '● Real') + '</strong>' +
     (imageRole === 'source' ? ' - generated content must use a generated version' : ' - generated content uses this picture directly') + '</div>';
   var generatedBlock = hasGenerated
-    ? '<div class="sd-view-version"><div class="sd-compare-label">Original (kept)</div><img class="sd-view-image" src="' + imageSrc + '" alt="Original"></div>' +
-      '<div class="sd-view-version"><div class="sd-compare-label">Generated version · ' + (image.generatedSizeKb || '?') + ' KB</div><img class="sd-view-image" src="' + generatedSrc + '" alt="Generated"></div>'
-    : '<img class="sd-view-image" src="' + imageSrc + '" alt="' + esc(image.name) + '">';
-  var bodyHtml = generatedBlock +
+    ? '<div class="sd-view-versions">' +
+        '<div><div class="sd-compare-label">Original (kept)</div><div class="sd-view-stage"><img class="sd-view-image" src="' + imageSrc + '" alt="Original"></div></div>' +
+        '<div><div class="sd-compare-label">Generated version · ' + (image.generatedSizeKb || '?') + ' KB</div><div class="sd-view-stage"><img class="sd-view-image" src="' + generatedSrc + '" alt="Generated"></div></div>' +
+      '</div>'
+    : '<div class="sd-view-stage"><img class="sd-view-image" src="' + imageSrc + '" alt="' + esc(image.name) + '"></div>';
+  var bodyHtml = navHtml + generatedBlock +
     '<div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-muted)">' + esc(image.name) + ' · ' + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB' + (isImageHosted(image) ? ' · 🔗 hosted' : '') + '</div>' +
     (image.caption ? '<div style="text-align:center;margin-top:6px;font-size:12px;color:var(--text-muted)">🤖 ' + esc(image.caption) + (image.kind ? ' · ' + esc(image.kind) : '') + '</div>' : '') +
     roleLine +
@@ -12388,8 +12408,13 @@ function openStudioImageView(imageIndex) {
       '<button type="button" class="btn btn-primary" data-sd-view-regen>' + (hasGenerated ? '🎨 Regenerate Version' : '🎨 Generate Version') + '</button>' +
     '</div>';
   openStudioModal('🖼 ' + esc(image.name), bodyHtml);
+  studioImageViewIndex = imageIndex;
   var modalBody = el('sd-modal-body');
   if (!modalBody) return;
+  var previousButton = modalBody.querySelector('[data-sd-view-prev]');
+  if (previousButton) previousButton.addEventListener('click', function() { stepStudioImageView(-1); });
+  var nextButton = modalBody.querySelector('[data-sd-view-next]');
+  if (nextButton) nextButton.addEventListener('click', function() { stepStudioImageView(1); });
   var openButton = modalBody.querySelector('[data-sd-view-open]');
   if (openButton) openButton.addEventListener('click', function() { tool.openUrl(imageSrc); });
   var openGeneratedButton = modalBody.querySelector('[data-sd-view-open-generated]');
@@ -14794,6 +14819,13 @@ function bindEvents() {
   // Drawings and vector illustrations can only be captured as screenshots:
   // paste one with Ctrl+V while the Studio drawer is open.
   document.addEventListener('paste', handleStudioImagePaste);
+  // Image viewer: arrow keys move between pictures, Escape closes it.
+  document.addEventListener('keydown', function(event) {
+    if (studioImageViewIndex === null || !el('sd-modal-overlay')) return;
+    if (event.key === 'ArrowLeft') { event.preventDefault(); stepStudioImageView(-1); }
+    else if (event.key === 'ArrowRight') { event.preventDefault(); stepStudioImageView(1); }
+    else if (event.key === 'Escape') { event.preventDefault(); closeStudioModal(); }
+  });
 
   // Gallery delegation (view large, regenerate, remove)
   var studioImagesGrid = el('sd-images-grid');

@@ -1,4 +1,4 @@
-/* css build 2026-11-18-73 */
+/* css build 2026-11-18-74 */
 /* ── Self-Paced Education by Section ── */
 /* ── Reset & Base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1217,6 +1217,20 @@ body {
 }
 .sd-version-btn.active { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
 .sd-view-role { margin-top: 8px; text-align: center; font-size: 12px; color: #475569; }
+.sd-view-nav { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+.sd-view-counter { font-size: 12px; font-weight: 600; color: var(--text-muted); min-width: 72px; text-align: center; }
+.sd-view-stage {
+  height: 56vh; display: flex; align-items: center; justify-content: center;
+  background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+.sd-view-stage .sd-view-image { max-width: 100%; max-height: 100%; margin: 0; border-radius: 0; }
+.sd-view-versions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sd-view-versions .sd-view-stage { height: 38vh; }
+@media (max-width: 640px) {
+  .sd-view-stage { height: 48vh; }
+  .sd-view-versions { grid-template-columns: 1fr; }
+  .sd-view-versions .sd-view-stage { height: 30vh; }
+}
 .sd-view-version { margin-top: 14px; }
 .sd-view-version .sd-compare-label { text-align: center; }
 .sd-empty { padding: 14px; text-align: center; color: var(--text-muted); font-size: 12px; }
