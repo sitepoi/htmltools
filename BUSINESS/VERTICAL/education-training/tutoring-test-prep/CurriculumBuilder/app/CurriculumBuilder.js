@@ -1,4 +1,4 @@
-/* js build 2026-11-18-91 */
+/* js build 2026-11-18-94 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,16 +6,12 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-91';
+var TOOL_BUILD = '2026-11-18-94';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 // Boot diagnostic: is the large-file download channel present in this CMS build?
 (function logFileChannelAvailability() {
   try {
     var channelPresent = (typeof tool !== 'undefined') && typeof tool.requestFileBinary === 'function';
-    console.log('[TOOL:BOOT] large-file download channel: ' + (channelPresent ? 'requestFileBinary available' : 'requestFileBinary MISSING'));
-    console.log('[TOOL:BOOT] PDF renderer: ' + (pdfJsLibraryAvailable() ? 'PDF.js injected' : 'PDF.js NOT injected (PDF page preview disabled)'));
-    console.log('[TOOL:BOOT] OCR engine: ' + describeOcrEngine());
-    console.log('[TOOL:BOOT] capabilities: ' + describePlatformCapabilities());
     var bootBadge = document.getElementById('tool-build-badge');
     if (bootBadge) bootBadge.textContent = 'build ' + TOOL_BUILD + ' · waiting for CMS…';
   } catch (probeError) { console.warn('[TOOL:BOOT] could not probe the download channel:', probeError); }
@@ -48,13 +44,6 @@ function pdfToolkitAvailable() {
   return true;
 }
 
-function describePlatformCapabilities() {
-  return 'deleteFile=' + toolCapability('deleteFile') +
-    ' pdfTools=' + toolCapability('pdfTools') +
-    ' imageRegenerate=' + toolCapability('imageRegenerate') +
-    ' aiVision=' + toolCapability('aiVision');
-}
-
 /* ── Early CMS handshake ─────────────────────────────────────────────
    The CMS pushes onReady / onValueChange as soon as the tool frame exists.
    This script is large, so a push can arrive BEFORE the entry point at the
@@ -77,7 +66,6 @@ function receiveEarlyCmsReady(cmsValue, cmsFields) {
   earlyCmsHandshake.readySeen = true;
   earlyCmsHandshake.readyValue = cmsValue;
   earlyCmsHandshake.readyFields = cmsFields;
-  console.log('[TOOL:READY] the CMS sent onReady · value type: ' + (cmsValue === null ? 'null' : typeof cmsValue));
   if (earlyCmsHandshake.readyHandler) earlyCmsHandshake.readyHandler(cmsValue, cmsFields);
 }
 
@@ -368,14 +356,12 @@ function stripInlineImagesFromLessonFields(docPayload, lessonLabel, stats) {
       if (imageEntry.generatedDataUrl === '') delete imageEntry.generatedDataUrl;
     }
   }
-  if (removedCount) {
-    if (stats) {
-      stats.removedCount += removedCount;
-      stats.removedBytes += removedBytes;
-    } else {
-      console.log('[BASE64] removed ' + removedCount + ' inline image(s) (' + formatFileSize(removedBytes) +
-        ') from the saved lesson "' + lessonLabel + '" - pictures must be CMS storage URLs');
-    }
+  if (removedCount && stats) {
+    stats.removedCount += removedCount;
+    stats.removedBytes += removedBytes;
+  } else if (removedCount) {
+    console.warn('[BASE64] ' + removedCount + ' inline image(s) (' + formatFileSize(removedBytes) +
+      ') removed from the saved lesson "' + lessonLabel + '" - pictures must be CMS storage URLs');
   }
   return docPayload;
 }
@@ -406,7 +392,7 @@ function extractHeavyLessonData(les) {
       (les.title || les.id || 'lesson') + '.studyDocImages', lessonImageBudget);
     var leftOutLessonPictures = applyInlineImageBudget(lessonImageBudget, MAX_SAVED_INLINE_IMAGE_BYTES);
     if (leftOutLessonPictures.length) {
-      console.log('[LESSON:DOC] ' + leftOutLessonPictures.length + ' inline picture(s) kept in memory only for "' +
+      console.warn('[LESSON:DOC] ' + leftOutLessonPictures.length + ' inline picture(s) kept in memory only for "' +
         (les.title || les.id || 'lesson') + '"');
     }
   }
@@ -502,7 +488,6 @@ function migrateLessonsToDocsIfNeeded() {
   });
   if (work.length === 0) { window._lessonsMigratedOnce = true; return; }
   window._lessonsMigratedOnce = true;
-  console.log('[CurriculumBuilder] migrating ' + work.length + ' heavy lesson(s) to lesson docs...');
 
   var remaining = work.length;
   var anyFailed = false;
@@ -551,7 +536,6 @@ function backfillLessonSummariesIfNeeded() {
   });
   if (work.length === 0) { window._summariesBackfilledOnce = true; return; }
   window._summariesBackfilledOnce = true;
-  console.log('[CurriculumBuilder] backfilling summary fields for ' + work.length + ' lesson(s)...');
 
   var remaining = work.length;
   var changed = false;
@@ -739,8 +723,6 @@ function migrateLegacyLessonDoc(lessonObj, mergedDocData, legacyDocId, callback)
         tool.requestObjects('delete', { mainObjectType: LESSON_DOC_TYPE_LEGACY, objectId: legacyDocId }, function(deleteError) {
           if (deleteError) {
             console.warn('[LESSON:DOC] legacy lesson doc ' + legacyDocId + ' was kept (its delete failed):', deleteError);
-          } else {
-            console.log('[LESSON:DOC] migrated lesson doc ' + legacyDocId + ' -> ' + newDocId + ' (' + LESSON_DOC_TYPE + ')');
           }
           if (callback) callback(null, newDocId);
         });
@@ -807,7 +789,6 @@ function updateLessonDocWithRetry(lessonObj, heavyData, lessonDocId, attemptNumb
       // The stored object type is not the current one (legacy or unknown):
       // this first save moves it to the current type (and deletes the old copy
       // once the record commits).
-      console.log('[LESSON:DOC] moving lesson doc ' + lessonDocId + ' from stored type "' + readObjectType + '" to ' + LESSON_DOC_TYPE);
       migrateLegacyLessonDoc(lessonObj, mergedDocData, lessonDocId, callback);
       return;
     }
@@ -883,7 +864,6 @@ function loadLessonDoc(lessonObj, callback) {
       // One line per page load - a curriculum with many old docs must not flood the console.
       if (!window._lessonDocTypeFallbackLogged) {
         window._lessonDocTypeFallbackLogged = true;
-        console.log('[LESSON:DOC] one or more lesson documents are still stored under an older object type - reading them through the type fallback');
       }
     }
     try {
@@ -3332,10 +3312,8 @@ function loadCurriculum(val) {
   mainDocuments = normalizeMainDocumentList(curriculumValue && curriculumValue.mainDocuments);
   orphanedStorageFiles = (curriculumValue && Array.isArray(curriculumValue.orphanedStorageFiles)) ? curriculumValue.orphanedStorageFiles.slice(0, 500) : [];
   renderMainDocumentsList();
-  console.log('[CURRICULUM:LOAD] ' + sections.length + ' section(s) · value type: ' + (val === null ? 'null' : typeof val) + (receivedSections ? '' : ' · NO sections array in the CMS value'));
-  if (val && typeof val === 'object' && !Array.isArray(val)) {
-    developerLog('[CURRICULUM:LOAD] value keys: ' + Object.keys(val).slice(0, 12).join(', '));
-  }
+  
+  
   if (receivedSections && sections.length) {
     stopCurriculumValueGuardian();
     curriculumHadSectionsThisSession = true;
@@ -3347,7 +3325,6 @@ function loadCurriculum(val) {
     var totalLessons = collectAllLessons().length;
     var sectionCount = 0;
     eachSection(function() { sectionCount++; });
-    console.log('[CurriculumBuilder] loadCurriculum: ' + sectionCount + ' section(s), ' + totalLessons + ' lesson(s) total');
   }
   updateIdBadge();
   try {
@@ -3682,24 +3659,21 @@ function buildCurriculumPayloadReport(reasonLabel, payloadValue) {
   return payloadReport;
 }
 
-/** Print the payload report to the console (and optionally tell the user).
- *  A normal save prints ONE line; the full breakdown is printed for the
- *  manual report button and for developers only. */
+/** Payload guard. A normal save stays SILENT: only an approaching 1 MB
+ *  Firestore limit is worth a warning. The full report is built only for the
+ *  manual Settings button, which shows it on screen. */
 function logCurriculumPayloadReport(reasonLabel, notifyUser, payloadValue) {
+  if (!notifyUser) {
+    var savedPayloadBytes = jsonByteLength(payloadValue);
+    if (savedPayloadBytes > 700 * 1024) {
+      console.warn('[CURRICULUM:SIZE] the record is close to the 1 MB Firestore document limit (' +
+        formatFileSize(savedPayloadBytes) + ')');
+    }
+    return null;
+  }
   var payloadReport;
   try { payloadReport = buildCurriculumPayloadReport(reasonLabel, payloadValue); }
   catch (reportError) { console.warn('[CURRICULUM:SIZE] report failed:', reportError); return null; }
-  var showPayloadDetails = !!notifyUser || isDeveloper();
-  console.log('[CURRICULUM:SIZE] ' + (payloadReport.reason || 'report') + ' · payload ' + formatFileSize(payloadReport.totalBytes) +
-    ' · ' + payloadReport.sectionCount + ' section(s) · ' + payloadReport.lessonCount + ' lesson(s) · build ' + payloadReport.build);
-  if (showPayloadDetails) {
-    for (var sectionIndex = 0; sectionIndex < payloadReport.sectionSizes.length; sectionIndex++) {
-      console.log('[CURRICULUM:SIZE]   section "' + payloadReport.sectionSizes[sectionIndex].path + '" = ' + formatFileSize(payloadReport.sectionSizes[sectionIndex].bytes));
-    }
-    for (var fieldIndex = 0; fieldIndex < payloadReport.fieldSizes.length; fieldIndex++) {
-      console.log('[CURRICULUM:SIZE]   ' + payloadReport.fieldSizes[fieldIndex].path + ' = ' + formatFileSize(payloadReport.fieldSizes[fieldIndex].bytes));
-    }
-  }
   if (payloadReport.inlineData.length) {
     console.warn('[CURRICULUM:SIZE] ' + payloadReport.inlineData.length + ' inline data entr(y/ies) = ' + formatFileSize(payloadReport.inlineBytes) +
       ' are saved INSIDE the curriculum record - pictures should be CMS storage URLs:');
@@ -3707,8 +3681,6 @@ function logCurriculumPayloadReport(reasonLabel, notifyUser, payloadValue) {
       console.warn('[CURRICULUM:SIZE]   ' + payloadReport.inlineData[inlineIndex].path + ' · ' +
         payloadReport.inlineData[inlineIndex].kind + ' = ' + formatFileSize(payloadReport.inlineData[inlineIndex].bytes));
     }
-  } else if (showPayloadDetails) {
-    console.log('[CURRICULUM:SIZE] no inline images - every picture in the record is a storage URL');
   }
   if (payloadReport.totalBytes > 700 * 1024) {
     console.warn('[CURRICULUM:SIZE] the record is close to the 1 MB Firestore document limit');
@@ -3718,7 +3690,7 @@ function logCurriculumPayloadReport(reasonLabel, notifyUser, payloadValue) {
       ? payloadReport.inlineData.length + ' inline entr(y/ies) ' + formatFileSize(payloadReport.inlineBytes)
       : 'no inline images';
     tool.notify('CMS payload: ' + formatFileSize(payloadReport.totalBytes) + ' · ' + payloadReport.lessonCount + ' lesson(s) · ' +
-      inlineReportText + '. Full breakdown in the browser console.', payloadReport.inlineData.length ? 'warning' : 'info');
+      inlineReportText + '.', payloadReport.inlineData.length ? 'warning' : 'info');
   }
   return payloadReport;
 }
@@ -3732,8 +3704,7 @@ function reportCurriculumPayloadFromSettings() {
     payloadReport.lessonCount + ' lesson(s) · ' +
     (payloadReport.inlineData.length
       ? formatFileSize(payloadReport.inlineBytes) + ' of inline images (should be storage URLs)'
-      : 'no inline images') +
-    ' · details in the browser console';
+      : 'no inline images');
 }
 
 /** Read every lesson doc in BOTH object types into one backup structure */
@@ -3856,7 +3827,6 @@ function openLessonBackupAsFile() {
   var backupText = backupArea.value;
   var fileName = lessonBackupFileName || 'curriculum-backup.json';
   if (downloadTextAsFile(fileName, backupText, 'application/json;charset=utf-8')) {
-    console.log('[DOWNLOAD] ' + fileName + ' · ' + formatFileSize(utf8ByteLength(backupText)));
     tool.notify('Download started: ' + fileName + '. If nothing happened, this field blocks downloads - use Copy JSON.', 'success');
     return;
   }
@@ -3894,7 +3864,6 @@ function exportAllLessonDocuments() {
       (backup.errors.length ? ' · ' + backup.errors.length + ' read error(s)' : '');
     openLessonBackupModal(backupText, summaryText, 'curriculum-lesson-docs-backup.json');
     if (resultElement) resultElement.textContent = 'Last backup: ' + summaryText;
-    console.log('[LESSON:BACKUP] ' + summaryText);
     if (backup.errors.length) console.warn('[LESSON:BACKUP] read errors:', backup.errors);
   });
 }
@@ -4060,9 +4029,6 @@ function refreshLessonDocTypeStatus() {
       };
       if (refreshButton) refreshButton.disabled = false;
       applyLessonDocTypeStatus();
-      console.log('[ACTIONS:STATUS] current=' + currentTotal + ' legacy=' + legacyTotal + ' referenced=' + referencedTotal +
-        ' legacyReferenced=' + legacyReferenced + ' legacyOrphans=' + legacyOrphans +
-        (legacyReadable ? '' : ' legacyUnreadable=' + legacyError));
     });
   });
 }
@@ -4144,7 +4110,6 @@ function bulkMigrateLessonDocs() {
     var recordText = summary.migrated ? (summary.saveConfirmed ? ' · curriculum saved' : ' · curriculum save NOT confirmed (old ids kept in the record)') : '';
     var reportText = summary.migrated + ' migrated · ' + summary.reused + ' reused existing copy · ' + summary.alreadyCurrent + ' already current · ' + summary.failed + ' failed' + recordText + deletedText;
     setActionStatus('migrate-lesson-docs-status', (summary.failed ? '⚠️ ' : '✅ ') + reportText);
-    console.log('[LESSON:MIGRATE] ' + reportText);
     if (summary.failures.length) console.warn('[LESSON:MIGRATE] failures:', summary.failures);
     tool.notify('Lesson documents: ' + reportText, summary.failed ? 'warning' : 'success');
     refreshLessonDocTypeStatus();
@@ -4312,7 +4277,6 @@ function cleanupUnreferencedLegacyLessonDocs() {
           var cleanupText = deletedCount + ' old document(s) deleted' + (failedCount ? ', ' + failedCount + ' failed' : '') +
             (referencedCount ? ' · ' + referencedCount + ' still referenced and kept' : '');
           setActionStatus('cleanup-legacy-docs-status', (failedCount ? '⚠️ ' : '✅ ') + cleanupText);
-          console.log('[LESSON:CLEANUP] ' + cleanupText);
           tool.notify('Old lesson documents: ' + cleanupText, failedCount ? 'warning' : 'success');
           refreshLessonDocTypeStatus();
           return;
@@ -4353,7 +4317,6 @@ function exportCurriculumPackage() {
       (curriculumPackage.curriculum.sections || []).length + ' top-level section(s) · ' + formatFileSize(utf8ByteLength(packageText));
     openLessonBackupModal(packageText, 'Curriculum package · ' + summaryText, 'curriculum-package.json');
     setActionStatus('export-package-result', 'Last export: ' + summaryText);
-    console.log('[PACKAGE:EXPORT] ' + summaryText);
     if (docsBackup.errors.length) console.warn('[PACKAGE:EXPORT] read errors:', docsBackup.errors);
   });
 }
@@ -4433,7 +4396,6 @@ function runLessonDocumentImport(matchList, skippedCount) {
     var recordText = summary.restored ? (summary.saveConfirmed ? ' · curriculum saved' : ' · curriculum save NOT confirmed - review before closing') : '';
     var reportText = summary.restored + ' restored · ' + summary.skipped + ' skipped · ' + summary.failed + ' failed' + recordText;
     setActionStatus('import-package-status', (summary.failed ? '⚠️ ' : '✅ ') + reportText);
-    console.log('[PACKAGE:IMPORT] ' + reportText);
     if (summary.failures.length) console.warn('[PACKAGE:IMPORT] failures:', summary.failures);
     tool.notify('Lesson documents import: ' + reportText, summary.failed ? 'warning' : 'success');
   }
@@ -5390,7 +5352,6 @@ function autoSaveCurrentLesson() {
 /** Documents, links and gallery images are lesson data - persist them at once. */
 function autoSaveLessonAfterDocumentChange(reasonLabel) {
   if (tool.isReadOnly()) return;
-  console.log('[STUDIO:SAVE] ' + reasonLabel + ' - saving the lesson now');
   autoSaveCurrentLesson();
 }
 
@@ -6647,7 +6608,7 @@ function generateQuizFromPdf(onDone) {
       },
       onError: function(err) {
         updateGenerateButtons({ disabled: false, text: '🤖 Generate Quiz Questions from PDFs' });
-        tool.notify('Generation failed: ' + err, 'error');
+        tool.notify('Generation failed: ' + describeAiChannelFailure(err), 'error');
         if (onDone) onDone(err);
       }
     });
@@ -6701,7 +6662,6 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
           var referenceContext = referenceLibraryGeneratedContext();
           if (referenceContext) {
             combinedText += '\n\n--- MATERIAL GENERATED FROM THE REFERENCE LIBRARY ---\n\n' + referenceContext;
-            console.log('[AI:STUDY] reference library context added: ' + formatFileSize(utf8ByteLength(referenceContext)));
           }
           generateHtmlWithAI(combinedText);
         }
@@ -6963,7 +6923,7 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
       },
       onError: function(err) {
         if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 Generate from PDFs'; }
-        tool.notify('Generation failed: ' + err, 'error');
+        tool.notify('Generation failed: ' + describeAiChannelFailure(err), 'error');
         if (onDone) onDone(err);
       }
     });
@@ -7150,7 +7110,7 @@ function generateFlashcardsFromPdf(onDone) {
             },
             onError: function(err) {
               if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🃏 Generate Flashcards'; }
-              tool.notify('Generation failed: ' + err, 'error');
+              tool.notify('Generation failed: ' + describeAiChannelFailure(err), 'error');
               if (onDone) onDone(err);
             }
           });
@@ -7283,7 +7243,7 @@ function generatePresentationFromPdf(onDone) {
       },
       onError: function(err) {
         if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🎞️ Generate Presentation'; }
-        tool.notify('Generation failed: ' + err, 'error');
+        tool.notify('Generation failed: ' + describeAiChannelFailure(err), 'error');
         if (onDone) onDone(err);
       }
     });
@@ -8459,8 +8419,6 @@ function pdfSplitPdfPageRange(pdfBytes, firstPageNumber, lastPageNumber) {
     outputBytes.set(outputChunks[chunkIndex], outputPosition);
     outputPosition += outputChunks[chunkIndex].length;
   }
-  console.log('[PDF:SPLIT] pages ' + (firstPageIndex + 1) + '-' + (lastPageIndex + 1) + ' of ' + pageCount +
-    ' · ' + totalObjectCount + ' object(s) · ' + outputBytes.length + ' byte(s)');
   return {
     bytes: outputBytes,
     pageCount: pageCount,
@@ -9585,7 +9543,6 @@ function adoptMirroredStudioDocumentUrl(originalDocumentUrl, fileMeta) {
   }
   renderPdfEditorList();
   autoSaveCurrentLesson();
-  console.log('[STUDIO:DOC] outside document stored in Firebase Storage · source: ' + originUrl + ' · stored: ' + storageUrl);
   tool.notify('This outside document was copied into CMS storage. The stored copy is now used for preview, generation and students.', 'success');
   return true;
 }
@@ -9602,16 +9559,6 @@ var STUDIO_PDF_PREVIEW_MAX_SCALE = 3;
 var pdfPreviewRetryTimer = null;
 var pdfPreviewRetryAttempts = 0;
 var pdfPreviewRetryDocUrl = '';
-
-/** First bytes of a PDF as text - shows at a glance whether it is really a PDF */
-function describePdfBytesForConsole(pdfBytes) {
-  if (!pdfBytes || !pdfBytes.length) return '(empty)';
-  var headerText = '';
-  for (var byteIndex = 0; byteIndex < Math.min(8, pdfBytes.length); byteIndex++) {
-    headerText += String.fromCharCode(pdfBytes[byteIndex]);
-  }
-  return headerText.replace(/[^\x20-\x7e]/g, '.');
-}
 
 /** Read one SDK param without letting a broken SDK break the OCR diagnostics */
 function readParamForDiagnostics(paramName) {
@@ -9642,16 +9589,6 @@ function schedulePdfPreviewRetry() {
 
 function pdfJsLibraryAvailable() {
   return (typeof window !== 'undefined') && !!window.pdfjsLib && (typeof window.pdfjsLib.getDocument === 'function');
-}
-
-/** The PDF.js worker is wired by the CMS - report it instead of overriding it */
-function pdfJsWorkerDescription() {
-  try {
-    var workerOptions = (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) ? window.pdfjsLib.GlobalWorkerOptions : null;
-    return (workerOptions && workerOptions.workerSrc) ? String(workerOptions.workerSrc) : '(not set by the CMS)';
-  } catch (workerError) {
-    return '(unavailable)';
-  }
 }
 
 /** Show/hide the "Retry preview" action in the Source pane header */
@@ -9700,8 +9637,6 @@ function renderPdfPreviewPages(pdfBytes, previewFrame, noteEl) {
   var previewScale = parseFloat(tool.param('pdfPreviewScale', '1.2'));
   if (!previewScale || isNaN(previewScale)) previewScale = 1.2;
   previewScale = Math.max(STUDIO_PDF_PREVIEW_MIN_SCALE, Math.min(STUDIO_PDF_PREVIEW_MAX_SCALE, previewScale));
-  console.log('[STUDIO:PREVIEW] PDF.js ' + (pdfLibrary.version || '(unknown version)') +
-    ' · scale ' + previewScale + ' · worker: ' + pdfJsWorkerDescription());
   var loadingTask;
   try {
     // PDF.js detaches the buffer it receives - pass a copy so the bytes stay
@@ -9714,7 +9649,6 @@ function renderPdfPreviewPages(pdfBytes, previewFrame, noteEl) {
     return;
   }
   loadingTask.promise.then(function (pdfDocument) {
-    console.log('[STUDIO:PREVIEW] PDF opened · ' + pdfDocument.numPages + ' page(s) · scale ' + previewScale);
     var pagesToRender = Math.min(pdfDocument.numPages, STUDIO_PDF_PREVIEW_MAX_PAGES);
     var pageImages = [];
     function renderNextPage(pageNumber) {
@@ -9802,12 +9736,8 @@ function loadStudioDocumentPreview() {
   // injects it; otherwise a clear placeholder is shown.
   if (pdfJsLibraryAvailable()) {
     if (noteEl) noteEl.textContent = 'Rendering the PDF preview…';
-    console.log('[STUDIO:PREVIEW] open · ' + studioCurrentDocUrl + ' · pdfjs ' +
-      (window.pdfjsLib.version || '(unknown version)') + ' · requestFileBinary ' +
-      (typeof tool.requestFileBinary === 'function' ? 'available' : 'MISSING'));
     var localPdfBytes = (studioLocalPdfBytes && studioLocalPdfUrl === studioCurrentDocUrl) ? studioLocalPdfBytes : null;
     if (localPdfBytes) {
-      console.log('[STUDIO:PREVIEW] using local bytes · ' + localPdfBytes.length + ' byte(s) · header ' + describePdfBytesForConsole(localPdfBytes));
       renderPdfPreviewPages(localPdfBytes, previewFrame, noteEl);
       return;
     }
@@ -9823,8 +9753,6 @@ function loadStudioDocumentPreview() {
         return;
       }
       adoptMirroredStudioDocumentUrl(previewDocumentUrl, previewMeta);
-      console.log('[STUDIO:PREVIEW] bytes received · ' + previewBytes.length + ' byte(s) · type ' +
-        ((previewMeta && previewMeta.contentType) || '?') + ' · header ' + describePdfBytesForConsole(previewBytes));
       renderPdfPreviewPages(previewBytes, previewFrame, noteEl);
     });
     return;
@@ -10613,6 +10541,66 @@ function logVisionPictureResponse(visionResult, visionPages, requestedPageNumber
   }
 }
 
+/** Wording for a failed AI channel (html-tool-rules v3.13). The host answers
+ *  a failure with { message, requestId, blocked, retryable, attempts,
+ *  retryAfterMs, gatewayCode }. The CMS retries ONCE and only when the
+ *  gateway marks the failure retryable; 4xx/auth/model/validation errors are
+ *  never retried, and a long retryAfterMs is not retried at all - the tool
+ *  explains the wait and NEVER repeats an AI call on its own. */
+function describeAiChannelFailure(errorCode, errorInfo) {
+  var failureInfo = errorInfo || {};
+  var retryAfterSeconds = describeAiRetryAfterSeconds(failureInfo);
+  if (errorCode === 'unauthorized') {
+    return 'the CMS session is not signed in (it may have expired). Sign in and try again.';
+  }
+  if (errorCode === 'not_configured') return 'AI is switched off for this tool.';
+  if (errorCode === 'unsupported') {
+    return 'this deployment cannot run this AI request - an administrator must check the AI model settings.';
+  }
+  if (errorCode === 'invalid_input') return 'the AI request was rejected as invalid.';
+  if (errorCode === 'too_large') return 'the request was too large for the AI service.';
+  if (errorCode === 'rate_limited') {
+    return 'too many AI requests right now.' + (retryAfterSeconds
+      ? ' Try again in ' + retryAfterSeconds + ' second(s).'
+      : ' Try again in a minute.');
+  }
+  if (errorCode === 'timeout') return 'the AI service did not answer in time.';
+  if (failureInfo.blocked) return 'the AI model blocked this content.';
+  // v3.13: a long retryAfterMs means the gateway breaker is open and the CMS
+  // did NOT retry - tell the user exactly how long to wait. Never loop here.
+  if (retryAfterSeconds) {
+    return 'the AI service is busy right now. Try again in ' + retryAfterSeconds + ' second(s).';
+  }
+  if (failureInfo.retryable) {
+    return 'the AI service is temporarily unavailable - try again in a few seconds.';
+  }
+  if (errorCode === 'model_error') return 'the AI model failed to answer.';
+  if (errorCode === 'internal_error') return 'the AI call failed unexpectedly - try again.';
+  return errorCode ? String(errorCode) : 'the AI call failed.';
+}
+
+/** Whole seconds the gateway asked us to wait (0 when it sent none). */
+function describeAiRetryAfterSeconds(errorInfo) {
+  var waitMs = Number((errorInfo || {}).retryAfterMs);
+  if (!isFinite(waitMs) || waitMs <= 0) return 0;
+  return Math.max(1, Math.round(waitMs / 1000));
+}
+
+/** Console detail of a failed AI call: codes, ids and timings only (v3.9).
+ *  The raw provider reason stays on the server log - never in the UI. */
+function describeAiErrorDetails(errorCode, errorInfo) {
+  var failureInfo = errorInfo || {};
+  var detailParts = [];
+  if (failureInfo.message) detailParts.push(String(failureInfo.message).substring(0, 160));
+  if (failureInfo.blocked) detailParts.push('blocked=true');
+  if (failureInfo.retryable) detailParts.push('retryable=true');
+  if (failureInfo.gatewayCode) detailParts.push('gatewayCode=' + failureInfo.gatewayCode);
+  if (failureInfo.retryAfterMs) detailParts.push('retryAfterMs=' + failureInfo.retryAfterMs);
+  if (failureInfo.attempts) detailParts.push('attempts=' + failureInfo.attempts);
+  if (failureInfo.requestId) detailParts.push('requestId=' + failureInfo.requestId);
+  return detailParts.length ? ' · ' + detailParts.join(' · ') : '';
+}
+
 /** Ask the platform AI for the picture boxes of a page batch */
 function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
   var visionPages = [];
@@ -10642,8 +10630,9 @@ function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
       }
     }, function(visionError, visionResult) {
       if (visionError) {
-        console.warn('[VISION:RESPONSE] failed: ' + visionError);
-        onDone(visionError, []);
+        var visionErrorInfo = (visionResult && typeof visionResult === 'object') ? visionResult : null;
+        console.warn('[VISION:RESPONSE] failed: ' + visionError + describeAiErrorDetails(visionError, visionErrorInfo));
+        onDone(visionError, [], visionErrorInfo);
         return;
       }
       var visionAnswerPages = (visionResult && visionResult.pages) ? visionResult.pages : [];
@@ -10652,7 +10641,7 @@ function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
     });
   } catch (visionCallError) {
     console.warn('[STUDIO:PICTURES] requestAIVision threw:', visionCallError);
-    onDone('internal_error', []);
+    onDone('internal_error', [], null);
   }
 }
 
@@ -10783,7 +10772,6 @@ function captureDocumentPictures(onDone) {
     if (pdfJsLibraryAvailable()) {
       importPdfIllustrations(pdfBytes, function() {
         if (editingStudyDocImages.length > picturesBefore) { if (onDone) onDone(); return; }
-        console.log('[STUDIO:PICTURES] the page capture found nothing - trying the raw image scan');
         runRawImageScanner(pdfBytes);
       });
       return;
@@ -10795,7 +10783,6 @@ function captureDocumentPictures(onDone) {
     var candidates = [];
     try { candidates = findPdfImageStreams(pdfBytes); } catch (scanError) { candidates = []; }
     if (!candidates.length) {
-      console.log('[STUDIO:PICTURES] no raster image objects and no PDF renderer - nothing to capture');
       setStudioStatus('❌ No picture could be extracted from this document.', 'warn');
       if (onDone) onDone();
       return;
@@ -10926,20 +10913,22 @@ function importPdfIllustrations(pdfBytes, onDone) {
       });
     }
 
-    /** Ask for one batch; a too_large answer is retried once at 900 px */
+    /** Ask for one batch; a too_large answer is retried once at 900 px.
+     *  That is a SIZE adaptation, not a retry of a transient provider failure
+     *  (the CMS owns those retries - v3.12), so it never loops. */
     function requestVisionBatch(pageImages, maxSide, onResult) {
-      requestVisionPictureRegions(pageImages, visionMaxRegions, function(visionError, visionPages) {
+      requestVisionPictureRegions(pageImages, visionMaxRegions, function(visionError, visionPages, visionErrorInfo) {
         if (visionError === 'too_large' && maxSide > 900) {
           console.warn('[STUDIO:PICTURES] AI vision rejected the page size - retrying at 900 px');
           var retryPageNumbers = [];
           for (var retryIndex = 0; retryIndex < pageImages.length; retryIndex++) retryPageNumbers.push(pageImages[retryIndex].pageNumber);
           renderVisionPagesSequentially(retryPageNumbers, 900, [], function(smallerPages) {
-            if (!smallerPages.length) { onResult(visionError, []); return; }
+            if (!smallerPages.length) { onResult(visionError, [], visionErrorInfo); return; }
             requestVisionBatch(smallerPages, 900, onResult);
           });
           return;
         }
-        onResult(visionError, visionPages);
+        onResult(visionError, visionPages, visionErrorInfo);
       });
     }
 
@@ -10969,7 +10958,7 @@ function importPdfIllustrations(pdfBytes, onDone) {
         (lastBatchPage !== firstBatchPage ? ' to ' + lastBatchPage : ''));
       renderVisionPagesSequentially(batchPageNumbers, visionMaxSideLimit, [], function(renderedPages) {
         if (!renderedPages.length) { processNextVisionBatch(); return; }
-        requestVisionBatch(renderedPages, visionMaxSideLimit, function(visionError, visionPages) {
+        requestVisionBatch(renderedPages, visionMaxSideLimit, function(visionError, visionPages, visionErrorInfo) {
           var batchPageNumbersForFallback = [];
           for (var batchIndex = 0; batchIndex < renderedPages.length; batchIndex++) {
             batchPageNumbersForFallback.push(renderedPages[batchIndex].pageNumber);
@@ -10979,7 +10968,8 @@ function importPdfIllustrations(pdfBytes, onDone) {
               batchPageNumbersForFallback.join(', '));
             if (!fallbackWarningShown) {
               fallbackWarningShown = true;
-              tool.notify('AI picture detection is unavailable (' + visionError + '). Those pages are captured with the local detector.', 'warning');
+              tool.notify('AI picture detection is unavailable: ' + describeAiChannelFailure(visionError, visionErrorInfo) +
+                ' Those pages are captured with the local detector.', 'warning');
             }
             runLocalFallback(batchPageNumbersForFallback, processNextVisionBatch);
             return;
@@ -11014,11 +11004,6 @@ function importPdfIllustrations(pdfBytes, onDone) {
       var pagesToInspect = Math.min(pdfDocument.numPages, maxPages);
       inspectedPageCount = pagesToInspect;
       var useVisionDetection = pictureVisionDetectionEnabled();
-      console.log('[PICTURES] ' + pdfDocument.numPages + ' page(s) · detector: ' +
-        (useVisionDetection
-          ? 'AI vision finds the picture boxes (tool.requestAIVision), the browser crops the pixels'
-          : 'local (PDF.js embedded images + drawing scan, no AI)') +
-        ' · inspecting page 1-' + pagesToInspect);
       var collectedPictures = [];
       if (useVisionDetection) {
         renderPagesWithVision(pdfDocument, pagesToInspect, collectedPictures);
@@ -11147,11 +11132,6 @@ function ocrEngineAvailable() {
     (typeof window.Tesseract.recognize === 'function' || typeof window.Tesseract.createWorker === 'function');
 }
 
-function describeOcrEngine() {
-  if (!ocrEngineAvailable()) return 'Tesseract NOT injected';
-  return 'Tesseract ' + (window.Tesseract.version || '(version unknown)') + ' injected';
-}
-
 /* Tesseract language files use ISO 639-2 codes (eng, tur, deu), not the
    2-letter codes most people type. Accept both and resolve to the file code. */
 var OCR_LANGUAGE_ALIASES = {
@@ -11272,8 +11252,6 @@ function ocrPdfBytesToText(pdfBytes, onDone) {
   var ocrPageScale = parseFloat(tool.param('ocrPageScale', '2'));
   if (!ocrPageScale || isNaN(ocrPageScale)) ocrPageScale = 2;
   ocrPageScale = Math.max(1, Math.min(3, ocrPageScale));
-  console.log('[STUDIO:OCR] starting · ' + describeOcrEngine() + ' · language ' + ocrLanguageText +
-    ' · up to ' + ocrMaxPages + ' page(s) · scale ' + ocrPageScale);
   logOcrDiagnostics('page OCR start');
   window.pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) }).promise.then(function(pdfDocument) {
     var pagesToOcr = Math.min(pdfDocument.numPages, ocrMaxPages);
@@ -11779,7 +11757,6 @@ function showQualityReportModal(report, rawText) {
       '<div class="sd-modal-section" style="margin-top:14px"><div class="sd-modal-label">Temporary result - not saved with the document</div></div>';
   }
   openStudioModal('🔍 Quality report (temporary)', bodyHtml);
-  console.log('[STUDIO:QUALITY] report', report || rawText);
 }
 
 function runStudyContentQualityCheck() {
@@ -11801,14 +11778,17 @@ function runStudyContentQualityCheck() {
     var qualityPrompt = buildStudyContentQualityPrompt(sourceText.slice(0, 20000), studioGeneratedHtml.slice(0, 40000));
     tool.requestAI(qualityPrompt, null, function(aiError, aiResult) {
       if (qualityButton) qualityButton.disabled = false;
-      if (aiError) {
-        console.warn('[STUDIO:QUALITY] AI call failed:', aiError);
-        setStudioStatus('❌ Quality check failed - try again.', 'warn');
-        return;
-      }
       var rawText = (typeof aiResult === 'string')
         ? aiResult
         : ((aiResult && (aiResult.text || aiResult.content || aiResult.message)) || '');
+      // html-tool-rules: a truncation notice arrives as an error while the
+      // (truncated) answer is still returned - use the answer when it exists.
+      if (aiError && !rawText) {
+        console.warn('[STUDIO:QUALITY] AI call failed: ' + aiError);
+        setStudioStatus('❌ Quality check failed: ' + describeAiChannelFailure(aiError) + ' Try again.', 'warn');
+        return;
+      }
+      if (aiError) console.warn('[STUDIO:QUALITY] AI answered with a warning: ' + aiError);
       var report = parseQualityReport(rawText);
       setStudioStatus('✅ Quality report ready (temporary - not saved).', 'ok');
       showQualityReportModal(report, rawText);
@@ -12275,7 +12255,6 @@ function collapseDuplicateStudioImages() {
   }
   if (removedCount) {
     editingStudyDocImages = uniqueImages;
-    console.log('[STUDIO:IMAGES] removed ' + removedCount + ' duplicate image entry(ies) from this document');
   }
   return removedCount;
 }
@@ -12295,7 +12274,6 @@ function decodeAndStorePdfImages(candidates, onDone) {
     else if (scanInfo.filters.jpx > 0 || scanInfo.jp2Signature) scanAdvice = ' Its images are JPEG2000 (JPX) - Chrome cannot decode that format. Export the pages as standard JPEG/PNG or re-save the PDF as a standard PDF.';
     else if (scanInfo.filters.jbig2 > 0 || scanInfo.filters.ccitt > 0) scanAdvice = ' Its images are scanned fax/JBIG2 - the browser cannot decode them. Convert the scanned pages to JPEG/PNG first.';
     else if (scanInfo.imageMentions === 0) scanAdvice = ' No raster image objects exist in this file - the pictures are vector drawings. Use "� Get Pictures" to capture them as cropped images, or "⬇ Download File" to check the file.';
-    console.log('[STUDIO:PDF-SCAN]', scanInfo);
     setStudioStatus('No images found in this document (' + scanSummary + ').' + scanAdvice + ' Use "⬇ Download File" to check the file.', 'warn');
     if (onDone) onDone();
     return;
@@ -12556,8 +12534,6 @@ function saveGeneratedContentForReferenceDocument(documentUrl, generatedHtml, so
       console.warn('[REF:LIBRARY] ' + sanitized.droppedImages + ' inline picture(s) (' + formatFileSize(sanitized.inlineBytes) +
         ') removed from the stored generated content of ' + (referenceEntry.name || 'reference document'));
     }
-    console.log('[REF:LIBRARY] generated content stored for ' + (referenceEntry.name || documentUrl) +
-      ' · ' + formatFileSize(utf8ByteLength(sanitized.html)));
     return true;
   }
   return false;
@@ -13623,7 +13599,6 @@ function generateStudyGuideFromStudioDoc(onDone) {
       var referenceContextText = referenceLibraryGeneratedContext();
       if (referenceContextText) {
         promptSourceText += '\n\n--- MATERIAL GENERATED FROM THE REFERENCE LIBRARY ---\n\n' + referenceContextText;
-        console.log('[AI:STUDY] reference library context added: ' + formatFileSize(utf8ByteLength(referenceContextText)));
       }
     }
     var prompt = buildStudioHtmlPrompt(promptSourceText, editingStudyDocImages.length);
@@ -13670,10 +13645,10 @@ function generateStudyGuideFromStudioDoc(onDone) {
         streamFinished = true;
         clearTimeout(streamWatchdog);
         setStudioActionButtonsBusy(false);
-        setStudioStatus('❌ Generation failed: ' + streamError, 'warn');
+        setStudioStatus('❌ Generation failed: ' + describeAiChannelFailure(streamError), 'warn');
         if (genStatusEl) genStatusEl.textContent = '';
         if (streamPreviewFrame) streamPreviewFrame.srcdoc = '';
-        tool.notify('Generation failed: ' + streamError, 'error');
+        tool.notify('Generation failed: ' + describeAiChannelFailure(streamError), 'error');
         if (onDone) onDone(streamError);
       }
     });
@@ -13841,7 +13816,6 @@ function deleteStorageFiles(storageFileEntries, reasonText, onDone) {
     }
   }
   if (!toolCapability('deleteFile')) {
-    console.log('[STUDIO:STORAGE] no delete channel on this host - ' + hostedEntries.length + ' file(s) queued for cleanup');
     finishDeleting(hostedEntries, 0);
     return;
   }
@@ -13871,8 +13845,6 @@ function deleteStorageFiles(storageFileEntries, reasonText, onDone) {
         }
         var batchDeletedCount = batchEntries.length - reportedFailures.length;
         deletedTotal += batchDeletedCount;
-        console.log('[STUDIO:STORAGE] deleted ' + batchDeletedCount + ' file(s)' +
-          (reportedFailures.length ? ', ' + reportedFailures.length + ' failed' : '') + ' · build ' + TOOL_BUILD);
         deleteNextBatch();
       });
     } catch (deleteCallError) {
@@ -13996,17 +13968,36 @@ function openStudioRegenerateDialog(imageIndexes) {
   });
 }
 
-/** Human-readable reason for a failed picture generation */
-function describePictureGenerationError(errorCode) {
+/** Human-readable reason for a failed picture generation.
+ *  v3.13: errorInfo carries { message, requestId, blocked, retryable,
+ *  attempts, retryAfterMs, gatewayCode }. The CMS retries once and only when
+ *  the gateway marks the failure retryable; a long retryAfterMs is not retried,
+ *  so the tool shows the wait and never loops the call. */
+function describePictureGenerationError(errorCode, errorInfo) {
+  var generationFailureInfo = errorInfo || {};
+  var retryAfterSeconds = describeAiRetryAfterSeconds(generationFailureInfo);
   if (errorCode === 'not_configured') return 'Picture generation is not enabled for this tool (allowImageRegenerate / allowImageGeneration).';
-  if (errorCode === 'unsupported') return 'The image model of this deployment cannot edit a sample picture.';
-  if (errorCode === 'model_error') return 'The image model refused this request - the picture or the instruction may be blocked.';
-  if (errorCode === 'rate_limited') return 'Too many picture requests right now - try again in a minute.';
+  if (errorCode === 'unsupported') {
+    return 'The image model of this deployment cannot edit a sample picture - an administrator must check the AI model settings.';
+  }
+  if (errorCode === 'rate_limited') {
+    return 'Too many picture requests right now.' + (retryAfterSeconds
+      ? ' Try again in ' + retryAfterSeconds + ' second(s).'
+      : ' Try again in a minute.');
+  }
   if (errorCode === 'too_large') return 'The sample picture is too large for the image model.';
   if (errorCode === 'invalid_input') return 'The sample picture format is not supported (JPEG, PNG or WebP).';
   if (errorCode === 'blocked_host') return 'The sample picture host is not allowed - upload the picture to CMS storage first.';
   if (errorCode === 'timeout') return 'The image model did not answer in time.';
-  if (errorCode === 'unauthorized') return 'Your session is not authorized for image generation.';
+  if (errorCode === 'unauthorized') return 'Your CMS session is not signed in (it may have expired) - sign in and try again.';
+  if (generationFailureInfo.blocked) return 'The image model blocked this request - change the picture or the instruction.';
+  if (retryAfterSeconds) {
+    return 'The image service is busy right now. Try again in ' + retryAfterSeconds + ' second(s).';
+  }
+  if (generationFailureInfo.retryable) return 'The image service is temporarily unavailable - try again in a few seconds.';
+  if (errorCode === 'model_error') return 'The image model refused this request - the picture or the instruction may be blocked.';
+  if (errorCode === 'internal_error') return 'Picture generation failed unexpectedly - try again.';
+  // The host message may be the RAW provider reason (server log only) - never show it.
   return 'Picture generation failed: ' + (errorCode || 'empty result');
 }
 
@@ -14015,7 +14006,7 @@ function describePictureGenerationError(errorCode) {
  *  prompt to the image-EDIT model and stores the result in CMS storage
  *  (store: true), so there is no upload and no 5 MB cap. Older hosts fall back
  *  to requestGenerateImage, which returns one inline data URL.
- *  onDone(errorCode, { url, dataUrl, bytes, width, height }) */
+ *  onDone(errorCode, { url, dataUrl, bytes, width, height }, errorInfo) */
 function requestRegeneratedStudioPicture(sampleDataUrl, promptText, onDone) {
   if (toolCapability('imageRegenerate')) {
     try {
@@ -14034,7 +14025,12 @@ function requestRegeneratedStudioPicture(sampleDataUrl, promptText, onDone) {
           onDone(null, regeneratedPicture);
           return;
         }
-        onDone(regenerateError || 'empty result', null);
+        var regenerateErrorInfo = (regenerateError && regenerateResult && typeof regenerateResult === 'object') ? regenerateResult : null;
+        if (regenerateError) {
+          console.warn('[STUDIO:IMAGES] picture generation failed: ' + regenerateError +
+            describeAiErrorDetails(regenerateError, regenerateErrorInfo));
+        }
+        onDone(regenerateError || 'empty result', null, regenerateErrorInfo);
       });
     } catch (regenerateCallError) {
       console.warn('[STUDIO:IMAGES] requestRegenerateImage threw:', regenerateCallError);
@@ -14044,7 +14040,15 @@ function requestRegeneratedStudioPicture(sampleDataUrl, promptText, onDone) {
   }
   if (typeof tool.requestGenerateImage !== 'function') { onDone('not_configured', null); return; }
   tool.requestGenerateImage({ prompt: promptText, baseImageDataUrl: sampleDataUrl }, function(generateError, generateResult) {
-    if (generateError || !generateResult || !generateResult.dataUrl) { onDone(generateError || 'empty result', null); return; }
+    if (generateError || !generateResult || !generateResult.dataUrl) {
+      var generateErrorInfo = generateError ? generateResult : null;
+      if (generateError) {
+        console.warn('[STUDIO:IMAGES] picture generation failed: ' + generateError +
+          describeAiErrorDetails(generateError, generateErrorInfo));
+      }
+      onDone(generateError || 'empty result', null, generateErrorInfo);
+      return;
+    }
     onDone(null, { url: '', dataUrl: generateResult.dataUrl, bytes: 0, width: 0, height: 0 });
   });
 }
@@ -14075,10 +14079,10 @@ function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
         processQueueItem();
         return;
       }
-      requestRegeneratedStudioPicture(sampleDataUrl, finalPrompt, function(generateError, generatedPicture) {
+      requestRegeneratedStudioPicture(sampleDataUrl, finalPrompt, function(generateError, generatedPicture, generateErrorInfo) {
         if (generateError || !generatedPicture || (!generatedPicture.url && !generatedPicture.dataUrl)) {
           setStudioStatus('', '');
-          tool.notify(describePictureGenerationError(generateError), 'error');
+          tool.notify(describePictureGenerationError(generateError, generateErrorInfo), 'error');
           processQueueItem();
           return;
         }
@@ -14313,8 +14317,6 @@ function bindEvents() {
   if (studioOcrLanguageSelect) {
     studioOcrLanguageSelect.addEventListener('change', function() {
       studioOcrLanguageOverride = this.value || '';
-      console.log('[STUDIO:OCR] manual language override: ' + (studioOcrLanguageOverride || '(follow curriculum language)') +
-        ' · effective ' + resolveActiveOcrLanguage());
       tool.notify(studioOcrLanguageOverride
         ? 'OCR language for this document: ' + resolveActiveOcrLanguage() + '.'
         : 'OCR language follows the curriculum setting.', 'info');
@@ -14605,7 +14607,6 @@ var curriculumToolStarted = false;
 function startCurriculumTool(val, fields) {
   if (curriculumToolStarted) return;
   curriculumToolStarted = true;
-  console.log('[TOOL:READY] onReady fired · value type: ' + (val === null ? 'null' : typeof val));
   if (el('tool-build-badge')) el('tool-build-badge').textContent = 'tool build ' + TOOL_BUILD;
   setTimeout(function() {
     if (el('loading-overlay').style.display !== 'none') {
@@ -14748,7 +14749,6 @@ function startCurriculumValueWatchdog() {
   var waitedMs = 0;
   var pollIntervalMs = 1500;
   var maxWaitMs = 60000;
-  console.log('[TOOL:WAIT] waiting for the CMS value · build ' + TOOL_BUILD);
   var watchdogTimer = setInterval(function() {
     if (curriculumToolStarted) { clearInterval(watchdogTimer); return; }
     waitedMs += pollIntervalMs;

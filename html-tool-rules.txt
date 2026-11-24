@@ -1,7 +1,32 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-html-tool-rules.txt — VERSION 3.9 — 2026-11-23
+html-tool-rules.txt — VERSION 3.14 — 2026-11-24
 
-CHANGELOG v3.9: AI diagnostics (D-HTMLT-28). Every new AI channel now writes
+CHANGELOG v3.14: AI calls must fit inside the serverless function budget
+(D-HTMLT-34). A vision call needs 20-50 s, so ONE HTTP request now carries ONE
+gateway chunk: at most 8 pages per requestAIVision() call, and the route
+declares maxDuration. If the platform still cuts the function you get
+`timeout` with a message, never an opaque empty 504. Previous changelog v3.13: retry policy aligned with the gateway error taxonomy
+(D-HTMLT-33). The CMS now retries ONCE and ONLY when the gateway marks the
+failure retryable — 4xx, auth, model and validation errors are never retried.
+A long retryAfterMs (open breaker) is not retried at all: the tool receives
+retryAfterMs instead. The gateway's MODEL_NOT_FOUND (404) and
+UNSUPPORTED_MODEL (422) arrive as tool code `unsupported` with retryable
+false. Previous changelog v3.12: the CMS retries transient provider outages itself (D-HTMLT-32).
+A fast failure marked retryable is retried up to 3 times (800 ms, 2000 ms) on
+both AI vision and image edit, so PROVIDER_UNAVAILABLE usually heals before your
+tool sees it. Slow failures are never retried. Server adds a `retry` log line
+and an `attempts` field on the error. Also removed a STALE DUPLICATE of the
+image-regeneration section that still said "max 8 MB" and "show revisedPrompt" —
+the single authoritative section is the one above AI CHAT SESSIONS (5 MB sample,
+revisedPrompt always null). Previous changelog v3.11: the gateway owns
+model choice (D-HTMLT-31). Do not send
+"provider" or "model" to vision or image edit — the gateway applies and echoes
+its defaults, and an unsupported override returns 422. Vision client timeout is
+120 s. Previous changelog v3.10: host auth is per-host, not [DEFAULT]
+(D-HTMLT-29). Missing
+CMS sign-in now reports `unauthorized` instead of `internal_error`, and the
+AI/file channels resolve the tenant Firebase auth instance explicitly.
+Previous changelog v3.9: AI diagnostics (D-HTMLT-28). Every new AI channel now writes
 structured console lines with a shared callId, on the tenant host AND on the
 CMS server: [AI:VISION], [AI:IMAGE-GEN], [AI:IMAGE-EDIT] and [AI:GATEWAY].
 They log codes, requestIds, sizes, timings and cost — never prompts, images
@@ -922,7 +947,7 @@ locally at full resolution.
 
   • options — {
       instruction?: string,        // 1..2000 chars; a sensible default is used
-      pages: [{ dataUrl, pageIndex?, isScan?, hasTextLayer? }],  // 1..24
+      pages: [{ dataUrl, pageIndex?, isScan?, hasTextLayer? }],  // 1..8
       options?: {
         detail?: 'low' | 'high',        // default high (low = 512 px triage)
         returnRegions?: boolean,        // default true
@@ -931,14 +956,18 @@ locally at full resolution.
         maxRegions?: number,            // 1..50 per page, default 30
         minRegionArea?: number,         // default 0.02 of the page
         minConfidence?: number,         // default 0.2
-        language?: string,              // 'auto' (default), 'eng', 'tur', ...
-        model?: string                  // optional override, default gpt-5.5
+        language?: string               // 'auto' (default), 'eng', 'tur', ...
       }
     }
+  • There is NO model and NO provider option. The gateway owns the vision
+    default (provider openai, model gpt-5.5). Sending either one is ignored by
+    the CMS and an unsupported value is rejected by the gateway with 422 — so
+    never send them, and never hardcode a model id in a tool.
   • callback — function(error, result)
       error  — null, or a tool code (see AI ERROR CODES)
       result — {
         ok: true,
+        provider, model,                         // resolved by the gateway
         pages: [{
           pageIndex, isScan, hasTextLayer,      // echoed from your input
           summary, language,
@@ -959,11 +988,17 @@ locally at full resolution.
       On error the second argument carries
       { message, requestId, blocked, retryable } when the gateway sent them.
 
-Requires: allowAiVision: 'yes' in the field settings (max pages per call is
-limited by Max pages per vision call, default 8, cap 24).
-Hard limits: 4 MB decoded per page, 8 pages per gateway call (the host
-chunks and keeps your pageIndex ABSOLUTE), 90 s gateway timeout.
+Requires: allowAiVision: 'yes' in the field settings (Max pages per vision
+call, default 8, HARD cap 8).
+Hard limits: 4 MB decoded per page, 8 pages per call, 55 s CMS timeout against
+the gateway's 90 s hard stop.
 Rate limit: 20 calls / minute / user.
+
+ONE CHUNK PER CALL (D-HTMLT-34) — a vision call takes 20-50 s and each HTTP
+request runs inside a serverless function with a fixed budget. Send at most 8
+pages, then call again with the next 8 and keep your absolute pageIndex values.
+Sending more returns 'too_large'; do not try to send a whole 40-page document in
+one call.
 
 PAGE METADATA IS YOURS — isScan / hasTextLayer are never guessed by the
 model. Detect the text layer locally (tool.pdf.extractText → hasText) and
@@ -1018,13 +1053,23 @@ The gateway answers with a stable error.category; the host maps it to the
 same tool codes used everywhere else:
   invalid_input   bad prompt/pages/options (or gateway VALIDATION_ERROR)
   too_large       image bytes, page count or payload cap exceeded
-  unsupported     model/route cannot do this (no vision, no image edit)
-  model_error     provider failed, blocked content, unparsable model output
+  unsupported     model/route cannot do this (no vision, no image edit); also
+                  carries the gateway's MODEL_NOT_FOUND (HTTP 404) and
+                  UNSUPPORTED_MODEL (HTTP 422) — retryable false, fix config
+  model_error     provider failed, blocked content, unparsable model output;
+                  a genuinely OPEN gateway breaker arrives here with
+                  retryable: true, gatewayCode 'CIRCUIT_OPEN' and retryAfterMs
+                  (typically 30000) — wait, do not hammer it
   rate_limited    per-tenant gateway limit hit (retry later)
   timeout         gateway hard timeout reached
-  unauthorized    gateway key/tenant rejected
+  unauthorized    gateway key/tenant rejected, OR the CMS session could not
+                  produce an ID token (signed out / auth not ready)
   not_configured  the field setting for that capability is off
 content that moderation blocks arrives as model_error with blocked: true.
+On any failure the error result may also carry `attempts`, `retryAfterMs`,
+`requestId`, `blocked` and `retryable`. The RAW provider reason
+(upstreamStatus / upstreamMessage) is written to the SERVER log only — never
+display it to an end user.
 
 AI DIAGNOSTICS — what to look for in the console (D-HTMLT-28)
 Every AI channel logs with a greppable prefix. Filter the browser console by
@@ -1042,10 +1087,35 @@ Host lines: `dispatch` (SDK accepted the call, console.debug),
 Every host line carries `callId`.
 
 Server lines use the SAME callId, so one browser line finds the server line:
-  [AI:VISION][server] start | chunk ok | gateway error | done
-  [AI:IMAGE-EDIT][server] start | gateway error | done
+  [AI:VISION][server] start | chunk ok | retry | gateway error | done
+  [AI:IMAGE-EDIT][server] start | retry | gateway error | done
+`retry` means a FAST, retryable failure was re-attempted (fields: attempt,
+http or reason, gatewayCode, requestId, waitMs). `chunk ok` and `done` also
+carry `attempts`, and an error response carries `attempts` so you can see how
+many tries the CMS already made.
 `[AI:GATEWAY] upstream error` is written by the generic gateway proxy with
 path, http status, gateway code/category and requestId.
+
+TRANSIENT PROVIDER OUTAGES ARE RETRIED FOR YOU (D-HTMLT-32, D-HTMLT-33): the
+CMS retries ONCE (after about 1.2 s) and ONLY when the gateway marks the
+failure retryable. 4xx, auth, model and validation errors are never retried —
+they come back immediately so you can react to the real cause. A retry is also
+skipped when the gateway asks for a longer wait: you then receive
+`retryAfterMs` in the error result, so show "try again in N seconds" and do NOT
+loop the call, because every attempt costs a gateway request and a quota unit.
+
+PLATFORM TIMEOUT vs GATEWAY TIMEOUT (D-HTMLT-34): if the console shows
+`failed { http: 504, message: '(no message)', gatewayCode: null, requestId: null,
+attempts: null }` the request never reached the gateway — the serverless
+function was cut by the platform. Fix it on your side by sending FEWER PAGES per
+call; a real gateway timeout always carries a message and a gatewayCode.
+
+AUTH FAILURES ARE NOT ERRORS OF YOUR TOOL (D-HTMLT-29): when the CMS session
+cannot mint an ID token the call comes back as `unauthorized` with a message
+("session expired" or "authentication instance not ready"). Nothing reached the
+gateway, no image was uploaded and no quota was consumed. Show the message and
+offer a retry button — do not loop re-calling, and do not treat it as
+`internal_error`.
 
 PRIVACY: the log never contains prompt text, page images, sample images or
 API keys — only lengths, byte sizes, codes, requestIds, timings and cost.
@@ -1658,10 +1728,14 @@ OPTIONS
   toolContext string label used in the audit entry and the stored file name
 
 RESULT
-  { ok, requestId, images: [{ url, width, height, mimeType, bytes,
-                              revisedPrompt }], warnings }
+  { ok, requestId, provider, model, images: [{ url, width, height, mimeType,
+                              bytes, revisedPrompt }], warnings }
+  provider / model are the RESOLVED pair echoed by the gateway — display them
+  if you need to, never send them back.
 
 BEHAVIOUR
+  • No model and no provider are sent: the gateway owns the image-edit default
+    (provider openai, model gpt-image-1). An unsupported override returns 422.
   • The host builds the instruction: the preserved aspects are stated FIRST
     and the caller prompt is applied after them — the prompt can never
     override a preserve rule.
@@ -1678,7 +1752,8 @@ BEHAVIOUR
     caption you generated instead.
   • background 'transparent' is delivered as PNG (JPEG has no alpha).
   • Limits: 20 calls / hour / user (host); the gateway allows 10 / 60 s per
-    tenant; 180 s gateway hard timeout, host aborts at 190 s.
+    tenant. The CMS aborts at 55 s (serverless function budget, D-HTMLT-34) —
+    a slow edit returns 'timeout', it is never left hanging.
 
 ES5 EXAMPLE
   tool.requestRegenerateImage({
@@ -1693,64 +1768,6 @@ ES5 EXAMPLE
     if (err === 'model_error') { tool.notify('The image model refused this request', 'warning'); return }
     if (err) { tool.notify('Regeneration failed: ' + err, 'error'); return }
     res.images.forEach(function (img) { addVariant(img.url) })
-  })
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WHEN TO USE — create a NEW picture based on an existing one ("make this
-illustration match our style", "clean up this photo"). This is an EDIT, not
-text-to-image: the sample image always travels with the prompt. If the
-configured model cannot edit images the call fails with 'unsupported' —
-there is NO silent text-to-image fallback.
-
-Requires: allowImageRegenerate: 'yes'   (default off)
-
-OPTIONS
-  sample     { url } | { dataUrl } | { base64 }   the image to base on
-  prompt     string, REQUIRED, max 2000 characters
-  preserve   array, default ['composition','subject']
-             allowed: composition | subject | style | palette | text
-  size       '1024x1024' | '1536x1024' | '1024x1536' | 'auto' (default auto)
-  count      1..4 (default 1, field setting maxRegenerateCount, cap 4)
-  quality    'low' | 'medium' | 'high' (default high)
-  background 'transparent' | 'opaque' (default opaque)
-  store      boolean, default true
-  toolContext string label used in the audit entry and the stored file name
-
-RESULT
-  { images: [{ url, width, height, mimeType, bytes, revisedPrompt }],
-    warnings: string[] }
-
-BEHAVIOUR
-  • The host builds the instruction: the preserved aspects are stated FIRST
-    and the caller prompt is applied after them — the prompt can never
-    override a preserve rule.
-  • Sample validation: JPEG / PNG / WebP, max 8 MB, max 8000 px per side.
-    Anything else → invalid_input. Third-party sample hosts → blocked_host
-    (upload the sample to CMS storage first).
-  • Provider moderation runs on the sample AND the prompt; a block is
-    'model_error' and no file is written.
-  • Results are stored in the tenant/tool folder (store: true) and are
-    deletable through requestDeleteFile. store: false returns inline data
-    URLs (not deletable).
-  • revisedPrompt is the model's own description of what it produced — show
-    it in the UI so the user sees what actually happened.
-  • Limits: 20 calls / hour / user, 180 s timeout, rate limits from the model
-    surface as rate_limited. The audit entry identifies the sample by storage
-    path or hash only — never the raw image.
-
-ES5 EXAMPLE
-  tool.requestRegenerateImage({
-    sample: { url: originalImageUrl },
-    prompt: 'turn it into a flat vector illustration for a course card',
-    preserve: ['composition', 'subject'],
-    size: '1536x1024',
-    count: 2,
-    toolContext: 'course-card'
-  }, function (err, res) {
-    if (err === 'unsupported') { tool.notify('This deployment cannot edit images', 'warning'); return }
-    if (err === 'model_error') { tool.notify('The image model refused this request', 'warning'); return }
-    if (err) { tool.notify('Regeneration failed: ' + err, 'error'); return }
-    res.images.forEach(function (img) { addVariant(img.url, img.revisedPrompt) })
   })
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
