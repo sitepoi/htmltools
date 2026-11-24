@@ -1,4 +1,4 @@
-/* js build 2026-11-18-60 */
+/* js build 2026-11-18-91 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-60';
+var TOOL_BUILD = '2026-11-18-91';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 // Boot diagnostic: is the large-file download channel present in this CMS build?
 (function logFileChannelAvailability() {
@@ -15,10 +15,45 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
     console.log('[TOOL:BOOT] large-file download channel: ' + (channelPresent ? 'requestFileBinary available' : 'requestFileBinary MISSING'));
     console.log('[TOOL:BOOT] PDF renderer: ' + (pdfJsLibraryAvailable() ? 'PDF.js injected' : 'PDF.js NOT injected (PDF page preview disabled)'));
     console.log('[TOOL:BOOT] OCR engine: ' + describeOcrEngine());
+    console.log('[TOOL:BOOT] capabilities: ' + describePlatformCapabilities());
     var bootBadge = document.getElementById('tool-build-badge');
     if (bootBadge) bootBadge.textContent = 'build ' + TOOL_BUILD + ' · waiting for CMS…';
   } catch (probeError) { console.warn('[TOOL:BOOT] could not probe the download channel:', probeError); }
 })();
+
+/* ── Platform capabilities (html-tool-rules v3.9) ──
+   Optional channels are advertised as boolean flags in tool.capabilities:
+   deleteFile | pdfTools | aiVision | imageRegenerate. Older hosts expose
+   neither the flag nor the method, so every check also probes the function.
+   Never call one of these channels without asking here first. */
+function toolCapability(capabilityName) {
+  var advertisedCapabilities = (typeof tool !== 'undefined' && tool && tool.capabilities) ? tool.capabilities : null;
+  if (advertisedCapabilities && typeof advertisedCapabilities[capabilityName] === 'boolean') {
+    return advertisedCapabilities[capabilityName];
+  }
+  if (typeof tool === 'undefined' || !tool) return false;
+  if (capabilityName === 'deleteFile') return typeof tool.requestDeleteFile === 'function';
+  if (capabilityName === 'imageRegenerate') return typeof tool.requestRegenerateImage === 'function';
+  if (capabilityName === 'aiVision') return typeof tool.requestAIVision === 'function';
+  if (capabilityName === 'pdfTools') return pdfToolkitAvailable();
+  return false;
+}
+
+/** The CMS-injected PDF toolkit (tool.pdf: PDF.js + pdf-lib, same origin) */
+function pdfToolkitAvailable() {
+  if (typeof tool === 'undefined' || !tool || !tool.pdf) return false;
+  if (typeof tool.pdf.available === 'function') {
+    try { return tool.pdf.available() === true; } catch (availabilityError) { return false; }
+  }
+  return true;
+}
+
+function describePlatformCapabilities() {
+  return 'deleteFile=' + toolCapability('deleteFile') +
+    ' pdfTools=' + toolCapability('pdfTools') +
+    ' imageRegenerate=' + toolCapability('imageRegenerate') +
+    ' aiVision=' + toolCapability('aiVision');
+}
 
 /* ── Early CMS handshake ─────────────────────────────────────────────
    The CMS pushes onReady / onValueChange as soon as the tool frame exists.
@@ -74,6 +109,7 @@ function el(id) { return document.getElementById(id); }
 /* ── State ── */
 var sections = [];               // section tree from curriculum (sections can nest via `children`)
 var mainDocuments = [];          // reference PDFs in CMS storage: { id, name, url, sizeKb, addedAt }
+var orphanedStorageFiles = [];   // files the host refused to delete: { url, label, deletedAt } (purge list)
 var curriculumLanguage = '';     // language saved with the curriculum (default OCR language)
 var studioOcrLanguageOverride = ''; // per-document OCR language chosen in the Process drawer
 var editingSectionIdx = null;    // Index being edited in editingSectionParent
@@ -87,6 +123,7 @@ var editingSourceLinks = [];
 var editingYoutubeUrls = [];
 var editingPresentationPdfUrls = [];
 var editingStudyDocPdfUrls = [];
+var editingReferenceDocs = [];   // page-range extracts of main reference documents (AI input only)
 var editingWorksheetPdfUrls = [];
 var editingAnswerKeyPdfUrls = [];
 var editingHtmlDocUrls = [];
@@ -103,11 +140,18 @@ var editingYoutubeIdx = null;
 var editingPdfIdx = null;
 var editingPdfType = null;
 var editingPdfSourceUrl = '';
+var curriculumDragState = null;  // { type: 'section', sectionId } | { type: 'lesson', sectionId, lessonIndex }
 
 /* ── Constants ── */
 var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
-var LESSON_DOC_TYPE = 'curriculum-lessons-uniconbase';
+var LESSON_DOC_TYPE = 'curriculum-lessons-uniconbaseapps';
+/* Legacy store name used by builds before 2026-11-18-74. Read-only fallback:
+   lesson docs created before the rename keep loading, and their summaries
+   still backfill. They move to LESSON_DOC_TYPE when the lesson is re-saved
+   through a migrated curriculum (see the migration steps in the Settings tab
+   documentation). */
+var LESSON_DOC_TYPE_LEGACY = 'curriculum-lessons-uniconbase';
 
 /* ── Section Tree Helpers ──
    Sections can nest to any depth: { id, title, order, lessons:[], children:[] }.
@@ -205,13 +249,13 @@ function byOrder(a, b) { return (a.order || 9999) - (b.order || 9999); }
 /* ── Lesson Document CRUD (Phase 2: heavy content lives in lesson docs) ──
    Heavy lesson content (notes, HTML code, study data, presentation HTML,
    flashcards, quiz, source links) is stored ONLY in separate CMS objects of
-   type curriculum-lessons-uniconbase. The main curriculum document keeps
+   type curriculum-lessons-uniconbaseapps. The main curriculum document keeps
    only light metadata (title, order, minutes, file URLs, lessonDocId) so it
    never approaches the Firestore 1MB document limit. The student tool
    already reads heavy content from the lesson docs via lessonDocId.
 
    REQUIRED CMS ADMIN CONFIG (Field Group → settings.allowedObjectTypes):
-     { mainObjectType: 'curriculum-lessons-uniconbase',
+     { mainObjectType: 'curriculum-lessons-uniconbaseapps',
        role: 'editor',
        scope: 'shared',
        targetCollection: 'private' }
@@ -225,6 +269,115 @@ function byOrder(a, b) { return (a.order || 9999) - (b.order || 9999); }
 /** Check if lesson doc CRUD is available */
 function canUseLessonDocs() {
   return typeof tool.requestObjects === 'function';
+}
+
+/** Remove every inline data: image from HTML. Base64 blobs are NEVER saved.
+ *  Returns { html, removedCount, removedBytes }. */
+function stripInlineImageDataFromHtml(htmlText) {
+  var sourceText = String(htmlText || '');
+  if (sourceText.indexOf('data:') === -1) return { html: sourceText, removedCount: 0, removedBytes: 0 };
+  var removedCount = 0;
+  var removedBytes = 0;
+  // 1) <img> tags that carry a data: src - drop the whole tag
+  var strippedText = sourceText.replace(/<img\b[^>]*\bsrc\s*=\s*("|')data:[^"']*\1[^>]*>/gi, function(tagText) {
+    var dataMatch = tagText.match(/data:[^"']+/i);
+    if (dataMatch) { removedCount++; removedBytes += utf8ByteLength(dataMatch[0]); }
+    return '';
+  });
+  // 2) CSS url(data:...)
+  strippedText = strippedText.replace(/url\(\s*("|')?data:[^)]*\1\s*\)/gi, function(urlText) {
+    removedCount++;
+    removedBytes += utf8ByteLength(urlText);
+    return '';
+  });
+  // 3) any remaining data:...;base64 payload (images, fonts, JSON blobs)
+  strippedText = strippedText.replace(/data:[a-z0-9.+-]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/gi, function(dataText) {
+    removedCount++;
+    removedBytes += utf8ByteLength(dataText);
+    return '';
+  });
+  return { html: strippedText, removedCount: removedCount, removedBytes: removedBytes };
+}
+
+/** Walk any JSON value and strip base64 data from every string in place */
+function stripInlineImageDataDeep(value, stats, depth) {
+  if (depth > 8 || value === null || value === undefined) return value;
+  if (typeof value === 'string') {
+    if (value.indexOf('data:') === -1) return value;
+    var strippedValue = stripInlineImageDataFromHtml(value);
+    stats.removedCount += strippedValue.removedCount;
+    stats.removedBytes += strippedValue.removedBytes;
+    return strippedValue.html;
+  }
+  if (Array.isArray(value)) {
+    for (var arrayIndex = 0; arrayIndex < value.length; arrayIndex++) value[arrayIndex] = stripInlineImageDataDeep(value[arrayIndex], stats, depth + 1);
+    return value;
+  }
+  if (typeof value === 'object') {
+    var objectKeys = Object.keys(value);
+    for (var keyIndex = 0; keyIndex < objectKeys.length; keyIndex++) value[objectKeys[keyIndex]] = stripInlineImageDataDeep(value[objectKeys[keyIndex]], stats, depth + 1);
+    return value;
+  }
+  return value;
+}
+
+/** Strip inline base64 from every HTML field of a lesson-doc payload */
+function stripInlineImagesFromLessonFields(docPayload, lessonLabel, stats) {
+  var htmlFieldNames = ['content', 'htmlCode', 'studyHtmlData', 'presentationHtml'];
+  var removedCount = 0;
+  var removedBytes = 0;
+  for (var fieldIndex = 0; fieldIndex < htmlFieldNames.length; fieldIndex++) {
+    var fieldName = htmlFieldNames[fieldIndex];
+    if (typeof docPayload[fieldName] !== 'string') continue;
+    var strippedField = stripInlineImageDataFromHtml(docPayload[fieldName]);
+    if (!strippedField.removedCount) continue;
+    docPayload[fieldName] = strippedField.html;
+    removedCount += strippedField.removedCount;
+    removedBytes += strippedField.removedBytes;
+  }
+  if (docPayload.studyDocGenerated && typeof docPayload.studyDocGenerated === 'object') {
+    var generatedKeys = Object.keys(docPayload.studyDocGenerated);
+    for (var keyIndex = 0; keyIndex < generatedKeys.length; keyIndex++) {
+      var generatedKey = generatedKeys[keyIndex];
+      var generatedEntry = docPayload.studyDocGenerated[generatedKey];
+      if (!generatedEntry || typeof generatedEntry !== 'object' || typeof generatedEntry.html !== 'string') continue;
+      var strippedGenerated = stripInlineImageDataFromHtml(generatedEntry.html);
+      if (!strippedGenerated.removedCount) continue;
+      var clonedEntry = {};
+      for (var entryProperty in generatedEntry) {
+        if (Object.prototype.hasOwnProperty.call(generatedEntry, entryProperty)) clonedEntry[entryProperty] = generatedEntry[entryProperty];
+      }
+      clonedEntry.html = strippedGenerated.html;
+      docPayload.studyDocGenerated[generatedKey] = clonedEntry;
+      removedCount += strippedGenerated.removedCount;
+      removedBytes += strippedGenerated.removedBytes;
+    }
+  }
+  // Any base64 left inside JSON fields (studyHtmlData, quiz, flashcards, ...)
+  var deepStripStats = { removedCount: 0, removedBytes: 0 };
+  stripInlineImageDataDeep(docPayload, deepStripStats, 0);
+  removedCount += deepStripStats.removedCount;
+  removedBytes += deepStripStats.removedBytes;
+  // The deep pass empties inline picture fields instead of deleting them;
+  // drop the empty keys so a saved record never carries an inline carrier.
+  if (Array.isArray(docPayload.studyDocImages)) {
+    for (var imageIndex = 0; imageIndex < docPayload.studyDocImages.length; imageIndex++) {
+      var imageEntry = docPayload.studyDocImages[imageIndex];
+      if (!imageEntry || typeof imageEntry !== 'object') continue;
+      if (imageEntry.dataUrl === '') delete imageEntry.dataUrl;
+      if (imageEntry.generatedDataUrl === '') delete imageEntry.generatedDataUrl;
+    }
+  }
+  if (removedCount) {
+    if (stats) {
+      stats.removedCount += removedCount;
+      stats.removedBytes += removedBytes;
+    } else {
+      console.log('[BASE64] removed ' + removedCount + ' inline image(s) (' + formatFileSize(removedBytes) +
+        ') from the saved lesson "' + lessonLabel + '" - pictures must be CMS storage URLs');
+    }
+  }
+  return docPayload;
 }
 
 /** Build the lesson-doc payload from a lesson object.
@@ -244,18 +397,34 @@ function extractHeavyLessonData(les) {
   // hiddenSections is small and stays in the main doc too, but the lesson doc
   // keeps a copy. Only copy it when the object owns the field.
   if (Object.prototype.hasOwnProperty.call(les, 'hiddenSections')) docPayload.hiddenSections = les.hiddenSections;
-  return docPayload;
+  if (Object.prototype.hasOwnProperty.call(les, 'referenceDocs')) docPayload.referenceDocs = les.referenceDocs;
+  // Pictures must be storage URLs in the saved doc as well - inline bytes are
+  // only a small budget and never the whole gallery.
+  if (docPayload.studyDocImages) {
+    var lessonImageBudget = { entries: [], totalBytes: 0 };
+    docPayload.studyDocImages = cleanStudioImagesForSave(docPayload.studyDocImages,
+      (les.title || les.id || 'lesson') + '.studyDocImages', lessonImageBudget);
+    var leftOutLessonPictures = applyInlineImageBudget(lessonImageBudget, MAX_SAVED_INLINE_IMAGE_BYTES);
+    if (leftOutLessonPictures.length) {
+      console.log('[LESSON:DOC] ' + leftOutLessonPictures.length + ' inline picture(s) kept in memory only for "' +
+        (les.title || les.id || 'lesson') + '"');
+    }
+  }
+  return stripInlineImagesFromLessonFields(docPayload, les.title || les.id || 'lesson');
 }
 
 /* ── 1MB Guard: heavy lesson content lives in lesson docs, NOT the main doc ──
    The main curriculum document must stay under Firestore's 1MB limit.
    These helpers keep only light metadata in the main doc and mirror heavy
    fields (content, htmlCode, studyHtmlData, presentationHtml, flashcards,
-   quiz, sourceUrls) exclusively to curriculum-lessons-uniconbase docs. */
+   quiz, sourceUrls) exclusively to curriculum-lessons-uniconbaseapps docs. */
 /* studyDocOrigins is deliberately NOT listed here: it is only a small map of
    original URLs. Listing it made every already-optimized lesson look "heavy"
-   again on load, which re-ran the migration and overwrote the lesson docs. */
-var HEAVY_LESSON_FIELDS = ['content', 'htmlCode', 'studyHtmlData', 'presentationHtml', 'flashcards', 'quiz', 'sourceUrls', 'studyDocSources', 'studyDocImages', 'studyDocGenerated'];
+   again on load, which re-ran the migration and overwrote the lesson docs.
+   referenceDocs (the page-range extracts of the reference library) only feed
+   the AI generators - the student tool never reads them - so they belong in
+   the lesson doc, not in the curriculum record. */
+var HEAVY_LESSON_FIELDS = ['content', 'htmlCode', 'studyHtmlData', 'presentationHtml', 'flashcards', 'quiz', 'sourceUrls', 'studyDocSources', 'studyDocImages', 'studyDocGenerated', 'referenceDocs'];
 
 function hasHeavyLessonFields(les) {
   for (var i = 0; i < HEAVY_LESSON_FIELDS.length; i++) {
@@ -366,7 +535,12 @@ function migrateLessonsToDocsIfNeeded() {
 /** One-time-per-page-load backfill: lessons stripped by the PRE-summary
  *  migration have no quizCount/flashcardCount/etc. in the main doc, so the
  *  list can't show counts. Read each such lesson's doc and persist the
- *  summary fields. Failed reads are skipped (retried on next load). */
+ *  summary fields. Failed reads are skipped (retried on next load).
+ *  This backfill is ADDITIVE ONLY: it never removes heavy fields from the
+ *  main record. Moving content out of the record is done by
+ *  migrateLessonsToDocsIfNeeded (or a real lesson save) after the doc write
+ *  is confirmed - a readable but empty lesson doc must never turn into a
+ *  reason to drop the copy still stored in the curriculum. */
 function backfillLessonSummariesIfNeeded() {
   if (window._summariesBackfilledOnce) return;
   if (!canUseLessonDocs()) { window._summariesBackfilledOnce = true; return; }
@@ -392,10 +566,9 @@ function backfillLessonSummariesIfNeeded() {
       loadLessonDoc(current, function(err, merged) {
         remaining--;
         if (!err && merged) {
-          // Summaries come from doc data; heavy fields are already safe in
-          // the doc, so strip them from the main-doc copy too.
+          // Only the summary counts are written back. Heavy fields stay where
+          // they are: this routine must never delete content from the record.
           writeLessonSummaryFields(merged);
-          stripHeavyLessonFields(merged);
           // Resolve the CURRENT tree copy (sections may have been refreshed).
           var found = findSectionById(wk.section.id);
           var targetSec = found ? found.section : wk.section;
@@ -421,6 +594,241 @@ function mergeLessonDocPayload(existingDocData, freshDocPayload) {
   return mergedDocData;
 }
 
+/** Save conflict reported by the CMS object bridge */
+function isLessonDocConflictError(errorText) {
+  return !!errorText && String(errorText).toLowerCase().indexOf('conflict') !== -1;
+}
+
+/** The object type ACTUALLY stored on a CMS object. The bridge can answer a get
+ *  for any requested type, so the stored cmsObjectType is the only truth. */
+function storedObjectTypeOf(cmsObject) {
+  if (!cmsObject) return '';
+  var candidateNames = ['cmsObjectType', 'mainObjectType', 'objectType', 'cmsType'];
+  for (var nameIndex = 0; nameIndex < candidateNames.length; nameIndex++) {
+    var candidateValue = cmsObject[candidateNames[nameIndex]];
+    if (typeof candidateValue === 'string' && candidateValue) return candidateValue;
+  }
+  return '';
+}
+
+/** Read one lesson doc object, trying the current object type first and the
+ *  legacy (pre-rename) type second.
+ *  callback(errorText, cmsObject, objectTypeUsed) - objectTypeUsed is the type
+ *  STORED on the object, not the type that was requested. */
+function readLessonDocObject(lessonDocId, callback) {
+  tool.requestObjects('get', { mainObjectType: LESSON_DOC_TYPE, objectId: lessonDocId }, function(currentError, currentResult) {
+    if (!currentError && currentResult && currentResult.object) {
+      var currentStoredType = storedObjectTypeOf(currentResult.object);
+      if (!currentStoredType && !window._lessonDocTypeFieldWarned) {
+        window._lessonDocTypeFieldWarned = true;
+        console.warn('[LESSON:DOC] the CMS object has no cmsObjectType/mainObjectType field - the requested type is assumed. Object keys: ' +
+          Object.keys(currentResult.object).join(', '));
+      }
+      callback(null, currentResult.object, currentStoredType || LESSON_DOC_TYPE);
+      return;
+    }
+    tool.requestObjects('get', { mainObjectType: LESSON_DOC_TYPE_LEGACY, objectId: lessonDocId }, function(legacyError, legacyResult) {
+      if (!legacyError && legacyResult && legacyResult.object) {
+        callback(null, legacyResult.object, storedObjectTypeOf(legacyResult.object) || LESSON_DOC_TYPE_LEGACY);
+        return;
+      }
+      callback(currentError || legacyError || 'lesson doc not found', null, null);
+    });
+  });
+}
+
+/** Point every in-memory copy of one lesson at its new lesson-doc id */
+function rewireLessonDocId(lessonId, newDocId) {
+  collectAllLessons().forEach(function(lessonEntry) {
+    if (lessonEntry.lesson && lessonEntry.lesson.id === lessonId) lessonEntry.lesson.lessonDocId = newDocId;
+  });
+}
+
+/* lessonId -> id of a document that already exists in the current object type.
+   Built once per page load; keeps repeated migrations from creating copies. */
+var currentLessonDocIdByLessonId = null;
+
+/** Build (once) the map of current-type documents keyed by their lessonId */
+function ensureCurrentLessonDocIndex(callback) {
+  if (currentLessonDocIdByLessonId) { callback(currentLessonDocIdByLessonId); return; }
+  tool.requestObjects('query', { mainObjectType: LESSON_DOC_TYPE }, function(queryError, queryResult) {
+    var docIndex = {};
+    if (!queryError && queryResult && queryResult.objects) {
+      var storedObjects = queryResult.objects;
+      for (var objectIndex = 0; objectIndex < storedObjects.length; objectIndex++) {
+        var cmsObject = storedObjects[objectIndex] || {};
+        var indexedObjectType = storedObjectTypeOf(cmsObject);
+        if (indexedObjectType && indexedObjectType !== LESSON_DOC_TYPE) continue; // an old-type doc is never "current"
+        try {
+          var productData = cmsObject.productData;
+          var rawJson = productData && productData.data_categoriesBased ? productData.data_categoriesBased.lessonJson : '';
+          var lessonData = rawJson ? JSON.parse(rawJson) : null;
+          if (lessonData && lessonData.lessonId && cmsObject.id && !docIndex[lessonData.lessonId]) {
+            docIndex[lessonData.lessonId] = cmsObject.id;
+          }
+        } catch (indexParseError) {
+          // A malformed document must never block the migration.
+        }
+      }
+    } else if (queryError) {
+      console.warn('[LESSON:DOC] could not index the current-type documents (' + queryError + ') - duplicates are only avoided within this page load');
+    }
+    currentLessonDocIdByLessonId = docIndex;
+    callback(docIndex);
+  });
+}
+
+/** Stage the curriculum and wait for the CMS to CONFIRM the commit.
+ *  callback(savedOk) - false means "not confirmed", never "write failed". */
+function commitCurriculumNow(onCommitted) {
+  if (!writeCurriculumValueToCms('lesson doc type migration')) {
+    if (onCommitted) onCommitted(false);
+    return;
+  }
+  lastSaveRequestedAt = Date.now();
+  try { renderSections(); } catch (renderError) { console.warn('[LESSON:DOC] re-render after the migration failed:', renderError); }
+  if (typeof tool.requestSave !== 'function') {
+    if (onCommitted) onCommitted(false);
+    return;
+  }
+  try {
+    tool.requestSave(function(saveError, saveOk) {
+      if (!saveError && saveOk) { if (onCommitted) onCommitted(true); return; }
+      console.warn('[LESSON:DOC] the CMS did not confirm the curriculum commit (' + (saveError || 'no confirmation') + ')');
+      if (onCommitted) onCommitted(false);
+    });
+  } catch (saveThrow) {
+    console.warn('[LESSON:DOC] requestSave threw during the migration:', saveThrow);
+    if (onCommitted) onCommitted(false);
+  }
+}
+
+/** Update the legacy doc in place - used when the new object cannot be created */
+function updateLegacyLessonDocInPlace(lessonObj, mergedDocData, legacyDocId, callback) {
+  tool.requestObjects('update', {
+    mainObjectType: LESSON_DOC_TYPE_LEGACY,
+    objectId: legacyDocId,
+    name: lessonObj.title || 'Lesson',
+    productData: { data_categoriesBased: { lessonJson: JSON.stringify(mergedDocData) } }
+  }, function(updateError) {
+    if (updateError) console.warn('[LESSON:DOC] legacy lesson doc update failed:', updateError);
+    if (callback) callback(updateError || null);
+  });
+}
+
+/** First save of a lesson whose doc still lives in the legacy type: copy the
+ *  content into the current type, repoint the lesson, then delete the legacy
+ *  copy ONLY after the record with the new id is confirmed saved.
+ *  A document that already exists in the current type for this lesson is
+ *  REUSED - re-running a migration never creates a duplicate. */
+function migrateLegacyLessonDoc(lessonObj, mergedDocData, legacyDocId, callback) {
+  ensureCurrentLessonDocIndex(function(currentDocIndex) {
+    var lessonJsonText = JSON.stringify(mergedDocData);
+    var existingCurrentDocId = currentDocIndex[lessonObj.id] || '';
+
+    function finishSingleLessonMigration(newDocId) {
+      lessonObj.lessonDocId = newDocId;
+      rewireLessonDocId(lessonObj.id, newDocId);
+      commitCurriculumNow(function(recordSaved) {
+        if (!recordSaved) {
+          console.warn('[LESSON:DOC] lesson doc ' + newDocId + ' was created but the curriculum record was not confirmed saved - the legacy doc ' +
+            legacyDocId + ' is kept as a backup, and the next save uses the new doc');
+          if (callback) callback(null, newDocId);
+          return;
+        }
+        tool.requestObjects('delete', { mainObjectType: LESSON_DOC_TYPE_LEGACY, objectId: legacyDocId }, function(deleteError) {
+          if (deleteError) {
+            console.warn('[LESSON:DOC] legacy lesson doc ' + legacyDocId + ' was kept (its delete failed):', deleteError);
+          } else {
+            console.log('[LESSON:DOC] migrated lesson doc ' + legacyDocId + ' -> ' + newDocId + ' (' + LESSON_DOC_TYPE + ')');
+          }
+          if (callback) callback(null, newDocId);
+        });
+      });
+    }
+
+    if (existingCurrentDocId) {
+      // Already migrated before (for example an earlier run whose record save
+      // was not confirmed): refresh that document with the freshest payload and
+      // repoint to it instead of creating a second copy.
+      developerLog('[LESSON:DOC] lesson ' + lessonObj.id + ' already has a document in ' + LESSON_DOC_TYPE + ' (' + existingCurrentDocId +
+        ') - updating and reusing it instead of creating another one');
+      tool.requestObjects('update', {
+        mainObjectType: LESSON_DOC_TYPE,
+        objectId: existingCurrentDocId,
+        name: lessonObj.title || 'Lesson',
+        productData: { data_categoriesBased: { lessonJson: lessonJsonText } }
+      }, function(updateError) {
+        if (updateError) console.warn('[LESSON:DOC] the existing current-type document could not be refreshed:', updateError);
+        finishSingleLessonMigration(existingCurrentDocId);
+      });
+      return;
+    }
+
+    tool.requestObjects('create', {
+      mainObjectType: LESSON_DOC_TYPE,
+      name: lessonObj.title || 'Lesson',
+      productData: { data_categoriesBased: { lessonJson: lessonJsonText } }
+    }, function(createError, createResult) {
+      var newDocId = (createResult && createResult.object) ? createResult.object.id : '';
+      if (createError || !newDocId) {
+        console.warn('[LESSON:DOC] could not create the lesson doc in ' + LESSON_DOC_TYPE + ' (' + (createError || 'no id returned') +
+          ') - the legacy doc is updated in place instead');
+        updateLegacyLessonDocInPlace(lessonObj, mergedDocData, legacyDocId, callback);
+        return;
+      }
+      currentDocIndex[lessonObj.id] = newDocId;
+      finishSingleLessonMigration(newDocId);
+    });
+  });
+}
+
+/** Update an existing lesson doc: read, merge, write - and retry once when
+ *  another tab wrote the same doc in between (two open tools share one record). */
+function updateLessonDocWithRetry(lessonObj, heavyData, lessonDocId, attemptNumber, callback) {
+  readLessonDocObject(lessonDocId, function(readErr, readObject, readObjectType) {
+    if (readErr) {
+      console.warn('Lesson doc update skipped - the existing doc could not be read:', readErr);
+      if (callback) callback(readErr);
+      return;
+    }
+    var existingDocData = {};
+    try {
+      var readProductData = readObject && readObject.productData;
+      var readLessonJson = readProductData && readProductData.data_categoriesBased && readProductData.data_categoriesBased.lessonJson;
+      existingDocData = readLessonJson ? JSON.parse(readLessonJson) : {};
+    } catch (readParseError) {
+      console.warn('Lesson doc update stopped - the existing doc data could not be parsed:', readParseError);
+      if (callback) callback(readParseError);
+      return;
+    }
+    var mergedDocData = mergeLessonDocPayload(existingDocData, heavyData);
+    if (readObjectType !== LESSON_DOC_TYPE) {
+      // The stored object type is not the current one (legacy or unknown):
+      // this first save moves it to the current type (and deletes the old copy
+      // once the record commits).
+      console.log('[LESSON:DOC] moving lesson doc ' + lessonDocId + ' from stored type "' + readObjectType + '" to ' + LESSON_DOC_TYPE);
+      migrateLegacyLessonDoc(lessonObj, mergedDocData, lessonDocId, callback);
+      return;
+    }
+    tool.requestObjects('update', {
+      mainObjectType: LESSON_DOC_TYPE,
+      objectId: lessonDocId,
+      name: lessonObj.title || 'Lesson',
+      productData: { data_categoriesBased: { lessonJson: JSON.stringify(mergedDocData) } }
+    }, function(err) {
+      if (err && isLessonDocConflictError(err) && attemptNumber < 2) {
+        console.warn('[LESSON:DOC] save conflict - re-reading the lesson doc and retrying (' + (attemptNumber + 1) + '/2)');
+        updateLessonDocWithRetry(lessonObj, heavyData, lessonDocId, attemptNumber + 1, callback);
+        return;
+      }
+      if (err) { console.warn('Lesson doc update failed:', err); }
+      // Don't pass docId — it already exists, no need to re-save main doc
+      if (callback) callback(err);
+    });
+  });
+}
+
 /** Create or update a lesson doc. Returns lessonDocId via callback. */
 function saveLessonDoc(lessonObj, callback) {
   if (!canUseLessonDocs()) {
@@ -429,41 +837,11 @@ function saveLessonDoc(lessonObj, callback) {
   }
   var heavyData = extractHeavyLessonData(lessonObj);
   var lessonDocId = lessonObj.lessonDocId;
-  
+
   if (lessonDocId) {
     // Update existing lesson doc: read first, then merge, so a lesson object
     // whose heavy fields were already moved out can never erase the content.
-    tool.requestObjects('get', {
-      mainObjectType: LESSON_DOC_TYPE,
-      objectId: lessonDocId
-    }, function(readErr, readResult) {
-      if (readErr) {
-        console.warn('Lesson doc update skipped - the existing doc could not be read:', readErr);
-        if (callback) callback(readErr);
-        return;
-      }
-      var existingDocData = {};
-      try {
-        var readProductData = readResult && readResult.object && readResult.object.productData;
-        var readLessonJson = readProductData && readProductData.data_categoriesBased && readProductData.data_categoriesBased.lessonJson;
-        existingDocData = readLessonJson ? JSON.parse(readLessonJson) : {};
-      } catch (readParseError) {
-        console.warn('Lesson doc update stopped - the existing doc data could not be parsed:', readParseError);
-        if (callback) callback(readParseError);
-        return;
-      }
-      var mergedDocData = mergeLessonDocPayload(existingDocData, heavyData);
-      tool.requestObjects('update', {
-        mainObjectType: LESSON_DOC_TYPE,
-        objectId: lessonDocId,
-        name: lessonObj.title || 'Lesson',
-        productData: { data_categoriesBased: { lessonJson: JSON.stringify(mergedDocData) } }
-      }, function(err) {
-        if (err) { console.warn('Lesson doc update failed:', err); }
-        // Don't pass docId — it already exists, no need to re-save main doc
-        if (callback) callback(err);
-      });
-    });
+    updateLessonDocWithRetry(lessonObj, heavyData, lessonDocId, 0, callback);
   } else {
     // Create new lesson doc
     tool.requestObjects('create', {
@@ -485,18 +863,31 @@ function loadLessonDoc(lessonObj, callback) {
     if (callback) callback(null, lessonObj);
     return;
   }
-  tool.requestObjects('get', {
-    mainObjectType: LESSON_DOC_TYPE,
-    objectId: lessonObj.lessonDocId
-  }, function(err, result) {
-    if (err || !result || !result.object) {
-      // Fall back to data in the main doc
-      console.warn('Lesson doc load failed, using main doc data:', err);
+  readLessonDocObject(lessonObj.lessonDocId, function(err, lessonDocObject, lessonDocObjectType) {
+    if (err || !lessonDocObject) {
+      // Fall back to data in the main doc. Both object types were refused or
+      // empty, so make the reason visible instead of silently showing an
+      // empty lesson editor (the usual cause is a missing allowedObjectTypes
+      // entry while the lesson docs are still stored under the old type).
+      console.warn('[LESSON:DOC] lesson doc ' + lessonObj.lessonDocId + ' could not be read from ' + LESSON_DOC_TYPE +
+        ' or ' + LESSON_DOC_TYPE_LEGACY + ' - using the main doc copy:', err);
+      if (!window._lessonDocReadWarned) {
+        window._lessonDocReadWarned = true;
+        tool.notify('⚠️ Lesson documents could not be read, so some lesson content may be missing. Ask your administrator to allow ' + LESSON_DOC_TYPE +
+          ' (and the old ' + LESSON_DOC_TYPE_LEGACY + ' until the data is migrated) in this field\'s allowedObjectTypes.', 'warning');
+      }
       if (callback) callback(err || new Error('lesson doc not found'), lessonObj);
       return;
     }
+    if (lessonDocObjectType !== LESSON_DOC_TYPE) {
+      // One line per page load - a curriculum with many old docs must not flood the console.
+      if (!window._lessonDocTypeFallbackLogged) {
+        window._lessonDocTypeFallbackLogged = true;
+        console.log('[LESSON:DOC] one or more lesson documents are still stored under an older object type - reading them through the type fallback');
+      }
+    }
     try {
-      var pd = result.object.productData;
+      var pd = lessonDocObject.productData;
       var raw = pd && pd.data_categoriesBased && pd.data_categoriesBased.lessonJson;
       var docData = raw ? JSON.parse(raw) : {};
       // Merge: lesson doc data wins, but an EMPTY doc value must never hide
@@ -517,6 +908,7 @@ function loadLessonDoc(lessonObj, callback) {
       applyDocField('studyDocSources');
       applyDocField('studyDocImages');
       applyDocField('studyDocGenerated');
+      applyDocField('referenceDocs');
       applyDocField('studyDocOrigins');
       applyDocField('presentationHtml');
       applyDocField('flashcards');
@@ -538,7 +930,14 @@ function deleteLessonDoc(lessonDocId) {
     mainObjectType: LESSON_DOC_TYPE,
     objectId: lessonDocId
   }, function(err) {
-    if (err) console.warn('Lesson doc delete failed:', err);
+    if (!err) return;
+    // The doc may still be in the legacy type - remove that copy as well.
+    tool.requestObjects('delete', {
+      mainObjectType: LESSON_DOC_TYPE_LEGACY,
+      objectId: lessonDocId
+    }, function(legacyErr) {
+      if (legacyErr) console.warn('Lesson doc delete failed:', err, legacyErr);
+    });
   });
 }
 
@@ -550,6 +949,11 @@ function isDeveloper() {
     var roles = (user && user.roles) ? user.roles.map(function(r) { return String(r).toLowerCase(); }) : [];
     return roles.indexOf('developer') !== -1;
   } catch (e) { return false; }
+}
+
+/** Console line for developers only - keeps the normal console clean */
+function developerLog(message) {
+  if (isDeveloper()) console.log(message);
 }
 
 /** Resolve the tenant CMS origin for doc links. The tool runs in a sandboxed
@@ -610,8 +1014,8 @@ function updateLessonEditorDocLink(lessonObj) {
   if (docId) {
     var link = document.createElement('span');
     link.className = 'lesson-doc-link';
-    link.style.cssText = 'margin-left:10px;font-size:11px;font-weight:400;cursor:pointer;color:#7c3aed;text-decoration:underline;white-space:nowrap';
-    link.textContent = '📄 Open Lesson Doc';
+    link.style.cssText = 'margin-left:8px;font-size:14px;cursor:pointer;white-space:nowrap';
+    link.textContent = '🔥';
     link.title = 'Open this lesson\'s Firestore document in a new tab';
     link.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -2926,10 +3330,11 @@ function loadCurriculum(val) {
   }
   sections = receivedSections ? curriculumValue.sections : [];
   mainDocuments = normalizeMainDocumentList(curriculumValue && curriculumValue.mainDocuments);
+  orphanedStorageFiles = (curriculumValue && Array.isArray(curriculumValue.orphanedStorageFiles)) ? curriculumValue.orphanedStorageFiles.slice(0, 500) : [];
   renderMainDocumentsList();
   console.log('[CURRICULUM:LOAD] ' + sections.length + ' section(s) · value type: ' + (val === null ? 'null' : typeof val) + (receivedSections ? '' : ' · NO sections array in the CMS value'));
   if (val && typeof val === 'object' && !Array.isArray(val)) {
-    console.log('[CURRICULUM:LOAD] value keys: ' + Object.keys(val).slice(0, 12).join(', '));
+    developerLog('[CURRICULUM:LOAD] value keys: ' + Object.keys(val).slice(0, 12).join(', '));
   }
   if (receivedSections && sections.length) {
     stopCurriculumValueGuardian();
@@ -2943,12 +3348,6 @@ function loadCurriculum(val) {
     var sectionCount = 0;
     eachSection(function() { sectionCount++; });
     console.log('[CurriculumBuilder] loadCurriculum: ' + sectionCount + ' section(s), ' + totalLessons + ' lesson(s) total');
-    eachSection(function(sec, arr, i, depth) {
-      console.log('  ' + '  '.repeat(depth) + 'section "' + (sec.title || '?') + '" id=' + (sec.id || '?') + ' order=' + (sec.order || '?') + ' lessons=' + ((sec.lessons || []).length) + ' children=' + ((sec.children || []).length));
-      for (var lj = 0; lj < (sec.lessons || []).length; lj++) {
-        console.log('    ' + '  '.repeat(depth) + 'lesson[' + lj + '] ' + (sec.lessons[lj].title || '?') + ' order=' + (sec.lessons[lj].order || '?'));
-      }
-    });
   }
   updateIdBadge();
   try {
@@ -2967,6 +3366,9 @@ function loadCurriculum(val) {
   setTimeout(function() {
     migrateLessonsToDocsIfNeeded();
     setTimeout(function() { backfillLessonSummariesIfNeeded(); }, 800);
+    // The reference library (documents + the content generated from them)
+    // lives in its own CMS objects, never in the curriculum record.
+    setTimeout(function() { syncReferenceLibraryAfterLoad(); }, 1600);
   }, 50);
 }
 
@@ -2976,20 +3378,173 @@ function requestParentSave() {
   try {
     if (typeof tool.requestSave === 'function') {
       tool.requestSave(function(err, ok) {
-        if (err || !ok) console.warn('requestSave rejected:', err || 'denied');
+        if (err || !ok) {
+          // One line per page load: the value is still staged and saved by the form.
+          if (!window._requestSaveRejectedLogged) {
+            window._requestSaveRejectedLogged = true;
+            console.warn('[SAVE] the CMS did not accept the immediate save (' + (err || 'denied') +
+              ') - allowRequestSave: yes is not enabled, so the staged value is saved with the form. Logged once.');
+          }
+        }
       });
     }
   } catch(e) {}
+}
+
+/** No inline picture bytes are ever saved. Unhosted pictures stay in memory
+ *  (and uploadUnhostedStudioImages stores them right after a capture); every
+ *  saved record only holds CMS storage URLs. */
+var MAX_SAVED_INLINE_IMAGE_BYTES = 0;
+
+/** Copy of a picture list without the bytes that must not be saved.
+ *  A hosted picture never keeps its inline copy; unhosted ones are counted so
+ *  the caller can apply the budget. */
+function cleanStudioImagesForSave(imageList, labelPrefix, inlineBudgetState) {
+  if (!imageList || !imageList.length) return imageList;
+  var cleanedImages = [];
+  for (var imageIndex = 0; imageIndex < imageList.length; imageIndex++) {
+    var sourceImage = imageList[imageIndex];
+    if (!sourceImage || typeof sourceImage !== 'object') { cleanedImages.push(sourceImage); continue; }
+    var cleanedImage = {};
+    for (var propertyName in sourceImage) {
+      if (Object.prototype.hasOwnProperty.call(sourceImage, propertyName)) cleanedImage[propertyName] = sourceImage[propertyName];
+    }
+    if (cleanedImage.url) delete cleanedImage.dataUrl;
+    if (cleanedImage.generatedUrl) delete cleanedImage.generatedDataUrl;
+    cleanedImages.push(cleanedImage);
+    if (inlineBudgetState && (cleanedImage.dataUrl || cleanedImage.generatedDataUrl)) {
+      var inlineImageBytes = 0;
+      if (cleanedImage.dataUrl) inlineImageBytes += utf8ByteLength(cleanedImage.dataUrl);
+      if (cleanedImage.generatedDataUrl) inlineImageBytes += utf8ByteLength(cleanedImage.generatedDataUrl);
+      inlineBudgetState.entries.push({
+        label: labelPrefix + '[' + imageIndex + ']',
+        name: cleanedImage.name || '',
+        bytes: inlineImageBytes,
+        image: cleanedImage
+      });
+      inlineBudgetState.totalBytes += inlineImageBytes;
+    }
+  }
+  return cleanedImages;
+}
+
+/** Keep a saved record small: the largest unhosted pictures are left out of the
+ *  SAVED copy (they stay in memory and uploadUnhostedStudioImages stores them
+ *  right after a capture). Returns the entries that were left out. */
+function applyInlineImageBudget(inlineBudgetState, budgetBytes) {
+  var leftOutEntries = [];
+  if (!inlineBudgetState || inlineBudgetState.totalBytes <= budgetBytes) return leftOutEntries;
+  inlineBudgetState.entries.sort(function(firstEntry, secondEntry) { return secondEntry.bytes - firstEntry.bytes; });
+  for (var entryIndex = 0; entryIndex < inlineBudgetState.entries.length && inlineBudgetState.totalBytes > budgetBytes; entryIndex++) {
+    var budgetEntry = inlineBudgetState.entries[entryIndex];
+    delete budgetEntry.image.dataUrl;
+    delete budgetEntry.image.generatedDataUrl;
+    inlineBudgetState.totalBytes -= budgetEntry.bytes;
+    leftOutEntries.push(budgetEntry);
+  }
+  return leftOutEntries;
+}
+
+/** Strip inline base64 from lesson HTML stored in the curriculum record itself
+ *  (only lessons without a lesson doc still carry heavy fields there). */
+function stripInlineImagesFromCurriculumValue(curriculumValue) {
+  var recordStats = { removedCount: 0, removedBytes: 0 };
+  function walkSections(sectionList, depth) {
+    if (!sectionList || depth > 8) return;
+    for (var sectionIndex = 0; sectionIndex < sectionList.length; sectionIndex++) {
+      var sectionObject = sectionList[sectionIndex];
+      if (!sectionObject) continue;
+      var sectionLessons = sectionObject.lessons || [];
+      for (var lessonIndex = 0; lessonIndex < sectionLessons.length; lessonIndex++) {
+        var lessonObject = sectionLessons[lessonIndex];
+        if (!lessonObject) continue;
+        stripInlineImagesFromLessonFields(lessonObject, lessonObject.title || lessonObject.id || 'lesson', recordStats);
+      }
+      walkSections(sectionObject.children || [], depth + 1);
+    }
+  }
+  walkSections(curriculumValue.sections || [], 0);
+  return recordStats;
+}
+
+/** Strip every avoidable image byte from the value that goes to the CMS field */
+function stripInlineImageBytesForCms(curriculumValue) {
+  var inlineBudgetState = { entries: [], totalBytes: 0 };
+  function walkSections(sectionList, depth) {
+    if (!sectionList || depth > 8) return;
+    for (var sectionIndex = 0; sectionIndex < sectionList.length; sectionIndex++) {
+      var sectionObject = sectionList[sectionIndex];
+      if (!sectionObject) continue;
+      var sectionLessons = sectionObject.lessons || [];
+      for (var lessonIndex = 0; lessonIndex < sectionLessons.length; lessonIndex++) {
+        var lessonObject = sectionLessons[lessonIndex];
+        if (!lessonObject || !Object.prototype.hasOwnProperty.call(lessonObject, 'studyDocImages')) continue;
+        lessonObject.studyDocImages = cleanStudioImagesForSave(lessonObject.studyDocImages,
+          (lessonObject.title || lessonObject.id || 'lesson') + '.studyDocImages', inlineBudgetState);
+      }
+      walkSections(sectionObject.children || [], depth + 1);
+    }
+  }
+  walkSections(curriculumValue.sections || [], 0);
+  return applyInlineImageBudget(inlineBudgetState, MAX_SAVED_INLINE_IMAGE_BYTES);
 }
 
 /** The exact object written to the CMS: sections plus the optional curriculum language */
 function buildCurriculumValueForCms() {
   var curriculumValue = { sections: sections };
   if (curriculumLanguage) curriculumValue.language = curriculumLanguage;
-  // Reference documents live with the curriculum so every lesson can reach
-  // them. Only metadata is stored here - the files themselves stay in CMS storage.
-  if (mainDocuments.length) curriculumValue.mainDocuments = mainDocuments;
-  return JSON.parse(JSON.stringify(curriculumValue));
+  // Reference documents live in their OWN CMS objects when the store is ready,
+  // so the curriculum record carries no library metadata at all. The legacy
+  // list is only written back when object CRUD is unavailable.
+  if (mainDocuments.length && !referenceLibraryStoreReady) {
+    var recordDocuments = [];
+    for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+      var sourceDocument = mainDocuments[documentIndex] || {};
+      var documentCopy = {};
+      for (var documentProperty in sourceDocument) {
+        if (Object.prototype.hasOwnProperty.call(sourceDocument, documentProperty)) documentCopy[documentProperty] = sourceDocument[documentProperty];
+      }
+      if (typeof documentCopy.generatedHtml === 'string') {
+        var strippedDocumentHtml = stripInlineImageDataFromHtml(documentCopy.generatedHtml);
+        if (strippedDocumentHtml.removedCount) {
+          documentCopy.generatedHtml = strippedDocumentHtml.html;
+          documentCopy.generatedDroppedImages = (Number(documentCopy.generatedDroppedImages) || 0) + strippedDocumentHtml.removedCount;
+        }
+      }
+      recordDocuments.push(documentCopy);
+    }
+    curriculumValue.mainDocuments = recordDocuments;
+  }
+  // Files the host refused to delete. requestDeleteFile removes the real file
+  // (v3.9), so this list is only the fallback for a missing channel, a
+  // forbidden path or a failed delete - it is saved with the curriculum so a
+  // server-side purge can finish the job.
+  if (orphanedStorageFiles.length) curriculumValue.orphanedStorageFiles = orphanedStorageFiles;
+  var curriculumValueForCms = JSON.parse(JSON.stringify(curriculumValue));
+  // Pictures first: the budget sees the real inline bytes, drops them and
+  // tells the user. Stripping the HTML first would empty the fields silently.
+  var leftOutPictures = stripInlineImageBytesForCms(curriculumValueForCms);
+  if (leftOutPictures.length) {
+    var leftOutBytes = 0;
+    var leftOutNames = [];
+    for (var leftOutIndex = 0; leftOutIndex < leftOutPictures.length; leftOutIndex++) {
+      leftOutBytes += leftOutPictures[leftOutIndex].bytes;
+      leftOutNames.push(leftOutPictures[leftOutIndex].name || leftOutPictures[leftOutIndex].label);
+    }
+    console.warn('[CURRICULUM:SAVE] ' + leftOutPictures.length + ' inline picture(s) (' + formatFileSize(leftOutBytes) +
+      ') stay in memory only - they are NOT written to the CMS record: ' + leftOutNames.join(', '));
+    if (!window._inlinePicturesDroppedNotified) {
+      window._inlinePicturesDroppedNotified = true;
+      tool.notify('⚠️ Inline pictures are never saved: ' + leftOutPictures.length +
+        ' picture(s) stay in memory only. Upload them to store them in CMS storage.', 'warning');
+    }
+  }
+  var strippedRecordHtml = stripInlineImagesFromCurriculumValue(curriculumValueForCms);
+  if (strippedRecordHtml.removedCount) {
+    console.warn('[CURRICULUM:SAVE] ' + strippedRecordHtml.removedCount + ' inline image(s) (' +
+      formatFileSize(strippedRecordHtml.removedBytes) + ') were removed from lesson HTML - base64 is never saved');
+  }
+  return curriculumValueForCms;
 }
 
 /** Reflect the saved curriculum language in the toolbar picker */
@@ -3009,6 +3564,925 @@ function syncStudioOcrLanguageSelect() {
   if (languageSelect) languageSelect.value = studioOcrLanguageOverride || '';
 }
 
+/* ═══════════════════════════════════════════
+   CMS PAYLOAD SIZE REPORT
+   Answers "what exactly are we saving?". The curriculum record must stay far
+   below Firestore's 1 MB document limit, and every picture must be a CMS
+   storage URL - never an inline data: URL.
+   ═══════════════════════════════════════════ */
+
+/** UTF-8 byte length (string.length counts UTF-16 code units, not bytes) */
+function utf8ByteLength(textValue) {
+  var text = String(textValue === null || textValue === undefined ? '' : textValue);
+  var byteLength = 0;
+  for (var charIndex = 0; charIndex < text.length; charIndex++) {
+    var charCode = text.charCodeAt(charIndex);
+    if (charCode < 0x80) byteLength += 1;
+    else if (charCode < 0x800) byteLength += 2;
+    else if (charCode >= 0xD800 && charCode <= 0xDBFF) { byteLength += 4; charIndex++; }
+    else byteLength += 3;
+  }
+  return byteLength;
+}
+
+/** JSON size in bytes; 0 when the value cannot be serialised */
+function jsonByteLength(jsonValue) {
+  try { return utf8ByteLength(JSON.stringify(jsonValue)); } catch (jsonError) { return 0; }
+}
+
+/** Every inline data: payload with the path where it lives */
+function collectInlinePayloadData(jsonValue, valuePath, foundEntries, depth) {
+  if (depth > 12 || jsonValue === null || jsonValue === undefined) return foundEntries;
+  if (typeof jsonValue === 'string') {
+    if (jsonValue.indexOf('data:') === 0) {
+      foundEntries.push({ path: valuePath, kind: 'data: URL field', bytes: utf8ByteLength(jsonValue) });
+      return foundEntries;
+    }
+    if (jsonValue.indexOf('data:image') !== -1) {
+      var embeddedDataUrls = jsonValue.match(/data:image\/[^"')\s]+/g);
+      if (embeddedDataUrls && embeddedDataUrls.length) {
+        var embeddedBytes = 0;
+        for (var matchIndex = 0; matchIndex < embeddedDataUrls.length; matchIndex++) {
+          embeddedBytes += utf8ByteLength(embeddedDataUrls[matchIndex]);
+        }
+        foundEntries.push({ path: valuePath + ' (inside HTML)', kind: embeddedDataUrls.length + ' inline image(s)', bytes: embeddedBytes });
+      }
+    }
+    return foundEntries;
+  }
+  if (Object.prototype.toString.call(jsonValue) === '[object Array]') {
+    for (var itemIndex = 0; itemIndex < jsonValue.length && itemIndex < 400; itemIndex++) {
+      collectInlinePayloadData(jsonValue[itemIndex], valuePath + '[' + itemIndex + ']', foundEntries, depth + 1);
+    }
+    return foundEntries;
+  }
+  if (typeof jsonValue === 'object') {
+    for (var propertyName in jsonValue) {
+      if (!Object.prototype.hasOwnProperty.call(jsonValue, propertyName)) continue;
+      collectInlinePayloadData(jsonValue[propertyName], valuePath + '.' + propertyName, foundEntries, depth + 1);
+    }
+  }
+  return foundEntries;
+}
+
+/** Size breakdown of the exact value tool.setValue() writes to the CMS */
+function buildCurriculumPayloadReport(reasonLabel, payloadValue) {
+  var valueForSave = payloadValue || buildCurriculumValueForCms();
+  var payloadReport = {
+    reason: reasonLabel || '',
+    build: TOOL_BUILD,
+    totalBytes: jsonByteLength(valueForSave),
+    sectionCount: 0,
+    lessonCount: 0,
+    sectionSizes: [],
+    fieldSizes: [],
+    inlineData: [],
+    inlineBytes: 0
+  };
+
+  function measureLesson(lessonObject, sectionTitle) {
+    if (!lessonObject) return;
+    payloadReport.lessonCount++;
+    var lessonLabel = '§' + (sectionTitle || '?') + ' / ' + (lessonObject.title || lessonObject.id || 'lesson');
+    payloadReport.fieldSizes.push({ path: lessonLabel + ' (whole lesson)', bytes: jsonByteLength(lessonObject) });
+    for (var fieldName in lessonObject) {
+      if (!Object.prototype.hasOwnProperty.call(lessonObject, fieldName)) continue;
+      var fieldValue = lessonObject[fieldName];
+      if (fieldValue === null || fieldValue === undefined) continue;
+      var fieldBytes = jsonByteLength(fieldValue);
+      if (fieldBytes < 1024) continue;
+      payloadReport.fieldSizes.push({ path: lessonLabel + '.' + fieldName, bytes: fieldBytes });
+    }
+  }
+
+  function measureSectionList(sectionList, parentLabel, depth) {
+    if (!sectionList || depth > 8) return;
+    for (var sectionIndex = 0; sectionIndex < sectionList.length; sectionIndex++) {
+      var sectionObject = sectionList[sectionIndex];
+      if (!sectionObject) continue;
+      payloadReport.sectionCount++;
+      var sectionLabel = (parentLabel ? parentLabel + ' › ' : '') + (sectionObject.title || sectionObject.id || 'section');
+      payloadReport.sectionSizes.push({ path: sectionLabel, bytes: jsonByteLength(sectionObject) });
+      var sectionLessons = sectionObject.lessons || [];
+      for (var lessonIndex = 0; lessonIndex < sectionLessons.length; lessonIndex++) {
+        measureLesson(sectionLessons[lessonIndex], sectionObject.title || '');
+      }
+      measureSectionList(sectionObject.children || [], sectionLabel, depth + 1);
+    }
+  }
+  measureSectionList(valueForSave.sections || [], '', 0);
+
+  collectInlinePayloadData(valueForSave, 'value', payloadReport.inlineData, 0);
+  for (var inlineIndex = 0; inlineIndex < payloadReport.inlineData.length; inlineIndex++) {
+    payloadReport.inlineBytes += payloadReport.inlineData[inlineIndex].bytes;
+  }
+  payloadReport.fieldSizes.sort(function(firstEntry, secondEntry) { return secondEntry.bytes - firstEntry.bytes; });
+  payloadReport.fieldSizes = payloadReport.fieldSizes.slice(0, 12);
+  payloadReport.sectionSizes.sort(function(firstEntry, secondEntry) { return secondEntry.bytes - firstEntry.bytes; });
+  return payloadReport;
+}
+
+/** Print the payload report to the console (and optionally tell the user).
+ *  A normal save prints ONE line; the full breakdown is printed for the
+ *  manual report button and for developers only. */
+function logCurriculumPayloadReport(reasonLabel, notifyUser, payloadValue) {
+  var payloadReport;
+  try { payloadReport = buildCurriculumPayloadReport(reasonLabel, payloadValue); }
+  catch (reportError) { console.warn('[CURRICULUM:SIZE] report failed:', reportError); return null; }
+  var showPayloadDetails = !!notifyUser || isDeveloper();
+  console.log('[CURRICULUM:SIZE] ' + (payloadReport.reason || 'report') + ' · payload ' + formatFileSize(payloadReport.totalBytes) +
+    ' · ' + payloadReport.sectionCount + ' section(s) · ' + payloadReport.lessonCount + ' lesson(s) · build ' + payloadReport.build);
+  if (showPayloadDetails) {
+    for (var sectionIndex = 0; sectionIndex < payloadReport.sectionSizes.length; sectionIndex++) {
+      console.log('[CURRICULUM:SIZE]   section "' + payloadReport.sectionSizes[sectionIndex].path + '" = ' + formatFileSize(payloadReport.sectionSizes[sectionIndex].bytes));
+    }
+    for (var fieldIndex = 0; fieldIndex < payloadReport.fieldSizes.length; fieldIndex++) {
+      console.log('[CURRICULUM:SIZE]   ' + payloadReport.fieldSizes[fieldIndex].path + ' = ' + formatFileSize(payloadReport.fieldSizes[fieldIndex].bytes));
+    }
+  }
+  if (payloadReport.inlineData.length) {
+    console.warn('[CURRICULUM:SIZE] ' + payloadReport.inlineData.length + ' inline data entr(y/ies) = ' + formatFileSize(payloadReport.inlineBytes) +
+      ' are saved INSIDE the curriculum record - pictures should be CMS storage URLs:');
+    for (var inlineIndex = 0; inlineIndex < payloadReport.inlineData.length && inlineIndex < 10; inlineIndex++) {
+      console.warn('[CURRICULUM:SIZE]   ' + payloadReport.inlineData[inlineIndex].path + ' · ' +
+        payloadReport.inlineData[inlineIndex].kind + ' = ' + formatFileSize(payloadReport.inlineData[inlineIndex].bytes));
+    }
+  } else if (showPayloadDetails) {
+    console.log('[CURRICULUM:SIZE] no inline images - every picture in the record is a storage URL');
+  }
+  if (payloadReport.totalBytes > 700 * 1024) {
+    console.warn('[CURRICULUM:SIZE] the record is close to the 1 MB Firestore document limit');
+  }
+  if (notifyUser) {
+    var inlineReportText = payloadReport.inlineData.length
+      ? payloadReport.inlineData.length + ' inline entr(y/ies) ' + formatFileSize(payloadReport.inlineBytes)
+      : 'no inline images';
+    tool.notify('CMS payload: ' + formatFileSize(payloadReport.totalBytes) + ' · ' + payloadReport.lessonCount + ' lesson(s) · ' +
+      inlineReportText + '. Full breakdown in the browser console.', payloadReport.inlineData.length ? 'warning' : 'info');
+  }
+  return payloadReport;
+}
+
+/** Settings button: report what the field would save right now */
+function reportCurriculumPayloadFromSettings() {
+  var payloadReport = logCurriculumPayloadReport('manual report', true);
+  var resultElement = el('payload-report-result');
+  if (!resultElement || !payloadReport) return;
+  resultElement.textContent = formatFileSize(payloadReport.totalBytes) + ' total · ' + payloadReport.sectionCount + ' section(s) · ' +
+    payloadReport.lessonCount + ' lesson(s) · ' +
+    (payloadReport.inlineData.length
+      ? formatFileSize(payloadReport.inlineBytes) + ' of inline images (should be storage URLs)'
+      : 'no inline images') +
+    ' · details in the browser console';
+}
+
+/** Read every lesson doc in BOTH object types into one backup structure */
+function collectLessonDocsForBackup(onDone) {
+  var backup = {
+    exportedAt: new Date().toISOString(),
+    toolBuild: TOOL_BUILD,
+    currentType: LESSON_DOC_TYPE,
+    legacyType: LESSON_DOC_TYPE_LEGACY,
+    current: [],
+    legacy: [],
+    errors: []
+  };
+  function readOneType(objectType, targetList, nextType) {
+    tool.requestObjects('query', { mainObjectType: objectType }, function(queryError, queryResult) {
+      if (queryError) {
+        backup.errors.push(objectType + ': ' + queryError);
+        if (nextType) nextType();
+        return;
+      }
+      var storedObjects = (queryResult && queryResult.objects) ? queryResult.objects : [];
+      for (var objectIndex = 0; objectIndex < storedObjects.length; objectIndex++) {
+        var cmsObject = storedObjects[objectIndex];
+        var lessonJson = null;
+        try {
+          var productData = cmsObject.productData;
+          var rawLessonJson = productData && productData.data_categoriesBased ? productData.data_categoriesBased.lessonJson : '';
+          lessonJson = rawLessonJson ? JSON.parse(rawLessonJson) : null;
+        } catch (parseBackupError) {
+          backup.errors.push(objectType + ' ' + (cmsObject.id || '?') + ': lessonJson could not be parsed');
+        }
+        targetList.push({
+          objectType: objectType,
+          id: cmsObject.id || '',
+          name: cmsObject.name || '',
+          created: cmsObject.created || '',
+          updated: cmsObject.updated || '',
+          lessonJson: lessonJson
+        });
+      }
+      if (nextType) nextType();
+    });
+  }
+  readOneType(LESSON_DOC_TYPE, backup.current, function() {
+    readOneType(LESSON_DOC_TYPE_LEGACY, backup.legacy, function() { if (onDone) onDone(backup); });
+  });
+}
+
+var lessonBackupFileName = 'curriculum-lesson-docs-backup.json';
+
+function openLessonBackupModal(backupText, summaryText, suggestedFileName) {
+  var overlay = el('lesson-backup-overlay');
+  var backupArea = el('lesson-backup-json');
+  var summaryElement = el('lesson-backup-summary');
+  if (suggestedFileName) lessonBackupFileName = suggestedFileName;
+  if (backupArea) backupArea.value = backupText;
+  if (summaryElement) summaryElement.textContent = summaryText;
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function closeLessonBackupModal() {
+  var overlay = el('lesson-backup-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+/** Select the whole textarea so a blocked clipboard still ends with Ctrl+C */
+function selectLessonBackupText() {
+  var backupArea = el('lesson-backup-json');
+  if (!backupArea) return;
+  try { backupArea.focus(); } catch (focusError) {}
+  try { if (backupArea.select) backupArea.select(); } catch (selectError) {}
+}
+
+function copyLessonBackupJson() {
+  var backupArea = el('lesson-backup-json');
+  if (!backupArea) return;
+  var backupText = backupArea.value || '';
+  if (!backupText) { tool.notify('There is nothing to copy yet.', 'warning'); return; }
+  try {
+    navigator.clipboard.writeText(backupText).then(function() {
+      tool.notify('Lesson backup JSON copied - paste it into a .json file.', 'success');
+    }).catch(function() {
+      selectLessonBackupText();
+      tool.notify('Press Ctrl+C to copy the selected JSON.', 'info');
+    });
+  } catch (copyError) {
+    selectLessonBackupText();
+    tool.notify('Press Ctrl+C to copy the selected JSON.', 'info');
+  }
+}
+
+/** Save a string as a real file through a temporary download link.
+ *  Returns false when the browser/iframe refuses (sandbox without downloads). */
+function downloadTextAsFile(fileName, fileText, contentType) {
+  try {
+    var fileBlob = new Blob([fileText], { type: contentType || 'application/json;charset=utf-8' });
+    var objectUrl = URL.createObjectURL(fileBlob);
+    var downloadLink = document.createElement('a');
+    downloadLink.href = objectUrl;
+    downloadLink.download = fileName;
+    downloadLink.rel = 'noopener';
+    downloadLink.style.display = 'none';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    setTimeout(function() {
+      try { document.body.removeChild(downloadLink); } catch (removeError) {}
+      try { URL.revokeObjectURL(objectUrl); } catch (revokeError) {}
+    }, 4000);
+    return true;
+  } catch (downloadError) {
+    console.warn('[DOWNLOAD] the browser refused the file download:', downloadError);
+    return false;
+  }
+}
+
+/** Download the JSON in the backup window as a real .json file */
+function openLessonBackupAsFile() {
+  var backupArea = el('lesson-backup-json');
+  if (!backupArea || !backupArea.value) { tool.notify('There is nothing to export yet.', 'warning'); return; }
+  var backupText = backupArea.value;
+  var fileName = lessonBackupFileName || 'curriculum-backup.json';
+  if (downloadTextAsFile(fileName, backupText, 'application/json;charset=utf-8')) {
+    console.log('[DOWNLOAD] ' + fileName + ' · ' + formatFileSize(utf8ByteLength(backupText)));
+    tool.notify('Download started: ' + fileName + '. If nothing happened, this field blocks downloads - use Copy JSON.', 'success');
+    return;
+  }
+  // Fallback: the CMS export channel returns a printable HTML file with the JSON
+  if (typeof tool.requestExportPdf !== 'function') {
+    tool.notify('The browser blocked the download and file export is not enabled. Use Copy JSON instead.', 'warning');
+    return;
+  }
+  var exportHtml = '<h1>Curriculum backup</h1>' +
+    '<p>build ' + esc(TOOL_BUILD) + ' · ' + esc(new Date().toISOString()) + '</p>' +
+    '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px">' + esc(backupText) + '</pre>';
+  tool.requestExportPdf({ html: exportHtml, filename: fileName.replace(/\.json$/i, '') }, function(exportError, exportedFile) {
+    if (exportError || !exportedFile || !exportedFile.url) {
+      tool.notify('Export failed: ' + (exportError || 'no file URL returned'), 'warning');
+      return;
+    }
+    tool.notify('Backup file created - opening it in a new tab. Use Save as… to keep a copy.', 'success');
+    tool.openUrl(exportedFile.url);
+  });
+}
+
+/** Settings button: read every lesson doc and show it as one JSON backup */
+function exportAllLessonDocuments() {
+  if (!canUseLessonDocs()) {
+    tool.notify('Lesson documents cannot be read from this field (object CRUD is off).', 'warning');
+    return;
+  }
+  var resultElement = el('export-lessons-result');
+  if (resultElement) resultElement.textContent = '⏳ Reading lesson documents...';
+  collectLessonDocsForBackup(function(backup) {
+    var backupText = JSON.stringify(backup, null, 2);
+    var totalCount = backup.current.length + backup.legacy.length;
+    var summaryText = totalCount + ' lesson document(s) · ' + backup.current.length + ' in ' + LESSON_DOC_TYPE + ' · ' +
+      backup.legacy.length + ' in ' + LESSON_DOC_TYPE_LEGACY + ' · ' + formatFileSize(utf8ByteLength(backupText)) +
+      (backup.errors.length ? ' · ' + backup.errors.length + ' read error(s)' : '');
+    openLessonBackupModal(backupText, summaryText, 'curriculum-lesson-docs-backup.json');
+    if (resultElement) resultElement.textContent = 'Last backup: ' + summaryText;
+    console.log('[LESSON:BACKUP] ' + summaryText);
+    if (backup.errors.length) console.warn('[LESSON:BACKUP] read errors:', backup.errors);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   ACTIONS TAB: bulk lesson-doc migration + package export/import
+   ═══════════════════════════════════════════ */
+
+var lessonDocMigrationRunning = false;
+var pendingImportPackage = null;
+
+/** Write a status line into one of the Actions tab hint spans */
+function setActionStatus(elementId, statusText) {
+  var statusElement = el(elementId);
+  if (statusElement) statusElement.textContent = statusText;
+}
+
+/* Live state of the lesson-document object types (decides which cards show) */
+var lessonDocTypeStatus = {
+  currentTotal: 0,
+  legacyTotal: 0,
+  referencedTotal: 0,
+  legacyReferenced: 0,
+  legacyOrphans: 0,
+  unknownReferenced: 0,
+  legacyReadable: true,
+  legacyError: '',
+  checkedAt: ''
+};
+
+/** Show or hide one Actions card (hidden attribute + inline display) */
+function setActionCardVisible(cardId, isVisible) {
+  var cardElement = el(cardId);
+  if (!cardElement) return;
+  if (isVisible) {
+    cardElement.hidden = false;
+    if (cardElement.removeAttribute) cardElement.removeAttribute('hidden');
+    cardElement.style.display = '';
+  } else {
+    cardElement.hidden = true;
+    if (cardElement.setAttribute) cardElement.setAttribute('hidden', 'hidden');
+    cardElement.style.display = 'none';
+  }
+}
+
+/** Top health line of the Actions tab */
+function setLessonDocHealth(healthText, healthKind) {
+  var healthElement = el('lesson-doc-health');
+  if (!healthElement) return;
+  healthElement.textContent = healthText;
+  healthElement.className = 'actions-health' + (healthKind ? ' is-' + healthKind : '');
+}
+
+/** Apply the last measured state to the cards, badges and health line */
+function applyLessonDocTypeStatus() {
+  var status = lessonDocTypeStatus;
+  var migrateBadge = el('migrate-count-badge');
+  if (migrateBadge) {
+    migrateBadge.textContent = status.legacyReferenced + ' old';
+    migrateBadge.style.display = status.legacyReferenced ? '' : 'none';
+  }
+  var cleanupBadge = el('cleanup-count-badge');
+  if (cleanupBadge) {
+    cleanupBadge.textContent = status.legacyOrphans + ' unused';
+    cleanupBadge.style.display = status.legacyOrphans ? '' : 'none';
+  }
+  if (!status.legacyReadable) {
+    setActionCardVisible('action-card-migrate', status.unknownReferenced > 0);
+    setActionCardVisible('action-card-cleanup', false);
+    setLessonDocHealth('⚠️ The old object type ' + LESSON_DOC_TYPE_LEGACY + ' could not be read (' + (status.legacyError || 'not allowed') +
+      '). ' + status.unknownReferenced + ' referenced document(s) were not found in ' + LESSON_DOC_TYPE + '.', 'warn');
+    return;
+  }
+  var hasLegacyReferenced = status.legacyReferenced > 0;
+  var hasLegacyOrphans = status.legacyOrphans > 0;
+  setActionCardVisible('action-card-migrate', hasLegacyReferenced);
+  setActionCardVisible('action-card-cleanup', hasLegacyOrphans);
+  if (!hasLegacyReferenced && !hasLegacyOrphans) {
+    setLessonDocHealth('✅ All ' + status.currentTotal + ' lesson document(s) already use ' + LESSON_DOC_TYPE + '. Nothing to migrate.', 'ok');
+    return;
+  }
+  if (hasLegacyReferenced) {
+    setLessonDocHealth('🔁 ' + status.legacyReferenced + ' of ' + status.referencedTotal + ' referenced lesson document(s) still use ' +
+      LESSON_DOC_TYPE_LEGACY + '.' + (hasLegacyOrphans ? ' ' + status.legacyOrphans + ' old document(s) are no longer referenced.' : ''), 'warn');
+    return;
+  }
+  setLessonDocHealth('🧹 ' + status.legacyOrphans + ' old document(s) are no longer referenced and can be deleted.', 'warn');
+}
+
+/** Query both object types and decide which Actions cards are relevant */
+function refreshLessonDocTypeStatus() {
+  if (!canUseLessonDocs()) {
+    setLessonDocHealth('⚠️ Object CRUD is off for this field, so lesson documents cannot be checked.', 'warn');
+    setActionCardVisible('action-card-migrate', false);
+    setActionCardVisible('action-card-cleanup', false);
+    return;
+  }
+  var refreshButton = el('btn-actions-refresh');
+  if (refreshButton) refreshButton.disabled = true;
+  setLessonDocHealth('⏳ Checking lesson documents...', 'busy');
+
+  var referencedDocIds = {};
+  var referencedTotal = 0;
+  collectAllLessons().forEach(function(lessonEntry) {
+    if (lessonEntry.lesson && lessonEntry.lesson.lessonDocId) {
+      referencedDocIds[lessonEntry.lesson.lessonDocId] = true;
+      referencedTotal++;
+    }
+  });
+
+  var currentDocIds = {};
+  var legacyDocIds = {};
+  var currentTotal = 0;
+  var legacyTotal = 0;
+  var legacyReadable = true;
+  var legacyError = '';
+
+  tool.requestObjects('query', { mainObjectType: LESSON_DOC_TYPE }, function(currentError, currentResult) {
+    if (!currentError && currentResult && currentResult.objects) {
+      var currentObjects = currentResult.objects;
+      for (var currentIndex = 0; currentIndex < currentObjects.length; currentIndex++) {
+        var currentObject = currentObjects[currentIndex] || {};
+        var currentStoredType = storedObjectTypeOf(currentObject);
+        if (currentStoredType && currentStoredType !== LESSON_DOC_TYPE) continue; // unfiltered answer: not current
+        if (currentObject.id) { currentDocIds[currentObject.id] = true; currentTotal++; }
+      }
+    }
+    tool.requestObjects('query', { mainObjectType: LESSON_DOC_TYPE_LEGACY }, function(legacyQueryError, legacyResult) {
+      if (legacyQueryError) {
+        legacyReadable = false;
+        legacyError = legacyQueryError;
+      } else if (legacyResult && legacyResult.objects) {
+        var legacyObjects = legacyResult.objects;
+        for (var legacyIndex = 0; legacyIndex < legacyObjects.length; legacyIndex++) {
+          var legacyObject = legacyObjects[legacyIndex] || {};
+          if (!legacyObject.id || currentDocIds[legacyObject.id]) continue;
+          var legacyStoredType = storedObjectTypeOf(legacyObject);
+          if (legacyStoredType === LESSON_DOC_TYPE) continue; // an unfiltered answer can contain current docs
+          legacyDocIds[legacyObject.id] = true;
+          legacyTotal++;
+        }
+      }
+      var legacyReferenced = 0;
+      var unknownReferenced = 0;
+      Object.keys(referencedDocIds).forEach(function(referencedDocId) {
+        if (legacyDocIds[referencedDocId]) legacyReferenced++;
+        else if (!currentDocIds[referencedDocId]) unknownReferenced++;
+      });
+      var legacyOrphans = 0;
+      Object.keys(legacyDocIds).forEach(function(legacyDocId) {
+        if (!referencedDocIds[legacyDocId]) legacyOrphans++;
+      });
+      lessonDocTypeStatus = {
+        currentTotal: currentTotal,
+        legacyTotal: legacyTotal,
+        referencedTotal: referencedTotal,
+        legacyReferenced: legacyReferenced,
+        legacyOrphans: legacyOrphans,
+        unknownReferenced: unknownReferenced,
+        legacyReadable: legacyReadable,
+        legacyError: legacyError,
+        checkedAt: new Date().toISOString()
+      };
+      if (refreshButton) refreshButton.disabled = false;
+      applyLessonDocTypeStatus();
+      console.log('[ACTIONS:STATUS] current=' + currentTotal + ' legacy=' + legacyTotal + ' referenced=' + referencedTotal +
+        ' legacyReferenced=' + legacyReferenced + ' legacyOrphans=' + legacyOrphans +
+        (legacyReadable ? '' : ' legacyUnreadable=' + legacyError));
+    });
+  });
+}
+
+/** Read one lesson doc's stored lessonJson (callback(error, data, objectTypeUsed)) */
+function readLessonDocData(objectId, callback) {
+  readLessonDocObject(objectId, function(errorText, cmsObject, objectTypeUsed) {
+    if (errorText || !cmsObject) { callback(errorText || 'not found', null, null); return; }
+    var docData = {};
+    try {
+      var productData = cmsObject.productData;
+      var rawJson = productData && productData.data_categoriesBased ? productData.data_categoriesBased.lessonJson : '';
+      docData = rawJson ? (JSON.parse(rawJson) || {}) : {};
+    } catch (parseError) {
+      callback(parseError, null, objectTypeUsed);
+      return;
+    }
+    callback(null, docData, objectTypeUsed);
+  });
+}
+
+/** Read a freshly created lesson doc back and compare its payload with what was sent */
+function verifyLessonDocCopy(newDocId, expectedJsonText, callback) {
+  tool.requestObjects('get', { mainObjectType: LESSON_DOC_TYPE, objectId: newDocId }, function(readError, readResult) {
+    if (readError || !readResult || !readResult.object) { callback(false); return; }
+    var verifiedStoredType = storedObjectTypeOf(readResult.object);
+    if (verifiedStoredType && verifiedStoredType !== LESSON_DOC_TYPE) {
+      console.warn('[LESSON:DOC] the new document ' + newDocId + ' was stored as "' + verifiedStoredType + '" instead of ' + LESSON_DOC_TYPE);
+      callback(false);
+      return;
+    }
+    try {
+      var productData = readResult.object.productData;
+      var rawJson = productData && productData.data_categoriesBased ? productData.data_categoriesBased.lessonJson : '';
+      if (!rawJson) { callback(false); return; }
+      callback(JSON.stringify(JSON.parse(rawJson) || {}) === JSON.stringify(JSON.parse(expectedJsonText) || {}));
+    } catch (compareError) {
+      callback(false);
+    }
+  });
+}
+
+/** Copy every legacy lesson doc into the current type, verify each copy, repoint
+ *  the lessons and save the curriculum ONCE. Old copies are deleted only when
+ *  the user opted in AND the record save was confirmed. */
+function bulkMigrateLessonDocs() {
+  if (lessonDocMigrationRunning) return;
+  if (!canUseLessonDocs()) {
+    tool.notify('Lesson documents cannot be read from this field (object CRUD is off).', 'warning');
+    return;
+  }
+  var lessonRefs = [];
+  collectAllLessons().forEach(function(lessonEntry) {
+    if (lessonEntry.lesson && lessonEntry.lesson.lessonDocId) lessonRefs.push(lessonEntry);
+  });
+  if (!lessonRefs.length) {
+    tool.notify('No lesson document is referenced by this curriculum.', 'info');
+    return;
+  }
+  var deleteOption = el('chk-delete-legacy-docs');
+  var deleteLegacyCopies = !!(deleteOption && deleteOption.checked);
+  var migrateButton = el('btn-migrate-lesson-docs');
+  lessonDocMigrationRunning = true;
+  if (migrateButton) migrateButton.disabled = true;
+  var summary = { total: lessonRefs.length, alreadyCurrent: 0, migrated: 0, reused: 0, failed: 0, legacyCopies: [], failures: [] };
+  var lessonIndex = 0;
+  var currentDocIndex = {};
+  setActionStatus('migrate-lesson-docs-status', '⏳ Checking ' + lessonRefs.length + ' lesson document(s)...');
+
+  function migrationReport() {
+    lessonDocMigrationRunning = false;
+    if (migrateButton) migrateButton.disabled = false;
+    var deletedText = '';
+    if (typeof summary.deleted === 'number') {
+      deletedText = ' · ' + summary.deleted + ' old document(s) deleted' + (summary.deleteFailed ? ', ' + summary.deleteFailed + ' delete(s) failed' : '');
+    } else if (summary.migrated) {
+      deletedText = ' · old documents kept';
+    }
+    var recordText = summary.migrated ? (summary.saveConfirmed ? ' · curriculum saved' : ' · curriculum save NOT confirmed (old ids kept in the record)') : '';
+    var reportText = summary.migrated + ' migrated · ' + summary.reused + ' reused existing copy · ' + summary.alreadyCurrent + ' already current · ' + summary.failed + ' failed' + recordText + deletedText;
+    setActionStatus('migrate-lesson-docs-status', (summary.failed ? '⚠️ ' : '✅ ') + reportText);
+    console.log('[LESSON:MIGRATE] ' + reportText);
+    if (summary.failures.length) console.warn('[LESSON:MIGRATE] failures:', summary.failures);
+    tool.notify('Lesson documents: ' + reportText, summary.failed ? 'warning' : 'success');
+    refreshLessonDocTypeStatus();
+  }
+
+  function deleteLegacyCopiesInOrder() {
+    var deleteIndex = 0;
+    summary.deleted = 0;
+    summary.deleteFailed = 0;
+    function deleteNextCopy() {
+      if (deleteIndex >= summary.legacyCopies.length) { migrationReport(); return; }
+      var legacyCopy = summary.legacyCopies[deleteIndex];
+      deleteIndex++;
+      tool.requestObjects('delete', { mainObjectType: LESSON_DOC_TYPE_LEGACY, objectId: legacyCopy.docId }, function(deleteError) {
+        if (deleteError) {
+          summary.deleteFailed++;
+          summary.failures.push('delete ' + legacyCopy.docId + ': ' + deleteError);
+        } else {
+          summary.deleted++;
+        }
+        deleteNextCopy();
+      });
+    }
+    deleteNextCopy();
+  }
+
+  function finishBulkMigration() {
+    if (!summary.migrated) { migrationReport(); return; }
+    setActionStatus('migrate-lesson-docs-status', '⏳ Saving the curriculum with the new document ids...');
+    commitCurriculumNow(function(recordSaved) {
+      summary.saveConfirmed = !!recordSaved;
+      if (!summary.saveConfirmed || !deleteLegacyCopies) { migrationReport(); return; }
+      deleteLegacyCopiesInOrder();
+    });
+  }
+
+  function migrateNextLesson() {
+    if (lessonIndex >= lessonRefs.length) { finishBulkMigration(); return; }
+    var lessonEntry = lessonRefs[lessonIndex];
+    lessonIndex++;
+    var lesson = lessonEntry.lesson;
+    var lessonDocId = lesson.lessonDocId;
+    readLessonDocData(lessonDocId, function(readError, docData, objectTypeUsed) {
+      if (readError) {
+        var knownCurrentDocId = currentDocIndex[lesson.id] || '';
+        if (knownCurrentDocId) {
+          // The legacy copy is unreadable but a current-type copy exists from an
+          // earlier run: repoint to it instead of counting a failure.
+          lesson.lessonDocId = knownCurrentDocId;
+          rewireLessonDocId(lesson.id, knownCurrentDocId);
+          summary.reused++;
+          setActionStatus('migrate-lesson-docs-status', '⏳ ' + summary.reused + ' reused an existing copy...');
+          migrateNextLesson();
+          return;
+        }
+        summary.failed++;
+        summary.failures.push((lesson.title || lesson.id) + ': ' + readError);
+        migrateNextLesson();
+        return;
+      }
+      if (objectTypeUsed === LESSON_DOC_TYPE) {
+        summary.alreadyCurrent++;
+        migrateNextLesson();
+        return;
+      }
+      var docJsonText = JSON.stringify(docData || {});
+      var existingCurrentDocId = currentDocIndex[lesson.id] || '';
+      if (!existingCurrentDocId) { createLessonDocCopy(); return; }
+      // A document already exists in the current type for this lesson (an
+      // earlier run whose record save was not confirmed): reuse it.
+      tool.requestObjects('get', { mainObjectType: LESSON_DOC_TYPE, objectId: existingCurrentDocId }, function(existingError, existingResult) {
+        if (!existingError && existingResult && existingResult.object) {
+          lesson.lessonDocId = existingCurrentDocId;
+          rewireLessonDocId(lesson.id, existingCurrentDocId);
+          summary.reused++;
+          setActionStatus('migrate-lesson-docs-status', '⏳ ' + summary.reused + ' reused an existing copy...');
+          migrateNextLesson();
+          return;
+        }
+        createLessonDocCopy();
+      });
+
+      function createLessonDocCopy() {
+        tool.requestObjects('create', {
+          mainObjectType: LESSON_DOC_TYPE,
+          name: lesson.title || 'Lesson',
+          productData: { data_categoriesBased: { lessonJson: docJsonText } }
+        }, function(createError, createResult) {
+          var newDocId = (createResult && createResult.object) ? createResult.object.id : '';
+          if (createError || !newDocId) {
+            summary.failed++;
+            summary.failures.push((lesson.title || lesson.id) + ': ' + (createError || 'no id returned'));
+            migrateNextLesson();
+            return;
+          }
+          currentDocIndex[lesson.id] = newDocId;
+          verifyLessonDocCopy(newDocId, docJsonText, function(copyOk) {
+            if (!copyOk) {
+              summary.failed++;
+              summary.failures.push((lesson.title || lesson.id) + ': the new copy could not be verified - the old document is kept');
+              migrateNextLesson();
+              return;
+            }
+            lesson.lessonDocId = newDocId;
+            rewireLessonDocId(lesson.id, newDocId);
+            summary.migrated++;
+            summary.legacyCopies.push({ docId: lessonDocId, lessonTitle: lesson.title || lesson.id, newDocId: newDocId });
+            setActionStatus('migrate-lesson-docs-status', '⏳ ' + summary.migrated + '/' + summary.total + ' migrated...');
+            migrateNextLesson();
+          });
+        });
+      }
+    });
+  }
+
+  // Build the current-type index first so a repeated run can never create a
+  // second document for a lesson that already has one.
+  ensureCurrentLessonDocIndex(function(existingDocIndex) {
+    currentDocIndex = existingDocIndex || {};
+    migrateNextLesson();
+  });
+}
+
+/** Delete old-type lesson documents that no lesson references any more.
+ *  Referenced documents are NEVER touched - the check uses the live tree. */
+function cleanupUnreferencedLegacyLessonDocs() {
+  if (!canUseLessonDocs()) {
+    tool.notify('Lesson documents cannot be read from this field (object CRUD is off).', 'warning');
+    return;
+  }
+  var referencedDocIds = {};
+  collectAllLessons().forEach(function(lessonEntry) {
+    if (lessonEntry.lesson && lessonEntry.lesson.lessonDocId) referencedDocIds[lessonEntry.lesson.lessonDocId] = true;
+  });
+  setActionStatus('cleanup-legacy-docs-status', '⏳ Checking the old object type...');
+  tool.requestObjects('query', { mainObjectType: LESSON_DOC_TYPE_LEGACY }, function(queryError, queryResult) {
+    if (queryError) {
+      setActionStatus('cleanup-legacy-docs-status', '❌ The old object type could not be read: ' + queryError);
+      return;
+    }
+    var legacyObjects = (queryResult && queryResult.objects) ? queryResult.objects : [];
+    var removableIds = [];
+    var referencedCount = 0;
+    for (var objectIndex = 0; objectIndex < legacyObjects.length; objectIndex++) {
+      var legacyObject = legacyObjects[objectIndex] || {};
+      var legacyId = legacyObject.id || '';
+      if (!legacyId) continue;
+      // The bridge may return objects of every type: never touch a current-type document.
+      if (storedObjectTypeOf(legacyObject) === LESSON_DOC_TYPE) continue;
+      if (referencedDocIds[legacyId]) { referencedCount++; continue; }
+      removableIds.push(legacyId);
+    }
+    if (!removableIds.length) {
+      setActionStatus('cleanup-legacy-docs-status', '✅ Nothing to delete: ' + legacyObjects.length + ' old document(s), all still referenced (' + referencedCount + ').');
+      return;
+    }
+    sandboxConfirm('Delete ' + removableIds.length + ' old lesson document(s) that no lesson points to any more?' +
+      (referencedCount ? ' ' + referencedCount + ' referenced old document(s) will be kept.' : '') +
+      ' This cannot be undone.', function() {
+      var deleteIndex = 0;
+      var deletedCount = 0;
+      var failedCount = 0;
+      function deleteNextOldDoc() {
+        if (deleteIndex >= removableIds.length) {
+          var cleanupText = deletedCount + ' old document(s) deleted' + (failedCount ? ', ' + failedCount + ' failed' : '') +
+            (referencedCount ? ' · ' + referencedCount + ' still referenced and kept' : '');
+          setActionStatus('cleanup-legacy-docs-status', (failedCount ? '⚠️ ' : '✅ ') + cleanupText);
+          console.log('[LESSON:CLEANUP] ' + cleanupText);
+          tool.notify('Old lesson documents: ' + cleanupText, failedCount ? 'warning' : 'success');
+          refreshLessonDocTypeStatus();
+          return;
+        }
+        var oldDocId = removableIds[deleteIndex];
+        deleteIndex++;
+        tool.requestObjects('delete', { mainObjectType: LESSON_DOC_TYPE_LEGACY, objectId: oldDocId }, function(deleteError) {
+          if (deleteError) { failedCount++; console.warn('[LESSON:CLEANUP] delete failed for ' + oldDocId + ':', deleteError); }
+          else deletedCount++;
+          setActionStatus('cleanup-legacy-docs-status', '⏳ ' + (deletedCount + failedCount) + '/' + removableIds.length + ' processed...');
+          deleteNextOldDoc();
+        });
+      }
+      deleteNextOldDoc();
+    }, 'Delete old copies');
+  });
+}
+
+/** Export the curriculum value together with every lesson document */
+function exportCurriculumPackage() {
+  if (!canUseLessonDocs()) {
+    tool.notify('Lesson documents cannot be read from this field (object CRUD is off), so the package would be incomplete.', 'warning');
+    return;
+  }
+  setActionStatus('export-package-result', '⏳ Reading the curriculum and every lesson document...');
+  collectLessonDocsForBackup(function(docsBackup) {
+    var curriculumPackage = {
+      packageVersion: 1,
+      exportedAt: new Date().toISOString(),
+      toolBuild: TOOL_BUILD,
+      curriculumId: tool.param('builderObjectId', '') || '',
+      curriculum: buildCurriculumValueForCms(),
+      lessonDocs: docsBackup.current.concat(docsBackup.legacy),
+      readErrors: docsBackup.errors
+    };
+    var packageText = JSON.stringify(curriculumPackage, null, 2);
+    var summaryText = curriculumPackage.lessonDocs.length + ' lesson document(s) · ' +
+      (curriculumPackage.curriculum.sections || []).length + ' top-level section(s) · ' + formatFileSize(utf8ByteLength(packageText));
+    openLessonBackupModal(packageText, 'Curriculum package · ' + summaryText, 'curriculum-package.json');
+    setActionStatus('export-package-result', 'Last export: ' + summaryText);
+    console.log('[PACKAGE:EXPORT] ' + summaryText);
+    if (docsBackup.errors.length) console.warn('[PACKAGE:EXPORT] read errors:', docsBackup.errors);
+  });
+}
+
+/** Parse the chosen package file and show what would be imported */
+function readChosenImportPackage(fileInput) {
+  pendingImportPackage = null;
+  var importButton = el('btn-import-lesson-docs');
+  if (importButton) importButton.disabled = true;
+  setActionStatus('import-package-status', '');
+  var chosenFile = (fileInput && fileInput.files) ? fileInput.files[0] : null;
+  if (!chosenFile) { setActionStatus('import-package-preview', ''); return; }
+  var fileReader = new FileReader();
+  fileReader.onload = function() {
+    var parsedPackage = null;
+    try { parsedPackage = JSON.parse(String(fileReader.result || '')); }
+    catch (parseError) { setActionStatus('import-package-preview', '❌ That file is not valid JSON.'); return; }
+    if (!parsedPackage || !parsedPackage.lessonDocs || !parsedPackage.lessonDocs.length) {
+      setActionStatus('import-package-preview', '❌ That JSON is not a curriculum package (lessonDocs is missing or empty).');
+      return;
+    }
+    var currentLessonIds = {};
+    collectAllLessons().forEach(function(lessonEntry) {
+      if (lessonEntry.lesson && lessonEntry.lesson.id) currentLessonIds[lessonEntry.lesson.id] = true;
+    });
+    var matchingCount = 0;
+    for (var docIndex = 0; docIndex < parsedPackage.lessonDocs.length; docIndex++) {
+      var packageDoc = parsedPackage.lessonDocs[docIndex] || {};
+      var packageLessonJson = packageDoc.lessonJson;
+      if (packageLessonJson && packageLessonJson.lessonId && currentLessonIds[packageLessonJson.lessonId]) matchingCount++;
+    }
+    pendingImportPackage = parsedPackage;
+    setActionStatus('import-package-preview', '📦 ' + parsedPackage.lessonDocs.length + ' document(s) · ' + matchingCount +
+      ' match a lesson here · exported ' + (parsedPackage.exportedAt || 'unknown') + ' · build ' + (parsedPackage.toolBuild || '?'));
+    if (importButton) importButton.disabled = false;
+  };
+  fileReader.onerror = function() { setActionStatus('import-package-preview', '❌ The file could not be read.'); };
+  fileReader.readAsText(chosenFile);
+}
+
+/** Ask for confirmation, then restore the package into the matching lessons */
+function importLessonDocumentsFromPackage() {
+  var curriculumPackage = pendingImportPackage;
+  if (!curriculumPackage || !curriculumPackage.lessonDocs) {
+    tool.notify('Choose a package file first.', 'warning');
+    return;
+  }
+  var lessonsById = {};
+  collectAllLessons().forEach(function(lessonEntry) {
+    if (lessonEntry.lesson && lessonEntry.lesson.id) lessonsById[lessonEntry.lesson.id] = lessonEntry.lesson;
+  });
+  var matches = [];
+  var skippedCount = 0;
+  for (var docIndex = 0; docIndex < curriculumPackage.lessonDocs.length; docIndex++) {
+    var packageDoc = curriculumPackage.lessonDocs[docIndex] || {};
+    var packageLessonJson = packageDoc.lessonJson;
+    if (!packageLessonJson || !packageLessonJson.lessonId || !lessonsById[packageLessonJson.lessonId]) { skippedCount++; continue; }
+    matches.push({ lesson: lessonsById[packageLessonJson.lessonId], lessonJson: packageLessonJson });
+  }
+  if (!matches.length) {
+    tool.notify('None of the documents in the package belongs to a lesson in this curriculum - nothing imported.', 'warning');
+    return;
+  }
+  var confirmText = 'Restore ' + matches.length + ' lesson document(s) from the package?' +
+    (skippedCount ? ' ' + skippedCount + ' document(s) will be skipped (no matching lesson).' : '') +
+    ' Each matching lesson gets a NEW document and is repointed; existing documents are never deleted.';
+  sandboxConfirm(confirmText, function() { runLessonDocumentImport(matches, skippedCount); }, 'Restore now');
+}
+
+/** Create + verify one new document per matching lesson, then save once */
+function runLessonDocumentImport(matchList, skippedCount) {
+  var summary = { total: matchList.length, restored: 0, failed: 0, skipped: skippedCount, failures: [] };
+  var matchIndex = 0;
+  setActionStatus('import-package-status', '⏳ Restoring ' + matchList.length + ' lesson document(s)...');
+
+  function importReport() {
+    var recordText = summary.restored ? (summary.saveConfirmed ? ' · curriculum saved' : ' · curriculum save NOT confirmed - review before closing') : '';
+    var reportText = summary.restored + ' restored · ' + summary.skipped + ' skipped · ' + summary.failed + ' failed' + recordText;
+    setActionStatus('import-package-status', (summary.failed ? '⚠️ ' : '✅ ') + reportText);
+    console.log('[PACKAGE:IMPORT] ' + reportText);
+    if (summary.failures.length) console.warn('[PACKAGE:IMPORT] failures:', summary.failures);
+    tool.notify('Lesson documents import: ' + reportText, summary.failed ? 'warning' : 'success');
+  }
+
+  function importNextMatch() {
+    if (matchIndex >= matchList.length) {
+      if (!summary.restored) { importReport(); return; }
+      setActionStatus('import-package-status', '⏳ Saving the curriculum with the restored document ids...');
+      commitCurriculumNow(function(recordSaved) {
+        summary.saveConfirmed = !!recordSaved;
+        importReport();
+      });
+      return;
+    }
+    var match = matchList[matchIndex];
+    matchIndex++;
+    var lessonJsonText = JSON.stringify(match.lessonJson || {});
+    tool.requestObjects('create', {
+      mainObjectType: LESSON_DOC_TYPE,
+      name: match.lesson.title || match.lessonJson.title || 'Lesson',
+      productData: { data_categoriesBased: { lessonJson: lessonJsonText } }
+    }, function(createError, createResult) {
+      var newDocId = (createResult && createResult.object) ? createResult.object.id : '';
+      if (createError || !newDocId) {
+        summary.failed++;
+        summary.failures.push((match.lesson.title || match.lesson.id) + ': ' + (createError || 'no id returned'));
+        importNextMatch();
+        return;
+      }
+      verifyLessonDocCopy(newDocId, lessonJsonText, function(copyOk) {
+        if (!copyOk) {
+          summary.failed++;
+          summary.failures.push((match.lesson.title || match.lesson.id) + ': the new document could not be verified');
+          importNextMatch();
+          return;
+        }
+        if (currentLessonDocIdByLessonId) currentLessonDocIdByLessonId[match.lesson.id] = newDocId;
+        match.lesson.lessonDocId = newDocId;
+        rewireLessonDocId(match.lesson.id, newDocId);
+        summary.restored++;
+        setActionStatus('import-package-status', '⏳ ' + summary.restored + '/' + summary.total + ' restored...');
+        importNextMatch();
+      });
+    });
+  }
+
+  importNextMatch();
+}
+
 /** Single write path for the curriculum record.
  *  Refuses to write an empty section list once this session has already seen
  *  curriculum content: a failed load or a stripped in-memory copy must never
@@ -3020,7 +4494,9 @@ function writeCurriculumValueToCms(saveReason) {
     return false;
   }
   tool.reportValid(true, '');
-  tool.setValue(buildCurriculumValueForCms());
+  var curriculumValueForSave = buildCurriculumValueForCms();
+  logCurriculumPayloadReport(saveReason || 'save', false, curriculumValueForSave);
+  tool.setValue(curriculumValueForSave);
   return true;
 }
 
@@ -3091,35 +4567,35 @@ function renderSections() {
 }
 
 /** Recursive section-tree HTML. Children are indented per depth level. */
-function renderSectionTreeHtml(arr, depth) {
+function renderSectionTreeHtml(arr, depth, parentSectionNumber) {
   if (!arr || !arr.length) return '';
   var sorted = arr.slice().sort(byOrder);
   var html = '';
   for (var i = 0; i < sorted.length; i++) {
-    html += sectionCardHtml(sorted[i], depth);
-    html += renderSectionTreeHtml(sorted[i].children, depth + 1);
+    var sectionNumber = (parentSectionNumber ? parentSectionNumber + '.' : '') + (i + 1);
+    html += sectionCardHtml(sorted[i], depth, sectionNumber);
+    html += renderSectionTreeHtml(sorted[i].children, depth + 1, sectionNumber);
   }
   return depth > 0 ? '<div class="manager-children">' + html + '</div>' : html;
 }
 
 /** HTML for one section/subsection card (with its own lessons) */
-function sectionCardHtml(s, depth) {
+function sectionCardHtml(s, depth, sectionNumber) {
   var secId = esc(s.id || '');
   var lessonsSorted = (s.lessons || []).slice().sort(byOrder);
   var childCount = (s.children || []).length;
   var titlePrefix = depth > 0 ? '↳ ' : '';
-  return '<div class="manager-section-card">' +
+  return '<div class="manager-section-card" data-drop-section="' + secId + '">' +
     '<div class="manager-section-header">' +
       '<div class="manager-section-header-left">' +
+        '<span class="drag-handle" draggable="true" data-drag-section="' + secId + '" title="Drag to reorder this section">⠿</span>' +
+        '<span class="section-number">§ ' + esc(sectionNumber || '') + '</span>' +
         '<strong>' + titlePrefix + esc(s.title || 'Untitled') + '</strong>' +
         '<span class="section-meta">' + (s.lessons ? s.lessons.length : 0) + ' lesson(s)' + (childCount ? ' | ' + childCount + ' subsection(s)' : '') + ' | Order: ' + (s.order || '—') + '</span>' +
       '</div>' +
       '<div class="manager-section-actions">' +
         '<button class="btn btn-sm btn-primary" data-add-les="' + secId + '">+ Add Lesson</button>' +
-        '<button class="btn btn-sm btn-outline" data-add-subsec="' + secId + '">+ Add Subsection</button>' +
-        '<button class="btn btn-sm btn-outline" data-edit-sec="' + secId + '">✏️ Edit</button>' +
-        '<button class="btn btn-sm btn-danger" data-del-sec="' + secId + '">🗑 Delete</button>' +
-        '<button class="btn btn-sm btn-gen" data-gen-sec="' + secId + '" title="Serially generate missing AI content (Study Content, Slides, Flashcards, Quiz) for every lesson in this section and its subsections — already-filled content is skipped">🚀 Generate All</button>' +
+        '<button class="btn btn-sm btn-outline section-menu-button" data-sec-menu="' + secId + '" title="More section actions">⋯</button>' +
       '</div>' +
     '</div>' +
     (lessonsSorted.length > 0 ?
@@ -3129,9 +4605,9 @@ function sectionCardHtml(s, depth) {
         var media = buildMediaSummary(les);
         var quizCount = les.quizCount || countQuizQuestions(les.quiz);
         var quizIndicator = quizCount > 0 ? '✅ ' + quizCount + ' Q' : '—';
-        var docLinkBtn = (isDeveloper() && les.lessonDocId) ? '<button class="btn btn-sm" data-open-doc="' + esc(les.lessonDocId) + '" title="Open lesson Firestore document in new tab" style="padding:2px 8px;font-size:11px;border:1px solid #c4b5fd;border-radius:4px;background:#f5f3ff;color:#7c3aed;cursor:pointer;font-family:inherit">📄</button>' : '';
-        return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong> ' + docLinkBtn + '</td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
-          '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les="' + secId + ':' + lesRealIdx + '">✏️</button><button class="btn btn-sm btn-outline" data-move-les="' + secId + ':' + lesRealIdx + '" title="Move this lesson to another section">↔</button><button class="btn btn-sm btn-danger" data-del-les="' + secId + ':' + lesRealIdx + '">🗑</button><button class="btn btn-sm btn-gen" data-gen-les="' + secId + ':' + lesRealIdx + '" title="Serially generate missing AI content for this lesson — already-filled content is skipped">🚀</button></div></td></tr>';
+        var docLinkBtn = (isDeveloper() && les.lessonDocId) ? '<button class="btn btn-sm" data-open-doc="' + esc(les.lessonDocId) + '" title="Open this lesson\'s Firestore document in a new tab" style="padding:2px 7px;font-size:12px;border:1px solid #fde68a;border-radius:6px;background:#fffbeb;cursor:pointer;font-family:inherit">🔥</button>' : '';
+        return '<tr data-drop-lesson="' + secId + ':' + lesRealIdx + '"><td class="drag-cell"><span class="drag-handle" draggable="true" data-drag-lesson="' + secId + ':' + lesRealIdx + '" title="Drag to reorder this lesson">⠿</span> ' + (li+1) + '</td><td><strong>'+esc(les.title||'Untitled')+'</strong> ' + docLinkBtn + '</td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
+          '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les="' + secId + ':' + lesRealIdx + '" title="Edit lesson">✏️</button><button class="btn btn-sm btn-outline" data-les-menu="' + secId + ':' + lesRealIdx + '" title="More lesson actions">⋯</button></div></td></tr>';
       }).join('') + '</tbody></table>'
       : '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No lessons yet. Click "+ Add Lesson" above to add one.</div>'
     ) +
@@ -3152,36 +4628,205 @@ function bindSectionTreeEvents(container) {
     }
   }
   each('[data-add-les]', function() { startAddLessonDirect(this.getAttribute('data-add-les')); });
-  each('[data-add-subsec]', function() { openSectionEditor(null, this.getAttribute('data-add-subsec')); });
-  each('[data-edit-sec]', function() { openSectionEditor(this.getAttribute('data-edit-sec'), null); });
-  each('[data-del-sec]', function() { deleteSection(this.getAttribute('data-del-sec')); });
-  each('[data-gen-sec]', function() {
-    var targetSectionId = this.getAttribute('data-gen-sec');
-    var targetSection = findSectionById(targetSectionId);
-    var targetName = targetSection ? targetSection.section.title : 'this section';
-    sandboxConfirm('🚀 Generate the missing AI content (Study Content, Slides, Flashcards, Quiz) for "' + targetName + '" and its subsections? It runs the four generators one after another and may take several minutes. Lessons that already have content are skipped.', function() {
-      startBulkForSection(targetSectionId);
-    }, 'Yes, Generate');
-  });
   each('[data-edit-les]', function() {
     var parts = this.getAttribute('data-edit-les').split(':');
     editLessonDirect(parts[0], parseInt(parts[1]));
   });
-  each('[data-del-les]', function() {
-    var parts = this.getAttribute('data-del-les').split(':');
-    deleteLessonDirect(parts[0], parseInt(parts[1]));
-  });
-  each('[data-move-les]', function() {
-    var moveParts = this.getAttribute('data-move-les').split(':');
-    openMoveLessonDialog(moveParts[0], parseInt(moveParts[1], 10));
-  });
-  each('[data-gen-les]', function() {
-    var parts = this.getAttribute('data-gen-les').split(':');
-    sandboxConfirm('🚀 Generate the missing AI content (Study Content, Slides, Flashcards, Quiz) for this lesson? It runs the four generators one after another and may take a few minutes. Content that already exists is skipped.', function() {
-      startBulkForLesson(parts[0], parseInt(parts[1]));
-    }, 'Yes, Generate');
-  });
   each('[data-open-doc]', function() { openLessonDocUrl(this.getAttribute('data-open-doc')); });
+  each('[data-sec-menu]', function() { openSectionActionMenu(this, this.getAttribute('data-sec-menu')); });
+  each('[data-les-menu]', function() {
+    var menuParts = this.getAttribute('data-les-menu').split(':');
+    openLessonActionMenu(this, menuParts[0], parseInt(menuParts[1], 10));
+  });
+
+  // ── Drag & drop ordering: drag a ⠿ handle, drop on a card or row ──
+  function clearDropHighlights() {
+    var highlightedTargets = container.querySelectorAll('.drop-before, .drop-after');
+    for (var highlightIndex = 0; highlightIndex < highlightedTargets.length; highlightIndex++) {
+      highlightedTargets[highlightIndex].classList.remove('drop-before', 'drop-after');
+    }
+  }
+  function wantsInsertAfter(event, targetElement) {
+    var targetRect = targetElement.getBoundingClientRect();
+    return event.clientY > targetRect.top + targetRect.height / 2;
+  }
+  var dragHandles = container.querySelectorAll('[data-drag-section], [data-drag-lesson]');
+  for (var dragIndex = 0; dragIndex < dragHandles.length; dragIndex++) {
+    (function(dragHandle) {
+      dragHandle.addEventListener('dragstart', function(event) {
+        var lessonReference = dragHandle.getAttribute('data-drag-lesson');
+        if (lessonReference) {
+          var lessonParts = lessonReference.split(':');
+          curriculumDragState = { type: 'lesson', sectionId: lessonParts[0], lessonIndex: parseInt(lessonParts[1], 10) };
+        } else {
+          curriculumDragState = { type: 'section', sectionId: dragHandle.getAttribute('data-drag-section') };
+        }
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = 'move';
+          try { event.dataTransfer.setData('text/plain', 'curriculum-item'); } catch (dataTransferError) { /* ignore */ }
+        }
+        dragHandle.classList.add('is-dragging');
+      });
+      dragHandle.addEventListener('dragend', function() {
+        dragHandle.classList.remove('is-dragging');
+        curriculumDragState = null;
+        clearDropHighlights();
+      });
+    })(dragHandles[dragIndex]);
+  }
+  var dropTargets = container.querySelectorAll('[data-drop-section], [data-drop-lesson]');
+  for (var dropIndex = 0; dropIndex < dropTargets.length; dropIndex++) {
+    (function(dropTarget) {
+      dropTarget.addEventListener('dragover', function(event) {
+        if (!curriculumDragState) return;
+        var isSectionDropTarget = dropTarget.hasAttribute('data-drop-section');
+        if (curriculumDragState.type === 'section' && !isSectionDropTarget) return;
+        if (curriculumDragState.type === 'lesson' && isSectionDropTarget) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+        var insertAfter = wantsInsertAfter(event, dropTarget);
+        dropTarget.classList.toggle('drop-before', !insertAfter);
+        dropTarget.classList.toggle('drop-after', insertAfter);
+      });
+      dropTarget.addEventListener('dragleave', function() {
+        dropTarget.classList.remove('drop-before', 'drop-after');
+      });
+      dropTarget.addEventListener('drop', function(event) {
+        if (!curriculumDragState) return;
+        event.preventDefault();
+        var insertAfter = wantsInsertAfter(event, dropTarget);
+        var draggedItem = curriculumDragState;
+        curriculumDragState = null;
+        clearDropHighlights();
+        if (draggedItem.type === 'section') {
+          var targetSectionId = dropTarget.getAttribute('data-drop-section');
+          if (targetSectionId) reorderSectionInParent(draggedItem.sectionId, targetSectionId, insertAfter);
+          return;
+        }
+        var targetLessonReference = dropTarget.getAttribute('data-drop-lesson');
+        if (!targetLessonReference) return;
+        var targetLessonParts = targetLessonReference.split(':');
+        moveLessonToSlot(draggedItem.sectionId, draggedItem.lessonIndex, targetLessonParts[0], parseInt(targetLessonParts[1], 10), insertAfter);
+      });
+    })(dropTargets[dropIndex]);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ACTION MENU (keeps the lists compact)
+   ═══════════════════════════════════════════ */
+
+var actionMenuAnchor = null;
+
+function closeActionMenu() {
+  var menu = el('action-menu');
+  if (menu) {
+    menu.hidden = true;
+    menu.innerHTML = '';
+  }
+  actionMenuAnchor = null;
+}
+
+/** Open the shared menu under one anchor button */
+function openActionMenu(anchorElement, menuItems) {
+  var menu = el('action-menu');
+  if (!menu || !anchorElement || !menuItems || !menuItems.length) return;
+  var wasOpenOnSameAnchor = (actionMenuAnchor === anchorElement) && !menu.hidden;
+  closeActionMenu();
+  if (wasOpenOnSameAnchor) return;
+  var menuHtml = '';
+  var actionItems = [];
+  for (var itemIndex = 0; itemIndex < menuItems.length; itemIndex++) {
+    var menuItem = menuItems[itemIndex];
+    if (!menuItem) { menuHtml += '<div class="action-menu-separator"></div>'; continue; }
+    actionItems.push(menuItem);
+    menuHtml += '<button type="button" class="action-menu-item' + (menuItem.danger ? ' is-danger' : '') +
+      '" data-action-index="' + (actionItems.length - 1) + '">' +
+      '<span class="action-menu-icon">' + (menuItem.icon || '•') + '</span>' +
+      '<span class="action-menu-label">' + esc(menuItem.label) + '</span></button>';
+  }
+  menu.innerHTML = menuHtml;
+  menu.hidden = false;
+  var anchorRect = anchorElement.getBoundingClientRect();
+  var menuWidth = menu.offsetWidth || 210;
+  var menuHeight = menu.offsetHeight || 0;
+  var leftPosition = Math.min((window.innerWidth || 1200) - menuWidth - 8, Math.max(8, anchorRect.right - menuWidth));
+  var topPosition = anchorRect.bottom + 6;
+  if (menuHeight && topPosition + menuHeight > (window.innerHeight || 800) - 8) {
+    topPosition = Math.max(8, anchorRect.top - menuHeight - 6);
+  }
+  menu.style.left = leftPosition + 'px';
+  menu.style.top = topPosition + 'px';
+  actionMenuAnchor = anchorElement;
+  var actionButtons = menu.querySelectorAll('[data-action-index]');
+  for (var buttonIndex = 0; buttonIndex < actionButtons.length; buttonIndex++) {
+    (function(actionButton) {
+      actionButton.addEventListener('click', function(event) {
+        event.stopPropagation();
+        var actionItem = actionItems[parseInt(actionButton.getAttribute('data-action-index'), 10)];
+        closeActionMenu();
+        if (actionItem && typeof actionItem.handler === 'function') actionItem.handler();
+      });
+    })(actionButtons[buttonIndex]);
+  }
+}
+
+/** Section card menu: subsection, edit, order, generate, delete */
+function openSectionActionMenu(anchorElement, sectionId) {
+  var sectionFound = findSectionById(sectionId);
+  if (!sectionFound) return;
+  var sectionTitle = sectionFound.section.title || 'this section';
+  openActionMenu(anchorElement, [
+    { icon: '➕', label: 'Add Subsection', handler: function() { openSectionEditor(null, sectionId); } },
+    { icon: '✏️', label: 'Edit Section', handler: function() { openSectionEditor(sectionId, null); } },
+    { icon: '↑', label: 'Move Section Up', handler: function() { moveSectionInCourse(sectionId, -1); } },
+    { icon: '↓', label: 'Move Section Down', handler: function() { moveSectionInCourse(sectionId, 1); } },
+    null,
+    { icon: '🚀', label: 'Generate All Content', handler: function() {
+      sandboxConfirm('🚀 Generate the missing AI content (Study Content, Slides, Flashcards, Quiz) for "' + sectionTitle + '" and its subsections? It runs the four generators one after another and may take several minutes. Lessons that already have content are skipped.', function() {
+        startBulkForSection(sectionId);
+      }, 'Yes, Generate');
+    } },
+    null,
+    { icon: '🗑', label: 'Delete Section', danger: true, handler: function() { deleteSection(sectionId); } }
+  ]);
+}
+
+/** Lesson row menu: generate, open doc, delete */
+function openLessonActionMenu(anchorElement, sectionId, lessonIndex) {
+  var sectionFound = findSectionById(sectionId);
+  if (!sectionFound) return;
+  var lessonObject = (sectionFound.section.lessons || [])[lessonIndex];
+  if (!lessonObject) return;
+  var lessonTitle = lessonObject.title || 'this lesson';
+  var menuItems = [
+    { icon: '🚀', label: 'Generate AI Content', handler: function() {
+      sandboxConfirm('🚀 Generate the missing AI content (Study Content, Slides, Flashcards, Quiz) for "' + lessonTitle + '"? It runs the four generators one after another and may take a few minutes. Content that already exists is skipped.', function() {
+        startBulkForLesson(sectionId, lessonIndex);
+      }, 'Yes, Generate');
+    } }
+  ];
+  if (isDeveloper() && lessonObject.lessonDocId) {
+    menuItems.push({ icon: '📄', label: 'Open Lesson Document', handler: function() { openLessonDocUrl(lessonObject.lessonDocId); } });
+  }
+  menuItems.push(null);
+  menuItems.push({ icon: '🗑', label: 'Delete Lesson', danger: true, handler: function() { deleteLessonDirect(sectionId, lessonIndex); } });
+  openActionMenu(anchorElement, menuItems);
+}
+
+/** Close the menu on an outside click, Escape or a resize */
+function bindActionMenuEvents() {
+  document.addEventListener('click', function(event) {
+    var menu = el('action-menu');
+    if (!menu || menu.hidden) return;
+    if (menu.contains(event.target)) return;
+    if (actionMenuAnchor && actionMenuAnchor.contains(event.target)) return;
+    closeActionMenu();
+  });
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') closeActionMenu();
+  });
+  window.addEventListener('resize', closeActionMenu);
 }
 
 /* ═══════════════════════════════════════════
@@ -3354,6 +4999,8 @@ function startAddLesson() {
   hideSubModal('youtube-editor-panel');
   editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = []; editingHtmlDocUrls = [];
   editingHiddenDocUrls = [];
+  editingReferenceDocs = [];
+  renderReferenceDocsEditorList();
   editingFlashcards = [];
   editingPdfIdx = null; editingPdfType = null; editingPdfSourceUrl = '';
   renderPdfEditorList();
@@ -3378,6 +5025,8 @@ function startAddLesson() {
   editingQuizQuestions = []; editingQuizQuestionIdx = null;
   renderQuizEditorList();
   hideSubModal('quiz-question-editor-panel');
+  var modalSection = (editingSectionParent && editingSectionIdx !== null) ? editingSectionParent[editingSectionIdx] : null;
+  populateLessonSectionSelect(modalSection ? modalSection.id : '', false);
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
   updateAllVisToggles();
@@ -3396,6 +5045,8 @@ function populateEditorFromLesson(les) {
   hideSubModal('youtube-editor-panel');
   editingPresentationPdfUrls = normalizePdfArray(les.presentationPdfUrls);
   editingStudyDocPdfUrls = normalizePdfArray(les.studyDocPdfUrls);
+  editingReferenceDocs = (les.referenceDocs && Array.isArray(les.referenceDocs)) ? JSON.parse(JSON.stringify(les.referenceDocs)) : [];
+  renderReferenceDocsEditorList();
   editingWorksheetPdfUrls = normalizePdfArray(les.worksheetPdfUrls);
   editingAnswerKeyPdfUrls = normalizePdfArray(les.answerKeyPdfUrls);
   editingHtmlDocUrls = normalizePdfArray(les.htmlDocUrls);
@@ -3440,6 +5091,8 @@ function populateEditorFromLesson(les) {
   editingQuizQuestionIdx = null;
   renderQuizEditorList();
   hideSubModal('quiz-question-editor-panel');
+  var currentSectionForPicker = editingDirectSection || ((editingSectionParent && editingSectionIdx !== null) ? editingSectionParent[editingSectionIdx] : null);
+  populateLessonSectionSelect(currentSectionForPicker ? currentSectionForPicker.id : '', !!editingDirectSection);
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
   el('lesson-editor-heading').textContent = 'Edit Lesson';
@@ -3479,6 +5132,7 @@ function saveLessonFromEditor() {
     youtubeUrls: editingYoutubeUrls.length > 0 ? JSON.parse(JSON.stringify(editingYoutubeUrls)) : null,
     presentationPdfUrls: editingPresentationPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingPresentationPdfUrls)) : null,
     studyDocPdfUrls: editingStudyDocPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingStudyDocPdfUrls)) : null,
+    referenceDocs: editingReferenceDocs.length > 0 ? JSON.parse(JSON.stringify(editingReferenceDocs)) : null,
     worksheetPdfUrls: editingWorksheetPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingWorksheetPdfUrls)) : null,
     answerKeyPdfUrls: editingAnswerKeyPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingAnswerKeyPdfUrls)) : null,
     htmlDocUrls: editingHtmlDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHtmlDocUrls)) : null,
@@ -3497,27 +5151,37 @@ function saveLessonFromEditor() {
     lessonDocId: null  // populated by saveLessonDoc below
   };
 
-  // Direct mode: save to editingDirectSection.lessons and persist immediately
+  // Direct mode: save into the section chosen in Main Info, at the chosen order
   if (editingDirectSection) {
-    var sec = editingDirectSection;
-    if (!sec.lessons) sec.lessons = [];
-    if (editingLessonIdx !== null && sec.lessons[editingLessonIdx]) {
-      lessonData.id = sec.lessons[editingLessonIdx].id;
-      lessonData.lessonDocId = sec.lessons[editingLessonIdx].lessonDocId || null;
+    var sourceSection = editingDirectSection;
+    var sourceSectionId = sourceSection.id;
+    if (!sourceSection.lessons) sourceSection.lessons = [];
+    if (editingLessonIdx !== null && sourceSection.lessons[editingLessonIdx]) {
+      lessonData.id = sourceSection.lessons[editingLessonIdx].id;
+      lessonData.lessonDocId = sourceSection.lessons[editingLessonIdx].lessonDocId || null;
     }
-    var savedSectionId = sec.id;  // capture before clearing
+    var savedSectionId = sourceSectionId;  // kept for the log below
     var savedLessonId = lessonData.id;
-    // Place the lesson in the section immediately (heavy for now — the lesson
-    // doc sync below strips it from the main doc once the copy is confirmed).
-    sec.lessons = sec.lessons.filter(function(l) { return l.id !== savedLessonId; });
-    sec.lessons.push(lessonData);
+    // Main Info owns the placement: the Section picker can move the lesson and
+    // Order sets its position. Remove the old copy first (same lesson id).
+    var selectedSectionId = readLessonSectionSelection() || sourceSectionId;
+    var selectedSectionFound = findSectionById(selectedSectionId);
+    var targetSection = selectedSectionFound ? selectedSectionFound.section : sourceSection;
+    var targetSectionId = targetSection.id;
+    eachSection(function(sectionObject) {
+      if (sectionObject.lessons && sectionObject.lessons.length) {
+        sectionObject.lessons = sectionObject.lessons.filter(function(existingLesson) { return existingLesson.id !== savedLessonId; });
+      }
+    });
+    insertLessonIntoSectionAt(targetSection, lessonData, order);
+    renumberSectionLessons(sourceSection);
     hideSubModal('lesson-editor-panel');
     editingDirectSection = null;
 
     if (!canUseLessonDocs()) {
       saveCurriculum();
       tool.notify('⚠️ Lesson doc storage unavailable — lesson content stays in the main document.', 'warning');
-      tool.notify('Lesson saved! ✅', 'success');
+      tool.notify(targetSectionId !== savedSectionId ? ('Lesson moved ✅') : 'Lesson saved! ✅', 'success');
       return;
     }
 
@@ -3530,20 +5194,24 @@ function saveLessonFromEditor() {
         // Heavy content is now safe in the lesson doc — strip it from the main doc.
         stripHeavyLessonFields(lessonData);
       }
-      // Ensure the lesson is present in the CURRENT tree copy
-      // (onValueChange may have replaced `sections` during the async call).
-      var foundNow = findSectionById(savedSectionId);
-      var secNow = foundNow ? foundNow.section : sec;
+      // Ensure the lesson is present in the CURRENT tree copy of the target
+      // section (onValueChange may have replaced `sections` during the call).
+      var foundNow = findSectionById(targetSectionId);
+      var secNow = foundNow ? foundNow.section : targetSection;
       if (secNow) {
         if (!secNow.lessons) secNow.lessons = [];
         var found = false;
         for (var f = 0; f < secNow.lessons.length; f++) {
           if (secNow.lessons[f].id === savedLessonId) { found = true; break; }
         }
-        if (!found) secNow.lessons.push(lessonData);
+        if (!found) insertLessonIntoSectionAt(secNow, lessonData, order);
       }
       saveCurriculum();
-      tool.notify('Lesson saved! ✅', 'success');
+      if (targetSectionId !== savedSectionId) {
+        tool.notify('Lesson moved to "' + ((targetSection && targetSection.title) || 'Section') + '" ✅', 'success');
+      } else {
+        tool.notify('Lesson saved! ✅', 'success');
+      }
     });
     return;
   }
@@ -3555,6 +5223,11 @@ function saveLessonFromEditor() {
     editingLessons[editingLessonIdx] = lessonData;
   } else {
     editingLessons.push(lessonData);
+  }
+  // Keep the modal lesson list in the order the user asked for.
+  editingLessons.sort(byOrder);
+  for (var orderFixIndex = 0; orderFixIndex < editingLessons.length; orderFixIndex++) {
+    editingLessons[orderFixIndex].order = orderFixIndex + 1;
   }
 
   hideSubModal('lesson-editor-panel');
@@ -3667,6 +5340,7 @@ function autoSaveCurrentLesson() {
   targetLesson.studyDocImages = Object.keys(editingStudyDocImagesMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocImagesMap)) : null;
   targetLesson.studyDocGenerated = Object.keys(editingStudyDocGeneratedHtmlMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocGeneratedHtmlMap)) : null;
   targetLesson.studyDocOrigins = Object.keys(editingStudyDocOriginMap).length > 0 ? JSON.parse(JSON.stringify(editingStudyDocOriginMap)) : null;
+  targetLesson.referenceDocs = editingReferenceDocs.length > 0 ? JSON.parse(JSON.stringify(editingReferenceDocs)) : null;
   targetLesson.presentationHtml = editingPresentationHtml || null;
   targetLesson.flashcards = editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null;
   targetLesson.quiz = editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null;
@@ -3736,6 +5410,8 @@ function startAddLessonDirect(sectionId) {
   hideSubModal('youtube-editor-panel');
   editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = []; editingHtmlDocUrls = [];
   editingHiddenDocUrls = [];
+  editingReferenceDocs = [];
+  renderReferenceDocsEditorList();
   editingPdfIdx = null; editingPdfType = null; editingPdfSourceUrl = '';
   renderPdfEditorList();
   hideSubModal('pdf-editor-panel');
@@ -3759,6 +5435,7 @@ function startAddLessonDirect(sectionId) {
   editingQuizQuestions = []; editingQuizQuestionIdx = null;
   renderQuizEditorList();
   hideSubModal('quiz-question-editor-panel');
+  populateLessonSectionSelect(editingDirectSection.id, true);
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
   updateAllVisToggles();
@@ -4204,7 +5881,7 @@ function renderYoutubeEditorList() {
   } else {
     list.innerHTML = editingYoutubeUrls.map(function(url, idx) {
       var videoId = extractYouTubeId(url);
-      var thumbHtml = videoId ? '<img src="https://img.youtube.com/vi/' + videoId + '/default.jpg" style="width:60px;height:34px;object-fit:cover;border-radius:4px;margin-right:8px;flex-shrink:0" alt="">' : '';
+      var thumbHtml = videoId ? '<span class="yt-list-thumb" aria-hidden="true">🎬</span>' : '';
       return '<div class="source-link-editor-item"><div class="source-link-editor-item-info" style="display:flex;align-items:center">' + thumbHtml + '<div><div class="source-link-editor-item-title">🎬 ' + (videoId ? 'youtube.com/watch?v=' + videoId : esc(url)) + '</div><div class="source-link-editor-item-meta">' + esc(url) + '</div></div></div><div class="source-link-editor-item-actions"><button class="btn btn-sm btn-outline" data-edit-yt-idx="' + idx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-yt-idx="' + idx + '">🗑</button></div></div>';
     }).join('');
     var editBtns = list.querySelectorAll('[data-edit-yt-idx]');
@@ -4231,6 +5908,28 @@ function openYoutubeEditor(idx) {
   showSubModal('youtube-editor-panel');
   el('youtube-editor-heading').textContent = idx !== null ? 'Edit YouTube Video' : 'Add YouTube Video';
   el('edit-youtube-item-url').value = idx !== null ? (editingYoutubeUrls[idx] || '') : '';
+  var urlInput = el('edit-youtube-item-url');
+  if (urlInput && !urlInput.__previewBound) {
+    urlInput.addEventListener('input', updateYoutubePreview);
+    urlInput.addEventListener('paste', function() { setTimeout(updateYoutubePreview, 0); });
+    urlInput.__previewBound = true;
+  }
+  updateYoutubePreview();
+}
+
+/** Live player for the URL typed in the video editor */
+function updateYoutubePreview() {
+  var previewElement = el('youtube-preview');
+  if (!previewElement) return;
+  var urlInput = el('edit-youtube-item-url');
+  var typedUrl = urlInput ? urlInput.value.trim() : '';
+  var videoId = typedUrl ? extractYouTubeId(typedUrl) : '';
+  if (!videoId) {
+    previewElement.innerHTML = '<div class="yt-preview-empty">' + (typedUrl ? '❌ This does not look like a YouTube link yet.' : '🎬 Paste a YouTube link to preview the video here.') + '</div>';
+    return;
+  }
+  previewElement.innerHTML = '<iframe class="yt-preview-frame" src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(videoId) +
+    '" title="Video preview" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
 }
 
 function closeYoutubeEditor() { hideSubModal('youtube-editor-panel'); editingYoutubeIdx = null; }
@@ -4323,7 +6022,7 @@ function renderPdfEditorList() {
     var editButton = row.role === 'real'
       ? '<button class="btn btn-sm btn-outline doc-icon-btn" data-edit-pdf="' + row.type + ':' + row.idx + '" title="Edit this document (role, visibility, URL, delete)">✏️</button>'
       : '<button class="btn btn-sm btn-outline doc-icon-btn" data-edit-source="' + esc(row.url) + '" title="Edit this sample document (role, URL, delete)">✏️</button>';
-    var downloadButton = '<button class="btn btn-sm btn-outline doc-icon-btn" data-download-doc="' + esc(row.url) + '" title="Download this file to your device">⬇</button>';
+    var downloadButton = '';
     var originButton = originUrl
       ? '<button class="btn btn-sm btn-outline doc-icon-btn" data-open-origin="' + esc(originUrl) + '" title="Open the original outside source in a new tab">↗</button>'
       : '';
@@ -4342,15 +6041,6 @@ function renderPdfEditorList() {
     openOriginBtns[oB].addEventListener('click', function(e) {
       e.stopPropagation();
       tool.openUrl(this.getAttribute('data-open-origin'));
-    });
-  }
-
-  // ⬇ Download any document straight to the device
-  var downloadBtns = list.querySelectorAll('[data-download-doc]');
-  for (var dB = 0; dB < downloadBtns.length; dB++) {
-    downloadBtns[dB].addEventListener('click', function(e) {
-      e.stopPropagation();
-      downloadStudyDocFile(this.getAttribute('data-download-doc'));
     });
   }
 
@@ -4429,6 +6119,8 @@ function openPdfEditor(type, idx, sourceUrl) {
   updatePdfEditorVisSwitch();
   var deleteButton = el('btn-pdf-editor-delete');
   if (deleteButton) deleteButton.style.display = isEdit ? '' : 'none';
+  var downloadButton = el('btn-pdf-editor-download');
+  if (downloadButton) downloadButton.style.display = urlValue ? '' : 'none';
   // Update the URL label and button text based on type (the URL label is
   // the LAST .form-label inside the panel - the first one is the type).
   var isHtml = type === 'htmlDoc';
@@ -4740,7 +6432,7 @@ function uploadUnhostedStudioImages(onDone) {
         setStudioStatus('✅ Uploaded ' + uploadedCount + ' image(s) to CMS storage - the gallery and the generated content now use hosted URLs.', 'ok');
         autoSaveCurrentLesson();
       }
-      if (failedCount > 0) tool.notify(failedCount + ' image(s) could not be uploaded to CMS storage - they stay embedded.', 'warning');
+      if (failedCount > 0) tool.notify(failedCount + ' image(s) could not be stored in CMS storage - they stay in this session only, because picture bytes are never written into the curriculum record.', 'warning');
       if (onDone) onDone(uploadedCount);
       return;
     }
@@ -4869,6 +6561,7 @@ function generateQuizFromPdf(onDone) {
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
   allUrls = allUrls.concat(editingWorksheetPdfUrls);
+  allUrls = allUrls.concat(referenceDocumentUrls());
   allUrls = allUrls.filter(function(u) { return u && u.trim(); });
   // Sources are sample inputs - AI generators only ever read Real documents.
   allUrls = allUrls.filter(function(u) { return !isSourceDocumentUrl(u); });
@@ -4966,6 +6659,7 @@ function generateHtmlFromPdf(onDone) {
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
   allUrls = allUrls.concat(editingWorksheetPdfUrls);
+  allUrls = allUrls.concat(referenceDocumentUrls());
   allUrls = allUrls.filter(function(u) { return u && u.trim(); });
   // Sources are sample inputs - AI generators only ever read Real documents.
   allUrls = allUrls.filter(function(u) { return !isSourceDocumentUrl(u); });
@@ -5001,6 +6695,13 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
             tool.notify('Could not extract enough text from the PDFs.', 'warning');
             if (onDone) onDone('no-text');
             return;
+          }
+          // Reference documents are processed separately; their generated
+          // content is context for THIS real content and is never saved here.
+          var referenceContext = referenceLibraryGeneratedContext();
+          if (referenceContext) {
+            combinedText += '\n\n--- MATERIAL GENERATED FROM THE REFERENCE LIBRARY ---\n\n' + referenceContext;
+            console.log('[AI:STUDY] reference library context added: ' + formatFileSize(utf8ByteLength(referenceContext)));
           }
           generateHtmlWithAI(combinedText);
         }
@@ -5377,6 +7078,7 @@ function generateFlashcardsFromPdf(onDone) {
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
   allUrls = allUrls.concat(editingWorksheetPdfUrls);
+  allUrls = allUrls.concat(referenceDocumentUrls());
   allUrls = allUrls.filter(function(u) { return u && u.trim(); });
   // Sources are sample inputs - AI generators only ever read Real documents.
   allUrls = allUrls.filter(function(u) { return !isSourceDocumentUrl(u); });
@@ -5463,6 +7165,8 @@ function generatePresentationFromPdf(onDone) {
   var allUrls = [];
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
+  // Reference extracts from the lesson's References tab are AI inputs too.
+  allUrls = allUrls.concat(referenceDocumentUrls());
   allUrls = allUrls.filter(function(u) { return u && u.trim(); });
   // Sources are sample inputs - AI generators only ever read Real documents.
   allUrls = allUrls.filter(function(u) { return !isSourceDocumentUrl(u); });
@@ -8770,10 +10474,299 @@ function detectPagePictureRegions(pageCanvas, textBoxes) {  var pageWidth = page
   return pictureRegions;
 }
 
+/* ── AI PICTURE DETECTION (tool.requestAIVision) ──
+   The model reads the rendered page and answers with normalised boxes
+   (0..1, top-left origin). It is the only detector that understands the
+   content, so it decides whether fragments that sit close together are one
+   picture or two. This frame still owns every pixel: the page is rendered
+   locally and each box is cropped here at render scale. */
+function pictureVisionDetectionEnabled() {
+  var detectionMode = String(tool.param('pictureDetection', 'auto')).toLowerCase();
+  if (detectionMode === 'local') return false;
+  return toolCapability('aiVision');
+}
+
+/** Instruction sent with every page batch (the gateway allows 2000 chars) */
+function buildVisionPictureInstruction() {
+  return 'Find every real picture on the page: photos, illustrations, drawings, diagrams, charts, maps, logos, stamps and signatures. ' +
+    'Return ONE box per visual object. Merge fragments that belong to the same object (an illustration split by a column or a fold, a chart with its legend and axis labels, a photo with its frame). ' +
+    'Keep independent objects separate even when they touch or sit side by side, and never put two different photos in one box. ' +
+    'Ignore running text, paragraphs, tables of text, the page background, borders, rules, separators and single letters.';
+}
+
+/** Normalised model box -> pixel rectangle inside the rendered page (padded) */
+function visionBoxToCropRect(visionRegion, canvasWidth, canvasHeight) {
+  var visionBox = (visionRegion && visionRegion.box) ? visionRegion.box : null;
+  if (!visionBox) return null;
+  var boxLeft = Number(visionBox.x) || 0;
+  var boxTop = Number(visionBox.y) || 0;
+  var boxWidth = Number(visionBox.width) || 0;
+  var boxHeight = Number(visionBox.height) || 0;
+  if (boxWidth <= 0 || boxHeight <= 0) return null;
+  // 1.2% padding: model boxes are precise but not pixel exact, and cutting a
+  // photo edge is worse than keeping a thin margin around it.
+  var padX = Math.round(canvasWidth * 0.012);
+  var padY = Math.round(canvasHeight * 0.012);
+  var regionLeft = Math.max(0, Math.floor(boxLeft * canvasWidth - padX));
+  var regionTop = Math.max(0, Math.floor(boxTop * canvasHeight - padY));
+  var regionRight = Math.min(canvasWidth, Math.ceil((boxLeft + boxWidth) * canvasWidth + padX));
+  var regionBottom = Math.min(canvasHeight, Math.ceil((boxTop + boxHeight) * canvasHeight + padY));
+  return {
+    left: regionLeft,
+    top: regionTop,
+    width: Math.max(1, regionRight - regionLeft),
+    height: Math.max(1, regionBottom - regionTop)
+  };
+}
+
+/** Overlapping area of two page rectangles */
+function pictureRegionOverlapArea(firstRegion, secondRegion) {
+  var overlapWidth = Math.min(firstRegion.left + firstRegion.width, secondRegion.left + secondRegion.width) -
+    Math.max(firstRegion.left, secondRegion.left);
+  var overlapHeight = Math.min(firstRegion.top + firstRegion.height, secondRegion.top + secondRegion.height) -
+    Math.max(firstRegion.top, secondRegion.top);
+  if (overlapWidth <= 0 || overlapHeight <= 0) return 0;
+  return overlapWidth * overlapHeight;
+}
+
+/** The embedded image a model box is exactly about (native quality, no crop) */
+function findEmbeddedPictureInsideVisionBox(visionRect, embeddedPictureRegions) {
+  var visionArea = Math.max(1, visionRect.width * visionRect.height);
+  var bestMatch = null;
+  var bestOverlapArea = 0;
+  for (var regionIndex = 0; regionIndex < embeddedPictureRegions.length; regionIndex++) {
+    var embeddedRegion = embeddedPictureRegions[regionIndex];
+    if (!embeddedRegion || embeddedRegion.isPageBackground) continue;
+    var overlapArea = pictureRegionOverlapArea(visionRect, embeddedRegion);
+    if (!overlapArea) continue;
+    var embeddedArea = Math.max(1, embeddedRegion.width * embeddedRegion.height);
+    // The box must contain almost the whole embedded image AND the image must
+    // fill most of the box. Otherwise the box is a merged arrangement (photo +
+    // caption + border) and the rendered crop is the correct picture.
+    if ((overlapArea / embeddedArea) < 0.9) continue;
+    if ((overlapArea / visionArea) < 0.6) continue;
+    if (overlapArea > bestOverlapArea) {
+      bestOverlapArea = overlapArea;
+      bestMatch = embeddedRegion;
+    }
+  }
+  return bestMatch;
+}
+
+/** Render one page for the vision request (JPEG, longest side capped) */
+function renderVisionPageImage(pdfDocument, pageNumber, maxSide) {
+  return pdfDocument.getPage(pageNumber).then(function(pdfPage) {
+    var unitViewport = pdfPage.getViewport({ scale: 1 });
+    var longestSide = Math.max(unitViewport.width, unitViewport.height, 1);
+    var fitScale = Math.min(1, maxSide / longestSide);
+    var visionViewport = pdfPage.getViewport({ scale: Math.max(0.2, fitScale) });
+    var visionCanvas = document.createElement('canvas');
+    visionCanvas.width = Math.max(1, Math.floor(visionViewport.width));
+    visionCanvas.height = Math.max(1, Math.floor(visionViewport.height));
+    return pdfPage.render({ canvasContext: visionCanvas.getContext('2d'), viewport: visionViewport }).promise.then(function() {
+      var visionDataUrl = visionCanvas.toDataURL('image/jpeg', 0.8);
+      return pdfPage.getTextContent().then(function(textContent) {
+        var textItemCount = (textContent && textContent.items) ? textContent.items.length : 0;
+        return {
+          pageNumber: pageNumber,
+          dataUrl: visionDataUrl,
+          isScan: !textItemCount,
+          hasTextLayer: !!textItemCount
+        };
+      });
+    });
+  });
+}
+
+/** One console block that shows exactly what the vision model answered.
+ *  Boxes are normalised (0..1, top-left origin); pageIndex is the REAL page number. */
+function logVisionPictureResponse(visionResult, visionPages, requestedPageNumbers) {
+  var totalRegionCount = 0;
+  var pageLines = [];
+  for (var answerIndex = 0; answerIndex < visionPages.length; answerIndex++) {
+    var answerPage = visionPages[answerIndex] || {};
+    var answerRegions = answerPage.regions || [];
+    totalRegionCount += answerRegions.length;
+    var regionLines = [];
+    for (var regionIndex = 0; regionIndex < answerRegions.length; regionIndex++) {
+      var visionRegion = answerRegions[regionIndex] || {};
+      var regionBox = visionRegion.box || {};
+      regionLines.push('    #' + (regionIndex + 1) + ' ' + (visionRegion.kind || 'picture') +
+        ' x=' + (Number(regionBox.x) || 0).toFixed(3) +
+        ' y=' + (Number(regionBox.y) || 0).toFixed(3) +
+        ' w=' + (Number(regionBox.width) || 0).toFixed(3) +
+        ' h=' + (Number(regionBox.height) || 0).toFixed(3) +
+        (visionRegion.confidence !== undefined ? ' confidence=' + (Number(visionRegion.confidence) || 0).toFixed(2) : '') +
+        (visionRegion.caption ? ' "' + String(visionRegion.caption).substring(0, 70) + '"' : ''));
+    }
+    pageLines.push('  page ' + (answerPage.pageIndex || '?') + ': ' + answerRegions.length + ' box(es)' +
+      (regionLines.length ? '\n' + regionLines.join('\n') : ''));
+  }
+  console.log('[VISION:RESPONSE] ' + totalRegionCount + ' box(es) for page(s) ' + requestedPageNumbers.join(',') +
+    ' (answered ' + visionPages.length + ')\n' + pageLines.join('\n'));
+  if (isDeveloper()) {
+    try {
+      console.log('[VISION:RESPONSE] raw JSON:', JSON.stringify(visionResult));
+    } catch (rawLogError) {
+      console.warn('[VISION:RESPONSE] raw JSON could not be printed:', rawLogError);
+    }
+  }
+}
+
+/** Ask the platform AI for the picture boxes of a page batch */
+function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
+  var visionPages = [];
+  var requestedPageNumbers = [];
+  for (var pageIndex = 0; pageIndex < pageImages.length; pageIndex++) {
+    visionPages.push({
+      dataUrl: pageImages[pageIndex].dataUrl,
+      pageIndex: pageImages[pageIndex].pageNumber,
+      isScan: pageImages[pageIndex].isScan,
+      hasTextLayer: pageImages[pageIndex].hasTextLayer
+    });
+    requestedPageNumbers.push(pageImages[pageIndex].pageNumber);
+  }
+  console.log('[VISION:REQUEST] page(s) ' + requestedPageNumbers.join(',') + ' · maxRegions=' + maxRegions +
+    ' · detail=high · returnRegions=true · returnText=false');
+  try {
+    tool.requestAIVision({
+      instruction: buildVisionPictureInstruction(),
+      pages: visionPages,
+      options: {
+        detail: 'high',
+        returnRegions: true,
+        returnText: false,
+        maxRegions: maxRegions,
+        minRegionArea: 0.006,
+        minConfidence: 0.2
+      }
+    }, function(visionError, visionResult) {
+      if (visionError) {
+        console.warn('[VISION:RESPONSE] failed: ' + visionError);
+        onDone(visionError, []);
+        return;
+      }
+      var visionAnswerPages = (visionResult && visionResult.pages) ? visionResult.pages : [];
+      logVisionPictureResponse(visionResult, visionAnswerPages, requestedPageNumbers);
+      onDone(null, visionAnswerPages);
+    });
+  } catch (visionCallError) {
+    console.warn('[STUDIO:PICTURES] requestAIVision threw:', visionCallError);
+    onDone('internal_error', []);
+  }
+}
+
+/** Crop every AI box of one page from a fresh render of that page */
+function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pageScale, collectedPictures, onDone) {
+  var pageRegions = (visionPageResult && visionPageResult.regions) ? visionPageResult.regions : [];
+  if (!pageRegions.length) { onDone(); return; }
+  var pageIsScan = !!(visionPageResult && visionPageResult.isScan);
+  pdfDocument.getPage(pageNumber).then(function(pdfPage) {
+    var cropViewport = pdfPage.getViewport({ scale: pageScale });
+    var pageCanvas = document.createElement('canvas');
+    pageCanvas.width = Math.max(1, Math.floor(cropViewport.width));
+    pageCanvas.height = Math.max(1, Math.floor(cropViewport.height));
+    pageCanvas.getContext('2d').fillStyle = '#ffffff';
+    pageCanvas.getContext('2d').fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+    pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: cropViewport }).promise.then(function() {
+      var readOperatorList = (typeof pdfPage.getOperatorList === 'function')
+        ? pdfPage.getOperatorList().catch(function(operatorListError) {
+            console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' operator list failed:', operatorListError);
+            return null;
+          })
+        : Promise.resolve(null);
+      readOperatorList.then(function(operatorList) {
+        var embeddedPictureRegions = operatorList ? pdfEmbeddedPictureRegions(operatorList, cropViewport) : [];
+        var pageArea = Math.max(1, pageCanvas.width * pageCanvas.height);
+        var regionIndex = 0;
+        var capturedCount = 0;
+
+        function decorateVisionPicture(pictureImage, visionRegion) {
+          pictureImage.detectedBy = 'ai-vision';
+          if (visionRegion.caption) pictureImage.caption = String(visionRegion.caption).substring(0, 300);
+          if (visionRegion.kind) pictureImage.kind = String(visionRegion.kind);
+          return pictureImage;
+        }
+
+        function cropNextRegion() {
+          if (regionIndex >= pageRegions.length) { onDone(); return; }
+          var visionRegion = pageRegions[regionIndex];
+          regionIndex++;
+          if (!visionRegion || visionRegion.kind === 'text-block') { cropNextRegion(); return; }
+          var visionRect = visionBoxToCropRect(visionRegion, pageCanvas.width, pageCanvas.height);
+          if (!visionRect) { cropNextRegion(); return; }
+          var regionArea = visionRect.width * visionRect.height;
+          // A text page is never one single picture; a scan page may be.
+          if (regionArea > pageArea * 0.9 && !pageIsScan) { cropNextRegion(); return; }
+          if (visionRect.width < 56 || visionRect.height < 56) { cropNextRegion(); return; }
+          var pictureName = 'page-' + pageNumber + '-' + (capturedCount + 1) + '.jpg';
+
+          // 1) The box is exactly one embedded image: keep its native pixels.
+          var embeddedMatch = findEmbeddedPictureInsideVisionBox(visionRect, embeddedPictureRegions);
+          if (embeddedMatch) {
+            var nativeCanvas = null;
+            if (embeddedMatch.objectId) nativeCanvas = pdfPageImageCanvas(pdfPage, embeddedMatch.objectId);
+            else if (embeddedMatch.inlineImageObject) nativeCanvas = pdfImageObjectToCanvas(embeddedMatch.inlineImageObject);
+            if (nativeCanvas) {
+              canvasToStudioImage(nativeCanvas, pictureName, function(nativeError, nativePicture) {
+                if (!nativeError && nativePicture) {
+                  collectedPictures.push(decorateVisionPicture(nativePicture, visionRegion));
+                  capturedCount++;
+                } else if (nativeError) {
+                  console.warn('[STUDIO:PICTURES] ' + pictureName + ' native image could not be encoded:', nativeError);
+                }
+                cropNextRegion();
+              });
+              return;
+            }
+          }
+
+          // 2) Merged arrangement (or vector artwork): crop the model box.
+          try {
+            var regionCanvas = document.createElement('canvas');
+            regionCanvas.width = visionRect.width;
+            regionCanvas.height = visionRect.height;
+            regionCanvas.getContext('2d').drawImage(pageCanvas,
+              visionRect.left, visionRect.top, visionRect.width, visionRect.height,
+              0, 0, visionRect.width, visionRect.height);
+            canvasToStudioImage(regionCanvas, pictureName, function(cropError, croppedPicture) {
+              if (!cropError && croppedPicture) {
+                collectedPictures.push(decorateVisionPicture(croppedPicture, visionRegion));
+                capturedCount++;
+              } else if (cropError) {
+                console.warn('[STUDIO:PICTURES] ' + pictureName + ' could not be encoded:', cropError);
+              }
+              cropNextRegion();
+            });
+          } catch (cropException) {
+            console.warn('[STUDIO:PICTURES] ' + pictureName + ' could not be cropped:', cropException);
+            cropNextRegion();
+          }
+        }
+        cropNextRegion();
+      }).catch(function(operatorListFailure) {
+        console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' could not prepare the crop:', operatorListFailure);
+        onDone();
+      });
+    }).catch(function(renderFailure) {
+      console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' could not be rendered for cropping:', renderFailure);
+      onDone();
+    });
+  }).catch(function(pageFailure) {
+    console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' could not be opened for cropping:', pageFailure);
+    onDone();
+  });
+}
+
 /** Capture the pictures of the open document.
- *  Embedded raster images are used as they are (original quality). When the
- *  document has none (vector artwork), the drawing regions are cropped from
- *  the rendered pages instead. One button, automatic decision. */
+ *  Two detectors:
+ *  - AI vision (tool.requestAIVision, html-tool-rules v3.9): the model sees the
+ *    rendered page and returns NORMALISED picture boxes, so it can decide that
+ *    fragments close together are ONE picture or that touching pictures are
+ *    separate. The frame keeps the pixels and crops every box.
+ *  - Local: PDF.js operator list (exact embedded images, native quality) plus
+ *    a pixel scan for vector drawings.
+ *  pictureDetection = auto (AI when enabled) | vision | local. */
 function captureDocumentPictures(onDone) {
   var sourceUrl = studioCurrentDocUrl;
   if (!sourceUrl) {
@@ -8855,6 +10848,7 @@ function importPdfIllustrations(pdfBytes, onDone) {
   if (!maxPages || maxPages < 1) maxPages = 40;
   var embeddedPictureCount = 0;
   var drawingPictureCount = 0;
+  var inspectedPageCount = 0;   // set when the document opens; read by inspectPage()
   var scanSummary = 'build ' + TOOL_BUILD;
 
   function addRenderedPagesToGallery(renderedPageImages, renderedCount, totalPages) {
@@ -8902,11 +10896,134 @@ function importPdfIllustrations(pdfBytes, onDone) {
     if (onDone) onDone();
   }
 
+  /** AI vision capture: prepare page images, ask the model for boxes, crop them.
+   *  A failed batch falls back to the local detector for exactly those pages,
+   *  so a disabled or rate-limited AI never leaves the capture empty. */
+  function renderPagesWithVision(pdfDocument, pagesToInspect, collectedPictures) {
+    var visionPagesPerCall = parseInt(tool.param('visionPagesPerCall', '6'), 10);
+    if (!visionPagesPerCall || visionPagesPerCall < 1) visionPagesPerCall = 6;
+    if (visionPagesPerCall > 24) visionPagesPerCall = 24;
+    var visionMaxSideLimit = parseInt(tool.param('visionPageMaxSide', '1400'), 10);
+    if (!visionMaxSideLimit || visionMaxSideLimit < 600) visionMaxSideLimit = 1400;
+    if (visionMaxSideLimit > 2048) visionMaxSideLimit = 2048;
+    var visionMaxRegions = parseInt(tool.param('visionMaxRegions', '30'), 10);
+    if (!visionMaxRegions || visionMaxRegions < 5) visionMaxRegions = 30;
+    if (visionMaxRegions > 50) visionMaxRegions = 50;
+    var nextPageNumber = 1;
+    var visionPictureCount = 0;
+    var visionPageCount = 0;
+    var fallbackWarningShown = false;
+
+    function renderVisionPagesSequentially(pageNumbers, maxSide, renderedPages, onRendered) {
+      if (!pageNumbers.length) { onRendered(renderedPages); return; }
+      var pageNumber = pageNumbers.shift();
+      renderVisionPageImage(pdfDocument, pageNumber, maxSide).catch(function(prepareError) {
+        console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' could not be prepared for AI vision:', prepareError);
+        return null;
+      }).then(function(renderedPage) {
+        if (renderedPage) renderedPages.push(renderedPage);
+        renderVisionPagesSequentially(pageNumbers, maxSide, renderedPages, onRendered);
+      });
+    }
+
+    /** Ask for one batch; a too_large answer is retried once at 900 px */
+    function requestVisionBatch(pageImages, maxSide, onResult) {
+      requestVisionPictureRegions(pageImages, visionMaxRegions, function(visionError, visionPages) {
+        if (visionError === 'too_large' && maxSide > 900) {
+          console.warn('[STUDIO:PICTURES] AI vision rejected the page size - retrying at 900 px');
+          var retryPageNumbers = [];
+          for (var retryIndex = 0; retryIndex < pageImages.length; retryIndex++) retryPageNumbers.push(pageImages[retryIndex].pageNumber);
+          renderVisionPagesSequentially(retryPageNumbers, 900, [], function(smallerPages) {
+            if (!smallerPages.length) { onResult(visionError, []); return; }
+            requestVisionBatch(smallerPages, 900, onResult);
+          });
+          return;
+        }
+        onResult(visionError, visionPages);
+      });
+    }
+
+    function runLocalFallback(pageNumbers, onDone) {
+      if (!pageNumbers.length) { onDone(); return; }
+      var fallbackPageNumber = pageNumbers.shift();
+      inspectPage(pdfDocument, fallbackPageNumber, collectedPictures, function() {
+        runLocalFallback(pageNumbers, onDone);
+      });
+    }
+
+    function processNextVisionBatch() {
+      if (nextPageNumber > pagesToInspect) {
+        scanSummary = 'build ' + TOOL_BUILD + ' · AI vision · ' + visionPictureCount +
+          ' picture(s) on ' + visionPageCount + ' page(s)';
+        addRenderedPagesToGallery(collectedPictures, pagesToInspect, pdfDocument.numPages);
+        return;
+      }
+      var batchPageNumbers = [];
+      while (batchPageNumbers.length < visionPagesPerCall && nextPageNumber <= pagesToInspect) {
+        batchPageNumbers.push(nextPageNumber);
+        nextPageNumber++;
+      }
+      var firstBatchPage = batchPageNumbers[0];
+      var lastBatchPage = batchPageNumbers[batchPageNumbers.length - 1];
+      startStudioStatusTicker('🤖 AI is locating the pictures on page ' + firstBatchPage +
+        (lastBatchPage !== firstBatchPage ? ' to ' + lastBatchPage : ''));
+      renderVisionPagesSequentially(batchPageNumbers, visionMaxSideLimit, [], function(renderedPages) {
+        if (!renderedPages.length) { processNextVisionBatch(); return; }
+        requestVisionBatch(renderedPages, visionMaxSideLimit, function(visionError, visionPages) {
+          var batchPageNumbersForFallback = [];
+          for (var batchIndex = 0; batchIndex < renderedPages.length; batchIndex++) {
+            batchPageNumbersForFallback.push(renderedPages[batchIndex].pageNumber);
+          }
+          if (visionError) {
+            console.warn('[STUDIO:PICTURES] AI vision failed (' + visionError + ') - using local detection for pages ' +
+              batchPageNumbersForFallback.join(', '));
+            if (!fallbackWarningShown) {
+              fallbackWarningShown = true;
+              tool.notify('AI picture detection is unavailable (' + visionError + '). Those pages are captured with the local detector.', 'warning');
+            }
+            runLocalFallback(batchPageNumbersForFallback, processNextVisionBatch);
+            return;
+          }
+          var visionPageByNumber = {};
+          for (var resultIndex = 0; resultIndex < visionPages.length; resultIndex++) {
+            var visionPage = visionPages[resultIndex];
+            if (visionPage && visionPage.pageIndex) visionPageByNumber[visionPage.pageIndex] = visionPage;
+          }
+          // The model already has the pixels - free the JPEGs before cropping.
+          for (var freeIndex = 0; freeIndex < renderedPages.length; freeIndex++) renderedPages[freeIndex].dataUrl = '';
+          var pagesToCrop = batchPageNumbersForFallback.slice();
+          function cropNextPage() {
+            if (!pagesToCrop.length) { processNextVisionBatch(); return; }
+            var cropPageNumber = pagesToCrop.shift();
+            var visionPageResult = visionPageByNumber[cropPageNumber] || null;
+            var pageRegions = (visionPageResult && visionPageResult.regions) ? visionPageResult.regions : [];
+            visionPageCount++;
+            visionPictureCount += pageRegions.length;
+            captureVisionPagePictures(pdfDocument, cropPageNumber, visionPageResult, pageScale, collectedPictures, cropNextPage);
+          }
+          cropNextPage();
+        });
+      });
+    }
+    processNextVisionBatch();
+  }
+
   function renderPagesToGallery(pdfBytes) {
     setStudioStatus('🖼 Looking for pictures on each page…', 'busy');
     window.pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) }).promise.then(function(pdfDocument) {
       var pagesToInspect = Math.min(pdfDocument.numPages, maxPages);
+      inspectedPageCount = pagesToInspect;
+      var useVisionDetection = pictureVisionDetectionEnabled();
+      console.log('[PICTURES] ' + pdfDocument.numPages + ' page(s) · detector: ' +
+        (useVisionDetection
+          ? 'AI vision finds the picture boxes (tool.requestAIVision), the browser crops the pixels'
+          : 'local (PDF.js embedded images + drawing scan, no AI)') +
+        ' · inspecting page 1-' + pagesToInspect);
       var collectedPictures = [];
+      if (useVisionDetection) {
+        renderPagesWithVision(pdfDocument, pagesToInspect, collectedPictures);
+        return;
+      }
       function inspectNextPage(pageNumber) {
         if (pageNumber > pagesToInspect) { addRenderedPagesToGallery(collectedPictures, pagesToInspect, pdfDocument.numPages); return; }
         startStudioStatusTicker('🖼 Page ' + pageNumber + ' of ' + pagesToInspect + ' - finding pictures');
@@ -8933,9 +11050,7 @@ function importPdfIllustrations(pdfBytes, onDone) {
         : Promise.resolve(null);
       readOperatorList.then(function(operatorList) {
         var embeddedPictureRegions = operatorList ? pdfEmbeddedPictureRegions(operatorList, pageViewport) : [];
-        if (embeddedPictureRegions.stats) {
-          console.log('[STUDIO:PICTURES] page ' + pageNumber + ' PDF ops: ' + JSON.stringify(embeddedPictureRegions.stats));
-        } else if (!operatorList) {
+        if (!operatorList) {
           console.warn('[STUDIO:PICTURES] page ' + pageNumber + ': no operator list (pdf.js getOperatorList is unavailable) - using the rendered page only');
         }
         pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: pageViewport }).promise.then(function() {
@@ -8969,13 +11084,15 @@ function importPdfIllustrations(pdfBytes, onDone) {
             var textBoxes = pdfTextItemBoxes(textContent, pageViewport);
             // 2) Vector drawings (charts, shapes) have no image object.
             var drawingPictureRegions = detectPagePictureRegions(pageCanvas, textBoxes);
-            console.log('[STUDIO:PICTURES] page ' + pageNumber + ': ' + embeddedPictureRegions.length +
-              ' embedded image(s), ' + drawingPictureRegions.length + ' drawing region(s), ' +
-              textBoxes.length + ' text item(s) of ' + ((textContent && textContent.items && textContent.items.length) || 0));
+            if (embeddedPictureRegions.length || drawingPictureRegions.length) {
+              developerLog('[STUDIO:PICTURES] page ' + pageNumber + ': ' + embeddedPictureRegions.length +
+                ' embedded image(s), ' + drawingPictureRegions.length + ' drawing region(s), ' +
+                textBoxes.length + ' text item(s) of ' + ((textContent && textContent.items && textContent.items.length) || 0));
+            }
             embeddedPictureCount += embeddedPictureRegions.length;
             drawingPictureCount += drawingPictureRegions.length;
             scanSummary = 'build ' + TOOL_BUILD + ' · ' + embeddedPictureCount + ' embedded image(s), ' +
-              drawingPictureCount + ' drawing region(s) on ' + pagesToInspect + ' page(s)';
+              drawingPictureCount + ' drawing region(s) on ' + inspectedPageCount + ' page(s)';
             capturePictureRegions(combinePictureRegionSources(embeddedPictureRegions, drawingPictureRegions, pageCanvas, textBoxes));
           }).catch(function(textError) {
             console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' text boxes could not be read:', textError);
@@ -9395,17 +11512,24 @@ function openStudioDrawerForDoc(docUrl) {
   var removedDuplicateImages = collapseDuplicateStudioImages();
   if (removedDuplicateImages) persistStudioImages();
   var role = studioDocRole(docUrl);
+  var isReferenceDocument = isReferenceLibraryUrl(docUrl);
   var titleEl = el('sd-drawer-title');
   var subtitleEl = el('sd-drawer-subtitle');
   var roleButton = el('btn-sd-make-role');
   if (titleEl) titleEl.textContent = readableFileName(docUrl);
-  if (subtitleEl) subtitleEl.textContent = (role === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document') + ' · ' + editingStudyDocImages.length + ' image(s)';
+  if (subtitleEl) {
+    var documentKindText = isReferenceDocument
+      ? '📚 Reference document - generated content is AI context only, never student-facing'
+      : (role === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document');
+    subtitleEl.textContent = documentKindText + ' · ' + editingStudyDocImages.length + ' image(s)';
+  }
   if (roleButton) roleButton.textContent = role === 'final' ? '🔄 To Sample' : '🔄 To Ready';
   updateStudioOriginalSourceButton();
   setStudioStatus('', '');
   switchStudioTab('document');
   syncStudioOcrLanguageSelect();
   loadStudioGeneratedForDoc(docUrl);
+  showStudioGeneratedView('preview');
   loadStudioDocumentPreview();
   renderStudyDocImageGallery();
   var drawer = el('sd-studio-drawer');
@@ -9480,9 +11604,66 @@ function storeStudioDocumentCopyInCms() {
 
 /** Load the Generated content saved for one document into the drawer */
 function loadStudioGeneratedForDoc(docUrl) {
+  // A reference document keeps its generated content in its own CMS object.
+  for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+    var referenceEntry = mainDocuments[documentIndex];
+    if (!referenceEntry || referenceEntry.url !== docUrl || !referenceEntry.generatedHtml) continue;
+    if (!editingStudyDocGeneratedHtmlMap[docUrl]) {
+      editingStudyDocGeneratedHtmlMap[docUrl] = {
+        html: referenceEntry.generatedHtml,
+        generatedAt: referenceEntry.generatedAt ? Date.parse(referenceEntry.generatedAt) : 0,
+        sourceLabel: referenceEntry.generatedSourceLabel || '',
+        docName: referenceEntry.name || ''
+      };
+    }
+    break;
+  }
   var generatedEntry = editingStudyDocGeneratedHtmlMap[docUrl];
   studioGeneratedHtml = (generatedEntry && typeof generatedEntry.html === 'string') ? generatedEntry.html : '';
   renderStudioGeneratedPreview();
+}
+
+/** Developer-only: refresh the raw generated HTML and its inline-image audit */
+function updateStudioDevHtmlView() {
+  var devViewBar = el('sd-gen-view');
+  var htmlView = el('sd-gen-html-view');
+  if (!devViewBar || !htmlView) return;
+  var developerMode = isDeveloper();
+  devViewBar.style.display = developerMode ? 'flex' : 'none';
+  if (!developerMode) {
+    htmlView.style.display = 'none';
+    return;
+  }
+  var generatedText = String(studioGeneratedHtml || '');
+  htmlView.textContent = generatedText || '(nothing generated for this document yet)';
+  var inlineImages = generatedText.match(/data:image\/[^"')\s]+/g) || [];
+  var inlineBytes = 0;
+  for (var inlineIndex = 0; inlineIndex < inlineImages.length; inlineIndex++) inlineBytes += utf8ByteLength(inlineImages[inlineIndex]);
+  var statsElement = el('sd-gen-html-stats');
+  if (statsElement) {
+    statsElement.textContent = formatFileSize(utf8ByteLength(generatedText)) + ' HTML' +
+      (inlineImages.length
+        ? ' · ⚠️ ' + inlineImages.length + ' inline image(s) ' + formatFileSize(inlineBytes) + ' (base64)'
+        : ' · no base64 images') +
+      (generatedText.indexOf('data:') !== -1 && !inlineImages.length ? ' · other data: content' : '');
+  }
+}
+
+/** Switch the Generated pane between the rendered preview and the raw HTML */
+function showStudioGeneratedView(viewName) {
+  var previewFrame = el('sd-gen-preview');
+  var htmlView = el('sd-gen-html-view');
+  if (!previewFrame || !htmlView) return;
+  updateStudioDevHtmlView(); // hides the developer bar for every other role
+  var showHtml = viewName === 'html' && isDeveloper();
+  previewFrame.style.display = showHtml ? 'none' : '';
+  htmlView.style.display = showHtml ? 'block' : 'none';
+  var viewButtons = document.querySelectorAll('#sd-gen-view [data-sd-gen-view]');
+  for (var buttonIndex = 0; buttonIndex < viewButtons.length; buttonIndex++) {
+    var buttonView = viewButtons[buttonIndex].getAttribute('data-sd-gen-view');
+    viewButtons[buttonIndex].classList.toggle('sd-view-active', buttonView === (showHtml ? 'html' : 'preview'));
+  }
+  if (showHtml) updateStudioDevHtmlView();
 }
 
 /** Show the Generated content of the open document (never student-facing) */
@@ -9493,12 +11674,14 @@ function renderStudioGeneratedPreview() {
   if (!studioGeneratedHtml) {
     previewFrame.srcdoc = '';
     if (statusEl) statusEl.textContent = 'not generated yet';
+    updateStudioDevHtmlView();
     return;
   }
   previewFrame.srcdoc = studioPreviewCss + studioGeneratedHtml;
   var generatedEntry = editingStudyDocGeneratedHtmlMap[studioCurrentDocUrl];
   var generatedAtText = (generatedEntry && generatedEntry.generatedAt) ? new Date(generatedEntry.generatedAt).toLocaleString() : '';
   if (statusEl) statusEl.textContent = '💾 ' + formatCount(studioGeneratedHtml.length) + ' chars' + (generatedAtText ? ' · ' + generatedAtText : '');
+  updateStudioDevHtmlView();
 }
 
 /** Promote the Generated content into the lesson Study Content (student-facing) */
@@ -9713,6 +11896,7 @@ function renderStudyDocImageGallery() {
   if (tabCountEl) tabCountEl.textContent = String(editingStudyDocImages.length);
   if (!editingStudyDocImages.length) {
     grid.innerHTML = '<div class="sd-empty">No pictures yet. Use “Get Pictures”, “Add Image”, or paste a screenshot with Ctrl+V.</div>';
+    updateStudioSelectionUi();
     return;
   }
   grid.innerHTML = editingStudyDocImages.map(function(image, idx) {
@@ -9729,12 +11913,13 @@ function renderStudyDocImageGallery() {
           '<button type="button" class="sd-version-btn' + (showGenerated ? ' active' : '') + '" data-sd-version="' + idx + '" data-version="generated">Generated</button>' +
         '</div>'
       : '';
+    var imageCardTitle = 'Click to view large' + (image.caption ? ' · ' + image.caption : '');
     return '<div class="sd-image-card' + (imageRole === 'source' ? ' is-source' : '') + '">' +
       '<label class="sd-image-check"><input type="checkbox" data-sd-select="' + idx + '"> select</label>' +
-      '<img src="' + previewSrc + '" alt="' + esc(image.name) + '" title="Click to view large" data-sd-view="' + idx + '">' +
+      '<img src="' + previewSrc + '" alt="' + esc(image.name) + '" title="' + esc(imageCardTitle) + '" data-sd-view="' + idx + '">' +
       versionToggle +
       '<div class="sd-image-meta">' + esc(image.name) +
-        '<span class="sd-muted">' + (isImageHosted(image) ? '🔗 hosted · ' : '') + (image.ocrText ? '📝 text · ' : '') + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB</span>' +
+        '<span class="sd-muted">' + (isImageHosted(image) ? '🔗 hosted · ' : '⚠️ not uploaded · ') + (image.ocrText ? '📝 text · ' : '') + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB</span>' +
         badgeHtml +
       '</div>' +
       '<div class="sd-image-actions">' +
@@ -9745,6 +11930,7 @@ function renderStudyDocImageGallery() {
       '</div>' +
     '</div>';
   }).join('');
+  updateStudioSelectionUi();
 }
 
 /** Switch a picture between Real (use directly) and Source (needs a generated version) */
@@ -9769,19 +11955,29 @@ function setStudioImageVersion(imageIndex, version) {
 }
 
 /** Store the AI result as the picture's GENERATED version (the original is kept) */
-function applyGeneratedVersionToStudioImage(imageIndex, generatedDataUrl, generatedPromptText) {
+function applyGeneratedVersionToStudioImage(imageIndex, generatedPicture, generatedPromptText) {
   var targetImage = editingStudyDocImages[imageIndex];
-  if (!targetImage) return;
+  if (!targetImage || !generatedPicture) return;
+  // requestRegenerateImage answers with a CMS storage URL (already hosted);
+  // the legacy requestGenerateImage path answers with an inline data URL.
+  var generatedUrl = generatedPicture.url || '';
+  var generatedDataUrl = generatedUrl ? '' : (generatedPicture.dataUrl || '');
+  if (!generatedUrl && !generatedDataUrl) return;
+  // Replacing an earlier generated copy leaves its uploaded file behind.
+  var previousGeneratedUrl = targetImage.generatedUrl || '';
   targetImage.generatedDataUrl = generatedDataUrl;
-  targetImage.generatedUrl = '';
-  targetImage.generatedSizeKb = Math.max(1, Math.round(generatedDataUrl.length * 0.75 / 1024));
+  targetImage.generatedUrl = generatedUrl;
+  if (generatedPicture.bytes) targetImage.generatedSizeKb = Math.max(1, Math.round(generatedPicture.bytes / 1024));
+  else if (generatedDataUrl) targetImage.generatedSizeKb = Math.max(1, Math.round(generatedDataUrl.length * 0.75 / 1024));
   targetImage.generatedAt = Date.now();
   targetImage.generatedPrompt = generatedPromptText || '';
   if (!targetImage.role) targetImage.role = defaultStudioImageRole();
+  if (previousGeneratedUrl && previousGeneratedUrl !== generatedUrl) deleteStudioStorageFile(previousGeneratedUrl, targetImage.name);
   studioImagePreviewVersion[imageIndex] = 'generated';
   persistStudioImages();
   renderStudyDocImageGallery();
   autoSaveCurrentLesson();
+  if (generatedUrl) return; // already in CMS storage - nothing to upload
   uploadStudioGeneratedImageToStorage(imageIndex, function(uploaded) {
     renderStudyDocImageGallery();
     if (uploaded) autoSaveCurrentLesson();
@@ -9841,6 +12037,7 @@ function openStudioImageView(imageIndex) {
     : '<img class="sd-view-image" src="' + imageSrc + '" alt="' + esc(image.name) + '">';
   var bodyHtml = generatedBlock +
     '<div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-muted)">' + esc(image.name) + ' · ' + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB' + (isImageHosted(image) ? ' · 🔗 hosted' : '') + '</div>' +
+    (image.caption ? '<div style="text-align:center;margin-top:6px;font-size:12px;color:var(--text-muted)">🤖 ' + esc(image.caption) + (image.kind ? ' · ' + esc(image.kind) : '') + '</div>' : '') +
     roleLine +
     '<div class="sd-modal-actions" style="justify-content:center">' +
       '<button type="button" class="btn btn-outline" data-sd-view-open>↗ Open Original</button>' +
@@ -10182,265 +12379,6 @@ function extractStudyDocImages(onDone) {
 }
 
 /* ═══════════════════════════════════════════
-   SPLIT PDF DIALOG
-   ═══════════════════════════════════════════ */
-
-var splitPdfDialogSource = { mode: 'current', bytes: null, fileName: '', pageCount: 0 };
-var splitPdfDialogBusy = false;
-
-function setSplitPdfStatus(messageText, statusKind) {
-  var statusElement = el('split-pdf-status');
-  if (!statusElement) return;
-  statusElement.textContent = messageText || '';
-  if (statusKind === 'error') statusElement.style.color = '#b91c1c';
-  else if (statusKind === 'ok') statusElement.style.color = '#047857';
-  else statusElement.style.color = '';
-}
-
-/** Page count of a PDF byte array (no rendering) */
-function countPdfPages(pdfBytes) {
-  var pdfText = bytesToLatin1String(pdfBytes);
-  try {
-    var pdfObjects = pdfCollectClassicObjects(pdfText);
-    var catalogNumber = pdfFindCatalogNumber(pdfText);
-    var pageEntries = pdfCollectPageEntries(pdfObjects, catalogNumber);
-    if (!pageEntries.length && pdfText.indexOf('/ObjStm') !== -1) {
-      pdfExpandPdfObjectStreams(pdfObjects);
-      pageEntries = pdfCollectPageEntries(pdfObjects, catalogNumber);
-    }
-    if (pageEntries.length) return pageEntries.length;
-  } catch (pageCountError) {
-    console.warn('[PDF:SPLIT] page tree could not be parsed, counting page objects instead:', pageCountError);
-  }
-  // Never fail the dialog because of one unreadable structure.
-  var rawPageMatches = pdfText.match(/\/Type\s*\/Page(?![s])/g);
-  return rawPageMatches ? rawPageMatches.length : 0;
-}
-
-function applySplitPdfPageCount(pageCount, sourceLabel) {
-  splitPdfDialogSource.pageCount = pageCount;
-  var startInput = el('split-pdf-start-page');
-  var endInput = el('split-pdf-end-page');
-  if (startInput) { startInput.value = 1; startInput.max = pageCount || ''; }
-  if (endInput) { endInput.value = pageCount || 1; endInput.max = pageCount || ''; }
-  var infoElement = el('split-pdf-source-info');
-  if (infoElement) {
-    infoElement.textContent = pageCount
-      ? sourceLabel + ' · ' + pageCount + ' page(s). Choose the first and last page to copy.'
-      : sourceLabel + ' · the page count could not be read - type the page range manually.';
-  }
-}
-
-function loadSplitPdfSourceBytes(onLoaded) {
-  var sourceMode = splitPdfDialogSource.mode;
-  if (sourceMode === 'local') {
-    var fileInput = el('split-pdf-file');
-    var selectedFile = fileInput && fileInput.files && fileInput.files[0];
-    if (!selectedFile) { onLoaded('Choose a PDF file first.'); return; }
-    var fileReader = new FileReader();
-    fileReader.onload = function() {
-      try {
-        var localBytes = new Uint8Array(fileReader.result);
-        var localPageCount = countPdfPages(localBytes);
-        splitPdfDialogSource.bytes = localBytes;
-        splitPdfDialogSource.fileName = selectedFile.name || 'document.pdf';
-        applySplitPdfPageCount(localPageCount, selectedFile.name || 'Local PDF');
-        onLoaded(null);
-      } catch (pageCountError) {
-        onLoaded((pageCountError && pageCountError.message) || 'The PDF could not be read.');
-      }
-    };
-    fileReader.onerror = function() { onLoaded('The selected file could not be read.'); };
-    fileReader.readAsArrayBuffer(selectedFile);
-    return;
-  }
-  if (!studioCurrentDocUrl) {
-    onLoaded('Open a document in the Study Content drawer first, or choose a local PDF file.');
-    return;
-  }
-  if (studioLocalPdfBytes && studioLocalPdfUrl === studioCurrentDocUrl) {
-    try {
-      var documentPageCount = countPdfPages(studioLocalPdfBytes);
-      splitPdfDialogSource.bytes = studioLocalPdfBytes;
-      splitPdfDialogSource.fileName = studioLocalPdfName || 'document.pdf';
-      applySplitPdfPageCount(documentPageCount, studioLocalPdfName || 'Current document');
-      onLoaded(null);
-    } catch (localCountError) {
-      onLoaded((localCountError && localCountError.message) || 'The PDF could not be read.');
-    }
-    return;
-  }
-  setSplitPdfStatus('Downloading the open document…');
-  fetchDocumentBytes(studioCurrentDocUrl, { purpose: 'split' }, function(fetchError, documentBytes, documentMeta) {
-    if (fetchError || !documentBytes || !documentBytes.length) {
-      onLoaded(describeDocumentDownloadFailure(fetchError, documentMeta, studioCurrentDocUrl));
-      return;
-    }
-    try {
-      var downloadedPageCount = countPdfPages(documentBytes);
-      splitPdfDialogSource.bytes = documentBytes;
-      splitPdfDialogSource.fileName = (documentMeta && documentMeta.fileName) || safeDownloadFileName(studioCurrentDocUrl, 'document.pdf');
-      applySplitPdfPageCount(downloadedPageCount, splitPdfDialogSource.fileName);
-      onLoaded(null);
-    } catch (downloadedCountError) {
-      onLoaded((downloadedCountError && downloadedCountError.message) || 'The PDF could not be read.');
-    }
-  });
-}
-
-function openSplitPdfDialog() {
-  var overlay = el('split-pdf-overlay');
-  if (!overlay) return;
-  overlay.style.display = 'flex';
-  splitPdfDialogSource = { mode: studioCurrentDocUrl ? 'current' : 'local', bytes: null, fileName: '', pageCount: 0 };
-  var sourceSelect = el('split-pdf-source');
-  if (sourceSelect) {
-    sourceSelect.value = splitPdfDialogSource.mode;
-    var currentOption = sourceSelect.querySelector ? sourceSelect.querySelector('option[value="current"]') : null;
-    if (currentOption) {
-      currentOption.disabled = !studioCurrentDocUrl;
-      currentOption.textContent = studioCurrentDocUrl ? 'Current document' : 'Current document (none open)';
-    }
-  }
-  setSplitPdfStatus('');
-  var infoElement = el('split-pdf-source-info');
-  if (!studioCurrentDocUrl) {
-    // Nothing open in the Studio drawer: ask for a local file right away.
-    if (infoElement) infoElement.textContent = 'Choose a PDF file to split.';
-    var emptyFileInput = el('split-pdf-file');
-    if (emptyFileInput) emptyFileInput.click();
-    return;
-  }
-  if (infoElement) infoElement.textContent = 'Reading the document…';
-  loadSplitPdfSourceBytes(function(loadError) {
-    if (loadError) setSplitPdfStatus('❌ ' + loadError, 'error');
-  });
-}
-
-function closeSplitPdfDialog() {
-  var overlay = el('split-pdf-overlay');
-  if (overlay) overlay.style.display = 'none';
-  splitPdfDialogBusy = false;
-}
-
-/** Run the split with the current dialog values; onDone(bytes, fileName) */
-function runSplitPdfFromDialog(onDone) {
-  if (splitPdfDialogBusy) return;
-  if (!splitPdfDialogSource.bytes) { setSplitPdfStatus('❌ No PDF source loaded yet.', 'error'); return; }
-  var startPage = parseInt((el('split-pdf-start-page') || {}).value, 10);
-  var endPage = parseInt((el('split-pdf-end-page') || {}).value, 10);
-  var pageCount = splitPdfDialogSource.pageCount || 0;
-  if (!startPage || startPage < 1) { setSplitPdfStatus('❌ The start page must be 1 or more.', 'error'); return; }
-  if (!endPage || endPage < 1) { setSplitPdfStatus('❌ The end page must be 1 or more.', 'error'); return; }
-  if (endPage < startPage) { setSplitPdfStatus('❌ The end page must be after the start page.', 'error'); return; }
-  if (pageCount && startPage > pageCount) { setSplitPdfStatus('❌ The PDF has only ' + pageCount + ' page(s).', 'error'); return; }
-  splitPdfDialogBusy = true;
-  setSplitPdfStatus('Splitting pages ' + startPage + '-' + Math.min(endPage, pageCount || endPage) + '…');
-  try {
-    var splitResult = pdfSplitPdfPageRange(splitPdfDialogSource.bytes, startPage, endPage);
-    var baseName = String(splitPdfDialogSource.fileName || 'document.pdf').replace(/\.pdf$/i, '');
-    var splitFileName = baseName + '-p' + splitResult.firstPage + '-' + splitResult.lastPage + '.pdf';
-    setSplitPdfStatus('✅ Ready: ' + (splitResult.lastPage - splitResult.firstPage + 1) + ' page(s), ' +
-      Math.max(1, Math.round(splitResult.bytes.length / 1024)) + ' KB. The pages are copied as they are (no scanning).', 'ok');
-    splitPdfDialogBusy = false;
-    if (onDone) onDone(splitResult.bytes, splitFileName);
-  } catch (splitError) {
-    splitPdfDialogBusy = false;
-    setSplitPdfStatus('❌ ' + ((splitError && splitError.message) || splitError), 'error');
-  }
-}
-
-function downloadSplitPdfBytes(pdfBytes, fileName) {
-  try {
-    var pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-    var blobUrl = URL.createObjectURL(pdfBlob);
-    var downloadLink = document.createElement('a');
-    downloadLink.href = blobUrl;
-    downloadLink.download = fileName;
-    downloadLink.rel = 'noopener';
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    setTimeout(function() {
-      if (downloadLink.parentNode) downloadLink.parentNode.removeChild(downloadLink);
-      URL.revokeObjectURL(blobUrl);
-    }, 5000);
-  } catch (downloadError) {
-    setSplitPdfStatus('❌ The file could not be prepared for download: ' + ((downloadError && downloadError.message) || downloadError), 'error');
-  }
-}
-
-function bindSplitPdfDialogEvents() {
-  var openButton = el('btn-split-pdf');
-  if (openButton) openButton.addEventListener('click', openSplitPdfDialog);
-  var closeButton = el('btn-split-pdf-close');
-  if (closeButton) closeButton.addEventListener('click', closeSplitPdfDialog);
-  var cancelButton = el('btn-split-pdf-cancel');
-  if (cancelButton) cancelButton.addEventListener('click', closeSplitPdfDialog);
-  var overlay = el('split-pdf-overlay');
-  if (overlay) overlay.addEventListener('click', function(event) { if (event.target === overlay) closeSplitPdfDialog(); });
-  var sourceSelect = el('split-pdf-source');
-  var fileInput = el('split-pdf-file');
-  if (sourceSelect) {
-    sourceSelect.addEventListener('change', function() {
-      splitPdfDialogSource.mode = sourceSelect.value;
-      splitPdfDialogSource.bytes = null;
-      splitPdfDialogSource.pageCount = 0;
-      setSplitPdfStatus('');
-      if (sourceSelect.value === 'local') {
-        if (fileInput) fileInput.click();
-        return;
-      }
-      loadSplitPdfSourceBytes(function(loadError) {
-        if (loadError) setSplitPdfStatus('❌ ' + loadError, 'error');
-      });
-    });
-  }
-  if (fileInput) {
-    fileInput.addEventListener('change', function() {
-      splitPdfDialogSource.mode = 'local';
-      if (sourceSelect) sourceSelect.value = 'local';
-      loadSplitPdfSourceBytes(function(loadError) {
-        if (loadError) setSplitPdfStatus('❌ ' + loadError, 'error');
-      });
-    });
-  }
-  var downloadButton = el('btn-split-pdf-download');
-  if (downloadButton) {
-    downloadButton.addEventListener('click', function() {
-      runSplitPdfFromDialog(function(pdfBytes, fileName) { downloadSplitPdfBytes(pdfBytes, fileName); });
-    });
-  }
-  var uploadButton = el('btn-split-pdf-upload');
-  if (uploadButton) {
-    uploadButton.addEventListener('click', function() {
-      if (typeof tool.requestUploadBinary !== 'function') {
-        setSplitPdfStatus('❌ Uploading is not enabled for this tool - use Download instead.', 'error');
-        return;
-      }
-      runSplitPdfFromDialog(function(pdfBytes, fileName) {
-        if (pdfBytes.length > 5 * 1024 * 1024) {
-          setSplitPdfStatus('❌ The split file is larger than 5 MB - use Download instead.', 'error');
-          return;
-        }
-        setSplitPdfStatus('Uploading the split PDF…');
-        tool.requestUploadBinary({
-          dataUrl: 'data:application/pdf;base64,' + bytesToBase64(pdfBytes),
-          name: fileName,
-          contentType: 'application/pdf'
-        }, function(uploadError, uploadResult) {
-          if (uploadError || !uploadResult) {
-            setSplitPdfStatus('❌ Upload failed: ' + (uploadError || 'unknown error'), 'error');
-            return;
-          }
-          setSplitPdfStatus('✅ Uploaded (' + uploadResult.sizeKb + ' KB). Opening the file…', 'ok');
-          tool.openUrl(uploadResult.url);
-        });
-      });
-    });
-  }
-}
-
-/* ═══════════════════════════════════════════
    REFERENCE DOCUMENTS (main page library)
    The files are uploaded to CMS storage once; the curriculum only keeps
    their metadata, so every lesson can use any page range of them.
@@ -10468,6 +12406,222 @@ function normalizeMainDocumentList(rawList) {
   return normalizedList;
 }
 
+/* ── REFERENCE LIBRARY STORE (CMS objects, never the curriculum record) ──
+   A reference document and the content generated from it live in ONE object of
+   REFERENCE_DOC_TYPE, so the curriculum value keeps only sections + lessons -
+   exactly what the Self-Paced Education tool reads. That generated content is
+   used as extra context when the REAL study content is generated.
+   REQUIRED CMS ADMIN CONFIG (Field Group → settings.allowedObjectTypes):
+     { mainObjectType: 'curriculum-reference-docs-uniconbaseapps',
+       role: 'editor', scope: 'shared', targetCollection: 'private' }
+   plus settings.allowObjectCRUD: 'yes'.  Without CRUD the metadata simply
+   stays in the curriculum value (legacy behaviour) - nothing breaks. */
+var REFERENCE_DOC_TYPE = 'curriculum-reference-docs-uniconbaseapps';
+var referenceLibraryStoreReady = false;
+
+/** True when the reference library can live in CMS objects */
+function canUseReferenceStore() {
+  return typeof tool.requestObjects === 'function';
+}
+
+/** True when the URL belongs to a reference library document */
+function isReferenceLibraryUrl(documentUrl) {
+  for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+    if (mainDocuments[documentIndex] && mainDocuments[documentIndex].url === documentUrl) return true;
+  }
+  return false;
+}
+
+/** Drop inline base64 pictures from generated HTML that is about to be stored.
+ *  Nothing is kept: a saved record must never contain a data: image. */
+function sanitizeGeneratedHtmlForSave(htmlText) {
+  var strippedHtml = stripInlineImageDataFromHtml(htmlText);
+  return { html: strippedHtml.html, droppedImages: strippedHtml.removedCount, inlineBytes: strippedHtml.removedBytes };
+}
+
+/** One CMS object -> one library entry */
+function referenceEntryFromObject(referenceObject) {
+  if (!referenceObject) return null;
+  var storedEntry = {};
+  try {
+    var productData = referenceObject.productData;
+    var storedJson = productData && productData.data_categoriesBased ? productData.data_categoriesBased.referenceJson : '';
+    if (storedJson) storedEntry = JSON.parse(storedJson) || {};
+  } catch (parseReferenceError) {
+    storedEntry = {};
+  }
+  return {
+    objectId: referenceObject.id || '',
+    id: storedEntry.libraryId || referenceObject.id || genId(),
+    name: storedEntry.name || referenceObject.name || 'Reference document',
+    url: storedEntry.url || '',
+    sizeKb: storedEntry.sizeKb || 0,
+    addedAt: storedEntry.addedAt || '',
+    generatedHtml: storedEntry.generatedHtml || '',
+    generatedAt: storedEntry.generatedAt || '',
+    generatedSourceLabel: storedEntry.generatedSourceLabel || '',
+    generatedDroppedImages: storedEntry.generatedDroppedImages || 0
+  };
+}
+
+/** Load the whole library from CMS objects */
+function loadReferenceLibrary(onDone) {
+  if (!canUseReferenceStore()) { referenceLibraryStoreReady = false; if (onDone) onDone(false); return; }
+  tool.requestObjects('query', { mainObjectType: REFERENCE_DOC_TYPE }, function(queryError, queryResult) {
+    if (queryError) {
+      referenceLibraryStoreReady = false;
+      console.warn('[REF:LIBRARY] reference objects are not readable (' + queryError + ') - the library stays in the curriculum value');
+      if (onDone) onDone(false);
+      return;
+    }
+    referenceLibraryStoreReady = true;
+    var storedObjects = (queryResult && queryResult.objects) ? queryResult.objects : [];
+    var loadedEntries = [];
+    for (var objectIndex = 0; objectIndex < storedObjects.length; objectIndex++) {
+      var loadedEntry = referenceEntryFromObject(storedObjects[objectIndex]);
+      if (loadedEntry && loadedEntry.url) loadedEntries.push(loadedEntry);
+    }
+    mainDocuments = loadedEntries;
+    developerLog('[REF:LIBRARY] ' + loadedEntries.length + ' reference document(s) loaded from CMS objects');
+    renderMainDocumentsList();
+    if (onDone) onDone(true);
+  });
+}
+
+/** Create or update the object that holds one reference document */
+function saveReferenceDocumentToCms(referenceEntry, onDone) {
+  if (!canUseReferenceStore() || !referenceEntry || !referenceEntry.url) { if (onDone) onDone(null); return; }
+  // Generated content stored by an older build may still hold inline base64:
+  // strip it here too so no update can write the bytes back.
+  var storedGeneratedHtml = referenceEntry.generatedHtml || '';
+  if (storedGeneratedHtml.indexOf('data:') !== -1) {
+    var sanitizedGenerated = sanitizeGeneratedHtmlForSave(storedGeneratedHtml);
+    storedGeneratedHtml = sanitizedGenerated.html;
+    referenceEntry.generatedHtml = storedGeneratedHtml;
+    referenceEntry.generatedDroppedImages = (Number(referenceEntry.generatedDroppedImages) || 0) + sanitizedGenerated.droppedImages;
+    console.warn('[REF:LIBRARY] ' + sanitizedGenerated.droppedImages + ' inline picture(s) removed before storing ' +
+      (referenceEntry.name || 'reference document'));
+  }
+  var referenceJson = JSON.stringify({
+    libraryId: referenceEntry.id || '',
+    name: referenceEntry.name || 'Reference document',
+    url: referenceEntry.url,
+    sizeKb: referenceEntry.sizeKb || 0,
+    addedAt: referenceEntry.addedAt || '',
+    generatedHtml: storedGeneratedHtml,
+    generatedAt: referenceEntry.generatedAt || '',
+    generatedSourceLabel: referenceEntry.generatedSourceLabel || ''
+  });
+  if (referenceEntry.objectId) {
+    tool.requestObjects('update', {
+      mainObjectType: REFERENCE_DOC_TYPE,
+      objectId: referenceEntry.objectId,
+      name: referenceEntry.name || 'Reference document',
+      productData: { data_categoriesBased: { referenceJson: referenceJson } }
+    }, function(updateError) {
+      if (updateError) console.warn('[REF:LIBRARY] reference document update failed:', updateError);
+      if (onDone) onDone(updateError ? null : referenceEntry);
+    });
+    return;
+  }
+  tool.requestObjects('create', {
+    mainObjectType: REFERENCE_DOC_TYPE,
+    name: referenceEntry.name || 'Reference document',
+    productData: { data_categoriesBased: { referenceJson: referenceJson } }
+  }, function(createError, createResult) {
+    if (createError) {
+      console.warn('[REF:LIBRARY] reference document create failed:', createError);
+      if (onDone) onDone(null);
+      return;
+    }
+    referenceEntry.objectId = (createResult && createResult.object) ? createResult.object.id : '';
+    if (onDone) onDone(referenceEntry);
+  });
+}
+
+/** Store the content generated from one reference document (never the curriculum) */
+function saveGeneratedContentForReferenceDocument(documentUrl, generatedHtml, sourceLabel) {
+  if (!documentUrl || !generatedHtml) return false;
+  for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+    var referenceEntry = mainDocuments[documentIndex];
+    if (!referenceEntry || referenceEntry.url !== documentUrl) continue;
+    var sanitized = sanitizeGeneratedHtmlForSave(generatedHtml);
+    referenceEntry.generatedHtml = sanitized.html;
+    referenceEntry.generatedAt = new Date().toISOString();
+    referenceEntry.generatedSourceLabel = sourceLabel || '';
+    referenceEntry.generatedDroppedImages = sanitized.droppedImages;
+    if (referenceLibraryStoreReady) saveReferenceDocumentToCms(referenceEntry);
+    renderMainDocumentsList();
+    if (sanitized.droppedImages) {
+      console.warn('[REF:LIBRARY] ' + sanitized.droppedImages + ' inline picture(s) (' + formatFileSize(sanitized.inlineBytes) +
+        ') removed from the stored generated content of ' + (referenceEntry.name || 'reference document'));
+    }
+    console.log('[REF:LIBRARY] generated content stored for ' + (referenceEntry.name || documentUrl) +
+      ' · ' + formatFileSize(utf8ByteLength(sanitized.html)));
+    return true;
+  }
+  return false;
+}
+
+/** Delete the object behind one reference document */
+function deleteReferenceDocumentFromCms(referenceEntry, onDone) {
+  if (!canUseReferenceStore() || !referenceEntry || !referenceEntry.objectId) { if (onDone) onDone(); return; }
+  tool.requestObjects('delete', { mainObjectType: REFERENCE_DOC_TYPE, objectId: referenceEntry.objectId }, function(deleteError) {
+    if (deleteError) console.warn('[REF:LIBRARY] reference document delete failed:', deleteError);
+    if (onDone) onDone();
+  });
+}
+
+/** Generated reference text used as context for the REAL content generation */
+function referenceLibraryGeneratedContext(maxCharacters) {
+  var contextBudget = maxCharacters || parseInt(tool.param('referenceContextMaxChars', '40000'), 10);
+  if (!contextBudget || contextBudget < 1000) contextBudget = 40000;
+  var contextPieces = [];
+  var usedCharacters = 0;
+  for (var documentIndex = 0; documentIndex < mainDocuments.length && usedCharacters < contextBudget; documentIndex++) {
+    var referenceEntry = mainDocuments[documentIndex];
+    if (!referenceEntry || !referenceEntry.generatedHtml) continue;
+    var plainText = String(referenceEntry.generatedHtml).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!plainText) continue;
+    var sliceLength = Math.min(plainText.length, contextBudget - usedCharacters);
+    contextPieces.push('REFERENCE MATERIAL: ' + (referenceEntry.name || 'reference document') + '\n' + plainText.substring(0, sliceLength));
+    usedCharacters += sliceLength;
+  }
+  return contextPieces.join('\n\n');
+}
+
+/** After the curriculum is shown: load the library and move legacy value entries in */
+function syncReferenceLibraryAfterLoad() {
+  var legacyDocuments = mainDocuments.slice();
+  loadReferenceLibrary(function(storeReady) {
+    if (!storeReady) { renderMainDocumentsList(); return; }
+    var pendingDocuments = [];
+    for (var legacyIndex = 0; legacyIndex < legacyDocuments.length; legacyIndex++) {
+      if (!isReferenceLibraryUrl(legacyDocuments[legacyIndex].url)) pendingDocuments.push(legacyDocuments[legacyIndex]);
+    }
+    if (!pendingDocuments.length) {
+      renderMainDocumentsList();
+      if (legacyDocuments.length) saveCurriculum(); // the record no longer carries the library
+      return;
+    }
+    var remainingCreates = pendingDocuments.length;
+    for (var pendingIndex = 0; pendingIndex < pendingDocuments.length; pendingIndex++) {
+      (function(pendingEntry) {
+        mainDocuments.push(pendingEntry);
+        saveReferenceDocumentToCms(pendingEntry, function(savedEntry) {
+          remainingCreates--;
+          if (remainingCreates > 0) return;
+          renderMainDocumentsList();
+          saveCurriculum(); // drop the library metadata from the curriculum record
+          if (savedEntry) {
+            tool.notify('Reference documents now live in their own CMS objects - the curriculum record keeps only lessons.', 'info');
+          }
+        });
+      })(pendingDocuments[pendingIndex]);
+    }
+  });
+}
+
 function renderMainDocumentsList() {
   var container = el('ref-docs-list');
   if (!container) return;
@@ -10481,11 +12635,15 @@ function renderMainDocumentsList() {
   for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
     var documentEntry = mainDocuments[documentIndex];
     var sizeLabel = documentEntry.sizeKb ? (Math.max(1, Math.round(documentEntry.sizeKb)) + ' KB') : 'PDF';
+    var generatedLabel = documentEntry.generatedHtml
+      ? ' · 🤖 ' + formatFileSize(utf8ByteLength(documentEntry.generatedHtml)) + ' generated'
+      : ' · not generated';
     listHtml += '<div class="ref-doc-row">' +
       '<div class="ref-doc-main"><strong>' + esc(documentEntry.name) + '</strong>' +
-      '<span class="ref-doc-meta">' + sizeLabel + '</span></div>' +
+      '<span class="ref-doc-meta">' + sizeLabel + generatedLabel + '</span></div>' +
       '<div class="ref-doc-actions">' +
         '<button class="btn btn-sm btn-outline" data-ref-open="' + esc(documentEntry.id) + '">👁 Open</button>' +
+        '<button class="btn btn-sm btn-outline" data-ref-process="' + esc(documentEntry.id) + '" title="Open this reference document in the Process drawer: capture pictures and generate the reference content">⚙️ Process</button>' +
         '<button class="btn btn-sm btn-danger" data-ref-del="' + esc(documentEntry.id) + '">🗑</button>' +
       '</div></div>';
   }
@@ -10493,15 +12651,31 @@ function renderMainDocumentsList() {
 }
 
 function addMainDocumentEntry(documentName, documentUrl, documentSizeKb) {
-  mainDocuments.push({
+  var newReferenceEntry = {
+    objectId: '',
     id: genId(),
     name: documentName || 'Reference document',
     url: documentUrl,
     sizeKb: documentSizeKb || 0,
-    addedAt: new Date().toISOString()
-  });
-  saveCurriculum();
+    addedAt: new Date().toISOString(),
+    generatedHtml: '',
+    generatedAt: '',
+    generatedSourceLabel: ''
+  };
+  mainDocuments.push(newReferenceEntry);
   renderMainDocumentsList();
+  if (referenceLibraryStoreReady) {
+    saveReferenceDocumentToCms(newReferenceEntry, function(savedEntry) {
+      renderMainDocumentsList();
+      if (savedEntry) saveCurriculum(); // the value must not carry the library
+      tool.notify(savedEntry
+        ? 'Reference document added to its own CMS object ✅'
+        : 'Reference document added (the object could not be stored - it stays in the curriculum value).',
+        savedEntry ? 'success' : 'warning');
+    });
+    return;
+  }
+  saveCurriculum();
   tool.notify('Reference document added ✅', 'success');
 }
 
@@ -10537,11 +12711,28 @@ function deleteMainDocument(documentId) {
     if (mainDocuments[searchIndex].id === documentId) foundDocument = mainDocuments[searchIndex];
   }
   if (!foundDocument) return;
-  sandboxConfirm('Remove "' + foundDocument.name + '" from the reference documents? The file stays in storage; only the link is removed.', function() {
+  // An outside URL is not ours to delete; a CMS storage upload is.
+  var documentIsStoredFile = !isExternalDocumentHost(foundDocument.url);
+  var confirmText = documentIsStoredFile
+    ? 'Remove "' + foundDocument.name + '" from the reference documents? The uploaded file is deleted from CMS storage too. Lesson extracts copied from it are separate files and stay.'
+    : 'Remove "' + foundDocument.name + '" from the reference documents? The outside file stays where it is; only the link is removed.';
+  sandboxConfirm(confirmText, function() {
     mainDocuments = mainDocuments.filter(function(documentEntry) { return documentEntry.id !== documentId; });
-    saveCurriculum();
     renderMainDocumentsList();
-    tool.notify('Reference document removed.', 'info');
+    // The library entry lives in its own CMS object - remove that too.
+    deleteReferenceDocumentFromCms(foundDocument);
+    if (!referenceLibraryStoreReady) saveCurriculum();
+    if (!documentIsStoredFile) {
+      tool.notify('Reference document removed.', 'info');
+      return;
+    }
+    deleteStorageFiles([{ url: foundDocument.url, label: foundDocument.name }], 'reference document removed', function(deleteSummary) {
+      if (deleteSummary.queued) {
+        tool.notify('Reference document removed. Its file could not be deleted and was queued for cleanup.', 'warning');
+        return;
+      }
+      tool.notify('Reference document removed and its file deleted from CMS storage.', 'info');
+    });
   }, 'Yes, Remove');
 }
 
@@ -10558,6 +12749,14 @@ function bindReferenceDocumentEvents() {
         var openId = openButton.getAttribute('data-ref-open');
         for (var openIndex = 0; openIndex < mainDocuments.length; openIndex++) {
           if (mainDocuments[openIndex].id === openId) tool.openUrl(mainDocuments[openIndex].url);
+        }
+        return;
+      }
+      var processButton = event.target && event.target.closest ? event.target.closest('[data-ref-process]') : null;
+      if (processButton) {
+        var processId = processButton.getAttribute('data-ref-process');
+        for (var processIndex = 0; processIndex < mainDocuments.length; processIndex++) {
+          if (mainDocuments[processIndex].id === processId) openStudioDrawerForDoc(mainDocuments[processIndex].url);
         }
         return;
       }
@@ -10599,7 +12798,6 @@ function openLibraryRefDialog() {
   }
   if (el('library-ref-start')) el('library-ref-start').value = 1;
   if (el('library-ref-end')) el('library-ref-end').value = 1;
-  if (el('library-ref-type')) el('library-ref-type').value = 'studyDoc';
   setLibraryRefStatus('Choose the document and the page range to copy into this lesson.');
   overlay.style.display = 'flex';
 }
@@ -10610,17 +12808,117 @@ function closeLibraryRefDialog() {
   libraryRefBusy = false;
 }
 
-/** Add the uploaded page range to the lesson document lists */
-function addLibraryReferenceToLesson(documentType, splitUrl, libraryUrl) {
-  if (documentType === 'presentation') editingPresentationPdfUrls.push(splitUrl);
-  else if (documentType === 'worksheet') editingWorksheetPdfUrls.push(splitUrl);
-  else if (documentType === 'answerKey') editingAnswerKeyPdfUrls.push(splitUrl);
-  else if (documentType === 'htmlDoc') editingHtmlDocUrls.push(splitUrl);
-  else editingStudyDocPdfUrls.push(splitUrl);
-  // Keep the source visible: the Studio shows it as "Original Source".
-  if (documentType === 'studyDoc') editingStudyDocOriginMap[splitUrl] = libraryUrl;
-  renderPdfEditorList();
-  if (editingStudyDocPdfUrls.indexOf(splitUrl) !== -1) renderStudyDocStudio();
+/** One reference extract: { id, libraryId, name, fromPage, toPage, url, sizeKb } */
+function addReferenceDocToLesson(referenceEntry) {
+  editingReferenceDocs.push(referenceEntry);
+  renderReferenceDocsEditorList();
+}
+
+/** URLs of the lesson's reference extracts (used by the AI generators) */
+function referenceDocumentUrls() {
+  var referenceUrls = [];
+  for (var referenceIndex = 0; referenceIndex < editingReferenceDocs.length; referenceIndex++) {
+    var referenceEntry = editingReferenceDocs[referenceIndex];
+    if (referenceEntry && referenceEntry.url) referenceUrls.push(referenceEntry.url);
+  }
+  return referenceUrls;
+}
+
+/** List of the lesson's reference extracts */
+function renderReferenceDocsEditorList() {
+  var listContainer = el('reference-docs-list');
+  var countElement = el('reference-docs-count');
+  if (countElement) countElement.textContent = editingReferenceDocs.length + ' reference document(s)';
+  if (!listContainer) return;
+  if (!editingReferenceDocs.length) {
+    listContainer.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px">No reference extracts yet. Use "➕ Add from Reference Library" to copy the pages this lesson needs.</div>';
+    return;
+  }
+  listContainer.innerHTML = editingReferenceDocs.map(function(referenceEntry, referenceIndex) {
+    var pageLabel = 'pages ' + referenceEntry.fromPage + '-' + referenceEntry.toPage;
+    return '<div class="reference-doc-item">' +
+      '<div class="reference-doc-info">' +
+        '<div class="reference-doc-name">📎 ' + esc(referenceEntry.name || 'Reference extract') + '</div>' +
+        '<div class="reference-doc-meta">' + esc(pageLabel) + (referenceEntry.sizeKb ? ' · ' + Math.max(1, Math.round(referenceEntry.sizeKb)) + ' KB' : '') + '</div>' +
+      '</div>' +
+      '<div class="reference-doc-actions">' +
+        '<button type="button" class="btn btn-sm btn-outline" data-ref-doc-open="' + referenceIndex + '">👁 Open</button>' +
+        '<button type="button" class="btn btn-sm btn-danger" data-ref-doc-delete="' + referenceIndex + '">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/** Open/delete buttons inside the reference list */
+function bindReferenceDocsEditorEvents() {
+  var addButton = el('btn-add-reference-doc');
+  if (addButton) addButton.addEventListener('click', openLibraryRefDialog);
+  var listContainer = el('reference-docs-list');
+  if (listContainer) {
+    listContainer.addEventListener('click', function(event) {
+      var openButton = event.target && event.target.closest ? event.target.closest('[data-ref-doc-open]') : null;
+      if (openButton) {
+        var openEntry = editingReferenceDocs[parseInt(openButton.getAttribute('data-ref-doc-open'), 10)];
+        if (openEntry && openEntry.url) tool.openUrl(openEntry.url);
+        return;
+      }
+      var deleteButton = event.target && event.target.closest ? event.target.closest('[data-ref-doc-delete]') : null;
+      if (deleteButton) {
+        var deleteIndex = parseInt(deleteButton.getAttribute('data-ref-doc-delete'), 10);
+        var deleteEntry = editingReferenceDocs[deleteIndex];
+        if (!deleteEntry) return;
+        sandboxConfirm('Remove the reference extract "' + (deleteEntry.name || '') + '" (pages ' + deleteEntry.fromPage + '-' + deleteEntry.toPage + ') from this lesson?', function() {
+          editingReferenceDocs.splice(deleteIndex, 1);
+          renderReferenceDocsEditorList();
+        }, 'Yes, Remove');
+      }
+    });
+  }
+}
+
+/** Page count reported by the host PDF toolkit (0 when it is unavailable) */
+function countLibraryDocumentPages(pdfBytes, onDone) {
+  if (!pdfToolkitAvailable()) { onDone(0); return; }
+  try {
+    tool.pdf.pageCount({ binary: new Uint8Array(pdfBytes) }, function(countError, totalPages) {
+      if (countError || !totalPages) { onDone(0); return; }
+      onDone(totalPages);
+    });
+  } catch (countCallError) {
+    console.warn('[PDF:TOOLKIT] page count failed:', countCallError);
+    onDone(0);
+  }
+}
+
+/** Extract one page range: host PDF toolkit (pdf-lib) first, local splitter second */
+function splitLibraryPageRange(pdfBytes, firstPage, lastPage, onDone) {
+  function splitLocally() {
+    try {
+      var localSplit = pdfSplitPdfPageRange(pdfBytes, firstPage, lastPage);
+      onDone(null, { bytes: localSplit.bytes, firstPage: localSplit.firstPage, lastPage: localSplit.lastPage });
+    } catch (localSplitError) {
+      onDone((localSplitError && localSplitError.message) || String(localSplitError), null);
+    }
+  }
+  if (!pdfToolkitAvailable()) { splitLocally(); return; }
+  try {
+    tool.pdf.split({ binary: new Uint8Array(pdfBytes) }, [{ first: firstPage, last: lastPage }], function(splitError, splitParts) {
+      var splitPart = (splitParts && splitParts.length) ? splitParts[0] : null;
+      if (splitError || !splitPart || !splitPart.bytes) {
+        console.warn('[PDF:TOOLKIT] split failed (' + splitError + ') - using the local splitter');
+        splitLocally();
+        return;
+      }
+      onDone(null, {
+        bytes: splitPart.bytes,
+        firstPage: splitPart.first || firstPage,
+        lastPage: splitPart.last || lastPage
+      });
+    });
+  } catch (splitCallError) {
+    console.warn('[PDF:TOOLKIT] split threw:', splitCallError);
+    splitLocally();
+  }
 }
 
 function confirmLibraryRefSplit() {
@@ -10634,7 +12932,6 @@ function confirmLibraryRefSplit() {
   if (!selectedDocument) { setLibraryRefStatus('❌ Choose a reference document.', 'error'); return; }
   var startPage = parseInt((el('library-ref-start') || {}).value, 10);
   var endPage = parseInt((el('library-ref-end') || {}).value, 10);
-  var documentType = (el('library-ref-type') || {}).value || 'studyDoc';
   if (!startPage || startPage < 1 || !endPage || endPage < startPage) {
     setLibraryRefStatus('❌ Enter a valid page range (start 1 or more, end after the start).', 'error');
     return;
@@ -10643,27 +12940,7 @@ function confirmLibraryRefSplit() {
     setLibraryRefStatus('❌ Uploading is not enabled for this tool (allowBinaryUpload).', 'error');
     return;
   }
-  libraryRefBusy = true;
-  setLibraryRefStatus('Downloading the reference document…');
-  fetchDocumentBytes(selectedDocument.url, { purpose: 'library-reference' }, function(fetchError, documentBytes, documentMeta) {
-    if (fetchError || !documentBytes || !documentBytes.length) {
-      libraryRefBusy = false;
-      setLibraryRefStatus('❌ ' + describeDocumentDownloadFailure(fetchError, documentMeta, selectedDocument.url), 'error');
-      return;
-    }
-    var splitResult = null;
-    try {
-      splitResult = pdfSplitPdfPageRange(documentBytes, startPage, endPage);
-    } catch (splitError) {
-      libraryRefBusy = false;
-      setLibraryRefStatus('❌ ' + ((splitError && splitError.message) || splitError), 'error');
-      return;
-    }
-    if (splitResult.bytes.length > 5 * 1024 * 1024) {
-      libraryRefBusy = false;
-      setLibraryRefStatus('❌ Pages ' + splitResult.firstPage + '-' + splitResult.lastPage + ' are larger than 5 MB. Choose a smaller range.', 'error');
-      return;
-    }
+  function uploadSplitLibraryPages(splitResult) {
     setLibraryRefStatus('Uploading pages ' + splitResult.firstPage + '-' + splitResult.lastPage + ' to CMS storage…');
     var baseName = String(selectedDocument.name || 'document.pdf').replace(/\.pdf$/i, '');
     var splitFileName = baseName + '-p' + splitResult.firstPage + '-' + splitResult.lastPage + '.pdf';
@@ -10677,16 +12954,55 @@ function confirmLibraryRefSplit() {
         setLibraryRefStatus('❌ Upload failed: ' + (uploadError || 'unknown error'), 'error');
         return;
       }
-      addLibraryReferenceToLesson(documentType, uploadResult.url, selectedDocument.url);
+      addReferenceDocToLesson({
+        id: genId(),
+        libraryId: selectedDocument.id,
+        name: (selectedDocument.name || 'Reference extract') + ' · pages ' + splitResult.firstPage + '-' + splitResult.lastPage,
+        fromPage: splitResult.firstPage,
+        toPage: splitResult.lastPage,
+        url: uploadResult.url,
+        sizeKb: uploadResult.sizeKb || Math.max(1, Math.round(splitResult.bytes.length / 1024)),
+        addedAt: new Date().toISOString()
+      });
       closeLibraryRefDialog();
       tool.notify('Pages ' + splitResult.firstPage + '-' + splitResult.lastPage + ' added to this lesson ✅', 'success');
+    });
+  }
+  libraryRefBusy = true;
+  setLibraryRefStatus('Downloading the reference document…');
+  fetchDocumentBytes(selectedDocument.url, { purpose: 'library-reference' }, function(fetchError, documentBytes, documentMeta) {
+    if (fetchError || !documentBytes || !documentBytes.length) {
+      libraryRefBusy = false;
+      setLibraryRefStatus('❌ ' + describeDocumentDownloadFailure(fetchError, documentMeta, selectedDocument.url), 'error');
+      return;
+    }
+    // The host PDF toolkit knows the real page count and writes the extract
+    // with pdf-lib; the built-in splitter is the fallback for older hosts.
+    countLibraryDocumentPages(documentBytes, function(documentPageCount) {
+      if (documentPageCount && endPage > documentPageCount) {
+        libraryRefBusy = false;
+        setLibraryRefStatus('❌ This document has ' + documentPageCount + ' page(s). Set the end page to ' + documentPageCount + ' or less.', 'error');
+        return;
+      }
+      setLibraryRefStatus('✂️ Copying pages ' + startPage + '-' + (documentPageCount ? Math.min(endPage, documentPageCount) : endPage) + '…');
+      splitLibraryPageRange(documentBytes, startPage, endPage, function(splitError, splitResult) {
+        if (splitError || !splitResult) {
+          libraryRefBusy = false;
+          setLibraryRefStatus('❌ ' + (splitError || 'The page range could not be copied.'), 'error');
+          return;
+        }
+        if (splitResult.bytes.length > 5 * 1024 * 1024) {
+          libraryRefBusy = false;
+          setLibraryRefStatus('❌ Pages ' + splitResult.firstPage + '-' + splitResult.lastPage + ' are larger than 5 MB. Choose a smaller range.', 'error');
+          return;
+        }
+        uploadSplitLibraryPages(splitResult);
+      });
     });
   });
 }
 
 function bindLibraryRefEvents() {
-  var addButton = el('btn-add-library-doc');
-  if (addButton) addButton.addEventListener('click', openLibraryRefDialog);
   var closeButton = el('btn-library-ref-close');
   if (closeButton) closeButton.addEventListener('click', closeLibraryRefDialog);
   var cancelButton = el('btn-library-ref-cancel');
@@ -10698,12 +13014,12 @@ function bindLibraryRefEvents() {
 }
 
 /* ═══════════════════════════════════════════
-   MOVE A LESSON TO ANOTHER SECTION
+   ORDERING: LESSONS INSIDE A SECTION, SECTIONS IN THE COURSE
+   The lesson drawer's Main Info tab owns "Section" + "Order", so moving a
+   lesson and placing it needs no extra buttons in the lesson list.
    ═══════════════════════════════════════════ */
 
-var moveLessonState = { fromSectionId: '', lessonIndex: -1 };
-
-/** Renumber a section's lessons 1..n after a move */
+/** Renumber a section's lessons 1..n after an insertion */
 function renumberSectionLessons(sectionObject) {
   if (!sectionObject || !sectionObject.lessons) return;
   sectionObject.lessons.sort(byOrder);
@@ -10712,79 +13028,238 @@ function renumberSectionLessons(sectionObject) {
   }
 }
 
-/** Move one lesson between sections and persist the curriculum */
-function moveLessonToSection(fromSectionId, lessonIndex, toSectionId) {
-  var fromSection = findSectionById(fromSectionId);
-  var toSection = findSectionById(toSectionId);
-  if (!fromSection || !toSection || fromSectionId === toSectionId) return false;
-  var lessonList = fromSection.section.lessons || [];
-  var movedLesson = lessonList[lessonIndex];
-  if (!movedLesson) return false;
-  lessonList.splice(lessonIndex, 1);
-  if (!toSection.section.lessons) toSection.section.lessons = [];
-  toSection.section.lessons.push(movedLesson);
-  renumberSectionLessons(fromSection.section);
-  renumberSectionLessons(toSection.section);
+/** Insert a lesson at a 1-based position and renumber the section */
+function insertLessonIntoSectionAt(sectionObject, lessonObject, targetOrder) {
+  if (!sectionObject.lessons) sectionObject.lessons = [];
+  var requestedOrder = parseInt(targetOrder, 10);
+  if (!requestedOrder || requestedOrder < 1) requestedOrder = sectionObject.lessons.length + 1;
+  if (requestedOrder > sectionObject.lessons.length + 1) requestedOrder = sectionObject.lessons.length + 1;
+  sectionObject.lessons.splice(requestedOrder - 1, 0, lessonObject);
+  for (var orderIndex = 0; orderIndex < sectionObject.lessons.length; orderIndex++) {
+    sectionObject.lessons[orderIndex].order = orderIndex + 1;
+  }
+  return sectionObject;
+}
+
+/** Sections flattened with their course number (§ 1.2) for the drawer picker */
+function buildSectionChoiceList() {
+  var sectionChoices = [];
+  function walkSections(sectionList, parentNumber) {
+    if (!sectionList) return;
+    var sortedSections = sectionList.slice().sort(byOrder);
+    for (var sectionIndex = 0; sectionIndex < sortedSections.length; sectionIndex++) {
+      var sectionObject = sortedSections[sectionIndex];
+      var sectionNumber = (parentNumber ? parentNumber + '.' : '') + (sectionIndex + 1);
+      sectionChoices.push({
+        id: sectionObject.id,
+        number: sectionNumber,
+        title: sectionObject.title || 'Untitled',
+        lessonCount: (sectionObject.lessons || []).length,
+        depth: parentNumber ? parentNumber.split('.').length : 0
+      });
+      walkSections(sectionObject.children, sectionNumber);
+    }
+  }
+  walkSections(sections, '');
+  return sectionChoices;
+}
+
+/** Refresh the picker label ("§ 1.2 · Name · 3 lessons") and the position total */
+function updateLessonSectionPickerUi() {
+  var hiddenInput = el('edit-lesson-section');
+  var selectedSectionId = hiddenInput ? hiddenInput.value : '';
+  var sectionChoices = buildSectionChoiceList();
+  var selectedChoice = null;
+  for (var choiceIndex = 0; choiceIndex < sectionChoices.length; choiceIndex++) {
+    if (sectionChoices[choiceIndex].id === selectedSectionId) selectedChoice = sectionChoices[choiceIndex];
+  }
+  var numberElement = el('lesson-section-number');
+  var nameElement = el('lesson-section-name');
+  var metaElement = el('lesson-section-meta');
+  if (numberElement) numberElement.textContent = selectedChoice ? ('§ ' + selectedChoice.number) : '§';
+  if (nameElement) nameElement.textContent = selectedChoice ? selectedChoice.title : 'No section';
+  if (metaElement) {
+    metaElement.textContent = selectedChoice
+      ? (selectedChoice.lessonCount + ' lesson(s)')
+      : 'Choose the section of this lesson';
+  }
+  var maxPosition = selectedChoice ? Math.max(1, selectedChoice.lessonCount + 1) : 1;
+  var orderTotal = el('lesson-order-total');
+  if (orderTotal) orderTotal.textContent = 'of ' + maxPosition;
+  var orderInput = el('edit-lesson-order');
+  if (orderInput) {
+    var currentOrder = parseInt(orderInput.value, 10) || 1;
+    if (currentOrder > maxPosition) orderInput.value = maxPosition;
+    if (currentOrder < 1) orderInput.value = 1;
+  }
+  return selectedChoice;
+}
+
+/** Drawer Section picker: hidden value + the custom button (no plain select) */
+function populateLessonSectionSelect(currentSectionId, allowMove) {
+  var hiddenInput = el('edit-lesson-section');
+  if (!hiddenInput) return;
+  if (currentSectionId) hiddenInput.value = currentSectionId;
+  var pickerButton = el('btn-lesson-section-picker');
+  if (pickerButton) {
+    pickerButton.disabled = !allowMove;
+    pickerButton.classList.toggle('is-locked', !allowMove);
+    if (!pickerButton.__pickerBound) {
+      pickerButton.addEventListener('click', function(event) {
+        event.stopPropagation();
+        openLessonSectionPicker(pickerButton);
+      });
+      pickerButton.__pickerBound = true;
+    }
+  }
+  var orderInput = el('edit-lesson-order');
+  if (orderInput && !orderInput.__orderBound) {
+    orderInput.addEventListener('input', function() { updateLessonSectionPickerUi(); });
+    orderInput.addEventListener('change', function() { updateLessonSectionPickerUi(); });
+    orderInput.__orderBound = true;
+  }
+  var earlierButton = el('btn-lesson-order-earlier');
+  if (earlierButton && !earlierButton.__orderBound) {
+    earlierButton.addEventListener('click', function() { stepLessonOrder(-1); });
+    earlierButton.__orderBound = true;
+  }
+  var laterButton = el('btn-lesson-order-later');
+  if (laterButton && !laterButton.__orderBound) {
+    laterButton.addEventListener('click', function() { stepLessonOrder(1); });
+    laterButton.__orderBound = true;
+  }
+  var hintElement = el('edit-lesson-section-hint');
+  if (hintElement) {
+    hintElement.textContent = allowMove
+      ? 'Pick another section to move this lesson when you save; Position sets its place there.'
+      : 'This lesson belongs to the section you are editing.';
+  }
+  updateLessonSectionPickerUi();
+}
+
+/** Section menu opened from the picker: number + name + lesson count */
+function openLessonSectionPicker(anchorButton) {
+  var sectionChoices = buildSectionChoiceList();
+  if (!sectionChoices.length) {
+    tool.notify('Create a section first.', 'warning');
+    return;
+  }
+  var currentSectionId = (el('edit-lesson-section') || {}).value || '';
+  var menuItems = sectionChoices.map(function(choice) {
+    var indent = '';
+    for (var depthIndex = 0; depthIndex < choice.depth; depthIndex++) indent += '   ';
+    return {
+      icon: choice.id === currentSectionId ? '✓' : '§',
+      label: indent + choice.number + '  ' + choice.title + '  ·  ' + choice.lessonCount + ' lesson(s)',
+      handler: function() { chooseLessonSection(choice.id); }
+    };
+  });
+  openActionMenu(anchorButton, menuItems);
+}
+
+/** Apply a section choice; position defaults to the end of that section */
+function chooseLessonSection(sectionId) {
+  var hiddenInput = el('edit-lesson-section');
+  if (!hiddenInput) return;
+  hiddenInput.value = sectionId;
+  var found = findSectionById(sectionId);
+  var orderInput = el('edit-lesson-order');
+  if (found && orderInput) orderInput.value = (found.section.lessons || []).length + 1;
+  updateLessonSectionPickerUi();
+}
+
+/** − / + buttons of the position control */
+function stepLessonOrder(direction) {
+  var orderInput = el('edit-lesson-order');
+  if (!orderInput) return;
+  var selectedChoice = updateLessonSectionPickerUi();
+  var maxPosition = selectedChoice ? Math.max(1, selectedChoice.lessonCount + 1) : 1;
+  var nextOrder = (parseInt(orderInput.value, 10) || 1) + direction;
+  if (nextOrder < 1) nextOrder = 1;
+  if (nextOrder > maxPosition) nextOrder = maxPosition;
+  orderInput.value = nextOrder;
+}
+
+/** The section chosen in the drawer (empty when the picker is locked) */
+function readLessonSectionSelection() {
+  var pickerButton = el('btn-lesson-section-picker');
+  var hiddenInput = el('edit-lesson-section');
+  if (!hiddenInput || (pickerButton && pickerButton.disabled)) return '';
+  return hiddenInput.value || '';
+}
+
+/** Move a section up/down among its siblings (order is what the list uses) */
+function moveSectionInCourse(sectionId, direction) {
+  var found = findSectionById(sectionId);
+  if (!found) return false;
+  var siblingSections = found.parentArr.slice().sort(byOrder);
+  var currentPosition = siblingSections.indexOf(found.section);
+  var newPosition = currentPosition + direction;
+  if (currentPosition < 0 || newPosition < 0 || newPosition >= siblingSections.length) return false;
+  siblingSections.splice(currentPosition, 1);
+  siblingSections.splice(newPosition, 0, found.section);
+  for (var orderIndex = 0; orderIndex < siblingSections.length; orderIndex++) {
+    siblingSections[orderIndex].order = orderIndex + 1;
+  }
   saveCurriculum();
   renderSections();
-  tool.notify('Lesson "' + (movedLesson.title || 'Untitled') + '" moved to "' + (toSection.section.title || 'Untitled') + '" ✅', 'success');
+  tool.notify('Section order updated ✅', 'success');
   return true;
 }
 
-function openMoveLessonDialog(fromSectionId, lessonIndex) {
-  var fromSection = findSectionById(fromSectionId);
-  if (!fromSection) return;
-  var lessonObject = (fromSection.section.lessons || [])[lessonIndex];
-  if (!lessonObject) return;
-  var targetSelect = el('move-lesson-target');
-  if (!targetSelect) return;
-  var optionHtml = '';
-  eachSection(function(sectionObject, parentArray, indexInParent, depth) {
-    if (!sectionObject || sectionObject.id === fromSectionId) return;
-    var indent = '';
-    for (var indentIndex = 0; indentIndex < depth; indentIndex++) indent += '— ';
-    optionHtml += '<option value="' + esc(sectionObject.id) + '">' + indent + esc(sectionObject.title || 'Untitled') +
-      ' (' + ((sectionObject.lessons || []).length) + ' lesson(s))</option>';
-  });
-  if (!optionHtml) {
-    tool.notify('Create another section first, then you can move this lesson.', 'warning');
-    return;
+/** Drag & drop: place one section before/after another section of the same parent */
+function reorderSectionInParent(draggedSectionId, targetSectionId, insertAfter) {
+  if (!draggedSectionId || !targetSectionId || draggedSectionId === targetSectionId) return false;
+  var draggedSection = findSectionById(draggedSectionId);
+  var targetSection = findSectionById(targetSectionId);
+  if (!draggedSection || !targetSection) return false;
+  if (draggedSection.parentArr !== targetSection.parentArr) return false;
+  var siblingSections = draggedSection.parentArr.slice().sort(byOrder);
+  var draggedIndex = siblingSections.indexOf(draggedSection.section);
+  if (draggedIndex < 0) return false;
+  siblingSections.splice(draggedIndex, 1);
+  var targetIndex = siblingSections.indexOf(targetSection.section);
+  if (targetIndex < 0) return false;
+  siblingSections.splice(targetIndex + (insertAfter ? 1 : 0), 0, draggedSection.section);
+  for (var orderIndex = 0; orderIndex < siblingSections.length; orderIndex++) {
+    siblingSections[orderIndex].order = orderIndex + 1;
   }
-  targetSelect.innerHTML = optionHtml;
-  moveLessonState.fromSectionId = fromSectionId;
-  moveLessonState.lessonIndex = lessonIndex;
-  var titleElement = el('move-lesson-name');
-  if (titleElement) titleElement.textContent = lessonObject.title || 'Untitled';
-  var sourceElement = el('move-lesson-source');
-  if (sourceElement) sourceElement.textContent = fromSection.section.title || 'Untitled';
-  var overlay = el('move-lesson-overlay');
-  if (overlay) overlay.style.display = 'flex';
+  saveCurriculum();
+  renderSections();
+  return true;
 }
 
-function closeMoveLessonDialog() {
-  var overlay = el('move-lesson-overlay');
-  if (overlay) overlay.style.display = 'none';
-  moveLessonState = { fromSectionId: '', lessonIndex: -1 };
+/** Number lessons 1..n in their current array order (no sorting) */
+function renumberSectionLessonsInPlace(sectionObject) {
+  if (!sectionObject || !sectionObject.lessons) return;
+  for (var lessonIndex = 0; lessonIndex < sectionObject.lessons.length; lessonIndex++) {
+    sectionObject.lessons[lessonIndex].order = lessonIndex + 1;
+  }
 }
 
-function confirmMoveLesson() {
-  var targetSelect = el('move-lesson-target');
-  var targetSectionId = targetSelect ? targetSelect.value : '';
-  if (!targetSectionId) return;
-  var moved = moveLessonToSection(moveLessonState.fromSectionId, moveLessonState.lessonIndex, targetSectionId);
-  if (moved) closeMoveLessonDialog();
+/** Drag & drop: move a lesson to a slot (same or another section) */
+function moveLessonToSlot(fromSectionId, fromLessonIndex, toSectionId, targetLessonIndex, insertAfter) {
+  var fromSection = findSectionById(fromSectionId);
+  var toSection = findSectionById(toSectionId);
+  if (!fromSection || !toSection) return false;
+  var fromLessons = fromSection.section.lessons || [];
+  var movedLesson = fromLessons[fromLessonIndex];
+  if (!movedLesson) return false;
+  var toLessons = toSection.section.lessons || (toSection.section.lessons = []);
+  var targetLesson = toLessons[targetLessonIndex];
+  if (!targetLesson) return false;
+  if (fromSectionId === toSectionId && movedLesson === targetLesson) return false;
+  fromLessons.splice(fromLessons.indexOf(movedLesson), 1);
+  var targetIndexInTarget = toLessons.indexOf(targetLesson);
+  if (targetIndexInTarget < 0) targetIndexInTarget = toLessons.length;
+  toLessons.splice(targetIndexInTarget + (insertAfter ? 1 : 0), 0, movedLesson);
+  renumberSectionLessonsInPlace(fromSection.section);
+  if (toSectionId !== fromSectionId) renumberSectionLessonsInPlace(toSection.section);
+  saveCurriculum();
+  renderSections();
+  return true;
 }
 
-function bindMoveLessonEvents() {
-  var confirmButton = el('btn-move-lesson-confirm');
-  if (confirmButton) confirmButton.addEventListener('click', confirmMoveLesson);
-  var cancelButton = el('btn-move-lesson-cancel');
-  if (cancelButton) cancelButton.addEventListener('click', closeMoveLessonDialog);
-  var closeButton = el('btn-move-lesson-close');
-  if (closeButton) closeButton.addEventListener('click', closeMoveLessonDialog);
-  var overlay = el('move-lesson-overlay');
-  if (overlay) overlay.addEventListener('click', function(event) { if (event.target === overlay) closeMoveLessonDialog(); });
-}
 
 /* ── Studio generation: AI rewrites the document into raw HTML ── */
 function buildStudioHtmlPrompt(sourceText, imageCount) {
@@ -11143,7 +13618,15 @@ function generateStudyGuideFromStudioDoc(onDone) {
       if (onDone) onDone(readError || 'read-error');
       return;
     }
-    var prompt = buildStudioHtmlPrompt(sourceText, editingStudyDocImages.length);
+    var promptSourceText = sourceText;
+    if (!isReferenceLibraryUrl(sourceUrl)) {
+      var referenceContextText = referenceLibraryGeneratedContext();
+      if (referenceContextText) {
+        promptSourceText += '\n\n--- MATERIAL GENERATED FROM THE REFERENCE LIBRARY ---\n\n' + referenceContextText;
+        console.log('[AI:STUDY] reference library context added: ' + formatFileSize(utf8ByteLength(referenceContextText)));
+      }
+    }
+    var prompt = buildStudioHtmlPrompt(promptSourceText, editingStudyDocImages.length);
     var fullResponse = '';
     var streamedCharacters = 0;
     var streamFinished = false;
@@ -11229,6 +13712,9 @@ function finishStudioHtmlGeneration(rawResponse, onDone) {
   };
   if (studioCurrentDocUrl) editingStudyDocGeneratedHtmlMap[studioCurrentDocUrl] = generatedEntry;
   studioGeneratedHtml = generatedHtml;
+  // A reference document keeps its generated content in its own CMS object -
+  // never in the curriculum record.
+  if (studioCurrentDocUrl) saveGeneratedContentForReferenceDocument(studioCurrentDocUrl, generatedHtml, lastStudioTextSourceLabel);
   renderStudioGeneratedPreview();
   if (genStatusEl) genStatusEl.textContent = '✅ generated · ' + formatCount(generatedHtml.length) + ' chars';
   var imageCount = countHtmlImages(generatedHtml);
@@ -11267,6 +13753,214 @@ function studioSelectedImageIndexes() {
   return indexes;
 }
 
+/** Reflect the current picture selection in the pictures-pane bulk bar */
+function updateStudioSelectionUi() {
+  var selectedIndexes = studioSelectedImageIndexes();
+  var selectedCountElement = el('sd-selected-count');
+  if (selectedCountElement) selectedCountElement.textContent = selectedIndexes.length + ' selected';
+  var deleteButton = el('btn-sd-bulk-delete');
+  if (deleteButton) deleteButton.disabled = !selectedIndexes.length;
+  var generateButton = el('btn-sd-bulk-generate');
+  if (generateButton) {
+    var realSelectedCount = 0;
+    for (var realIndex = 0; realIndex < selectedIndexes.length; realIndex++) {
+      var selectedImage = editingStudyDocImages[selectedIndexes[realIndex]];
+      if (selectedImage && studioImageRole(selectedImage) === 'real') realSelectedCount++;
+    }
+    generateButton.disabled = !realSelectedCount;
+    generateButton.textContent = realSelectedCount ? ('🎨 Generate selected (' + realSelectedCount + ')') : '🎨 Generate selected';
+  }
+}
+
+/** Every CMS storage URL a picture owns (original upload + generated copy) */
+function studioImageStorageUrls(image) {
+  var storageUrls = [];
+  if (!image) return storageUrls;
+  if (typeof image.url === 'string' && /^https?:\/\//i.test(image.url)) storageUrls.push(image.url);
+  if (typeof image.generatedUrl === 'string' && /^https?:\/\//i.test(image.generatedUrl)) storageUrls.push(image.generatedUrl);
+  return storageUrls;
+}
+
+/** Remember a storage URL that must be purged by the server */
+function recordOrphanedStorageFile(fileUrl, fileLabel) {
+  if (!fileUrl) return;
+  for (var existingIndex = 0; existingIndex < orphanedStorageFiles.length; existingIndex++) {
+    if (orphanedStorageFiles[existingIndex].url === fileUrl) return;
+  }
+  orphanedStorageFiles.push({ url: fileUrl, label: fileLabel || '', deletedAt: new Date().toISOString() });
+  while (orphanedStorageFiles.length > 500) orphanedStorageFiles.shift();
+}
+
+/** Every hosted file the given pictures own, with the owning picture name */
+function collectStudioStorageFiles(images) {
+  var storageFileEntries = [];
+  for (var imageIndex = 0; imageIndex < images.length; imageIndex++) {
+    var image = images[imageIndex];
+    var storageUrls = studioImageStorageUrls(image);
+    for (var urlIndex = 0; urlIndex < storageUrls.length; urlIndex++) {
+      storageFileEntries.push({ url: storageUrls[urlIndex], label: (image && image.name) || '' });
+    }
+  }
+  return storageFileEntries;
+}
+
+/** Delete CMS storage files through the platform channel (html-tool-rules v3.9).
+ *  requestDeleteFile is idempotent (an already missing file is SUCCESS with
+ *  alreadyMissing), takes at most 20 urls per call and reports per-url
+ *  failures. Files the host cannot delete are recorded in orphanedStorageFiles
+ *  so the purge list keeps working on hosts without the channel.
+ *  onDone receives { deleted, queued, failed }. */
+function deleteStorageFiles(storageFileEntries, reasonText, onDone) {
+  var hostedEntries = [];
+  for (var entryIndex = 0; entryIndex < storageFileEntries.length; entryIndex++) {
+    var storageFileEntry = storageFileEntries[entryIndex];
+    if (storageFileEntry && typeof storageFileEntry.url === 'string' && /^https?:\/\//i.test(storageFileEntry.url)) {
+      hostedEntries.push(storageFileEntry);
+    }
+  }
+  if (!hostedEntries.length) {
+    if (onDone) onDone({ deleted: 0, queued: 0, failed: 0 });
+    return;
+  }
+  var orphanCountBefore = orphanedStorageFiles.length;
+  var labelByUrl = {};
+  for (var labelIndex = 0; labelIndex < hostedEntries.length; labelIndex++) {
+    labelByUrl[hostedEntries[labelIndex].url] = hostedEntries[labelIndex].label;
+  }
+  function finishDeleting(failedEntries, deletedCount) {
+    for (var failedIndex = 0; failedIndex < failedEntries.length; failedIndex++) {
+      recordOrphanedStorageFile(failedEntries[failedIndex].url, failedEntries[failedIndex].label);
+    }
+    if (orphanedStorageFiles.length !== orphanCountBefore) saveCurriculum();
+    if (onDone) {
+      onDone({
+        deleted: deletedCount,
+        queued: orphanedStorageFiles.length - orphanCountBefore,
+        failed: failedEntries.length
+      });
+    }
+  }
+  if (!toolCapability('deleteFile')) {
+    console.log('[STUDIO:STORAGE] no delete channel on this host - ' + hostedEntries.length + ' file(s) queued for cleanup');
+    finishDeleting(hostedEntries, 0);
+    return;
+  }
+  var pendingEntries = hostedEntries.slice();
+  var deletedTotal = 0;
+  var failedEntries = [];
+  function deleteNextBatch() {
+    if (!pendingEntries.length) { finishDeleting(failedEntries, deletedTotal); return; }
+    var batchEntries = pendingEntries.splice(0, 20); // requestDeleteFile batch cap
+    var batchUrls = [];
+    for (var batchIndex = 0; batchIndex < batchEntries.length; batchIndex++) batchUrls.push(batchEntries[batchIndex].url);
+    var batchOptions = { urls: batchUrls };
+    if (reasonText) batchOptions.reason = reasonText;
+    try {
+      tool.requestDeleteFile(batchOptions, function(deleteError, deleteResult) {
+        if (deleteError) {
+          console.warn('[STUDIO:STORAGE] file delete refused (' + deleteError + ') for ' + batchUrls.length + ' file(s)');
+          for (var rejectedIndex = 0; rejectedIndex < batchEntries.length; rejectedIndex++) failedEntries.push(batchEntries[rejectedIndex]);
+          deleteNextBatch();
+          return;
+        }
+        var reportedFailures = (deleteResult && deleteResult.failed) ? deleteResult.failed : [];
+        for (var failureIndex = 0; failureIndex < reportedFailures.length; failureIndex++) {
+          var failedUrl = reportedFailures[failureIndex] ? reportedFailures[failureIndex].url : '';
+          if (!failedUrl) continue;
+          failedEntries.push({ url: failedUrl, label: labelByUrl[failedUrl] || '' });
+        }
+        var batchDeletedCount = batchEntries.length - reportedFailures.length;
+        deletedTotal += batchDeletedCount;
+        console.log('[STUDIO:STORAGE] deleted ' + batchDeletedCount + ' file(s)' +
+          (reportedFailures.length ? ', ' + reportedFailures.length + ' failed' : '') + ' · build ' + TOOL_BUILD);
+        deleteNextBatch();
+      });
+    } catch (deleteCallError) {
+      console.warn('[STUDIO:STORAGE] the delete channel threw:', deleteCallError);
+      for (var thrownIndex = 0; thrownIndex < batchEntries.length; thrownIndex++) failedEntries.push(batchEntries[thrownIndex]);
+      deleteNextBatch();
+    }
+  }
+  deleteNextBatch();
+}
+
+/** Delete one CMS storage file (used when a generated version is replaced) */
+function deleteStudioStorageFile(fileUrl, fileLabel, onDone) {
+  if (!fileUrl || !/^https?:\/\//i.test(fileUrl)) {
+    if (onDone) onDone(false, 'not-hosted');
+    return;
+  }
+  deleteStorageFiles([{ url: fileUrl, label: fileLabel || '' }], 'generated picture replaced', function(deleteSummary) {
+    if (onDone) onDone(deleteSummary.deleted > 0, deleteSummary.queued > 0 ? 'queued' : null);
+  });
+}
+
+/** Delete every storage file the given pictures own; returns how many files were found */
+function deleteStudioImageStorageFiles(images, onDone) {
+  var storageFileEntries = collectStudioStorageFiles(images);
+  if (!storageFileEntries.length) {
+    if (onDone) onDone({ deleted: 0, queued: 0, failed: 0 });
+    return 0;
+  }
+  deleteStorageFiles(storageFileEntries, 'picture removed from the document', onDone);
+  return storageFileEntries.length;
+}
+
+/** Tell the user what happened to the files behind the deleted pictures */
+function notifyStorageDeletionResult(deleteSummary, removedPictureCount) {
+  var removedText = removedPictureCount + ' picture(s) removed.';
+  if (!deleteSummary || (!deleteSummary.deleted && !deleteSummary.queued)) {
+    tool.notify(removedText, 'info');
+    return;
+  }
+  if (deleteSummary.queued) {
+    tool.notify(removedText + ' ' + deleteSummary.deleted + ' file(s) deleted from storage, ' + deleteSummary.queued +
+      ' queued for cleanup because the host refused them.', 'warning');
+    return;
+  }
+  tool.notify(removedText + ' ' + deleteSummary.deleted + ' file(s) deleted from CMS storage.', 'info');
+}
+
+/** Bulk action: remove every selected picture from the gallery */
+function deleteSelectedStudioImages() {
+  var selectedIndexes = studioSelectedImageIndexes();
+  if (!selectedIndexes.length) { tool.notify('Select at least one picture first.', 'warning'); return; }
+  sandboxConfirm('Remove the ' + selectedIndexes.length + ' selected picture(s) from this document\'s gallery? Their uploaded files are deleted from CMS storage too. Study content already generated keeps its own embedded copy and is not affected.', function() {
+    // Delete from the end so the earlier indexes stay valid.
+    var removedImages = [];
+    var sortedIndexes = selectedIndexes.slice().sort(function(firstIndex, secondIndex) { return secondIndex - firstIndex; });
+    for (var removePosition = 0; removePosition < sortedIndexes.length; removePosition++) {
+      var removedImage = editingStudyDocImages.splice(sortedIndexes[removePosition], 1)[0];
+      if (removedImage) removedImages.push(removedImage);
+    }
+    var deletedFileCount = deleteStudioImageStorageFiles(removedImages, function(deleteSummary) {
+      notifyStorageDeletionResult(deleteSummary, sortedIndexes.length);
+    });
+    studioImagePreviewVersion = {};
+    persistStudioImages();
+    renderStudyDocImageGallery();
+    renderPdfEditorList();
+    autoSaveCurrentLesson();
+    updateStudioSelectionUi();
+    if (!deletedFileCount) notifyStorageDeletionResult({ deleted: 0, queued: 0, failed: 0 }, sortedIndexes.length);
+  }, 'Yes, Remove');
+}
+
+/** Bulk action: create/refresh the generated version of the selected Real pictures */
+function generateSelectedStudioImages() {
+  var selectedIndexes = studioSelectedImageIndexes();
+  var realIndexes = [];
+  for (var index = 0; index < selectedIndexes.length; index++) {
+    var image = editingStudyDocImages[selectedIndexes[index]];
+    if (image && studioImageRole(image) === 'real') realIndexes.push(selectedIndexes[index]);
+  }
+  if (!realIndexes.length) {
+    tool.notify('Select at least one Real picture first (Source pictures are generated one by one with 🎨).', 'warning');
+    return;
+  }
+  openStudioRegenerateDialog(realIndexes);
+}
+
 function openStudioRegenerateDialog(imageIndexes) {
   if (!imageIndexes.length) { tool.notify('Select one or more images first (or use the 🎨 button on an image).', 'warning'); return; }
   var chipsHtml = STUDIO_IMAGE_STYLES.map(function(style) {
@@ -11302,9 +13996,62 @@ function openStudioRegenerateDialog(imageIndexes) {
   });
 }
 
+/** Human-readable reason for a failed picture generation */
+function describePictureGenerationError(errorCode) {
+  if (errorCode === 'not_configured') return 'Picture generation is not enabled for this tool (allowImageRegenerate / allowImageGeneration).';
+  if (errorCode === 'unsupported') return 'The image model of this deployment cannot edit a sample picture.';
+  if (errorCode === 'model_error') return 'The image model refused this request - the picture or the instruction may be blocked.';
+  if (errorCode === 'rate_limited') return 'Too many picture requests right now - try again in a minute.';
+  if (errorCode === 'too_large') return 'The sample picture is too large for the image model.';
+  if (errorCode === 'invalid_input') return 'The sample picture format is not supported (JPEG, PNG or WebP).';
+  if (errorCode === 'blocked_host') return 'The sample picture host is not allowed - upload the picture to CMS storage first.';
+  if (errorCode === 'timeout') return 'The image model did not answer in time.';
+  if (errorCode === 'unauthorized') return 'Your session is not authorized for image generation.';
+  return 'Picture generation failed: ' + (errorCode || 'empty result');
+}
+
+/** Ask the platform for a regenerated version of ONE picture.
+ *  html-tool-rules v3.9: requestRegenerateImage sends the sample WITH the
+ *  prompt to the image-EDIT model and stores the result in CMS storage
+ *  (store: true), so there is no upload and no 5 MB cap. Older hosts fall back
+ *  to requestGenerateImage, which returns one inline data URL.
+ *  onDone(errorCode, { url, dataUrl, bytes, width, height }) */
+function requestRegeneratedStudioPicture(sampleDataUrl, promptText, onDone) {
+  if (toolCapability('imageRegenerate')) {
+    try {
+      tool.requestRegenerateImage({
+        sample: { dataUrl: sampleDataUrl },
+        prompt: promptText,
+        preserve: ['composition', 'subject'],
+        count: 1,
+        quality: 'high',
+        store: true,
+        toolContext: 'lesson-picture'
+      }, function(regenerateError, regenerateResult) {
+        var regeneratedPictures = (regenerateResult && regenerateResult.images) ? regenerateResult.images : [];
+        var regeneratedPicture = regeneratedPictures.length ? regeneratedPictures[0] : null;
+        if (!regenerateError && regeneratedPicture && regeneratedPicture.url) {
+          onDone(null, regeneratedPicture);
+          return;
+        }
+        onDone(regenerateError || 'empty result', null);
+      });
+    } catch (regenerateCallError) {
+      console.warn('[STUDIO:IMAGES] requestRegenerateImage threw:', regenerateCallError);
+      onDone('internal_error', null);
+    }
+    return;
+  }
+  if (typeof tool.requestGenerateImage !== 'function') { onDone('not_configured', null); return; }
+  tool.requestGenerateImage({ prompt: promptText, baseImageDataUrl: sampleDataUrl }, function(generateError, generateResult) {
+    if (generateError || !generateResult || !generateResult.dataUrl) { onDone(generateError || 'empty result', null); return; }
+    onDone(null, { url: '', dataUrl: generateResult.dataUrl, bytes: 0, width: 0, height: 0 });
+  });
+}
+
 function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
-  if (typeof tool.requestGenerateImage !== 'function') {
-    tool.notify('AI image generation is not enabled on this host - requestGenerateImage needs allowImageGeneration: yes in the field settings. The compare-and-select UI is ready and works as soon as the host enables it.', 'warning');
+  if (!toolCapability('imageRegenerate') && typeof tool.requestGenerateImage !== 'function') {
+    tool.notify('Picture generation is not enabled on this host - it needs requestRegenerateImage (allowImageRegenerate) or requestGenerateImage (allowImageGeneration).', 'warning');
     return;
   }
   var queue = imageIndexes.slice();
@@ -11320,24 +14067,28 @@ function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
     var originalImage = editingStudyDocImages[imageIndex];
     if (!originalImage) { processQueueItem(); return; }
     startStudioStatusTicker('🎨 AI is generating picture version ' + (queueTotal - queue.length) + ' of ' + queueTotal + ' (this can take up to 60 seconds)');
-    // Hosted images have no embedded data URL - fetch the bytes for image-to-image.
-    resolveStudioImageDataUrl(originalImage, function(baseImageDataUrl) {
-      var generateOptions = { prompt: finalPrompt };
-      if (baseImageDataUrl) generateOptions.baseImageDataUrl = baseImageDataUrl;
-      tool.requestGenerateImage(generateOptions, function(generateError, generateResult) {
-        if (generateError || !generateResult || !generateResult.dataUrl) {
+    // Hosted images have no embedded data URL - fetch the bytes for the sample.
+    resolveStudioImageDataUrl(originalImage, function(sampleDataUrl) {
+      if (!sampleDataUrl) {
+        setStudioStatus('', '');
+        tool.notify('The bytes of "' + (originalImage.name || 'picture') + '" could not be read, so it cannot be used as a sample.', 'warning');
+        processQueueItem();
+        return;
+      }
+      requestRegeneratedStudioPicture(sampleDataUrl, finalPrompt, function(generateError, generatedPicture) {
+        if (generateError || !generatedPicture || (!generatedPicture.url && !generatedPicture.dataUrl)) {
           setStudioStatus('', '');
-          tool.notify('Picture generation failed: ' + (generateError || 'empty result'), 'error');
+          tool.notify(describePictureGenerationError(generateError), 'error');
           processQueueItem();
           return;
         }
         setStudioStatus('', '');
-        openStudioImageCompare(imageIndex, generateResult.dataUrl, function(decision) {
+        openStudioImageCompare(imageIndex, generatedPicture.url || generatedPicture.dataUrl, function(decision) {
           if (decision === 'again') queue.unshift(imageIndex);
           if (decision === 'use') {
             // The original picture is never overwritten: the AI result becomes its
             // GENERATED version, which is what the generated content uses.
-            applyGeneratedVersionToStudioImage(imageIndex, generateResult.dataUrl, finalPrompt);
+            applyGeneratedVersionToStudioImage(imageIndex, generatedPicture, finalPrompt);
             renderPdfEditorList();
           }
           processQueueItem();
@@ -11348,12 +14099,12 @@ function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
   processQueueItem();
 }
 
-function openStudioImageCompare(imageIndex, newDataUrl, decideCallback) {
+function openStudioImageCompare(imageIndex, newPictureSource, decideCallback) {
   var originalImage = editingStudyDocImages[imageIndex];
   if (!originalImage) { decideCallback('keep'); return; }
   var bodyHtml = '<div class="sd-compare">' +
     '<div class="sd-compare-side"><div class="sd-compare-label">Original (kept)</div><img src="' + imageContentSrc(originalImage) + '" alt="Original"></div>' +
-    '<div class="sd-compare-side"><div class="sd-compare-label">AI generated version</div><img src="' + newDataUrl + '" alt="Generated"></div>' +
+    '<div class="sd-compare-side"><div class="sd-compare-label">AI generated version</div><img src="' + newPictureSource + '" alt="Generated"></div>' +
     '</div>' +
     '<div class="sd-modal-builtin" style="margin-top:10px">Using the generated version keeps the original picture and adds it to the gallery as the Generated version. Generated content will use the generated version.</div>' +
     '<div class="sd-modal-actions"><button type="button" class="btn btn-outline" data-sd-decide="again">🔄 Regenerate Again</button><button type="button" class="btn btn-outline" data-sd-decide="keep">↩ Keep Original Only</button><button type="button" class="btn btn-primary" data-sd-decide="use">✅ Use Generated Version</button></div>';
@@ -11405,15 +14156,73 @@ function checkManagerRole() {
 }
 
 /* ═══════════════════════════════════════════
+   MAIN TABS (Course Structure / Reference Docs / Settings)
+   ═══════════════════════════════════════════ */
+
+/** Switch the main page tab without reloading or losing state */
+function showMainTab(tabName) {
+  var tabButtons = document.querySelectorAll('[data-main-tab]');
+  for (var tabIndex = 0; tabIndex < tabButtons.length; tabIndex++) {
+    var isActiveTab = tabButtons[tabIndex].getAttribute('data-main-tab') === tabName;
+    tabButtons[tabIndex].classList.toggle('main-tab-active', isActiveTab);
+    tabButtons[tabIndex].setAttribute('aria-selected', isActiveTab ? 'true' : 'false');
+  }
+  var tabPanels = document.querySelectorAll('[data-main-panel]');
+  for (var panelIndex = 0; panelIndex < tabPanels.length; panelIndex++) {
+    var isActivePanel = tabPanels[panelIndex].getAttribute('data-main-panel') === tabName;
+    tabPanels[panelIndex].classList.toggle('main-tab-panel-active', isActivePanel);
+  }
+  // The Actions tab measures which lesson-document types are in use, so its
+  // cards only show the actions that are relevant right now.
+  if (tabName === 'actions') refreshLessonDocTypeStatus();
+}
+
+function bindMainTabs() {
+  var tabButtons = document.querySelectorAll('[data-main-tab]');
+  for (var tabIndex = 0; tabIndex < tabButtons.length; tabIndex++) {
+    (function(tabButton) {
+      tabButton.addEventListener('click', function() {
+        showMainTab(tabButton.getAttribute('data-main-tab'));
+      });
+    })(tabButtons[tabIndex]);
+  }
+}
+
+/* ═══════════════════════════════════════════
    EVENT BINDINGS
    ═══════════════════════════════════════════ */
 
 function bindEvents() {
   el('btn-add-section').addEventListener('click', function() { openSectionEditor(null, null); });
-  bindSplitPdfDialogEvents();
+  bindMainTabs();
+  bindActionMenuEvents();
   bindReferenceDocumentEvents();
+  bindReferenceDocsEditorEvents();
   bindLibraryRefEvents();
-  bindMoveLessonEvents();
+  var payloadReportButton = el('btn-payload-report');
+  if (payloadReportButton) payloadReportButton.addEventListener('click', reportCurriculumPayloadFromSettings);
+  var exportLessonsButton = el('btn-export-lessons');
+  if (exportLessonsButton) exportLessonsButton.addEventListener('click', exportAllLessonDocuments);
+  var lessonBackupCloseButton = el('btn-lesson-backup-close');
+  if (lessonBackupCloseButton) lessonBackupCloseButton.addEventListener('click', closeLessonBackupModal);
+  var lessonBackupCloseFooter = el('btn-lesson-backup-close2');
+  if (lessonBackupCloseFooter) lessonBackupCloseFooter.addEventListener('click', closeLessonBackupModal);
+  var lessonBackupCopyButton = el('btn-lesson-backup-copy');
+  if (lessonBackupCopyButton) lessonBackupCopyButton.addEventListener('click', copyLessonBackupJson);
+  var lessonBackupFileButton = el('btn-lesson-backup-file');
+  if (lessonBackupFileButton) lessonBackupFileButton.addEventListener('click', openLessonBackupAsFile);
+  var migrateLessonDocsButton = el('btn-migrate-lesson-docs');
+  if (migrateLessonDocsButton) migrateLessonDocsButton.addEventListener('click', bulkMigrateLessonDocs);
+  var cleanupLegacyDocsButton = el('btn-cleanup-legacy-docs');
+  if (cleanupLegacyDocsButton) cleanupLegacyDocsButton.addEventListener('click', cleanupUnreferencedLegacyLessonDocs);
+  var exportPackageButton = el('btn-export-package');
+  if (exportPackageButton) exportPackageButton.addEventListener('click', exportCurriculumPackage);
+  var importFileInput = el('import-package-file');
+  if (importFileInput) importFileInput.addEventListener('change', function() { readChosenImportPackage(importFileInput); });
+  var importLessonDocsButton = el('btn-import-lesson-docs');
+  if (importLessonDocsButton) importLessonDocsButton.addEventListener('click', importLessonDocumentsFromPackage);
+  var actionsRefreshButton = el('btn-actions-refresh');
+  if (actionsRefreshButton) actionsRefreshButton.addEventListener('click', refreshLessonDocTypeStatus);
   var btnGenAllCurr = el('btn-generate-all-curriculum');
   if (btnGenAllCurr) {
     btnGenAllCurr.addEventListener('click', function() {
@@ -11450,6 +14259,13 @@ function bindEvents() {
   el('btn-pdf-editor-cancel').addEventListener('click', closePdfEditor);
   var btnPdfEditorDelete = el('btn-pdf-editor-delete');
   if (btnPdfEditorDelete) btnPdfEditorDelete.addEventListener('click', deletePdfFromEditor);
+  var btnPdfEditorDownload = el('btn-pdf-editor-download');
+  if (btnPdfEditorDownload) {
+    btnPdfEditorDownload.addEventListener('click', function() {
+      var documentUrl = el('edit-pdf-item-url') ? el('edit-pdf-item-url').value.trim() : '';
+      if (documentUrl) downloadStudyDocFile(documentUrl);
+    });
+  }
   var pdfRoleSwitch = el('edit-pdf-item-role');
   if (pdfRoleSwitch) {
     pdfRoleSwitch.addEventListener('change', function() {
@@ -11553,8 +14369,13 @@ function bindEvents() {
         if (!checkboxes[allIdx].checked) { allChecked = false; break; }
       }
       for (var cbIdx = 0; cbIdx < checkboxes.length; cbIdx++) checkboxes[cbIdx].checked = !allChecked;
+      updateStudioSelectionUi();
     });
   }
+  var btnSdBulkDelete = el('btn-sd-bulk-delete');
+  if (btnSdBulkDelete) btnSdBulkDelete.addEventListener('click', deleteSelectedStudioImages);
+  var btnSdBulkGenerate = el('btn-sd-bulk-generate');
+  if (btnSdBulkGenerate) btnSdBulkGenerate.addEventListener('click', generateSelectedStudioImages);
   var btnSdCompare = el('btn-sd-compare');
   if (btnSdCompare) btnSdCompare.addEventListener('click', toggleStudioCompareMode);
   var btnSdTabDocument = el('btn-sd-tab-document');
@@ -11565,6 +14386,12 @@ function bindEvents() {
   if (btnSdTabPictures) btnSdTabPictures.addEventListener('click', function() { switchStudioTab('pictures'); });
   var btnSdQuality = el('btn-sd-quality');
   if (btnSdQuality) btnSdQuality.addEventListener('click', runStudyContentQualityCheck);
+  var generatedViewButtons = document.querySelectorAll('#sd-gen-view [data-sd-gen-view]');
+  for (var generatedViewIndex = 0; generatedViewIndex < generatedViewButtons.length; generatedViewIndex++) {
+    generatedViewButtons[generatedViewIndex].addEventListener('click', function() {
+      showStudioGeneratedView(this.getAttribute('data-sd-gen-view'));
+    });
+  }
   var btnSdPublish = el('btn-sd-publish');
   if (btnSdPublish) btnSdPublish.addEventListener('click', function() { publishGeneratedToStudyContent('add'); });
   var btnSdReplaceStudy = el('btn-sd-replace-study');
@@ -11582,6 +14409,10 @@ function bindEvents() {
   // Gallery delegation (view large, regenerate, remove)
   var studioImagesGrid = el('sd-images-grid');
   if (studioImagesGrid) {
+    studioImagesGrid.addEventListener('change', function(event) {
+      var changedTarget = event.target;
+      if (changedTarget && changedTarget.getAttribute && changedTarget.getAttribute('data-sd-select') !== null) updateStudioSelectionUi();
+    });
     studioImagesGrid.addEventListener('click', function(event) {
       var target = event.target;
       if (!target || !target.closest) return;
@@ -11599,14 +14430,19 @@ function bindEvents() {
       var removeTarget = target.closest('[data-sd-remove]');
       if (removeTarget) {
         var removeImageIndex = parseInt(removeTarget.getAttribute('data-sd-remove'), 10);
-        var removeImageName = editingStudyDocImages[removeImageIndex] ? editingStudyDocImages[removeImageIndex].name : 'this image';
-        sandboxConfirm('Remove "' + removeImageName + '" from this document\'s image gallery? Study content already generated keeps its own embedded copy and is not affected.', function() {
-          editingStudyDocImages.splice(removeImageIndex, 1);
+        var removeImage = editingStudyDocImages[removeImageIndex];
+        var removeImageName = removeImage ? removeImage.name : 'this image';
+        sandboxConfirm('Remove "' + removeImageName + '" from this document\'s image gallery? Its uploaded file is deleted from CMS storage too. Study content already generated keeps its own embedded copy and is not affected.', function() {
+          var deletedImage = editingStudyDocImages.splice(removeImageIndex, 1)[0];
+          var deletedFileCount = deleteStudioImageStorageFiles(deletedImage ? [deletedImage] : [], function(deleteSummary) {
+            notifyStorageDeletionResult(deleteSummary, 1);
+          });
           studioImagePreviewVersion = {};
           persistStudioImages();
           renderStudyDocImageGallery();
           renderPdfEditorList();
-          tool.notify('Image removed from this document.', 'info');
+          autoSaveCurrentLesson();
+          if (!deletedFileCount) notifyStorageDeletionResult({ deleted: 0, queued: 0, failed: 0 }, 1);
         }, 'Yes, Remove');
       }
     });
@@ -11764,7 +14600,6 @@ function bindEvents() {
 /* ═══════════════════════════════════════════
    ENTRY POINT
    ═══════════════════════════════════════════ */
-
 var curriculumToolStarted = false;
 
 function startCurriculumTool(val, fields) {
@@ -11786,6 +14621,15 @@ function startCurriculumTool(val, fields) {
     { name: 'pdfPreviewScale', label: 'PDF Preview Quality', type: 'text', default: '1.2', severity: 'optional', hint: 'Optional page-render scale for the in-tool preview: 1.0 = normal, 1.2 = default, 1.5 = sharper but slower. The PDF.js worker and library are provided by the CMS - no other PDF setting is needed.' },
     { name: 'pdfPageImageScale', label: 'Picture Capture Scale', type: 'text', default: '2', severity: 'optional', hint: 'Render scale used by "🖼 Get Pictures" when it looks for drawings/illustrations on each page (2 = 200%).' },
     { name: 'pdfPageImageMaxPages', label: 'Picture Capture Page Limit', type: 'text', default: '40', severity: 'optional', hint: 'Maximum number of pages "🖼 Get Pictures" inspects for pictures. Embedded images are read from the PDF structure, so a high limit is fast; only vector pages need a render.' },
+    { name: 'pictureDetection', label: 'Picture Detection', type: 'select', default: 'auto', severity: 'optional', options: [
+      { value: 'auto', label: 'AI vision when enabled, otherwise local' },
+      { value: 'vision', label: 'AI vision only (needs Allow AI Vision)' },
+      { value: 'local', label: 'Local detection only (no AI cost)' }
+    ], hint: 'Who decides where each picture is. AI vision reads the rendered page and decides whether nearby fragments are ONE picture or several; it needs the Allow AI Vision channel and costs model tokens per page. Local detection uses the PDF image objects plus a pixel scan (free, but cannot judge content).' },
+    { name: 'visionPageMaxSide', label: 'AI Vision Page Size (px)', type: 'text', default: '1400', severity: 'optional', hint: 'Longest side of the page image sent to AI vision (600-2048). Smaller is cheaper and faster; larger finds small details.' },
+    { name: 'visionPagesPerCall', label: 'AI Vision Pages per Call', type: 'text', default: '6', severity: 'optional', hint: 'Pages sent in one vision call (1-24). The CMS caps a call at its own page limit and splits it further when needed.' },
+    { name: 'visionMaxRegions', label: 'AI Vision Max Pictures per Page', type: 'text', default: '30', severity: 'optional', hint: 'Upper bound of picture boxes the model may return for one page (5-50).' },
+    { name: 'referenceContextMaxChars', label: 'Reference Context Budget', type: 'text', default: '40000', severity: 'optional', hint: 'How many characters of the content generated from the reference library may be added as context when the REAL study content is generated. The reference documents and their generated content are stored in their own CMS objects, never in the curriculum.' },
     { name: 'ocrLanguage', label: 'OCR Language', type: 'select', default: 'eng', severity: 'optional', options: [
       { value: 'eng', label: 'English (eng)' },
       { value: 'tur', label: 'Turkish (tur)' },

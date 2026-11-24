@@ -1,4 +1,4 @@
-/* css build 2026-11-18-60 */
+/* css build 2026-11-18-73 */
 /* ── Self-Paced Education by Section ── */
 /* ── Reset & Base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1596,25 +1596,44 @@ body.drawer-scroll-locked {
 }
 #sd-studio-drawer .sd-role-chip:hover { background: #e0e7ff; border-color: #a5b4fc; }
 
+/* Single action row: every tab keeps its actions on one line */
 #sd-studio-drawer .sd-app-toolbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px 8px;
   padding: 0 0 10px;
   background: transparent;
   border-bottom: 1px solid #e8edf5;
   flex-shrink: 0;
 }
-/* Per-tab action group: only the active tab's group is visible */
+/* Per-tab action group: only the active tab's group is visible.
+   Groups are content-sized (no width:100%) so Side by Side can show the
+   content group and the document group on the same line. */
 #sd-studio-drawer .sd-tab-actions {
-  display: none; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%;
+  display: none; align-items: center; flex: 0 0 auto; flex-wrap: nowrap; gap: 6px;
 }
 #sd-studio-drawer[data-active-tab="document"] .sd-tab-actions[data-tab-group="document"],
 #sd-studio-drawer[data-active-tab="content"] .sd-tab-actions[data-tab-group="content"],
 #sd-studio-drawer[data-active-tab="pictures"] .sd-tab-actions[data-tab-group="pictures"],
 #sd-studio-drawer[data-active-tab="compare"] .sd-tab-actions[data-tab-group="document"],
 #sd-studio-drawer[data-active-tab="compare"] .sd-tab-actions[data-tab-group="content"] { display: flex; }
+/* The Pictures toolbar keeps its own "select all" at the right end */
+#sd-studio-drawer[data-active-tab="pictures"] .sd-tab-actions[data-tab-group="pictures"] { flex: 1 1 auto; }
+#sd-studio-drawer[data-active-tab="pictures"] .sd-app-toolbar > .sd-toolbar-spacer { display: none; }
+/* Icon-only action: full label lives in the tooltip/aria-label */
+#sd-studio-drawer .sd-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0; flex: 0 0 auto;
+  border: 1px solid #dbe3ef; border-radius: 10px;
+  background: #fff; color: #334155;
+  font: inherit; font-size: 15px; line-height: 1; cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+}
+#sd-studio-drawer .sd-icon-btn:hover { background: #f1f5f9; border-color: #c3cfe2; }
+#sd-studio-drawer .sd-icon-btn:active { transform: translateY(1px); }
+#sd-studio-drawer .sd-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#sd-studio-drawer .sd-icon-btn:focus-visible { outline: 2px solid #a5b4fc; outline-offset: 1px; }
 #sd-studio-drawer .sd-btn {
   display: inline-flex; align-items: center; gap: 6px;
   border: 1px solid #dbe3ef; background: #fff; color: #1e293b;
@@ -1640,6 +1659,20 @@ body.drawer-scroll-locked {
 #sd-studio-drawer .sd-app-toolbar .sd-mini-btn { white-space: nowrap; }
 #sd-studio-drawer .sd-toolbar-divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
 #sd-studio-drawer .sd-toolbar-spacer { flex: 1 1 auto; }
+/* Generated pane: developer-only raw HTML view */
+#sd-studio-drawer .sd-gen-view {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 12px; border-bottom: 1px solid #e8edf5; background: #fbfcfe;
+  flex-shrink: 0;
+}
+#sd-studio-drawer .sd-gen-view .sd-muted { font-size: 11.5px; margin-left: 4px; }
+#sd-studio-drawer .sd-view-active { background: #eef2ff; border-color: #a5b4fc; color: #3730a3; }
+#sd-studio-drawer .sd-gen-html {
+  flex: 1; min-height: 0; margin: 0; padding: 14px 16px;
+  overflow: auto; background: #0f172a; color: #e2e8f0;
+  font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 11.5px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+}
 
 #sd-studio-drawer .sd-status {
   margin: 10px 0 0; padding: 9px 12px; border-radius: 10px;
@@ -1831,6 +1864,10 @@ body.drawer-scroll-locked {
 
 #sd-studio-drawer .sd-language { display: inline-flex; align-items: center; gap: 6px; }
 #sd-studio-drawer .sd-language-label { font-size: 11px; font-weight: 700; color: #64748b; white-space: nowrap; }
+/* The OCR picker is shared by the Generated and Side by Side tabs */
+#sd-studio-drawer .sd-ocr-control { display: none; }
+#sd-studio-drawer[data-active-tab="content"] .sd-ocr-control,
+#sd-studio-drawer[data-active-tab="compare"] .sd-ocr-control { display: inline-flex; }
 #sd-studio-drawer .sd-select {
   border: 1px solid #dbe3ef;
   border-radius: 9px;
@@ -1842,12 +1879,13 @@ body.drawer-scroll-locked {
   padding: 8px 10px;
   max-width: 190px;
 }
+#sd-studio-drawer .sd-ocr-control .sd-select { max-width: 168px; padding: 6px 8px; font-size: 11.5px; }
 #sd-studio-drawer .sd-select:focus { outline: 2px solid #e0e7ff; border-color: #a5b4fc; }
 /* ═══════════════════════════════════════════
    REFERENCE DOCUMENTS CARD (main page)
    ═══════════════════════════════════════════ */
 .ref-docs-card {
-  margin: 0 20px 14px;
+  margin: 16px 20px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -1891,3 +1929,446 @@ body.drawer-scroll-locked {
 }
 .ref-doc-meta { font-size: 10px; color: var(--text-muted); }
 .ref-doc-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* Section ordering buttons in the section header */
+.section-order-buttons { display: inline-flex; gap: 2px; margin-right: 4px; }
+.section-order-buttons .btn { padding: 3px 8px; line-height: 1; }
+
+/* ═══════════════════════════════════════════
+   MAIN TABS + SETTINGS + ACTION MENU
+   ═══════════════════════════════════════════ */
+.main-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 20px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-wrap: wrap;
+}
+.main-tab {
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+}
+.main-tab:hover { background: #f1f5f9; color: var(--text); }
+.main-tab-active { background: #fff; border-color: var(--border); color: var(--text); }
+.main-tab-panel { display: none; }
+.main-tab-panel-active { display: block; }
+
+.settings-card {
+  margin: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.settings-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+}
+.settings-header strong { font-size: 13px; }
+.settings-body { padding: 16px; }
+.settings-select { max-width: 320px; }
+
+.action-menu {
+  position: fixed;
+  z-index: 500;
+  min-width: 210px;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+}
+.action-menu[hidden] { display: none; }
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  text-align: left;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.action-menu-item:hover { background: #f1f5f9; }
+.action-menu-item.is-danger { color: #b91c1c; }
+.action-menu-item.is-danger:hover { background: #fef2f2; }
+.action-menu-icon { width: 16px; text-align: center; }
+.action-menu-separator { height: 1px; background: var(--border); margin: 4px 6px; }
+.section-menu-button { padding: 3px 10px; font-weight: 700; }
+
+/* ═══════════════════════════════════════════
+   SECTION NUMBERING + DRAG & DROP + LESSON REFERENCES
+   ═══════════════════════════════════════════ */
+.section-number {
+  font-size: 11px;
+  font-weight: 800;
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.drag-handle {
+  cursor: grab;
+  color: #94a3b8;
+  font-size: 14px;
+  padding: 0 4px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.drag-handle:active { cursor: grabbing; }
+.drag-handle.is-dragging { opacity: 0.4; }
+.drag-cell { white-space: nowrap; }
+.manager-section-card.drop-before { box-shadow: inset 0 3px 0 #6366f1; }
+.manager-section-card.drop-after { box-shadow: inset 0 -3px 0 #6366f1; }
+.manager-lessons-table tr.drop-before td { box-shadow: inset 0 3px 0 #6366f1; }
+.manager-lessons-table tr.drop-after td { box-shadow: inset 0 -3px 0 #6366f1; }
+
+.reference-doc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.reference-doc-info { min-width: 0; }
+.reference-doc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reference-doc-meta { font-size: 11px; color: var(--text-muted); }
+.reference-doc-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════
+   LESSON DRAWER: SECTION PICKER + POSITION CONTROL
+   ═══════════════════════════════════════════ */
+.lesson-section-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.lesson-section-picker:hover:not(:disabled) {
+  border-color: #a5b4fc;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
+}
+.lesson-section-picker:disabled { opacity: 0.65; cursor: not-allowed; }
+.lesson-section-number {
+  font-size: 11px;
+  font-weight: 800;
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.lesson-section-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.lesson-section-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lesson-section-meta { font-size: 11px; color: var(--text-muted); }
+.lesson-section-caret { color: var(--text-muted); font-size: 12px; }
+
+.lesson-order-control { display: flex; align-items: center; gap: 6px; }
+.lesson-order-button {
+  width: 34px;
+  height: 38px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+}
+.lesson-order-button:hover { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
+.lesson-order-input { width: 64px; text-align: center; }
+.lesson-order-total { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+/* ═══════════════════════════════════════════
+   VIDEO PREVIEW (lesson editor)
+   ═══════════════════════════════════════════ */
+.yt-preview { margin-top: 10px; }
+.yt-preview-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #0f172a;
+  display: block;
+}
+.yt-preview-empty {
+  padding: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: #f8fafc;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.yt-list-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 24px;
+  margin-right: 8px;
+  border-radius: 5px;
+  background: #fee2e2;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════
+   PICTURES PANE: bounded height + inner scroll
+   (the grid must never stretch the pane, otherwise the
+   bottom of each card - including delete - is clipped)
+   ═══════════════════════════════════════════ */
+#sd-studio-drawer .sd-preview-columns { grid-template-rows: minmax(0, 1fr); }
+#sd-studio-drawer .sd-pane { min-height: 0; }
+#sd-studio-drawer #sd-pane-pictures { min-height: 0; overflow: hidden; }
+#sd-studio-drawer #sd-pane-pictures .sd-images-grid {
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  align-content: start;
+}
+#sd-studio-drawer .sd-image-card { max-height: 280px; }
+
+/* ═══════════════════════════════════════════
+   PICTURES PANE - FINAL LAYOUT FIX + BULK BAR
+   The grid is the ONLY scroll container: the pane is a flex column,
+   the head/legend keep their height and the grid takes the rest.
+   Cards are never clipped, so the role/delete row is always reachable.
+   NOTE: no `display` here - the active-tab rule above
+   (.sd-preview-columns[data-tab="pictures"] #sd-pane-pictures) shows it and
+   `.sd-pane { display: none }` hides it on every other tab.
+   ═══════════════════════════════════════════ */
+#sd-studio-drawer #sd-pane-pictures {
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+#sd-studio-drawer #sd-pane-pictures .sd-panel-head,
+#sd-studio-drawer #sd-pane-pictures .sd-images-legend {
+  flex: 0 0 auto;
+}
+#sd-studio-drawer #sd-pane-pictures .sd-images-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 0;                 /* flex-grow fills the remaining space */
+  max-height: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  grid-auto-rows: max-content;
+  align-items: start;
+  align-content: start;
+}
+#sd-studio-drawer .sd-image-card {
+  align-self: start;
+  overflow: visible;         /* never clip the action row */
+  max-height: none;
+}
+#sd-studio-drawer .sd-mini-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+#sd-studio-drawer .sd-mini-btn-danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+#sd-studio-drawer .sd-mini-btn-danger:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+/* ═══════════════════════════════════════════
+   ACTIONS TAB (bulk maintenance + full backups)
+   Card layout that only shows what is relevant right now.
+   ═══════════════════════════════════════════ */
+.actions-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 20px 0;
+}
+.actions-head strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.actions-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.actions-health {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+.actions-health.is-ok { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+.actions-health.is-warn { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.actions-health.is-busy { border-color: #c7d2fe; background: #eef2ff; color: #3730a3; }
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  padding: 14px 20px 24px;
+  align-items: start;
+}
+.action-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+/* `hidden` must win over display:flex (a card is removed when it is not relevant) */
+.action-card[hidden] { display: none !important; }
+.action-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef2f7;
+  background: linear-gradient(135deg, #f8fafc, #ffffff);
+}
+.action-card-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 17px;
+  background: #eef2ff;
+}
+.action-card-migrate .action-card-icon { background: #eef2ff; }
+.action-card-cleanup .action-card-icon { background: #fff7ed; }
+.action-card-export .action-card-icon { background: #ecfdf5; }
+.action-card-import .action-card-icon { background: #eff6ff; }
+.action-card-head h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+.action-card-head p {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.action-count {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.action-card-cleanup .action-count { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
+.action-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+}
+.action-card-body .btn { align-self: flex-start; }
+.action-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.55;
+  cursor: pointer;
+}
+.action-option input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+.action-option em { font-style: normal; color: #94a3b8; }
+.action-note {
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.55;
+}
+.action-status {
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.action-status:empty { display: none; }
+.action-file {
+  padding: 7px 10px;
+  font-size: 12px;
+  max-width: 100%;
+}
+
+@media (max-width: 600px) {
+  .actions-head { margin: 12px 14px 0; flex-wrap: wrap; }
+  .actions-health { margin: 10px 14px 0; }
+  .actions-grid { grid-template-columns: 1fr; padding: 12px 14px 20px; }
+}

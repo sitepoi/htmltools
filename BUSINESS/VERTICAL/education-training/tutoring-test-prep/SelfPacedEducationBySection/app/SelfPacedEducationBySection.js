@@ -1,4 +1,4 @@
-/* js build 2026-10-18-1 */
+/* js build 2026-11-23-1 */
 /* ── Self-Paced Education by Section (STUDENT TOOL) ──
    Reads curriculum from a Curriculum Builder CMS object.
    Progress stored locally per student via tool.setValue().
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-10-18-1';
+var TOOL_BUILD = '2026-11-23-1';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 
 /* ── Helpers ── */
@@ -38,53 +38,84 @@ var currentStudentTab = 'course';   // student view sub-tab: 'course' | 'dashboa
 
 /* ── Constants ── */
 var SECTIONS_TYPE = 'curriculum-builder-uniconbaseapps';
-var LESSON_DOC_TYPE = 'curriculum-lessons-uniconbase';
+var LESSON_DOC_TYPE = 'curriculum-lessons-uniconbaseapps';
+/* Legacy store name used by Curriculum Builder builds before 2026-11-18-74.
+   Read-only fallback: lesson docs created before the rename still load. */
+var LESSON_DOC_TYPE_LEGACY = 'curriculum-lessons-uniconbase';
 var MIN_PASS_SCORE = 60;
 var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
 var STUDY_WAIT_MIN = 30;
 
 /* ── Lesson Doc Loader (Phase 2: read heavy content from separate docs) ── */
-/** Fetch a lesson's heavy content from its curriculum-lessons-uniconbase doc.
- *  Falls back to the main curriculum doc data if lesson doc is unavailable. */
+/** Apply one lesson doc's stored fields over a copy of the lesson object */
+function applyLessonDocFields(lesson, docData) {
+  var enriched = JSON.parse(JSON.stringify(lesson));
+  if (docData.content !== undefined) enriched.content = docData.content;
+  if (docData.htmlCode !== undefined) enriched.htmlCode = docData.htmlCode;
+  if (docData.studyHtmlData !== undefined) enriched.studyHtmlData = docData.studyHtmlData;
+  if (docData.presentationHtml !== undefined) enriched.presentationHtml = docData.presentationHtml;
+  if (docData.flashcards !== undefined) enriched.flashcards = docData.flashcards;
+  if (docData.quiz !== undefined) enriched.quiz = docData.quiz;
+  if (docData.sourceUrls !== undefined) enriched.sourceUrls = docData.sourceUrls;
+  if (docData.hiddenSections !== undefined) enriched.hiddenSections = docData.hiddenSections;
+  return enriched;
+}
+
+/** Read one lesson doc of ONE object type.
+ *  callback(errorText, lessonDocData) - lessonDocData is the parsed lessonJson. */
+function readLessonDocOfType(lessonDocType, objectId, callback) {
+  tool.requestObjects('get', {
+    mainObjectType: lessonDocType,
+    objectId: objectId
+  }, function(err, result) {
+    if (err || !result || !result.object) {
+      if (callback) callback(err || 'not-found', null);
+      return;
+    }
+    var docData = {};
+    try {
+      var pd = result.object.productData;
+      var raw = pd && pd.data_categoriesBased && pd.data_categoriesBased.lessonJson;
+      docData = raw ? (JSON.parse(raw) || {}) : {};
+    } catch (parseError) {
+      if (callback) callback(parseError, null);
+      return;
+    }
+    if (callback) callback(null, docData);
+  });
+}
+
+/** Fetch a lesson's heavy content from its lesson doc.
+ *  The current type is tried first, then the legacy type, then the main
+ *  curriculum doc data (backward compatible). */
 function loadLessonDocData(lesson, callback) {
   if (!lesson || !lesson.lessonDocId || typeof tool.requestObjects !== 'function') {
     // No lesson doc — use data already in the lesson object (backward compat)
     if (callback) callback(null, lesson);
     return;
   }
-  tool.requestObjects('get', {
-    mainObjectType: LESSON_DOC_TYPE,
-    objectId: lesson.lessonDocId
-  }, function(err, result) {
-    if (err || !result || !result.object) {
-      // Fall back to main doc data, but make the misconfiguration visible.
-      if (!window._lessonDocLoadWarned) {
-        window._lessonDocLoadWarned = true;
-        tool.notify('⚠️ Could not load the lesson document. Add { "mainObjectType": "curriculum-lessons-uniconbase", "role": "editor", "scope": "shared", "targetCollection": "private" } to this field\'s allowedObjectTypes.', 'warning');
-      }
-      if (callback) callback(null, lesson);
+  readLessonDocOfType(LESSON_DOC_TYPE, lesson.lessonDocId, function(readError, docData) {
+    if (!readError) {
+      if (callback) callback(null, applyLessonDocFields(lesson, docData));
       return;
     }
-    try {
-      var pd = result.object.productData;
-      var raw = pd && pd.data_categoriesBased && pd.data_categoriesBased.lessonJson;
-      var docData = raw ? JSON.parse(raw) : {};
-      // Merge: lesson doc data wins, main doc as fallback
-      var enriched = JSON.parse(JSON.stringify(lesson));
-      if (docData.content !== undefined) enriched.content = docData.content;
-      if (docData.htmlCode !== undefined) enriched.htmlCode = docData.htmlCode;
-      if (docData.studyHtmlData !== undefined) enriched.studyHtmlData = docData.studyHtmlData;
-      if (docData.presentationHtml !== undefined) enriched.presentationHtml = docData.presentationHtml;
-      if (docData.flashcards !== undefined) enriched.flashcards = docData.flashcards;
-      if (docData.quiz !== undefined) enriched.quiz = docData.quiz;
-      if (docData.sourceUrls !== undefined) enriched.sourceUrls = docData.sourceUrls;
-      if (docData.hiddenSections !== undefined) enriched.hiddenSections = docData.hiddenSections;
-      if (callback) callback(null, enriched);
-    } catch(e) {
-      // Parse error — fall back to main doc
+    readLessonDocOfType(LESSON_DOC_TYPE_LEGACY, lesson.lessonDocId, function(legacyError, legacyDocData) {
+      if (!legacyError) {
+        if (!window._lessonDocLegacyWarned) {
+          window._lessonDocLegacyWarned = true;
+          console.log('[LESSON:DOC] lesson doc ' + lesson.lessonDocId + ' is still stored as ' + LESSON_DOC_TYPE_LEGACY + ' - read through the legacy fallback');
+        }
+        if (callback) callback(null, applyLessonDocFields(lesson, legacyDocData));
+        return;
+      }
+      // Neither type worked: keep the lesson usable and explain the config.
+      if (!window._lessonDocLoadWarned) {
+        window._lessonDocLoadWarned = true;
+        tool.notify('⚠️ Could not load the lesson document. Add { "mainObjectType": "' + LESSON_DOC_TYPE + '", "role": "editor", "scope": "shared", "targetCollection": "private" } (and the legacy type "' + LESSON_DOC_TYPE_LEGACY + '" with role "viewer") to this field\'s allowedObjectTypes.', 'warning');
+      }
       if (callback) callback(null, lesson);
-    }
+    });
   });
 }
 
@@ -100,13 +131,12 @@ function probeLessonDocAccess() {
     if (all[i].lesson && all[i].lesson.lessonDocId) { probeId = all[i].lesson.lessonDocId; break; }
   }
   if (!probeId) return;
-  tool.requestObjects('get', {
-    mainObjectType: LESSON_DOC_TYPE,
-    objectId: probeId
-  }, function(err, result) {
-    if (err || !result || !result.object) {
-      tool.notify('⚠️ Lesson documents are not readable from this tool. Add { "mainObjectType": "curriculum-lessons-uniconbase", "role": "editor", "scope": "shared", "targetCollection": "private" } to this field\'s allowedObjectTypes.', 'warning');
-    }
+  readLessonDocOfType(LESSON_DOC_TYPE, probeId, function(readError) {
+    if (!readError) return;
+    readLessonDocOfType(LESSON_DOC_TYPE_LEGACY, probeId, function(legacyError) {
+      if (!legacyError) return;
+      tool.notify('⚠️ Lesson documents are not readable from this tool. Add { "mainObjectType": "' + LESSON_DOC_TYPE + '", "role": "editor", "scope": "shared", "targetCollection": "private" } (and the legacy type "' + LESSON_DOC_TYPE_LEGACY + '" with role "viewer") to this field\'s allowedObjectTypes.', 'warning');
+    });
   });
 }
 

@@ -1,4 +1,4 @@
-<!-- html build 2026-11-18-60 -->
+<!-- html build 2026-11-18-76 -->
 <div id="app">
   <!-- HEADER -->
   <header class="app-header">
@@ -12,115 +12,194 @@
     </div>
   </header>
 
-  <!-- TOOLBAR -->
-  <div class="toolbar">
-    <button class="btn btn-primary" id="btn-add-section">+ Add New Section</button>
-    <button class="btn btn-primary" id="btn-generate-all-curriculum" title="Serially generate missing AI content (Study Content, Slides, Flashcards, Quiz) for every lesson in the curriculum — already-filled content is skipped">🚀 Generate All AI Content</button>
-    <button class="btn btn-outline" id="btn-split-pdf" title="Copy a page range of a PDF into a new PDF file - text and images stay original, nothing is scanned">✂️ Split PDF</button>
-    <span class="toolbar-language">
-      <label class="toolbar-language-label" for="curriculum-language-select">🌐 Curriculum language</label>
-      <select class="toolbar-select" id="curriculum-language-select" title="Saved with the curriculum. Used as the default OCR language for every document; the Process drawer can override it per document.">
-        <option value="">Not set (tool default)</option>
-        <option value="eng">English (eng)</option>
-        <option value="tur">Turkish (tur)</option>
-        <option value="deu">German (deu)</option>
-        <option value="fra">French (fra)</option>
-        <option value="spa">Spanish (spa)</option>
-        <option value="ita">Italian (ita)</option>
-        <option value="por">Portuguese (por)</option>
-        <option value="nld">Dutch (nld)</option>
-        <option value="rus">Russian (rus)</option>
-        <option value="ara">Arabic (ara)</option>
-        <option value="fas">Persian (fas)</option>
-        <option value="urd">Urdu (urd)</option>
-        <option value="hin">Hindi (hin)</option>
-        <option value="chi_sim">Chinese Simplified (chi_sim)</option>
-        <option value="chi_tra">Chinese Traditional (chi_tra)</option>
-        <option value="jpn">Japanese (jpn)</option>
-        <option value="kor">Korean (kor)</option>
-        <option value="ell">Greek (ell)</option>
-        <option value="heb">Hebrew (heb)</option>
-        <option value="pol">Polish (pol)</option>
-        <option value="ukr">Ukrainian (ukr)</option>
-        <option value="ron">Romanian (ron)</option>
-        <option value="bul">Bulgarian (bul)</option>
-        <option value="srp">Serbian (srp)</option>
-        <option value="aze">Azerbaijani (aze)</option>
-        <option value="kaz">Kazakh (kaz)</option>
-      </select>
-    </span>
-    <span class="toolbar-info" id="manager-section-count"></span>
-  </div>
+  <!-- MAIN TABS -->
+  <nav class="main-tabs" role="tablist">
+    <button type="button" class="main-tab main-tab-active" data-main-tab="structure" role="tab" aria-selected="true">📚 Course Structure</button>
+    <button type="button" class="main-tab" data-main-tab="reference" role="tab" aria-selected="false">📄 Reference Docs</button>
+    <button type="button" class="main-tab" data-main-tab="settings" role="tab" aria-selected="false">⚙️ Settings</button>
+    <button type="button" class="main-tab" data-main-tab="actions" role="tab" aria-selected="false">🛠️ Actions</button>
+  </nav>
 
-  <!-- REFERENCE DOCUMENTS -->
-  <div class="ref-docs-card" id="ref-docs-card">
-    <div class="ref-docs-header">
-      <div class="ref-docs-heading">
-        <strong>📚 Reference documents</strong>
-        <span class="form-hint">PDFs for building this curriculum. They are stored in CMS storage; any lesson can use a page range of one of them.</span>
+  <!-- TAB: COURSE STRUCTURE -->
+  <section class="main-tab-panel main-tab-panel-active" data-main-panel="structure">
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btn-add-section">+ Add New Section</button>
+      <button class="btn btn-primary" id="btn-generate-all-curriculum" title="Serially generate missing AI content (Study Content, Slides, Flashcards, Quiz) for every lesson in the curriculum — already-filled content is skipped">🚀 Generate All AI Content</button>
+      <span class="toolbar-info" id="manager-section-count"></span>
+    </div>
+
+    <div class="manager-sections" id="sections-list"></div>
+    <div class="empty-state" id="sections-empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No sections created yet</div>
+      <div class="empty-desc">Click "+ Add New Section" to create your first curriculum section.</div>
+    </div>
+  </section>
+
+  <!-- TAB: REFERENCE DOCS -->
+  <section class="main-tab-panel" data-main-panel="reference">
+    <div class="ref-docs-card" id="ref-docs-card">
+      <div class="ref-docs-header">
+        <div class="ref-docs-heading">
+          <strong>📚 Reference documents</strong>
+          <span class="form-hint">PDFs for building this curriculum. They are stored in CMS storage; any lesson can use a page range of one of them.</span>
+        </div>
+        <div class="ref-docs-head-actions">
+          <span class="ref-docs-count" id="ref-docs-count">0 document(s)</span>
+          <button type="button" class="btn btn-sm btn-outline" id="btn-add-ref-url">+ Add URL</button>
+          <button type="button" class="btn btn-sm btn-primary" id="btn-upload-ref-doc">⬆ Upload PDF</button>
+        </div>
       </div>
-      <div class="ref-docs-head-actions">
-        <span class="ref-docs-count" id="ref-docs-count">0 document(s)</span>
-        <button type="button" class="btn btn-sm btn-outline" id="btn-add-ref-url">+ Add URL</button>
-        <button type="button" class="btn btn-sm btn-primary" id="btn-upload-ref-doc">⬆ Upload PDF</button>
+      <div class="ref-docs-list" id="ref-docs-list">
+        <div class="ref-docs-empty">No reference documents yet. Upload a PDF once, then any lesson can use a page range of it.</div>
       </div>
     </div>
-    <div class="ref-docs-list" id="ref-docs-list">
-      <div class="ref-docs-empty">No reference documents yet. Upload a PDF once, then any lesson can use a page range of it.</div>
-    </div>
-  </div>
+  </section>
 
-  <!-- SECTIONS LIST -->
-  <div class="manager-sections" id="sections-list"></div>
-  <div class="empty-state" id="sections-empty">
-    <div class="empty-icon">📋</div>
-    <div class="empty-title">No sections created yet</div>
-    <div class="empty-desc">Click "+ Add New Section" to create your first curriculum section.</div>
-  </div>
-
-  <!-- SPLIT PDF MODAL -->
-  <div class="modal-overlay" id="split-pdf-overlay" style="display:none">
-    <div class="modal" style="max-width:520px">
-      <div class="modal-header">
-        <h3>✂️ Split PDF - copy a page range</h3>
-        <button class="btn-icon modal-close" id="btn-split-pdf-close">✕</button>
+  <!-- TAB: SETTINGS -->
+  <section class="main-tab-panel" data-main-panel="settings">
+    <div class="settings-card">
+      <div class="settings-header">
+        <strong>⚙️ Settings</strong>
+        <span class="form-hint">Defaults saved with this curriculum.</span>
       </div>
-      <div class="modal-body">
+      <div class="settings-body">
         <div class="form-group">
-          <label class="form-label" for="split-pdf-source">Source</label>
-          <select class="form-input" id="split-pdf-source">
-            <option value="current">Current document</option>
-            <option value="local">Choose a PDF file…</option>
+          <label class="form-label" for="curriculum-language-select">🌐 Curriculum language</label>
+          <select class="form-input settings-select" id="curriculum-language-select" title="Saved with the curriculum. Used as the default OCR language for every document; the Process drawer can override it per document.">
+            <option value="">Not set (tool default)</option>
+            <option value="eng">English (eng)</option>
+            <option value="tur">Turkish (tur)</option>
+            <option value="deu">German (deu)</option>
+            <option value="fra">French (fra)</option>
+            <option value="spa">Spanish (spa)</option>
+            <option value="ita">Italian (ita)</option>
+            <option value="por">Portuguese (por)</option>
+            <option value="nld">Dutch (nld)</option>
+            <option value="rus">Russian (rus)</option>
+            <option value="ara">Arabic (ara)</option>
+            <option value="fas">Persian (fas)</option>
+            <option value="urd">Urdu (urd)</option>
+            <option value="hin">Hindi (hin)</option>
+            <option value="chi_sim">Chinese Simplified (chi_sim)</option>
+            <option value="chi_tra">Chinese Traditional (chi_tra)</option>
+            <option value="jpn">Japanese (jpn)</option>
+            <option value="kor">Korean (kor)</option>
+            <option value="ell">Greek (ell)</option>
+            <option value="heb">Hebrew (heb)</option>
+            <option value="pol">Polish (pol)</option>
+            <option value="ukr">Ukrainian (ukr)</option>
+            <option value="ron">Romanian (ron)</option>
+            <option value="bul">Bulgarian (bul)</option>
+            <option value="srp">Serbian (srp)</option>
+            <option value="aze">Azerbaijani (aze)</option>
+            <option value="kaz">Kazakh (kaz)</option>
           </select>
-          <input type="file" id="split-pdf-file" accept="application/pdf,.pdf" style="display:none">
-          <span class="form-hint" id="split-pdf-source-info">Open a document in the Study Content drawer, or choose a local PDF file.</span>
+          <span class="form-hint">The default language for reading documents and for AI generation. A single document can still override it in the Process drawer.</span>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="split-pdf-start-page">Start page</label>
-            <input class="form-input" type="number" id="split-pdf-start-page" min="1" value="1">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="split-pdf-end-page">End page</label>
-            <input class="form-input" type="number" id="split-pdf-end-page" min="1" value="1">
-          </div>
+        <div class="form-group">
+          <label class="form-label">📏 CMS payload size</label>
+          <button type="button" class="btn btn-outline" id="btn-payload-report" title="Print exactly what this field saves to the CMS: total size, the biggest lesson fields and any inline image data">📏 Report what is saved to the CMS</button>
+          <span class="form-hint">The curriculum must stay well below the 1 MB Firestore document limit, so every picture has to be a CMS storage URL. The report lists the total size, the biggest lesson fields and every inline image, in the browser console.</span>
+          <span class="form-hint" id="payload-report-result"></span>
         </div>
-        <div class="form-hint">The selected pages are copied exactly as they are: text stays text, vectors stay vectors and images keep their original quality. Nothing is re-rendered or scanned.</div>
-        <div class="form-hint" id="split-pdf-status" style="margin-top:10px"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" id="btn-split-pdf-cancel">Close</button>
-        <button class="btn btn-outline" id="btn-split-pdf-upload" title="Upload the split PDF to CMS storage and open it (max 5 MB)">☁ Upload to CMS</button>
-        <button class="btn btn-primary" id="btn-split-pdf-download">⬇ Download split PDF</button>
+        <div class="form-group">
+          <label class="form-label">💾 Lesson documents backup</label>
+          <button type="button" class="btn btn-outline" id="btn-export-lessons" title="Read every lesson document (current and old object type) and show the complete JSON so you can save it">💾 Export all lesson documents</button>
+          <span class="form-hint">Reads every lesson document this field can access and shows the complete JSON, so you can keep a copy before changing object types in the database. The count and the size appear here; Copy JSON puts the whole backup on the clipboard.</span>
+          <span class="form-hint" id="export-lessons-result"></span>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <!-- TAB: ACTIONS (bulk maintenance, package export/import) -->
+  <section class="main-tab-panel" data-main-panel="actions">
+    <div class="actions-head">
+      <div>
+        <strong>🛠️ Curriculum actions</strong>
+        <span class="actions-sub">Bulk maintenance and full backups. Every action reports exactly what it changed.</span>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm" id="btn-actions-refresh" title="Re-check how many lesson documents still use the old object type">🔄 Refresh status</button>
+    </div>
+    <div class="actions-health" id="lesson-doc-health">Checking lesson documents…</div>
+
+    <div class="actions-grid">
+      <section class="action-card action-card-migrate" id="action-card-migrate" hidden>
+        <header class="action-card-head">
+          <span class="action-card-icon">🔁</span>
+          <div>
+            <h4>Lesson document object type</h4>
+            <p>Copy lesson documents that still use the old object type into the current one.</p>
+          </div>
+          <span class="action-count" id="migrate-count-badge">0 old</span>
+        </header>
+        <div class="action-card-body">
+          <button type="button" class="btn btn-primary btn-sm" id="btn-migrate-lesson-docs" title="Copy every lesson document that still uses the old object type into the current type, verify each copy, repoint the lessons and save once at the end">🔁 Migrate all lesson documents</button>
+          <label class="action-option">
+            <input type="checkbox" id="chk-delete-legacy-docs">
+            <span>Also delete the old copies after the curriculum record is confirmed saved <em>(leave this off to keep them as a backup)</em></span>
+          </label>
+          <div class="action-note">Each document is created in the current type and read back. A lesson is repointed only when the new copy is verified; re-running never creates duplicates.</div>
+          <div class="action-status" id="migrate-lesson-docs-status"></div>
+        </div>
+      </section>
+
+      <section class="action-card action-card-cleanup" id="action-card-cleanup" hidden>
+        <header class="action-card-head">
+          <span class="action-card-icon">🧹</span>
+          <div>
+            <h4>Old documents nobody references</h4>
+            <p>Delete old-type documents that no lesson points to any more.</p>
+          </div>
+          <span class="action-count" id="cleanup-count-badge">0 unused</span>
+        </header>
+        <div class="action-card-body">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-cleanup-legacy-docs" title="Delete old-type lesson documents that no lesson points to any more. Referenced documents are never touched.">🧹 Delete unreferenced old documents</button>
+          <div class="action-note">Run this after the migration is verified. Referenced old documents are never touched, and a confirmation shows the exact count first.</div>
+          <div class="action-status" id="cleanup-legacy-docs-status"></div>
+        </div>
+      </section>
+
+      <section class="action-card action-card-export" id="action-card-export">
+        <header class="action-card-head">
+          <span class="action-card-icon">📦</span>
+          <div>
+            <h4>Export package</h4>
+            <p>Curriculum value + every lesson document in one JSON file.</p>
+          </div>
+        </header>
+        <div class="action-card-body">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-export-package" title="Export the curriculum value together with every lesson document as one JSON package">📦 Export curriculum + lesson documents</button>
+          <div class="action-note">Use Copy JSON to keep it, or Download JSON when the field allows downloads.</div>
+          <div class="action-status" id="export-package-result"></div>
+        </div>
+      </section>
+
+      <section class="action-card action-card-import" id="action-card-import">
+        <header class="action-card-head">
+          <span class="action-card-icon">📥</span>
+          <div>
+            <h4>Import lesson documents</h4>
+            <p>Safe restore: never removes lessons and never deletes documents.</p>
+          </div>
+        </header>
+        <div class="action-card-body">
+          <input type="file" class="form-input action-file" id="import-package-file" accept="application/json,.json">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-import-lesson-docs" disabled title="Applies the selected package to the lessons that exist in this curriculum. It never removes lessons and never deletes documents.">📥 Restore lesson documents</button>
+          <div class="action-note">A matching lesson (same lesson id) gets a NEW document and is repointed. Existing documents are never deleted or overwritten; documents without a matching lesson are skipped.</div>
+          <div class="action-status" id="import-package-preview"></div>
+          <div class="action-status" id="import-package-status"></div>
+        </div>
+      </section>
+    </div>
+  </section>
 
   <!-- LIBRARY PAGE-RANGE MODAL -->
   <div class="modal-overlay" id="library-ref-overlay" style="display:none">
     <div class="modal" style="max-width:560px">
       <div class="modal-header">
-        <h3>📚 Use pages from a reference document</h3>
+        <h3>� Add pages from a reference document</h3>
         <button class="btn-icon modal-close" id="btn-library-ref-close">✕</button>
       </div>
       <div class="modal-body">
@@ -138,16 +217,6 @@
             <input class="form-input" type="number" id="library-ref-end" min="1" value="1">
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="library-ref-type">Add as</label>
-          <select class="form-input" id="library-ref-type">
-            <option value="studyDoc">📖 Study Document</option>
-            <option value="presentation">📊 Presentation Slides</option>
-            <option value="worksheet">📝 Worksheet</option>
-            <option value="answerKey">🔑 Answer Key</option>
-            <option value="htmlDoc">🌐 Web Document</option>
-          </select>
-        </div>
         <div class="form-hint">Only the selected pages are copied (text and images stay original) and the split file is uploaded once to CMS storage.</div>
         <div class="form-hint" id="library-ref-status" style="margin-top:10px"></div>
       </div>
@@ -158,25 +227,21 @@
     </div>
   </div>
 
-  <!-- MOVE LESSON MODAL -->
-  <div class="modal-overlay" id="move-lesson-overlay" style="display:none">
-    <div class="modal" style="max-width:460px">
+  <!-- LESSON DOCUMENTS BACKUP MODAL -->
+  <div class="modal-overlay" id="lesson-backup-overlay" style="display:none">
+    <div class="modal" style="max-width:860px">
       <div class="modal-header">
-        <h3>↔ Move lesson</h3>
-        <button class="btn-icon modal-close" id="btn-move-lesson-close">✕</button>
+        <h3>💾 Lesson documents backup</h3>
+        <button class="btn-icon modal-close" id="btn-lesson-backup-close">✕</button>
       </div>
       <div class="modal-body">
-        <p class="form-hint" style="margin-bottom:12px">
-          Lesson <strong id="move-lesson-name"></strong> currently in <strong id="move-lesson-source"></strong>.
-        </p>
-        <div class="form-group">
-          <label class="form-label" for="move-lesson-target">Move to section</label>
-          <select class="form-input" id="move-lesson-target"></select>
-        </div>
+        <div class="form-hint" id="lesson-backup-summary"></div>
+        <textarea class="form-input" id="lesson-backup-json" readonly style="width:100%;height:300px;margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:11px;white-space:pre"></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" id="btn-move-lesson-cancel">Cancel</button>
-        <button class="btn btn-primary" id="btn-move-lesson-confirm">Move lesson</button>
+        <button class="btn btn-outline" id="btn-lesson-backup-file">⬇️ Download JSON</button>
+        <button class="btn btn-outline" id="btn-lesson-backup-copy">📋 Copy JSON</button>
+        <button class="btn btn-primary" id="btn-lesson-backup-close2">Close</button>
       </div>
     </div>
   </div>
@@ -224,6 +289,7 @@
       <button class="lesson-tab active" data-lesson-tab="info">📋 Main Info</button>
       <button class="lesson-tab" data-lesson-tab="videos">🎬 Videos</button>
       <button class="lesson-tab" data-lesson-tab="documents">📄 Documents</button>
+      <button class="lesson-tab" data-lesson-tab="references">📎 References</button>
       <button class="lesson-tab" data-lesson-tab="studyHtml">🌐 Study Content</button>
       <button class="lesson-tab" data-lesson-tab="presentation">🎞️ Presentation</button>
       <button class="lesson-tab" data-lesson-tab="flashcards">🃏 Flashcards</button>
@@ -235,11 +301,29 @@
         <input class="form-input main-info-title" id="edit-lesson-title" placeholder="e.g. Introduction to Fractions">
         <span class="form-hint">The lesson name students see in the course flow.</span>
       </div>
+      <div class="form-group">
+        <label class="form-label">Section</label>
+        <button type="button" class="lesson-section-picker" id="btn-lesson-section-picker" title="Choose the section this lesson belongs to">
+          <span class="lesson-section-number" id="lesson-section-number">§</span>
+          <span class="lesson-section-text">
+            <span class="lesson-section-name" id="lesson-section-name">No section</span>
+            <span class="lesson-section-meta" id="lesson-section-meta">0 lessons</span>
+          </span>
+          <span class="lesson-section-caret" aria-hidden="true">▾</span>
+        </button>
+        <input type="hidden" id="edit-lesson-section" value="">
+        <span class="form-hint" id="edit-lesson-section-hint">Pick another section to move this lesson when you save.</span>
+      </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Order #</label>
-          <input class="form-input" type="number" id="edit-lesson-order" placeholder="1" min="1">
-          <span class="form-hint">Position of this lesson inside its section.</span>
+          <label class="form-label">Position in section</label>
+          <div class="lesson-order-control">
+            <button type="button" class="lesson-order-button" id="btn-lesson-order-earlier" title="Move one position earlier">−</button>
+            <input class="form-input lesson-order-input" type="number" id="edit-lesson-order" placeholder="1" min="1" value="1">
+            <button type="button" class="lesson-order-button" id="btn-lesson-order-later" title="Move one position later">+</button>
+            <span class="lesson-order-total" id="lesson-order-total">of 1</span>
+          </div>
+          <span class="form-hint">Where this lesson sits inside its section.</span>
         </div>
         <div class="form-group">
           <label class="form-label">Estimated Minutes</label>
@@ -276,13 +360,22 @@
         <div class="managed-list-header">
           <span id="pdf-count-all">0 document(s)</span>
           <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            <button type="button" class="btn btn-sm btn-outline" id="btn-add-library-doc" title="Use a page range of a reference document as a document of this lesson">📚 From Library</button>
             <button type="button" class="btn btn-sm btn-outline" id="btn-upload-document" title="Upload a file to CMS storage and add it as a document">⬆ Upload</button>
             <button type="button" class="btn btn-sm btn-primary" id="btn-add-document" title="Add a document by URL">+ Add URL</button>
           </div>
         </div>
         <div class="managed-list-items" id="pdf-list-all"></div>
         <span class="form-hint">✅ Ready = your processed file, shown to students and used for AI content generation. 🧭 Sample = an outside sample used only to create your own Ready document. ✏️ edits a document (role, visibility, URL, delete). ⚙️ processes a document - extracts and uploads its images, then generates the study content. Deleting never affects content already generated.</span>
+      </div>
+    </div>
+    <div class="lesson-tab-panel" data-lesson-panel="references">
+      <div class="form-group">
+        <div class="managed-list-header">
+          <span id="reference-docs-count">0 reference document(s)</span>
+          <button type="button" class="btn btn-sm btn-primary" id="btn-add-reference-doc" title="Copy a page range of a main reference document into this lesson">➕ Add from Reference Library</button>
+        </div>
+        <div class="managed-list-items" id="reference-docs-list"></div>
+        <span class="form-hint">Reference extracts used only for AI generation: pick a main reference document and the pages this lesson needs. The selected pages are copied unchanged into a smaller PDF and added to this lesson.</span>
       </div>
     </div>
     <div class="lesson-tab-panel" data-lesson-panel="studyHtml">
@@ -394,12 +487,13 @@
             <span class="sd-tab-actions" data-tab-group="content">
               <button type="button" class="sd-btn sd-btn-primary" id="btn-sd-generate" title="Capture the document's pictures when the gallery is empty, then let AI write the Generated version (nothing student-facing changes)">✨ Generate New Content</button>
               <span class="sd-toolbar-divider" aria-hidden="true"></span>
-              <button type="button" class="sd-mini-btn" id="btn-sd-quality" title="Compare the source and the generated content: coverage, similarity (copyright risk) and unverifiable additions">🔍 Quality Check</button>
-              <button type="button" class="sd-mini-btn" id="btn-sd-publish" title="Append this generated content to the lesson Study Content (student-facing)">⬆ Add to Study Content</button>
-              <button type="button" class="sd-mini-btn" id="btn-sd-replace-study" title="Replace the lesson Study Content with this generated content">⇄ Replace</button>
-              <span class="sd-toolbar-spacer" aria-hidden="true"></span>
-              <span class="sd-language">
-                <label class="sd-language-label" for="sd-ocr-language">🔍 OCR language</label>
+              <button type="button" class="sd-icon-btn" id="btn-sd-quality" title="Quality Check: compare the source and the generated content - coverage, similarity (copyright risk) and unverifiable additions" aria-label="Quality Check">🔍</button>
+              <button type="button" class="sd-icon-btn" id="btn-sd-publish" title="Add to Study Content: append this generated content to the lesson Study Content (student-facing)" aria-label="Add to Study Content">⬆</button>
+              <button type="button" class="sd-icon-btn" id="btn-sd-replace-study" title="Replace: overwrite the lesson Study Content with this generated content" aria-label="Replace Study Content">⇄</button>
+            </span>
+            <span class="sd-toolbar-spacer" aria-hidden="true"></span>
+            <span class="sd-language sd-ocr-control">
+              <label class="sd-language-label" for="sd-ocr-language" title="Language used to read this document's scanned pages and pictures">🌐 OCR</label>
                 <select class="sd-select" id="sd-ocr-language" title="Language used to read this document's scanned pages and pictures. Overrides the curriculum language for this document.">
                   <option value="">Curriculum language</option>
                   <option value="eng">English (eng)</option>
@@ -428,14 +522,13 @@
                   <option value="srp">Serbian (srp)</option>
                   <option value="aze">Azerbaijani (aze)</option>
                   <option value="kaz">Kazakh (kaz)</option>
-                </select>
-              </span>
+              </select>
             </span>
             <span class="sd-tab-actions" data-tab-group="document">
-              <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-open-doc" title="Open the source document in a new tab">👁 Open Document</button>
-              <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-open-original" title="Open the original outside source" hidden>↗ Original Source</button>
-              <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-store-copy" title="Download this outside document, store a copy in CMS storage (Firebase) and use the stored copy from now on" hidden>☁ Import to CMS</button>
-              <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-download-pdf" title="Download the source document to your device (any size, any type)">⬇ Download File</button>
+              <button type="button" class="sd-icon-btn" id="btn-sd-open-doc" title="Open Document: open the source in a new tab" aria-label="Open Document">👁</button>
+              <button type="button" class="sd-icon-btn" id="btn-sd-open-original" title="Original Source: open the original outside document" aria-label="Original Source" hidden>↗</button>
+              <button type="button" class="sd-icon-btn" id="btn-sd-store-copy" title="Import to CMS: download this outside document, store a copy in CMS storage (Firebase) and use the stored copy from now on" aria-label="Import to CMS" hidden>☁</button>
+              <button type="button" class="sd-icon-btn" id="btn-sd-download-pdf" title="Download File: save the source document to your device (any size, any type)" aria-label="Download File">⬇</button>
             </span>
             <span class="sd-tab-actions" data-tab-group="pictures">
               <button type="button" class="sd-btn" id="btn-sd-extract" title="Capture the pictures in this document: embedded images keep their original quality, drawings and illustrations are cropped from the page">🧩 Get Pictures</button>
@@ -456,11 +549,22 @@
           </section>
           <section class="sd-pane" id="sd-pane-content">
             <div class="sd-pane-head"><span>Generated from this source</span><span class="sd-muted" id="sd-gen-status"></span></div>
+            <div class="sd-gen-view" id="sd-gen-view" style="display:none">
+              <button type="button" class="sd-mini-btn sd-view-active" data-sd-gen-view="preview">👁 Preview</button>
+              <button type="button" class="sd-mini-btn" data-sd-gen-view="html">📝 HTML</button>
+              <span class="sd-muted" id="sd-gen-html-stats"></span>
+            </div>
             <iframe class="study-html-preview-iframe sd-preview" id="sd-gen-preview" sandbox="allow-scripts allow-same-origin allow-modals" title="Generated Study Content Preview"></iframe>
+            <pre class="sd-gen-html" id="sd-gen-html-view" style="display:none" title="Raw generated HTML - developer only"></pre>
           </section>
           <section class="sd-pane" id="sd-pane-pictures">
             <div class="sd-panel-head">
               <span class="sd-panel-title">🖼 Pictures <span class="sd-muted" id="sd-images-count">0 image(s)</span></span>
+              <span class="sd-panel-tools">
+                <span class="sd-muted" id="sd-selected-count">0 selected</span>
+                <button type="button" class="sd-mini-btn" id="btn-sd-bulk-generate" title="Create (or refresh) the generated version of the selected Real pictures" disabled>🎨 Generate selected</button>
+                <button type="button" class="sd-mini-btn sd-mini-btn-danger" id="btn-sd-bulk-delete" title="Delete the selected pictures from this document" disabled>🗑 Delete selected</button>
+              </span>
             </div>
             <div class="sd-images-legend">
               <span class="sd-image-role is-real">● Real</span> used directly in generated content
@@ -480,7 +584,9 @@
     <div class="form-group">
       <label class="form-label">YouTube URL <span class="required">*</span></label>
       <input class="form-input" id="edit-youtube-item-url" placeholder="https://www.youtube.com/watch?v=...">
+      <span class="form-hint">Paste a watch, share or shorts link. The preview below confirms the right video.</span>
     </div>
+    <div class="yt-preview" id="youtube-preview"></div>
     <div class="managed-editor-actions">
       <button type="button" class="btn btn-outline" id="btn-youtube-editor-cancel">Cancel</button>
       <button type="button" class="btn btn-primary" id="btn-youtube-editor-save">Save Video</button>
@@ -536,6 +642,7 @@
     </div>
     <div class="managed-editor-actions">
       <button type="button" class="btn btn-danger" id="btn-pdf-editor-delete" style="display:none">🗑 Delete</button>
+      <button type="button" class="btn btn-outline" id="btn-pdf-editor-download" style="display:none">⬇ Download</button>
       <button type="button" class="btn btn-outline" id="btn-pdf-editor-cancel">Cancel</button>
       <button type="button" class="btn btn-primary" id="btn-pdf-editor-save">Save Document</button>
     </div>
@@ -588,6 +695,8 @@
       </div>
     </div>
   </div>
+
+  <div class="action-menu" id="action-menu" hidden></div>
 
   <div class="loading-overlay" id="loading-overlay" style="display:none">
     <div class="spinner"></div>

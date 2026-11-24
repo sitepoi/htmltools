@@ -1,45 +1,13 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-html-tool-rules.txt — VERSION 3.5 — 2026-11-20
+html-tool-rules.txt — VERSION 3.9 — 2026-11-23
 
-CHANGELOG v3.5: Field Group Designer config overhaul (D-HTMLT-24 / D-FREG-07).
-(a) The legacy server fetch relay settings (allowFetchRelay / allowedFetchHosts
-/ allowAllFetchHosts) are GONE from the designer UI — no tool used them. The
-relay itself is unchanged at runtime: requestFetch still works, platform
-*.uniconhub.com hosts stay allowed, and stored values in existing field
-groups are still honoured. (b) allowedObjectTypes is now a PICKER that reads
-every registered CMS object type and writes the same JSON list — nobody
-types type ids. (c) toolParams is now a key/value editor instead of a raw
-JSON box, and it flags keys that a channel switch already controls.
-Previous version: v3.4 (2026-11-20 - OCR language catalog + dropdown).
-Earlier: v3.3 (2026-11-20 - client-side OCR via hosted Tesseract.js).
-Earlier: v3.1 (2026-11-20 - large-file binary download, PDF.js rendering).
-Earlier: v3.0 (2026-11-18 - merged platform global requirements).
-Earlier: v2 (2026-10-10 - formalized getFields/setField contracts).
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TYPE 1 OF 4 - HTML TOOL (object-level interface in the CMS data part)
-
-Placement: OBJECT level. This tool becomes an interface added to the data
-part of a CMS object. Objects live under folders, and folders live under an
-application.
-
-This file is the COMMON SDK CONTRACT for the CMS html-tool system. The other
-CMS tool types inherit it and add their own conventions:
-  - html-report-tool-rules.txt   (TYPE 2 - application-level or folder-level
-                                   reporting tool)
-  - html-listing-tool-rules.txt  (TYPE 3 - application-level listing tool
-                                   that lists folders and objects, customized
-                                   for the application's needs)
-
-TYPE 4 - WEBPAGE-HTML-TOOL - is for a DIFFERENT application: the publishing
-public-web side of the CMS (generated web contents). It has its own platform
-(window.gw, no window.tool). Its rules are OWNED BY THE CONSUMER APPS TEAM -
-they prepare and update them in their own project, and we copy them into
-this repo as public-website-page-rules.txt whenever they update it. Do NOT
-prepare or edit webpage-html-tool rules in this project.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+CHANGELOG v3.9: AI diagnostics (D-HTMLT-28). Every new AI channel now writes
+structured console lines with a shared callId, on the tenant host AND on the
+CMS server: [AI:VISION], [AI:IMAGE-GEN], [AI:IMAGE-EDIT] and [AI:GATEWAY].
+They log codes, requestIds, sizes, timings and cost — never prompts, images
+or keys. See AI DIAGNOSTICS.
+Previous version: v3.8 (2026-11-23 - AI gateway contract: vision, generate,
+edit).
 You are building a custom interactive tool for the Uniconhub CMS html-tool system.
 The tool runs inside a sandboxed iframe. Your output must be exactly THREE separate
 code blocks, labeled and ordered as shown:
@@ -175,47 +143,17 @@ images, fonts, API data — MUST come through the PARENT CMS. Two channels:
      widgets, etc. The tool passes the cmsObjectType; the CMS host
      resolves it and returns the ObjectRecords into the iframe.
 
-  2. RAW EXTERNAL RESOURCES — tool.requestFetch(url, opts, cb), the
-     platform fetch relay. REQUIRED PLATFORM CAPABILITY (contract for the
-     platform team):
-       tool.requestFetch(url, {
-         method: 'GET',        // GET only in v1
-         timeoutMs: 15000,
-         maxBytes: 512000      // server-enforced response cap; default 500 KB.
-                               // Raise per deployment via the env var
-                               // HTML_TOOL_FETCH_RELAY_MAX_BYTES (ceiling 10 MB)
-                               // and pass the higher value here.
-       }, function(err, res) {
-         // text:     { status, contentType, text }
-         // binary:   { status, contentType, dataUrl }
-       })
-     The PARENT CMS performs the HTTP request server-side and returns the
-     content into the iframe. The tool NEVER dials the outside URL itself.
+  2. BINARY / FILE DATA — tool.requestFileBinary(...) for complete files,
+     tool.requestObjects(...) for CMS object records, tool.requestStoreObjects
+     for Application Store collections. All of them run through the parent
+     CMS; the tool never dials an outside URL itself.
 
-  DEFAULT ALLOWLIST — platform-owned hosts need NO per-tenant configuration:
-     - https://applicationstore.uniconhub.com        (application store)
-     - https://applicationstore.uniconhub.com/api/*  (Public API v2)
-     - any other *.uniconhub.com platform-owned host
-     These hosts MUST be reachable through the relay for EVERY tenant,
-     automatically — installing a tool must never require per-tenant
-     allowlisting, keys or allowedObjectTypes entries for the platform's
-     own store. Non-platform (third-party) hosts remain admin-gated via
-     the field setting Allowed Fetch Hosts (settings.allowedFetchHosts).
-
-  PER-FIELD ALLOWLIST BYPASS: a field with
-  settings.allowAllFetchHosts = 'yes' may fetch ANY public https host —
-  https-only, GET-only, private/reserved-IP blocking, 15 s timeout and the
-  response byte cap (default 500 KB, env-configurable) still apply. Default
-  remains: platform hosts + the admin's Allowed Fetch Hosts list.
-  NOTE (D-HTMLT-24): these two relay keys are no longer exposed in the Field
-  Group Designer because no shipped tool uses them. They keep working exactly
-  as described for every field that already stores them, and an advanced user
-  can still set them in the field JSON tab. New tools should use
-  requestFileBinary / requestObjects instead of the relay.
+  (The legacy server fetch relay tool.requestFetch still answers so old tools
+   do not break, but it is DEPRECATED: do not use it in new tools.)
 
   LARGE-FILE BINARY DOWNLOAD — tool.requestFileBinary(options, callback)
   For COMPLETE files (40 MB PDFs, DOCX, ZIP, images) use the streaming
-  channel instead of requestFetch — no 500 KB cap, no truncation:
+  channel for complete files — no truncation, no relay:
 
     tool.requestFileBinary({
       url: 'https://firebasestorage.googleapis.com/...',
@@ -950,36 +888,169 @@ Example (live typewriter in a thinking bubble):
 ── AI Image Generation ───────────────────────────────
 tool.requestGenerateImage(options, callback)
 
-Asks the platform AI image-generation model for an image and returns it as
-a JPEG data URL.  Probes with typeof tool.requestGenerateImage === 'function'
-and handles the error case — older hosts simply lack the method.
+Asks the platform image model for one image. EXACT gateway contract:
+the request carries only the prompt (and an optional reference image) —
+model, size, quality and output format are gateway configuration, and any
+other field is rejected. Probes with
+typeof tool.requestGenerateImage === 'function'.
 
   • options — { prompt, baseImageDataUrl? }
-      prompt           — string, text description of the desired image (required)
-      baseImageDataUrl — string (optional), a data URL of an existing image to
-                         use as the visual reference
+      prompt           — string, 1..4000 chars (required)
+      baseImageDataUrl — optional PNG/JPEG/WEBP/GIF/BMP data URL, <= 5 MB
   • callback — function(error, result)
-      error  — null on success, or string describing what went wrong
-      result — { dataUrl } — a JPEG data URL of the generated image
+      error  — null on success, or a tool code (see AI ERROR CODES)
+      result — { dataUrl } — ONE JPEG data URL
 
 Requires: allowImageGeneration: 'yes' in the field settings.
-Timeout: 60 seconds.
+Timeout: the gateway hard-stops at 90 s; the host aborts at 100 s.
 
 Example:
   tool.requestGenerateImage({ prompt: 'A cozy mountain cabin at dusk' },
-    (err, result) => {
+    function (err, result) {
       if (err) { tool.notify('Generation failed: ' + err, 'error'); return }
       document.getElementById('preview').src = result.dataUrl
     })
 
-  // With a reference image (image-to-image):
-  tool.requestGenerateImage({
-    prompt: 'Turn this sketch into a polished illustration',
-    baseImageDataUrl: canvas.toDataURL('image/png')
-  }, (err, result) => {
-    if (err) return
-    tool.notify('Done', 'success')
-  })
+── AI Vision (document pages → region boxes) ─────────
+tool.requestAIVision(options, callback)
+
+WHEN TO USE — you have a rendered page (or any picture) and need to know
+WHERE the meaningful content is: photos, illustrations, drawings, diagrams,
+charts, tables, logos, stamps, signatures and text blocks. The model returns
+NORMALISED BOXES, never images. You already hold the pixels, so YOU crop them
+locally at full resolution.
+
+  • options — {
+      instruction?: string,        // 1..2000 chars; a sensible default is used
+      pages: [{ dataUrl, pageIndex?, isScan?, hasTextLayer? }],  // 1..24
+      options?: {
+        detail?: 'low' | 'high',        // default high (low = 512 px triage)
+        returnRegions?: boolean,        // default true
+        returnText?: boolean,           // default false (pure OCR mode when
+                                        //   false + returnText true)
+        maxRegions?: number,            // 1..50 per page, default 30
+        minRegionArea?: number,         // default 0.02 of the page
+        minConfidence?: number,         // default 0.2
+        language?: string,              // 'auto' (default), 'eng', 'tur', ...
+        model?: string                  // optional override, default gpt-5.5
+      }
+    }
+  • callback — function(error, result)
+      error  — null, or a tool code (see AI ERROR CODES)
+      result — {
+        ok: true,
+        pages: [{
+          pageIndex, isScan, hasTextLayer,      // echoed from your input
+          summary, language,
+          regions: [{
+            id,                                  // r1..rN
+            kind: 'photo'|'illustration'|'drawing'|'diagram'|'chart'
+                 |'table'|'logo'|'stamp'|'signature'|'text-block',
+            box: { x, y, width, height },        // 0..1, top-left origin
+            confidence, caption,
+            text,                                // for text-block regions
+            dominantColors                       // up to 3 '#RRGGBB'
+          }],
+          text                                   // only if returnText
+        }],
+        usage: { images, inputTokens, outputTokens, estimatedCostUsd },
+        requestIds, warnings
+      }
+      On error the second argument carries
+      { message, requestId, blocked, retryable } when the gateway sent them.
+
+Requires: allowAiVision: 'yes' in the field settings (max pages per call is
+limited by Max pages per vision call, default 8, cap 24).
+Hard limits: 4 MB decoded per page, 8 pages per gateway call (the host
+chunks and keeps your pageIndex ABSOLUTE), 90 s gateway timeout.
+Rate limit: 20 calls / minute / user.
+
+PAGE METADATA IS YOURS — isScan / hasTextLayer are never guessed by the
+model. Detect the text layer locally (tool.pdf.extractText → hasText) and
+send it: if hasTextLayer is true, read text with PDF.js and ask ONLY for
+regions — cheaper and more accurate than OCR.
+
+CROPPING — pad the box by ~1.5% of the page so model imprecision never clips
+edges, then draw the padded rectangle from the ORIGINAL bitmap:
+  function cropRegion(bitmap, region, outMaxSide, pad) {
+    pad = pad === undefined ? 0.015 : pad;
+    outMaxSide = outMaxSide || 1600;
+    var b = region.box;
+    var x = Math.max(0, b.x - pad);
+    var y = Math.max(0, b.y - pad);
+    var w = Math.min(1, b.x + b.width + pad) - x;
+    var h = Math.min(1, b.y + b.height + pad) - y;
+    var sx = x * bitmap.width, sy = y * bitmap.height;
+    var sw = w * bitmap.width, sh = h * bitmap.height;
+    var k = Math.min(1, outMaxSide / Math.max(sw, sh));
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sw * k));
+    canvas.height = Math.max(1, Math.round(sh * k));
+    canvas.getContext('2d').drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.9);
+  }
+
+RENDER SIZE — render the page at 1600..2048 px on the longest side
+(tool.pdf.renderPage with scale computed from the viewport), JPEG quality 0.8
+for the model image. Never multiply by devicePixelRatio: bigger images do not
+improve box precision and cost more.
+
+ES5 EXAMPLE
+  tool.pdf.renderPage({ binary: pdfBytes }, 3, { scale: 2, format: 'jpeg', quality: 0.8 },
+    function (renderErr, page) {
+      if (renderErr) { tool.notify('Page render failed: ' + renderErr, 'error'); return }
+      tool.requestAIVision({
+        instruction: 'Find photos, charts, tables, logos and stamps. Ignore rules and borders.',
+        pages: [{ dataUrl: page.dataUrl, pageIndex: 2, isScan: true, hasTextLayer: false }],
+        options: { detail: 'high', maxRegions: 30 }
+      }, function (err, res) {
+        if (err) { tool.notify('AI vision failed: ' + err, 'error'); return }
+        res.pages.forEach(function (p) {
+          p.regions.forEach(function (region) {
+            console.log(region.kind, region.caption, cropRegion(canvasBitmap, region))
+          })
+        })
+      })
+    })
+
+── AI ERROR CODES (both AI methods) ──────────────────
+The gateway answers with a stable error.category; the host maps it to the
+same tool codes used everywhere else:
+  invalid_input   bad prompt/pages/options (or gateway VALIDATION_ERROR)
+  too_large       image bytes, page count or payload cap exceeded
+  unsupported     model/route cannot do this (no vision, no image edit)
+  model_error     provider failed, blocked content, unparsable model output
+  rate_limited    per-tenant gateway limit hit (retry later)
+  timeout         gateway hard timeout reached
+  unauthorized    gateway key/tenant rejected
+  not_configured  the field setting for that capability is off
+content that moderation blocks arrives as model_error with blocked: true.
+
+AI DIAGNOSTICS — what to look for in the console (D-HTMLT-28)
+Every AI channel logs with a greppable prefix. Filter the browser console by
+one of these to see the whole story of a call:
+
+  [AI:VISION]       tool.requestAIVision
+  [AI:IMAGE-GEN]    tool.requestGenerateImage
+  [AI:IMAGE-EDIT]   tool.requestRegenerateImage
+  [AI:GATEWAY]      the CMS -> gateway proxy (server log)
+
+Host lines: `dispatch` (SDK accepted the call, console.debug),
+`request` (field flags + sizes), `ok` (pages/regions/images, costUsd, ms),
+`failed` (http, code, gatewayCode, requestId, blocked, retryable),
+`threw` (unexpected client error), `blocked — <flag> is off` (not_configured).
+Every host line carries `callId`.
+
+Server lines use the SAME callId, so one browser line finds the server line:
+  [AI:VISION][server] start | chunk ok | gateway error | done
+  [AI:IMAGE-EDIT][server] start | gateway error | done
+`[AI:GATEWAY] upstream error` is written by the generic gateway proxy with
+path, http status, gateway code/category and requestId.
+
+PRIVACY: the log never contains prompt text, page images, sample images or
+API keys — only lengths, byte sizes, codes, requestIds, timings and cost.
+When you report a bug, include the callId (and the gateway requestId if the
+line shows one); the CMS team can trace the exact call from those two ids.
 
 ── File Upload ────────────────────────────────────────
 tool.requestUpload(accept, callback)
@@ -1243,26 +1314,22 @@ The CMS admin must configure two settings on the html-tool field:
     registered object type's rules.publicAccess setting (if the type
     is registered in CMS Settings → App Designer).
 
-── Tenant-level parameter overrides ──────────────────────────────────────────
-  For connected tools (from Application Store or My Tools), the tool's
-  built-in toolParams serve as remote defaults.  Tenants can override
-  individual parameters without modifying the upstream definition by
-  setting settings.localToolParams in the Field Group Designer:
+── Tool parameters (the only param store) ──────────────────────────────────────
+  Every value the tool reads with tool.param(name, default) comes from ONE
+  place: the field's Tool parameters setting in the Field Group Designer
+  (a key/value editor that stores settings.toolParams). The channel switches
+  (AI, uploads, downloads, PDF tools, OCR, file delete, image regeneration,
+  object CRUD, export, email) are separate settings — the host merges them
+  into the same object at render time, and a channel switch always wins over
+  a hand-written key with the same name.
 
-    settings.toolParams      = { "currency": "USD", "max": 100 }    ← remote
-    settings.localToolParams = { "currency": "EUR" }                ← tenant override
-
-  Effective params at runtime: { "currency": "EUR", "max": 100 }
-  Local overrides always win.  This is the same pattern as
-  TenantProfileCustomizer for cmsObjectType remote apps.
-
-  • Use settings.toolParams for the tool's default configuration
-    (set at install time from the tool source).
-  • Use settings.localToolParams for tenant-specific overrides
-    (e.g. pointing to a different CMS object type, changing currency).
-  • When the tool source is updated, the remote toolParams may change,
-    but localToolParams always take precedence for the keys they define.
-  • Leave localToolParams empty to use remote defaults as-is.
+  Rules:
+  • Add ONLY the params your tool declares with tool.declareParams().
+  • Never add channel keys such as allowOcr / allowFileDelete / allowAi by
+    hand — flip the switch instead, otherwise the switch overrides you.
+  • A connected tool (Application Store / My Tools) keeps its own defaults:
+    the designer copies them in at install time and the tenant edits the same
+    Tool parameters list. There is no second override key.
 
 ── Connected tool settings locking ───────────────────────────────────────────
   When a tool is connected (connectionMode: 'connected-app-store' or
@@ -1278,10 +1345,9 @@ The CMS admin must configure two settings on the html-tool field:
     cssCode           — fetched live from the tool source at render time
     jsCode            — fetched live from the tool source at render time
     toolUrl           — external URL, if set by the tool source
-    toolParams        — remote defaults; use localToolParams to override
+    toolParams        — remote defaults, copied into the field settings
 
   ✏️ Tenant-controlled (editable, saved with field group):
-    localToolParams   — overrides specific remote toolParams keys
     displayMode       — inline / popup / drawer / toolbar-strip
     height, autoHeight, stripHeight
     triggerLabel, triggerWidth
@@ -1296,11 +1362,10 @@ The CMS admin must configure two settings on the html-tool field:
   the field group definition.  Changing height or displayMode for a
   connected tool works correctly and is NOT overridden by the remote.
 
-  Parameter overrides follow the merge pattern:
-    mergedToolParams = { ...remoteToolParams, ...localToolParams }
+  Parameters follow ONE merge pattern at runtime:
+    mergedToolParams = { ...settings.toolParams, ...channel switches }
 
-  Local wins where both define the same key.  Leave localToolParams
-  empty to use the remote defaults as-is.
+  The field settings are authoritative for everything except the tool code.
 
 ── Examples ──────────────────────────────────────────────────────────────────
 
@@ -1382,6 +1447,310 @@ The CMS admin must configure two settings on the html-tool field:
       return
     }
     tool.notify('Invoice created and stock adjusted', 'success')
+  })
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CAPABILITY FLAGS — tool.capabilities
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Every capability added in v3.6 is OPTIONAL. Detect support with the flags,
+not by probing functions, so older hosts never throw:
+
+  if (tool.capabilities && tool.capabilities.deleteFile) {
+    // tool.requestDeleteFile is available
+  }
+  // flags: deleteFile | pdfTools | aiVision | imageRegenerate
+
+Each method ALSO exists as a real function, so the classic probe works too:
+  typeof tool.requestDeleteFile === 'function'
+
+COMMON CONTRACT (all three methods)
+  • Callback style: callback(error, result), called EXACTLY once.
+  • error is a STABLE string code (never an exception, never thrown sync).
+  • Each method needs its own allow flag in the field settings; when the flag
+    is off the callback fires with 'not_configured'.
+  • An anonymous / expired session yields 'unauthorized'.
+  • Every call writes exactly ONE audit entry (timestamp, user, tenant, tool
+    instance, method, target, outcome, error code, byte and item counts,
+    duration). File bytes and full prompts are NEVER written to the log.
+  • Per-user rate limits apply (see each method). 'rate_limited' includes a
+    retry hint.
+  • Storage rules: the tool never sends a storage path, only a download URL.
+    The host resolves the path from the URL and rejects anything outside this
+    tenant's bucket with 'forbidden_path'.
+
+STANDARD ERROR CODES
+  not_configured  the capability flag is off on this tool field
+  unauthorized    no signed-in CMS user / invalid token
+  forbidden_path  the URL does not point into this tenant's storage
+  not_found       the source file no longer exists
+  unsupported     the deployment/model cannot do this (e.g. no image edit)
+  too_large       a size/page/image cap was exceeded
+  blocked_host    a non allow-listed host
+  invalid_input   missing/incorrect options (prompt, page range, format …)
+  rate_limited    per-user rate limit hit (retry later)
+  timeout         the operation exceeded its hard timeout
+  model_error     the image model failed or blocked the request
+  storage_error   writing the result to CMS storage failed
+  internal_error  unexpected host failure
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE DELETE — tool.requestDeleteFile(options, callback)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHEN TO USE — the tool OWNS the files it created (its own uploads, PDF
+extraction output, regenerated images) and the user removes a record. The
+call deletes the FILE OBJECT ONLY: CMS records, lesson documents or
+curriculum data that reference the URL are untouched — the tool owns that
+cleanup.
+
+Requires: allowFileDelete: 'yes'   (default off)
+
+OPTIONS
+  url      string       delete ONE file
+  urls     string[]     delete a batch; every url is attempted
+  reason   string       optional note stored in the audit entry
+
+RESULT — single
+  { deleted: boolean, alreadyMissing: boolean, path: string,
+    warnings: string[] }
+RESULT — batch
+  { deleted: string[], alreadyMissing: string[],
+    failed: [{ url: string, error: string }], warnings: string[] }
+
+BEHAVIOUR
+  • Idempotent: deleting a file that is already gone is SUCCESS with
+    alreadyMissing = true (never an error).
+  • A batch never aborts on the first failure — per-url errors land in
+    `failed`, the rest still delete.
+  • Only Firebase Storage download URLs of this tenant's bucket are accepted
+    (the tenant is one Firebase project). Anything else → forbidden_path.
+  • If the current CMS record still references the url, `warnings` lists it;
+    the delete still happens (it is not blocked). The check covers the record
+    the tool is mounted on — it is not a tenant-wide reference scan.
+  • Limits: batch of at most 20 urls (field setting maxDeleteBatch, cap 20);
+    60 calls / minute / user; 30 s timeout.
+
+ES5 EXAMPLE
+  tool.requestDeleteFile({ url: savedFileUrl, reason: 'lesson media removed' },
+    function (err, res) {
+      if (err) {
+        if (err === 'not_configured') tool.notify('Deleting files is disabled for this tool', 'warning')
+        else if (err === 'forbidden_path') tool.notify('That file is not yours to delete', 'error')
+        else tool.notify('Delete failed: ' + err, 'error')
+        return
+      }
+      if (res.alreadyMissing) console.log('[delete] already gone')
+    })
+
+  // Batch — failures are reported per url:
+  tool.requestDeleteFile({ urls: [u1, u2, u3] }, function (err, res) {
+    if (err) return
+    console.log('deleted', res.deleted.length, 'failed', res.failed)
+  })
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PDF TOOLKIT — tool.pdf  (BROWSER-SIDE, no server)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHEN TO USE — you need page images, text, a page count, or a new PDF that
+contains only some pages (split / extract). This is generic PDF plumbing, so
+the CMS ships it instead of every tool re-implementing it.
+
+WHERE IT RUNS — INSIDE YOUR FRAME. The CMS injects PDF.js 3.11.174 and
+pdf-lib 1.17.1 from /vendor/ (same origin) when the field setting
+"PDF tools (browser-side)" is on. There is NO endpoint, NO upload, NO server
+processing and NO size cap beyond the browser's own memory. The rendered page
+is a real canvas, so you get true pixel output.
+
+DETECT SUPPORT
+  if (tool.pdf && tool.pdf.available()) { ... }
+  // tool.capabilities.pdfTools is the boolean equivalent
+
+SOURCE (every method takes one)
+  { binary }   ArrayBuffer or Uint8Array — RECOMMENDED
+  { base64 }   raw base64 string
+  { dataUrl }  data:application/pdf;base64,...
+  { url }      https URL (same-origin or CORS-enabled; when the OCR setting
+               is also on the frame CSP allows only same-origin calls, so
+               prefer fetching bytes with tool.requestFileBinary)
+
+METHODS (all callback based, callback(errorCode, result), ES5)
+  tool.pdf.pageCount(source, cb)
+      → (null, 12)
+
+  tool.pdf.renderPage(source, pageNumber, options, cb)
+      options: { scale (0.25-4, default 1.5), format 'png'|'jpeg', quality }
+      → (null, { pageNumber, width, height, mimeType, dataUrl })
+      Page numbers are 1-based.
+
+  tool.pdf.renderRange(source, { first, last }, options, onPage, cb)
+      onPage({ pageNumber, width, height, mimeType, dataUrl }) per page
+      → (null, { pageCount, rendered })
+      Omit the range for the whole document. Hard cap 300 pages per call →
+      'too_large' — slice the document instead.
+
+  tool.pdf.extractText(source, { first, last }, cb)
+      → (null, { pageCount, pages: [{ pageNumber, text, hasText }] })
+      hasText tells you whether a page is a scan (no text layer).
+
+  tool.pdf.split(source, [{ first, last }, ...], cb)
+      → (null, [{ first, last, byteLength, bytes: Uint8Array, dataUrl }])
+      PDF WRITING (pdf-lib); needs tool.pdf.available().
+
+  tool.pdf.extractPages(source, [3, 5, 9], cb)
+      → (null, { byteLength, bytes: Uint8Array, dataUrl })
+
+ERROR CODES
+  unsupported     PDF libraries are not injected for this field
+  invalid_input   bad source / page number / range
+  encrypted_pdf   password-protected PDF
+  too_large       more than 300 pages requested at once
+  not_found       a { url } source answered 404
+  network         a { url } source could not be fetched
+  storage_error   a { url } source answered with another non-ok status
+  internal_error  PDF.js / pdf-lib failed
+
+PAGE IMAGES → AI (the pattern this toolkit is built for)
+Render the page, then ask the platform AI to describe or locate content.
+The CMS relays the model call, the frame keeps the pixels:
+  1. tool.pdf.renderPage(source, 4, { scale: 2 }, function (err, page) {
+       if (err) return
+       // page.dataUrl is a PNG of page 4
+       // → tool.requestAI(prompt, context, cb) with the page's text, or
+       // → the AI vision relay once it ships (see the AI gateway contract)
+     })
+  2. Crop what you need from page.dataUrl with a canvas — the AI can return
+     regions as percentage boxes, and you keep full resolution because you
+     render at scale 2+.
+
+ES5 EXAMPLE — split a 40-page PDF into 4 PDFs of 10 pages
+  tool.requestFileBinary({ url: pdfUrl }, function (err, res) {
+    if (err) { tool.notify('Download failed: ' + err, 'error'); return }
+    var ranges = []
+    for (var i = 0; i < 40; i += 10) ranges.push({ first: i + 1, last: i + 10 })
+    tool.pdf.split({ binary: res.bytes }, ranges, function (splitErr, parts) {
+      if (splitErr) { tool.notify('Split failed: ' + splitErr, 'error'); return }
+      parts.forEach(function (part) {
+        console.log('pages', part.first + '-' + part.last, part.byteLength + ' bytes', part.dataUrl.slice(0, 40))
+      })
+    })
+  })
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMAGE REGENERATION (IMAGE-TO-IMAGE) — tool.requestRegenerateImage(options, callback)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHEN TO USE — create a NEW picture based on an existing one ("make this
+illustration match our style", "clean up this photo"). The sample image always
+travels with the prompt to the platform image-EDIT model
+(POST /v1/images/edit). There is NO silent text-to-image fallback: if the
+configured model cannot edit, the callback gets 'unsupported'.
+
+Requires: allowImageRegenerate: 'yes'   (default off)
+
+OPTIONS
+  sample     { url } | { dataUrl } | { base64 }   the image to base on
+  prompt     string, REQUIRED, max 2000 characters (gateway allows 4000)
+  preserve   array, default ['composition','subject']
+             allowed: composition | subject | style | palette | text
+  size       '1024x1024' | '1536x1024' | '1024x1536' | 'auto' (default auto)
+  count      1..4 (default 1, field setting maxRegenerateCount, cap 4)
+  quality    'low' | 'medium' | 'high' (default high)
+  background 'transparent' | 'opaque' (default opaque)
+  store      boolean, default true
+  toolContext string label used in the audit entry and the stored file name
+
+RESULT
+  { ok, requestId, images: [{ url, width, height, mimeType, bytes,
+                              revisedPrompt }], warnings }
+
+BEHAVIOUR
+  • The host builds the instruction: the preserved aspects are stated FIRST
+    and the caller prompt is applied after them — the prompt can never
+    override a preserve rule.
+  • Sample validation: JPEG / PNG / WebP, max 5 MB (gateway limit), max
+    8000 px per side. Anything else → invalid_input. Third-party sample hosts
+    → blocked_host (upload the sample to CMS storage first).
+  • Provider moderation runs on the sample AND the prompt; a blocked request
+    is 'model_error' with blocked: true and NO file is written.
+  • Results are stored in the tenant/tool folder (store: true) and are
+    deletable through requestDeleteFile. store: false returns inline data
+    URLs (not deletable).
+  • revisedPrompt is ALWAYS null for the configured image model (gpt-image-1
+    does not produce one). Do NOT build UI that depends on it; show the
+    caption you generated instead.
+  • background 'transparent' is delivered as PNG (JPEG has no alpha).
+  • Limits: 20 calls / hour / user (host); the gateway allows 10 / 60 s per
+    tenant; 180 s gateway hard timeout, host aborts at 190 s.
+
+ES5 EXAMPLE
+  tool.requestRegenerateImage({
+    sample: { url: originalImageUrl },
+    prompt: 'turn it into a flat vector illustration for a course card',
+    preserve: ['composition', 'subject'],
+    size: '1536x1024',
+    count: 2,
+    toolContext: 'course-card'
+  }, function (err, res) {
+    if (err === 'unsupported') { tool.notify('This deployment cannot edit images', 'warning'); return }
+    if (err === 'model_error') { tool.notify('The image model refused this request', 'warning'); return }
+    if (err) { tool.notify('Regeneration failed: ' + err, 'error'); return }
+    res.images.forEach(function (img) { addVariant(img.url) })
+  })
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHEN TO USE — create a NEW picture based on an existing one ("make this
+illustration match our style", "clean up this photo"). This is an EDIT, not
+text-to-image: the sample image always travels with the prompt. If the
+configured model cannot edit images the call fails with 'unsupported' —
+there is NO silent text-to-image fallback.
+
+Requires: allowImageRegenerate: 'yes'   (default off)
+
+OPTIONS
+  sample     { url } | { dataUrl } | { base64 }   the image to base on
+  prompt     string, REQUIRED, max 2000 characters
+  preserve   array, default ['composition','subject']
+             allowed: composition | subject | style | palette | text
+  size       '1024x1024' | '1536x1024' | '1024x1536' | 'auto' (default auto)
+  count      1..4 (default 1, field setting maxRegenerateCount, cap 4)
+  quality    'low' | 'medium' | 'high' (default high)
+  background 'transparent' | 'opaque' (default opaque)
+  store      boolean, default true
+  toolContext string label used in the audit entry and the stored file name
+
+RESULT
+  { images: [{ url, width, height, mimeType, bytes, revisedPrompt }],
+    warnings: string[] }
+
+BEHAVIOUR
+  • The host builds the instruction: the preserved aspects are stated FIRST
+    and the caller prompt is applied after them — the prompt can never
+    override a preserve rule.
+  • Sample validation: JPEG / PNG / WebP, max 8 MB, max 8000 px per side.
+    Anything else → invalid_input. Third-party sample hosts → blocked_host
+    (upload the sample to CMS storage first).
+  • Provider moderation runs on the sample AND the prompt; a block is
+    'model_error' and no file is written.
+  • Results are stored in the tenant/tool folder (store: true) and are
+    deletable through requestDeleteFile. store: false returns inline data
+    URLs (not deletable).
+  • revisedPrompt is the model's own description of what it produced — show
+    it in the UI so the user sees what actually happened.
+  • Limits: 20 calls / hour / user, 180 s timeout, rate limits from the model
+    surface as rate_limited. The audit entry identifies the sample by storage
+    path or hash only — never the raw image.
+
+ES5 EXAMPLE
+  tool.requestRegenerateImage({
+    sample: { url: originalImageUrl },
+    prompt: 'turn it into a flat vector illustration for a course card',
+    preserve: ['composition', 'subject'],
+    size: '1536x1024',
+    count: 2,
+    toolContext: 'course-card'
+  }, function (err, res) {
+    if (err === 'unsupported') { tool.notify('This deployment cannot edit images', 'warning'); return }
+    if (err === 'model_error') { tool.notify('The image model refused this request', 'warning'); return }
+    if (err) { tool.notify('Regeneration failed: ' + err, 'error'); return }
+    res.images.forEach(function (img) { addVariant(img.url, img.revisedPrompt) })
   })
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1617,14 +1986,16 @@ HARD RULES
    the admin can fix the configuration without digging through JSON.
 ✗  No external <script src="https://cdn…"> / <link> / fonts / fetch-XHR from
    the three files — everything must be inlined in the three files or come
-   through the parent CMS relay (tool.requestFetch / tool.requestObjects).
+   through the parent CMS relay (tool.requestFileBinary / tool.requestObjects).
    A stalled CDN script freezes the whole tool.
 ✓  Values can be any JSON type — save objects/arrays freely with tool.setValue()
 ✓  tool.requestAI / tool.requestAIStream / tool.requestUpload /
-   tool.requestUploadBinary / tool.requestGenerateImage / tool.requestFetch /
+   tool.requestUploadBinary / tool.requestGenerateImage /
    tool.requestFileContent / tool.requestObjects / tool.requestExportPdf /
-   tool.requestSendEmail ARE exceptions to the no-fetch rule — they go
-   through the parent CMS, not direct from the iframe.
+   tool.requestSendEmail / tool.requestDeleteFile /
+   tool.requestRegenerateImage / tool.requestAIVision ARE exceptions to the
+   no-fetch rule — they go through the parent CMS, not direct from the
+   iframe. tool.pdf runs inside the frame and needs no exception.
 ✓  Each request* method requires its allow*: 'yes' toolParam. The admin
    configures this. Without it, the callback fires with an error —
    handle this gracefully in your code.
