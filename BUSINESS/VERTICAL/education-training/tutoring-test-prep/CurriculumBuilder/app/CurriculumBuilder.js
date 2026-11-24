@@ -1,4 +1,4 @@
-/* js build 2026-11-18-94 */
+/* js build 2026-11-18-103 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-94';
+var TOOL_BUILD = '2026-11-18-103';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 // Boot diagnostic: is the large-file download channel present in this CMS build?
 (function logFileChannelAvailability() {
@@ -99,6 +99,8 @@ var sections = [];               // section tree from curriculum (sections can n
 var mainDocuments = [];          // reference PDFs in CMS storage: { id, name, url, sizeKb, addedAt }
 var orphanedStorageFiles = [];   // files the host refused to delete: { url, label, deletedAt } (purge list)
 var curriculumLanguage = '';     // language saved with the curriculum (default OCR language)
+var curriculumPictureDetection = '';   // '' = tool parameter | 'auto' | 'local' | 'vision'
+var curriculumVisionPageMaxSide = 0;   // 0 = tool parameter, else 600..2048 px
 var studioOcrLanguageOverride = ''; // per-document OCR language chosen in the Process drawer
 var editingSectionIdx = null;    // Index being edited in editingSectionParent
 var editingSectionParent = null; // Array that holds the section being edited (sections or a parent's children)
@@ -3176,7 +3178,13 @@ function annotateEmptyStateLoadInfo(rawValue, hasSectionsArray) {
     if (hasSectionsArray) { hintEl.textContent = ''; if (reloadButton) reloadButton.style.display = 'none'; return; }
     if (reloadButton) reloadButton.style.display = 'inline-block';
     var valueKind = (rawValue === undefined) ? 'no value' : (rawValue === null ? 'null' : typeof rawValue);
-    hintEl.textContent = 'The CMS did not send any curriculum content (' + valueKind + ', build ' + TOOL_BUILD + '). The tool keeps checking automatically - use "Reload data" once the record is back.';
+    var valueKeyList = [];
+    try {
+      if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)) valueKeyList = Object.keys(rawValue).slice(0, 8);
+    } catch (keyError) { valueKeyList = []; }
+    hintEl.textContent = 'The CMS did not send any curriculum content (' + valueKind +
+      (valueKeyList.length ? ': ' + valueKeyList.join(', ') : '') + ', build ' + TOOL_BUILD +
+      '). The tool keeps checking automatically - use "Reload data" once the record is back.';
   } catch (hintError) {
     console.warn('[CURRICULUM:LOAD] could not annotate the empty state:', hintError);
   }
@@ -3207,6 +3215,7 @@ var lastSaveRequestedAt = 0;
        the real curriculum arrives;
      - the empty state offers a "Reload data" button instead of a dead end. */
 var curriculumHadSectionsThisSession = false;
+var curriculumLoadCompleted = false;   // a CMS value WITH a sections array arrived
 var curriculumGuardianTimer = null;
 var curriculumGuardianStartedAt = 0;
 var CURRICULUM_GUARDIAN_POLL_MS = 1200;
@@ -3300,6 +3309,14 @@ function loadCurriculum(val) {
     curriculumLanguage = resolveOcrLanguage(incomingLanguage);
     syncCurriculumLanguageSelect();
   }
+  // Picture-detection preferences travel with the curriculum as well.
+  if (curriculumValue && typeof curriculumValue.pictureDetection === 'string') {
+    curriculumPictureDetection = normalizePictureDetectionMode(curriculumValue.pictureDetection);
+  }
+  if (curriculumValue && curriculumValue.visionPageMaxSide !== undefined) {
+    curriculumVisionPageMaxSide = normalizeVisionPageMaxSide(curriculumValue.visionPageMaxSide);
+  }
+  syncStudioPictureDetectionControls();
   // GUARD: an empty value must NEVER wipe a curriculum that is already on
   // screen. Keep the screen and keep reading tool.getValue() instead.
   if (!incomingSectionCount && sections.length > 0) {
@@ -3309,6 +3326,7 @@ function loadCurriculum(val) {
     return;
   }
   sections = receivedSections ? curriculumValue.sections : [];
+  if (receivedSections) curriculumLoadCompleted = true;
   mainDocuments = normalizeMainDocumentList(curriculumValue && curriculumValue.mainDocuments);
   orphanedStorageFiles = (curriculumValue && Array.isArray(curriculumValue.orphanedStorageFiles)) ? curriculumValue.orphanedStorageFiles.slice(0, 500) : [];
   renderMainDocumentsList();
@@ -3334,7 +3352,16 @@ function loadCurriculum(val) {
     console.error('[CURRICULUM:LOAD] rendering failed:', renderError);
     showCurriculumLoadFailure(renderError);
   }
-  if (!sections.length) startCurriculumValueGuardian('the tool has no sections yet');
+  if (!sections.length) {
+    var rawValueKeys = [];
+    try {
+      if (val && typeof val === 'object' && !Array.isArray(val)) rawValueKeys = Object.keys(val).slice(0, 12);
+    } catch (keyError) { rawValueKeys = []; }
+    console.warn('[CURRICULUM:LOAD] no sections · value type: ' + (val === null ? 'null' : typeof val) +
+      (rawValueKeys.length ? ' · keys: ' + rawValueKeys.join(', ') : '') +
+      (receivedSections ? ' · sections array is empty' : ' · no sections array') + ' · build ' + TOOL_BUILD);
+    startCurriculumValueGuardian('the tool has no sections yet');
+  }
   tool.resize();
   // One-time per page load: move legacy heavy content out of the main doc
   // into lesson docs (fixes the Firestore 1MB limit error on the main doc),
@@ -3466,10 +3493,13 @@ function stripInlineImageBytesForCms(curriculumValue) {
   return applyInlineImageBudget(inlineBudgetState, MAX_SAVED_INLINE_IMAGE_BYTES);
 }
 
-/** The exact object written to the CMS: sections plus the optional curriculum language */
+/** The exact object written to the CMS: sections, the optional curriculum
+ *  language and the picture-detection preferences */
 function buildCurriculumValueForCms() {
   var curriculumValue = { sections: sections };
   if (curriculumLanguage) curriculumValue.language = curriculumLanguage;
+  if (curriculumPictureDetection) curriculumValue.pictureDetection = curriculumPictureDetection;
+  if (curriculumVisionPageMaxSide) curriculumValue.visionPageMaxSide = curriculumVisionPageMaxSide;
   // Reference documents live in their OWN CMS objects when the store is ready,
   // so the curriculum record carries no library metadata at all. The legacy
   // list is only written back when object CRUD is unavailable.
@@ -3539,6 +3569,35 @@ function syncCurriculumLanguageSelect() {
 function syncStudioOcrLanguageSelect() {
   var languageSelect = el('sd-ocr-language');
   if (languageSelect) languageSelect.value = studioOcrLanguageOverride || '';
+}
+
+/** Reflect the saved picture-detection choice in the Pictures toolbar */
+function syncStudioPictureDetectionControls() {
+  var detectionSelect = el('sd-picture-detection');
+  if (detectionSelect) {
+    detectionSelect.value = curriculumPictureDetection || '';
+    var defaultModeOption = detectionSelect.options.length ? detectionSelect.options[0] : null;
+    if (defaultModeOption && defaultModeOption.value === '') {
+      var parameterMode = normalizePictureDetectionMode(tool.param('pictureDetection', 'auto')) || 'auto';
+      defaultModeOption.textContent = 'Tool default (' +
+        (parameterMode === 'local' ? 'local only' : (parameterMode === 'vision' ? 'AI vision' : 'auto')) + ')';
+    }
+  }
+  var sizeSelect = el('sd-vision-page-size');
+  if (sizeSelect) {
+    var effectiveSize = String(resolveVisionPageMaxSide());
+    var sizeIsOffered = false;
+    for (var optionIndex = 0; optionIndex < sizeSelect.options.length; optionIndex++) {
+      if (sizeSelect.options[optionIndex].value === effectiveSize) { sizeIsOffered = true; break; }
+    }
+    sizeSelect.value = sizeIsOffered ? effectiveSize : '';
+    var defaultSizeOption = sizeSelect.options.length ? sizeSelect.options[0] : null;
+    if (defaultSizeOption && defaultSizeOption.value === '') {
+      defaultSizeOption.textContent = 'Tool default (' + resolveVisionPageMaxSide() + ' px)';
+    }
+  }
+  var sizeControl = el('sd-vision-size-control');
+  if (sizeControl) sizeControl.style.display = effectivePictureDetectionMode() === 'local' ? 'none' : '';
 }
 
 /* ═══════════════════════════════════════════
@@ -4450,6 +4509,14 @@ function runLessonDocumentImport(matchList, skippedCount) {
  *  curriculum content: a failed load or a stripped in-memory copy must never
  *  erase the saved record. */
 function writeCurriculumValueToCms(saveReason) {
+  // Nothing may be written before a real CMS value arrived: a preference
+  // change (or any early save) must never replace the stored curriculum
+  // with an empty one.
+  if (!sections.length && !curriculumLoadCompleted) {
+    console.warn('[CURRICULUM:SAVE] blocked a write before the curriculum loaded (' + saveReason + ') · build ' + TOOL_BUILD);
+    tool.notify('Nothing saved yet: the curriculum has not loaded. Use "Reload data" first.', 'warning');
+    return false;
+  }
   if (!sections.length && curriculumHadSectionsThisSession) {
     console.warn('[CURRICULUM:SAVE] blocked an empty write (' + saveReason + ') - the CMS record keeps its last saved content · build ' + TOOL_BUILD);
     tool.notify('Save blocked: the tool would have written an empty curriculum. Use "Reload data" first.', 'warning');
@@ -4460,6 +4527,17 @@ function writeCurriculumValueToCms(saveReason) {
   logCurriculumPayloadReport(saveReason || 'save', false, curriculumValueForSave);
   tool.setValue(curriculumValueForSave);
   return true;
+}
+
+/** Picture-detection preferences save with the curriculum. Before the first
+ *  real load they only live in memory - the record must never be written
+ *  empty just because a dropdown changed. */
+function saveCurriculumPreference() {
+  if (!sections.length && !curriculumLoadCompleted) {
+    tool.notify('Picture setting will be saved with the curriculum once it loads.', 'info');
+    return;
+  }
+  saveCurriculum();
 }
 
 function saveCurriculum(callback) {
@@ -10408,18 +10486,51 @@ function detectPagePictureRegions(pageCanvas, textBoxes) {  var pageWidth = page
    content, so it decides whether fragments that sit close together are one
    picture or two. This frame still owns every pixel: the page is rendered
    locally and each box is cropped here at render scale. */
+/** '' (use the tool parameter) | 'auto' | 'local' | 'vision' */
+function normalizePictureDetectionMode(rawMode) {
+  var detectionMode = String(rawMode === undefined || rawMode === null ? '' : rawMode).toLowerCase();
+  if (detectionMode === 'local' || detectionMode === 'vision' || detectionMode === 'auto') return detectionMode;
+  return '';
+}
+
+/** The mode actually used: the curriculum choice, else the tool parameter */
+function effectivePictureDetectionMode() {
+  var detectionMode = normalizePictureDetectionMode(curriculumPictureDetection);
+  if (!detectionMode) detectionMode = normalizePictureDetectionMode(tool.param('pictureDetection', 'auto'));
+  return detectionMode || 'auto';
+}
+
 function pictureVisionDetectionEnabled() {
-  var detectionMode = String(tool.param('pictureDetection', 'auto')).toLowerCase();
-  if (detectionMode === 'local') return false;
+  if (effectivePictureDetectionMode() === 'local') return false;
   return toolCapability('aiVision');
+}
+
+/** Vision render size in px: 0 = follow the tool parameter */
+function normalizeVisionPageMaxSide(rawSize) {
+  var pageSize = parseInt(rawSize, 10);
+  if (!pageSize || pageSize < 600) return 0;
+  if (pageSize > 2048) return 2048;
+  return pageSize;
+}
+
+/** The page size used for the AI image: curriculum choice, else tool parameter */
+function resolveVisionPageMaxSide() {
+  var pageSize = curriculumVisionPageMaxSide || parseInt(tool.param('visionPageMaxSide', '1600'), 10);
+  if (!pageSize || pageSize < 600) pageSize = 1600;
+  if (pageSize > 2048) pageSize = 2048;
+  return pageSize;
 }
 
 /** Instruction sent with every page batch (the gateway allows 2000 chars) */
 function buildVisionPictureInstruction() {
-  return 'Find every real picture on the page: photos, illustrations, drawings, diagrams, charts, maps, logos, stamps and signatures. ' +
-    'Return ONE box per visual object. Merge fragments that belong to the same object (an illustration split by a column or a fold, a chart with its legend and axis labels, a photo with its frame). ' +
-    'Keep independent objects separate even when they touch or sit side by side, and never put two different photos in one box. ' +
-    'Ignore running text, paragraphs, tables of text, the page background, borders, rules, separators and single letters.';
+  return 'Find every real picture on every page: photos, illustrations, drawings, diagrams, charts, maps, logos, stamps, signs and signatures. ' +
+    'Return ONE tight box per visual object that contains the picture only - EXCLUDE captions, labels, page numbers, headers and surrounding text. ' +
+    'Merge fragments that belong to the same object (an illustration split by a column or a fold, a chart with its legend and axis labels, a photo with its frame). ' +
+    'Keep independent objects separate even when they touch or sit side by side, and never put two different pictures in one box. ' +
+    'On a page with many small pictures return a separate tight box for EACH one, even when they are arranged in a grid. ' +
+    'Ignore running text, paragraphs, tables of text, the page background, borders, rules, separators and single letters. ' +
+    'Answer with ONE entry for EVERY page you were given, echoing its pageIndex, and use an empty regions array when a page has no picture. ' +
+    'Give every box as fractions of that page: x, y, width and height between 0 and 1, top-left origin.';
 }
 
 /** Normalised model box -> pixel rectangle inside the rendered page (padded) */
@@ -10431,6 +10542,10 @@ function visionBoxToCropRect(visionRegion, canvasWidth, canvasHeight) {
   var boxWidth = Number(visionBox.width) || 0;
   var boxHeight = Number(visionBox.height) || 0;
   if (boxWidth <= 0 || boxHeight <= 0) return null;
+  // A box outside 0..1 is not normalised (pixel coordinates, a 0..1000 scale
+  // or a different corner order): clamping it would crop a wrong, often
+  // page-sized picture, so the caller skips it instead.
+  if (boxLeft > 1.5 || boxTop > 1.5 || boxWidth > 1.5 || boxHeight > 1.5) return null;
   // 1.2% padding: model boxes are precise but not pixel exact, and cutting a
   // photo edge is worse than keeping a thin margin around it.
   var padX = Math.round(canvasWidth * 0.012);
@@ -10457,7 +10572,11 @@ function pictureRegionOverlapArea(firstRegion, secondRegion) {
   return overlapWidth * overlapHeight;
 }
 
-/** The embedded image a model box is exactly about (native quality, no crop) */
+/** The embedded image a model box is about (native quality, no crop).
+ *  The box is not pixel exact, so a box that strongly overlaps ONE embedded
+ *  image is snapped to that image: no caption, no neighbouring picture and no
+ *  clipped edge. A merged arrangement (two photos + caption in one box) still
+ *  fails both tests and is cropped as drawn. */
 function findEmbeddedPictureInsideVisionBox(visionRect, embeddedPictureRegions) {
   var visionArea = Math.max(1, visionRect.width * visionRect.height);
   var bestMatch = null;
@@ -10468,11 +10587,11 @@ function findEmbeddedPictureInsideVisionBox(visionRect, embeddedPictureRegions) 
     var overlapArea = pictureRegionOverlapArea(visionRect, embeddedRegion);
     if (!overlapArea) continue;
     var embeddedArea = Math.max(1, embeddedRegion.width * embeddedRegion.height);
-    // The box must contain almost the whole embedded image AND the image must
-    // fill most of the box. Otherwise the box is a merged arrangement (photo +
-    // caption + border) and the rendered crop is the correct picture.
-    if ((overlapArea / embeddedArea) < 0.9) continue;
-    if ((overlapArea / visionArea) < 0.6) continue;
+    // Most of the embedded image must sit inside the box (a loose box around a
+    // picture is normal) and the image must fill a good part of the box
+    // (otherwise the box is a merged arrangement and the crop is correct).
+    if ((overlapArea / embeddedArea) < 0.65) continue;
+    if ((overlapArea / visionArea) < 0.5) continue;
     if (overlapArea > bestOverlapArea) {
       bestOverlapArea = overlapArea;
       bestMatch = embeddedRegion;
@@ -10481,13 +10600,33 @@ function findEmbeddedPictureInsideVisionBox(visionRect, embeddedPictureRegions) 
   return bestMatch;
 }
 
+/** Embedded pictures that fill a real part of ONE model box. A grid of small
+ *  pictures often comes back as ONE merged box; each picture is captured on
+ *  its own in that case. */
+function embeddedPicturesCoveringVisionBox(visionRect, embeddedPictureRegions) {
+  var coveringPictures = [];
+  for (var regionIndex = 0; regionIndex < embeddedPictureRegions.length; regionIndex++) {
+    var embeddedRegion = embeddedPictureRegions[regionIndex];
+    if (!embeddedRegion || embeddedRegion.isPageBackground) continue;
+    var overlapArea = pictureRegionOverlapArea(visionRect, embeddedRegion);
+    if (!overlapArea) continue;
+    var embeddedArea = Math.max(1, embeddedRegion.width * embeddedRegion.height);
+    // The box covers most of the picture itself - a merged box (two signs and
+    // their captions) covers SEVERAL pictures like this, a loose single box
+    // covers only one.
+    if ((overlapArea / embeddedArea) >= 0.7) coveringPictures.push(embeddedRegion);
+  }
+  return coveringPictures;
+}
+
 /** Render one page for the vision request (JPEG, longest side capped) */
 function renderVisionPageImage(pdfDocument, pageNumber, maxSide) {
   return pdfDocument.getPage(pageNumber).then(function(pdfPage) {
     var unitViewport = pdfPage.getViewport({ scale: 1 });
     var longestSide = Math.max(unitViewport.width, unitViewport.height, 1);
     var fitScale = Math.min(1, maxSide / longestSide);
-    var visionViewport = pdfPage.getViewport({ scale: Math.max(0.2, fitScale) });
+    var visionRenderScale = Math.max(0.2, fitScale);
+    var visionViewport = pdfPage.getViewport({ scale: visionRenderScale });
     var visionCanvas = document.createElement('canvas');
     visionCanvas.width = Math.max(1, Math.floor(visionViewport.width));
     visionCanvas.height = Math.max(1, Math.floor(visionViewport.height));
@@ -10499,7 +10638,11 @@ function renderVisionPageImage(pdfDocument, pageNumber, maxSide) {
           pageNumber: pageNumber,
           dataUrl: visionDataUrl,
           isScan: !textItemCount,
-          hasTextLayer: !!textItemCount
+          hasTextLayer: !!textItemCount,
+          // The canvas is kept so the crop below uses the EXACT pixels the
+          // model saw (same size, same edges) instead of a second render.
+          canvas: visionCanvas,
+          renderScale: visionRenderScale
         };
       });
     });
@@ -10601,6 +10744,62 @@ function describeAiErrorDetails(errorCode, errorInfo) {
   return detailParts.length ? ' · ' + detailParts.join(' · ') : '';
 }
 
+/** Pages sent in ONE vision call: ALWAYS ONE, page by page. Rules allow up
+ *  to 8, but a single page keeps every answer tied to one pageIndex and gives
+ *  the model a sharper look at a complex layout. */
+function resolveVisionPagesPerCall() {
+  return 1;
+}
+
+/** Match the model's page answers to the pages that were actually sent.
+ *  The API echoes pageIndex, but a model may omit it, answer with 0-based or
+ *  relative indices, or answer only the pages that had pictures. An answer is
+ *  accepted only for a page of THIS batch; when the echoed indices cannot be
+ *  trusted the POSITION in the answer is used. The returned missingPageNumbers
+ *  lets the caller run the local detector for exactly those pages instead of
+ *  silently dropping them (the old behaviour). */
+function mapVisionPagesToRequestedPages(visionPages, requestedPageNumbers) {
+  var byPageNumber = {};
+  var requestedSet = {};
+  for (var requestedIndex = 0; requestedIndex < requestedPageNumbers.length; requestedIndex++) {
+    requestedSet[requestedPageNumbers[requestedIndex]] = true;
+  }
+  var answerPages = visionPages || [];
+  var echoedIndicesUsable = true;
+  var indexMissingCount = 0;
+  for (var checkIndex = 0; checkIndex < answerPages.length; checkIndex++) {
+    var checkedPage = answerPages[checkIndex];
+    if (!checkedPage) continue;
+    if (checkedPage.pageIndex === 0 || checkedPage.pageIndex === '0') { echoedIndicesUsable = false; break; }
+    var checkedNumber = Number(checkedPage.pageIndex);
+    if (checkedNumber && !requestedSet[checkedNumber]) { echoedIndicesUsable = false; break; }
+    if (!checkedNumber) indexMissingCount++;
+  }
+  var emptyRegionPageNumbers = [];
+  for (var answerIndex = 0; answerIndex < answerPages.length; answerIndex++) {
+    var answerPage = answerPages[answerIndex];
+    if (!answerPage) continue;
+    var echoedPageNumber = Number(answerPage.pageIndex);
+    var mappedPageNumber = (echoedIndicesUsable && echoedPageNumber && requestedSet[echoedPageNumber])
+      ? echoedPageNumber
+      : requestedPageNumbers[answerIndex];
+    if (!mappedPageNumber || !requestedSet[mappedPageNumber] || byPageNumber[mappedPageNumber]) continue;
+    byPageNumber[mappedPageNumber] = answerPage;
+    if (!(answerPage.regions && answerPage.regions.length)) emptyRegionPageNumbers.push(mappedPageNumber);
+  }
+  var missingPageNumbers = [];
+  for (var pageIndex = 0; pageIndex < requestedPageNumbers.length; pageIndex++) {
+    if (!byPageNumber[requestedPageNumbers[pageIndex]]) missingPageNumbers.push(requestedPageNumbers[pageIndex]);
+  }
+  return {
+    byPageNumber: byPageNumber,
+    missingPageNumbers: missingPageNumbers,
+    emptyRegionPageNumbers: emptyRegionPageNumbers,
+    indexMissingCount: indexMissingCount,
+    indexIgnoredCount: echoedIndicesUsable ? 0 : Math.max(0, answerPages.length - indexMissingCount)
+  };
+}
+
 /** Ask the platform AI for the picture boxes of a page batch */
 function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
   var visionPages = [];
@@ -10646,18 +10845,30 @@ function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
 }
 
 /** Crop every AI box of one page from a fresh render of that page */
-function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pageScale, collectedPictures, onDone) {
+function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pageScale, collectedPictures, onDone, visionPageCanvas, visionRenderScale) {
   var pageRegions = (visionPageResult && visionPageResult.regions) ? visionPageResult.regions : [];
   if (!pageRegions.length) { onDone(); return; }
   var pageIsScan = !!(visionPageResult && visionPageResult.isScan);
   pdfDocument.getPage(pageNumber).then(function(pdfPage) {
-    var cropViewport = pdfPage.getViewport({ scale: pageScale });
-    var pageCanvas = document.createElement('canvas');
-    pageCanvas.width = Math.max(1, Math.floor(cropViewport.width));
-    pageCanvas.height = Math.max(1, Math.floor(cropViewport.height));
-    pageCanvas.getContext('2d').fillStyle = '#ffffff';
-    pageCanvas.getContext('2d').fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-    pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: cropViewport }).promise.then(function() {
+    // Crop from the EXACT page image the model saw when it is available, so
+    // box coordinates and pixels always belong together.
+    var useVisionCanvas = !!(visionPageCanvas && visionPageCanvas.width > 1 && visionPageCanvas.height > 1);
+    var canvasScale = (useVisionCanvas && visionRenderScale) ? visionRenderScale : pageScale;
+    var cropViewport = pdfPage.getViewport({ scale: canvasScale });
+    var pageCanvas = null;
+    var pageCanvasReady;
+    if (useVisionCanvas) {
+      pageCanvas = visionPageCanvas;
+      pageCanvasReady = Promise.resolve();
+    } else {
+      pageCanvas = document.createElement('canvas');
+      pageCanvas.width = Math.max(1, Math.floor(cropViewport.width));
+      pageCanvas.height = Math.max(1, Math.floor(cropViewport.height));
+      pageCanvas.getContext('2d').fillStyle = '#ffffff';
+      pageCanvas.getContext('2d').fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      pageCanvasReady = pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: cropViewport }).promise;
+    }
+    pageCanvasReady.then(function() {
       var readOperatorList = (typeof pdfPage.getOperatorList === 'function')
         ? pdfPage.getOperatorList().catch(function(operatorListError) {
             console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' operator list failed:', operatorListError);
@@ -10669,6 +10880,7 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
         var pageArea = Math.max(1, pageCanvas.width * pageCanvas.height);
         var regionIndex = 0;
         var capturedCount = 0;
+        var acceptedRegions = [];
 
         function decorateVisionPicture(pictureImage, visionRegion) {
           pictureImage.detectedBy = 'ai-vision';
@@ -10677,21 +10889,85 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
           return pictureImage;
         }
 
+        function captureEmbeddedPictureList(embeddedRegionList, visionRegion, onCaptured) {
+          var embeddedListIndex = 0;
+          function captureNextEmbeddedPicture() {
+            if (embeddedListIndex >= embeddedRegionList.length) { onCaptured(); return; }
+            var embeddedRegion = embeddedRegionList[embeddedListIndex];
+            embeddedListIndex++;
+            var nativeCanvas = null;
+            if (embeddedRegion.objectId) nativeCanvas = pdfPageImageCanvas(pdfPage, embeddedRegion.objectId);
+            else if (embeddedRegion.inlineImageObject) nativeCanvas = pdfImageObjectToCanvas(embeddedRegion.inlineImageObject);
+            if (!nativeCanvas) { captureNextEmbeddedPicture(); return; }
+            var embeddedPictureName = 'page-' + pageNumber + '-' + (capturedCount + 1) + '.jpg';
+            canvasToStudioImage(nativeCanvas, embeddedPictureName, function(nativeError, nativePicture) {
+              if (!nativeError && nativePicture) {
+                collectedPictures.push(decorateVisionPicture(nativePicture, visionRegion));
+                acceptedRegions.push(embeddedRegion);
+                capturedCount++;
+              } else if (nativeError) {
+                console.warn('[STUDIO:PICTURES] ' + embeddedPictureName + ' native image could not be encoded:', nativeError);
+              }
+              captureNextEmbeddedPicture();
+            });
+          }
+          captureNextEmbeddedPicture();
+        }
+
         function cropNextRegion() {
-          if (regionIndex >= pageRegions.length) { onDone(); return; }
+          if (regionIndex >= pageRegions.length) {
+            console.log('[STUDIO:PICTURES] page ' + pageNumber + ': captured ' + capturedCount +
+              ' picture(s) from ' + pageRegions.length + ' AI box(es)');
+            onDone();
+            return;
+          }
           var visionRegion = pageRegions[regionIndex];
           regionIndex++;
-          if (!visionRegion || visionRegion.kind === 'text-block') { cropNextRegion(); return; }
+          if (!visionRegion) { cropNextRegion(); return; }
           var visionRect = visionBoxToCropRect(visionRegion, pageCanvas.width, pageCanvas.height);
-          if (!visionRect) { cropNextRegion(); return; }
+          if (!visionRect) {
+            console.warn('[STUDIO:PICTURES] page ' + pageNumber + ': an AI box is not a normalised 0..1 rectangle - skipped');
+            cropNextRegion();
+            return;
+          }
           var regionArea = visionRect.width * visionRect.height;
-          // A text page is never one single picture; a scan page may be.
-          if (regionArea > pageArea * 0.9 && !pageIsScan) { cropNextRegion(); return; }
-          if (visionRect.width < 56 || visionRect.height < 56) { cropNextRegion(); return; }
-          var pictureName = 'page-' + pageNumber + '-' + (capturedCount + 1) + '.jpg';
-
-          // 1) The box is exactly one embedded image: keep its native pixels.
+          if (visionRect.width < 40 || visionRect.height < 40) { cropNextRegion(); return; }
           var embeddedMatch = findEmbeddedPictureInsideVisionBox(visionRect, embeddedPictureRegions);
+          // A text-block answer is a paragraph on a text page, but on a scanned
+          // page (or when it is really an embedded image) it is a scanned sign
+          // or graphic - those must be captured, not skipped.
+          if (visionRegion.kind === 'text-block' && !embeddedMatch && !pageIsScan) { cropNextRegion(); return; }
+          // A page-sized box on a text page is only accepted when it really is
+          // one embedded picture (a full-page illustration). Otherwise it is a
+          // mistaken "whole page" box.
+          if (regionArea > pageArea * 0.9 && !pageIsScan && !embeddedMatch) { cropNextRegion(); return; }
+          // The model sometimes describes the same picture twice - never create
+          // a duplicate crop for a box that an accepted box already covers.
+          var isDuplicateRegion = false;
+          for (var acceptedIndex = 0; acceptedIndex < acceptedRegions.length; acceptedIndex++) {
+            var acceptedRegion = acceptedRegions[acceptedIndex];
+            var acceptedArea = Math.max(1, acceptedRegion.width * acceptedRegion.height);
+            var duplicateOverlap = pictureRegionOverlapArea(visionRect, acceptedRegion);
+            if ((duplicateOverlap / regionArea) >= 0.8 || (duplicateOverlap / acceptedArea) >= 0.8) {
+              isDuplicateRegion = true;
+              break;
+            }
+          }
+          if (isDuplicateRegion) {
+            console.warn('[STUDIO:PICTURES] page ' + pageNumber + ': an AI box overlaps a picture that is already captured - skipped');
+            cropNextRegion();
+            return;
+          }
+          // A grid of small pictures often arrives as ONE merged box: capture
+          // each embedded picture of that box separately.
+          var coveringEmbeddedPictures = embeddedPicturesCoveringVisionBox(visionRect, embeddedPictureRegions);
+          if (coveringEmbeddedPictures.length > 1) {
+            console.warn('[STUDIO:PICTURES] page ' + pageNumber + ': one AI box contained ' +
+              coveringEmbeddedPictures.length + ' pictures - capturing each one separately');
+            captureEmbeddedPictureList(coveringEmbeddedPictures, visionRegion, cropNextRegion);
+            return;
+          }
+          var pictureName = 'page-' + pageNumber + '-' + (capturedCount + 1) + '.jpg';
           if (embeddedMatch) {
             var nativeCanvas = null;
             if (embeddedMatch.objectId) nativeCanvas = pdfPageImageCanvas(pdfPage, embeddedMatch.objectId);
@@ -10700,6 +10976,7 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
               canvasToStudioImage(nativeCanvas, pictureName, function(nativeError, nativePicture) {
                 if (!nativeError && nativePicture) {
                   collectedPictures.push(decorateVisionPicture(nativePicture, visionRegion));
+                  acceptedRegions.push(embeddedMatch);
                   capturedCount++;
                 } else if (nativeError) {
                   console.warn('[STUDIO:PICTURES] ' + pictureName + ' native image could not be encoded:', nativeError);
@@ -10710,17 +10987,21 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
             }
           }
 
-          // 2) Merged arrangement (or vector artwork): crop the model box.
+          // 2) Merged arrangement (or vector artwork): crop the box. When the
+          // box was snapped to an embedded picture but its native pixels are
+          // unavailable, crop THAT image rectangle (never the loose box).
+          var cropRect = embeddedMatch ? embeddedMatch : visionRect;
           try {
             var regionCanvas = document.createElement('canvas');
-            regionCanvas.width = visionRect.width;
-            regionCanvas.height = visionRect.height;
+            regionCanvas.width = cropRect.width;
+            regionCanvas.height = cropRect.height;
             regionCanvas.getContext('2d').drawImage(pageCanvas,
-              visionRect.left, visionRect.top, visionRect.width, visionRect.height,
-              0, 0, visionRect.width, visionRect.height);
+              cropRect.left, cropRect.top, cropRect.width, cropRect.height,
+              0, 0, cropRect.width, cropRect.height);
             canvasToStudioImage(regionCanvas, pictureName, function(cropError, croppedPicture) {
               if (!cropError && croppedPicture) {
                 collectedPictures.push(decorateVisionPicture(croppedPicture, visionRegion));
+                acceptedRegions.push(cropRect);
                 capturedCount++;
               } else if (cropError) {
                 console.warn('[STUDIO:PICTURES] ' + pictureName + ' could not be encoded:', cropError);
@@ -10887,18 +11168,15 @@ function importPdfIllustrations(pdfBytes, onDone) {
    *  A failed batch falls back to the local detector for exactly those pages,
    *  so a disabled or rate-limited AI never leaves the capture empty. */
   function renderPagesWithVision(pdfDocument, pagesToInspect, collectedPictures) {
-    var visionPagesPerCall = parseInt(tool.param('visionPagesPerCall', '6'), 10);
-    if (!visionPagesPerCall || visionPagesPerCall < 1) visionPagesPerCall = 6;
-    if (visionPagesPerCall > 24) visionPagesPerCall = 24;
-    var visionMaxSideLimit = parseInt(tool.param('visionPageMaxSide', '1400'), 10);
-    if (!visionMaxSideLimit || visionMaxSideLimit < 600) visionMaxSideLimit = 1400;
-    if (visionMaxSideLimit > 2048) visionMaxSideLimit = 2048;
+    var visionPagesPerCall = resolveVisionPagesPerCall();
+    var visionMaxSideLimit = resolveVisionPageMaxSide();
     var visionMaxRegions = parseInt(tool.param('visionMaxRegions', '30'), 10);
     if (!visionMaxRegions || visionMaxRegions < 5) visionMaxRegions = 30;
     if (visionMaxRegions > 50) visionMaxRegions = 50;
     var nextPageNumber = 1;
     var visionPictureCount = 0;
     var visionPageCount = 0;
+    var localFallbackPageCount = 0;
     var fallbackWarningShown = false;
 
     function renderVisionPagesSequentially(pageNumbers, maxSide, renderedPages, onRendered) {
@@ -10913,9 +11191,24 @@ function importPdfIllustrations(pdfBytes, onDone) {
       });
     }
 
-    /** Ask for one batch; a too_large answer is retried once at 900 px.
-     *  That is a SIZE adaptation, not a retry of a transient provider failure
-     *  (the CMS owns those retries - v3.12), so it never loops. */
+    /** The rendered page (with its canvas) for one page number */
+    function findRenderedPage(renderedPages, pageNumber) {
+      for (var renderedIndex = 0; renderedIndex < renderedPages.length; renderedIndex++) {
+        if (renderedPages[renderedIndex].pageNumber === pageNumber) return renderedPages[renderedIndex];
+      }
+      return null;
+    }
+
+    /** Free the JPEG and the canvas of a page that is finished */
+    function releaseRenderedPage(renderedPage) {
+      if (!renderedPage) return;
+      renderedPage.dataUrl = '';
+      renderedPage.canvas = null;
+    }
+
+    /** Ask for one page. A too_large answer is retried once at 900 px (SIZE
+     *  adaptation); any failure falls back to the local detector for that
+     *  page. Every call now carries exactly one page, so no batch logic. */
     function requestVisionBatch(pageImages, maxSide, onResult) {
       requestVisionPictureRegions(pageImages, visionMaxRegions, function(visionError, visionPages, visionErrorInfo) {
         if (visionError === 'too_large' && maxSide > 900) {
@@ -10943,7 +11236,8 @@ function importPdfIllustrations(pdfBytes, onDone) {
     function processNextVisionBatch() {
       if (nextPageNumber > pagesToInspect) {
         scanSummary = 'build ' + TOOL_BUILD + ' · AI vision · ' + visionPictureCount +
-          ' picture(s) on ' + visionPageCount + ' page(s)';
+          ' picture(s) on ' + visionPageCount + ' page(s)' +
+          (localFallbackPageCount ? ' · local detector on ' + localFallbackPageCount + ' page(s)' : '');
         addRenderedPagesToGallery(collectedPictures, pagesToInspect, pdfDocument.numPages);
         return;
       }
@@ -10955,7 +11249,7 @@ function importPdfIllustrations(pdfBytes, onDone) {
       var firstBatchPage = batchPageNumbers[0];
       var lastBatchPage = batchPageNumbers[batchPageNumbers.length - 1];
       startStudioStatusTicker('🤖 AI is locating the pictures on page ' + firstBatchPage +
-        (lastBatchPage !== firstBatchPage ? ' to ' + lastBatchPage : ''));
+        (lastBatchPage !== firstBatchPage ? ' to ' + lastBatchPage : '') + ' of ' + pagesToInspect);
       renderVisionPagesSequentially(batchPageNumbers, visionMaxSideLimit, [], function(renderedPages) {
         if (!renderedPages.length) { processNextVisionBatch(); return; }
         requestVisionBatch(renderedPages, visionMaxSideLimit, function(visionError, visionPages, visionErrorInfo) {
@@ -10966,6 +11260,7 @@ function importPdfIllustrations(pdfBytes, onDone) {
           if (visionError) {
             console.warn('[STUDIO:PICTURES] AI vision failed (' + visionError + ') - using local detection for pages ' +
               batchPageNumbersForFallback.join(', '));
+            for (var releaseIndex = 0; releaseIndex < renderedPages.length; releaseIndex++) releaseRenderedPage(renderedPages[releaseIndex]);
             if (!fallbackWarningShown) {
               fallbackWarningShown = true;
               tool.notify('AI picture detection is unavailable: ' + describeAiChannelFailure(visionError, visionErrorInfo) +
@@ -10974,22 +11269,43 @@ function importPdfIllustrations(pdfBytes, onDone) {
             runLocalFallback(batchPageNumbersForFallback, processNextVisionBatch);
             return;
           }
-          var visionPageByNumber = {};
-          for (var resultIndex = 0; resultIndex < visionPages.length; resultIndex++) {
-            var visionPage = visionPages[resultIndex];
-            if (visionPage && visionPage.pageIndex) visionPageByNumber[visionPage.pageIndex] = visionPage;
+          var pageAnswerMap = mapVisionPagesToRequestedPages(visionPages, batchPageNumbersForFallback);
+          if (pageAnswerMap.indexMissingCount || pageAnswerMap.indexIgnoredCount) {
+            console.warn('[STUDIO:PICTURES] the AI answer did not echo usable page numbers (' +
+              pageAnswerMap.indexMissingCount + ' missing, ' + pageAnswerMap.indexIgnoredCount +
+              ' unusable) - answers were matched to pages by position');
+          }
+          if (pageAnswerMap.emptyRegionPageNumbers.length) {
+            console.warn('[STUDIO:PICTURES] the AI answer reported no pictures on page(s) ' +
+              pageAnswerMap.emptyRegionPageNumbers.join(', '));
           }
           // The model already has the pixels - free the JPEGs before cropping.
           for (var freeIndex = 0; freeIndex < renderedPages.length; freeIndex++) renderedPages[freeIndex].dataUrl = '';
           var pagesToCrop = batchPageNumbersForFallback.slice();
+          var missingAnswerPages = pageAnswerMap.missingPageNumbers.slice();
           function cropNextPage() {
-            if (!pagesToCrop.length) { processNextVisionBatch(); return; }
+            if (!pagesToCrop.length) {
+              if (missingAnswerPages.length) {
+                console.warn('[STUDIO:PICTURES] the AI answer had no entry for page(s) ' +
+                  missingAnswerPages.join(', ') + ' - using the local detector there');
+                localFallbackPageCount += missingAnswerPages.length;
+                runLocalFallback(missingAnswerPages.slice(), processNextVisionBatch);
+                return;
+              }
+              processNextVisionBatch();
+              return;
+            }
             var cropPageNumber = pagesToCrop.shift();
-            var visionPageResult = visionPageByNumber[cropPageNumber] || null;
-            var pageRegions = (visionPageResult && visionPageResult.regions) ? visionPageResult.regions : [];
+            var renderedPageForCrop = findRenderedPage(renderedPages, cropPageNumber);
+            var visionPageResult = pageAnswerMap.byPageNumber[cropPageNumber] || null;
+            if (!visionPageResult) { releaseRenderedPage(renderedPageForCrop); cropNextPage(); return; }
+            var pageRegions = visionPageResult.regions ? visionPageResult.regions : [];
             visionPageCount++;
             visionPictureCount += pageRegions.length;
-            captureVisionPagePictures(pdfDocument, cropPageNumber, visionPageResult, pageScale, collectedPictures, cropNextPage);
+            captureVisionPagePictures(pdfDocument, cropPageNumber, visionPageResult, pageScale, collectedPictures, function() {
+              releaseRenderedPage(renderedPageForCrop);
+              cropNextPage();
+            }, renderedPageForCrop ? renderedPageForCrop.canvas : null, renderedPageForCrop ? renderedPageForCrop.renderScale : 0);
           }
           cropNextPage();
         });
@@ -11506,6 +11822,7 @@ function openStudioDrawerForDoc(docUrl) {
   setStudioStatus('', '');
   switchStudioTab('document');
   syncStudioOcrLanguageSelect();
+  syncStudioPictureDetectionControls();
   loadStudioGeneratedForDoc(docUrl);
   showStudioGeneratedView('preview');
   loadStudioDocumentPreview();
@@ -11802,6 +12119,7 @@ function closeStudioDrawer() {
   editingStudyDocImages = [];
   studioOcrLanguageOverride = '';
   syncStudioOcrLanguageSelect();
+  syncStudioPictureDetectionControls();
   updateStudioOriginalSourceButton();
   // Keep the local PDF bytes/blob for the session: reopening the same document
   // does not require picking the file again. They are released when a
@@ -11859,11 +12177,54 @@ function totalStudioImageKb() {
 /** Which version of each picture the gallery shows ('original' | 'generated') */
 var studioImagePreviewVersion = {};
 
+/** Ticked pictures, kept by image id so a gallery re-render (upload, role
+ *  change, version switch) never clears the selection. */
+var studioSelectedImageIds = {};
+
+/** True when every picture in the list is ticked */
+function studioImageSelectionIsComplete() {
+  if (!editingStudyDocImages.length) return false;
+  for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+    var image = editingStudyDocImages[imageIndex];
+    if (!image || !image.id || !studioSelectedImageIds[image.id]) return false;
+  }
+  return true;
+}
+
+/** Tick every picture, or clear the selection when all are already ticked */
+function toggleStudioImageSelection() {
+  if (!editingStudyDocImages.length) return;
+  var selectAll = !studioImageSelectionIsComplete();
+  studioSelectedImageIds = {};
+  if (selectAll) {
+    for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+      var image = editingStudyDocImages[imageIndex];
+      if (image && image.id) studioSelectedImageIds[image.id] = true;
+    }
+  }
+  var checkboxes = document.querySelectorAll('#sd-images-grid input[data-sd-select]');
+  for (var checkboxIndex = 0; checkboxIndex < checkboxes.length; checkboxIndex++) {
+    checkboxes[checkboxIndex].checked = selectAll;
+  }
+  updateStudioSelectionUi();
+}
+
 function renderStudyDocImageGallery() {
   var grid = el('sd-images-grid');
   var countEl = el('sd-images-count');
   var tabCountEl = el('sd-pictures-tab-count');
   if (!grid) return;
+  // Forget selections for pictures that are no longer in the list.
+  var liveImageIds = {};
+  for (var liveIndex = 0; liveIndex < editingStudyDocImages.length; liveIndex++) {
+    var liveImage = editingStudyDocImages[liveIndex];
+    if (liveImage && liveImage.id) liveImageIds[liveImage.id] = true;
+  }
+  for (var selectedImageId in studioSelectedImageIds) {
+    if (Object.prototype.hasOwnProperty.call(studioSelectedImageIds, selectedImageId) && !liveImageIds[selectedImageId]) {
+      delete studioSelectedImageIds[selectedImageId];
+    }
+  }
   var sourceImageCount = 0;
   for (var countIndex = 0; countIndex < editingStudyDocImages.length; countIndex++) {
     if (studioImageRole(editingStudyDocImages[countIndex]) === 'source') sourceImageCount++;
@@ -11895,7 +12256,8 @@ function renderStudyDocImageGallery() {
       : '';
     var imageCardTitle = 'Click to view large' + (image.caption ? ' · ' + image.caption : '');
     return '<div class="sd-image-card' + (imageRole === 'source' ? ' is-source' : '') + '">' +
-      '<label class="sd-image-check"><input type="checkbox" data-sd-select="' + idx + '"> select</label>' +
+      '<label class="sd-image-check"><input type="checkbox" data-sd-select="' + idx + '"' +
+        (studioSelectedImageIds[image.id] ? ' checked' : '') + '> select</label>' +
       '<img src="' + previewSrc + '" alt="' + esc(image.name) + '" title="' + esc(imageCardTitle) + '" data-sd-view="' + idx + '">' +
       versionToggle +
       '<div class="sd-image-meta">' + esc(image.name) +
@@ -13733,6 +14095,14 @@ function updateStudioSelectionUi() {
   var selectedIndexes = studioSelectedImageIndexes();
   var selectedCountElement = el('sd-selected-count');
   if (selectedCountElement) selectedCountElement.textContent = selectedIndexes.length + ' selected';
+  var allPicturesSelected = studioImageSelectionIsComplete();
+  var selectAllButtons = [el('btn-sd-select-all-images'), el('btn-sd-select-all')];
+  for (var selectButtonIndex = 0; selectButtonIndex < selectAllButtons.length; selectButtonIndex++) {
+    var selectAllButton = selectAllButtons[selectButtonIndex];
+    if (!selectAllButton) continue;
+    selectAllButton.disabled = !editingStudyDocImages.length;
+    selectAllButton.textContent = allPicturesSelected ? '☐ Clear selection' : '☑ Select all';
+  }
   var deleteButton = el('btn-sd-bulk-delete');
   if (deleteButton) deleteButton.disabled = !selectedIndexes.length;
   var generateButton = el('btn-sd-bulk-generate');
@@ -14070,7 +14440,7 @@ function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
     var imageIndex = queue.shift();
     var originalImage = editingStudyDocImages[imageIndex];
     if (!originalImage) { processQueueItem(); return; }
-    startStudioStatusTicker('🎨 AI is generating picture version ' + (queueTotal - queue.length) + ' of ' + queueTotal + ' (this can take up to 60 seconds)');
+    startStudioStatusTicker('🎨 AI is generating picture version ' + (queueTotal - queue.length) + ' of ' + queueTotal + ' (this can take up to 110 seconds)');
     // Hosted images have no embedded data URL - fetch the bytes for the sample.
     resolveStudioImageDataUrl(originalImage, function(sampleDataUrl) {
       if (!sampleDataUrl) {
@@ -14322,6 +14692,31 @@ function bindEvents() {
         : 'OCR language follows the curriculum setting.', 'info');
     });
   }
+  var studioPictureDetectionSelect = el('sd-picture-detection');
+  if (studioPictureDetectionSelect) {
+    studioPictureDetectionSelect.addEventListener('change', function() {
+      curriculumPictureDetection = normalizePictureDetectionMode(this.value);
+      syncStudioPictureDetectionControls();
+      saveCurriculumPreference();
+      var detectionMode = effectivePictureDetectionMode();
+      tool.notify(detectionMode === 'local'
+        ? 'Pictures will be found locally (PDF.js only - no AI cost).'
+        : (detectionMode === 'vision'
+          ? 'Pictures will be found with AI vision.'
+          : 'Picture detection follows the tool default (AI when available).'), 'info');
+    });
+  }
+  var studioVisionPageSizeSelect = el('sd-vision-page-size');
+  if (studioVisionPageSizeSelect) {
+    studioVisionPageSizeSelect.addEventListener('change', function() {
+      curriculumVisionPageMaxSide = normalizeVisionPageMaxSide(this.value);
+      syncStudioPictureDetectionControls();
+      saveCurriculumPreference();
+      tool.notify(curriculumVisionPageMaxSide
+        ? 'AI vision pages are rendered at ' + curriculumVisionPageMaxSide + ' px.'
+        : 'AI vision page size follows the tool parameter.', 'info');
+    });
+  }
   var btnSdExtract = el('btn-sd-extract');
   if (btnSdExtract) btnSdExtract.addEventListener('click', function() { extractStudyDocImages(); });
   var btnSdExtractLocal = el('btn-sd-extract-local');
@@ -14363,17 +14758,9 @@ function bindEvents() {
   var btnLessonDrawerClose = el('btn-lesson-drawer-close');
   if (btnLessonDrawerClose) btnLessonDrawerClose.addEventListener('click', cancelLessonEditor);
   var btnSdSelectAll = el('btn-sd-select-all');
-  if (btnSdSelectAll) {
-    btnSdSelectAll.addEventListener('click', function() {
-      var checkboxes = document.querySelectorAll('#sd-images-grid input[data-sd-select]');
-      var allChecked = true;
-      for (var allIdx = 0; allIdx < checkboxes.length; allIdx++) {
-        if (!checkboxes[allIdx].checked) { allChecked = false; break; }
-      }
-      for (var cbIdx = 0; cbIdx < checkboxes.length; cbIdx++) checkboxes[cbIdx].checked = !allChecked;
-      updateStudioSelectionUi();
-    });
-  }
+  if (btnSdSelectAll) btnSdSelectAll.addEventListener('click', toggleStudioImageSelection);
+  var btnSdSelectAllImages = el('btn-sd-select-all-images');
+  if (btnSdSelectAllImages) btnSdSelectAllImages.addEventListener('click', toggleStudioImageSelection);
   var btnSdBulkDelete = el('btn-sd-bulk-delete');
   if (btnSdBulkDelete) btnSdBulkDelete.addEventListener('click', deleteSelectedStudioImages);
   var btnSdBulkGenerate = el('btn-sd-bulk-generate');
@@ -14413,7 +14800,15 @@ function bindEvents() {
   if (studioImagesGrid) {
     studioImagesGrid.addEventListener('change', function(event) {
       var changedTarget = event.target;
-      if (changedTarget && changedTarget.getAttribute && changedTarget.getAttribute('data-sd-select') !== null) updateStudioSelectionUi();
+      if (changedTarget && changedTarget.getAttribute && changedTarget.getAttribute('data-sd-select') !== null) {
+        var changedIndex = parseInt(changedTarget.getAttribute('data-sd-select'), 10);
+        var changedImage = editingStudyDocImages[changedIndex];
+        if (changedImage && changedImage.id) {
+          if (changedTarget.checked) studioSelectedImageIds[changedImage.id] = true;
+          else delete studioSelectedImageIds[changedImage.id];
+        }
+        updateStudioSelectionUi();
+      }
     });
     studioImagesGrid.addEventListener('click', function(event) {
       var target = event.target;
@@ -14627,8 +15022,7 @@ function startCurriculumTool(val, fields) {
       { value: 'vision', label: 'AI vision only (needs Allow AI Vision)' },
       { value: 'local', label: 'Local detection only (no AI cost)' }
     ], hint: 'Who decides where each picture is. AI vision reads the rendered page and decides whether nearby fragments are ONE picture or several; it needs the Allow AI Vision channel and costs model tokens per page. Local detection uses the PDF image objects plus a pixel scan (free, but cannot judge content).' },
-    { name: 'visionPageMaxSide', label: 'AI Vision Page Size (px)', type: 'text', default: '1400', severity: 'optional', hint: 'Longest side of the page image sent to AI vision (600-2048). Smaller is cheaper and faster; larger finds small details.' },
-    { name: 'visionPagesPerCall', label: 'AI Vision Pages per Call', type: 'text', default: '6', severity: 'optional', hint: 'Pages sent in one vision call (1-24). The CMS caps a call at its own page limit and splits it further when needed.' },
+    { name: 'visionPageMaxSide', label: 'AI Vision Page Size (px)', type: 'text', default: '1600', severity: 'optional', hint: 'Longest side of the page image sent to AI vision (600-2048). 1600 is sharper for complex layouts; smaller is cheaper and faster.' },
     { name: 'visionMaxRegions', label: 'AI Vision Max Pictures per Page', type: 'text', default: '30', severity: 'optional', hint: 'Upper bound of picture boxes the model may return for one page (5-50).' },
     { name: 'referenceContextMaxChars', label: 'Reference Context Budget', type: 'text', default: '40000', severity: 'optional', hint: 'How many characters of the content generated from the reference library may be added as context when the REAL study content is generated. The reference documents and their generated content are stored in their own CMS objects, never in the curriculum.' },
     { name: 'ocrLanguage', label: 'OCR Language', type: 'select', default: 'eng', severity: 'optional', options: [

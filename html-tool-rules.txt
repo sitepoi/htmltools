@@ -1,7 +1,15 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-html-tool-rules.txt — VERSION 3.14 — 2026-11-24
+html-tool-rules.txt — VERSION 3.16 — 2026-11-24
 
-CHANGELOG v3.14: AI calls must fit inside the serverless function budget
+CHANGELOG v3.16: vision is called BROWSER-DIRECT (D-HTMLT-35). The CMS mints a
+120 s scoped JWT and the page images go straight from the browser to the
+gateway, so no serverless function sits in the path and no platform budget can
+cut a 90-120 s model call. The server relay remains as an automatic fallback.
+Host AI lines now carry `transport: direct | relay`. Previous changelog v3.15: the AI budget now covers the gateway's own 90 s hard stop
+(D-HTMLT-34 numbers corrected after measurement). A 6-page, a 3-page and even a
+1-page vision call all exceeded 55 s, so the CMS now waits up to 100 s and the
+function declares 120 s. A slow call still returns `timeout` with a message.
+Previous changelog v3.14: AI calls must fit inside the serverless function budget
 (D-HTMLT-34). A vision call needs 20-50 s, so ONE HTTP request now carries ONE
 gateway chunk: at most 8 pages per requestAIVision() call, and the route
 declares maxDuration. If the platform still cuts the function you get
@@ -990,15 +998,21 @@ locally at full resolution.
 
 Requires: allowAiVision: 'yes' in the field settings (Max pages per vision
 call, default 8, HARD cap 8).
-Hard limits: 4 MB decoded per page, 8 pages per call, 55 s CMS timeout against
-the gateway's 90 s hard stop.
+Hard limits: 4 MB decoded per page, 8 pages per call. Browser timeout 150 s;
+the gateway's own soft/hard stops are 90 s / 120 s and normally answer first.
 Rate limit: 20 calls / minute / user.
 
-ONE CHUNK PER CALL (D-HTMLT-34) — a vision call takes 20-50 s and each HTTP
-request runs inside a serverless function with a fixed budget. Send at most 8
-pages, then call again with the next 8 and keep your absolute pageIndex values.
-Sending more returns 'too_large'; do not try to send a whole 40-page document in
-one call.
+BROWSER-DIRECT TRANSPORT (D-HTMLT-35) — the CMS mints a short-lived scoped JWT
+(`GET /api/ai/gateway/token?scope=vision`) and the PARENT BROWSER POSTs the page
+images straight to the gateway. No serverless function is in the path, so a
+long vision call cannot be cut by a platform function budget. If the token or
+the scope is unavailable the host falls back to the server relay automatically —
+your tool does not see the difference, except for `transport` in the log and a
+shorter effective budget on the relay.
+
+ONE CHUNK PER CALL (D-HTMLT-34) — send at most 8 pages, then call again with the
+next 8 and keep your absolute pageIndex values. Sending more returns
+'too_large'; do not try to send a whole 40-page document in one call.
 
 PAGE METADATA IS YOURS — isScan / hasTextLayer are never guessed by the
 model. Detect the text layer locally (tool.pdf.extractText → hasText) and
@@ -1081,10 +1095,13 @@ one of these to see the whole story of a call:
   [AI:GATEWAY]      the CMS -> gateway proxy (server log)
 
 Host lines: `dispatch` (SDK accepted the call, console.debug),
-`request` (field flags + sizes), `ok` (pages/regions/images, costUsd, ms),
-`failed` (http, code, gatewayCode, requestId, blocked, retryable),
+`request` (field flags + sizes), `retry` (a fast retryable failure was
+re-attempted), `ok` (pages/regions/images, costUsd, attempts, transport, ms),
+`failed` (http, transport, code, gatewayCode, requestId, blocked, retryable,
+attempts, retryAfterMs, upstreamStatus, upstreamMessage),
 `threw` (unexpected client error), `blocked — <flag> is off` (not_configured).
-Every host line carries `callId`.
+Every host line carries `callId`. `transport: 'direct'` means the browser talked
+to the gateway itself; `transport: 'relay'` means it went through the CMS server.
 
 Server lines use the SAME callId, so one browser line finds the server line:
   [AI:VISION][server] start | chunk ok | retry | gateway error | done
@@ -1752,7 +1769,7 @@ BEHAVIOUR
     caption you generated instead.
   • background 'transparent' is delivered as PNG (JPEG has no alpha).
   • Limits: 20 calls / hour / user (host); the gateway allows 10 / 60 s per
-    tenant. The CMS aborts at 55 s (serverless function budget, D-HTMLT-34) —
+    tenant. The CMS aborts at 110 s (serverless function budget, D-HTMLT-34) —
     a slow edit returns 'timeout', it is never left hanging.
 
 ES5 EXAMPLE

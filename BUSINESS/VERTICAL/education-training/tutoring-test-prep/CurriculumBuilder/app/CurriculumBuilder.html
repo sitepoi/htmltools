@@ -1,4 +1,4 @@
-<!-- html build 2026-11-18-77 -->
+<!-- html build 2026-11-18-79 -->
 <div id="app">
   <!-- HEADER -->
   <header class="app-header">
@@ -531,6 +531,25 @@
               <button type="button" class="sd-icon-btn" id="btn-sd-download-pdf" title="Download File: save the source document to your device (any size, any type)" aria-label="Download File">⬇</button>
             </span>
             <span class="sd-tab-actions" data-tab-group="pictures">
+              <span class="sd-language sd-detection-control">
+                <label class="sd-language-label" for="sd-picture-detection" title="How pictures are found: Local uses PDF.js only (no AI cost), AI vision finds drawings and complex layouts better">🔎 Find</label>
+                <select class="sd-select" id="sd-picture-detection" title="Local only = no AI cost. AI vision = better for drawings and complex multi-image layouts.">
+                  <option value="">Tool default</option>
+                  <option value="local">Local only (no AI)</option>
+                  <option value="auto">Auto (AI if available)</option>
+                  <option value="vision">AI vision</option>
+                </select>
+              </span>
+              <span class="sd-language sd-detection-control" id="sd-vision-size-control">
+                <label class="sd-language-label" for="sd-vision-page-size" title="Resolution of the page image sent to AI vision. Larger finds small pictures in dense layouts and costs more">AI size</label>
+                <select class="sd-select" id="sd-vision-page-size" title="Resolution of the page image sent to AI vision (larger = sharper for small pictures, more expensive).">
+                  <option value="">Tool default</option>
+                  <option value="1200">1200 px</option>
+                  <option value="1600">1600 px</option>
+                  <option value="2048">2048 px</option>
+                </select>
+              </span>
+              <span class="sd-toolbar-divider" aria-hidden="true"></span>
               <button type="button" class="sd-btn" id="btn-sd-extract" title="Capture the pictures in this document: embedded images keep their original quality, drawings and illustrations are cropped from the page">🧩 Get Pictures</button>
               <span class="sd-toolbar-divider" aria-hidden="true"></span>
               <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-add-image" title="Upload an image to this document's pictures">🖼 Add Image</button>
@@ -561,6 +580,7 @@
             <div class="sd-panel-head">
               <span class="sd-panel-title">🖼 Pictures <span class="sd-muted" id="sd-images-count">0 image(s)</span></span>
               <span class="sd-panel-tools">
+                <button type="button" class="sd-mini-btn" id="btn-sd-select-all-images" title="Select every picture in this list (press again to clear)" disabled>☑ Select all</button>
                 <span class="sd-muted" id="sd-selected-count">0 selected</span>
                 <button type="button" class="sd-mini-btn" id="btn-sd-bulk-generate" title="Create (or refresh) the generated version of the selected Real pictures" disabled>🎨 Generate selected</button>
                 <button type="button" class="sd-mini-btn sd-mini-btn-danger" id="btn-sd-bulk-delete" title="Delete the selected pictures from this document" disabled>🗑 Delete selected</button>
