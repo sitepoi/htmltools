@@ -1,4 +1,4 @@
-<!-- html build 2026-11-18-79 -->
+<!-- html build 2026-11-18-81 -->
 <div id="app">
   <!-- HEADER -->
   <header class="app-header">
@@ -199,7 +199,7 @@
   <div class="modal-overlay" id="library-ref-overlay" style="display:none">
     <div class="modal" style="max-width:560px">
       <div class="modal-header">
-        <h3>� Add pages from a reference document</h3>
+        <h3>📎 Add pages from a reference document</h3>
         <button class="btn-icon modal-close" id="btn-library-ref-close">✕</button>
       </div>
       <div class="modal-body">
@@ -217,12 +217,89 @@
             <input class="form-input" type="number" id="library-ref-end" min="1" value="1">
           </div>
         </div>
-        <div class="form-hint">Only the selected pages are copied (text and images stay original) and the split file is uploaded once to CMS storage.</div>
+        <div class="form-hint">Only the selected pages are copied (text and images stay original) and the split file is uploaded once to CMS storage. A document larger than the CMS download limit must be split first: use ⚙️ Process on the Reference documents tab and send a part to this lesson.</div>
         <div class="form-hint" id="library-ref-status" style="margin-top:10px"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" id="btn-library-ref-cancel">Cancel</button>
         <button class="btn btn-primary" id="btn-library-ref-create">Create split copy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REFERENCE DOCUMENT SPLITTER DRAWER -->
+  <div class="sd-drawer" id="ref-split-drawer" aria-label="Reference document splitter">
+    <div class="sd-drawer-header">
+      <div class="ref-split-heading">
+        <div class="sd-drawer-title" id="ref-split-title">Reference document</div>
+        <div class="ref-split-sub">Split this document once, then send the parts to lessons or generate content from a part.</div>
+      </div>
+      <button type="button" class="sd-drawer-close" id="btn-ref-split-close" title="Close">✕</button>
+    </div>
+    <div class="sd-drawer-body">
+      <div class="ref-split-meta" id="ref-split-meta">Reading the page count…</div>
+
+      <div class="ref-split-card">
+        <div class="ref-split-card-title">✂️ Create a part</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ref-split-from">From page</label>
+            <input class="form-input" type="number" id="ref-split-from" min="1" value="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ref-split-to">To page</label>
+            <input class="form-input" type="number" id="ref-split-to" min="1" value="10">
+          </div>
+        </div>
+        <div class="ref-split-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="btn-ref-split-range">✂️ Split range &amp; upload</button>
+          <span class="ref-split-inline">
+            <label class="form-label" for="ref-split-every" style="margin:0">Every</label>
+            <input class="form-input ref-split-every" type="number" id="ref-split-every" min="1" value="10" title="Pages per part">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ref-split-equal">⚡ Split whole document</button>
+          </span>
+        </div>
+        <div class="form-hint">Each part becomes its own small PDF in CMS storage. Nothing is written to a lesson until you tick the parts and send them.</div>
+        <div class="ref-split-status" id="ref-split-status"></div>
+      </div>
+
+      <div class="ref-split-parts-head">
+        <strong>Parts</strong>
+        <span class="ref-split-parts-tools">
+          <span id="ref-split-parts-count">0 part(s)</span>
+          <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-select-all" title="Tick / untick every part">✓ Select all</button>
+        </span>
+      </div>
+      <div class="ref-split-parts" id="ref-split-parts-list"></div>
+      <div class="ref-split-empty" id="ref-split-empty">No parts yet. Choose a page range above and press "Split range &amp; upload".</div>
+    </div>
+    <div class="sd-drawer-footer">
+      <button type="button" class="btn btn-outline" id="btn-ref-split-done">Close</button>
+      <button type="button" class="btn btn-primary" id="btn-ref-split-send" title="Add the ticked parts to the reference files of the lessons you choose">📤 Send selected parts to lessons…</button>
+    </div>
+  </div>
+  <div class="sd-drawer-backdrop" id="ref-split-backdrop"></div>
+
+  <!-- SEND REFERENCE PARTS TO LESSONS -->
+  <div class="modal-overlay" id="ref-distribute-overlay" style="display:none">
+    <div class="modal" style="max-width:660px">
+      <div class="modal-header">
+        <h3>📤 Send reference parts to lessons</h3>
+        <button class="btn-icon modal-close" id="btn-ref-distribute-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-hint" id="ref-distribute-summary"></div>
+        <input class="form-input ref-dist-filter" id="ref-dist-filter" type="search" placeholder="Filter lessons by name or section…">
+        <div class="ref-dist-tools">
+          <button type="button" class="btn btn-sm btn-outline" id="btn-ref-distribute-all">Select all</button>
+          <button type="button" class="btn btn-sm btn-outline" id="btn-ref-distribute-none">Clear</button>
+          <span class="form-hint" style="margin:0">The parts are added to each lesson's reference files - existing ones are kept.</span>
+        </div>
+        <div class="ref-dist-lessons" id="ref-distribute-lessons"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btn-ref-distribute-cancel">Cancel</button>
+        <button class="btn btn-primary" id="btn-ref-distribute-apply">Add to selected lessons</button>
       </div>
     </div>
   </div>
@@ -534,9 +611,7 @@
               <span class="sd-language sd-detection-control">
                 <label class="sd-language-label" for="sd-picture-detection" title="How pictures are found: Local uses PDF.js only (no AI cost), AI vision finds drawings and complex layouts better">🔎 Find</label>
                 <select class="sd-select" id="sd-picture-detection" title="Local only = no AI cost. AI vision = better for drawings and complex multi-image layouts.">
-                  <option value="">Tool default</option>
                   <option value="local">Local only (no AI)</option>
-                  <option value="auto">Auto (AI if available)</option>
                   <option value="vision">AI vision</option>
                 </select>
               </span>
@@ -554,7 +629,6 @@
               <span class="sd-toolbar-divider" aria-hidden="true"></span>
               <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-add-image" title="Upload an image to this document's pictures">🖼 Add Image</button>
               <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-generate-image" title="Create the AI generated version of the selected pictures (select at least one picture first)">🎨 Generate Image</button>
-              <button type="button" class="sd-btn sd-btn-ghost" id="btn-sd-extract-local" title="Read a PDF from your device in the browser - no download limit">📁 Local PDF</button>
               <span class="sd-toolbar-spacer" aria-hidden="true"></span>
               <button type="button" class="sd-mini-btn" id="btn-sd-select-all" title="Select or unselect every picture">☑ All</button>
             </span>

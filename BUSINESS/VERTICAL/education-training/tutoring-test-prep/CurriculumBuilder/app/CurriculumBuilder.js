@@ -1,4 +1,4 @@
-/* js build 2026-11-18-104 */
+/* js build 2026-11-18-108 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,10 +6,10 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-104';
-console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
-// Boot diagnostic: is the large-file download channel present in this CMS build?
+var TOOL_BUILD = '2026-11-18-108';
+// Boot diagnostic: which build is running, and is the large-file download channel present?
 (function logFileChannelAvailability() {
+  console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' · Curriculum Builder');
   try {
     var channelPresent = (typeof tool !== 'undefined') && typeof tool.requestFileBinary === 'function';
     var bootBadge = document.getElementById('tool-build-badge');
@@ -3072,9 +3072,11 @@ function syncDrawerScrollLock() {
   if (!document.body || !document.body.classList) return;
   var lessonPanel = el('lesson-editor-panel');
   var studioDrawer = el('sd-studio-drawer');
+  var referenceSplitDrawer = el('ref-split-drawer');
   var lessonDrawerOpen = !!(lessonPanel && lessonPanel.classList.contains('lesson-drawer-open'));
   var studioDrawerOpen = !!(studioDrawer && studioDrawer.classList.contains('sd-drawer-open'));
-  if (lessonDrawerOpen || studioDrawerOpen) document.body.classList.add('drawer-scroll-locked');
+  var referenceSplitDrawerOpen = !!(referenceSplitDrawer && referenceSplitDrawer.classList.contains('sd-drawer-open'));
+  if (lessonDrawerOpen || studioDrawerOpen || referenceSplitDrawerOpen) document.body.classList.add('drawer-scroll-locked');
   else document.body.classList.remove('drawer-scroll-locked');
 }
 
@@ -3293,7 +3295,6 @@ function reloadCurriculumFromCms() {
 }
 
 function loadCurriculum(val) {
-  window.__curriculumLastVal = val;  // inspectable from the browser console
   var curriculumValue = normalizeCurriculumValue(val);
   var receivedSections = !!(curriculumValue && Array.isArray(curriculumValue.sections));
   var incomingSectionCount = receivedSections ? curriculumValue.sections.length : 0;
@@ -3336,8 +3337,6 @@ function loadCurriculum(val) {
     stopCurriculumValueGuardian();
     curriculumHadSectionsThisSession = true;
     curriculumEmptyNoticeShown = false;
-    try { window.__curriculumLastGoodValue = { sections: JSON.parse(JSON.stringify(sections)) }; }
-    catch (snapshotError) { console.warn('[CURRICULUM:LOAD] could not keep a copy of the loaded curriculum:', snapshotError); }
   }
   if (isDeveloper()) {
     var totalLessons = collectAllLessons().length;
@@ -3575,13 +3574,7 @@ function syncStudioOcrLanguageSelect() {
 function syncStudioPictureDetectionControls() {
   var detectionSelect = el('sd-picture-detection');
   if (detectionSelect) {
-    detectionSelect.value = curriculumPictureDetection || '';
-    var defaultModeOption = detectionSelect.options.length ? detectionSelect.options[0] : null;
-    if (defaultModeOption && defaultModeOption.value === '') {
-      var parameterMode = normalizePictureDetectionMode(tool.param('pictureDetection', 'auto')) || 'auto';
-      defaultModeOption.textContent = 'Tool default (' +
-        (parameterMode === 'local' ? 'local only' : (parameterMode === 'vision' ? 'AI vision' : 'auto')) + ')';
-    }
+    detectionSelect.value = effectivePictureDetectionMode() === 'local' ? 'local' : 'vision';
   }
   var sizeSelect = el('sd-vision-page-size');
   if (sizeSelect) {
@@ -6489,14 +6482,101 @@ function uploadUnhostedStudioImages(onDone) {
 function startStudioGenerateNewContent() {
   var docUrl = studioCurrentDocUrl;
   if (!docUrl) { tool.notify('No document is open.', 'warning'); return; }
-  var pictureStepText = editingStudyDocImages.length
-    ? 'It uses the ' + editingStudyDocImages.length + ' picture(s) already in this document\'s gallery'
-    : 'It first captures the document\'s pictures';
+  var lowerUrl = docUrl.toLowerCase();
+  var docType = studioDocType(docUrl);
+  var isHtmlDocument = docType === 'htmlDoc' || /\.(html?|htm)(\?|#|$)/.test(lowerUrl);
+  var existingImages = editingStudyDocImagesMap[docUrl] || [];
+  if (!isHtmlDocument && !existingImages.length) {
+    // No pictures yet: the capture step must run first, so let the user pick
+    // the detector (and the AI page size) before any AI quota is spent.
+    openStudioGenerateOptionsDialog(docUrl);
+    return;
+  }
+  var pictureStepText = existingImages.length
+    ? 'It uses the ' + existingImages.length + ' picture(s) already in this document\'s gallery (no new extraction)'
+    : 'It does not need a picture capture for this document type';
   sandboxConfirm('✨ Generate a new version of "' + readableFileName(docUrl) + '"? ' + pictureStepText +
     ', then the AI rewrites the document into a Generated version with its picture links. Nothing student-facing changes - this can take several minutes.', function() {
     runStudioContentGenerationPipeline();
   }, 'Yes, Generate');
 }
+
+/** Detector + AI page size picker shown by Generate New Content when the gallery
+ *  is still empty. The choice is saved with the curriculum and synced to the
+ *  Pictures toolbar, so the next capture uses the same settings. */
+function openStudioGenerateOptionsDialog(docUrl) {
+  var currentDetectionMode = effectivePictureDetectionMode();
+  var selectedPageSize = resolveVisionPageMaxSide();
+  var pageSizeOptions = [1200, 1600, 2048].map(function(sizeValue) {
+    return '<option value="' + sizeValue + '"' + (sizeValue === selectedPageSize ? ' selected' : '') + '>' + sizeValue + ' px</option>';
+  }).join('');
+  var bodyHtml =
+    '<div class="sd-modal-section">' +
+      '<div class="sd-modal-label">Pictures for "' + esc(readableFileName(docUrl)) + '"</div>' +
+      '<div class="sd-modal-hint">The gallery is empty. Choose whether pictures are captured first; every option writes the generated content from the document text.</div>' +
+      '<label class="sd-choice-row"><input type="radio" name="sd-gen-detection" value="local"' + (currentDetectionMode === 'local' ? ' checked' : '') + '>' +
+        '<span><strong>Local only</strong> - PDF.js only, no AI cost. Best when the document already contains real images.</span></label>' +
+      '<label class="sd-choice-row"><input type="radio" name="sd-gen-detection" value="vision"' + (currentDetectionMode === 'local' ? '' : ' checked') + '>' +
+        '<span><strong>AI vision</strong> - finds drawings and complex multi-image layouts. One AI call per page.</span></label>' +
+      '<label class="sd-choice-row"><input type="radio" name="sd-gen-detection" value="none">' +
+        '<span><strong>No pictures</strong> - skip the picture step entirely: no extraction and no AI vision calls. The content is generated from the document text only.</span></label>' +
+    '</div>' +
+    '<div class="sd-modal-section" id="sd-gen-size-section">' +
+      '<div class="sd-modal-label">AI page size</div>' +
+      '<select class="form-input" id="sd-gen-ai-size">' + pageSizeOptions + '</select>' +
+      '<div class="sd-modal-hint">Larger pages find small pictures in dense layouts and cost more.</div>' +
+    '</div>' +
+    '<div class="sd-modal-actions">' +
+      '<button type="button" class="btn btn-outline" data-sd-close>Cancel</button>' +
+      '<button type="button" class="btn btn-primary" id="sd-gen-run">🧩 Capture pictures &amp; generate</button>' +
+    '</div>';
+  openStudioModal('✨ Generate new content', bodyHtml);
+  var modalBody = el('sd-modal-body');
+  if (!modalBody) return;
+  var sizeSection = modalBody.querySelector('#sd-gen-size-section');
+  var detectionRadios = modalBody.querySelectorAll('input[name="sd-gen-detection"]');
+  var runButton = modalBody.querySelector('#sd-gen-run');
+  function chosenDetectionMode() {
+    var chosenMode = 'local';
+    for (var radioIndex = 0; radioIndex < detectionRadios.length; radioIndex++) {
+      if (detectionRadios[radioIndex].checked) chosenMode = detectionRadios[radioIndex].value;
+    }
+    return chosenMode;
+  }
+  function syncGenerateOptionsUi() {
+    var chosenMode = chosenDetectionMode();
+    if (sizeSection) sizeSection.style.display = chosenMode === 'vision' ? '' : 'none';
+    if (runButton) {
+      runButton.textContent = chosenMode === 'none'
+        ? '✨ Generate without pictures'
+        : '🧩 Capture pictures & generate';
+    }
+  }
+  for (var radioIndex = 0; radioIndex < detectionRadios.length; radioIndex++) {
+    detectionRadios[radioIndex].addEventListener('change', syncGenerateOptionsUi);
+  }
+  syncGenerateOptionsUi();
+  if (runButton) {
+    runButton.addEventListener('click', function() {
+      var chosenMode = chosenDetectionMode();
+      // "No pictures" is a ONE-RUN choice: it never changes the saved detector
+      // preference and it is reset by the pipeline as soon as it runs.
+      skipPicturesForNextGeneration = chosenMode === 'none';
+      if (chosenMode !== 'none') {
+        curriculumPictureDetection = normalizePictureDetectionMode(chosenMode);
+        var pageSizeSelect = modalBody.querySelector('#sd-gen-ai-size');
+        if (pageSizeSelect) curriculumVisionPageMaxSide = normalizeVisionPageMaxSide(pageSizeSelect.value);
+        syncStudioPictureDetectionControls();
+        saveCurriculumPreference();
+      }
+      closeStudioModal();
+      runStudioContentGenerationPipeline();
+    });
+  }
+}
+
+/** True only for the ONE generation run started with "No pictures" */
+var skipPicturesForNextGeneration = false;
 
 /** Pictures first (only when the gallery is empty), then the AI generated content */
 function runStudioContentGenerationPipeline() {
@@ -6507,6 +6587,9 @@ function runStudioContentGenerationPipeline() {
   var isHtmlDocument = docType === 'htmlDoc' || /\.(html?|htm)(\?|#|$)/.test(lowerUrl);
   var existingImages = editingStudyDocImagesMap[docUrl];
   var hasImages = !!(existingImages && existingImages.length > 0);
+  // Consume the "No pictures" choice: it applies to this run only.
+  var skipPicturesThisRun = skipPicturesForNextGeneration;
+  skipPicturesForNextGeneration = false;
 
   function uploadPicturesThenGenerate(statusText) {
     setStudioStatus(statusText, 'busy');
@@ -6515,6 +6598,10 @@ function runStudioContentGenerationPipeline() {
 
   if (isHtmlDocument) {
     uploadPicturesThenGenerate('⏳ Generating the new content…');
+    return;
+  }
+  if (skipPicturesThisRun) {
+    uploadPicturesThenGenerate('⏳ Generating the new content from the document text (no picture capture)…');
     return;
   }
   if (!hasImages) {
@@ -7512,29 +7599,6 @@ if (typeof window !== 'undefined') {
   window.__curriculumBuilderReload = reloadCurriculumFromCms;
   /** Console helper: render the open document's page preview again */
   window.__curriculumBuilderRetryPreview = function() { loadStudioDocumentPreview(); };
-  /** Console helper: explain why OCR is not running / which engine was injected */
-  window.__curriculumBuilderOcrDiag = function() {
-    logOcrDiagnostics('manual');
-    return collectOcrDiagnostics();
-  };
-  /** Console helper: what the tool currently holds */
-  window.__curriculumBuilderDebug = function() {
-    var rawValue = window.__curriculumLastVal;
-    var debugInfo = {
-      build: TOOL_BUILD,
-      hasCurriculumValue: rawValue !== undefined && rawValue !== null,
-      valueType: (rawValue === null) ? 'null' : typeof rawValue,
-      valueKeys: (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)) ? Object.keys(rawValue).slice(0, 20) : [],
-      valueLength: (typeof rawValue === 'string') ? rawValue.length : null,
-      sectionCount: sections.length,
-      lastGoodSectionCount: (window.__curriculumLastGoodValue && window.__curriculumLastGoodValue.sections) ? window.__curriculumLastGoodValue.sections.length : 0,
-      secondsSinceLocalSave: lastSaveRequestedAt ? Math.round((Date.now() - lastSaveRequestedAt) / 1000) : null
-    };
-    console.log('===== CURRICULUM BUILDER DEBUG =====');
-    console.log(JSON.stringify(debugInfo, null, 2));
-    console.log('===== END CURRICULUM BUILDER DEBUG =====');
-    return debugInfo;
-  };
 }
 
 /** Call requestFileBinary defensively: some SDK builds reject an options
@@ -9567,6 +9631,15 @@ function offerUnreadableStudioDocumentRemoval(documentUrl, errorCode, fetchResul
   if (!documentUrl || unreadableDocumentPromptUrl === documentUrl) return;
   unreadableDocumentPromptUrl = documentUrl;
   var reasonText = describeDocumentDownloadFailure(errorCode, fetchResult, documentUrl);
+  // A reference document is not "in the lesson": removing it from here would
+  // delete the whole library entry. Explain the real fix instead.
+  if (isReferenceLibraryUrl(documentUrl)) {
+    var referenceLimitText = (fetchResult && fetchResult.limitBytes) ? formatFileSize(fetchResult.limitBytes) : 'the CMS limit';
+    console.warn('[REF:LIBRARY] the reference document could not be read (' + errorCode + ') - it is never removed from the library here');
+    tool.notify('This reference document is larger than ' + referenceLimitText +
+      '. Open it with ⚙️ Process and split it into parts - the parts are small enough to read.', 'warning');
+    return;
+  }
   sandboxConfirm(reasonText + ' Remove this document from the lesson? The link cannot be used here.', function() {
     removeStudioDocumentCompletely(documentUrl);
   }, 'Yes, Remove');
@@ -9637,12 +9710,6 @@ var STUDIO_PDF_PREVIEW_MAX_SCALE = 3;
 var pdfPreviewRetryTimer = null;
 var pdfPreviewRetryAttempts = 0;
 var pdfPreviewRetryDocUrl = '';
-
-/** Read one SDK param without letting a broken SDK break the OCR diagnostics */
-function readParamForDiagnostics(paramName) {
-  try { return tool.param(paramName, '(not exposed)'); }
-  catch (paramError) { return 'threw: ' + paramError.message; }
-}
 
 /** Re-check for PDF.js a few times - the CMS may inject it after the tool */
 function schedulePdfPreviewRetry() {
@@ -10493,11 +10560,12 @@ function normalizePictureDetectionMode(rawMode) {
   return '';
 }
 
-/** The mode actually used: the curriculum choice, else the tool parameter */
+/** The mode actually used. Only two real choices exist: 'local' and 'vision';
+ *  the old 'auto'/'tool default' values mean "AI vision when the host offers it". */
 function effectivePictureDetectionMode() {
   var detectionMode = normalizePictureDetectionMode(curriculumPictureDetection);
   if (!detectionMode) detectionMode = normalizePictureDetectionMode(tool.param('pictureDetection', 'auto'));
-  return detectionMode || 'auto';
+  return detectionMode === 'local' ? 'local' : 'vision';
 }
 
 function pictureVisionDetectionEnabled() {
@@ -10649,41 +10717,6 @@ function renderVisionPageImage(pdfDocument, pageNumber, maxSide) {
   });
 }
 
-/** One console block that shows exactly what the vision model answered.
- *  Boxes are normalised (0..1, top-left origin); pageIndex is the REAL page number. */
-function logVisionPictureResponse(visionResult, visionPages, requestedPageNumbers) {
-  var totalRegionCount = 0;
-  var pageLines = [];
-  for (var answerIndex = 0; answerIndex < visionPages.length; answerIndex++) {
-    var answerPage = visionPages[answerIndex] || {};
-    var answerRegions = answerPage.regions || [];
-    totalRegionCount += answerRegions.length;
-    var regionLines = [];
-    for (var regionIndex = 0; regionIndex < answerRegions.length; regionIndex++) {
-      var visionRegion = answerRegions[regionIndex] || {};
-      var regionBox = visionRegion.box || {};
-      regionLines.push('    #' + (regionIndex + 1) + ' ' + (visionRegion.kind || 'picture') +
-        ' x=' + (Number(regionBox.x) || 0).toFixed(3) +
-        ' y=' + (Number(regionBox.y) || 0).toFixed(3) +
-        ' w=' + (Number(regionBox.width) || 0).toFixed(3) +
-        ' h=' + (Number(regionBox.height) || 0).toFixed(3) +
-        (visionRegion.confidence !== undefined ? ' confidence=' + (Number(visionRegion.confidence) || 0).toFixed(2) : '') +
-        (visionRegion.caption ? ' "' + String(visionRegion.caption).substring(0, 70) + '"' : ''));
-    }
-    pageLines.push('  page ' + (answerPage.pageIndex || '?') + ': ' + answerRegions.length + ' box(es)' +
-      (regionLines.length ? '\n' + regionLines.join('\n') : ''));
-  }
-  console.log('[VISION:RESPONSE] ' + totalRegionCount + ' box(es) for page(s) ' + requestedPageNumbers.join(',') +
-    ' (answered ' + visionPages.length + ')\n' + pageLines.join('\n'));
-  if (isDeveloper()) {
-    try {
-      console.log('[VISION:RESPONSE] raw JSON:', JSON.stringify(visionResult));
-    } catch (rawLogError) {
-      console.warn('[VISION:RESPONSE] raw JSON could not be printed:', rawLogError);
-    }
-  }
-}
-
 /** Wording for a failed AI channel (html-tool-rules v3.13). The host answers
  *  a failure with { message, requestId, blocked, retryable, attempts,
  *  retryAfterMs, gatewayCode }. The CMS retries ONCE and only when the
@@ -10803,7 +10836,6 @@ function mapVisionPagesToRequestedPages(visionPages, requestedPageNumbers) {
 /** Ask the platform AI for the picture boxes of a page batch */
 function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
   var visionPages = [];
-  var requestedPageNumbers = [];
   for (var pageIndex = 0; pageIndex < pageImages.length; pageIndex++) {
     visionPages.push({
       dataUrl: pageImages[pageIndex].dataUrl,
@@ -10811,10 +10843,7 @@ function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
       isScan: pageImages[pageIndex].isScan,
       hasTextLayer: pageImages[pageIndex].hasTextLayer
     });
-    requestedPageNumbers.push(pageImages[pageIndex].pageNumber);
   }
-  console.log('[VISION:REQUEST] page(s) ' + requestedPageNumbers.join(',') + ' · maxRegions=' + maxRegions +
-    ' · detail=high · returnRegions=true · returnText=false');
   try {
     tool.requestAIVision({
       instruction: buildVisionPictureInstruction(),
@@ -10835,7 +10864,6 @@ function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
         return;
       }
       var visionAnswerPages = (visionResult && visionResult.pages) ? visionResult.pages : [];
-      logVisionPictureResponse(visionResult, visionAnswerPages, requestedPageNumbers);
       onDone(null, visionAnswerPages);
     });
   } catch (visionCallError) {
@@ -10916,8 +10944,6 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
 
         function cropNextRegion() {
           if (regionIndex >= pageRegions.length) {
-            console.log('[STUDIO:PICTURES] page ' + pageNumber + ': captured ' + capturedCount +
-              ' picture(s) from ' + pageRegions.length + ' AI box(es)');
             onDone();
             return;
           }
@@ -11075,7 +11101,7 @@ function captureDocumentPictures(onDone) {
   if (studioLocalPdfBytes && studioLocalPdfUrl === sourceUrl) { runWithBytes(studioLocalPdfBytes); return; }
   if (!binaryFileChannelAvailable()) {
     console.warn('[STUDIO:DOWNLOAD] picture capture needs tool.requestFileBinary (allowFileFetch: yes)');
-    tool.notify('File downloads are switched off for this tool. Use "📁 Local PDF" instead.', 'warning');
+    tool.notify('File downloads are switched off for this tool - picture capture needs the large-file download channel (allowFileFetch).', 'warning');
     if (onDone) onDone();
     return;
   }
@@ -11484,42 +11510,6 @@ function resolveActiveOcrLanguage() {
 /** Document URL currently being OCR'd (prevents duplicate runs) */
 var ocrInProgressDocUrl = '';
 
-/** Everything needed to confirm the CMS injected the OCR engine */
-function collectOcrDiagnostics() {
-  var ocrEngine = (typeof window !== 'undefined') ? window.Tesseract : null;
-  return {
-    build: TOOL_BUILD,
-    ocrEnginePresent: !!ocrEngine,
-    ocrVersion: ocrEngine ? (ocrEngine.version || '(unknown)') : '',
-    hasRecognize: !!(ocrEngine && typeof ocrEngine.recognize === 'function'),
-    hasCreateWorker: !!(ocrEngine && typeof ocrEngine.createWorker === 'function'),
-    ocrLanguage: readParamForDiagnostics('ocrLanguage'),
-    ocrLanguageResolved: resolveActiveOcrLanguage(),
-    curriculumLanguage: curriculumLanguage || '(not set)',
-    ocrLanguageOverride: studioOcrLanguageOverride || '(follow curriculum language)',
-    ocrMaxPages: readParamForDiagnostics('ocrMaxPages'),
-    ocrPageScale: readParamForDiagnostics('ocrPageScale'),
-    ocrWorkerPath: readParamForDiagnostics('ocrWorkerPath'),
-    ocrCorePath: readParamForDiagnostics('ocrCorePath'),
-    ocrLanguagePath: readParamForDiagnostics('ocrLanguagePath'),
-    ocrGalleryImages: readParamForDiagnostics('ocrGalleryImages'),
-    pdfjsLibPresent: pdfJsLibraryAvailable(),
-    galleryImages: editingStudyDocImages.length,
-    imagesWithRecognizedText: editingStudyDocImages.filter(function(image) { return !!(image && image.ocrText); }).length
-  };
-}
-
-function logOcrDiagnostics(stageLabel) {
-  try {
-    console.log('===== CURRICULUM BUILDER - OCR DIAGNOSTICS =====');
-    console.log('stage: ' + stageLabel);
-    console.log(JSON.stringify(collectOcrDiagnostics(), null, 2));
-    console.log('===== END OCR DIAGNOSTICS =====');
-  } catch (diagnosticsError) {
-    console.warn('[STUDIO:OCR] diagnostics could not be printed:', diagnosticsError);
-  }
-}
-
 /** OCR one rendered page; callback(errorText, recognizedText) */
 function runOcrOnCanvas(pageCanvas, onDone) {
   var ocrEngine = window.Tesseract;
@@ -11568,7 +11558,6 @@ function ocrPdfBytesToText(pdfBytes, onDone) {
   var ocrPageScale = parseFloat(tool.param('ocrPageScale', '2'));
   if (!ocrPageScale || isNaN(ocrPageScale)) ocrPageScale = 2;
   ocrPageScale = Math.max(1, Math.min(3, ocrPageScale));
-  logOcrDiagnostics('page OCR start');
   window.pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) }).promise.then(function(pdfDocument) {
     var pagesToOcr = Math.min(pdfDocument.numPages, ocrMaxPages);
     var pageTexts = [];
@@ -11655,7 +11644,6 @@ function ocrGalleryImage(image, onDone) {
  *  (image.ocrText) so a second generation run does not repeat the work. */
 function ocrStudioGalleryImages(onDone) {
   if (!ocrEngineAvailable()) { onDone('', '', 0); return; }
-  logOcrDiagnostics('picture OCR start');
   var maxImages = parseInt(tool.param('ocrImageMaxCount', '4'), 10);
   if (!maxImages || maxImages < 1) maxImages = 4;
   var pendingImages = [];
@@ -11817,7 +11805,12 @@ function openStudioDrawerForDoc(docUrl) {
       : (role === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document');
     subtitleEl.textContent = documentKindText + ' · ' + editingStudyDocImages.length + ' image(s)';
   }
-  if (roleButton) roleButton.textContent = role === 'final' ? '🔄 To Sample' : '🔄 To Ready';
+  // A reference document/part is never a lesson document, so the Ready/Sample
+  // switch does not apply and must not be offered.
+  if (roleButton) {
+    roleButton.hidden = isReferenceDocument;
+    roleButton.textContent = role === 'final' ? '🔄 To Sample' : '🔄 To Ready';
+  }
   updateStudioOriginalSourceButton();
   setStudioStatus('', '');
   switchStudioTab('document');
@@ -11897,18 +11890,30 @@ function storeStudioDocumentCopyInCms() {
   });
 }
 
-/** Load the Generated content saved for one document into the drawer */
+/** Load the Generated content saved for one document into the drawer.
+ *  Works for a whole reference document and for one of its split parts. */
 function loadStudioGeneratedForDoc(docUrl) {
   // A reference document keeps its generated content in its own CMS object.
   for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
     var referenceEntry = mainDocuments[documentIndex];
-    if (!referenceEntry || referenceEntry.url !== docUrl || !referenceEntry.generatedHtml) continue;
+    if (!referenceEntry) continue;
+    var generatedSource = null;
+    if (referenceEntry.url === docUrl && referenceEntry.generatedHtml) {
+      generatedSource = referenceEntry;
+    } else {
+      var entryParts = referenceEntry.parts || [];
+      for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+        var partEntry = entryParts[partIndex];
+        if (partEntry && partEntry.url === docUrl && partEntry.generatedHtml) { generatedSource = partEntry; break; }
+      }
+    }
+    if (!generatedSource) continue;
     if (!editingStudyDocGeneratedHtmlMap[docUrl]) {
       editingStudyDocGeneratedHtmlMap[docUrl] = {
-        html: referenceEntry.generatedHtml,
-        generatedAt: referenceEntry.generatedAt ? Date.parse(referenceEntry.generatedAt) : 0,
-        sourceLabel: referenceEntry.generatedSourceLabel || '',
-        docName: referenceEntry.name || ''
+        html: generatedSource.generatedHtml,
+        generatedAt: generatedSource.generatedAt ? Date.parse(generatedSource.generatedAt) : 0,
+        sourceLabel: generatedSource.generatedSourceLabel || '',
+        docName: generatedSource.name || ''
       };
     }
     break;
@@ -12142,6 +12147,12 @@ function closeStudioDrawer() {
 /** Switch the open document between Final and Source (any type) */
 function toggleStudioDocRole() {
   if (!studioCurrentDocUrl) return;
+  // Reference documents and their parts live in the reference library, not in
+  // a lesson's document lists - moving them would corrupt both.
+  if (isReferenceLibraryUrl(studioCurrentDocUrl)) {
+    tool.notify('A reference document is never added to a lesson\'s documents. Use the reference library (⚙️ Process) to split it and send parts to lessons.', 'info');
+    return;
+  }
   var role = studioDocRole(studioCurrentDocUrl);
   if (role === 'final') {
     var removedType = removeRealDocumentUrl(studioCurrentDocUrl);
@@ -12516,69 +12527,7 @@ function addStudyDocImageDirectly() {
   });
 }
 
-/* ── 📁 Local PDF mode: read the file in the browser, no server relay ── */
-
-/** Button handler: pick a PDF from the device and process it entirely locally */
-function pickAndProcessLocalPdf() {
-  var pickerOpened = pickLocalFile('.pdf,application/pdf', function(selectedFile) {
-    processLocalPdfFile(selectedFile);
-  });
-  if (!pickerOpened) tool.notify('The browser blocked the file picker. Try again from a click.', 'error');
-}
-
-/** Read a local PDF into memory, then extract its images (and make it the target doc) */
-function processLocalPdfFile(selectedFile) {
-  if (!selectedFile) return;
-  var lowerName = String(selectedFile.name || '').toLowerCase();
-  if (lowerName.indexOf('.pdf') === -1 && selectedFile.type !== 'application/pdf') {
-    tool.notify('Choose a PDF file - other formats cannot be read locally.', 'warning');
-    return;
-  }
-  startStudioStatusTicker('📁 Reading "' + selectedFile.name + '" in your browser (no server)');
-  var localReader = new FileReader();
-  localReader.onerror = function() {
-    setStudioStatus('❌ Could not read "' + selectedFile.name + '" from disk.', 'warn');
-  };
-  localReader.onload = function() {
-    var pdfBytes = new Uint8Array(localReader.result);
-    if (studioLocalPdfBlobUrl) {
-      try { URL.revokeObjectURL(studioLocalPdfBlobUrl); } catch (localRevokeError) { /* ignore */ }
-      studioLocalPdfBlobUrl = '';
-    }
-    studioLocalPdfBytes = pdfBytes;
-    studioLocalPdfName = selectedFile.name;
-    studioLocalPdfBlobUrl = URL.createObjectURL(selectedFile);
-    ensureLocalPdfDocument(selectedFile, function(docError, docUrl) {
-      if (docError) {
-        setStudioStatus('❌ ' + docError + ' Tip: open an existing document first, then choose the local PDF - no upload is needed then.', 'warn');
-        return;
-      }
-      studioLocalPdfUrl = docUrl;
-      if (studioCurrentDocUrl !== docUrl) openStudioDrawerForDoc(docUrl);
-      else loadStudioDocumentPreview();
-      runLocalImageExtraction(pdfBytes);
-    });
-  };
-  localReader.readAsArrayBuffer(selectedFile);
-}
-
-/** Use the open document, or upload the local PDF so it becomes a Ready document */
-function ensureLocalPdfDocument(selectedFile, onDone) {
-  if (studioCurrentDocUrl) { onDone(null, studioCurrentDocUrl); return; }
-  uploadLocalFileToStorage(selectedFile, function(uploadError, uploadResult) {
-    if (uploadError) { onDone(uploadError); return; }
-    editingStudyDocPdfUrls.push(uploadResult.url);
-    renderPdfEditorList();
-    onDone(null, uploadResult.url);
-  });
-}
-
-/** Scan local PDF bytes for images - no relay, no 500 KB limit */
-function runLocalImageExtraction(pdfBytes, onDone) {
-  startStudioStatusTicker('🧩 Scanning the local PDF for images (no server involved)');
-  var candidates = findPdfImageStreams(pdfBytes);
-  decodeAndStorePdfImages(candidates, onDone);
-}
+/* ── Picture identity ── */
 
 /** Stable identity for a gallery image so running Extract again does not add
  *  the same picture twice. The content hash is kept in image.contentKey
@@ -12789,10 +12738,17 @@ function canUseReferenceStore() {
   return typeof tool.requestObjects === 'function';
 }
 
-/** True when the URL belongs to a reference library document */
+/** True when the URL belongs to a reference library document or one of its parts */
 function isReferenceLibraryUrl(documentUrl) {
+  if (!documentUrl) return false;
   for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
-    if (mainDocuments[documentIndex] && mainDocuments[documentIndex].url === documentUrl) return true;
+    var libraryEntry = mainDocuments[documentIndex];
+    if (!libraryEntry) continue;
+    if (libraryEntry.url === documentUrl) return true;
+    var entryParts = libraryEntry.parts || [];
+    for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+      if (entryParts[partIndex] && entryParts[partIndex].url === documentUrl) return true;
+    }
   }
   return false;
 }
@@ -12802,6 +12758,63 @@ function isReferenceLibraryUrl(documentUrl) {
 function sanitizeGeneratedHtmlForSave(htmlText) {
   var strippedHtml = stripInlineImageDataFromHtml(htmlText);
   return { html: strippedHtml.html, droppedImages: strippedHtml.removedCount, inlineBytes: strippedHtml.removedBytes };
+}
+
+/** One stored part of a reference document: a smaller PDF cut from the big one.
+ *  The part keeps its own generated content, so the AI can work on that part
+ *  without reading the whole document again. */
+function normalizeReferencePart(rawPart) {
+  if (!rawPart || typeof rawPart !== 'object' || !rawPart.url) return null;
+  return {
+    partId: rawPart.partId || genId(),
+    name: rawPart.name || 'Reference part',
+    url: rawPart.url,
+    sizeKb: rawPart.sizeKb || 0,
+    fromPage: parseInt(rawPart.fromPage, 10) || 0,
+    toPage: parseInt(rawPart.toPage, 10) || 0,
+    addedAt: rawPart.addedAt || '',
+    generatedHtml: rawPart.generatedHtml || '',
+    generatedAt: rawPart.generatedAt || '',
+    generatedSourceLabel: rawPart.generatedSourceLabel || ''
+  };
+}
+
+/** All valid parts of one reference entry (never null) */
+function normalizeReferenceParts(rawParts) {
+  var normalizedParts = [];
+  if (!Array.isArray(rawParts)) return normalizedParts;
+  for (var partIndex = 0; partIndex < rawParts.length; partIndex++) {
+    var normalizedPart = normalizeReferencePart(rawParts[partIndex]);
+    if (normalizedPart) normalizedParts.push(normalizedPart);
+  }
+  return normalizedParts;
+}
+
+/** Parts exactly as they are stored in the CMS object (inline pictures stripped) */
+function serializeReferencePartsForStore(referenceParts) {
+  var storedParts = [];
+  if (!Array.isArray(referenceParts)) return storedParts;
+  for (var partIndex = 0; partIndex < referenceParts.length; partIndex++) {
+    var partEntry = normalizeReferencePart(referenceParts[partIndex]);
+    if (!partEntry) continue;
+    if (partEntry.generatedHtml.indexOf('data:') !== -1) {
+      var sanitizedPartHtml = sanitizeGeneratedHtmlForSave(partEntry.generatedHtml);
+      partEntry.generatedHtml = sanitizedPartHtml.html;
+    }
+    storedParts.push({
+      partId: partEntry.partId,
+      name: partEntry.name,
+      url: partEntry.url,
+      sizeKb: partEntry.sizeKb,
+      fromPage: partEntry.fromPage,
+      toPage: partEntry.toPage,
+      addedAt: partEntry.addedAt,
+      generatedHtml: partEntry.generatedHtml,
+      generatedAt: partEntry.generatedAt,
+      generatedSourceLabel: partEntry.generatedSourceLabel
+    });
+  }
+  return storedParts;
 }
 
 /** One CMS object -> one library entry */
@@ -12825,7 +12838,8 @@ function referenceEntryFromObject(referenceObject) {
     generatedHtml: storedEntry.generatedHtml || '',
     generatedAt: storedEntry.generatedAt || '',
     generatedSourceLabel: storedEntry.generatedSourceLabel || '',
-    generatedDroppedImages: storedEntry.generatedDroppedImages || 0
+    generatedDroppedImages: storedEntry.generatedDroppedImages || 0,
+    parts: normalizeReferenceParts(storedEntry.parts)
   };
 }
 
@@ -12875,7 +12889,8 @@ function saveReferenceDocumentToCms(referenceEntry, onDone) {
     addedAt: referenceEntry.addedAt || '',
     generatedHtml: storedGeneratedHtml,
     generatedAt: referenceEntry.generatedAt || '',
-    generatedSourceLabel: referenceEntry.generatedSourceLabel || ''
+    generatedSourceLabel: referenceEntry.generatedSourceLabel || '',
+    parts: serializeReferencePartsForStore(referenceEntry.parts)
   });
   if (referenceEntry.objectId) {
     tool.requestObjects('update', {
@@ -12904,22 +12919,39 @@ function saveReferenceDocumentToCms(referenceEntry, onDone) {
   });
 }
 
-/** Store the content generated from one reference document (never the curriculum) */
+/** Store the content generated from one reference document (never the curriculum).
+ *  Matches the document URL or one of its split parts. */
 function saveGeneratedContentForReferenceDocument(documentUrl, generatedHtml, sourceLabel) {
   if (!documentUrl || !generatedHtml) return false;
   for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
     var referenceEntry = mainDocuments[documentIndex];
-    if (!referenceEntry || referenceEntry.url !== documentUrl) continue;
+    if (!referenceEntry) continue;
+    var targetPart = null;
+    if (referenceEntry.url !== documentUrl) {
+      var entryParts = referenceEntry.parts || [];
+      for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+        if (entryParts[partIndex] && entryParts[partIndex].url === documentUrl) { targetPart = entryParts[partIndex]; break; }
+      }
+      if (!targetPart) continue;
+    }
     var sanitized = sanitizeGeneratedHtmlForSave(generatedHtml);
-    referenceEntry.generatedHtml = sanitized.html;
-    referenceEntry.generatedAt = new Date().toISOString();
-    referenceEntry.generatedSourceLabel = sourceLabel || '';
-    referenceEntry.generatedDroppedImages = sanitized.droppedImages;
+    var storedAtIso = new Date().toISOString();
+    if (targetPart) {
+      targetPart.generatedHtml = sanitized.html;
+      targetPart.generatedAt = storedAtIso;
+      targetPart.generatedSourceLabel = sourceLabel || '';
+    } else {
+      referenceEntry.generatedHtml = sanitized.html;
+      referenceEntry.generatedAt = storedAtIso;
+      referenceEntry.generatedSourceLabel = sourceLabel || '';
+      referenceEntry.generatedDroppedImages = sanitized.droppedImages;
+    }
     if (referenceLibraryStoreReady) saveReferenceDocumentToCms(referenceEntry);
     renderMainDocumentsList();
+    renderReferenceSplitterParts(referenceEntry);
     if (sanitized.droppedImages) {
       console.warn('[REF:LIBRARY] ' + sanitized.droppedImages + ' inline picture(s) (' + formatFileSize(sanitized.inlineBytes) +
-        ') removed from the stored generated content of ' + (referenceEntry.name || 'reference document'));
+        ') removed from the stored generated content of ' + ((targetPart || referenceEntry).name || 'reference document'));
     }
     return true;
   }
@@ -12935,20 +12967,33 @@ function deleteReferenceDocumentFromCms(referenceEntry, onDone) {
   });
 }
 
-/** Generated reference text used as context for the REAL content generation */
+/** Generated reference text used as context for the REAL content generation.
+ *  Whole-document content and the content generated from each split part are
+ *  both included - the parts are what the lessons actually use. */
 function referenceLibraryGeneratedContext(maxCharacters) {
   var contextBudget = maxCharacters || parseInt(tool.param('referenceContextMaxChars', '40000'), 10);
   if (!contextBudget || contextBudget < 1000) contextBudget = 40000;
   var contextPieces = [];
   var usedCharacters = 0;
+  function addContextText(generatedHtml, labelText) {
+    if (!generatedHtml || usedCharacters >= contextBudget) return;
+    var plainText = String(generatedHtml).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!plainText) return;
+    var sliceLength = Math.min(plainText.length, contextBudget - usedCharacters);
+    contextPieces.push('REFERENCE MATERIAL: ' + labelText + '\n' + plainText.substring(0, sliceLength));
+    usedCharacters += sliceLength;
+  }
   for (var documentIndex = 0; documentIndex < mainDocuments.length && usedCharacters < contextBudget; documentIndex++) {
     var referenceEntry = mainDocuments[documentIndex];
-    if (!referenceEntry || !referenceEntry.generatedHtml) continue;
-    var plainText = String(referenceEntry.generatedHtml).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    if (!plainText) continue;
-    var sliceLength = Math.min(plainText.length, contextBudget - usedCharacters);
-    contextPieces.push('REFERENCE MATERIAL: ' + (referenceEntry.name || 'reference document') + '\n' + plainText.substring(0, sliceLength));
-    usedCharacters += sliceLength;
+    if (!referenceEntry) continue;
+    addContextText(referenceEntry.generatedHtml, referenceEntry.name || 'reference document');
+    var entryParts = referenceEntry.parts || [];
+    for (var partIndex = 0; partIndex < entryParts.length && usedCharacters < contextBudget; partIndex++) {
+      var partEntry = entryParts[partIndex];
+      if (!partEntry) continue;
+      addContextText(partEntry.generatedHtml, (partEntry.name || 'reference part') +
+        (partEntry.fromPage ? ' (pages ' + partEntry.fromPage + '-' + partEntry.toPage + ')' : ''));
+    }
   }
   return contextPieces.join('\n\n');
 }
@@ -12998,15 +13043,17 @@ function renderMainDocumentsList() {
   for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
     var documentEntry = mainDocuments[documentIndex];
     var sizeLabel = documentEntry.sizeKb ? (Math.max(1, Math.round(documentEntry.sizeKb)) + ' KB') : 'PDF';
+    var partCount = (documentEntry.parts || []).length;
+    var partsLabel = partCount ? ' · ✂️ ' + partCount + ' part(s)' : '';
     var generatedLabel = documentEntry.generatedHtml
       ? ' · 🤖 ' + formatFileSize(utf8ByteLength(documentEntry.generatedHtml)) + ' generated'
-      : ' · not generated';
+      : '';
     listHtml += '<div class="ref-doc-row">' +
       '<div class="ref-doc-main"><strong>' + esc(documentEntry.name) + '</strong>' +
-      '<span class="ref-doc-meta">' + sizeLabel + generatedLabel + '</span></div>' +
+      '<span class="ref-doc-meta">' + sizeLabel + partsLabel + generatedLabel + '</span></div>' +
       '<div class="ref-doc-actions">' +
         '<button class="btn btn-sm btn-outline" data-ref-open="' + esc(documentEntry.id) + '">👁 Open</button>' +
-        '<button class="btn btn-sm btn-outline" data-ref-process="' + esc(documentEntry.id) + '" title="Open this reference document in the Process drawer: capture pictures and generate the reference content">⚙️ Process</button>' +
+        '<button class="btn btn-sm btn-outline" data-ref-process="' + esc(documentEntry.id) + '" title="Split this document into smaller PDFs, then send the parts to lessons or generate content from a part">⚙️ Process</button>' +
         '<button class="btn btn-sm btn-danger" data-ref-del="' + esc(documentEntry.id) + '">🗑</button>' +
       '</div></div>';
   }
@@ -13023,7 +13070,8 @@ function addMainDocumentEntry(documentName, documentUrl, documentSizeKb) {
     addedAt: new Date().toISOString(),
     generatedHtml: '',
     generatedAt: '',
-    generatedSourceLabel: ''
+    generatedSourceLabel: '',
+    parts: []
   };
   mainDocuments.push(newReferenceEntry);
   renderMainDocumentsList();
@@ -13076,25 +13124,39 @@ function deleteMainDocument(documentId) {
   if (!foundDocument) return;
   // An outside URL is not ours to delete; a CMS storage upload is.
   var documentIsStoredFile = !isExternalDocumentHost(foundDocument.url);
+  var splitPartCount = (foundDocument.parts || []).length;
+  var partDeletionNote = splitPartCount
+    ? ' Its ' + splitPartCount + ' split part(s) are deleted from CMS storage too; copies already added to lessons stay.'
+    : '';
   var confirmText = documentIsStoredFile
-    ? 'Remove "' + foundDocument.name + '" from the reference documents? The uploaded file is deleted from CMS storage too. Lesson extracts copied from it are separate files and stay.'
-    : 'Remove "' + foundDocument.name + '" from the reference documents? The outside file stays where it is; only the link is removed.';
+    ? 'Remove "' + foundDocument.name + '" from the reference documents? The uploaded file is deleted from CMS storage too.' + partDeletionNote +
+      ' Lesson extracts copied from it are separate files and stay.'
+    : 'Remove "' + foundDocument.name + '" from the reference documents? The outside file stays where it is; only the link is removed.' +
+      (splitPartCount ? ' The ' + splitPartCount + ' split part(s) are deleted from CMS storage.' : '');
   sandboxConfirm(confirmText, function() {
     mainDocuments = mainDocuments.filter(function(documentEntry) { return documentEntry.id !== documentId; });
     renderMainDocumentsList();
+    if (referenceSplitterDocumentId === documentId) closeReferenceSplitter();
     // The library entry lives in its own CMS object - remove that too.
     deleteReferenceDocumentFromCms(foundDocument);
     if (!referenceLibraryStoreReady) saveCurriculum();
-    if (!documentIsStoredFile) {
+    // The split parts are separate storage files: delete them with the entry.
+    var deletedFileEntries = [];
+    for (var partIndex = 0; partIndex < splitPartCount; partIndex++) {
+      var splitPart = foundDocument.parts[partIndex];
+      if (splitPart && splitPart.url) deletedFileEntries.push({ url: splitPart.url, label: splitPart.name || 'reference part' });
+    }
+    if (documentIsStoredFile) deletedFileEntries.push({ url: foundDocument.url, label: foundDocument.name });
+    if (!deletedFileEntries.length) {
       tool.notify('Reference document removed.', 'info');
       return;
     }
-    deleteStorageFiles([{ url: foundDocument.url, label: foundDocument.name }], 'reference document removed', function(deleteSummary) {
+    deleteStorageFiles(deletedFileEntries, 'reference document removed', function(deleteSummary) {
       if (deleteSummary.queued) {
-        tool.notify('Reference document removed. Its file could not be deleted and was queued for cleanup.', 'warning');
+        tool.notify('Reference document removed. Its file(s) could not all be deleted and were queued for cleanup.', 'warning');
         return;
       }
-      tool.notify('Reference document removed and its file deleted from CMS storage.', 'info');
+      tool.notify('Reference document removed and its file(s) deleted from CMS storage.', 'info');
     });
   }, 'Yes, Remove');
 }
@@ -13117,16 +13179,727 @@ function bindReferenceDocumentEvents() {
       }
       var processButton = event.target && event.target.closest ? event.target.closest('[data-ref-process]') : null;
       if (processButton) {
-        var processId = processButton.getAttribute('data-ref-process');
-        for (var processIndex = 0; processIndex < mainDocuments.length; processIndex++) {
-          if (mainDocuments[processIndex].id === processId) openStudioDrawerForDoc(mainDocuments[processIndex].url);
-        }
+        openReferenceSplitter(processButton.getAttribute('data-ref-process'));
         return;
       }
       var removeButton = event.target && event.target.closest ? event.target.closest('[data-ref-del]') : null;
       if (removeButton) deleteMainDocument(removeButton.getAttribute('data-ref-del'));
     });
   }
+}
+
+/* ═══════════════════════════════════════════
+   REFERENCE DOCUMENT SPLITTER & DISTRIBUTOR
+   A curriculum-level reference document is usually one large file (a whole
+   book or exam pack) and the CMS download channel has a size cap. This drawer
+   cuts the document into small PDFs ONCE, uploads each part to CMS storage,
+   and then lets the author
+     a) send parts straight into the reference files of chosen lessons, and
+     b) open a part in the Document Studio to generate content from it.
+   Nothing is written to a lesson until "Send selected parts to lessons" is
+   confirmed, and the big document is never handed to the lesson-level studio.
+   ═══════════════════════════════════════════ */
+
+var referenceSplitterDocumentId = '';
+var referenceSplitterPageCount = 0;
+var referenceSplitterBusy = false;
+var referenceSplitterSelectedPartIds = {};
+
+/** Find one reference library entry by its library id */
+function findMainDocumentById(documentId) {
+  for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+    if (mainDocuments[documentIndex] && mainDocuments[documentIndex].id === documentId) return mainDocuments[documentIndex];
+  }
+  return null;
+}
+
+/** Highest page already used by a part (0 when the document has no parts) */
+function lastReferencePartPage(referenceEntry) {
+  var lastPage = 0;
+  var entryParts = (referenceEntry && referenceEntry.parts) ? referenceEntry.parts : [];
+  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+    if (entryParts[partIndex] && entryParts[partIndex].toPage > lastPage) lastPage = entryParts[partIndex].toPage;
+  }
+  return lastPage;
+}
+
+function setReferenceSplitterStatus(messageText, statusKind) {
+  var statusElement = el('ref-split-status');
+  if (!statusElement) return;
+  statusElement.textContent = messageText || '';
+  if (statusKind === 'error') statusElement.style.color = '#b91c1c';
+  else if (statusKind === 'warn') statusElement.style.color = '#b45309';
+  else if (statusKind === 'ok') statusElement.style.color = '#047857';
+  else statusElement.style.color = '';
+}
+
+function closeReferenceSplitter() {
+  var drawer = el('ref-split-drawer');
+  var backdrop = el('ref-split-backdrop');
+  if (drawer) drawer.classList.remove('sd-drawer-open');
+  if (backdrop) backdrop.classList.remove('sd-drawer-backdrop-open');
+  referenceSplitterBusy = false;
+  syncDrawerScrollLock();
+  tool.resize();
+}
+
+function openReferenceSplitter(documentId) {
+  var documentEntry = findMainDocumentById(documentId);
+  if (!documentEntry) { tool.notify('Reference document not found.', 'warning'); return; }
+  referenceSplitterDocumentId = documentEntry.id;
+  referenceSplitterPageCount = 0;
+  referenceSplitterBusy = false;
+  referenceSplitterSelectedPartIds = {};
+  var titleElement = el('ref-split-title');
+  if (titleElement) titleElement.textContent = '📚 ' + (documentEntry.name || 'Reference document');
+  var metaElement = el('ref-split-meta');
+  if (metaElement) metaElement.textContent = 'Reading the page count…';
+  setReferenceSplitterStatus('', '');
+  renderReferenceSplitterParts(documentEntry);
+  syncReferenceSplitterRangeInputs(documentEntry);
+  var drawer = el('ref-split-drawer');
+  var backdrop = el('ref-split-backdrop');
+  if (drawer) drawer.classList.add('sd-drawer-open');
+  if (backdrop) backdrop.classList.add('sd-drawer-backdrop-open');
+  syncDrawerScrollLock();
+  tool.resize();
+  loadReferenceDocumentPageCount(documentEntry, function(pageCount, readFailureText) {
+    if (referenceSplitterDocumentId !== documentEntry.id) return;
+    referenceSplitterPageCount = pageCount || 0;
+    var partCount = (documentEntry.parts || []).length;
+    var metaText = referenceSplitterPageCount
+      ? ('📄 ' + referenceSplitterPageCount + ' page(s) · ✂️ ' + partCount + ' part(s)')
+      : ('📄 page count not available · ✂️ ' + partCount + ' part(s)');
+    if (metaElement) metaElement.textContent = metaText;
+    if (readFailureText) setReferenceSplitterStatus('⚠️ ' + readFailureText, 'warn');
+    syncReferenceSplitterRangeInputs(documentEntry);
+  });
+}
+
+/** Point the range inputs at the pages that are not split yet */
+function syncReferenceSplitterRangeInputs(documentEntry) {
+  if (referenceSplitterBusy) return;
+  var fromInput = el('ref-split-from');
+  var toInput = el('ref-split-to');
+  var startPage = lastReferencePartPage(documentEntry) + 1;
+  if (startPage < 1) startPage = 1;
+  var endPage = referenceSplitterPageCount ? Math.min(referenceSplitterPageCount, startPage + 9) : startPage + 9;
+  if (endPage < startPage) endPage = startPage;
+  if (fromInput) fromInput.value = startPage;
+  if (toInput) toInput.value = endPage;
+}
+
+/** Read the document page count. The PDF toolkit can read a URL directly, so
+ *  the CMS download cap does not apply; the download is only the fallback. */
+function loadReferenceDocumentPageCount(referenceEntry, onDone) {
+  function countFromDownloadedFile() {
+    fetchDocumentBytes(referenceEntry.url, { purpose: 'reference-page-count' }, function(fetchError, documentBytes, documentMeta) {
+      if (fetchError || !documentBytes || !documentBytes.length) {
+        onDone(0, describeReferenceReadFailure(fetchError, documentMeta, referenceEntry.url));
+        return;
+      }
+      countLibraryDocumentPages(documentBytes, function(pageCount) { onDone(pageCount, ''); });
+    });
+  }
+  if (pdfToolkitAvailable()) {
+    try {
+      tool.pdf.pageCount({ url: referenceEntry.url }, function(countError, totalPages) {
+        if (!countError && totalPages) { onDone(totalPages, ''); return; }
+        countFromDownloadedFile();
+      });
+      return;
+    } catch (pageCountThrow) {
+      console.warn('[REF:SPLIT] toolkit page count threw:', pageCountThrow);
+    }
+  }
+  countFromDownloadedFile();
+}
+
+/** Plain explanation for a document the splitter could not read */
+function describeReferenceReadFailure(errorCode, fetchResult, documentUrl) {
+  var reasonText = describeDocumentDownloadFailure(errorCode, fetchResult, documentUrl);
+  if (errorCode === 'too_large') {
+    var limitText = (fetchResult && fetchResult.limitBytes) ? formatFileSize(fetchResult.limitBytes) : 'the current limit';
+    reasonText += ' This field allows downloads up to ' + limitText +
+      '. An administrator can raise "Max download size (MB)" in the CMS Large-file download settings.';
+  }
+  return reasonText;
+}
+
+/** Cut the reference document into the requested page ranges.
+ *  Toolkit by URL first (no download cap), downloaded file as the fallback. */
+function splitReferenceDocumentRanges(referenceEntry, pageRanges, onDone) {
+  function splitDownloadedFile() {
+    fetchDocumentBytes(referenceEntry.url, { purpose: 'reference-split' }, function(fetchError, documentBytes, documentMeta) {
+      if (fetchError || !documentBytes || !documentBytes.length) {
+        onDone(describeReferenceReadFailure(fetchError, documentMeta, referenceEntry.url), null);
+        return;
+      }
+      var splitResults = [];
+      var rangeIndex = 0;
+      function splitNextRange() {
+        if (rangeIndex >= pageRanges.length) { onDone(null, splitResults); return; }
+        var pageRange = pageRanges[rangeIndex];
+        rangeIndex++;
+        splitLibraryPageRange(documentBytes, pageRange.first, pageRange.last, function(rangeError, splitResult) {
+          if (rangeError || !splitResult) {
+            onDone('Pages ' + pageRange.first + '-' + pageRange.last + ' could not be copied (' + (rangeError || 'unknown error') + ').', null);
+            return;
+          }
+          splitResults.push({ first: splitResult.firstPage, last: splitResult.lastPage, bytes: splitResult.bytes });
+          splitNextRange();
+        });
+      }
+      splitNextRange();
+    });
+  }
+  if (pdfToolkitAvailable()) {
+    try {
+      tool.pdf.split({ url: referenceEntry.url }, pageRanges, function(splitError, splitParts) {
+        if (!splitError && splitParts && splitParts.length) {
+          var toolkitResults = [];
+          for (var partIndex = 0; partIndex < splitParts.length; partIndex++) {
+            var toolkitPart = splitParts[partIndex];
+            if (toolkitPart && toolkitPart.bytes && toolkitPart.bytes.length) {
+              toolkitResults.push({ first: toolkitPart.first, last: toolkitPart.last, bytes: toolkitPart.bytes });
+            }
+          }
+          if (toolkitResults.length) { onDone(null, toolkitResults); return; }
+        }
+        console.warn('[REF:SPLIT] the PDF toolkit could not split by URL (' + (splitError || 'no parts returned') + ') - downloading the file instead');
+        splitDownloadedFile();
+      });
+      return;
+    } catch (splitThrow) {
+      console.warn('[REF:SPLIT] toolkit split threw:', splitThrow);
+    }
+  }
+  splitDownloadedFile();
+}
+
+/** Upload one split part and return the part entry to store */
+function uploadSplitReferencePart(referenceEntry, splitResult, onDone) {
+  var baseName = String(referenceEntry.name || 'reference document').replace(/\.pdf$/i, '').trim() || 'reference';
+  var partFileName = baseName + '-p' + splitResult.first + '-' + splitResult.last + '.pdf';
+  tool.requestUploadBinary({
+    dataUrl: 'data:application/pdf;base64,' + bytesToBase64(splitResult.bytes),
+    name: partFileName,
+    contentType: 'application/pdf'
+  }, function(uploadError, uploadResult) {
+    if (uploadError || !uploadResult || !uploadResult.url) {
+      onDone('Upload failed: ' + (uploadError || 'no URL returned'), null);
+      return;
+    }
+    var newPart = normalizeReferencePart({
+      partId: genId(),
+      name: baseName + ' · pages ' + splitResult.first + '-' + splitResult.last,
+      url: uploadResult.url,
+      sizeKb: uploadResult.sizeKb || Math.max(1, Math.round(splitResult.bytes.length / 1024)),
+      fromPage: splitResult.first,
+      toPage: splitResult.last,
+      addedAt: new Date().toISOString()
+    });
+    onDone(null, newPart);
+  });
+}
+
+/** Persist the reference entry: its own CMS object when available, otherwise
+ *  the curriculum value (legacy fallback). */
+function saveReferenceEntryAfterChange(referenceEntry, onDone) {
+  if (referenceLibraryStoreReady) {
+    saveReferenceDocumentToCms(referenceEntry, function() { if (onDone) onDone(); });
+    return;
+  }
+  saveCurriculum();
+  if (onDone) onDone();
+}
+
+/** Split + upload the ranges, then store all new parts on the entry */
+function startReferenceSplit(documentEntry, pageRanges) {
+  if (referenceSplitterBusy) return;
+  if (typeof tool.requestUploadBinary !== 'function') {
+    setReferenceSplitterStatus('❌ Uploading is not enabled for this tool (allowBinaryUpload).', 'error');
+    return;
+  }
+  referenceSplitterBusy = true;
+  setReferenceSplitterStatus('✂️ Reading the document and cutting ' + pageRanges.length + ' part(s)…', 'busy');
+  splitReferenceDocumentRanges(documentEntry, pageRanges, function(splitError, splitResults) {
+    if (splitError || !splitResults || !splitResults.length) {
+      referenceSplitterBusy = false;
+      setReferenceSplitterStatus('❌ ' + (splitError || 'No part could be created.'), 'error');
+      return;
+    }
+    var uploadedParts = [];
+    var uploadProblems = [];
+    var uploadIndex = 0;
+    function finishSplit() {
+      referenceSplitterBusy = false;
+      if (!uploadedParts.length) {
+        setReferenceSplitterStatus('❌ ' + (uploadProblems[0] || 'The parts could not be uploaded.'), 'error');
+        return;
+      }
+      documentEntry.parts = (documentEntry.parts || []).concat(uploadedParts);
+      saveReferenceEntryAfterChange(documentEntry, function() {
+        renderReferenceSplitterParts(documentEntry);
+        renderMainDocumentsList();
+        syncReferenceSplitterRangeInputs(documentEntry);
+        var doneText = '✅ ' + uploadedParts.length + ' part(s) uploaded to CMS storage.';
+        if (uploadProblems.length) doneText += ' ' + uploadProblems.length + ' part(s) failed: ' + uploadProblems[0];
+        setReferenceSplitterStatus(doneText, uploadProblems.length ? 'warn' : 'ok');
+        tool.notify(uploadedParts.length + ' reference part(s) ready. Tick them and send them to lessons.', 'success');
+      });
+    }
+    function uploadNextPart() {
+      if (uploadIndex >= splitResults.length) { finishSplit(); return; }
+      var splitResult = splitResults[uploadIndex];
+      uploadIndex++;
+      setReferenceSplitterStatus('⬆ Uploading part ' + uploadIndex + ' of ' + splitResults.length +
+        ' (pages ' + splitResult.first + '-' + splitResult.last + ')…', 'busy');
+      uploadSplitReferencePart(documentEntry, splitResult, function(uploadError, uploadedPart) {
+        if (uploadError || !uploadedPart) uploadProblems.push(uploadError || 'upload failed');
+        else uploadedParts.push(uploadedPart);
+        uploadNextPart();
+      });
+    }
+    uploadNextPart();
+  });
+}
+
+/** "Split range & upload" button */
+function splitReferencePageRange() {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!documentEntry || referenceSplitterBusy) return;
+  var fromPage = parseInt((el('ref-split-from') || {}).value, 10);
+  var toPage = parseInt((el('ref-split-to') || {}).value, 10);
+  if (!fromPage || fromPage < 1 || !toPage || toPage < fromPage) {
+    setReferenceSplitterStatus('❌ Enter a valid page range (start 1 or more, end after the start).', 'error');
+    return;
+  }
+  if (referenceSplitterPageCount && toPage > referenceSplitterPageCount) {
+    setReferenceSplitterStatus('❌ This document has ' + referenceSplitterPageCount + ' page(s). Set the end page to ' +
+      referenceSplitterPageCount + ' or less.', 'error');
+    return;
+  }
+  startReferenceSplit(documentEntry, [{ first: fromPage, last: toPage }]);
+}
+
+/** "Split into equal parts" button */
+function splitReferenceIntoEqualParts() {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!documentEntry || referenceSplitterBusy) return;
+  if (!referenceSplitterPageCount) {
+    setReferenceSplitterStatus('❌ The page count is not available yet. Split one range at a time instead.', 'error');
+    return;
+  }
+  var pagesPerPart = parseInt((el('ref-split-every') || {}).value, 10) || 10;
+  if (pagesPerPart < 1) pagesPerPart = 1;
+  var pageRanges = [];
+  for (var firstPage = 1; firstPage <= referenceSplitterPageCount; firstPage += pagesPerPart) {
+    pageRanges.push({ first: firstPage, last: Math.min(referenceSplitterPageCount, firstPage + pagesPerPart - 1) });
+  }
+  if (pageRanges.length > 40) {
+    setReferenceSplitterStatus('❌ That would create ' + pageRanges.length + ' parts. Use larger parts (40 parts per run is the limit).', 'error');
+    return;
+  }
+  startReferenceSplit(documentEntry, pageRanges);
+}
+
+/** Render the parts list of the open reference document */
+function renderReferenceSplitterParts(documentEntry) {
+  var listElement = el('ref-split-parts-list');
+  var countElement = el('ref-split-parts-count');
+  var emptyElement = el('ref-split-empty');
+  var entryParts = (documentEntry && documentEntry.parts) ? documentEntry.parts : [];
+  if (countElement) countElement.textContent = entryParts.length + ' part(s)';
+  if (emptyElement) emptyElement.style.display = entryParts.length ? 'none' : '';
+  if (!listElement) return;
+  var rowsHtml = '';
+  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+    var partEntry = entryParts[partIndex];
+    if (!partEntry) continue;
+    var isSelected = !!referenceSplitterSelectedPartIds[partEntry.partId];
+    var partSize = partEntry.sizeKb ? (Math.max(1, Math.round(partEntry.sizeKb)) + ' KB') : 'PDF';
+    var partGenerated = partEntry.generatedHtml ? ' · 🤖 generated' : '';
+    rowsHtml += '<div class="ref-split-part-row">' +
+      '<input type="checkbox" class="ref-split-part-check" data-ref-part-check="' + esc(partEntry.partId) + '"' +
+        (isSelected ? ' checked' : '') + ' title="Tick to send this part to lessons">' +
+      '<div class="ref-split-part-main">' +
+        '<div class="ref-split-part-name">' + esc(partEntry.name) + '</div>' +
+        '<div class="ref-split-part-meta">pages ' + esc(String(partEntry.fromPage)) + '-' + esc(String(partEntry.toPage)) +
+          ' · ' + esc(partSize) + partGenerated + '</div>' +
+      '</div>' +
+      '<div class="ref-split-part-actions">' +
+        '<button type="button" class="btn btn-sm btn-outline" data-ref-part-open="' + esc(partEntry.partId) + '" title="Open the part file">👁</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" data-ref-part-generate="' + esc(partEntry.partId) + '" title="Open this part in the Document Studio and generate content from it">⚙️</button>' +
+        '<button type="button" class="btn btn-sm btn-danger" data-ref-part-delete="' + esc(partEntry.partId) + '" title="Delete this part">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }
+  listElement.innerHTML = rowsHtml;
+}
+
+/** One part of the open reference document by part id */
+function findReferenceSplitPart(documentEntry, partId) {
+  var entryParts = (documentEntry && documentEntry.parts) ? documentEntry.parts : [];
+  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+    if (entryParts[partIndex] && entryParts[partIndex].partId === partId) return entryParts[partIndex];
+  }
+  return null;
+}
+
+function toggleAllReferencePartsSelected(selectAll) {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  var entryParts = (documentEntry && documentEntry.parts) ? documentEntry.parts : [];
+  referenceSplitterSelectedPartIds = {};
+  if (selectAll) {
+    for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+      if (entryParts[partIndex]) referenceSplitterSelectedPartIds[entryParts[partIndex].partId] = true;
+    }
+  }
+  renderReferenceSplitterParts(documentEntry);
+}
+
+/** Send the ticked parts to the classroom: opens the lesson picker */
+function openReferenceSendDialog() {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!documentEntry) return;
+  var selectedPartIds = [];
+  var entryParts = documentEntry.parts || [];
+  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+    var partEntry = entryParts[partIndex];
+    if (partEntry && referenceSplitterSelectedPartIds[partEntry.partId]) selectedPartIds.push(partEntry.partId);
+  }
+  if (!selectedPartIds.length) {
+    tool.notify('Tick at least one part to send to lessons.', 'warning');
+    return;
+  }
+  openReferenceDistributeDialog(documentEntry, selectedPartIds);
+}
+
+/** Delete one part: CMS object first, then the storage file */
+function deleteReferenceSplitPart(partId) {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  var partEntry = findReferenceSplitPart(documentEntry, partId);
+  if (!documentEntry || !partEntry) return;
+  sandboxConfirm('Delete the part "' + partEntry.name + '" (pages ' + partEntry.fromPage + '-' + partEntry.toPage + ')? ' +
+    'The part file is deleted from CMS storage; copies already added to lessons stay.', function() {
+    documentEntry.parts = (documentEntry.parts || []).filter(function(entry) { return entry.partId !== partId; });
+    delete referenceSplitterSelectedPartIds[partId];
+    saveReferenceEntryAfterChange(documentEntry, function() {
+      renderReferenceSplitterParts(documentEntry);
+      renderMainDocumentsList();
+      syncReferenceSplitterRangeInputs(documentEntry);
+      tool.notify('Reference part deleted.', 'info');
+    });
+    if (typeof tool.requestDeleteFile === 'function' && partEntry.url) {
+      tool.requestDeleteFile({ url: partEntry.url, reason: 'reference part deleted' }, function(deleteError) {
+        if (deleteError) console.warn('[REF:SPLIT] the part file could not be deleted:', deleteError);
+      });
+    }
+  }, 'Yes, Delete');
+}
+
+function bindReferenceSplitterEvents() {
+  var closeButton = el('btn-ref-split-close');
+  if (closeButton) closeButton.addEventListener('click', closeReferenceSplitter);
+  var doneButton = el('btn-ref-split-done');
+  if (doneButton) doneButton.addEventListener('click', closeReferenceSplitter);
+  var backdrop = el('ref-split-backdrop');
+  if (backdrop) backdrop.addEventListener('click', closeReferenceSplitter);
+  var rangeButton = el('btn-ref-split-range');
+  if (rangeButton) rangeButton.addEventListener('click', splitReferencePageRange);
+  var equalButton = el('btn-ref-split-equal');
+  if (equalButton) equalButton.addEventListener('click', splitReferenceIntoEqualParts);
+  var selectAllButton = el('btn-ref-split-select-all');
+  if (selectAllButton) {
+    selectAllButton.addEventListener('click', function() {
+      toggleAllReferencePartsSelected(!referenceSplitterSelectedPartIds ||
+        Object.keys(referenceSplitterSelectedPartIds).length === 0);
+    });
+  }
+  var sendButton = el('btn-ref-split-send');
+  if (sendButton) sendButton.addEventListener('click', openReferenceSendDialog);
+  var partsList = el('ref-split-parts-list');
+  if (partsList) {
+    partsList.addEventListener('change', function(event) {
+      var checkbox = event.target && event.target.getAttribute && event.target.getAttribute('data-ref-part-check');
+      if (!checkbox) return;
+      if (event.target.checked) referenceSplitterSelectedPartIds[checkbox] = true;
+      else delete referenceSplitterSelectedPartIds[checkbox];
+    });
+    partsList.addEventListener('click', function(event) {
+      if (!event.target || !event.target.closest) return;
+      var openButton = event.target.closest('[data-ref-part-open]');
+      if (openButton) {
+        var openPart = findReferenceSplitPart(findMainDocumentById(referenceSplitterDocumentId), openButton.getAttribute('data-ref-part-open'));
+        if (openPart && openPart.url) tool.openUrl(openPart.url);
+        return;
+      }
+      var generateButton = event.target.closest('[data-ref-part-generate]');
+      if (generateButton) {
+        var generatePart = findReferenceSplitPart(findMainDocumentById(referenceSplitterDocumentId), generateButton.getAttribute('data-ref-part-generate'));
+        if (!generatePart) return;
+        closeReferenceSplitter();
+        openStudioDrawerForDoc(generatePart.url);
+        return;
+      }
+      var deleteButton = event.target.closest('[data-ref-part-delete]');
+      if (deleteButton) deleteReferenceSplitPart(deleteButton.getAttribute('data-ref-part-delete'));
+    });
+  }
+}
+
+/* ── SEND PARTS TO LESSONS ──
+   The picker lists every lesson in the curriculum. The chosen parts are added
+   to each lesson's reference files (referenceDocs) - the same list the lesson
+   drawer shows and the AI generators read. */
+
+var referenceDistributeDocumentId = '';
+var referenceDistributePartIds = [];
+var referenceDistributeTargets = [];
+
+function closeReferenceDistributeDialog() {
+  var overlay = el('ref-distribute-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+/** Every lesson in the tree with its section number, sorted like the UI */
+function buildReferenceDistributeTargets() {
+  var targets = [];
+  function walkSections(sectionList, parentNumber) {
+    if (!sectionList) return;
+    var sortedSections = sectionList.slice().sort(byOrder);
+    for (var sectionIndex = 0; sectionIndex < sortedSections.length; sectionIndex++) {
+      var sectionObject = sortedSections[sectionIndex];
+      var sectionNumber = (parentNumber ? parentNumber + '.' : '') + (sectionIndex + 1);
+      var sortedLessons = (sectionObject.lessons || []).slice().sort(byOrder);
+      for (var lessonIndex = 0; lessonIndex < sortedLessons.length; lessonIndex++) {
+        var lessonObject = sortedLessons[lessonIndex];
+        targets.push({
+          key: sectionObject.id + '|' + lessonObject.id,
+          sectionNumber: sectionNumber,
+          sectionTitle: sectionObject.title || 'Untitled',
+          lesson: lessonObject,
+          title: lessonObject.title || 'Untitled lesson',
+          referenceCount: Array.isArray(lessonObject.referenceDocs) ? lessonObject.referenceDocs.length : 0
+        });
+      }
+      walkSections(sectionObject.children, sectionNumber);
+    }
+  }
+  walkSections(sections, '');
+  return targets;
+}
+
+function openReferenceDistributeDialog(documentEntry, partIds) {
+  referenceDistributeDocumentId = documentEntry.id;
+  referenceDistributePartIds = partIds.slice();
+  referenceDistributeTargets = buildReferenceDistributeTargets();
+  var summaryElement = el('ref-distribute-summary');
+  if (summaryElement) {
+    var partPages = [];
+    for (var partIndex = 0; partIndex < documentEntry.parts.length; partIndex++) {
+      var partEntry = documentEntry.parts[partIndex];
+      if (partEntry && partIds.indexOf(partEntry.partId) !== -1) partPages.push(partEntry.fromPage + '-' + partEntry.toPage);
+    }
+    summaryElement.textContent = partIds.length + ' part(s) of "' + documentEntry.name + '": pages ' +
+      partPages.join(', ') + '. Tick the lessons that should receive them.';
+  }
+  var filterInput = el('ref-dist-filter');
+  if (filterInput) filterInput.value = '';
+  renderReferenceDistributeLessonList('');
+  var overlay = el('ref-distribute-overlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function renderReferenceDistributeLessonList(filterText) {
+  var container = el('ref-distribute-lessons');
+  if (!container) return;
+  var lowerFilter = String(filterText || '').toLowerCase();
+  var rowsHtml = '';
+  var currentSectionNumber = '';
+  for (var targetIndex = 0; targetIndex < referenceDistributeTargets.length; targetIndex++) {
+    var target = referenceDistributeTargets[targetIndex];
+    var searchText = (target.title + ' ' + target.sectionTitle + ' §' + target.sectionNumber).toLowerCase();
+    if (lowerFilter && searchText.indexOf(lowerFilter) === -1) continue;
+    if (target.sectionNumber !== currentSectionNumber) {
+      if (currentSectionNumber) rowsHtml += '</div>';
+      currentSectionNumber = target.sectionNumber;
+      rowsHtml += '<div class="ref-dist-section"><div class="ref-dist-section-head">§ ' +
+        esc(target.sectionNumber + ' · ' + target.sectionTitle) + '</div>';
+    }
+    rowsHtml += '<label class="ref-dist-lesson">' +
+      '<input type="checkbox" data-dist-lesson="' + esc(target.key) + '">' +
+      '<span>' + esc(target.title) + '</span>' +
+      (target.referenceCount ? '<span class="ref-dist-lesson-meta">' + target.referenceCount + ' reference(s)</span>' : '') +
+    '</label>';
+  }
+  if (currentSectionNumber) rowsHtml += '</div>';
+  if (!rowsHtml) rowsHtml = '<div class="ref-dist-lesson">No lesson matches that filter.</div>';
+  container.innerHTML = rowsHtml;
+}
+
+function setAllReferenceDistributeLessonsChecked(isChecked) {
+  var checkboxes = document.querySelectorAll('#ref-distribute-lessons input[data-dist-lesson]');
+  for (var checkboxIndex = 0; checkboxIndex < checkboxes.length; checkboxIndex++) {
+    checkboxes[checkboxIndex].checked = isChecked;
+  }
+}
+
+/** The lesson currently open in the lesson editor ('' when none) */
+function currentEditingLessonId() {
+  if (editingDirectSection) {
+    var foundSection = findSectionById(editingDirectSection.id);
+    var directSection = foundSection ? foundSection.section : editingDirectSection;
+    if (editingLessonIdx !== null && directSection && directSection.lessons && directSection.lessons[editingLessonIdx]) {
+      return directSection.lessons[editingLessonIdx].id;
+    }
+    return '';
+  }
+  if (editingSectionIdx !== null && editingLessonIdx !== null && editingLessons && editingLessons[editingLessonIdx]) {
+    return editingLessons[editingLessonIdx].id;
+  }
+  return '';
+}
+
+/** One referenceDocs entry built from a shipped part */
+function referencePartAsLessonEntry(documentEntry, partEntry) {
+  return {
+    id: genId(),
+    libraryId: documentEntry.id,
+    partId: partEntry.partId,
+    name: partEntry.name,
+    fromPage: partEntry.fromPage,
+    toPage: partEntry.toPage,
+    url: partEntry.url,
+    sizeKb: partEntry.sizeKb,
+    addedAt: new Date().toISOString()
+  };
+}
+
+/** Add the parts to ONE lesson: read its lesson doc first so existing
+ *  reference files are never replaced, then save the doc and strip the
+ *  heavy field from the main record. */
+function addReferencePartsToLesson(lessonObject, documentEntry, partEntries, onDone) {
+  loadLessonDoc(lessonObject, function(loadError, mergedLesson) {
+    var sourceLesson = (!loadError && mergedLesson) ? mergedLesson : lessonObject;
+    var existingDocs = Array.isArray(sourceLesson.referenceDocs) ? sourceLesson.referenceDocs : [];
+    var updatedDocs = existingDocs.slice();
+    var addedCount = 0;
+    for (var partIndex = 0; partIndex < partEntries.length; partIndex++) {
+      var partEntry = partEntries[partIndex];
+      var alreadyThere = false;
+      for (var docIndex = 0; docIndex < updatedDocs.length; docIndex++) {
+        if (updatedDocs[docIndex] && partEntry && updatedDocs[docIndex].url === partEntry.url) { alreadyThere = true; break; }
+      }
+      if (alreadyThere || !partEntry) continue;
+      updatedDocs.push(referencePartAsLessonEntry(documentEntry, partEntry));
+      addedCount++;
+    }
+    if (!addedCount) { onDone({ added: 0 }); return; }
+    lessonObject.referenceDocs = updatedDocs;
+    if (!canUseLessonDocs()) { onDone({ added: addedCount }); return; }
+    saveLessonDoc(lessonObject, function(docError, docId) {
+      if (docId && !lessonObject.lessonDocId) {
+        lessonObject.lessonDocId = docId;
+        collectAllLessons().forEach(function(lessonRef) {
+          if (lessonRef.lesson.id === lessonObject.id) lessonRef.lesson.lessonDocId = docId;
+        });
+      }
+      if (docError) { onDone({ error: true }); return; }
+      stripHeavyLessonFields(lessonObject);
+      onDone({ added: addedCount });
+    });
+  });
+}
+
+/** Keep the open lesson editor in sync when its lesson received parts */
+function syncOpenLessonReferenceEditor(documentEntry, partEntries, updatedLessonIds) {
+  var openLessonId = currentEditingLessonId();
+  if (!openLessonId || updatedLessonIds.indexOf(openLessonId) === -1) return;
+  for (var partIndex = 0; partIndex < partEntries.length; partIndex++) {
+    var partEntry = partEntries[partIndex];
+    var alreadyThere = false;
+    for (var docIndex = 0; docIndex < editingReferenceDocs.length; docIndex++) {
+      if (editingReferenceDocs[docIndex] && editingReferenceDocs[docIndex].url === partEntry.url) { alreadyThere = true; break; }
+    }
+    if (!alreadyThere) editingReferenceDocs.push(referencePartAsLessonEntry(documentEntry, partEntry));
+  }
+  renderReferenceDocsEditorList();
+}
+
+/** "Add to lessons" in the picker */
+function applyReferencePartDistribution() {
+  var documentEntry = findMainDocumentById(referenceDistributeDocumentId);
+  if (!documentEntry) { closeReferenceDistributeDialog(); return; }
+  var partEntries = [];
+  var entryParts = documentEntry.parts || [];
+  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+    if (entryParts[partIndex] && referenceDistributePartIds.indexOf(entryParts[partIndex].partId) !== -1) partEntries.push(entryParts[partIndex]);
+  }
+  var selectedTargets = [];
+  var checkboxes = document.querySelectorAll('#ref-distribute-lessons input[data-dist-lesson]');
+  for (var checkboxIndex = 0; checkboxIndex < checkboxes.length; checkboxIndex++) {
+    if (!checkboxes[checkboxIndex].checked) continue;
+    var targetKey = checkboxes[checkboxIndex].getAttribute('data-dist-lesson');
+    for (var targetIndex = 0; targetIndex < referenceDistributeTargets.length; targetIndex++) {
+      if (referenceDistributeTargets[targetIndex].key === targetKey) {
+        selectedTargets.push(referenceDistributeTargets[targetIndex]);
+        break;
+      }
+    }
+  }
+  if (!partEntries.length || !selectedTargets.length) {
+    tool.notify('Tick at least one lesson (and one part) first.', 'warning');
+    return;
+  }
+  closeReferenceDistributeDialog();
+  setReferenceSplitterStatus('📤 Adding ' + partEntries.length + ' part(s) to ' + selectedTargets.length + ' lesson(s)…', 'busy');
+  var remainingLessons = selectedTargets.length;
+  var updatedLessons = 0;
+  var skippedLessons = 0;
+  var failedLessons = 0;
+  var updatedLessonIds = [];
+  for (var targetIndex = 0; targetIndex < selectedTargets.length; targetIndex++) {
+    (function(target) {
+      addReferencePartsToLesson(target.lesson, documentEntry, partEntries, function(result) {
+        if (result.error) failedLessons++;
+        else if (result.added) { updatedLessons++; updatedLessonIds.push(target.lesson.id); }
+        else skippedLessons++;
+        remainingLessons--;
+        if (remainingLessons > 0) return;
+        if (canUseLessonDocs()) {
+          if (writeCurriculumValueToCms('reference parts sent to lessons')) requestParentSave();
+        } else {
+          saveCurriculum();
+        }
+        renderSections();
+        syncOpenLessonReferenceEditor(documentEntry, partEntries, updatedLessonIds);
+        var summaryText = updatedLessons + ' lesson(s) updated' +
+          (skippedLessons ? ', ' + skippedLessons + ' already had these parts' : '') +
+          (failedLessons ? ', ' + failedLessons + ' failed' : '');
+        setReferenceSplitterStatus('✅ ' + summaryText + '.', failedLessons ? 'warn' : 'ok');
+        tool.notify('Reference parts: ' + summaryText + '.', failedLessons ? 'warning' : 'success');
+      });
+    })(selectedTargets[targetIndex]);
+  }
+}
+
+function bindReferenceDistributeEvents() {
+  var closeButton = el('btn-ref-distribute-close');
+  if (closeButton) closeButton.addEventListener('click', closeReferenceDistributeDialog);
+  var cancelButton = el('btn-ref-distribute-cancel');
+  if (cancelButton) cancelButton.addEventListener('click', closeReferenceDistributeDialog);
+  var applyButton = el('btn-ref-distribute-apply');
+  if (applyButton) applyButton.addEventListener('click', applyReferencePartDistribution);
+  var selectAllButton = el('btn-ref-distribute-all');
+  if (selectAllButton) selectAllButton.addEventListener('click', function() { setAllReferenceDistributeLessonsChecked(true); });
+  var clearButton = el('btn-ref-distribute-none');
+  if (clearButton) clearButton.addEventListener('click', function() { setAllReferenceDistributeLessonsChecked(false); });
+  var filterInput = el('ref-dist-filter');
+  if (filterInput) filterInput.addEventListener('input', function() { renderReferenceDistributeLessonList(filterInput.value); });
+  var overlay = el('ref-distribute-overlay');
+  if (overlay) overlay.addEventListener('click', function(event) { if (event.target === overlay) closeReferenceDistributeDialog(); });
 }
 
 /* ═══════════════════════════════════════════
@@ -13336,7 +14109,11 @@ function confirmLibraryRefSplit() {
   fetchDocumentBytes(selectedDocument.url, { purpose: 'library-reference' }, function(fetchError, documentBytes, documentMeta) {
     if (fetchError || !documentBytes || !documentBytes.length) {
       libraryRefBusy = false;
-      setLibraryRefStatus('❌ ' + describeDocumentDownloadFailure(fetchError, documentMeta, selectedDocument.url), 'error');
+      var readFailureText = describeDocumentDownloadFailure(fetchError, documentMeta, selectedDocument.url);
+      if (fetchError === 'too_large') {
+        readFailureText += ' Split it into parts first: Reference documents → ⚙️ Process, then send a part to this lesson.';
+      }
+      setLibraryRefStatus('❌ ' + readFailureText, 'error');
       return;
     }
     // The host PDF toolkit knows the real page count and writes the extract
@@ -13894,9 +14671,7 @@ function readSourceDocumentText(onDone) {
       });
       return;
     }
-    onDone(reason + (localBytesAvailable
-      ? ' The local text reader found too little readable text in this PDF.'
-      : ' Use "📁 From Local PDF" to read the file in your browser instead.'), '');
+    onDone(reason + ' The built-in text reader found too little readable text in this PDF.', '');
   }
   function readThroughCmsTextService(downloadNote) {
     if (typeof tool.requestFileContent !== 'function') {
@@ -14598,6 +15373,8 @@ function bindEvents() {
   bindReferenceDocumentEvents();
   bindReferenceDocsEditorEvents();
   bindLibraryRefEvents();
+  bindReferenceSplitterEvents();
+  bindReferenceDistributeEvents();
   var payloadReportButton = el('btn-payload-report');
   if (payloadReportButton) payloadReportButton.addEventListener('click', reportCurriculumPayloadFromSettings);
   var exportLessonsButton = el('btn-export-lessons');
@@ -14726,9 +15503,7 @@ function bindEvents() {
       var detectionMode = effectivePictureDetectionMode();
       tool.notify(detectionMode === 'local'
         ? 'Pictures will be found locally (PDF.js only - no AI cost).'
-        : (detectionMode === 'vision'
-          ? 'Pictures will be found with AI vision.'
-          : 'Picture detection follows the tool default (AI when available).'), 'info');
+        : 'Pictures will be found with AI vision.', 'info');
     });
   }
   var studioVisionPageSizeSelect = el('sd-vision-page-size');
@@ -14744,8 +15519,6 @@ function bindEvents() {
   }
   var btnSdExtract = el('btn-sd-extract');
   if (btnSdExtract) btnSdExtract.addEventListener('click', function() { extractStudyDocImages(); });
-  var btnSdExtractLocal = el('btn-sd-extract-local');
-  if (btnSdExtractLocal) btnSdExtractLocal.addEventListener('click', pickAndProcessLocalPdf);
   var btnSdGenerate = el('btn-sd-generate');
   if (btnSdGenerate) btnSdGenerate.addEventListener('click', startStudioGenerateNewContent);
   var btnSdRefreshPreview = el('btn-sd-refresh-preview');
@@ -15007,6 +15780,10 @@ function bindEvents() {
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
+      var distributeOverlay = el('ref-distribute-overlay');
+      if (distributeOverlay && distributeOverlay.style.display !== 'none') { closeReferenceDistributeDialog(); return; }
+      var referenceSplitDrawer = el('ref-split-drawer');
+      if (referenceSplitDrawer && referenceSplitDrawer.classList.contains('sd-drawer-open')) { closeReferenceSplitter(); return; }
       var studioDrawer = el('sd-studio-drawer');
       if (studioDrawer && studioDrawer.classList.contains('sd-drawer-open')) { closeStudioDrawer(); return; }
       var panels = ['youtube-editor-panel','pdf-editor-panel','quiz-question-editor-panel','source-link-editor-panel','lesson-editor-panel'];

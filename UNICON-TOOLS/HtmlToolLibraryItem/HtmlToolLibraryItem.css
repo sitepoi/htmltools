@@ -330,6 +330,24 @@
 .htl-editor-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .htl-editor-title { font-size: 14.5px; font-weight: 800; }
 .htl-editor-meta { margin-left: auto; font-size: 11.5px; color: var(--htl-faint); font-family: var(--htl-mono); white-space: nowrap; }
+.htl-code-link-note { font-size: 11px; color: var(--htl-faint); font-family: var(--htl-mono); white-space: nowrap; }
+.htl-fire-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  flex: none;
+  border: 1px solid var(--htl-line);
+  border-radius: 8px;
+  background: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1;
+}
+.htl-fire-link:hover { background: #fff7ed; border-color: #fdba74; }
+.htl-fire-link:focus-visible { outline: 2px solid #fdba74; outline-offset: 1px; }
+.htl-fire-link-off { opacity: .45; cursor: not-allowed; }
 .htl-editor-body {
   display: flex;
   border: 1.5px solid var(--htl-line);
@@ -723,4 +741,111 @@
 .htl-locked .htl-seo-details summary {
   pointer-events: none;
   opacity: .62;
+}
+
+/* Code storage mode badge + developer Firestore object links */
+.htl-code-mode {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.htl-code-mode.combined {
+  color: #0f766e;
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+.htl-code-mode.split {
+  color: #b45309;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+.htl-code-sizes {
+  font-size: 11px;
+  font-family: var(--htl-mono);
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #e2e8f0;
+  white-space: nowrap;
+}
+.htl-object-links {
+  margin-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 8px;
+}
+.htl-object-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.htl-object-link-icon { margin-right: 5px; }
+.htl-object-link-label {
+  min-width: 110px;
+  font-weight: 600;
+  font-size: 12px;
+}
+.htl-object-link-size {
+  font-size: 11px;
+  font-family: var(--htl-mono);
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.htl-object-link-size.dirty {
+  color: #b45309;
+  background: #fffbeb;
+}
+.htl-object-link-id {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.htl-object-link-empty {
+  color: #64748b;
+  font-size: 12px;
+}
+.htl-dev-docs {
+  margin-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 8px;
+}
+.htl-dev-docs .htl-object-link {
+  padding: 4px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.htl-dev-docs .htl-object-link:last-child { border-bottom: 0; }
+.htl-dev-docs .htl-object-link-label { min-width: 170px; }
+.htl-dev-docs .htl-object-link-main {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  padding: 6px 9px;
+  margin: 2px 0 6px;
+}
+.htl-dev-docs-group + .htl-dev-docs-group {
+  margin-top: 14px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 10px;
+}
+.htl-dev-docs-group-head {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+.htl-dev-docs .htl-fire-link {
+  width: 26px;
+  height: 24px;
+  font-size: 13px;
 }

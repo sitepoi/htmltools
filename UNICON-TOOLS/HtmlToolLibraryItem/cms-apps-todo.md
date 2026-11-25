@@ -44,15 +44,23 @@ size-report.html (1 MB budget proof), SHIP-CMS-PLAN.md (root).
   - Screenshots tab: upload, list (name/url/size/time), copy URL,
     Insert into doc (img with the storage URL at the cursor).
   - Live size meter (warn 800 KB, block 950 KB).
-- T2 Create object type `tool-code-versions-uniconbaseapps` in tools-applicationstore
+- T2 Create object type `tool-code-versions-applicationstore` in tools-applicationstore
   (exact fields in section 4).
+- T2b Code parts type is `tool-code-parts-applicationstore` in the
+  Application Store namespace (same family as the social and versions
+  types). It must be listed in the field-level allowedObjectTypes; if the
+  Application Store deployment does not define the type it will answer
+  "read-only".
+  The record's 1 MB budget is reached by big tools, so html/css/js
+  live one part per object (1 MB each) and the record keeps only refs.
 - T3 Set the HtmlToolLibraryItem field settings:
   - allowObjectCRUD: 'yes'
   - allowUpload: 'yes'
   - allowedObjectTypes:
     { mainObjectType: "website-builder-uniconbaseapps", role: 'editor', scope: 'shared', targetCollection: 'public' }
-    { mainObjectType: "tool-social-content-uniconbaseapps", role: 'editor', scope: 'shared', targetCollection: 'public' }
-    { mainObjectType: "tool-code-versions-uniconbaseapps", role: 'editor', scope: 'shared', targetCollection: 'public' }
+    { mainObjectType: "tool-social-content-applicationstore", role: 'editor', scope: 'shared', targetCollection: 'public' }
+    { mainObjectType: "tool-code-versions-applicationstore", role: 'editor', scope: 'shared', targetCollection: 'public' }
+    { mainObjectType: "tool-code-parts-applicationstore", role: 'editor', scope: 'shared', targetCollection: 'private' }
 - T4 (later) AppStoreItem update: every tool card links to its published
   pages (webpage / help / updates / presentation) and shows social status.
 
@@ -84,7 +92,7 @@ size-report.html (1 MB budget proof), SHIP-CMS-PLAN.md (root).
 ## 3. Social application (NEW - create)
 
 - S1 Create the application (suggested name: "Tool Social").
-- S2 Create object type `tool-social-content-uniconbaseapps` (exact fields in section 4).
+- S2 Create object type `tool-social-content-applicationstore` (exact fields in section 4).
 - S3 (later) social media connectors (WhatsApp, X, LinkedIn, Instagram,
   Facebook) consume objects with status "ready" and write postedAt when
   published. No website page involved.
@@ -92,14 +100,25 @@ size-report.html (1 MB budget proof), SHIP-CMS-PLAN.md (root).
 
 ## 4. New object type fields (exact lists for the CMS team)
 
-tool-code-versions-uniconbaseapps (inside tools-applicationstore):
+tool-code-versions-applicationstore (inside tools-applicationstore):
   toolSlug (text), toolName (text), versionNumber (number),
   htmlCode (text), cssCode (text), jsCode (text), note (text),
   pushedAt (text), pushedBy (text)
   Usage: ONE object per push; the tool keeps the newest 20 per toolSlug
   and deletes the rest. The tool's own 1 MB object never holds history.
 
-tool-social-content-uniconbaseapps (inside the Social application):
+tool-code-parts-applicationstore (inside tools-applicationstore):
+  toolSlug (text), toolName (text), part (text: html | css | js),
+  code (text), pushedAt (text), pushedBy (text)
+  Usage: ONE object per code part per tool (3 objects per tool). Each
+  part gets its own 1 MB Firestore budget, so a tool is no longer capped
+  by the record's single 1 MB. The tool record keeps only refs
+  {objectId, pushedAt, pushedSignature}; after every successful push the
+  code is stripped from the record value. On edit the tool re-pushes
+  (debounced + on blur) and falls back to keeping the code in the record
+  while the object API is unavailable.
+
+tool-social-content-applicationstore (inside the Social application):
   name (text), slug (text), toolSlug (text),
   platform (select: whatsapp | x | linkedin | instagram | facebook),
   message (text), linkUrl (text), imageUrl (text), hashtags (text),
@@ -111,7 +130,7 @@ tool-social-content-uniconbaseapps (inside the Social application):
 - Website page: mainObjectType + real field ids (name, slug, meta,
   status, htmlPage, seo) + folder/typeId for tool pages.
 - Social: mainObjectType + real field ids + folder/typeId.
-- Versions: mainObjectType (confirmed: tool-code-versions-uniconbaseapps) + field ids
+- Versions: mainObjectType (confirmed: tool-code-versions-applicationstore) + field ids
   + folder/typeId.
 - Per type: role / scope / targetCollection entries for
   allowedObjectTypes.
@@ -217,11 +236,12 @@ types, two tables.
 
 | mainObjectType | app | table | folder (om_object_types) | purpose |
 | --- | --- | --- | --- | --- |
-| html-tool-library-item-uniconbaseapps | tools-applicationstore | om_private_objects | taxonomy leaf (the tool's own leaf) | ONE record per tool: code (html/css/js), doc drafts, screenshot URLs, schema, targets |
-| tool-code-versions-uniconbaseapps | tools-applicationstore | om_private_objects | single "code versions" folder | ONE object per push; newest 20 per tool |
+| html-tool-library-item-uniconbaseapps | tools-applicationstore | om_private_objects | taxonomy leaf (the tool's own leaf) | ONE record per tool: metadata, doc drafts (refs), screenshot URLs, schema, code-part refs (NO code) |
+| tool-code-versions-applicationstore | tools-applicationstore | om_private_objects | single "code versions" folder | ONE object per push; newest 20 per tool |
+| tool-code-parts-applicationstore | tools-applicationstore | om_private_objects | single "code parts" folder | THREE objects per tool: html / css / js code parts - each with its own 1 MB budget |
 | tool-published-listing | tools-applicationstore | om_objects | single "published listings" folder | ONE card per PUBLISHED tool for the public site catalog: name, slug, shortDesc, tags, screenshotUrl, page links, version, publishedAt (NO code) - optional until the public site shows a tools catalog |
 | website-builder-uniconbaseapps | website-builder-uniconbaseapps | om_objects | tool-pages root > taxonomy copy > leaf | FOUR objects per tool: webpage / help / updates / presentation - each carrying webpageContentWithBuilder |
-| tool-social-content-uniconbaseapps | Tool Social | om_private_objects (until the site shows feeds) | single "social content" folder | per-platform posts (whatsapp / x / linkedin / instagram / facebook), status ready-posted |
+| tool-social-content-applicationstore | Tool Social | om_private_objects (until the site shows feeds) | single "social content" folder | per-platform posts (whatsapp / x / linkedin / instagram / facebook), status ready-posted |
 
 Platform-owned types already used by tools stay as they are
 (ai-chat-sessions-uniconbaseapps, webpagebuilder-history-uniconbaseapps)
@@ -244,8 +264,8 @@ and belong in om_private_objects.
 
     tools-applicationstore
       <imported taxonomy from folder-hierarchy-import.json>
-        leaf subcategory (one per tool)  -> the tool record
-      code versions                      -> tool-code-versions-uniconbaseapps objects
+        leaf subcategory (one per tool)  -> the tool record + its 3 code-part objects
+      code versions                      -> tool-code-versions-applicationstore objects
       published listings                 -> tool-published-listing objects
 
     website-builder-uniconbaseapps
@@ -254,7 +274,7 @@ and belong in om_private_objects.
           leaf subcategory               -> 4 doc objects per tool
 
     Tool Social
-      social content                     -> tool-social-content-uniconbaseapps objects (filter by toolSlug)
+      social content                     -> tool-social-content-applicationstore objects (filter by toolSlug)
 
 Rules: taxonomy folders are created ONLY by importing
 folder-hierarchy-import.json (the CMS rule). code versions / published
@@ -275,12 +295,13 @@ listings / social content are single fixed folders, NOT taxonomy copies.
 | --- | --- | --- | --- |
 | HtmlToolLibraryItem | html-tool-library-item | instance (own record) | - |
 | HtmlToolLibraryItem | website-builder-uniconbaseapps | editor | shared, targetCollection public |
-| HtmlToolLibraryItem | tool-code-versions-uniconbaseapps | editor | shared |
+| HtmlToolLibraryItem | tool-code-versions-applicationstore | editor | shared |
+| HtmlToolLibraryItem | tool-code-parts-applicationstore | editor | shared |
 | HtmlToolLibraryItem | tool-published-listing | editor | shared, public |
-| HtmlToolLibraryItem | tool-social-content-uniconbaseapps | editor | shared |
+| HtmlToolLibraryItem | tool-social-content-applicationstore | editor | shared |
 | WebpageBuilder | website-builder-uniconbaseapps | editor (own app) | - |
 | public website | website-builder-uniconbaseapps + registered collections | viewer (READ ONLY) | public |
-| social connectors | tool-social-content-uniconbaseapps | viewer/editor | internal |
+| social connectors | tool-social-content-applicationstore | viewer/editor | internal |
 | store UI | everything in tools-applicationstore | platform | internal |
 
 ### 9.7 Doc object contract (add to the website-builder-uniconbaseapps field list)
@@ -297,7 +318,20 @@ ogImage), publishAt (text, optional).
 Reserved slugs per tool: <toolSlug>-webpage, <toolSlug>-help,
 <toolSlug>-updates, <toolSlug>-presentation.
 
-### 9.8 Why this shape
+### 9.8 Code parts contract (tool-code-parts-applicationstore type)
+
+See section 4 for the field list. One object per part per tool
+(toolSlug + part). DYNAMIC MODE: the record keeps the code itself
+(combined) while the total code size is at or below codeSplitThresholdKb
+(default 500 KB); above it the code splits into part objects and the
+record keeps codeParts = {html: {objectId, pushedAt, pushedSignature},
+css: {...}, js: {...}} refs only. Below 80% of the threshold the code
+merges back into the record and the part objects are deleted. Legacy
+records with big code migrate automatically on the next load. While
+allowObjectCRUD is off the tool stays in combined mode (old behavior) so
+nothing is lost. Version snapshots read from memory and are unaffected.
+
+### 9.9 Why this shape
 
 - One tool = one record in its taxonomy leaf (the CMS rule "one tool =
   one folder" holds). Everything the tool needs to edit lives in that

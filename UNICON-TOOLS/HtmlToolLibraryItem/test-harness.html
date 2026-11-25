@@ -26,6 +26,8 @@
         </div>
       </div>
       <div class="htl-header-actions">
+        <span class="htl-code-mode" id="htl-code-mode" title="Code storage mode"></span>
+        <span class="htl-code-sizes" id="htl-code-sizes" title="Code part sizes" style="display:none"></span>
         <span class="htl-size-meter" id="htl-size-meter" title="Stored value size"></span>
         <span class="htl-save-state" id="htl-save-state">Draft staged</span>
         <span class="htl-role-badge" id="htl-role-badge"></span>
@@ -44,6 +46,7 @@
       <button class="htl-tab" data-tab="docs">Docs</button>
       <button class="htl-tab" data-tab="screenshots">Screenshots</button>
       <button class="htl-tab" data-tab="versions">Versions</button>
+      <button class="htl-tab" data-tab="documents" id="htl-tab-documents" style="display:none">DB Docs</button>
       <button class="htl-tab" data-tab="synclogs">Logs</button>
     </nav>
   </div>
@@ -202,7 +205,7 @@
       <div class="htl-editor">
         <div class="htl-editor-head">
           <span class="htl-editor-title">HTML code</span>
-          <span class="htl-editor-hint">Body markup only - no &lt;html&gt; / &lt;head&gt; / &lt;style&gt; / &lt;script&gt; tags. CDN script tags are allowed.</span>
+          <span class="htl-code-link" id="htl-code-link-html"></span>
           <span class="htl-editor-meta" id="htl-meta-html">0 lines · 0 chars</span>
         </div>
         <div class="htl-editor-body">
@@ -216,7 +219,7 @@
       <div class="htl-editor">
         <div class="htl-editor-head">
           <span class="htl-editor-title">CSS code</span>
-          <span class="htl-editor-hint">Stylesheet rules only - no &lt;style&gt; tag.</span>
+          <span class="htl-code-link" id="htl-code-link-css"></span>
           <span class="htl-editor-meta" id="htl-meta-css">0 lines · 0 chars</span>
         </div>
         <div class="htl-editor-body">
@@ -230,7 +233,7 @@
       <div class="htl-editor">
         <div class="htl-editor-head">
           <span class="htl-editor-title">JS code</span>
-          <span class="htl-editor-hint">JavaScript only - no &lt;script&gt; tag. Entry point must be tool.onReady(callback).</span>
+          <span class="htl-code-link" id="htl-code-link-js"></span>
           <span class="htl-editor-meta" id="htl-meta-js">0 lines · 0 chars</span>
         </div>
         <div class="htl-editor-body">
@@ -264,6 +267,7 @@
             <div class="htl-target-item"><span class="htl-target-label">Social type</span><code class="htl-target-value" id="htl-target-social-type"></code></div>
             <div class="htl-target-item"><span class="htl-target-label">Versions type</span><code class="htl-target-value" id="htl-target-versions-type"></code></div>
           </div>
+          <div class="htl-object-links" id="htl-object-links"></div>
           <p class="htl-hint" id="htl-doc-object-note"></p>
         </div>
       </details>
@@ -291,6 +295,18 @@
           <span class="htl-hint" id="htl-versions-note"></span>
         </div>
         <div class="htl-versions-list" id="htl-versions-list"></div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-documents" style="display:none">
+      <div class="htl-card">
+        <h2>Firestore documents</h2>
+        <p class="htl-hint">Developer view (developer role only). The first row is the main tool record - it holds this tool's metadata and the object references. When the code is split, the HTML/CSS/JS documents (and their numbered chunks) are additional documents listed below. Copy any row as a JSON sample; the fire icon opens that document directly in Firestore.</p>
+        <div class="htl-shots-bar">
+          <button class="htl-btn htl-btn-ghost htl-btn-sm" id="htl-documents-refresh">↻ Refresh list</button>
+          <span class="htl-hint" id="htl-documents-note"></span>
+        </div>
+        <div class="htl-dev-docs" id="htl-dev-docs-list"></div>
       </div>
     </section>
 
@@ -370,10 +386,10 @@
         } }
       }];
     }
-    if (!store['tool-code-versions-uniconbaseapps']) {
-      store['tool-code-versions-uniconbaseapps'] = [{
+    if (!store['tool-code-versions-applicationstore']) {
+      store['tool-code-versions-applicationstore'] = [{
         id: 'obj-version-1', _id: 'obj-version-1',
-        cmsObjectType: 'tool-code-versions-uniconbaseapps', typeId: 'demo-versions',
+        cmsObjectType: 'tool-code-versions-applicationstore', typeId: 'demo-versions',
         name: 'Brand Set Generator - v1', slug: 'brand-set-generator-v1',
         contentId: 'seed-version', meta: {}, permissions: {},
         created: new Date().toISOString(), updated: new Date().toISOString(),

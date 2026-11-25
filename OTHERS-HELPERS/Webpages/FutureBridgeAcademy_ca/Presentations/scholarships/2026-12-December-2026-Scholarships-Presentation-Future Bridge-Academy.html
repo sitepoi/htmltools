@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<meta name="description" content="A landscape presentation deck explaining 19 scholarships from the November 2026 cycle: value, deadline, eligibility, judging criteria and application links.">
-<title>Scholarships - November 2026</title>
+<meta name="description" content="A landscape presentation deck explaining 19 scholarships from the December 2026 cycle: value, deadline, eligibility, judging criteria and application links.">
+<title>Scholarships - December 2026</title>
 <style>
 /* ==========================================================================
    1. Base tokens
@@ -176,7 +176,6 @@ body {
   font-size: 15px;
   color: var(--text);
   background-color: #ffffff;
-  background-image: radial-gradient(760px 320px at 100% 0%, #f4f7fe 0%, transparent 60%);
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: 0 26px 54px -28px rgba(15, 23, 42, 0.28);
@@ -337,12 +336,10 @@ body {
   border-color: rgba(255, 255, 255, 0.14);
   background-color: #0b1a3a;
   background-image:
-    radial-gradient(900px 460px at 88% -14%, rgba(252, 211, 77, 0.22) 0%, transparent 58%),
-    radial-gradient(760px 420px at -10% 112%, rgba(59, 130, 246, 0.35) 0%, transparent 58%),
     linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
     linear-gradient(135deg, #081129 0%, #12275a 55%, #1e3a8a 100%);
-  background-size: auto, auto, 44px 44px, 44px 44px, auto;
+  background-size: 44px 44px, 44px 44px, auto;
 }
 
 .title-slide .slide-accent { background: linear-gradient(90deg, #fcd34d, #f59e0b); }
@@ -1050,12 +1047,10 @@ body {
   border-color: rgba(255, 255, 255, 0.14);
   background-color: #0b1a3a;
   background-image:
-    radial-gradient(900px 460px at 10% -14%, rgba(252, 211, 77, 0.16) 0%, transparent 58%),
-    radial-gradient(760px 420px at 108% 112%, rgba(59, 130, 246, 0.3) 0%, transparent 58%),
     linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
     linear-gradient(135deg, #081129 0%, #12275a 55%, #1e3a8a 100%);
-  background-size: auto, auto, 44px 44px, 44px 44px, auto;
+  background-size: 44px 44px, 44px 44px, auto;
 }
 
 .closing-slide .slide-accent { background: linear-gradient(90deg, #fcd34d, #f59e0b); }
@@ -1331,6 +1326,241 @@ body {
 
   .pres-slide:last-child { page-break-after: auto; break-after: auto; }
 }
+/* ---- December redesign: fewer words, larger reading size ---- */
+.title-slide h1 { font-size: 3.5em; letter-spacing: -0.035em; }
+.title-slide .title-grid { grid-template-columns: 1.6fr 1fr; }
+.title-meta { margin-top: 1.1em; font-size: 0.8em; }
+.sch-lead { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 60em; font-size: 1.02em; }
+.sch-facts--three { grid-template-columns: 1.1fr 1fr 0.9fr; }
+.sch-facts--three .sch-fact strong { font-size: 1.06em; }
+.sch-cols { align-content: start; }
+.sch-card { padding: 0.95em 1.15em; }
+.sch-card li .li-text { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sch-card ul { gap: 0.55em; }
+.sch-card .li-text { font-size: 0.92em; line-height: 1.4; }
+.sch-foot--tight { justify-content: flex-end; padding-top: 0.6em; }
+.writing-table--short td { font-size: 0.88em; }
+.writing-table--short th:nth-child(1) { width: 46%; }
+.writing-table--short th:nth-child(2) { width: 16%; }
+.writing-table--short th:nth-child(3) { width: 20%; }
+.writing-table--short th:nth-child(4) { width: 18%; }
+/* ---- December redesign: fill the slide, larger reading size ---- */
+.sch-cols { flex: 1; }
+.sch-card .li-text { font-size: 1em; line-height: 1.5; }
+.sch-card ul { gap: 0.85em; }
+.sch-fact strong { font-size: 1.1em; }
+.sch-fact span { font-size: 0.74em; }
+.sch-slide .slide-sub { font-size: 1em; }
+.writing-table--short td { font-size: 0.95em; padding: 0.62em 0.9em; }
+.writing-table--short th { font-size: 0.74em; letter-spacing: 0.1em; }
+.sch-cols { align-content: center; align-items: stretch; }
+/* =====================================================================
+   13. Readability and polish pass - larger type, richer surfaces
+   ===================================================================== */
+
+/* Base reading size: 15px -> 16.6px */
+.pres-slide { font-size: 16.6px; }
+@media screen and (max-width: 1180px) {
+  .pres-slide { font-size: calc((100vw - 48px) / 68); }
+}
+
+/* Headings */
+.slide-title { font-size: 2.45em; line-height: 1.06; }
+.slide-kicker { font-size: 0.76em; letter-spacing: 0.16em; }
+.slide-sub { font-size: 1.02em; }
+.slide-accent { height: 5px; box-shadow: 0 3px 16px rgba(59, 130, 246, 0.45); }
+
+/* Soft tint so the page does not look flat */
+.pres-slide:not(.title-slide):not(.closing-slide) {
+  background-image: radial-gradient(120% 95% at 100% 0%, rgba(30, 58, 138, 0.055), transparent 58%);
+}
+
+/* Award slide */
+.sch-lead { font-size: 1.08em; }
+.sch-facts { gap: 0.55em; }
+.sch-fact {
+  border-radius: 0.8em;
+  background: linear-gradient(180deg, #ffffff, #f6f9fd);
+  box-shadow: 0 14px 30px -26px rgba(15, 23, 42, 0.6);
+}
+.sch-fact strong { font-size: 1.2em; }
+.sch-fact span { font-size: 0.72em; letter-spacing: 0.12em; }
+.sch-card {
+  border-radius: 0.95em;
+  border: 1px solid #e6ecf5;
+  background: linear-gradient(180deg, #ffffff, #f8fafd);
+  box-shadow: 0 20px 40px -34px rgba(15, 23, 42, 0.55);
+}
+.sch-card h3 { font-size: 0.82em; }
+.sch-card .li-text { font-size: 1.04em; }
+.sch-foot--tight .sch-link { font-size: 0.9em; }
+
+/* Quick reference */
+.index-name { font-size: 0.84em; }
+.index-meta { font-size: 0.74em; }
+.index-item {
+  border-radius: 0.6em;
+  box-shadow: 0 10px 22px -22px rgba(15, 23, 42, 0.6);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.index-item:hover { transform: translateY(-1px); box-shadow: 0 14px 26px -20px rgba(15, 23, 42, 0.55); }
+
+/* Deadline board */
+.board-date { font-size: 0.9em; }
+.board-item {
+  font-size: 0.72em;
+  padding: 0.2em 0.66em;
+  background: linear-gradient(180deg, #ffffff, #f3f7fd);
+  box-shadow: 0 6px 14px -14px rgba(15, 23, 42, 0.6);
+}
+.board-tip { font-size: 0.82em; }
+
+/* Written pieces */
+.writing-table--short td { font-size: 0.98em; padding: 0.42em 0.85em; }
+.writing-table--short th { font-size: 0.8em; }
+
+/* Numbers slide */
+.stat-value { font-size: 2.4em; }
+.stat-label { font-size: 0.86em; }
+.rank-line { font-size: 0.82em; }
+.close-item { font-size: 0.82em; }
+.rank-list { gap: 0.42em; }
+.rank-name { line-height: 1.25; }
+.panel { border-radius: 0.95em; box-shadow: 0 18px 36px -32px rgba(15, 23, 42, 0.5); }
+
+/* Title slide */
+.title-slide h1 { font-size: 3.1em; line-height: 1.06; }
+.title-card-row b { font-size: 1.85em; }
+.title-card-row span { font-size: 0.84em; }
+.title-card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+
+/* Closing */
+.reminder h3 { font-size: 0.95em; }
+.reminder p { font-size: 0.86em; }
+
+/* Deck chrome */
+.deck-counter, .ghost-btn { font-size: 13px; }
+.nav-btn { font-size: 13.5px; }
+.pres-nav { backdrop-filter: blur(8px); background: rgba(11, 18, 32, 0.86); }
+.board-cont { color: #94a3b8; font-weight: 600; letter-spacing: 0.04em; }
+/* =====================================================================
+   14. Home logos, provider CTA and polish v2
+   ===================================================================== */
+
+/* Partner logos on the opening slide - larger and framed */
+.partner-label { font-size: 0.66em; margin-bottom: 0.6em; letter-spacing: 0.2em; }
+.partner-wall-title { gap: 0.55em; }
+.partner-tile {
+  height: 4.7em;
+  padding: 0.42em 0.5em;
+  border-radius: 0.58em;
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 14px 26px -18px rgba(2, 6, 23, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.partner-tile:hover { transform: translateY(-2px); box-shadow: 0 18px 30px -18px rgba(2, 6, 23, 0.85); }
+.partner-tile img { max-height: 3.35em; }
+
+@media screen and (max-width: 760px) {
+  .partner-wall-title { gap: 0.4em; }
+  .partner-tile { height: 3.6em; }
+  .partner-tile img { max-height: 2.5em; }
+}
+
+/* Provider page button - bottom right of every award slide */
+.sch-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.5em 1em 0.5em 0.6em;
+  border: 1px solid rgba(30, 58, 138, 0.9);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb 70%, #4f46e5);
+  color: #ffffff;
+  font-size: 0.82em;
+  font-weight: 800;
+  white-space: nowrap;
+  text-decoration: none;
+  box-shadow: 0 14px 26px -16px rgba(30, 58, 138, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.sch-link:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.sch-link-icon {
+  display: grid;
+  place-items: center;
+  width: 1.85em;
+  height: 1.85em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.95em;
+  line-height: 1;
+  flex: none;
+}
+.sch-link-text { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
+.sch-link-text b { font-size: 1em; font-weight: 800; letter-spacing: 0.01em; }
+.sch-link-text small {
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 22em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sch-foot--tight { padding-top: 0.75em; }
+
+/* Finishing details */
+.pres-slide:not(.title-slide):not(.closing-slide) {
+  background-image:
+    radial-gradient(120% 95% at 100% 0%, rgba(30, 58, 138, 0.06), transparent 58%),
+    radial-gradient(70% 50% at 0% 100%, rgba(79, 70, 229, 0.045), transparent 72%);
+}
+.pres-slide:not(.title-slide):not(.closing-slide) .slide-kicker span {
+  background: linear-gradient(90deg, #1e3a8a, #4f46e5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.stat-value {
+  background: linear-gradient(135deg, #1e3a8a, #4f46e5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.index-item { border-left: 3px solid #dbeafe; }
+.index-item:hover { border-left-color: var(--accent); }
+.sch-fact { border-top: 3px solid rgba(37, 99, 235, 0.35); }
+.sch-card h3 { letter-spacing: 0.09em; }
+.status-pill { box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06); }
+.writing-pill { background: linear-gradient(135deg, #e0e7ff, #ede9fe); box-shadow: inset 0 0 0 1px rgba(55, 48, 163, 0.12); }
+.board-item { border-color: #dbe6f7; }
+.board-item:hover { border-color: var(--accent); color: var(--accent); }
+/* ---- polish v3 ---- */
+.rank-bar-fill { background: linear-gradient(90deg, #1e3a8a, #4f46e5); }
+.sch-foot--tight { border-top: 1px solid rgba(15, 23, 42, 0.08); }
+.sch-foot--tight .sch-link { margin-bottom: 0.1em; }
+/* =====================================================================
+   15. PDF presentation tuning
+   ===================================================================== */
+
+/* Provider pill carries only the domain now, so it gets the space */
+.sch-link { padding: 0.52em 1.05em 0.52em 0.6em; font-size: 0.95em; }
+.sch-foot--tight .sch-link { font-size: 0.95em; }
+.sch-link-domain { font-size: 1.04em; font-weight: 800; letter-spacing: 0.01em; }
+.sch-link-icon { width: 1.7em; height: 1.7em; font-size: 0.92em; }
+
+/* Gradients and tints must survive the PDF export */
+.sch-link, .status-pill, .writing-pill, .sch-fact, .sch-card,
+.stat-tile, .panel, .index-item, .board-item, .partner-tile, .slide-accent {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@media print {
+  .pres-slide { box-shadow: none; }
+  .sch-link { box-shadow: none; }
+  .partner-tile:hover, .index-item:hover, .board-item:hover, .sch-link:hover { transform: none; filter: none; }
+}
 </style>
 </head>
 <body>
@@ -1341,7 +1571,7 @@ body {
   <header class="deck-bar">
     <div class="deck-brand">
       <span class="brand-mark"></span>
-      <span>Scholarships <span class="brand-dim">/ November 2026</span></span>
+      <span>Scholarships <span class="brand-dim">/ December 2026</span></span>
     </div>
     <div class="deck-actions">
       <span class="deck-counter" id="deckCounter">1 / 1</span>
@@ -1395,493 +1625,1310 @@ var LOGO_DATA = {
   'use strict';
 
   /* ==========================================================================
-     DATA - one object per open scholarship.
-     Sources: the November 2026 scholarship set, with awards that had already
-     closed removed. Duplicate records for Wolf Scholars Program and Michael
-     Decter Scholarship are merged below.
+     DATA - one object per scholarship in the December 2026 set.
+     Source: 2026-12 - December--scholarships-ibap.json (54 records).
+     Two records carry no fixed deadline and are listed at the end.
      ========================================================================== */
   var AWARDS = [
     {
-      name: 'Wolf Scholars Program',
-      provider: 'University of Toronto',
-      amount: 'Full tuition + $10,000 a year',
-      amountShort: 'Full tuition + $10k/yr',
-      rankValue: 100000,
-      rankLabel: 'Full tuition + $10,000 a year',
-      deadline: '2026-11-02',
-      level: 'Grade 12 / CEGEP',
-      where: 'Ontario',
-      summary: 'U of T flagship undergraduate award: tuition is fully funded for four years, plus an annual stipend for other student expenses.',
-      eligibility: [
-        'Final year of high school or first year of CEGEP, or graduated within the last 3 years without starting post-secondary',
-        'Canadian citizen or permanent resident, including students studying abroad',
-        'Born between September 1, 2005 and December 31, 2010',
-        'At least 90% average in your last completed year; non-academic courses are excluded'
+      "name": "Uggla Family Scholarship (Simon Fraser University)",
+      "provider": "",
+      "amount": "Up to $170,000 over 8 terms",
+      "amountShort": "$170k",
+      "rankValue": 170000,
+      "rankLabel": "Up to $170,000 over 8 terms",
+      "deadline": "2027-01-18",
+      "duration": "8 full-time academic terms (4 years of undergraduate study).",
+      "where": "British Columbia",
+      "summary": "Ten scholarships are awarded annually. You must submit an SFU admission application first to get your SFU ID before accessing the scholarship form",
+      "eligibility": [
+        "Domestic (Canadian citizen or permanent resident) secondary school students applying for Fall 2027 admission to."
       ],
-      reviewLabel: 'How it is judged',
-      review: [
-        'Apply separately to U of T Arts and Science or Applied Science and Engineering through OUAC by the Wolf deadline',
-        'Two reference forms, at least one academic from a current or recent teacher',
-        'Semi-finalists interview online in January 2027',
-        'Judged on drive to build and lead, curiosity, and exceptional character'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Significant financial barriers to post-secondary education, academic achievement."
       ],
-      note: 'Financial need is not specifically evaluated. The source record lists the whole package at up to $100,000.',
-      link: 'https://wolfscholars.awardsplatform.com',
-      linkLabel: 'wolfscholars.awardsplatform.com'
+      "note": "",
+      "link": "https://www.sfu.ca/students/admission/fees-scholarships/uggla.html",
+      "linkLabel": "sfu.ca"
     },
     {
-      name: 'Bernard Erlin Memorial Scholarship',
-      provider: 'ACI Foundation',
-      amount: '$7,000',
-      amountShort: '$7,000',
-      rankValue: 7000,
-      rankLabel: '$7,000',
-      deadline: '2026-11-01',
-      level: 'Undergrad / graduate',
-      where: 'US / Canada',
-      summary: 'Fellowship for students in concrete-related degree programs who are enrolled full-time during the award year.',
-      eligibility: [
-        'Graduate or undergraduate student in a concrete materials related degree program',
-        'Full-time from fall through spring of the standard academic year',
-        'Attending an accredited institution in the United States or Canada',
-        'English proficiency; an optional TOEFL score can be uploaded'
-      ],
-      reviewLabel: 'How it is judged',
-      review: [
-        'Finalists must attend the spring ACI Concrete Convention for an in-person interview',
-        'Travel costs for the interview are paid by the fellowship program'
-      ],
-      note: 'Finalists should plan for convention travel; the interview is not online.',
-      link: 'https://www.acifoundation.org/scholarships/fellowshipsscholarships.aspx?id=31',
-      linkLabel: 'acifoundation.org'
+      "name": "ASNA/CIA DEI Scholarships",
+      "provider": "",
+      "amount": "See provider page",
+      "amountShort": "n/a",
+      "rankValue": 0,
+      "rankLabel": "See provider page",
+      "deadline": "2027-01-04",
+      "duration": "See provider page",
+      "where": "See provider page",
+      "summary": "",
+      "eligibility": [],
+      "reviewLabel": "How it is judged",
+      "review": [],
+      "note": "",
+      "link": "https://www.cia-ica.ca/the-cia/partners-and-networks/diversity-equity-and-inclusion-scholarships/",
+      "linkLabel": "cia-ica.ca"
     },
     {
-      name: 'Hydro One Women in Engineering Award',
-      provider: 'Hydro One',
-      amount: '$5,000 (ten awards)',
-      amountShort: '$5,000',
-      deadline: '2026-11-01',
-      level: 'Undergraduate',
-      where: 'Ontario',
-      summary: 'Ten awards for women in undergraduate engineering at accredited Ontario universities, with a paid developmental work term at Hydro One.',
-      eligibility: [
-        'Identify as a woman',
-        'Canadian citizen or landed immigrant',
-        'Study full-time at an accredited Ontario university with at least a B+ GPA',
-        'Take part in outreach, volunteer or educational activities with younger girls'
+      "name": "Allied Van Lines Scholarship",
+      "provider": "",
+      "amount": "$4,000 ($1,000 x 4 awards)",
+      "amountShort": "$4k",
+      "rankValue": 4000,
+      "rankLabel": "$4,000 ($1,000 x 4 awards)",
+      "deadline": "2026-12-15",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "Payment is issued via check directly to the educational institution rather than the student's personal account.",
+      "eligibility": [
+        "Must be a Canadian citizen or permanent resident (PR). Must be enrolled (or planning to enroll) full-time in an."
       ],
-      reviewLabel: 'What to submit',
-      review: [
-        'Updated resume and unofficial transcripts',
-        'Strong oral and written communication skills',
-        'Preference to electrical engineering students; civil, software, systems and computer engineering students with two or more years completed are encouraged'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "A 400–800 word personal essay detailing how logistics or supply chain management plays a vital role in your."
       ],
-      note: 'You must be returning to full-time study; the only exception is a work placement required to graduate.',
-      link: 'https://career47.sapsf.com/sfcareer/jobreqcareerpvt?jobId=51464&company=28745P&st=330752958663B15284297ECD9929345B40850DFB',
-      linkLabel: 'career47.sapsf.com'
+      "note": "",
+      "link": "https://www.alliedvanlines.ca/scholarship",
+      "linkLabel": "alliedvanlines.ca"
     },
     {
-      name: 'CSEG Foundation Technologist Scholarship',
-      provider: 'CSEG Foundation',
-      amount: '$1,000 to $2,500',
-      amountShort: '$1,000 to $2,500',
-      deadline: '2026-11-02',
-      level: 'College / technical',
-      where: 'Canada',
-      summary: 'For students in Canadian geoscience technology programs who are preparing for a career in geophysics.',
-      eligibility: [
-        'Enrolled full-time at an accredited Canadian institution in a geoscience technology program',
-        'Studies directed toward a geophysics career',
-        'Be, or become, a CSEG student member'
+      "name": "APMA Future of Work Scholarship",
+      "provider": "",
+      "amount": "$500",
+      "amountShort": "$500",
+      "rankValue": 500,
+      "rankLabel": "$500",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "Applications are accepted year-round; December 31 marks the final quarterly review deadline for the year.",
+      "eligibility": [
+        "Students enrolled in post-secondary education (college, university, or graduate) in Canada."
       ],
-      reviewLabel: 'How it is judged',
-      review: [
-        'Academic performance',
-        'Financial need',
-        'Interest in geophysics, extra-curricular activities and leadership roles',
-        'References'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Vision for automotive innovation, competitiveness, and sustainability, application form."
       ],
-      note: 'The CSEG Foundation lists three different bursaries on the same scholarships page; check each one.',
-      link: 'https://cseg.ca/foundation/scholarships/',
-      linkLabel: 'cseg.ca'
+      "note": "",
+      "link": "https://www.apma.ca/scholarship",
+      "linkLabel": "apma.ca"
     },
     {
-      name: 'Michael Decter Scholarship',
-      provider: 'SE Health',
-      amount: '$5,000',
-      amountShort: '$5,000',
-      deadline: '2026-11-02',
-      level: 'First-year graduate',
-      where: 'Canada',
-      summary: 'For first-year graduate students in health leadership or health policy who aim for leadership roles in Canadian health care.',
-      eligibility: [
-        'Entering the first year of graduate studies in health leadership and/or health policy',
-        'At a recognized, accredited Canadian university',
-        'Ideal candidates want a future leadership, executive or board role in Canadian health care'
+      "name": "Ayn Rand Institute – The Fountainhead Essay Contest",
+      "provider": "",
+      "amount": "Up to $25,000 ($3,000 round prize; $22,000 grand prize)",
+      "amountShort": "Up to $25k",
+      "rankValue": 25000,
+      "rankLabel": "Up to $25,000 ($3,000 round prize; $22,000 grand prize)",
+      "deadline": "2026-07-31",
+      "duration": "one-time",
+      "where": "Open worldwide",
+      "summary": "Submissions go through a four-stage blind judging process; the essay file itself must not include the student's name or personal identifiers.",
+      "eligibility": [
+        "Must be enrolled in Grades 8 through 12 (middle/high school level) anywhere in the world.",
+        "No entry fee and no citizenship restrictions.",
+        "Essays must be written in English, strictly original (no AI-generated content or plagiarism)",
+        "Immediate family members of Ayn Rand Institute employees or board members are ineligible."
       ],
-      reviewLabel: 'What to submit',
-      review: [
-        'A submission of no more than 750 words, or a media format of no more than 5 minutes',
-        'Cover your long-term goals, leadership aspirations and innovation focus',
-        'Proof of acceptance or registration, plus official transcripts',
-        'One academic and two professional references, all signed, plus a CV or resume'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Clarity, logical organization, and persuasiveness of the argument (judges evaluate how well ideas are reasoned.",
+        "Depth of understanding of the plot, characters, and philosophical themes of The Fountainhead.",
+        "Direct and thorough engagement with all parts of the chosen essay prompt."
       ],
-      note: 'The same award appears in two source records with two application pages; check both before applying.',
-      link: 'https://sehc.com/michael-decter-scholarship#apply',
-      linkLabel: 'sehc.com'
+      "note": "Finalists are required to complete a brief online video interview to confirm authorship before receiving an award.",
+      "link": "https://aynrand.org/students/essay-contests/the-fountainhead",
+      "linkLabel": "aynrand.org"
     },
     {
-      name: 'Ecowaste Scholarships',
-      provider: 'SWANA BC Chapter',
-      amount: 'Up to $1,500',
-      amountShort: 'Up to $1,500',
-      deadline: '2026-11-13',
-      level: 'Post-secondary (1+ year)',
-      where: 'British Columbia / Yukon',
-      summary: 'For BC and Yukon students in environmental management or a related program who connect their studies to solid waste management.',
-      eligibility: [
-        'Registered in a full course of studies in environmental management or a related program',
-        'At a recognized post-secondary institution in British Columbia or Yukon',
-        'At least one year of post-secondary study completed'
+      "name": "Bank of Montreal Award (Queen's)",
+      "provider": "",
+      "amount": "$10,000 to $18,000 a year, renewable 4 years",
+      "amountShort": "$10k-18k/yr",
+      "rankValue": 72000,
+      "rankLabel": "$10,000 to $18,000 a year, renewable 4 years",
+      "deadline": "2026-12-08",
+      "duration": "4 years",
+      "where": "All provinces",
+      "summary": "Renewable for three additional years.",
+      "eligibility": [
+        "Must be entering the first year of an undergraduate program at Queen’s University.",
+        "Must be a Canadian citizen, permanent resident, or Protected Person.",
+        "Must demonstrate financial need.",
+        "Recommended high school average: 90% or higher."
       ],
-      reviewLabel: 'What to submit',
-      review: [
-        'A written submission of 500 words or less',
-        'A faculty reference letter',
-        'Proof of registration for Fall 2026 or Winter 2027',
-        'Your transcript or previous year marks'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic excellence.",
+        "Financial need.",
+        "Leadership qualities.",
+        "School and community involvement."
       ],
-      note: 'SWANA members and their immediate relatives may receive preference.',
-      link: 'https://swanabc.org/swana-bc-chapter-scholarships/',
-      linkLabel: 'swanabc.org'
+      "note": "Minimum GPA of 3.5 required for renewal. Full-time enrollment required. Preference may be given to students from rural and remote areas of Canada.",
+      "link": "https://fundmycourse.ca/scholarships/bank-of-montreal-award",
+      "linkLabel": "fundmycourse.ca"
     },
     {
-      name: 'Fulbright Canada Student Awards',
-      provider: 'Fulbright Canada',
-      amount: '$25,000',
-      amountShort: '$25,000',
-      rankValue: 25000,
-      rankLabel: '$25,000',
-      deadline: '2026-11-15',
-      level: 'Bachelor degree holders',
-      where: 'Canada to US',
-      summary: 'The Canada-US Fulbright Program funds outstanding Canadian students to study or conduct research in the United States.',
-      eligibility: [
-        'Canadian citizen',
-        'Hold a Bachelor degree before the grant start date',
-        'Proficient in English',
-        'Comply with Fulbright Foreign Scholarship Board guidelines and visa, immigration, travel and residence rules'
+      "name": "Beedie Luminaries BUILD",
+      "provider": "",
+      "amount": "See provider page",
+      "amountShort": "n/a",
+      "rankValue": 0,
+      "rankLabel": "See provider page",
+      "deadline": "2026-12-14",
+      "duration": "Multiple stages of training",
+      "where": "British Columbia",
+      "summary": "International students are not eligible.",
+      "eligibility": [
+        "Must be a Canadian citizen, permanent resident, or protected person.",
+        "Must reside full-time in British Columbia.",
+        "Must be between 17 and 34 years old.",
+        "Must demonstrate financial adversity."
       ],
-      reviewLabel: 'What is assessed',
-      review: [
-        'Fields include communications and culture, Canadian-American relations and contemporary public policy',
-        'Also culture and environment, law, Indigenous issues, and the pure and applied sciences',
-        'Applications are assessed as a reciprocal residential exchange'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Financial circumstances and adversity.",
+        "Personal circumstances.",
+        "Commitment to skilled trades.",
+        "Eligibility for the selected training program."
       ],
-      note: 'The award supports study or research in the United States, not a Canadian program.',
-      link: 'https://www.fulbright.ca/programs/canadian-students/eligibility',
-      linkLabel: 'fulbright.ca'
+      "note": "Preference may be given to students with previous Trades Discovery experience. Apprenticeship opportunities and mentoring support are also available. This is not a general university entrance scholarship.",
+      "link": "https://beedieluminaries.ca",
+      "linkLabel": "beedieluminaries.ca"
     },
     {
-      name: 'The Zonta International Amelia Earhart Fellowship',
-      provider: 'Zonta International',
-      amount: '$17,000',
-      amountShort: '$17,000',
-      rankValue: 17000,
-      rankLabel: '$17,000',
-      deadline: '2026-11-15',
-      level: 'Doctoral',
-      where: 'International',
-      summary: 'A fellowship for women in doctoral research applied to aerospace engineering or space sciences.',
-      eligibility: [
-        'Registered full-time in a Ph.D. or doctoral program by November 15, 2026',
-        'Research must be applied to aerospace engineering or space sciences',
-        'Applicants must be female'
+      "name": "Beedie Luminaries SHINE Scholarship",
+      "provider": "",
+      "amount": "$44,000 (4-year) or $22,000 (2-year)",
+      "amountShort": "$44k",
+      "rankValue": 44000,
+      "rankLabel": "$44,000 (4-year) or $22,000 (2-year)",
+      "deadline": "2026-12-14",
+      "duration": "up to 4 years",
+      "where": "British Columbia",
+      "summary": "Supports promising high school graduates who face financial difficulties and need assistance to continue their education.",
+      "eligibility": [
+        "Canadian citizen, permanent resident or protected person.",
+        "Must live in British Columbia.",
+        "Currently studying in Grade 12.",
+        "Minimum 75% average in the most recently completed school year."
       ],
-      reviewLabel: 'How it is judged',
-      review: [
-        'Doctoral research relevance to aerospace engineering or space sciences',
-        'Full-time doctoral registration by the deadline'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic performance.",
+        "Financial circumstances.",
+        "Personal circumstances and resilience.",
+        "School and community involvement."
       ],
-      note: 'The fellowship is international; the deadline applies to doctoral registration.',
-      link: 'https://www.zonta.org/Web/Web/Programs/Education/Amelia_Earhart_Fellowship.aspx',
-      linkLabel: 'zonta.org'
+      "note": "Provides mentoring and peer support. Includes student success programs. Some applicants may be invited to interviews.",
+      "link": "https://beedieluminaries.ca/?utm_source=chatgpt.com",
+      "linkLabel": "beedieluminaries.ca"
     },
     {
-      name: 'Feed Your Future Scholarship',
-      provider: 'AgCareers.com',
-      amount: '$1,000 (four awards a year)',
-      amountShort: '$1,000',
-      deadline: '2026-11-20',
-      level: 'High school / post-secondary',
-      where: 'US / Canada',
-      summary: 'Four $1,000 awards a year for students who study agriculture or plan to build a career in the field.',
-      eligibility: [
-        'Study agriculture, or intend to pursue an agricultural career',
-        'Enrolled in a high school or post-secondary institution in the US or Canada',
-        'At least one semester remaining after 2026'
+      "name": "Beedie Luminaries – RISE Scholarship",
+      "provider": "",
+      "amount": "Up to $44,000 ($11,000 a year for 4 years)",
+      "amountShort": "Up to $44k",
+      "rankValue": 44000,
+      "rankLabel": "Up to $44,000 ($11,000 a year for 4 years)",
+      "deadline": "2026-12-14",
+      "duration": "See provider page",
+      "where": "British Columbia",
+      "summary": "Full-Time: Renewable for up to 4 years (or until the student completes their first accreditation in Canada, whichever comes first: 1 year for certificates, 2 years for diplomas, 4 years for undergraduate...",
+      "eligibility": [
+        "Must be between 19 and 34 years old (born between 1992 and 2007 for the current cycle).",
+        "Must be a Protected Person in Canada determined to be a Convention refugee (with a Notice of Decision issued.",
+        "Must be a full-time resident of British Columbia for at least the previous 6 consecutive months.",
+        "Must have completed secondary school (high school) or its equivalent."
       ],
-      reviewLabel: 'What to submit',
-      review: [
-        'Complete the application questionnaire',
-        'Upload your resume to the AgCareers Resume Database',
-        'Follow AgCareers on social media'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Demonstrated financial need and resilience in overcoming life adversities.",
+        "Academic readiness, personal motivation, and career goals.",
+        "Strength of the required community/settlement agency endorsement letter.",
+        "Shortlisted candidates are evaluated through a panel interview (typically held between January and April)"
       ],
-      note: 'Two awards go to post-secondary students and two to high school students each year.',
-      link: 'https://www.agcareers.com',
-      linkLabel: 'agcareers.com'
+      "note": "Payments are disbursed directly to the post-secondary institution to cover tuition and mandatory fees. Recipients cannot hold other external scholarships totaling more than $10,000 CAD over the 4-year funding period (this restriction does not apply to bursaries or student loans). Beyond funding, recipients receive...",
+      "link": "https://beedieluminaries.ca/rise-scholarship/",
+      "linkLabel": "beedieluminaries.ca"
     },
     {
-      name: 'Kwi Am Choi Exhibition Scholarship',
-      provider: 'PoMoArts',
-      amount: '$2,000 + exhibition support',
-      amountShort: '$2,000',
-      deadline: '2026-11-22',
-      level: 'Emerging artists (18 to 32)',
-      where: 'British Columbia',
-      summary: 'Funds and curates a solo exhibition for an emerging BC artist, including an exhibition slot in 2027.',
-      eligibility: [
-        'Emerging BC artists aged 18 to 32',
-        'Currently studying Fine Art at a recognized Canadian post-secondary institution, or within 24 months of graduating',
-        'Emerging means early professional development, not earning your whole living from artwork',
-        'Solo exhibitions only; PoMoArts staff, instructors, board members and their immediate families are excluded'
+      "name": "Beem Credit Union Purple Cap Awards",
+      "provider": "",
+      "amount": "$25,000 ($2,500 x 10 awards)",
+      "amountShort": "$25k",
+      "rankValue": 25000,
+      "rankLabel": "$25,000 ($2,500 x 10 awards)",
+      "deadline": "",
+      "duration": "One-time award; may be received up to two times in a lifetime.",
+      "where": "British Columbia",
+      "summary": "A bursary program offered by Beem Credit Union with applications accepted year-round.",
+      "eligibility": [
+        "Be a BC resident, Canadian citizen, Permanent Resident, or protected person.",
+        "Be 17 years of age or older at the time of claiming the award.",
+        "Be enrolled in a full-time or part-time degree, diploma, trades.",
+        "Be a Beem Credit Union member at the time of claiming the award (membership is not required to apply;."
       ],
-      reviewLabel: 'What to submit',
-      review: [
-        'Two artistic references, a cover letter and a CV',
-        'One-page exhibition proposal, artist statement and biography of at most 125 words each',
-        'Up to ten artwork images with the required image list',
-        'Confirm availability for the August 12 to October 24, 2027 exhibition and related dates'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Evaluated by a selection committee; specific scoring standards are not publicly disclosed."
       ],
-      note: 'There is no application fee.',
-      link: 'https://www.jotform.com/form/262364695108261',
-      linkLabel: 'jotform.com'
+      "note": "there are three assessment periods in 2026 (May 15, September 30, November 30). Applications submitted after November 30 will be considered in the next assessment period (2027), so applying after December 2026 is possible. This is the only verifiable option that meets your criteria. Note that eligibility is relatively...",
+      "link": "https://beemcreditunion.ca/bursary",
+      "linkLabel": "beemcreditunion.ca"
     },
     {
-      name: 'BDC Summer Studentships in Inherited Bleeding Disorders Research',
-      provider: 'Bleeding Disorders Canada',
-      amount: '$6,000',
-      amountShort: '$6,000',
-      rankValue: 6000,
-      rankLabel: '$6,000',
-      deadline: '2026-11-27',
-      level: 'Medical / science',
-      where: 'All provinces',
-      summary: 'Funds a summer research placement for medical students and science undergraduates working on inherited bleeding disorders.',
-      eligibility: [
-        'Medical students in any year of training',
-        'Science students in any year of an undergraduate program',
-        'Canadian citizens or permanent residents',
-        'A supervisor running a current BDC- or agency-funded project in inherited bleeding disorders must accept you'
+      "name": "Blankstyle Scholarship Fund Details",
+      "provider": "",
+      "amount": "$1,000",
+      "amountShort": "$1k",
+      "rankValue": 1000,
+      "rankLabel": "$1,000",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "See provider page",
+      "summary": "There is no application fee required to enter.",
+      "eligibility": [
+        "Must be a high school senior who has been accepted into an accredited university or college.",
+        "Must accurately provide standard academic details on the application form, including school name."
       ],
-      reviewLabel: 'How it is judged',
-      review: [
-        'Excellent academic record',
-        'Acceptance by a scientist leading a relevant research project',
-        'A 200-word plain-language summary of the research, written at Grade 12 readability'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Applications are reviewed on a merit basis.",
+        "Candidates are evaluated based on four written responses submitted through the online form:.",
+        "1. A 2-paragraph summary of personal achievements and future goals.",
+        "2. A 2-paragraph explanation of why the applicant deserves the scholarship."
       ],
-      note: 'The project must relate to inherited bleeding disorders and be supported by BDC or another major granting agency.',
-      link: 'https://bleedingdisorderscanada.ca/chs-dream-of-a-cure-research-program/',
-      linkLabel: 'bleedingdisorderscanada.ca'
+      "note": "The $1,000 USD award check is sent directly to the financial aid office of the recipient's enrolled institution rather than to the individual student. Funds may only be applied toward educational expenses, such as tuition, room and board, books, and school supplies",
+      "link": "https://www.blankstyle.com/blankstyle-scholarship-fund",
+      "linkLabel": "blankstyle.com"
     },
     {
-      name: 'Captain Judy Cameron Scholarship for Canadian women',
-      provider: 'Northern Lights Aero Foundation',
-      amount: '$5,000',
-      amountShort: '$5,000',
-      deadline: '2026-11-30',
-      level: 'Post-secondary',
-      where: 'Canada',
-      summary: 'Supports young women training as commercial pilots or aircraft maintenance engineers, with preference for volunteers and students in financial need.',
-      eligibility: [
-        'Canadian citizen enrolled in a post-secondary fixed-wing aviation program at a college, university or flight school',
-        'Or enrolled in an aircraft repair and maintenance program anywhere in Canada',
-        'Pilot applicants need a Category One Medical certificate and a completed solo flight'
+      "name": "BMO Leader of Tomorrow – University of Manitoba",
+      "provider": "",
+      "amount": "$16,000 ($4,000 a year for 4 years)",
+      "amountShort": "$16k",
+      "rankValue": 16000,
+      "rankLabel": "$16,000 ($4,000 a year for 4 years)",
+      "deadline": "2026-12-01",
+      "duration": "4 years",
+      "where": "All provinces",
+      "summary": "Three recommendation letters are required.",
+      "eligibility": [
+        "Canadian citizen or permanent resident.",
+        "Applying directly from a Canadian high school to the University of Manitoba.",
+        "Minimum 90% high school average in specified courses.",
+        "Must demonstrate leadership and community involvement."
       ],
-      reviewLabel: 'Letters of reference',
-      review: [
-        'Two letters of reference about your specific skills, aptitudes and performance',
-        'References cannot be from a family member or spouse',
-        'Pilots: one letter from a flight instructor you trained with',
-        'Maintenance engineers: one letter from a teacher or apprenticeship supervisor'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic achievement.",
+        "Leadership potential.",
+        "Communication skills.",
+        "Community involvement."
       ],
-      note: 'Preference goes to women who volunteer to help other women in aviation, or who demonstrate financial need.',
-      link: 'https://northernlightsaerofoundation.com/get-involved/scholarships/',
-      linkLabel: 'northernlightsaerofoundation.com'
+      "note": "One must be from your principal, one from a teacher or counsellor, and one from a community member. The national competition includes students graduating from Canadian high schools outside Manitoba.",
+      "link": "https://umanitoba.ca/financial-aid-and-awards/entrance-awards/bmo-leaders-scholarships?utm_source=chatgpt.com",
+      "linkLabel": "umanitoba.ca"
     },
     {
-      name: 'HSA BURSARIES',
-      provider: 'Health Sciences Association of BC',
-      amount: '10 scholarships + 24 bursaries',
-      amountShort: '10 awards + 24 bursaries',
-      deadline: '2026-11-30',
-      level: 'Members and dependents',
-      where: 'British Columbia',
-      summary: 'A large bursary and scholarship program for HSA members and their dependents, plus awards for Indigenous students in HSA-related fields.',
-      eligibility: [
-        'Open to HSA members and their dependents',
-        'Two additional scholarships for First Nations, Metis and Inuit students in an HSA-related field',
-        'Current HSA membership is not required for the Indigenous scholarships'
+      "name": "Burger King Scholars Program",
+      "provider": "",
+      "amount": "$1,000 to $60,000",
+      "amountShort": "$1k-60k",
+      "rankValue": 60000,
+      "rankLabel": "$1,000 to $60,000",
+      "deadline": "2026-12-15",
+      "duration": "Generally one-time",
+      "where": "Canada and United States",
+      "summary": "A scholarship program supporting students who demonstrate academic achievement, work experience, community participation and financial need.",
+      "eligibility": [
+        "Living in Canada, the United States, Puerto Rico or Guam.",
+        "Graduating from Grade 12 in Canada in 2027.",
+        "Minimum GPA equivalent to 2.0/4.0.",
+        "Planning to study full-time during 2027–2028."
       ],
-      reviewLabel: 'Before you apply',
-      review: [
-        'The page lists ten scholarships and 24 bursaries in one place',
-        'Read each award own criteria and use its own application form'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Criterion Weight.",
+        "Academic record 33%.",
+        "School/community activities and work experience 34%.",
+        "Financial need 33%."
       ],
-      note: 'Check which of the 34 awards fits you best before starting an application.',
-      link: 'https://hsabc.org/member-benefits/scholarships-and-bursaries',
-      linkLabel: 'hsabc.org'
+      "note": "The highest special award is the $60,000 James W. McLamore WHOPPER Scholarship. Most general scholarships are $1,000–$5,000. Payments are in US dollars.",
+      "link": "https://scholarshipamerica.org/scholarship/burgerking/?utm_source=chatgpt.com",
+      "linkLabel": "scholarshipamerica.org"
     },
     {
-      name: 'editing.services scholarship',
-      provider: 'editing.services',
-      amount: '$1,000',
-      amountShort: '$1,000',
-      deadline: '2026-11-30',
-      level: 'College / university / trade',
-      where: 'All provinces',
-      summary: 'An essay contest for students on how writing impacts the world today.',
-      eligibility: [
-        'Attending, or about to attend, an accredited college, university or trade school in 2026',
-        'At least 18 years old',
-        'Submit the application form successfully',
-        'One entry per person'
+      "name": "Canada Graduate Research Scholarship — Master’s (CGRS-M)",
+      "provider": "",
+      "amount": "$27,000 a year",
+      "amountShort": "$27k/yr",
+      "rankValue": 27000,
+      "rankLabel": "$27,000 a year",
+      "deadline": "2026-12-01",
+      "duration": "12 months (1 academic year, non-renewable).",
+      "where": "All provinces",
+      "summary": "Administered jointly by CIHR, NSERC, and SSHRC. You may select up to three Canadian universities on a single application via the federal Research Portal",
+      "eligibility": [
+        "For current university students (final-year undergrads applying to grad school or first-year master's."
       ],
-      reviewLabel: 'How to enter',
-      review: [
-        'Essay topic: How does writing impact today world?',
-        'Think about it, write about it, and share your thoughts through the application form'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic excellence (50%), research potential (30%), and personal characteristics/interpersonal skills (20%)."
       ],
-      note: 'The contest is decided on the submitted essay, not on grades.',
-      link: 'https://editing.services/scholarship',
-      linkLabel: 'editing.services'
+      "note": "",
+      "link": "https://nserc-crsng.canada.ca/en/funding-opportunity/canada-graduate-research-scholarship-masters-program",
+      "linkLabel": "nserc-crsng.canada.ca"
     },
     {
-      name: 'John Galt Solutions Scholarship for Future Supply Chain Leaders',
-      provider: 'John Galt Solutions',
-      amount: '$10,000',
-      amountShort: '$10,000',
-      rankValue: 10000,
-      rankLabel: '$10,000',
-      deadline: '2026-11-30',
-      level: 'Undergraduate',
-      where: 'US / Canada',
-      summary: 'For full-time undergraduates who intend to work in supply chain management and can show financial need.',
-      eligibility: [
-        'Full-time undergraduate at an accredited US or Canadian institution',
-        'Intend to work in supply chain management',
-        'Demonstrate financial need',
-        'Supply chain, business forecasting and related majors qualify; other majors may qualify through relevant courses'
+      "name": "Cashion Legal Access Scholarship",
+      "provider": "",
+      "amount": "$2,500",
+      "amountShort": "$2.5k",
+      "rankValue": 2500,
+      "rankLabel": "$2,500",
+      "deadline": "2026-12-15",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "Applications are submitted via an online form with an essay upload.",
+      "eligibility": [
+        "Must be a high school senior or current student enrolled/enrolling in an accredited Canadian university or."
       ],
-      reviewLabel: 'What to submit',
-      review: [
-        'A 500 to 750 word letter on your passion for supply chain, personal growth and financial need',
-        'Proof of enrolment such as a transcript, course list or school letter'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Essay focusing on access to justice and legal barriers, along with academic standing."
       ],
-      note: 'Citizenship is not required. High-school and postgraduate students are not eligible.',
-      link: 'https://johngalt.com/scholarships',
-      linkLabel: 'johngalt.com'
+      "note": "",
+      "link": "https://cashionlegal.com/about/scholarships-cashion/",
+      "linkLabel": "cashionlegal.com"
     },
     {
-      name: 'Keith Sanftleben Memorial Scholarship',
-      provider: 'PVMA',
-      amount: '$4,000',
-      amountShort: '$4,000',
-      deadline: '2026-11-30',
-      level: 'Post-secondary',
-      where: 'Alberta',
-      summary: 'An Alberta award for post-secondary students, with preference for biology, agriculture, environmental studies and forestry.',
-      eligibility: [
-        'Enrolled in post-secondary study at an Alberta-approved provincial, national or international institution or program',
-        'Preference for biology, agriculture, environmental studies, forestry or another natural science program',
-        'Have not received this scholarship before'
+      "name": "Chernoff Family Award",
+      "provider": "",
+      "amount": "$12,000 to $18,000 a year, renewable 4 years",
+      "amountShort": "$12k-18k/yr",
+      "rankValue": 72000,
+      "rankLabel": "$12,000 to $18,000 a year, renewable 4 years",
+      "deadline": "2026-12-08",
+      "duration": "4 years",
+      "where": "All provinces",
+      "summary": "Renewable for up to four years, subject to renewal requirements.",
+      "eligibility": [
+        "Must be a Canadian citizen, permanent resident or Protected Person.",
+        "Must be entering an undergraduate program at Queen's University.",
+        "Must demonstrate strong academic ability.",
+        "Must demonstrate financial need."
       ],
-      reviewLabel: 'What to submit',
-      review: [
-        'A 1 to 2 page essay on how you have improved, or plan to improve, human welfare',
-        'Explain the difference you make and your positive impact on community and others'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic achievement.",
+        "Leadership qualities.",
+        "Financial need.",
+        "School and community involvement."
       ],
-      note: 'The application form is a PDF on the PVMA site.',
-      link: 'https://www.pvma.ca/THE-KEITH-SANFTLEBEN-MEMORIAL-SCHOLARSHIP-form.pdf',
-      linkLabel: 'pvma.ca (PDF form)'
+      "note": "Applicants must submit the Major Admission Award application through Queen's SOLUS. A Financial Aid and Awards Profile is also required. International students who do not meet the citizenship/residency requirements are not eligible.",
+      "link": "https://www.queensu.ca/registrar/financial-aid/application-required/future-students/major-awards",
+      "linkLabel": "queensu.ca"
     },
     {
-      name: 'ORVIL L. DAVIE MEMORIAL FUND',
-      provider: 'HRAI',
-      amount: '$1,000',
-      amountShort: '$1,000',
-      deadline: '2026-11-30',
-      level: 'Apprenticeship / college',
-      where: 'Canada',
-      summary: 'A bursary for students in HVACR-focused programs who can demonstrate financial need.',
-      eligibility: [
-        'Currently registered in an eligible post-secondary HVACR or related program',
-        'Still enrolled after the submission deadline',
-        'Demonstrate financial need',
-        'Consent to HRAI being told when you complete the program'
+      "name": "CIBC Full Ride – Student Life Network 2026",
+      "provider": "",
+      "amount": "$35,000",
+      "amountShort": "$35k",
+      "rankValue": 35000,
+      "rankLabel": "$35,000",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "There is one CAD $35,000 grand prize.",
+      "eligibility": [
+        "Must be a legal resident of Canada.",
+        "Must be at least 16 years old when entering.",
+        "Applicants under the age of majority need permission from a parent or legal guardian.",
+        "Must be a currently registered student in good standing at an accredited Canadian:."
       ],
-      reviewLabel: 'How it is judged',
-      review: [
-        'Applicant eligibility',
-        'Financial need',
-        'Quality of application'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "No academic grade requirement.",
+        "No academic essay or GPA competition.",
+        "Winner is selected through a random draw.",
+        "Odds depend on the number of eligible entries received."
       ],
-      note: 'Programs must focus on HVACR: sheet metal, refrigeration and air conditioning, gas fitting, HVAC-focused mechanical engineering, or industry and apprenticeship training.',
-      link: 'https://www.hrai.ca/uploads/userfiles/files/Orvil%20L_%20Davie%20Bursary%20Guidelines%20and%20Application-Fillable.pdf',
-      linkLabel: 'hrai.ca (PDF form)'
+      "note": "The prize is paid by cheque to the winner. The official rules provide an alternative mail-in entry method. Opening a qualifying CIBC account is not the only entry method.",
+      "link": "https://www.cibc.com/en/student/scholarships-and-contests/student-life-network.html?utm_source=chatgpt.com",
+      "linkLabel": "cibc.com"
     },
     {
-      name: 'Terry Fox Humanitarian Award',
-      provider: 'Terry Fox Humanitarian Award Program',
-      amount: '$28,000 over 4 years',
-      amountShort: '$28,000 over 4 years',
-      rankValue: 28000,
-      rankLabel: '$28,000',
-      deadline: '2026-11-30',
-      level: 'Grade 12 / CEGEP / first year',
-      where: 'Canada',
-      summary: 'A four-year award for students who combine academic life with voluntary humanitarian work and the courage to overcome obstacles.',
-      eligibility: [
-        'In good academic standing',
-        'Canadian citizen, landed immigrant or permanent resident',
-        'Graduating from high school, completing first year of CEGEP, or already finished high school',
-        'Involved in voluntary humanitarian activities you were not paid for'
+      "name": "CN Diversity Scholarship (Canadian National Railway)",
+      "provider": "",
+      "amount": "$3,000",
+      "amountShort": "$3k",
+      "rankValue": 3000,
+      "rankLabel": "$3,000",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "https://www.cn.ca/en/careers/",
+      "eligibility": [
+        "Must be a Canadian citizen or Permanent Resident.",
+        "Must be enrolled full-time at an accredited Canadian university or college.",
+        "Diversity Criteria: Must belong to at least one designated group: Women, Persons with Disabilities.",
+        "Eligible Programs: Engineering, Transportation/Logistics, Computer Science, Business/Finance/Accounting."
       ],
-      reviewLabel: 'How it is judged',
-      review: [
-        'Dedication to the humanitarian ideals of Terry Fox',
-        'Courage in overcoming obstacles',
-        'Distinction and persistence in academic, athletic and civic life',
-        'Three referees and a transcript covering your last two years of schooling'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic achievement and official transcript performance.",
+        "Quality of a ~500-word \"Plan of Study\" statement outlining career goals.",
+        "Strength of the reference letter and extracurricular/work experience on the resume."
       ],
-      note: 'The 2026-2027 cycle opens for submissions on November 1, 2026. Recipients keep the award until they finish their first degree or diploma, up to four years.',
-      link: 'https://terryfoxawards.ca/applicant-information/',
-      linkLabel: 'terryfoxawards.ca'
+      "note": "Required documents typically include an up-to-date resume, official transcripts, one letter of reference, a 500-word Plan of Study, and a declaration of eligibility for the relevant diversity stream. CN sometimes lists sub-streams separately (e.g., Women, Visible Minorities, Indigenous Peoples, Persons with...",
+      "link": "https://scholartree.ca/scholarship/cn-scholarship-visible-minorities/0twJedR5A",
+      "linkLabel": "scholartree.ca"
     },
     {
-      name: 'Ana D. Cleveland MLA Scholarship',
-      provider: 'Medical Library Association',
-      amount: '$2,500',
-      amountShort: '$2,500',
-      deadline: '2026-12-02',
-      level: 'Master degree',
-      where: 'US / Canada',
-      summary: 'Awarded annually to a library student who shows excellence in scholarship and potential in health sciences librarianship.',
-      eligibility: [
-        'Entering a master program at an ALA-accredited library school, or no more than half-way through it by March',
-        'Citizen or permanent resident of the United States or Canada',
-        'Only one MLA scholarship can be held in a year; past MLA scholarship recipients are not eligible',
-        'MLA membership is not required'
+      "name": "Consolidated Credit Canada Scholarship",
+      "provider": "",
+      "amount": "$500",
+      "amountShort": "$500",
+      "rankValue": 500,
+      "rankLabel": "$500",
+      "deadline": "2026-12-11",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "The scholarship is awarded twice per year.",
+      "eligibility": [
+        "Must be a Canadian resident.",
+        "Must be enrolled in a Canadian college or university, or scheduled to start in the upcoming semester.",
+        "Must provide proof of enrolment.",
+        "Must submit an original essay answering: \"Share a story about the best money you ever spent.\"."
       ],
-      reviewLabel: 'How it is judged',
-      review: [
-        'A jury scores three written answers: what the award means to you',
-        'Your career and academic objectives and how you will reach them',
-        'How your work and activities have impacted the communities you serve'
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Originality of the essay.",
+        "Relevance to the essay question.",
+        "Quality of writing.",
+        "Personal reflection and storytelling."
       ],
-      note: 'One application covers all three MLA student scholarships; do not submit duplicates.',
-      link: 'https://www.mlanet.org/Grants-Scholarships-Fellowships/ana-d-cleveland-mla-scholarship/',
-      linkLabel: 'mlanet.org'
+      "note": "Only one winner receives CAD $500 per cycle. Winner will be announced in February 2027. The organization reserves the right to use submitted essays and images for marketing purposes.",
+      "link": "https://www.consolidatedcreditcanada.ca/scholarship-program/?utm_source=",
+      "linkLabel": "consolidatedcreditcanada.ca"
+    },
+    {
+      "name": "Dr. Iris May Marsh Memorial Award",
+      "provider": "",
+      "amount": "$12,000 a year for 4 years",
+      "amountShort": "$12k/yr",
+      "rankValue": 48000,
+      "rankLabel": "$12,000 a year for 4 years",
+      "deadline": "2026-12-08",
+      "duration": "4 years",
+      "where": "Ontario",
+      "summary": "Renewable for three additional years.",
+      "eligibility": [
+        "Must be entering the first year of any undergraduate program at Queen's University.",
+        "Permanent family residence must be in Ontario.",
+        "Must be a Canadian citizen, permanent resident or Protected Person.",
+        "Demonstrated academic excellence (90%+ recommended)."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic performance.",
+        "Creative and original thinking.",
+        "Leadership qualities.",
+        "Financial need."
+      ],
+      "note": "Minimum GPA of 3.5 required for renewal. Full-time enrollment required. Financial need must remain evident.",
+      "link": "https://ouinfo.ca/scholarships/queens/dr-iris-may-marsh-memorial-award/",
+      "linkLabel": "ouinfo.ca"
+    },
+    {
+      "name": "Dr. M. Wosk Environmental Leadership Award",
+      "provider": "",
+      "amount": "$1,000",
+      "amountShort": "$1k",
+      "rankValue": 1000,
+      "rankLabel": "$1,000",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "British Columbia",
+      "summary": "Three awards of CAD $1,000 each are available annually.",
+      "eligibility": [
+        "Must be between 15 and 19 years old.",
+        "Must be passionate about ecological issues and environmental preservation.",
+        "Interested in developing environmental leadership skills."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Must be between 15 and 19 years old.",
+        "Must be passionate about ecological issues and environmental preservation.",
+        "Interested in developing environmental leadership skills."
+      ],
+      "note": "Applicants must submit a self-nomination. Applicants must be between 15 and 19 years old. The award supports environmental leadership and ecological conservation.",
+      "link": "https://mvrpfoundation.ca/funding/scholarships/?utm_source=",
+      "linkLabel": "mvrpfoundation.ca"
+    },
+    {
+      "name": "Edwards Undergraduate Scholarship (USask Edwards School of Business)",
+      "provider": "",
+      "amount": "$36,000 ($9,000 a year)",
+      "amountShort": "$36k",
+      "rankValue": 36000,
+      "rankLabel": "$36,000 ($9,000 a year)",
+      "deadline": "2026-12-15",
+      "duration": "4 years",
+      "where": "Saskatchewan",
+      "summary": "Must first complete admission application by December 1, then submit \"Best and Brightest\" scholarship application via PAWS by December 15; maintain 80% average and complete 24 credits after first year to renew",
+      "eligibility": [
+        "Entering Bachelor of Commerce student; Canadian citizen / permanent resident / international student all."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic performance, leadership, community involvement; 6 recipients per year."
+      ],
+      "note": "",
+      "link": "https://fundmycourse.ca/scholarships/edwards-undergraduate-scholarship-usask-business",
+      "linkLabel": "fundmycourse.ca"
+    },
+    {
+      "name": "Enbridge Scholarship for Indigenous Leadership",
+      "provider": "",
+      "amount": "$3,500",
+      "amountShort": "$3.5k",
+      "rankValue": 3500,
+      "rankLabel": "$3,500",
+      "deadline": "2027-01-03",
+      "duration": "one-time",
+      "where": "Alberta",
+      "summary": "Exclusively for Mount Royal University students.",
+      "eligibility": [
+        "Indigenous students who graduated from MRU's Indigenous University Bridging Program (IUBP)"
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic performance and leadership qualities demonstrated as a mentor or role model in the community."
+      ],
+      "note": "",
+      "link": "https://mtroyal.academicworks.ca/opportunities/19362",
+      "linkLabel": "mtroyal.academicworks.ca"
+    },
+    {
+      "name": "Environmental Public Health Bursary for Indigenous Students",
+      "provider": "",
+      "amount": "See provider page",
+      "amountShort": "n/a",
+      "rankValue": 0,
+      "rankLabel": "See provider page",
+      "deadline": "2026-12-15",
+      "duration": "per year",
+      "where": "All provinces",
+      "summary": "Renewable annual bursary for Indigenous students in a CIPHI-accredited Environmental Public Health program",
+      "eligibility": [
+        "Indigenous student; new or returning student in a CIPHI-accredited Environmental Public Health program."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Indigenous identity/eligibility, program enrolment, prior-year completion for renewal."
+      ],
+      "note": "Managed by Environmental Health Foundation of Canada and funded by Indigenous Services",
+      "link": "https://www.ehfc.ca/bursaries-information",
+      "linkLabel": "ehfc.ca"
+    },
+    {
+      "name": "Foster Children Bursary",
+      "provider": "",
+      "amount": "See provider page",
+      "amountShort": "n/a",
+      "rankValue": 0,
+      "rankLabel": "See provider page",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "One bursary of CAD $2,000 is awarded annually.",
+      "eligibility": [
+        "Must have previously been in an official Canadian or American foster care program.",
+        "Youth from kinship care or similar alternative care arrangements may also be considered.",
+        "Must be a Canadian or American citizen or permanent resident.",
+        "Must be 24 years old or younger."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Eligibility and foster care history verification.",
+        "Post-secondary enrolment.",
+        "Intended field of study.",
+        "Future educational and career goals."
+      ],
+      "note": "Students may reapply annually. All fields of study are eligible. The organization may verify the applicant's care history.",
+      "link": "https://www.storwell.com/bursary-application/?utm_source",
+      "linkLabel": "storwell.com"
+    },
+    {
+      "name": "French for the Future – National Essay Contest",
+      "provider": "",
+      "amount": "$1,000 to $28,000",
+      "amountShort": "$1k-28k",
+      "rankValue": 28000,
+      "rankLabel": "$1,000 to $28,000",
+      "deadline": "2026-12-18",
+      "duration": "One-time award",
+      "where": "All provinces",
+      "summary": "A national essay competition offering 108 scholarships to students who want to continue their education in French.",
+      "eligibility": [
+        "Canadian citizen, permanent resident or person with refugee status.",
+        "Currently enrolled in Grade 10, 11 or 12 at a Canadian high school.",
+        "A 750-word original essay written in French.",
+        "Select your preferred post-secondary institutions."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Essay quality.",
+        "Four judges evaluate each essay.",
+        "Essays receive a score out of 35 points.",
+        "Originality, clarity and coherence are considered through the evaluation process."
+      ],
+      "note": "108 scholarships are advertised, with a total scholarship value of $436,000. The highest individual scholarship is $28,000 at York University's Glendon Campus. Some awards require full-time university enrollment and French-language courses.",
+      "link": "https://french-future.org/programs/essay-contest/?utm_source=chatgpt.com",
+      "linkLabel": "french-future.org"
+    },
+    {
+      "name": "Gordon Smith Youth Environmental Stewardship Award",
+      "provider": "",
+      "amount": "$1,000",
+      "amountShort": "$1k",
+      "rankValue": 1000,
+      "rankLabel": "$1,000",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "British Columbia",
+      "summary": "Timeline: Applications are reviewed in January 2027 by the Gordon Smith Nomination Committee, and recipients are announced in March 2027.",
+      "eligibility": [
+        "Age: Must be between 12 and 18 years old at the time of application.",
+        "Volunteer Involvement: Must have actively participated in hands-on environmental stewardship or conservation.",
+        "Application Method: Applicants must submit a self-nomination."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Hands-on Stewardship Impact: Demonstrated practical contribution to park ecosystems.",
+        "Youth Leadership & Inspiration: Ability to show initiative."
+      ],
+      "note": "Number of Awards: 2 awards are granted annually. Related Award: The same foundation also offers the Dr. M. Wosk Environmental Leadership Award ($1,000 CAD) with the exact same December 31, 2026 deadline for youth aged 15 to 19.",
+      "link": "https://mvrpfoundation.ca/funding/scholarships/",
+      "linkLabel": "mvrpfoundation.ca"
+    },
+    {
+      "name": "Humber Tuition Bursary (Domestic)",
+      "provider": "",
+      "amount": "$500 to $1,000 by credential",
+      "amountShort": "$500-1k",
+      "rankValue": 1000,
+      "rankLabel": "$500 to $1,000 by credential",
+      "deadline": "2026-12-11",
+      "duration": "Term-based bursary.",
+      "where": "Ontario",
+      "summary": "",
+      "eligibility": [
+        "Canadian citizen or permanent resident.",
+        "Full-time domestic Humber student.",
+        "Enrolled in an eligible diploma, degree or postgraduate certificate.",
+        "Demonstrated financial need."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Primarily financial need.",
+        "Academic excellence and community involvement may also be considered."
+      ],
+      "note": "This is a bursary, not a conventional merit scholarship. It is not open to secondary school students who are not yet enrolled at Humber.",
+      "link": "https://humber.ca/study-at-humber/pay-fees/scholarships-bursaries",
+      "linkLabel": "humber.ca"
+    },
+    {
+      "name": "January Marie Lapuz Youth Leadership Award",
+      "provider": "",
+      "amount": "$2,000 winner, $1,000 runner-up",
+      "amountShort": "$2k",
+      "rankValue": 2000,
+      "rankLabel": "$2,000 winner, $1,000 runner-up",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "Not restricted to a particular province or school.",
+      "eligibility": [
+        "Demonstrated leadership, commitment, and involvement in 2SLGBTQ+ communities locally, nationally."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "2SLGBTQ+ community leadership and impact."
+      ],
+      "note": "",
+      "link": "https://januaryfilm.com/youthaward/",
+      "linkLabel": "januaryfilm.com"
+    },
+    {
+      "name": "Kemper Human Rights Education Foundation Essay Contest",
+      "provider": "",
+      "amount": "$5,000 first prize, $2,500, $1,250",
+      "amountShort": "$5k",
+      "rankValue": 5000,
+      "rankLabel": "$5,000 first prize, $2,500, $1,250",
+      "deadline": "2026-12-10",
+      "duration": "One-time essay contest prize",
+      "where": "All provinces",
+      "summary": "",
+      "eligibility": [
+        "Must be a high school student.",
+        "Must be a citizen and resident of a country outside the United States for the international contest.",
+        "Essay must be written in English.",
+        "Essay must not exceed 2,500 words, excluding footnotes and bibliography."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Quality of research.",
+        "Clarity of arguments.",
+        "Strength of reasoning.",
+        "How effectively the essay answers the annual question."
+      ],
+      "note": "Quality of research. Clarity of arguments. Strength of reasoning.",
+      "link": "https://khref.org/2026-winning-essays/",
+      "linkLabel": "khref.org"
+    },
+    {
+      "name": "Melvin R. Goodes Entrance Award (Queen's University)",
+      "provider": "",
+      "amount": "$12,000 to $18,000 a year, renewable 4 years",
+      "amountShort": "$12k-18k/yr",
+      "rankValue": 72000,
+      "rankLabel": "$12,000 to $18,000 a year, renewable 4 years",
+      "deadline": "2026-12-08",
+      "duration": "Up to 4 years",
+      "where": "Ontario",
+      "summary": "Must first apply to Queen's University through OUAC (Ontario Universities' Application Centre) and obtain a SOLUS student number to apply for this award. Recipients cannot hold other merit-based scholarships...",
+      "eligibility": [
+        "Canadian citizen, permanent resident, or protected person.",
+        "Full-time first-year undergraduate applicant.",
+        "High school average of 90% or above.",
+        "Demonstrates financial need, academic excellence, and leadership."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Financial need, academic excellence, demonstrated leadership."
+      ],
+      "note": "",
+      "link": "https://fundmycourse.ca/scholarships/melvin-r-goodes-entrance-award",
+      "linkLabel": "fundmycourse.ca"
+    },
+    {
+      "name": "Metis Nation of Ontario (MNO) Student Bursary Program",
+      "provider": "",
+      "amount": "See provider page",
+      "amountShort": "n/a",
+      "rankValue": 0,
+      "rankLabel": "See provider page",
+      "deadline": "2026-12-31",
+      "duration": "Variable amount per term/year depending on the student's assessed need and...",
+      "where": "Ontario",
+      "summary": "Variable amount per term/year depending on the student's assessed need and institution.",
+      "eligibility": [
+        "Verified MNO citizens who are Canadian citizens/PRs, Ontario residents for at least 12 months."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Demonstrated financial need (budget breakdown of tuition, rent, books, etc.)"
+      ],
+      "note": "Non-repayable bursary. Some partner institutions require a supplemental institutional form.",
+      "link": "https://metisnation.smapply.io/prog/MNO_Bursary_Program/?utm_source=chatgpt.com",
+      "linkLabel": "metisnation.smapply.io"
+    },
+    {
+      "name": "Ontario Graduate Scholarship (OGS)",
+      "provider": "",
+      "amount": "$5,000 per session, up to $15,000",
+      "amountShort": "$5k/session",
+      "rankValue": 15000,
+      "rankLabel": "$5,000 per session, up to $15,000",
+      "deadline": "",
+      "duration": "2 or 3 consecutive terms",
+      "where": "Ontario",
+      "summary": "Issued for a minimum of 1 academic year (2 or 3 consecutive terms). Students must re-apply annually. Subject to lifetime program caps: maximum 2 academic years for Master's students and maximum 4 academic...",
+      "eligibility": [
+        "Must be enrolled (or applying to enroll) full-time in an eligible Master's or Doctoral graduate program at a.",
+        "Open to Canadian citizens, Permanent Residents, Protected Persons.",
+        "Must have achieved a minimum first-class average (A- or equivalent.",
+        "Must not exceed the lifetime limit of 6 years of government-funded graduate awards (including Tri-Agency awards."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic excellence (official post-secondary transcripts and GPA).",
+        "Research potential, quality of the proposed research statement/plan of study.",
+        "Strength of two academic reference letters/assessments."
+      ],
+      "note": "Joint Funding: The award is funded two-thirds (2/3) by the Government of Ontario and one-third (1/3) by the awarding university. Non-Transferable: There is no centralized provincial application; you must apply directly through each Ontario university you are attending or applying to, and the award cannot be...",
+      "link": "https://www.sgs.utoronto.ca/awards/ontario-graduate-scholarship/",
+      "linkLabel": "sgs.utoronto.ca"
+    },
+    {
+      "name": "Opportunity to Win $250 By Joining CMA NXT",
+      "provider": "",
+      "amount": "$250",
+      "amountShort": "$250",
+      "rankValue": 250,
+      "rankLabel": "$250",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "CMA NXT is a free career development platform designed to help students transition from school to the workforce through interview guides, workshops, and industry networking opportunities.",
+      "eligibility": [
+        "Program Level: Must be enrolled in a Certificate, Diploma, Post-diploma, Associate, Bachelor’s, Master’s.",
+        "Enrollment Status: Must be studying full-time or part-time at a Canadian post-secondary institution (open to.",
+        "Citizenship & Financial Need: There are no specific citizenship requirements or financial need criteria."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "No GPA or essay review is required. The winner is selected through a random draw among eligible students who."
+      ],
+      "note": "",
+      "link": "https://www.scholarshipscanada.com/Scholarships/64975/Opportunity-to-Win-$250-By-Joining-CMA-NXT!",
+      "linkLabel": "scholarshipscanada.com"
+    },
+    {
+      "name": "PlagiarismSearch.com Scholarship",
+      "provider": "",
+      "amount": "$1,000",
+      "amountShort": "$1k",
+      "rankValue": 1000,
+      "rankLabel": "$1,000",
+      "deadline": "2026-12-10",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "Awarded twice a year (May and December cycles) and open to international students as well.",
+      "eligibility": [
+        "Must be a high school senior or full-time undergraduate/graduate student at an accredited institution."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Quality and originality of an essay written on one of the provided prompts regarding academic integrity."
+      ],
+      "note": "",
+      "link": "https://plagiarismsearch.com/scholarship",
+      "linkLabel": "plagiarismsearch.com"
+    },
+    {
+      "name": "Queen's Chancellor's Scholarship",
+      "provider": "",
+      "amount": "$48,000 ($12,000 a year for 4 years)",
+      "amountShort": "$48k",
+      "rankValue": 48000,
+      "rankLabel": "$48,000 ($12,000 a year for 4 years)",
+      "deadline": "2026-12-08",
+      "duration": "4 years",
+      "where": "All provinces",
+      "summary": "Renewable for up to 4 years (initial year plus 3 subsequent years), contingent upon maintaining a minimum 3.5 GPA in a full-time course load each academic year",
+      "eligibility": [
+        "Must be a Canadian citizen, Permanent Resident (PR), or Protected Person.",
+        "Must be entering the first year of any undergraduate degree program at Queen's University (students in their.",
+        "Must hold a minimum cumulative high school average of 90% or higher.",
+        "High School Nomination Required: Must be formally nominated by your full-time secondary school."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Superior Academic Ability: Official transcript/Credit Counselling Summary including current November grades.",
+        "Creative and Original Thinking: Evaluated through a dedicated 1-page original/creative thinking attachment.",
+        "Proven Leadership & Involvement: Assessed via a list of major awards."
+      ],
+      "note": "Single Application: Submitting the Major Admission Awards (MAA) application on SOLUS automatically enters you into consideration for all other major Queen's awards you qualify for (such as the Bank of Montreal, Chernoff Family, or Sobey Atlantic awards). Non-Stackable: Recipients of the Chancellor's Scholarship cannot...",
+      "link": "https://ouinfo.ca/scholarships/queens/chancellors-scholarship/",
+      "linkLabel": "ouinfo.ca"
+    },
+    {
+      "name": "Queen's University – Major Admission Awards",
+      "provider": "",
+      "amount": "Varies: $10,000 to $30,000 a year",
+      "amountShort": "$10k-30k/yr",
+      "rankValue": 120000,
+      "rankLabel": "Varies: $10,000 to $30,000 a year",
+      "deadline": "2026-12-08",
+      "duration": "Renewable for up to 3 additional years (4 years total) provided renewal GPA and...",
+      "where": "Ontario",
+      "summary": "You must apply to Queen's via OUAC several days in advance (recommended by November 15–20) to receive access to the SOLUS portal where the MAA application is submitted.",
+      "eligibility": [
+        "Must be a Canadian citizen, permanent resident, or protected person entering first-year full-time undergraduate."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Judged on superior academic achievement, creative and original thinking."
+      ],
+      "note": "",
+      "link": "https://www.queensu.ca/registrar/financial-aid/application-required/future-students/major-awards",
+      "linkLabel": "queensu.ca"
+    },
+    {
+      "name": "Seymour Schulich Academic Excellence Entrance Scholarship",
+      "provider": "",
+      "amount": "$15,200 a year, renewable",
+      "amountShort": "$15.2k/yr",
+      "rankValue": 60800,
+      "rankLabel": "$15,200 a year, renewable",
+      "deadline": "2026-12-01",
+      "duration": "Up to 3 years.",
+      "where": "All provinces",
+      "summary": "Calgary Area Residents: $15,200/year (renewable up to 3 years). Non-Calgary Residents: $30,400 in Year 1; $22,700/year in Years 2 & 3.",
+      "eligibility": [
+        "Entering first year of the Schulich School of Engineering.",
+        "Exceptional academic merit.",
+        "Permanent home address and graduating high school at least 100 km outside Calgary city centre.",
+        "International students are also eligible."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic excellence.",
+        "Admission and engineering eligibility requirements.",
+        "Renewal requires at least a 3.00 GPA and continued engineering enrolment."
+      ],
+      "note": "The $30,400 award is renewable for the second and third years at $22,700 each, subject to conditions. Confirm the specific award application in the UCalgary portal.",
+      "link": "https://www.ucalgary.ca/registrar/awards/seymour-schulich-academic-excellence-entrance-scholarship-calgary-area-residents",
+      "linkLabel": "ucalgary.ca"
+    },
+    {
+      "name": "Sfu undergraduate scholars entrance scholarship",
+      "provider": "",
+      "amount": "$40,000 (8 x $5,000)",
+      "amountShort": "$40k",
+      "rankValue": 40000,
+      "rankLabel": "$40,000 (8 x $5,000)",
+      "deadline": "2026-12-15",
+      "duration": "4 years",
+      "where": "British Columbia",
+      "summary": "A highly competitive entrance scholarship recognizing academic achievement, extracurricular involvement and contributions to the university community.",
+      "eligibility": [
+        "Domestic and international applicants can apply.",
+        "Applying to SFU for Fall 2027.",
+        "Graduating from high school in 2027, or graduated in 2026 without attending post-secondary education.",
+        "Minimum 90% average or 31 IB points."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic performance.",
+        "Extracurricular achievements.",
+        "Community involvement.",
+        "500-word personal essay."
+      ],
+      "note": "International students can receive up to $140,000. Canadian citizens and permanent residents have separate awards worth $20,000–$60,000. An additional living allowance may be available in limited circumstances.",
+      "link": "https://www.sfu.ca/students/financial-aid/entrance/highschool/uses.html?utm_source=chatgpt.com",
+      "linkLabel": "sfu.ca"
+    },
+    {
+      "name": "SPEATBC Scholarship Program",
+      "provider": "",
+      "amount": "$1,000",
+      "amountShort": "$1k",
+      "rankValue": 1000,
+      "rankLabel": "$1,000",
+      "deadline": "2026-12-30",
+      "duration": "Not specified",
+      "where": "British Columbia",
+      "summary": "Five scholarships supporting students pursuing engineering and technology education.",
+      "eligibility": [
+        "Must fit one of the five scholarship categories.",
+        "Must be pursuing or planning engineering or technology education in BC.",
+        "Supporting documentation must be provided.",
+        "Full category-specific eligibility requirements are in the official application package."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "The organization provides a formal scoring and evaluation package.",
+        "Exact scoring weights are not published on the main scholarship webpage, so I won't invent them."
+      ],
+      "note": "Five awards of $1,000 each. Both high school and university-level categories are available. Applications are submitted electronically in PDF format.",
+      "link": "https://speatbc.org/scholarship?utm_source=chatgpt.com",
+      "linkLabel": "speatbc.org"
+    },
+    {
+      "name": "Terry fox humanitarian award",
+      "provider": "",
+      "amount": "$30,000 over 4 years ($7,500 a year)",
+      "amountShort": "$30k",
+      "rankValue": 30000,
+      "rankLabel": "$30,000 over 4 years ($7,500 a year)",
+      "deadline": "2026-12-01",
+      "duration": "Up to 4 years",
+      "where": "All provinces",
+      "summary": "A humanitarian scholarship for students who demonstrate community service, compassion, courage and commitment to helping others.",
+      "eligibility": [
+        "Canadian citizen, landed immigrant or permanent resident.",
+        "Good academic standing.",
+        "Graduating from high school or already graduated.",
+        "Planning to pursue a first university degree or diploma at a Canadian institution."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Humanitarian activities.",
+        "Community impact.",
+        "Academic, athletic and civic achievements.",
+        "Courage and persistence in overcoming obstacles."
+      ],
+      "note": "Three referees are required. Academic transcripts covering the last two years are required. Shortlisted applicants may be invited to an interview.",
+      "link": "https://terryfoxawards.ca/?utm_source=chatgpt.com",
+      "linkLabel": "terryfoxawards.ca"
+    },
+    {
+      "name": "The Heer Law Entrepreneurship Scholarship",
+      "provider": "",
+      "amount": "$2,000",
+      "amountShort": "$2k",
+      "rankValue": 2000,
+      "rankLabel": "$2,000",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "Submit your application via email to scholarship@heerlaw.com including your contact information, institution, program, expected graduation date, and a confidential business plan with an IP strategy section",
+      "eligibility": [
+        "Must be currently attending or set to attend an accredited university or college in good academic standing."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Judged on the overall strength of the business idea, the quality of the business plan."
+      ],
+      "note": "",
+      "link": "https://www.heerlaw.com/scholarship",
+      "linkLabel": "heerlaw.com"
+    },
+    {
+      "name": "U of Regina Chancellor’s Scholarship",
+      "provider": "",
+      "amount": "$46,000 ($10,000 a year)",
+      "amountShort": "$46k",
+      "rankValue": 46000,
+      "rankLabel": "$46,000 ($10,000 a year)",
+      "deadline": "2026-12-15",
+      "duration": "4 years",
+      "where": "Saskatchewan",
+      "summary": "14 awards, including one for an Indigenous applicant and one for an out-of-province applicant. Renewal needs an 80% sessional average and 18 credit hours. Using generative AI on the application is treated as a...",
+      "eligibility": [
+        "Domestic students entering directly from high school (or high school graduates with no post-secondary courses)."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Admission average, an activity summary, a supplementary information form, and an academic reference."
+      ],
+      "note": "",
+      "link": "https://www.uregina.ca/cost-aid/funding/undergraduate-scholarships/entrance-awards/chancellors-scholarship.html",
+      "linkLabel": "uregina.ca"
+    },
+    {
+      "name": "UBC Beyond Tomorrow Scholars Award",
+      "provider": "",
+      "amount": "Up to $80,000",
+      "amountShort": "Up to $80k",
+      "rankValue": 80000,
+      "rankLabel": "Up to $80,000",
+      "deadline": "2026-12-11",
+      "duration": "Renewable during undergraduate studies, subject to award conditions",
+      "where": "All provinces",
+      "summary": "The award is available at both UBC Vancouver and UBC Okanagan.",
+      "eligibility": [
+        "Must self-identify as Black (African, African-American, African-Canadian, Afro-Caribbean).",
+        "Must be a Canadian citizen, permanent resident, or protected person.",
+        "Must demonstrate financial need.",
+        "Must have strong academic performance."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic achievement.",
+        "Financial need.",
+        "Personal circumstances.",
+        "School and community involvement."
+      ],
+      "note": "A description of personal circumstances (maximum 1,000 words) is required. A reference form is required. A parent/guardian financial information form may be required.",
+      "link": "https://undergraduatescholarshipsubc.smapply.io/prog/2027_ubc_entrance_awards/?utm_source=chatgpt.com",
+      "linkLabel": "undergraduatescholarshipsubc.smapply.io"
+    },
+    {
+      "name": "UBC Centennial Scholars Entrance Award",
+      "provider": "",
+      "amount": "See provider page",
+      "amountShort": "n/a",
+      "rankValue": 0,
+      "rankLabel": "See provider page",
+      "deadline": "2026-12-11",
+      "duration": "4 years",
+      "where": "British Columbia",
+      "summary": "A student application form, a “Description of Circumstance” (maximum 1,000 words), a parent/guardian form, and a reference form",
+      "eligibility": [
+        "Strong academics, demonstrated financial need, Canadian citizen, permanent resident or protected person."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic strength, financial need, and your involvement in school, community or family."
+      ],
+      "note": "",
+      "link": "https://you.ubc.ca/financial-planning/scholarships-awards-canadian-students/entrance-award/",
+      "linkLabel": "you.ubc.ca"
+    },
+    {
+      "name": "UBC Presidential Scholars Award",
+      "provider": "",
+      "amount": "Up to $80,000 (Vancouver) or $40,000 (Okanagan), plus $5,000 one-time",
+      "amountShort": "Up to $80k",
+      "rankValue": 80000,
+      "rankLabel": "Up to $80,000 (Vancouver) or $40,000 (Okanagan), plus $5,000 one-time",
+      "deadline": "2026-12-11",
+      "duration": "Up to $10,000 CAD for the first year, with renewable paths",
+      "where": "British Columbia",
+      "summary": "You must complete the UBC application, including payment of the admission fee, by 1 December",
+      "eligibility": [
+        "Canadian citizens or permanent residents; high-school students entering UBC; must apply to UBC."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic excellence and leadership/community contribution, based on UBC’s entrance-award process."
+      ],
+      "note": "",
+      "link": "https://you.ubc.ca/financial-planning/scholarships-awards-canadian-students/presidential-scholars/",
+      "linkLabel": "you.ubc.ca"
+    },
+    {
+      "name": "University of Calgary International Entrance Scholarship",
+      "provider": "",
+      "amount": "$20,000 a year, renewable",
+      "amountShort": "$20k/yr",
+      "rankValue": 80000,
+      "rankLabel": "$20,000 a year, renewable",
+      "deadline": "2026-12-01",
+      "duration": "Renewable annually for up to 4 years of undergraduate study.",
+      "where": "Alberta",
+      "summary": "Requires submitting an admission application first to gain access to the My UCalgary Portal for Prestige Awards.",
+      "eligibility": [
+        "Must be an international student (not a Canadian citizen or permanent resident) paying international tuition.",
+        "Must be entering the first year of any undergraduate degree program."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Primarily based on outstanding academic merit; renewal requires maintaining a minimum 2.60 GPA over 24.00 units."
+      ],
+      "note": "",
+      "link": "https://www.ucalgary.ca/registrar/awards/university-calgary-international-entrance-scholarship",
+      "linkLabel": "ucalgary.ca"
+    },
+    {
+      "name": "University of Manitoba International Excellence Entrance Scholarship",
+      "provider": "",
+      "amount": "$25,000 (1 award) and $10,000 (2 awards)",
+      "amountShort": "$25k",
+      "rankValue": 25000,
+      "rankLabel": "$25,000 (1 award) and $10,000 (2 awards)",
+      "deadline": "2026-12-01",
+      "duration": "Not specified as renewable; entrance award",
+      "where": "See provider page",
+      "summary": "One scholarship of $25,000 is available.",
+      "eligibility": [
+        "Must be an international student.",
+        "Must apply to a direct-entry undergraduate programme.",
+        "One award requires at least a 90% admission average.",
+        "Must demonstrate leadership and meaningful community involvement."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic performance.",
+        "Leadership qualities.",
+        "Community involvement.",
+        "Application and reference information."
+      ],
+      "note": "Two additional scholarships of $10,000 each are available. The university ranks shortlisted candidates based on their scholarship and admission applications.",
+      "link": "https://umanitoba.ca/financial-aid-and-awards/entrance-awards/international-excellence-entrance-scholarship?utm_source=chatgpt.com",
+      "linkLabel": "umanitoba.ca"
+    },
+    {
+      "name": "USask Best and Brightest",
+      "provider": "",
+      "amount": "Up to $40,000 ($10,000 a year)",
+      "amountShort": "Up to $40k",
+      "rankValue": 40000,
+      "rankLabel": "Up to $40,000 ($10,000 a year)",
+      "deadline": "2026-12-15",
+      "duration": "Renewable for up to 4 years (totaling 4 years of undergraduate study).",
+      "where": "All provinces",
+      "summary": "Covers prestigious awards like the George and Marsha Ivany President's First and Best Scholarship ($40,000) and Edwards Undergraduate Scholarships ($36,000 for Business students). Submitted via the USask PAWS...",
+      "eligibility": [
+        "High school students entering their first year of undergraduate study at USask with an entering average of 95%."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic excellence, leadership, and contributions to school and community life."
+      ],
+      "note": "",
+      "link": "https://admissions.usask.ca/money/scholarships.php",
+      "linkLabel": "admissions.usask.ca"
+    },
+    {
+      "name": "Whittel & Melton Magna Carta College Scholarship",
+      "provider": "",
+      "amount": "$1,215",
+      "amountShort": "$1.2k",
+      "rankValue": 1215,
+      "rankLabel": "$1,215",
+      "deadline": "2026-12-15",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "Applications must be submitted via email to MagnaCarta@theFLlawfirm.com along with your full name, school, mailing address, phone number, major, and dream job",
+      "eligibility": [
+        "Must be currently enrolled in, or planning to attend in the upcoming semester."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Evaluated on a clear and concise essay (maximum 7 paragraphs."
+      ],
+      "note": "",
+      "link": "https://www.thefllawfirm.com/whittel-melton-magna-carta-college-scholarship/",
+      "linkLabel": "thefllawfirm.com"
+    },
+    {
+      "name": "WiDS Scholarship & WiDS + CGAI Fellowship",
+      "provider": "",
+      "amount": "Up to $10,000 annually",
+      "amountShort": "Up to $10k",
+      "rankValue": 10000,
+      "rankLabel": "Up to $10,000 annually",
+      "deadline": "2026-12-31",
+      "duration": "one-time",
+      "where": "All provinces",
+      "summary": "https://wids.ca/events/details&e=108",
+      "eligibility": [
+        "Citizenship. Must be a Canadian citizen.",
+        "Gender Identity. Must identify as a woman or non-binary individual.",
+        "Enrollment Status. Must be enrolled full-time or part-time at an accredited Canadian university or college.",
+        "Academic Standing. Must maintain a minimum 70% GPA."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic Achievement. Assessed through current transcripts and the minimum 70% GPA requirement.",
+        "Leadership Potential. Evaluated based on community, academic.",
+        "Sector Commitment. Reviewed through motivation to contribute to Canada's defence."
+      ],
+      "note": "Application packages must include an unofficial transcript, work/volunteer history, at least one reference letter from an academic, and two short statements (on leadership and interest in defence/security, max 250 words each). Recipients will be notified in late January 2027, and awards will be presented at the WiDS...",
+      "link": "https://www.wids.ca/cms/Scholarship-Application",
+      "linkLabel": "wids.ca"
+    },
+    {
+      "name": "Woodsworth College Scholarships",
+      "provider": "",
+      "amount": "$6,000 to $12,000",
+      "amountShort": "$6k-12k",
+      "rankValue": 12000,
+      "rankLabel": "$6,000 to $12,000",
+      "deadline": "2026-12-15",
+      "duration": "one-time",
+      "where": "Ontario",
+      "summary": "Annual one-time awards (distributed from a $225,000+ pool; Gold Scholarship is $12,000).",
+      "eligibility": [
+        "Incoming secondary school students or current undergraduate students at U of T's Woodsworth College (Domestic &."
+      ],
+      "reviewLabel": "How it is judged",
+      "review": [
+        "Academic excellence, community involvement, and equity-deserving criteria (Black, Indigenous, 2SLGBTQ+."
+      ],
+      "note": "Brookfield Peter F. Bronfman awards close in October; other entrance and in-course awards close on December 15.",
+      "link": "https://wdw.utoronto.ca/scholarships-financial-aid/scholarships",
+      "linkLabel": "wdw.utoronto.ca"
     }
   ];
 
@@ -1891,46 +2938,18 @@ var LOGO_DATA = {
      badge on each award slide are generated from this object.
      ========================================================================== */
   var WRITING_REQUIREMENTS = {
-    'Michael Decter Scholarship': {
-      type: 'Essay or media',
-      length: '750 words max, or 5 minutes',
-      prompt: 'Your personal vision for health policy or leadership: long-term goals, leadership aspirations and innovation focus.'
-    },
-    'Ecowaste Scholarships': {
-      type: 'Written submission',
-      length: '500 words or less',
-      prompt: 'A written submission that shows your connection to solid waste management, alongside your academic and community record.'
-    },
-    'Kwi Am Choi Exhibition Scholarship': {
-      type: 'Proposal and statement',
-      length: '1 page; 125 words each',
-      prompt: 'Solo exhibition proposal, artist statement and biography, submitted with up to ten artwork images.'
-    },
-    'BDC Summer Studentships in Inherited Bleeding Disorders Research': {
-      type: 'Research summary',
-      length: '200 words',
-      prompt: 'A plain-language summary of the research, written at Grade 12 readability, for the provider publications.'
-    },
-    'editing.services scholarship': {
-      type: 'Essay contest',
-      length: 'No limit stated',
-      prompt: "How does writing impact today's world?"
-    },
-    'John Galt Solutions Scholarship for Future Supply Chain Leaders': {
-      type: 'Letter',
-      length: '500 to 750 words',
-      prompt: 'Your passion for supply chain, your dedication to personal growth, and your financial need.'
-    },
-    'Keith Sanftleben Memorial Scholarship': {
-      type: 'Essay',
-      length: '1 to 2 pages',
-      prompt: 'How you have improved, or plan to improve, human welfare, make a difference and have a positive impact on community and others.'
-    },
-    'Ana D. Cleveland MLA Scholarship': {
-      type: 'Written answers',
-      length: 'No limit stated',
-      prompt: 'Three answers: what the award means to you, your career and academic plan, and how your work has impacted communities.'
-    }
+    "Allied Van Lines Scholarship": {"type":"Essay","length":"800 words","prompt":"A 400–800 word personal essay detailing how logistics or supply chain management plays a vital role in your chosen field, academic transcripts, and proof of enrollment."},
+    "Ayn Rand Institute – The Fountainhead Essay Contest": {"type":"Essay","length":"800-1600 words","prompt":"Essays must be written in English, strictly original (no AI-generated content or plagiarism), and between 800 and 1,600 words."},
+    "Blankstyle Scholarship Fund Details": {"type":"Essay","length":"1000 words","prompt":"Candidates are evaluated based on four written responses submitted through the online form: 1."},
+    "Cashion Legal Access Scholarship": {"type":"Essay","length":"-","prompt":"Essay focusing on access to justice and legal barriers, along with academic standing."},
+    "Consolidated Credit Canada Scholarship": {"type":"Essay","length":"-","prompt":"Must submit an original essay answering: \"Share a story about the best money you ever spent.\" Essay must be written without AI assistance."},
+    "Dr. M. Wosk Environmental Leadership Award": {"type":"Essay","length":"Up to 1500 words","prompt":"An essay of up to 1,500 words is required."},
+    "French for the Future – National Essay Contest": {"type":"Essay","length":"750 words","prompt":"A 750-word original essay written in French."},
+    "Kemper Human Rights Education Foundation Essay Contest": {"type":"Essay","length":"2500 words","prompt":"Essay must be written in English."},
+    "PlagiarismSearch.com Scholarship": {"type":"Essay","length":"-","prompt":"Must be a high school senior or full-time undergraduate/graduate student at an accredited institution Quality and originality of an essay written on one of the provided..."},
+    "Queen's Chancellor's Scholarship": {"type":"Essay","length":"-","prompt":"Proven Leadership & Involvement: Assessed via a list of major awards, up to 5 extracurricular/employment activities, a volunteerism statement, a leadership challenge..."},
+    "Sfu undergraduate scholars entrance scholarship": {"type":"Essay","length":"500 words","prompt":"500-word personal essay."},
+    "Whittel & Melton Magna Carta College Scholarship": {"type":"Essay","length":"750 words","prompt":"Evaluated on a clear and concise essay (maximum 7 paragraphs and 750 words) answering one of five designated prompts about the Magna Carta, the Rule of Law, or jury..."}
   };
 
   /* ==========================================================================
@@ -1958,12 +2977,17 @@ var LOGO_DATA = {
   }
 
   function formatDate(isoDate, withYear) {
+    if (!isoDate) { return "No fixed date"; }
     var parts = dateParts(isoDate);
-    return MONTHS[parts.month - 1] + ' ' + parts.day + (withYear === false ? '' : ', ' + parts.year);
+    if (!parts || !parts.year) { return "No fixed date"; }
+    var base = MONTHS[parts.month - 1] + " " + parts.day;
+    return withYear === false ? base : base + ", " + parts.year;
   }
 
   function weekdayOf(isoDate) {
+    if (!isoDate) { return ""; }
     var parts = dateParts(isoDate);
+    if (!parts || !parts.year) { return ""; }
     return WEEKDAYS[new Date(parts.year, parts.month - 1, parts.day).getDay()];
   }
 
@@ -1979,26 +3003,26 @@ var LOGO_DATA = {
   }
 
   function statusOf(award) {
+    if (!award.deadline) {
+      return { key: "open", label: "Open", short: "Open", detail: "No fixed deadline", days: null };
+    }
     var days = daysFromToday(award.deadline);
     if (days < 0) {
-      return { key: 'closed', label: 'Closed ' + formatDate(award.deadline, false), short: 'Closed', detail: 'Closed ' + formatDate(award.deadline), days: days };
+      return { key: "closed", label: "Closed " + formatDate(award.deadline, false), short: "Closed", detail: "Closed " + formatDate(award.deadline), days: days };
     }
     if (days === 0) {
-      return { key: 'today', label: 'Closes today', short: 'Today', detail: 'Closes today', days: days };
+      return { key: "today", label: "Closes today", short: "Today", detail: "Closes today", days: days };
     }
     if (days <= 7) {
-      return {
-        key: 'soon',
-        label: days === 1 ? 'Closes tomorrow' : 'Closing soon',
-        short: 'Soon',
-        detail: days === 1 ? 'Closes tomorrow' : 'Closes in ' + days + ' days',
-        days: days
-      };
+      return { key: "soon", label: days === 1 ? "Closes tomorrow" : "Closing soon", short: "Soon", detail: days === 1 ? "Closes tomorrow" : "Closes in " + days + " days", days: days };
     }
-    return { key: 'open', label: 'Open', short: 'Open', detail: 'Closes in ' + days + ' days', days: days };
+    return { key: "open", label: "Open", short: "Open", detail: "Closes in " + days + " days", days: days };
   }
 
   function sortByDeadline(a, b) {
+    if (!a.deadline && !b.deadline) { return a.name.localeCompare(b.name); }
+    if (!a.deadline) { return 1; }
+    if (!b.deadline) { return -1; }
     return a.deadline.localeCompare(b.deadline) || a.name.localeCompare(b.name);
   }
 
@@ -2015,12 +3039,9 @@ var LOGO_DATA = {
   function deadlineGroups() {
     var groups = [];
     openAwards.forEach(function (award) {
+      if (!award.deadline) { return; }
       var group = groups.filter(function (item) { return item.date === award.deadline; })[0];
-      if (group) {
-        group.awards.push(award);
-      } else {
-        groups.push({ date: award.deadline, awards: [award] });
-      }
+      if (group) { group.awards.push(award); } else { groups.push({ date: award.deadline, awards: [award] }); }
     });
     return groups;
   }
@@ -2029,35 +3050,31 @@ var LOGO_DATA = {
     return openAwards
       .filter(function (award) { return award.rankValue; })
       .sort(function (a, b) { return b.rankValue - a.rankValue; })
-      .slice(0, 5);
+      .slice(0, 4);
   }
 
   function closingSoonAwards() {
     return openAwards
       .filter(function (award) {
+        if (!award.deadline) { return false; }
         var days = daysFromToday(award.deadline);
         return days >= 0 && days <= 7;
       })
       .sort(sortByDeadline);
   }
 
-  var todayIso = (function () {
-    var now = todayAtMidnight();
-    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
-  })();
-
-  var todayLabel = weekdayOf(todayIso) + ', ' + formatDate(todayIso);
-
   var deadlineDateCount = deadlineGroups().length;
 
-  var deadlineRangeLabel = openAwards.length
-    ? 'Deadlines ' + formatDate(openAwards[0].deadline, false) + ' to ' + formatDate(openAwards[openAwards.length - 1].deadline, false)
-    : 'No open deadlines';
+  var datedOpenAwards = openAwards.filter(function (award) { return award.deadline; });
+
+  var deadlineRangeLabel = datedOpenAwards.length
+    ? "Deadlines " + formatDate(datedOpenAwards[0].deadline, false) + " to " + formatDate(datedOpenAwards[datedOpenAwards.length - 1].deadline, false)
+    : "No open deadlines";
 
   var deadlineGroupList = deadlineGroups();
-  var secondDeadlineDate = deadlineGroupList.length > 1 ? deadlineGroupList[1].date : deadlineGroupList[0].date;
-  var earlyDeadlineCount = openAwards.filter(function (award) { return award.deadline <= secondDeadlineDate; }).length;
-  var busiestDeadlineGroup = deadlineGroupList.slice().sort(function (a, b) { return b.awards.length - a.awards.length; })[0];
+  var secondDeadlineDate = deadlineGroupList.length > 1 ? deadlineGroupList[1].date : (deadlineGroupList.length ? deadlineGroupList[0].date : "");
+  var earlyDeadlineCount = datedOpenAwards.filter(function (award) { return award.deadline <= secondDeadlineDate; }).length;
+  var busiestDeadlineGroup = deadlineGroupList.slice().sort(function (a, b) { return b.awards.length - a.awards.length; })[0] || { date: "", awards: [] };
 
   /* ==========================================================================
      Slide builders
@@ -2083,7 +3100,7 @@ var LOGO_DATA = {
       '<div class="brand-rail">' +
         '<span class="rail-badge">' + logoImg('futureBridge', '', 'Future Bridge Academy') + '</span>' +
         '<span class="rail-divider"></span>' +
-        '<span class="rail-label">Scholarships - November 2026</span>' +
+        '<span class="rail-label">Scholarships - December 2026</span>' +
         '<span class="slide-num"></span>' +
       '</div>';
   }
@@ -2113,26 +3130,23 @@ var LOGO_DATA = {
 
   function titleSlide() {
     var statRows = [
-      { value: AWARDS.length, label: 'awards open for applications' },
+      { value: AWARDS.length, label: 'awards in this briefing' },
       { value: earlyDeadlineCount, label: 'close by ' + formatDate(secondDeadlineDate, false) },
       { value: busiestDeadlineGroup.awards.length, label: 'close on ' + formatDate(busiestDeadlineGroup.date, false) },
-      { value: deadlineDateCount, label: 'deadline dates in the cycle' },
-      { value: writingAwards.length, label: 'need a written piece' }
+      { value: writingAwards.length, label: 'ask for a written piece' }
     ].map(function (row) {
       return '<div class="title-card-row"><b>' + row.value + '</b><span>' + esc(row.label) + '</span></div>';
     }).join('');
 
     return '' +
-      '<section class="pres-slide title-slide" data-slide-title="Scholarships to apply for now" data-slide-kicker="Introduction">' +
+      '<section class="pres-slide title-slide" data-slide-title="Scholarship briefing - December 2026 cycle" data-slide-kicker="Introduction">' +
         '<span class="slide-accent"></span>' +
         brandRail() +
         '<div class="title-grid">' +
           '<div class="title-main">' +
-            '<div class="slide-kicker"><i class="kicker-dash"></i><span>Scholarship briefing - November 2026 cycle</span></div>' +
-            '<h1>Scholarships to<br>apply for now</h1>' +
-            '<p class="title-lead">' + AWARDS.length + ' awards for Canadian students: what each one pays, who qualifies, how it is judged, and when it closes.</p>' +
-            '<p class="title-meta"><span>Prepared for the 2026-2027 application cycle</span><i></i><span>' + esc(deadlineRangeLabel) + '</span><i></i><span>Status checked ' + esc(todayLabel) + '</span></p>' +
-            '<p class="title-note">Inside: the deadline map, a one-page index, and one slide per award with eligibility, judging and the official link.</p>' +
+            '<div class="slide-kicker"><i class="kicker-dash"></i><span>Future Bridge Academy</span></div>' +
+            '<h1>Scholarship briefing -<br>December 2026 cycle</h1>' +
+            '<p class="title-meta"><span>' + esc(deadlineRangeLabel) + '</span><i></i><span>' + AWARDS.length + ' awards</span></p>' +
           '</div>' +
           '<div class="title-side">' +
             '<div class="title-card">' + statRows + '</div>' +
@@ -2147,12 +3161,12 @@ var LOGO_DATA = {
 
   function glanceSlide() {
     var largest = largestAwards();
-    var closing = closingSoonAwards();
+    var closing = closingSoonAwards().slice(0, 4);
     var maxRank = largest.length ? largest[0].rankValue : 1;
 
     var stats = '' +
       '<div class="stat-row">' +
-        '<div class="stat-tile"><div class="stat-value">' + AWARDS.length + '</div><div class="stat-label">awards open for applications</div></div>' +
+        '<div class="stat-tile"><div class="stat-value">' + AWARDS.length + '</div><div class="stat-label">awards in this deck</div></div>' +
         '<div class="stat-tile"><div class="stat-value">' + earlyDeadlineCount + '</div><div class="stat-label">close by ' + esc(formatDate(secondDeadlineDate, false)) + '</div></div>' +
         '<div class="stat-tile"><div class="stat-value">' + busiestDeadlineGroup.awards.length + '</div><div class="stat-label">close on ' + esc(formatDate(busiestDeadlineGroup.date, false)) + '</div></div>' +
         '<div class="stat-tile"><div class="stat-value">' + deadlineDateCount + '</div><div class="stat-label">deadline dates in the cycle</div></div>' +
@@ -2167,9 +3181,11 @@ var LOGO_DATA = {
         '</div>';
     }).join('');
 
-    var closingItems = closing.map(function (award) {
-      return '<div class="close-item"><strong>' + esc(award.name) + '</strong><span>' + esc(formatDate(award.deadline, false)) + '</span></div>';
-    }).join('');
+    var closingItems = closing.length
+      ? closing.map(function (award) {
+          return '<div class="close-item"><strong>' + esc(award.name) + '</strong><span>' + esc(formatDate(award.deadline, false)) + '</span></div>';
+        }).join('')
+      : '<div class="close-item"><strong>Nothing closes in the next seven days</strong><span>See the deadline map</span></div>';
 
     var body = stats +
       '<div class="split-2">' +
@@ -2186,79 +3202,126 @@ var LOGO_DATA = {
     return slideFrame({
       className: 'glance-slide',
       kicker: 'The cycle in numbers',
-      title: AWARDS.length + ' awards, ' + earlyDeadlineCount + ' closing by ' + formatDate(secondDeadlineDate, false) + ', ' + deadlineDateCount + ' deadline dates',
-      subtitle: 'Status checked on ' + todayLabel + '. Every award still has an upcoming deadline, and ' + writingAwards.length + ' name a written piece in their criteria.',
+      title: AWARDS.length + ' awards, ' + earlyDeadlineCount + ' closing by ' + formatDate(secondDeadlineDate, false),
+      subtitle: 'Sorted by deadline. ' + writingAwards.length + ' of them also ask for a written piece.',
       body: body
     });
   }
 
-  function deadlineSlide() {
+  function chunkList(items, size) {
+    var chunks = [];
+    for (var index = 0; index < items.length; index += size) {
+      chunks.push(items.slice(index, index + size));
+    }
+    return chunks;
+  }
+
+  function deadlineSlides() {
     var groups = deadlineGroups();
-    var leftGroups = groups.slice(0, 5);
-    var rightGroups = groups.slice(5);
+    var blocks = [];
 
-    function groupHtml(group) {
-      return '' +
-        '<div class="board-group">' +
-          '<div class="board-date">' + esc(formatDate(group.date, false)) + '<small>' + esc(weekdayOf(group.date)) + '</small></div>' +
-          '<div class="board-items">' + group.awards.map(function (award) {
-            return '<span class="board-item">' + esc(award.name) + '</span>';
-          }).join('') + '</div>' +
-        '</div>';
-    }
+    /* Long deadline days are split so no column can overflow. */
+    groups.forEach(function (group) {
+      if (group.awards.length <= 6) {
+        blocks.push({ date: group.date, awards: group.awards, continued: false });
+        return;
+      }
+      for (var start = 0; start < group.awards.length; start += 5) {
+        blocks.push({ date: group.date, awards: group.awards.slice(start, start + 5), continued: start > 0 });
+      }
+    });
 
-    var body = '' +
-      '<div class="board">' +
-        '<div>' + leftGroups.map(groupHtml).join('') + '</div>' +
-        '<div>' + rightGroups.map(groupHtml).join('') + '</div>' +
-      '</div>' +
-      '<div class="board-tip"><strong>Plan around the peaks:</strong> ' + earlyDeadlineCount + ' awards close by ' + esc(formatDate(secondDeadlineDate, false)) + ', and ' + busiestDeadlineGroup.awards.length + ' close on ' + esc(formatDate(busiestDeadlineGroup.date, false)) + '.</div>';
+    var pageCount = Math.max(1, Math.ceil(blocks.length / 6));
+    var pages = chunkList(blocks, Math.ceil(blocks.length / pageCount));
+    if (!pages.length) { pages = [[]]; }
 
-    return slideFrame({
-      className: 'board-slide',
-      kicker: 'Deadline map',
-      title: 'Every open deadline, in order',
-      subtitle: 'Start at the top left. Groups with several awards are the busiest days to prepare for.',
-      body: body
+    return pages.map(function (pageBlocks, pageIndex) {
+      var leftBlocks = [];
+      var rightBlocks = [];
+      var leftHeight = 0;
+      var rightHeight = 0;
+
+      pageBlocks.forEach(function (block) {
+        var estimatedHeight = 28 + Math.ceil(block.awards.length / 2) * 30;
+        if (leftHeight <= rightHeight) {
+          leftBlocks.push(block);
+          leftHeight += estimatedHeight;
+        } else {
+          rightBlocks.push(block);
+          rightHeight += estimatedHeight;
+        }
+      });
+
+      function blockHtml(block) {
+        return '' +
+          '<div class="board-group">' +
+            '<div class="board-date">' + esc(formatDate(block.date, false)) + '<small>' + esc(weekdayOf(block.date)) + '</small>' +
+              (block.continued ? '<small class="board-cont">continued</small>' : '') +
+            '</div>' +
+            '<div class="board-items">' + block.awards.map(function (award) {
+              return '<span class="board-item">' + esc(award.name) + '</span>';
+            }).join('') + '</div>' +
+          '</div>';
+      }
+
+      var body = '' +
+        '<div class="board">' +
+          '<div>' + leftBlocks.map(blockHtml).join('') + '</div>' +
+          '<div>' + rightBlocks.map(blockHtml).join('') + '</div>' +
+        '</div>' +
+        '<div class="board-tip"><strong>Plan around the peaks:</strong> ' + earlyDeadlineCount + ' awards close by ' + esc(formatDate(secondDeadlineDate, false)) + ', and ' + busiestDeadlineGroup.awards.length + ' close on ' + esc(formatDate(busiestDeadlineGroup.date, false)) + '.</div>';
+
+      return slideFrame({
+        className: 'board-slide',
+        kicker: pages.length > 1 ? 'Deadline map - part ' + (pageIndex + 1) + ' of ' + pages.length : 'Deadline map',
+        title: 'Every open deadline, in order',
+        subtitle: pageIndex === 0 ? 'Start at the top left. Groups with several awards are the busiest days to prepare for.' : 'Continued from the previous deadline map.',
+        body: body
+      });
     });
   }
+  function indexSlides() {
+    var pages = chunkList(orderedAwards, 18);
+    if (!pages.length) { pages = [[]]; }
 
-  function indexSlide() {
-    var baseCount = Math.floor(orderedAwards.length / 3);
-    var remainder = orderedAwards.length % 3;
-    var columns = [];
-    var nextIndex = 0;
-    for (var columnIndex = 0; columnIndex < 3; columnIndex++) {
-      var columnCount = baseCount + (columnIndex < remainder ? 1 : 0);
-      columns.push(orderedAwards.slice(nextIndex, nextIndex + columnCount));
-      nextIndex += columnCount;
-    }
+    return pages.map(function (pageAwards, pageIndex) {
+      var columnCount = 3;
+      var baseCount = Math.floor(pageAwards.length / columnCount);
+      var remainder = pageAwards.length % columnCount;
+      var columns = [];
+      var nextIndex = 0;
+      for (var columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+        var columnCountForPage = baseCount + (columnIndex < remainder ? 1 : 0);
+        columns.push(pageAwards.slice(nextIndex, nextIndex + columnCountForPage));
+        nextIndex += columnCountForPage;
+      }
 
-    var columnHtml = columns.map(function (column) {
-      return '<div class="index-col">' + column.map(function (award) {
-        var status = statusOf(award);
-        var writingTag = WRITING_REQUIREMENTS[award.name] ? '<span class="index-writing">Writing</span>' : '';
-        return '' +
-          '<div class="index-item">' +
-            '<div class="index-name">' + esc(award.name) + '</div>' +
-            '<div class="index-meta">' +
-              '<span>' + esc(formatDate(award.deadline, false)) + '</span>' +
-              '<i class="meta-dot"></i>' +
-              '<span>' + esc(award.amountShort) + '</span>' +
-              '<i class="meta-dot"></i>' +
-              '<span class="mini-status ' + status.key + '">' + esc(status.short) + '</span>' +
-              writingTag +
-            '</div>' +
-          '</div>';
-      }).join('') + '</div>';
-    }).join('');
+      var columnHtml = columns.map(function (column) {
+        return '<div class="index-col">' + column.map(function (award) {
+          var status = statusOf(award);
+          var writingTag = WRITING_REQUIREMENTS[award.name] ? '<span class="index-writing">Writing</span>' : '';
+          return '' +
+            '<div class="index-item">' +
+              '<div class="index-name">' + esc(award.name) + '</div>' +
+              '<div class="index-meta">' +
+                '<span>' + esc(formatDate(award.deadline, false)) + '</span>' +
+                '<i class="meta-dot"></i>' +
+                '<span>' + esc(award.amountShort) + '</span>' +
+                '<i class="meta-dot"></i>' +
+                '<span class="mini-status ' + status.key + '">' + esc(status.short) + '</span>' +
+                writingTag +
+              '</div>' +
+            '</div>';
+        }).join('') + '</div>';
+      }).join('');
 
-    return slideFrame({
-      className: 'index-slide',
-      kicker: 'Quick reference',
-      title: 'All ' + AWARDS.length + ' awards at a glance',
-      subtitle: 'Awards in deadline order, one line each.',
-      body: '<div class="index-grid">' + columnHtml + '</div>'
+      return slideFrame({
+        className: 'index-slide',
+        kicker: pages.length > 1 ? 'Quick reference - part ' + (pageIndex + 1) + ' of ' + pages.length : 'Quick reference',
+        title: 'All ' + AWARDS.length + ' awards at a glance',
+        subtitle: 'Awards in deadline order, one line each.',
+        body: '<div class="index-grid">' + columnHtml + '</div>'
+      });
     });
   }
 
@@ -2266,32 +3329,34 @@ var LOGO_DATA = {
     var status = statusOf(award);
     var isClosed = status.key === 'closed';
     var writing = WRITING_REQUIREMENTS[award.name] || null;
+    var providerSuffix = award.provider ? ' - ' + esc(award.provider) : '';
+
+    var eligibilityItems = (award.eligibility.length ? award.eligibility : ['See the provider page for the full criteria.']).slice(0, 3);
+    var reviewItems = (award.review.length ? award.review : ['See the provider page for how the award is judged.']).slice(0, 3);
 
     var body = '' +
-      '<p class="slide-sub">' + esc(award.summary) + '</p>' +
-      '<div class="sch-facts">' +
+      (award.summary ? '<p class="slide-sub sch-lead">' + esc(award.summary) + '</p>' : '') +
+      '<div class="sch-facts sch-facts--three">' +
         '<div class="sch-fact"><span>Value</span><strong>' + esc(award.amount) + '</strong></div>' +
         '<div class="sch-fact"><span>Deadline</span><strong>' + esc(formatDate(award.deadline)) + '</strong><em>' + esc(status.detail) + '</em></div>' +
-        '<div class="sch-fact"><span>Level</span><strong>' + esc(award.level) + '</strong></div>' +
         '<div class="sch-fact"><span>Where</span><strong>' + esc(award.where) + '</strong></div>' +
       '</div>' +
       '<div class="sch-cols">' +
         '<div class="sch-card">' +
           '<h3><i class="card-dot"></i>Who can apply</h3>' +
-          '<ul>' + award.eligibility.map(function (line) {
+          '<ul>' + eligibilityItems.map(function (line) {
             return '<li><span class="li-tick"></span><span class="li-text">' + esc(line) + '</span></li>';
           }).join('') + '</ul>' +
         '</div>' +
         '<div class="sch-card">' +
           '<h3><i class="card-dot"></i>' + esc(award.reviewLabel) + '</h3>' +
-          '<ul>' + award.review.map(function (line) {
+          '<ul>' + reviewItems.map(function (line) {
             return '<li><span class="li-tick"></span><span class="li-text">' + esc(line) + '</span></li>';
           }).join('') + '</ul>' +
         '</div>' +
       '</div>' +
-      '<div class="sch-foot">' +
-        '<span class="sch-note"><b>Good to know:</b> ' + esc(award.note) + '</span>' +
-        '<a class="sch-link" href="' + esc(award.link) + '" target="_blank" rel="noopener">' + esc(award.linkLabel) + '</a>' +
+      '<div class="sch-foot sch-foot--tight">' +
+        (award.link ? '<a class="sch-link" href="' + esc(award.link) + '" target="_blank" rel="noopener" title="' + esc(award.link) + '">' +'<span class="sch-link-icon" aria-hidden="true">&#8599;</span>' +'<span class="sch-link-domain">' + esc(award.linkLabel) + '</span>' +'</a>' : '') +
       '</div>';
 
     return '' +
@@ -2300,7 +3365,7 @@ var LOGO_DATA = {
         brandRail() +
         '<div class="slide-head">' +
           '<div class="slide-head-main">' +
-            '<div class="slide-kicker"><i class="kicker-dash"></i><span>Award ' + pad(awardIndex) + ' of ' + awardTotal + ' - ' + esc(award.provider) + '</span></div>' +
+            '<div class="slide-kicker"><i class="kicker-dash"></i><span>Award ' + pad(awardIndex) + ' of ' + awardTotal + providerSuffix + '</span></div>' +
             '<h2 class="slide-title">' + esc(award.name) + '</h2>' +
           '</div>' +
           '<div class="head-badges">' +
@@ -2312,41 +3377,52 @@ var LOGO_DATA = {
       '</section>';
   }
 
-  function writingSlide() {
-    var rows = writingAwards.map(function (award) {
-      var writing = WRITING_REQUIREMENTS[award.name];
-      return '' +
-        '<tr>' +
-          '<td><strong>' + esc(award.name) + '</strong><span class="writing-provider">' + esc(award.provider) + '</span></td>' +
-          '<td>' + esc(writing.type) + '</td>' +
-          '<td>' + esc(writing.length) + '</td>' +
-          '<td>' + esc(writing.prompt) + '</td>' +
-          '<td>' + esc(formatDate(award.deadline, false)) + '</td>' +
-        '</tr>';
-    }).join('');
+  function writingSlides() {
+    var maxRowsPerPage = 6;
+    var writingPageCount = Math.max(1, Math.ceil(writingAwards.length / maxRowsPerPage));
+    var pages = chunkList(writingAwards, Math.ceil(writingAwards.length / writingPageCount));
+    if (!pages.length) { pages = [[]]; }
 
-    var body = '' +
-      '<table class="writing-table">' +
-        '<thead><tr><th>Award</th><th>Type</th><th>Length</th><th>What the piece must cover</th><th>Due</th></tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-      '</table>' +
-      '<div class="writing-note"><b>How to read this table:</b> these awards explicitly ask for original writing in their published criteria. Length is the provider limit; the criteria column is what the piece has to address. Other awards may still include a statement inside the application form, so always check the provider page.</div>';
+    return pages.map(function (pageAwards, pageIndex) {
+      var rows = pageAwards.map(function (award) {
+        var writing = WRITING_REQUIREMENTS[award.name];
+        return '' +
+          '<tr>' +
+            '<td><strong>' + esc(award.name) + '</strong><span class="writing-provider">' + esc(award.linkLabel) + '</span></td>' +
+            '<td>' + esc(writing.type) + '</td>' +
+            '<td>' + esc(writing.length) + '</td>' +
+            '<td>' + esc(formatDate(award.deadline, false)) + '</td>' +
+          '</tr>';
+      }).join('');
 
-    return slideFrame({
-      className: 'writing-slide',
-      kicker: 'Essay and written submissions',
-      title: writingAwards.length + ' awards require a written piece',
-      subtitle: 'The essays, letters, summaries and proposals named in the award criteria, in deadline order.',
-      body: body
+      var body = '' +
+        '<table class="writing-table writing-table--short">' +
+          '<thead><tr><th>Award</th><th>Type</th><th>Length</th><th>Due</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>' +
+        '<div class="writing-note"><b>Before you write:</b> confirm the prompt, the word count and the deadline on the provider page.</div>';
+
+      return slideFrame({
+        className: 'writing-slide',
+        kicker: pages.length > 1 ? 'Written pieces - part ' + (pageIndex + 1) + ' of ' + pages.length : 'Written pieces',
+        title: writingAwards.length + ' awards ask for writing',
+        subtitle: 'Type, length and due date only. The prompt is on the provider page.',
+        body: body
+      });
     });
   }
 
   function howToApplySlide() {
+    var firstGroup = deadlineGroupList[0] || { date: '', awards: [] };
+    var firstDeadlineText = firstGroup.awards.length
+      ? formatDate(firstGroup.date, false) + ': ' + firstGroup.awards.slice(0, 3).map(function (award) { return award.name; }).join(', ') + '.'
+      : 'Work down the deadline map.';
+
     var steps = [
-      { title: 'Start with the earliest deadline', text: 'November 1 and November 2 close first: Bernard Erlin, Hydro One, Wolf Scholars, CSEG and Michael Decter.' },
-      { title: 'Check the hard filters', text: 'Citizenship, province, GPA, age and enrolment year eliminate most applicants before any writing starts.' },
-      { title: 'Collect the documents', text: 'Transcript, references, proof of enrolment, CV, and the essay or proposal the award asks for.' },
-      { title: 'Apply on the provider page', text: 'Use the official link on each slide and keep a copy of everything you submitted.' }
+      { title: 'Start at the top', text: firstDeadlineText },
+      { title: 'Check the filters', text: 'Citizenship, province, GPA, age, enrolment year.' },
+      { title: 'Gather documents', text: 'Transcript, references, enrolment proof, CV, essay.' },
+      { title: 'Apply on the provider page', text: 'Use the official link on each slide.' }
     ];
 
     var stepHtml = steps.map(function (step, index) {
@@ -2358,32 +3434,31 @@ var LOGO_DATA = {
         '</div>';
     }).join('');
 
-    var documents = ['Transcript', 'Two references', 'Proof of enrolment', 'CV or resume', 'Essay 500 to 750 words', 'Exhibition or project proposal', 'Portfolio images', 'Test scores (optional)'];
-
+    var documents = ['Transcript', 'References', 'Proof of enrolment', 'CV', 'Essay', 'Portfolio'];
     var body = '' +
       '<div class="step-row">' + stepHtml + '</div>' +
       '<div class="doc-strip">' +
-        '<h3><i class="card-dot"></i> Documents to have ready</h3>' +
+        '<h3><i class="card-dot"></i> Have these ready</h3>' +
         '<div class="doc-chips">' + documents.map(function (doc) {
           return '<span class="doc-chip">' + esc(doc) + '</span>';
         }).join('') + '</div>' +
       '</div>' +
-      '<div class="caution">Dates, amounts and criteria on these slides come from the source records. Always confirm them on the provider official page before you apply.</div>';
+      '<div class="caution">Always confirm dates and amounts on the provider page.</div>';
 
     return slideFrame({
       className: 'apply-slide',
       kicker: 'Application checklist',
-      title: 'How to work through this list',
-      subtitle: 'A simple order that keeps the closest deadlines moving while you prepare the slower applications.',
+      title: 'How to apply',
+      subtitle: 'Four steps, in this order.',
       body: body
     });
   }
 
   function closingSlide() {
     var reminders = [
-      { title: 'Verify before you write', text: 'Confirm eligibility, the award amount and the exact submission steps on the provider page.' },
-      { title: 'Reuse what you already have', text: 'One transcript, one CV and two reference letters cover most of the awards in this deck.' },
-      { title: 'Finish early', text: 'Submit at least 48 hours before the deadline so a technical problem does not cost you an award.' }
+      { title: 'Verify first', text: 'Check eligibility and the amount on the provider page.' },
+      { title: 'Reuse your file', text: 'One transcript, one CV, two references.' },
+      { title: 'Finish early', text: 'Submit 48 hours before the deadline.' }
     ];
 
     var reminderHtml = reminders.map(function (reminder, index) {
@@ -2394,12 +3469,17 @@ var LOGO_DATA = {
         '</div>';
     }).join('');
 
+    var firstGroup = deadlineGroupList[0] || { date: '', awards: [] };
+    var closingSubtitle = firstGroup.awards.length
+      ? firstGroup.awards.length + ' awards close on ' + formatDate(firstGroup.date, false) + '.'
+      : 'Work down the list in deadline order.';
+
     var body = '' +
       '<div class="closing-body">' +
         '<div class="closing-left">' +
           '<span class="closing-logo-plate">' + logoImg('futureBridge', '', 'Future Bridge Academy') + '</span>' +
           '<div class="closing-reminders">' + reminderHtml + '</div>' +
-          '<div class="source-note"><b>About this deck:</b> ' + AWARDS.length + ' awards from the November 2026 cycle that are still open for applications. Dates, amounts and criteria come from the provider pages at the time of writing; the provider page always wins.</div>' +
+          '<div class="source-note"><b>Source:</b> provider pages, checked for the December 2026 cycle. Confirm before applying.</div>' +
         '</div>' +
         '<div class="partner-panel">' +
           '<h3>In partnership with</h3>' +
@@ -2408,14 +3488,14 @@ var LOGO_DATA = {
       '</div>';
 
     return '' +
-      '<section class="pres-slide closing-slide" data-slide-title="Start with the deadline that comes first" data-slide-kicker="Next step">' +
+      '<section class="pres-slide closing-slide" data-slide-title="Start with the earliest deadline" data-slide-kicker="Next step">' +
         '<span class="slide-accent"></span>' +
         brandRail() +
         '<div class="slide-head">' +
           '<div class="slide-head-main">' +
             '<div class="slide-kicker"><i class="kicker-dash"></i><span>Next step</span></div>' +
-            '<h2 class="slide-title">Start with the deadline that comes first</h2>' +
-            '<p class="slide-sub">Five awards close on November 1 and 2. Send those first, then work down the list in deadline order.</p>' +
+            '<h2 class="slide-title">Start with the earliest deadline</h2>' +
+            '<p class="slide-sub">' + esc(closingSubtitle) + '</p>' +
           '</div>' +
         '</div>' +
         body +
@@ -2427,18 +3507,21 @@ var LOGO_DATA = {
      ========================================================================== */
   var stage = document.getElementById('presStage');
 
-  var slidesHtml = [
-    titleSlide(),
-    glanceSlide(),
-    deadlineSlide(),
-    indexSlide(),
-    writingSlide(),
-    orderedAwards.map(function (award, index) {
-      return scholarshipSlide(award, index + 1, orderedAwards.length);
-    }).join(''),
-    howToApplySlide(),
-    closingSlide()
-  ].join('');
+  var awardSlidesHtml = orderedAwards.map(function (award, index) {
+    return scholarshipSlide(award, index + 1, orderedAwards.length);
+  }).join('');
+
+  /* Add ?awards=1 to the file URL for the presentation build: award pages only, in deadline order. */
+  var awardsOnlyMode = /[?&]awards=1(?:&|$)/.test(window.location.search);
+
+  var slidesHtml = awardsOnlyMode
+    ? awardSlidesHtml
+    : [titleSlide(), glanceSlide()].concat(
+      deadlineSlides(),
+      indexSlides(),
+      writingSlides(),
+      [awardSlidesHtml, howToApplySlide(), closingSlide()]
+    ).join('');
 
   stage.innerHTML = slidesHtml;
 
@@ -2681,7 +3764,7 @@ var LOGO_DATA = {
       function renderSlide(slideIndex) {
         if (slideIndex >= slideElements.length) {
           if (pdfDocument) {
-            pdfDocument.save('Scholarships-November-2026.pdf');
+            pdfDocument.save('Scholarships-December-2026.pdf');
             if (window.console && console.log) {
               console.log('PDF exported: ' + pdfDocument.internal.getNumberOfPages() + ' pages at 297 x 167 mm');
             }
@@ -2730,8 +3813,8 @@ var LOGO_DATA = {
               pdfDocument.setPage(1);
               pdfDocument.addImage(imageDataUrl, 'JPEG', 0, 0, 297, 167);
               pdfDocument.setProperties({
-                title: 'Scholarships - November 2026',
-                subject: 'Scholarship briefing, November 2026 cycle',
+                title: 'Scholarships - December 2026',
+                subject: 'Scholarship briefing, December 2026 cycle',
                 creator: 'Scholarships deck'
               });
               addInvisibleTextLayer(pdfDocument, textBlocks);

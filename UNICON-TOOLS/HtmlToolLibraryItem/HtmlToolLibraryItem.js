@@ -61,8 +61,12 @@
     metaRobots: 'Meta robots', ogTitle: 'OG title', ogDesc: 'OG description', ogImage: 'OG image URL'
   };
   var DEFAULT_PAGE_TARGET_TYPE = 'website-builder-uniconbaseapps';
-  var DEFAULT_SOCIAL_TARGET_TYPE = 'tool-social-content-uniconbaseapps';
-  var DEFAULT_VERSIONS_TARGET_TYPE = 'tool-code-versions-uniconbaseapps';
+  var DEFAULT_SOCIAL_TARGET_TYPE = 'tool-social-content-applicationstore';
+  var DEFAULT_VERSIONS_TARGET_TYPE = 'tool-code-versions-applicationstore';
+  var DEFAULT_CODE_PARTS_TARGET_TYPE = 'tool-code-parts-applicationstore';
+  var CODE_PART_KEYS = ['html', 'css', 'js'];
+  var CODE_PART_LABELS = { html: 'HTML code', css: 'CSS code', js: 'JS code' };
+  var CODE_PART_SHORT_LABELS = { html: 'HTML', css: 'CSS', js: 'JS' };
   var DEFAULT_DOCS_FOLDER_TYPE_MAP = {
     webpage: 'www.uniconhub.com',
     updates: 'www.uniconhub.com',
@@ -71,6 +75,16 @@
   };
   var VERSION_LIMIT = 20;
   var SHOTS_LIMIT = 50;
+  var CODE_PUSH_COOLDOWN_MS = 30000;
+  var DEFAULT_CODE_CHUNK_KB = 800;
+  var DEFAULT_VERSION_SNAPSHOT_MAX_KB = 900;
+  var DEFAULT_CMS_ADMIN_BASE_URL = 'https://applicationstore.uniconhub.com';
+  var FIRESTORE_CONSOLE_BASE_URL = 'https://console.firebase.google.com';
+  var DEFAULT_FIRESTORE_COLLECTION = 'om_objects';
+  var DEFAULT_FIRESTORE_COLLECTION_MAP = {
+    'tool-code-parts-applicationstore': 'om_private_objects',
+    'tool-code-versions-applicationstore': 'om_private_objects'
+  };
   var SCHEMA_FIELDS = ['toolParams', 'toolOutputSchema'];
   var SCHEMA_CONTAINER_IDS = { toolParams: 'htl-schema-params', toolOutputSchema: 'htl-schema-output' };
 
@@ -102,10 +116,24 @@
   var _activeDocPart = {};
   var _ownTypeId = '';
   var _ownRecordName = '';
+  var _ownRecordId = '';
+  var _ownObjectType = '';
+  var _ownSource = '';
+  var _firestoreProjectId = '';
+  var _firestoreProjectDetectStarted = false;
   var _docsMemory = {};
   var _docLoadBusy = {};
   var _docReloadArmed = {};
   var _docReloadArmTimers = {};
+  var _codeMemory = {};
+  var _codePushArmed = {};
+  var _codePushArmTimers = {};
+  var _codePushBusy = {};
+  var _codePushTimers = {};
+  var _codePushCooldownUntil = {};
+  var _codePushFailedSignature = {};
+  var _codeModeTimer = null;
+  var _codeModeCurrent = '';
 
   /* --------------------------------------------------------
      Small helpers
@@ -134,6 +162,133 @@
     return parsedDate.toLocaleString();
   }
   function formatTime(dateValue) { return dateValue.toLocaleTimeString(); }
+  var _utf8Encoder = null;
+  try { if (typeof TextEncoder !== 'undefined') _utf8Encoder = new TextEncoder(); } catch (error) {}
+  function utf8SizeOf(text) {
+    var textValue = String(text == null ? '' : text);
+    try {
+      if (_utf8Encoder) return _utf8Encoder.encode(textValue).length;
+      if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(textValue).length;
+    } catch (error) {}
+    return textValue.length;
+  }
+  function formatSizeLabel(bytes) {
+    var byteCount = Math.max(0, Number(bytes) || 0);
+    if (byteCount >= 1024 * 1024) return (byteCount / (1024 * 1024)).toFixed(2) + ' MB';
+    if (byteCount >= 1024) return (byteCount / 1024).toFixed(byteCount >= 10 * 1024 ? 0 : 1) + ' KB';
+    return byteCount + ' B';
+  }
+  function firestoreProjectId() {
+    var configuredId = String(readParam('firestoreProjectId', '') || '').trim();
+    return configuredId || _firestoreProjectId;
+  }
+  function firestoreDatabaseId() {
+    return String(readParam('firestoreDatabaseId', '-default-') || '-default-').trim() || '-default-';
+  }
+  function firestoreCollectionFor(objectType) {
+    var collectionMap = safeJsonObject(readParam('firestoreCollectionMap', JSON.stringify(DEFAULT_FIRESTORE_COLLECTION_MAP)));
+    var mappedCollection = collectionMap[objectType];
+    if (typeof mappedCollection === 'string' && mappedCollection.trim()) return mappedCollection.trim();
+    if (_ownSource && _ownObjectType && objectType === _ownObjectType) return _ownSource;
+    return String(readParam('firestoreDefaultCollection', DEFAULT_FIRESTORE_COLLECTION) || DEFAULT_FIRESTORE_COLLECTION).trim() || DEFAULT_FIRESTORE_COLLECTION;
+  }
+  function firestoreDocumentUrl(objectType, objectId) {
+    var projectId = firestoreProjectId();
+    if (!projectId || !objectType || !objectId) return '';
+    var pathSegments = firestoreCollectionFor(objectType).split('/').filter(Boolean);
+    pathSegments.push(String(objectId));
+    var encodedPath = pathSegments.map(function (segment) { return encodeURIComponent(segment); }).join('~2F');
+    return FIRESTORE_CONSOLE_BASE_URL + '/project/' + encodeURIComponent(projectId)
+      + '/firestore/databases/' + encodeURIComponent(firestoreDatabaseId())
+      + '/data/~2F' + encodedPath;
+  }
+  function firebaseProjectIdFromText(text) {
+    var textValue = String(text || '');
+    var patterns = [
+      /firebasestorage\.googleapis\.com\/v0\/b\/([a-z0-9-]+)\.appspot\.com/i,
+      /https?:\/\/([a-z0-9-]+)\.firebaseapp\.com/i,
+      /https?:\/\/([a-z0-9-]+)\.web\.app/i,
+      /["']projectId["']\s*:\s*["']([a-z0-9-]+)["']/i
+    ];
+    for (var index = 0; index < patterns.length; index++) {
+      var match = patterns[index].exec(textValue);
+      if (match && match[1]) return match[1].toLowerCase();
+    }
+    return '';
+  }
+  function scanForFirebaseProject(node, depth) {
+    if (!node || depth > 4) return '';
+    if (typeof node === 'string') return firebaseProjectIdFromText(node);
+    if (typeof node !== 'object') return '';
+    var keys = Object.keys(node);
+    for (var index = 0; index < keys.length && index < 80; index++) {
+      var key = keys[index];
+      if (/token|secret|password|apikey|api_key/i.test(key)) continue;
+      var foundProjectId = scanForFirebaseProject(node[key], depth + 1);
+      if (foundProjectId) return foundProjectId;
+    }
+    return '';
+  }
+  function applyDetectedFirestoreProject(projectId, source) {
+    var configuredId = String(readParam('firestoreProjectId', '') || '').trim();
+    if (!projectId || configuredId || _firestoreProjectId === projectId) return;
+    _firestoreProjectId = projectId;
+    logDiagnostics('firestore-project', 'direct Firestore links use project ' + projectId + ' (from ' + source + ')');
+    renderAccessLinks();
+    if (_activeTab === 'documents') renderDevDocuments();
+  }
+  function detectFirestoreProjectId(shellFields) {
+    if (_firestoreProjectDetectStarted) return;
+    _firestoreProjectDetectStarted = true;
+    var shotsProjectId = scanForFirebaseProject(DB && DB.draft ? DB.draft.shots : null, 0);
+    if (shotsProjectId) { applyDetectedFirestoreProject(shotsProjectId, 'screenshot storage URL'); return; }
+    var shellProjectId = scanForFirebaseProject(shellFields, 0);
+    if (shellProjectId) { applyDetectedFirestoreProject(shellProjectId, 'record shell'); return; }
+    var relayAvailable = typeof tool.requestFetch === 'function';
+    var browserOrigin = '';
+    try {
+      if (typeof window !== 'undefined' && window.location && /^https?:$/i.test(window.location.protocol)) {
+        browserOrigin = String(window.location.origin || '');
+      }
+    } catch (error) {}
+    if (!relayAvailable && !browserOrigin) return;
+    var adminBase = String(readParam('cmsAdminBaseUrl', DEFAULT_CMS_ADMIN_BASE_URL) || '').trim().replace(/\/+$/, '');
+    var initUrls = [];
+    if (relayAvailable && adminBase) initUrls.push(adminBase + '/__/firebase/init.json');
+    if (browserOrigin) initUrls.push(browserOrigin + '/__/firebase/init.json');
+    initUrls.push('/__/firebase/init.json');
+    initUrls = initUrls.filter(function (url, index) { return url && initUrls.indexOf(url) === index; });
+    initUrls.forEach(function (initUrl) {
+      if (relayAvailable) {
+        try {
+          tool.requestFetch(initUrl, { method: 'GET', timeoutMs: 5000 }, function (fetchError, fetchResult) {
+            if (fetchError || !fetchResult) return;
+            var body = fetchResult.json !== undefined ? fetchResult.json : (fetchResult.body || fetchResult.text);
+            var config = typeof body === 'string' ? parseJsonLenient(body) : body;
+            if (config && config.projectId) applyDetectedFirestoreProject(String(config.projectId), initUrl);
+          });
+        } catch (error) {}
+      }
+      if (browserOrigin) {
+        try {
+          fetch(initUrl, { credentials: initUrl.charAt(0) === '/' ? 'same-origin' : 'omit' })
+            .then(function (response) { return response && response.ok ? response.json() : null; })
+            .then(function (config) {
+              if (config && config.projectId) applyDetectedFirestoreProject(String(config.projectId), initUrl);
+            })
+            .catch(function () {});
+        } catch (error) {}
+      }
+    });
+  }
+  function fireLinkHtml(objectType, objectId, titleText) {
+    var directUrl = firestoreDocumentUrl(objectType, objectId);
+    if (!directUrl) {
+      var disabledTitle = titleText + ' - Firestore project id not detected; set the Firestore Project ID parameter to open this document in the Firebase console';
+      return '<span class="htl-fire-link htl-fire-link-off" title="' + escHtml(disabledTitle) + '" aria-label="' + escHtml(disabledTitle) + '">🔥</span>';
+    }
+    return '<a class="htl-fire-link" href="' + escHtml(directUrl) + '" target="_blank" rel="noopener" title="' + escHtml(titleText) + '" aria-label="' + escHtml(titleText) + '">🔥</a>';
+  }
 
   function parseJsonLenient(rawText) {
     var text = String(rawText || '').trim();
@@ -189,6 +344,7 @@
     draft.toolCategories = [];
     draft.toolTags = [];
     draft.docs = defaultDocs();
+    draft.codeParts = {};
     draft.shots = [];
     return draft;
   }
@@ -232,6 +388,27 @@
           }
         });
       }
+      var savedCodeParts = savedDraft ? savedDraft.codeParts : null;
+      if (savedCodeParts && typeof savedCodeParts === 'object') {
+        CODE_PART_KEYS.forEach(function (codePartKey) {
+          var savedPart = savedCodeParts[codePartKey];
+          if (!savedPart || typeof savedPart !== 'object') return;
+          var savedObjectIds = Array.isArray(savedPart.objectIds)
+            ? savedPart.objectIds.filter(function (objectId) { return typeof objectId === 'string' && objectId; })
+            : [];
+          if (!savedObjectIds.length && typeof savedPart.objectId === 'string' && savedPart.objectId) {
+            savedObjectIds = [savedPart.objectId];
+          }
+          if (!savedObjectIds.length) return;
+          normalized.draft.codeParts[codePartKey] = {
+            objectIds: savedObjectIds,
+            chunkCount: Number(savedPart.chunkCount) || savedObjectIds.length,
+            chunkBytes: Array.isArray(savedPart.chunkBytes) ? savedPart.chunkBytes.map(function (byteCount) { return Number(byteCount) || 0; }) : [],
+            pushedAt: typeof savedPart.pushedAt === 'string' ? savedPart.pushedAt : '',
+            pushedSignature: typeof savedPart.pushedSignature === 'string' ? savedPart.pushedSignature : ''
+          };
+        });
+      }
       var savedShots = savedDraft ? savedDraft.shots : null;
       if (Array.isArray(savedShots)) {
         normalized.draft.shots = savedShots.filter(function (shot) {
@@ -258,6 +435,9 @@
     if (!target || typeof target !== 'object') return null;
     if (typeof target.objectType !== 'string' || !target.objectType) return null;
     if (typeof target.objectId !== 'string' || !target.objectId) return null;
+    var savedSignature = typeof target.pushedSignature === 'string' ? target.pushedSignature : '';
+    // Older builds stored the whole document JSON as the signature - shrink it to a hash.
+    if (savedSignature && savedSignature.charAt(0) === '{') savedSignature = payloadSignatureOf(savedSignature);
     return {
       objectType: target.objectType,
       objectId: target.objectId,
@@ -265,7 +445,7 @@
       slug: typeof target.slug === 'string' ? target.slug : '',
       folderTypeId: typeof target.folderTypeId === 'string' ? target.folderTypeId : '',
       pushedAt: typeof target.pushedAt === 'string' ? target.pushedAt : '',
-      pushedSignature: typeof target.pushedSignature === 'string' ? target.pushedSignature : ''
+      pushedSignature: savedSignature
     };
   }
   function docMemory(docKey) {
@@ -283,15 +463,16 @@
   -------------------------------------------------------- */
   function persist() {
     clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(function () {
-      _saving = true;
-      try {
-        tool.setValue(JSON.parse(JSON.stringify(DB)));
-        setSaveState('staged');
-        updateSizeMeter();
-      } catch (error) {}
-      setTimeout(function () { _saving = false; }, 400);
-    }, 350);
+    _saveTimer = setTimeout(persistImmediate, 350);
+  }
+  function persistImmediate() {
+    _saving = true;
+    try {
+      tool.setValue(JSON.parse(JSON.stringify(DB)));
+      setSaveState('staged');
+      updateSizeMeter();
+    } catch (error) {}
+    setTimeout(function () { _saving = false; }, 400);
   }
   function setSaveState(kind) {
     var element = $('htl-save-state');
@@ -308,15 +489,22 @@
   }
   function getRoles() {
     var user = _user || getUserSafe();
-    if (user && Array.isArray(user.roles) && user.roles.length) return user.roles;
-    if (user && user.effectiveAccess) {
-      var roles = [];
+    var roles = [];
+    if (user && user.roles) {
+      var rawRoles = Array.isArray(user.roles) ? user.roles : String(user.roles).split(/[\s,]+/);
+      rawRoles.forEach(function (role) {
+        if (!role) return;
+        var roleName = String(role && role.name ? role.name : role).trim().toLowerCase();
+        if (roleName && roles.indexOf(roleName) === -1) roles.push(roleName);
+      });
+    }
+    if (!roles.length && user && user.effectiveAccess) {
       if (user.effectiveAccess.isManager) roles.push('admin');
       if (user.effectiveAccess.isEditor) roles.push('editor');
       if (user.effectiveAccess.isViewer) roles.push('viewer');
-      return roles;
+      if (user.effectiveAccess.isDeveloper) roles.push('developer');
     }
-    return [];
+    return roles;
   }
   function canWrite() {
     if (_noIdentity) return !_readOnly;
@@ -325,6 +513,21 @@
     return ['admin', 'editor', 'developer', 'owner', 'user-manager'].some(function (roleName) {
       return roles.indexOf(roleName) > -1;
     });
+  }
+  function isDeveloper() {
+    return getRoles().indexOf('developer') > -1;
+  }
+  function renderAccessLinks() {
+    renderObjectLinks();
+    CODE_KEYS.forEach(function (codeKey) { renderCodePartLink(codeKey); });
+  }
+  var _loggedRolesSnapshot = '';
+  function logRolesChange() {
+    var rolesSnapshot = JSON.stringify(getRoles());
+    if (rolesSnapshot !== _loggedRolesSnapshot) {
+      _loggedRolesSnapshot = rolesSnapshot;
+      logDiagnostics('user-roles', 'roles: ' + rolesSnapshot);
+    }
   }
   function refreshUser() {
     _user = getUserSafe();
@@ -338,12 +541,16 @@
             if (_user && getRoles().length) _polled = true;
             renderUser();
             lockUI();
+            renderAccessLinks();
+            logRolesChange();
           }, delayMs);
         });
       }
     }
     renderUser();
     lockUI();
+    renderAccessLinks();
+    logRolesChange();
   }
   function renderUser() {
     var badge = $('htl-role-badge');
@@ -562,10 +769,33 @@
   function renderCodeEditors() {
     CODE_KEYS.forEach(function (codeKey) {
       var textarea = $('htl-code-' + codeKey);
-      if (textarea && document.activeElement !== textarea) textarea.value = DB.draft[codeKey];
+      var part = codePartKeyOf(codeKey);
+      if (textarea && document.activeElement !== textarea) textarea.value = codePartMemory(part).code;
       updateCodeMeta(codeKey);
       updateGutter(codeKey);
+      renderCodePartLink(codeKey);
     });
+  }
+  function renderCodePartLink(codeKey) {
+    var linkSpan = $('htl-code-link-' + CODE_TAB_OF_KEY[codeKey]);
+    if (!linkSpan) return;
+    if (!isDeveloper()) { linkSpan.innerHTML = ''; return; }
+    if (codePartsMode() === 'split') {
+      var objectIds = codePartObjectIds(DB.draft.codeParts[codePartKeyOf(codeKey)]);
+      if (objectIds.length) {
+        linkSpan.innerHTML = fireLinkHtml(codePartsType(), objectIds[0], objectIds.length > 1
+          ? 'Open ' + CODE_PART_LABELS[codePartKeyOf(codeKey)] + ' chunk 1 of ' + objectIds.length + ' in Firestore'
+          : 'Open ' + CODE_PART_LABELS[codePartKeyOf(codeKey)] + ' in Firestore');
+      } else {
+        linkSpan.innerHTML = '<span class="htl-code-link-note">not pushed yet</span>';
+      }
+      return;
+    }
+    if (_ownRecordId && _ownObjectType) {
+      linkSpan.innerHTML = fireLinkHtml(_ownObjectType, _ownRecordId, 'Open this tool record in Firestore - combined code is stored in this document');
+    } else {
+      linkSpan.innerHTML = '<span class="htl-code-link-note" title="Combined code is stored inside this record document.">in this record</span>';
+    }
   }
   function updateCodeMeta(codeKey) {
     var textarea = $('htl-code-' + codeKey);
@@ -573,7 +803,12 @@
     if (!textarea || !metaElement) return;
     var text = textarea.value || '';
     var lineCount = text ? text.split('\n').length : 1;
-    metaElement.textContent = lineCount + ' lines · ' + text.length + ' chars';
+    var metaText = lineCount + ' lines · ' + text.length + ' chars';
+    if (codePartsMode() === 'split') {
+      metaText += ' · ' + formatSizeLabel(utf8SizeOf(text));
+      if (codePartMemory(codePartKeyOf(codeKey)).dirty) metaText += ' · not pushed to object';
+    }
+    metaElement.textContent = metaText;
   }
   function updateGutter(codeKey) {
     var textarea = $('htl-code-' + codeKey);
@@ -583,6 +818,14 @@
     var lineNumbers = [];
     for (var lineNumber = 1; lineNumber <= lineCount; lineNumber++) lineNumbers.push(lineNumber);
     gutter.textContent = lineNumbers.join('\n');
+    syncGutterToEditor(codeKey);
+  }
+  function syncGutterToEditor(codeKey) {
+    var textarea = $('htl-code-' + codeKey);
+    var gutter = $('htl-gutter-' + CODE_TAB_OF_KEY[codeKey]);
+    if (!textarea || !gutter) return;
+    if (textarea.clientHeight > 0) gutter.style.height = textarea.clientHeight + 'px';
+    gutter.scrollTop = textarea.scrollTop;
   }
   function renderAll() {
     renderDetails();
@@ -604,19 +847,25 @@
      Tabs
   -------------------------------------------------------- */
   function switchTab(tabName) {
+    if (tabName === 'documents' && !isDeveloper()) tabName = 'details';
     _activeTab = tabName;
     var tabButtons = document.querySelectorAll('.htl-tab');
     for (var tabIndex = 0; tabIndex < tabButtons.length; tabIndex++) {
       tabButtons[tabIndex].classList.toggle('active', tabButtons[tabIndex].getAttribute('data-tab') === tabName);
     }
-    ['details', 'html', 'css', 'js', 'preview', 'docs', 'screenshots', 'versions', 'synclogs'].forEach(function (paneName) {
+    ['details', 'html', 'css', 'js', 'preview', 'docs', 'screenshots', 'versions', 'documents', 'synclogs'].forEach(function (paneName) {
       var pane = $('pane-' + paneName);
       if (pane) pane.style.display = paneName === tabName ? '' : 'none';
     });
     if (tabName === 'preview' && !_previewBuilt) renderPreview();
     if (tabName === 'docs') ensureDocsStructure();
     if (tabName === 'versions') renderVersionsList();
+    if (tabName === 'documents') renderDevDocuments();
     if (tabName === 'screenshots') renderShots();
+    if (tabName === 'html' || tabName === 'css' || tabName === 'js') {
+      loadCodePart(tabName);
+      syncGutterToEditor(toolCodeKeyOf(tabName));
+    }
     try { tool.resize(); } catch (error) {}
   }
 
@@ -749,9 +998,9 @@
   }
 
   function buildPreviewDoc() {
-    var htmlCode = DB.draft.toolHtmlCode || '';
-    var cssCode = DB.draft.toolCssCode || '';
-    var jsCode = DB.draft.toolJsCode || '';
+    var htmlCode = codePartText('html');
+    var cssCode = codePartText('css');
+    var jsCode = codePartText('js');
     var jsSyntaxError = checkJsSyntax(jsCode);
     var scriptOpen = '<' + 'script' + '>';
     var scriptClose = '<' + '/' + 'script' + '>';
@@ -809,7 +1058,11 @@
     var mapped = {
       'htl-demo-pages-uniconbaseapps': DEFAULT_PAGE_TARGET_TYPE,
       'htl-demo-social-uniconbaseapps': DEFAULT_SOCIAL_TARGET_TYPE,
-      'htl-demo-versions-uniconbaseapps': DEFAULT_VERSIONS_TARGET_TYPE
+      'htl-demo-versions-uniconbaseapps': DEFAULT_VERSIONS_TARGET_TYPE,
+      'tool-social-content-uniconbaseapps': DEFAULT_SOCIAL_TARGET_TYPE,
+      'tool-code-versions-uniconbaseapps': DEFAULT_VERSIONS_TARGET_TYPE,
+      'tool-code-parts-uniconbaseapps': DEFAULT_CODE_PARTS_TARGET_TYPE,
+      'toolCodeParts': DEFAULT_CODE_PARTS_TARGET_TYPE
     }[typeName];
     if (mapped) {
       if (!_legacyTypeNoticeShown) {
@@ -838,10 +1091,17 @@
     var singleOverride = String(readParam('docsFolderTypeId', '') || '').trim();
     if (singleOverride) return singleOverride;
     if (docKey === 'versions') return _ownTypeId || '';
+    if (docKey === 'codeParts') return '';
     return '';
   }
   function objectsApiAvailable() {
     return typeof tool.requestObjects === 'function';
+  }
+  function isReadOnlyStoreError(errorText) {
+    return /read-only/i.test(String(errorText || ''));
+  }
+  function readOnlyStoreHint(objectType) {
+    return ' The CMS store does not allow writes for "' + objectType + '": define that object type in the Application Store app (create + update allowed), or set the "Code Parts Target Object Type" parameter to a writable type such as tool-code-parts-uniconbaseapps and add that type to the field allowedObjectTypes. The code stays in this record until a push succeeds.';
   }
   function objectDcb(cmsObject) {
     if (!cmsObject || typeof cmsObject !== 'object') return {};
@@ -860,12 +1120,36 @@
     }
     return null;
   }
-  function contentSignature(docKey) {
+  function contentPayloadJson(docKey) {
     var doc = docMemory(docKey);
     if (docKey === 'social') return JSON.stringify({ contentHtml: String(doc.contentHtml || '') });
     var seo = {};
     SEO_FIELDS.forEach(function (seoField) { if (doc.seo[seoField]) seo[seoField] = doc.seo[seoField]; });
     return JSON.stringify({ html: String(doc.html || ''), css: String(doc.css || ''), js: String(doc.js || ''), seo: seo });
+  }
+  function payloadSignatureOf(payloadJson) {
+    return hashCode(payloadJson) + '-' + payloadJson.length;
+  }
+  function contentSignature(docKey) {
+    return payloadSignatureOf(contentPayloadJson(docKey));
+  }
+  function signatureMatchesPayload(storedSignature, payloadJson) {
+    var storedText = String(storedSignature || '');
+    if (!storedText) return false;
+    // Signatures saved before the hash change are the full payload JSON - keep them comparable.
+    if (storedText.charAt(0) === '{') return storedText === payloadJson;
+    return storedText === payloadSignatureOf(payloadJson);
+  }
+  function contentSignatureMatches(docKey, storedSignature) {
+    return signatureMatchesPayload(storedSignature, contentPayloadJson(docKey));
+  }
+  function docContentSizeBytes(docKey) {
+    var doc = docMemory(docKey);
+    if (!doc.loaded) return -1;
+    if (docKey === 'social') return utf8SizeOf(doc.contentHtml);
+    var seoText = '';
+    SEO_FIELDS.forEach(function (seoField) { if (doc.seo[seoField]) seoText += String(doc.seo[seoField]); });
+    return utf8SizeOf(doc.html) + utf8SizeOf(doc.css) + utf8SizeOf(doc.js) + utf8SizeOf(seoText);
   }
   function pageFieldMap() {
     var overrideMap = safeJsonObject(readParam('pageTargetFieldMap', ''));
@@ -922,7 +1206,7 @@
     if (fieldMap.updatedAt) payload[fieldMap.updatedAt] = new Date().toISOString();
     return { name: docDisplayName(docKey), payload: payload };
   }
-  function remoteSignature(docKey, cmsObject) {
+  function remotePayloadJson(docKey, cmsObject) {
     var dcb = objectDcb(cmsObject);
     if (docKey === 'social') {
       var socialMap = socialFieldMap();
@@ -938,6 +1222,9 @@
       });
     }
     return JSON.stringify({ html: String(code.html || ''), css: String(code.css || ''), js: String(code.js || ''), seo: seo });
+  }
+  function remoteSignature(docKey, cmsObject) {
+    return payloadSignatureOf(remotePayloadJson(docKey, cmsObject));
   }
   function applyPageObjectToMemory(docKey, cmsObject) {
     var dcb = objectDcb(cmsObject);
@@ -983,7 +1270,7 @@
         : (typeof savedDoc.html === 'string' && savedDoc.html !== '');
       if (!hasContent) return;
       var target = normalizeDocTarget(savedDoc.target);
-      if (target && target.pushedSignature && target.pushedSignature === legacySignatureOf(docKey, savedDoc)) {
+      if (target && target.pushedSignature && signatureMatchesPayload(target.pushedSignature, legacySignatureOf(docKey, savedDoc))) {
         logDiagnostics('doc-migrate-' + docKey, 'content already saved in ' + target.objectType + ' ' + target.objectId + ' - removed from this record');
         return;
       }
@@ -1008,6 +1295,453 @@
   function userNameOf() {
     var user = _user || getUserSafe();
     return (user && (user.name || user.id)) || 'user';
+  }
+
+  /* --------------------------------------------------------
+     Code parts (each part lives in its own object - 1 MB each)
+  -------------------------------------------------------- */
+  function codePartKeyOf(codeKey) {
+    return CODE_TAB_OF_KEY[codeKey] || 'html';
+  }
+  function toolCodeKeyOf(part) {
+    return 'tool' + part.charAt(0).toUpperCase() + part.slice(1) + 'Code';
+  }
+  function codePartsType() {
+    return legacyToCurrentType(readParam('codePartsTargetType', DEFAULT_CODE_PARTS_TARGET_TYPE)) || DEFAULT_CODE_PARTS_TARGET_TYPE;
+  }
+  function codePartObjectIds(ref) {
+    if (!ref || typeof ref !== 'object') return [];
+    if (Array.isArray(ref.objectIds)) {
+      return ref.objectIds.filter(function (objectId) { return typeof objectId === 'string' && objectId; });
+    }
+    if (typeof ref.objectId === 'string' && ref.objectId) return [ref.objectId];
+    return [];
+  }
+  function hasCodePartRef(part) {
+    return codePartObjectIds(DB.draft.codeParts[part]).length > 0;
+  }
+  function codeChunkBytes() {
+    var kilobytes = Number(readParam('codeChunkKb', String(DEFAULT_CODE_CHUNK_KB)));
+    if (!isFinite(kilobytes) || kilobytes <= 0) kilobytes = DEFAULT_CODE_CHUNK_KB;
+    return Math.round(kilobytes * 1024);
+  }
+  function versionSnapshotMaxBytes() {
+    var kilobytes = Number(readParam('versionSnapshotMaxKb', String(DEFAULT_VERSION_SNAPSHOT_MAX_KB)));
+    if (!isFinite(kilobytes) || kilobytes <= 0) kilobytes = DEFAULT_VERSION_SNAPSHOT_MAX_KB;
+    return Math.round(kilobytes * 1024);
+  }
+  function splitCodeIntoChunks(rawCode) {
+    var source = String(rawCode == null ? '' : rawCode);
+    var limitBytes = codeChunkBytes();
+    if (!source) return [''];
+    if (utf8SizeOf(source) <= limitBytes) return [source];
+    var chunks = [];
+    var chunkStart = 0;
+    var chunkByteCount = 0;
+    var cursor = 0;
+    while (cursor < source.length) {
+      var newlineIndex = source.indexOf('\n', cursor);
+      var lineEnd = newlineIndex === -1 ? source.length : newlineIndex + 1;
+      var lineByteCount = utf8SizeOf(source.slice(cursor, lineEnd));
+      if (lineByteCount > limitBytes) {
+        // Hard-split the accumulated prefix plus this oversized line as one range,
+        // so a tiny prefix is not wasted as its own chunk.
+        var segmentStart = chunkStart;
+        while (segmentStart < lineEnd) {
+          var lowLength = 1;
+          var highLength = Math.min(lineEnd - segmentStart, limitBytes);
+          var bestLength = 1;
+          while (lowLength <= highLength) {
+            var middleLength = Math.floor((lowLength + highLength) / 2);
+            if (utf8SizeOf(source.slice(segmentStart, segmentStart + middleLength)) <= limitBytes) {
+              bestLength = middleLength;
+              lowLength = middleLength + 1;
+            } else {
+              highLength = middleLength - 1;
+            }
+          }
+          var lastCharCode = source.charCodeAt(segmentStart + bestLength - 1);
+          if (lastCharCode >= 0xD800 && lastCharCode <= 0xDBFF && bestLength > 1) bestLength -= 1;
+          chunks.push(source.slice(segmentStart, segmentStart + bestLength));
+          segmentStart += bestLength;
+        }
+        chunkStart = lineEnd;
+        chunkByteCount = 0;
+        cursor = lineEnd;
+        continue;
+      }
+      if (chunkByteCount + lineByteCount > limitBytes && cursor > chunkStart) {
+        chunks.push(source.slice(chunkStart, cursor));
+        chunkStart = cursor;
+        chunkByteCount = 0;
+      }
+      chunkByteCount += lineByteCount;
+      cursor = lineEnd;
+    }
+    if (chunkStart < source.length) chunks.push(source.slice(chunkStart));
+    return chunks.length ? chunks : [source];
+  }
+  function codePartMemory(part) {
+    if (!_codeMemory[part]) _codeMemory[part] = { code: '', loaded: false, dirty: false };
+    return _codeMemory[part];
+  }
+  function codePartText(part) {
+    return codePartMemory(part).code;
+  }
+  function codePartObjectName(part, chunkIndex, chunkCount) {
+    var objectName = String(DB.draft.toolName || _ownRecordName || 'Tool').trim() + ' - ' + CODE_PART_LABELS[part];
+    if (chunkCount > 1) objectName += ' (' + (chunkIndex + 1) + '/' + chunkCount + ')';
+    return objectName;
+  }
+  function hashCode(text) {
+    var hash = 5381;
+    for (var charIndex = 0; charIndex < text.length; charIndex++) {
+      hash = ((hash << 5) + hash + text.charCodeAt(charIndex)) | 0;
+    }
+    return String(hash);
+  }
+  function codePartSignature(part) {
+    return hashCode(codePartMemory(part).code);
+  }
+  function buildCodePartPayload(part, chunkCode, chunkIndex, chunkCount) {
+    return {
+      toolSlug: toolSlugOf(),
+      toolName: DB.draft.toolName || '',
+      part: part,
+      chunkIndex: chunkIndex,
+      chunkCount: chunkCount,
+      code: String(chunkCode || ''),
+      pushedAt: new Date().toISOString(),
+      pushedBy: userNameOf()
+    };
+  }
+  function findCodePartObjects(objects, wantedPart) {
+    var toolSlug = toolSlugOf();
+    var matches = [];
+    for (var index = 0; index < objects.length; index++) {
+      var cmsObject = objects[index];
+      if (!cmsObject) continue;
+      var dcb = objectDcb(cmsObject);
+      if (String(dcb.part) === wantedPart && String(dcb.toolSlug) === toolSlug) {
+        matches.push({ cmsObject: cmsObject, chunkIndex: Number(dcb.chunkIndex) || 0 });
+      }
+    }
+    matches.sort(function (first, second) { return first.chunkIndex - second.chunkIndex; });
+    return matches;
+  }
+  function loadCodePart(part) {
+    var memory = codePartMemory(part);
+    if (memory.loaded) return;
+    var ref = DB.draft.codeParts[part] || null;
+    var objectIds = codePartObjectIds(ref);
+    var legacyCode = String(DB.draft[toolCodeKeyOf(part)] || '');
+    if (!objectsApiAvailable() || !objectIds.length) {
+      memory.loaded = true;
+      if (legacyCode) { memory.code = legacyCode; memory.dirty = false; }
+      return;
+    }
+    var objectType = codePartsType();
+    var loadedChunks = new Array(objectIds.length);
+    var pendingCount = objectIds.length;
+    var loadFailed = false;
+    function finishChunkLoad() {
+      memory.loaded = true;
+      if (loadFailed) {
+        memory.code = legacyCode;
+        memory.dirty = !!legacyCode;
+        logDiagnostics('code-load-' + part, 'chunk load failed - code stays in this record');
+        return;
+      }
+      var loadedCode = loadedChunks.join('');
+      var recordCode = String(DB.draft[toolCodeKeyOf(part)] || '');
+      var recordCopyDiffers = !!recordCode && recordCode !== loadedCode;
+      // The part objects are authoritative: the record must not keep a second copy of the code.
+      memory.code = recordCopyDiffers ? recordCode : loadedCode;
+      memory.dirty = recordCopyDiffers;
+      DB.draft.codeParts[part] = {
+        objectIds: objectIds,
+        chunkCount: objectIds.length,
+        chunkBytes: loadedChunks.map(function (chunkText) { return utf8SizeOf(chunkText); }),
+        pushedAt: ref && ref.pushedAt ? ref.pushedAt : '',
+        pushedSignature: codePartSignature(part)
+      };
+      DB.draft[toolCodeKeyOf(part)] = '';
+      persistImmediate();
+      renderCodeEditors();
+      logDiagnostics('code-load-' + part, 'loaded ' + objectIds.length + ' chunk(s) - ' + loadedCode.length + ' chars'
+        + (recordCopyDiffers ? ' · record copy differs - it is pushed to the part objects' : ' · record copy cleared'));
+      syncCodePartsMode();
+    }
+    objectIds.forEach(function (objectId, chunkIndex) {
+      tool.requestObjects('get', { mainObjectType: objectType, objectId: objectId }, function (getError, getResult) {
+        if (getError) {
+          loadFailed = true;
+          logDiagnostics('code-load-' + part, 'chunk ' + (chunkIndex + 1) + ' get error: ' + getError);
+        } else {
+          var cmsObject = getResult && getResult.object ? getResult.object : null;
+          loadedChunks[chunkIndex] = cmsObject ? String(objectDcb(cmsObject).code || '') : '';
+        }
+        pendingCount--;
+        if (pendingCount === 0) finishChunkLoad();
+      });
+    });
+  }
+  function pushCodePart(part) {
+    if (!canWrite()) return;
+    if (!objectsApiAvailable()) {
+      logDiagnostics('code-push-' + part, 'object API unavailable - code stays in this record');
+      return;
+    }
+    if (_codePushBusy[part]) return;
+    var memory = codePartMemory(part);
+    _codePushBusy[part] = true;
+    var objectType = codePartsType();
+    var signature = codePartSignature(part);
+    var ref = DB.draft.codeParts[part] || null;
+    var refObjectIds = codePartObjectIds(ref);
+    var chunkTexts = splitCodeIntoChunks(memory.code);
+    var chunkCount = chunkTexts.length;
+
+    function resetCodePushState() {
+      _codePushBusy[part] = false;
+      _codePushArmed[part] = false;
+      _codePushCooldownUntil[part] = 0;
+      _codePushFailedSignature[part] = '';
+    }
+    function failCodePush(failureText, label) {
+      _codePushBusy[part] = false;
+      _codePushCooldownUntil[part] = Date.now() + CODE_PUSH_COOLDOWN_MS;
+      _codePushFailedSignature[part] = signature;
+      logDiagnostics('code-push-' + part, label + ': ' + failureText);
+      notify('Code push failed: ' + failureText + (isReadOnlyStoreError(failureText) ? readOnlyStoreHint(objectType) : ''), 'error');
+    }
+    function finishCodePush(resultObjectIds) {
+      DB.draft.codeParts[part] = {
+        objectIds: resultObjectIds,
+        chunkCount: chunkCount,
+        chunkBytes: chunkTexts.map(function (chunkText) { return utf8SizeOf(chunkText); }),
+        pushedAt: new Date().toISOString(),
+        pushedSignature: signature
+      };
+      memory.dirty = false;
+      DB.draft[toolCodeKeyOf(part)] = '';
+      resetCodePushState();
+      persistImmediate();
+      updateCodeMeta(toolCodeKeyOf(part));
+      renderObjectLinks();
+      logDiagnostics('code-push-' + part, 'pushed ' + resultObjectIds.length + ' chunk(s): ' + resultObjectIds.join(', ') + ' - code removed from this record');
+    }
+    function deleteCodeObjects(objectIds) {
+      var uniqueIds = objectIds.filter(function (objectId, index) { return objectId && objectIds.indexOf(objectId) === index; });
+      uniqueIds.forEach(function (objectId) {
+        tool.requestObjects('delete', { mainObjectType: objectType, objectId: objectId }, function (deleteError) {
+          if (deleteError) logDiagnostics('code-push-' + part, 'extra object delete failed (' + objectId + '): ' + deleteError);
+          else logDiagnostics('code-push-' + part, 'deleted duplicate/extra object ' + objectId);
+        });
+      });
+    }
+    function createChunkObject(chunkIndex, next) {
+      var createParams = {
+        mainObjectType: objectType,
+        name: codePartObjectName(part, chunkIndex, chunkCount),
+        productData: { data_categoriesBased: buildCodePartPayload(part, chunkTexts[chunkIndex], chunkIndex, chunkCount) }
+      };
+      var partFolderTypeId = leafTypeIdOf('codeParts');
+      if (partFolderTypeId) createParams.typeId = partFolderTypeId;
+      tool.requestObjects('create', createParams, function (createError, createResult) {
+        if (createError || !createResult || !createResult.object) {
+          next(String(createError || 'no object returned'));
+          return;
+        }
+        var createdObject = createResult.object;
+        next(null, createdObject.id || createdObject._id);
+      });
+    }
+    function writeChunkObject(chunkIndex, existingObjectId, next) {
+      if (!existingObjectId) { createChunkObject(chunkIndex, next); return; }
+      var payload = buildCodePartPayload(part, chunkTexts[chunkIndex], chunkIndex, chunkCount);
+      tool.requestObjects('update', { mainObjectType: objectType, objectId: existingObjectId, productData: { data_categoriesBased: payload } }, function (updateError) {
+        if (!updateError) { next(null, existingObjectId); return; }
+        var failureText = String(updateError || '');
+        if (isReadOnlyStoreError(failureText)) { next(failureText); return; }
+        logDiagnostics('code-push-' + part, 'chunk ' + (chunkIndex + 1) + ' update failed (' + failureText + ') - creating a replacement object');
+        createChunkObject(chunkIndex, next);
+      });
+    }
+    function writeChunks(idsByIndex, next) {
+      var resultObjectIds = [];
+      var chunkIndex = 0;
+      function writeNextChunk() {
+        if (chunkIndex >= chunkCount) { next(null, resultObjectIds); return; }
+        var currentIndex = chunkIndex;
+        writeChunkObject(currentIndex, idsByIndex[currentIndex] || '', function (writeError, objectId) {
+          if (writeError) { next(writeError); return; }
+          resultObjectIds[currentIndex] = objectId;
+          chunkIndex++;
+          writeNextChunk();
+        });
+      }
+      writeNextChunk();
+    }
+
+    tool.requestObjects('query', { mainObjectType: objectType }, function (queryError, queryResult) {
+      if (queryError) {
+        failCodePush(String(queryError), 'query error - code stays in this record');
+        return;
+      }
+      var matches = findCodePartObjects((queryResult && queryResult.objects) || [], part);
+      var matchIdsByIndex = {};
+      var extraObjectIds = [];
+      matches.forEach(function (match) {
+        var matchObjectId = match.cmsObject.id || match.cmsObject._id;
+        if (!matchObjectId) return;
+        if (!matchIdsByIndex[match.chunkIndex]) matchIdsByIndex[match.chunkIndex] = matchObjectId;
+        else extraObjectIds.push(matchObjectId);
+      });
+      var idsByIndex = {};
+      for (var chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+        if (matchIdsByIndex[chunkIndex]) {
+          // A visible object for this chunk wins; a stale stored id becomes cleanup.
+          idsByIndex[chunkIndex] = matchIdsByIndex[chunkIndex];
+          if (refObjectIds[chunkIndex] && refObjectIds[chunkIndex] !== matchIdsByIndex[chunkIndex]) {
+            extraObjectIds.push(refObjectIds[chunkIndex]);
+          }
+        } else if (refObjectIds[chunkIndex]) {
+          idsByIndex[chunkIndex] = refObjectIds[chunkIndex];
+        }
+      }
+      Object.keys(matchIdsByIndex).forEach(function (indexKey) {
+        var indexNumber = Number(indexKey);
+        if (indexNumber >= chunkCount) extraObjectIds.push(matchIdsByIndex[indexKey]);
+      });
+      writeChunks(idsByIndex, function (writeError, resultObjectIds) {
+        if (writeError) {
+          failCodePush(writeError, 'chunk write error');
+          return;
+        }
+        finishCodePush(resultObjectIds.filter(function (objectId) { return !!objectId; }));
+        if (extraObjectIds.length) deleteCodeObjects(extraObjectIds);
+      });
+    });
+  }
+  function scheduleCodeModeSync() {
+    clearTimeout(_codeModeTimer);
+    _codeModeTimer = setTimeout(function () { syncCodePartsMode(); }, 1200);
+  }
+  function codeSplitBytes() {
+    var kilobytes = Number(readParam('codeSplitThresholdKb', '500'));
+    if (!isFinite(kilobytes) || kilobytes <= 0) kilobytes = 500;
+    return Math.round(kilobytes * 1024);
+  }
+  function codeMergeBackBytes() {
+    return Math.round(codeSplitBytes() * 0.8);
+  }
+  function totalCodeBytes() {
+    var total = 0;
+    CODE_PART_KEYS.forEach(function (part) { total += codePartMemory(part).code.length; });
+    return total;
+  }
+  function allCodePartsLoaded() {
+    return CODE_PART_KEYS.every(function (part) { return codePartMemory(part).loaded; });
+  }
+  function codePartsMode() {
+    var hasRefs = CODE_PART_KEYS.some(function (part) { return hasCodePartRef(part); });
+    if (hasRefs && !allCodePartsLoaded()) return 'split';
+    if (hasRefs) {
+      if (totalCodeBytes() < codeMergeBackBytes()) return 'combined';
+      return 'split';
+    }
+    if (!allCodePartsLoaded()) return 'combined';
+    if (totalCodeBytes() > codeSplitBytes()) return 'split';
+    return 'combined';
+  }
+  function setCodeMode(mode) {
+    if (mode !== _codeModeCurrent) {
+      _codeModeCurrent = mode;
+      logDiagnostics('code-mode', mode === 'split'
+        ? 'split mode - ' + Math.round(totalCodeBytes() / 1024) + ' KB of code lives in part objects (split above ' + Math.round(codeSplitBytes() / 1024) + ' KB)'
+        : 'combined mode - ' + Math.round(totalCodeBytes() / 1024) + ' KB of code lives in this record');
+    }
+    renderCodeModeBadge();
+    renderObjectLinks();
+    renderCodeEditors();
+    renderCodeSizes();
+  }
+  function mergeCodeBackIntoRecord() {
+    var objectIdsToDelete = [];
+    var wroteRecord = false;
+    CODE_PART_KEYS.forEach(function (part) {
+      var codeKey = toolCodeKeyOf(part);
+      var memory = codePartMemory(part);
+      if (DB.draft[codeKey] !== memory.code) { DB.draft[codeKey] = memory.code; wroteRecord = true; }
+      memory.dirty = false;
+      codePartObjectIds(DB.draft.codeParts[part]).forEach(function (objectId) { objectIdsToDelete.push(objectId); });
+    });
+    if (objectIdsToDelete.length) DB.draft.codeParts = {};
+    if (wroteRecord || objectIdsToDelete.length) persist();
+    setCodeMode('combined');
+    if (objectIdsToDelete.length) {
+      logDiagnostics('code-mode', 'merged code back into the record - removing ' + objectIdsToDelete.length + ' part object(s)');
+      objectIdsToDelete.forEach(function (objectId) {
+        tool.requestObjects('delete', { mainObjectType: codePartsType(), objectId: objectId }, function (deleteError) {
+          if (deleteError) logDiagnostics('code-mode', 'part object delete failed (manual cleanup needed): ' + deleteError);
+        });
+      });
+    }
+  }
+  function syncCodePartsMode() {
+    if (!objectsApiAvailable()) {
+      var copiedToRecord = false;
+      CODE_PART_KEYS.forEach(function (part) {
+        var codeKey = toolCodeKeyOf(part);
+        var memory = codePartMemory(part);
+        if (!DB.draft[codeKey] && memory.code) { DB.draft[codeKey] = memory.code; copiedToRecord = true; }
+      });
+      if (copiedToRecord) persist();
+      setCodeMode('combined');
+      return;
+    }
+    if (!allCodePartsLoaded()) return;
+    var mode = codePartsMode();
+    if (mode === 'split') {
+      setCodeMode('split');
+      CODE_PART_KEYS.forEach(function (part) {
+        var memory = codePartMemory(part);
+        var ref = DB.draft.codeParts[part] || null;
+        var needsPush = memory.dirty || !hasCodePartRef(part);
+        var failedRecently = Date.now() < (_codePushCooldownUntil[part] || 0)
+          && _codePushFailedSignature[part] === codePartSignature(part);
+        if (needsPush && !failedRecently) pushCodePart(part);
+      });
+    } else {
+      mergeCodeBackIntoRecord();
+    }
+  }
+  function initCodePartsMemory() {
+    CODE_PART_KEYS.forEach(function (part) {
+      var codeKey = toolCodeKeyOf(part);
+      var legacyCode = String(DB.draft[codeKey] || '');
+      var memory = codePartMemory(part);
+      if (hasCodePartRef(part)) {
+        if (objectsApiAvailable()) {
+          // The part objects are authoritative. The record copy is only a fallback while
+          // the objects are read; finishChunkLoad clears it from the record.
+          memory.code = legacyCode;
+          memory.loaded = false;
+          memory.dirty = false;
+          loadCodePart(part);
+        } else {
+          memory.code = legacyCode;
+          memory.loaded = true;
+          memory.dirty = false;
+        }
+        return;
+      }
+      memory.code = legacyCode;
+      memory.loaded = true;
+      memory.dirty = !!legacyCode;
+    });
+    syncCodePartsMode();
   }
 
   function openDoc(docKey) {
@@ -1079,13 +1813,14 @@
       _docPushArmed[docKey] = false;
       persist();
       renderDocStatus(docKey);
+      renderObjectLinks();
       notify(DOC_LABELS[docKey] + ' saved to its own ' + (docKey === 'social' ? 'social object' : 'page object (with SEO)') + '.', 'success');
     }
 
     function performWrite(existingObject) {
       if (existingObject) {
-        var remoteSignatureValue = remoteSignature(docKey, existingObject);
-        if (target && target.pushedSignature && target.pushedSignature !== remoteSignatureValue && !_docPushArmed[docKey]) {
+        var targetStillMatchesRemote = signatureMatchesPayload(target && target.pushedSignature, remotePayloadJson(docKey, existingObject));
+        if (target && target.pushedSignature && !targetStillMatchesRemote && !_docPushArmed[docKey]) {
           _docPushArmed[docKey] = true;
           clearTimeout(_docPushArmTimers[docKey]);
           _docPushArmTimers[docKey] = setTimeout(function () { _docPushArmed[docKey] = false; }, 8000);
@@ -1175,6 +1910,7 @@
         _docPushArmed[docKey] = false;
         persist();
         renderDocStatus(docKey);
+        renderObjectLinks();
         notify(DOC_LABELS[docKey] + ' saved into folder ' + newFolderTypeId + '.' + (deleteError ? ' The old object in the previous folder stays - delete it manually.' : ' The old object in the previous folder was removed.'), 'success');
       });
     });
@@ -1397,7 +2133,7 @@
     if (socialElement) socialElement.textContent = docTargetType('social');
     if (versionsElement) versionsElement.textContent = versionsTargetType();
     if (leafElement) {
-      var folderParts = DOC_KEYS.concat(['versions']).map(function (folderKey) {
+      var folderParts = DOC_KEYS.concat(['versions', 'codeParts']).map(function (folderKey) {
         var resolvedFolder = leafTypeIdOf(folderKey);
         return folderKey + ' → ' + (resolvedFolder || '(app default)');
       });
@@ -1409,6 +2145,252 @@
         ? 'Object API available - Save writes each document into its own CMS object in the tool leaf folder above (the CMS hierarchy folder where this record lives).'
         : 'Object API NOT available here (allowObjectCRUD off) - Save/Reload stay disabled until the field settings allow it.';
     }
+  }
+  function renderCodeModeBadge() {
+    var badge = $('htl-code-mode');
+    if (!badge) return;
+    var split = codePartsMode() === 'split';
+    badge.textContent = split ? '◫ Split code documents' : '◧ Single-document code';
+    badge.className = 'htl-code-mode ' + (split ? 'split' : 'combined');
+    var partSizeSummary = CODE_PART_KEYS.map(function (part) {
+      return CODE_PART_SHORT_LABELS[part] + ' ' + formatSizeLabel(utf8SizeOf(codePartMemory(part).code));
+    }).join(' · ');
+    badge.title = split
+      ? 'Code is over the threshold and lives in per-part objects. Each part is split into numbered chunks above ' + Math.round(codeChunkBytes() / 1024) + ' KB. Sizes: ' + partSizeSummary + '.'
+      : 'Code lives in this record as one document. Above ' + Math.round(codeSplitBytes() / 1024) + ' KB it splits into per-part objects. Sizes: ' + partSizeSummary + '.';
+  }
+  function renderCodeSizes() {
+    var sizesElement = $('htl-code-sizes');
+    if (!sizesElement) return;
+    if (codePartsMode() !== 'split') {
+      sizesElement.textContent = '';
+      sizesElement.style.display = 'none';
+      return;
+    }
+    sizesElement.style.display = '';
+    var sizeTexts = [];
+    var sizeTitles = [];
+    CODE_PART_KEYS.forEach(function (part) {
+      var partBytes = utf8SizeOf(codePartMemory(part).code);
+      sizeTexts.push(CODE_PART_SHORT_LABELS[part] + ' ' + formatSizeLabel(partBytes));
+      sizeTitles.push(CODE_PART_LABELS[part] + ': ' + partBytes + ' bytes');
+    });
+    sizesElement.textContent = sizeTexts.join(' · ');
+    sizesElement.title = 'Code part sizes in their own documents (UTF-8 bytes):\n' + sizeTitles.join('\n')
+      + '\nMerges back into this record below ' + Math.round(codeMergeBackBytes() / 1024) + ' KB.';
+  }
+  function docLinkSizeState(docKey) {
+    var target = DB.draft.docs[docKey].target || null;
+    var memory = docMemory(docKey);
+    var contentBytes = docContentSizeBytes(docKey);
+    if (contentBytes < 0) {
+      return { label: 'not loaded', dirty: false, title: 'Open the ' + DOC_LABELS[docKey] + ' tab to load this document and see its content size.' };
+    }
+    var dirty = memory.dirty || !contentSignatureMatches(docKey, target && target.pushedSignature);
+    return {
+      label: formatSizeLabel(contentBytes) + (dirty ? ' · unsaved' : ''),
+      dirty: dirty,
+      title: contentBytes + ' bytes of editor content (UTF-8) - this is what gets written to the object.'
+    };
+  }
+  function updateDocLinkSize(docKey) {
+    var container = $('htl-object-links');
+    if (!container || !container.querySelector) return;
+    var row = container.querySelector('[data-doc-link="' + docKey + '"]');
+    if (!row || !row.querySelector) return;
+    var sizeElement = row.querySelector('.htl-object-link-size');
+    if (!sizeElement) return;
+    var state = docLinkSizeState(docKey);
+    sizeElement.textContent = state.label;
+    sizeElement.title = state.title;
+    sizeElement.className = 'htl-object-link-size' + (state.dirty ? ' dirty' : '');
+  }
+  function objectLinkRowHtml(icon, label, objectType, objectId, sizeLabel, sizeIsDirty, sizeTitle, docLinkKey) {
+    return '<div class="htl-object-link"' + (docLinkKey ? ' data-doc-link="' + escHtml(docLinkKey) + '"' : '') + '>'
+      + '<span class="htl-object-link-label"><span class="htl-object-link-icon">' + escHtml(icon) + '</span>' + escHtml(label) + '</span>'
+      + (sizeLabel ? '<span class="htl-object-link-size' + (sizeIsDirty ? ' dirty' : '') + '" title="' + escHtml(sizeTitle || sizeLabel) + '">' + escHtml(sizeLabel) + '</span>' : '')
+      + '<code class="htl-object-link-id" title="' + escHtml(objectId) + '">' + escHtml(objectId) + '</code>'
+      + fireLinkHtml(objectType, objectId, 'Open ' + label + ' in Firestore')
+      + '</div>';
+  }
+  function renderObjectLinks() {
+    renderDevDocuments();
+    var container = $('htl-object-links');
+    if (!container) return;
+    if (!isDeveloper()) { container.innerHTML = ''; container.style.display = 'none'; return; }
+    container.style.display = '';
+    var rows = [];
+    DOC_KEYS.forEach(function (docKey) {
+      var target = DB.draft.docs[docKey].target;
+      if (!target || !target.objectId) return;
+      var sizeState = docLinkSizeState(docKey);
+      rows.push(objectLinkRowHtml('📄', DOC_LABELS[docKey], target.objectType || docTargetType(docKey), target.objectId, sizeState.label, sizeState.dirty, sizeState.title, docKey));
+    });
+    if (codePartsMode() === 'split') {
+      CODE_PART_KEYS.forEach(function (part) {
+        var ref = DB.draft.codeParts[part];
+        var objectIds = codePartObjectIds(ref);
+        if (!objectIds.length) return;
+        var partMemory = codePartMemory(part);
+        var partIsDirty = partMemory.dirty || (!!ref.pushedSignature && ref.pushedSignature !== codePartSignature(part));
+        var storedChunkBytes = Array.isArray(ref.chunkBytes) ? ref.chunkBytes : [];
+        objectIds.forEach(function (objectId, chunkIndex) {
+          var chunkLabel = CODE_PART_LABELS[part] + (objectIds.length > 1 ? ' ' + (chunkIndex + 1) + '/' + objectIds.length : '');
+          var sizeBytes = typeof storedChunkBytes[chunkIndex] === 'number' ? storedChunkBytes[chunkIndex] : null;
+          rows.push(objectLinkRowHtml('🧩', chunkLabel, codePartsType(), objectId,
+            sizeBytes === null ? '' : formatSizeLabel(sizeBytes),
+            partIsDirty,
+            sizeBytes === null ? 'Chunk ' + (chunkIndex + 1) + ' of the ' + CODE_PART_LABELS[part] + ' code.' : sizeBytes + ' bytes in this chunk (UTF-8).'));
+        });
+      });
+    } else {
+      if (_ownRecordId && _ownObjectType) {
+        rows.push(objectLinkRowHtml('📦', 'Tool record (code inside)', _ownObjectType, _ownRecordId,
+          formatSizeLabel(totalCodeBytes()), false,
+          'Combined HTML/CSS/JS lives inside this record document.'));
+      } else {
+        rows.push('<div class="htl-object-link htl-object-link-empty">Code lives in this record document - no separate code objects (single-document mode).</div>');
+      }
+    }
+    if (!rows.length) {
+      rows.push('<div class="htl-object-link htl-object-link-empty">No saved objects yet - save a document or grow the code to create them.</div>');
+    }
+    container.innerHTML = rows.join('');
+  }
+  function handleObjectLinkClick(event) {
+    var fireLink = event.target && event.target.closest ? event.target.closest('a.htl-fire-link') : null;
+    if (fireLink) {
+      var href = fireLink.getAttribute('href');
+      if (href) {
+        if (event.preventDefault) event.preventDefault();
+        try {
+          if (typeof tool.openUrl === 'function') tool.openUrl(href);
+          else if (typeof window !== 'undefined' && window.open) window.open(href, '_blank', 'noopener');
+        } catch (error) {}
+        logDiagnostics('object-link', 'opened ' + href);
+      }
+      return;
+    }
+    var button = event.target && event.target.closest ? event.target.closest('[data-act="open-object"]') : null;
+    if (!button) return;
+    var objectType = button.getAttribute('data-object-type');
+    var objectId = button.getAttribute('data-object-id');
+    if (!objectType || !objectId) return;
+    try {
+      if (typeof tool.openObjectDetail === 'function') tool.openObjectDetail(objectType, objectId);
+      else if (typeof tool.openUrl === 'function') tool.openUrl('object/' + objectType + '/' + objectId);
+    } catch (error) {}
+    logDiagnostics('object-link', 'opened ' + objectType + ' ' + objectId);
+  }
+  function devDocRowHtml(label, objectType, objectId, sizeLabel, copyKind) {
+    var hasRealTarget = !!objectType && !!objectId && objectType.charAt(0) !== '(' && objectId.charAt(0) !== '(';
+    return '<div class="htl-object-link' + (copyKind === 'record' ? ' htl-object-link-main' : '') + '" title="' + escHtml(objectType) + ' · ' + escHtml(objectId) + '">'
+      + '<span class="htl-object-link-label"><span class="htl-object-link-icon">' + (copyKind === 'record' ? '📦' : '📄') + '</span>' + escHtml(label) + '</span>'
+      + (sizeLabel ? '<span class="htl-object-link-size">' + escHtml(sizeLabel) + '</span>' : '')
+      + '<code class="htl-object-link-id" title="' + escHtml(objectId) + '">' + escHtml(objectId) + '</code>'
+      + (hasRealTarget ? fireLinkHtml(objectType, objectId, 'Open ' + label + ' in Firestore') : '')
+      + '<button class="htl-btn htl-btn-ghost htl-btn-sm" data-act="copy-doc" data-copy-kind="' + escHtml(copyKind) + '" data-object-type="' + escHtml(objectType) + '" data-object-id="' + escHtml(objectId) + '" data-doc-label="' + escHtml(label) + '">⧉ Copy</button>'
+      + '</div>';
+  }
+  function devDocGroupHtml(title, rows) {
+    return '<div class="htl-dev-docs-group">'
+      + '<div class="htl-dev-docs-group-head">' + escHtml(title) + '</div>'
+      + rows.join('')
+      + '</div>';
+  }
+  function renderDevDocuments() {
+    var tabButton = $('htl-tab-documents');
+    var listElement = $('htl-dev-docs-list');
+    var noteElement = $('htl-documents-note');
+    var developer = isDeveloper();
+    if (tabButton) tabButton.style.display = developer ? '' : 'none';
+    if (!developer) {
+      if (listElement) listElement.innerHTML = '';
+      if (noteElement) noteElement.textContent = '';
+      if (_activeTab === 'documents') switchTab('details');
+      return;
+    }
+    if (!listElement) return;
+    var recordRows = [];
+    var documentRows = [];
+    var recordText = '';
+    var recordBytes = 0;
+    try { recordText = JSON.stringify(DB) || ''; } catch (error) {}
+    recordBytes = utf8SizeOf(recordText);
+    var recordType = _ownObjectType || '(type not exposed by host)';
+    var recordId = _ownRecordId || '(id not exposed by host)';
+    recordRows.push(devDocRowHtml('Tool record (main document)', recordType, recordId, formatSizeLabel(recordBytes), 'record'));
+    if (codePartsMode() === 'split') {
+      CODE_PART_KEYS.forEach(function (part) {
+        var ref = DB.draft.codeParts[part];
+        var objectIds = codePartObjectIds(ref);
+        if (!objectIds.length) return;
+        var chunkBytes = Array.isArray(ref.chunkBytes) ? ref.chunkBytes : [];
+        objectIds.forEach(function (objectId, chunkIndex) {
+          var chunkLabel = CODE_PART_LABELS[part] + (objectIds.length > 1 ? ' ' + (chunkIndex + 1) + '/' + objectIds.length : '');
+          recordRows.push(devDocRowHtml(chunkLabel, codePartsType(), objectId,
+            typeof chunkBytes[chunkIndex] === 'number' ? formatSizeLabel(chunkBytes[chunkIndex]) : '', 'object'));
+        });
+      });
+    }
+    DOC_KEYS.forEach(function (docKey) {
+      var target = DB.draft.docs[docKey].target;
+      if (!target || !target.objectId) return;
+      var contentBytes = docContentSizeBytes(docKey);
+      documentRows.push(devDocRowHtml(DOC_LABELS[docKey] + ' document', target.objectType || docTargetType(docKey), target.objectId,
+        contentBytes < 0 ? 'not loaded' : formatSizeLabel(contentBytes), 'object'));
+    });
+    if (!documentRows.length) {
+      documentRows.push('<div class="htl-object-link htl-object-link-empty">No document objects saved yet - save a webpage, help, updates, presentation or social document in the Docs tab to create its object.</div>');
+    }
+    listElement.innerHTML = devDocGroupHtml('Tool record and code documents', recordRows)
+      + devDocGroupHtml('Document objects (webpage, help, updates, presentation, social)', documentRows);
+    var modeNote = codePartsMode() === 'split'
+      ? 'Split mode: the tool record above is the main document - it holds the metadata and the object references. The code documents below are additional objects.'
+      : 'Combined mode: the tool record above is the main document and holds the HTML, CSS and JS code inside this record.';
+    if (!_ownRecordId) modeNote += ' This host does not expose the record id, so the main row cannot link to Firestore - copying still works.';
+    var firestoreProject = firestoreProjectId();
+    var firestoreNote = firestoreProject
+      ? 'Firestore console: project ' + firestoreProject + ' · database ' + firestoreDatabaseId() + '.'
+      : 'Firestore project id not detected - set the Firestore Project ID parameter to open documents in the Firebase console.';
+    if (noteElement) noteElement.textContent = modeNote + ' ' + firestoreNote + ' The fire icon opens that document; DB Docs is developer-only.';
+  }
+  function handleDevDocumentCopy(event) {
+    if (!isDeveloper()) return;
+    var button = event.target && event.target.closest ? event.target.closest('[data-act="copy-doc"]') : null;
+    if (!button) return;
+    var copyKind = button.getAttribute('data-copy-kind');
+    var objectType = button.getAttribute('data-object-type') || '';
+    var objectId = button.getAttribute('data-object-id') || '';
+    var label = button.getAttribute('data-doc-label') || 'document';
+    if (copyKind === 'record') {
+      var recordSample = {
+        purpose: 'html-tool-library-item record sample',
+        objectType: objectType,
+        objectId: objectId,
+        name: _ownRecordName,
+        copiedAt: new Date().toISOString(),
+        value: DB
+      };
+      copyTextWithMessage(JSON.stringify(recordSample, null, 2), 'Tool record sample copied.');
+      logDiagnostics('dev-copy', 'record sample copied');
+      return;
+    }
+    if (!objectsApiAvailable()) { notify('Object API is unavailable - cannot read this document.', 'warning'); return; }
+    if (!objectType || !objectId) return;
+    if (button.disabled) return;
+    button.disabled = true;
+    button.textContent = '…';
+    tool.requestObjects('get', { mainObjectType: objectType, objectId: objectId }, function (getError, getResult) {
+      button.disabled = false;
+      button.textContent = '⧉ Copy';
+      if (getError || !getResult || !getResult.object) {
+        notify('Copy failed - could not read ' + label + ': ' + (getError || 'object not found'), 'error');
+        return;
+      }
+      copyTextWithMessage(JSON.stringify(getResult.object, null, 2), label + ' copied.');
+      logDiagnostics('dev-copy', label + ' object copied (' + objectType + ' ' + objectId + ')');
+    });
   }
   function updateDocEditorMeta(docKey, part) {
     var textarea = $('htl-doc-' + docKey + '-' + part);
@@ -1452,6 +2434,7 @@
       }
       renderDocStatus(docKey);
     });
+    renderObjectLinks();
   }
   function renderDocStatus(docKey) {
     var statusElement = $('htl-doc-status-' + docKey);
@@ -1459,7 +2442,7 @@
     var target = DB.draft.docs[docKey].target;
     var memory = docMemory(docKey);
     if (target && target.objectId) {
-      var dirty = memory.dirty || contentSignature(docKey) !== (target.pushedSignature || '');
+      var dirty = memory.dirty || !contentSignatureMatches(docKey, target.pushedSignature);
       statusElement.textContent = target.objectType + ' · ' + target.objectId
         + ' · saved ' + (target.pushedAt ? formatDateTime(target.pushedAt) : '?')
         + (dirty ? ' · not saved' : '');
@@ -1487,6 +2470,7 @@
     }
     doc.dirty = true;
     renderDocStatus(docKey);
+    updateDocLinkSize(docKey);
   }
   function handleDocActionClick(event) {
     var button = event.target && event.target.closest ? event.target.closest('[data-act]') : null;
@@ -1664,8 +2648,15 @@
       return;
     }
     var objectType = versionsTargetType();
-    if (!String(DB.draft.toolHtmlCode || '').trim() && !String(DB.draft.toolCssCode || '').trim() && !String(DB.draft.toolJsCode || '').trim()) {
+    if (!String(codePartText('html') || '').trim() && !String(codePartText('css') || '').trim() && !String(codePartText('js') || '').trim()) {
       notify('The code is empty - nothing to snapshot.', 'warning');
+      return;
+    }
+    var snapshotBytes = utf8SizeOf(codePartText('html')) + utf8SizeOf(codePartText('css')) + utf8SizeOf(codePartText('js'));
+    var snapshotMaxBytes = versionSnapshotMaxBytes();
+    if (snapshotBytes > snapshotMaxBytes) {
+      logDiagnostics('version-snapshot', 'skipped - code is ' + formatSizeLabel(snapshotBytes) + ' (limit ' + formatSizeLabel(snapshotMaxBytes) + ')');
+      notify('Code snapshot skipped: the current code is ' + formatSizeLabel(snapshotBytes) + '. A version object stores HTML + CSS + JS in one document and must stay under 1 MB. Reduce the code, or use the code part objects as the working copy.', 'warning');
       return;
     }
     var toolSlug = toolSlugOf();
@@ -1688,9 +2679,9 @@
           toolSlug: toolSlug,
           toolName: DB.draft.toolName || '',
           versionNumber: nextNumber,
-          htmlCode: DB.draft.toolHtmlCode || '',
-          cssCode: DB.draft.toolCssCode || '',
-          jsCode: DB.draft.toolJsCode || '',
+          htmlCode: codePartText('html'),
+          cssCode: codePartText('css'),
+          jsCode: codePartText('js'),
           note: '',
           pushedAt: new Date().toISOString(),
           pushedBy: userNameOf()
@@ -1778,11 +2769,17 @@
     }
     if (!versionObject) { notify('Version not found in the list.', 'warning'); return; }
     var dcb = objectDcb(versionObject);
-    DB.draft.toolHtmlCode = String(dcb.htmlCode || '');
-    DB.draft.toolCssCode = String(dcb.cssCode || '');
-    DB.draft.toolJsCode = String(dcb.jsCode || '');
+    var versionLoadSplit = codePartsMode() === 'split';
+    CODE_PART_KEYS.forEach(function (part) {
+      var loadedCode = String(dcb[part + 'Code'] || '');
+      codePartMemory(part).code = loadedCode;
+      codePartMemory(part).loaded = true;
+      codePartMemory(part).dirty = true;
+      if (!versionLoadSplit) DB.draft[toolCodeKeyOf(part)] = loadedCode;
+    });
     persist();
     renderCodeEditors();
+    syncCodePartsMode();
     logDiagnostics('version-load', 'loaded v' + dcb.versionNumber + ' from ' + objectId);
     notify('Version v' + dcb.versionNumber + ' loaded into the editors.', 'success');
   }
@@ -1850,15 +2847,21 @@
     }).join('');
   }
   function copyText(text) {
+    copyTextWithMessage(text, 'URL copied.');
+  }
+  function copyTextWithMessage(text, successMessage) {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () { notify('URL copied.', 'success'); }, function () { fallbackCopy(text); });
+        navigator.clipboard.writeText(text).then(function () { notify(successMessage, 'success'); }, function () { fallbackCopyWithMessage(text, successMessage); });
         return;
       }
     } catch (error) {}
-    fallbackCopy(text);
+    fallbackCopyWithMessage(text, successMessage);
   }
   function fallbackCopy(text) {
+    fallbackCopyWithMessage(text, 'URL copied.');
+  }
+  function fallbackCopyWithMessage(text, successMessage) {
     try {
       var tempTextarea = document.createElement('textarea');
       tempTextarea.value = text;
@@ -1868,7 +2871,7 @@
       tempTextarea.select();
       document.execCommand('copy');
       document.body.removeChild(tempTextarea);
-      notify('URL copied.', 'success');
+      notify(successMessage, 'success');
     } catch (error) {
       notify('Copy failed - select and copy manually: ' + text, 'warning');
     }
@@ -1935,7 +2938,12 @@
     var label = kilobytes >= 1024 ? (kilobytes / 1024).toFixed(2) + ' MB' : Math.round(kilobytes) + ' KB';
     meterElement.textContent = label;
     meterElement.className = 'htl-size-meter' + (bytes >= 950 * 1024 ? ' danger' : (bytes >= 800 * 1024 ? ' warn' : ''));
-    meterElement.title = bytes + ' bytes in the stored value (code + metadata) - documents live in their own objects';
+    var partsBytes = 0;
+    CODE_PART_KEYS.forEach(function (part) { partsBytes += codePartMemory(part).code.length; });
+    var modeLabel = codePartsMode() === 'split' ? 'split - code lives in part objects' : 'combined - code lives in this record';
+    meterElement.title = bytes + ' bytes in the stored value (code + metadata) - ' + modeLabel + ' - code parts: ' + Math.round(partsBytes / 1024) + ' KB';
+    renderCodeModeBadge();
+    renderCodeSizes();
   }
 
   /* --------------------------------------------------------
@@ -2002,22 +3010,40 @@
     on('htl-versions-snapshot', 'click', snapshotCodeVersion);
     on('htl-versions-refresh', 'click', renderVersionsList);
     on('htl-versions-list', 'click', handleVersionsActionClick);
+    on('htl-documents-refresh', 'click', renderDevDocuments);
+    on('htl-dev-docs-list', 'click', handleDevDocumentCopy);
+    on('htl-dev-docs-list', 'click', handleObjectLinkClick);
+    on('htl-object-links', 'click', handleObjectLinkClick);
+    on('htl-code-link-html', 'click', handleObjectLinkClick);
+    on('htl-code-link-css', 'click', handleObjectLinkClick);
+    on('htl-code-link-js', 'click', handleObjectLinkClick);
   }
 
   function bindCodeEditor(codeKey) {
     var textarea = $('htl-code-' + codeKey);
     if (!textarea) return;
     function onCodeChanged() {
-      DB.draft[codeKey] = textarea.value;
+      var part = codePartKeyOf(codeKey);
+      var memory = codePartMemory(part);
+      memory.code = textarea.value;
+      memory.dirty = true;
+      // While the code is split, only the part objects hold it - never write it back into this record.
+      if (codePartsMode() !== 'split') DB.draft[codeKey] = textarea.value;
       updateCodeMeta(codeKey);
       persist();
-      clearTimeout(_gutterTimers[codeKey]);
-      _gutterTimers[codeKey] = setTimeout(function () { updateGutter(codeKey); }, 160);
+      updateGutter(codeKey);
+      scheduleCodeModeSync();
     }
     textarea.addEventListener('input', onCodeChanged);
+    textarea.addEventListener('paste', function () {
+      setTimeout(function () { syncGutterToEditor(codeKey); }, 0);
+    });
+    textarea.addEventListener('blur', function () {
+      clearTimeout(_codeModeTimer);
+      syncCodePartsMode();
+    });
     textarea.addEventListener('scroll', function () {
-      var gutter = $('htl-gutter-' + CODE_TAB_OF_KEY[codeKey]);
-      if (gutter) gutter.scrollTop = textarea.scrollTop;
+      syncGutterToEditor(codeKey);
     });
     textarea.addEventListener('keydown', function (event) {
       if (event.key !== 'Tab') return;
@@ -2041,15 +3067,23 @@
     logDiagnostics('ready', 'tool API keys: ' + Object.keys(tool || {}).join(', '));
     logDiagnostics('ready-value', JSON.stringify(value).slice(0, 300));
     _ownRecordName = String((readyFields && readyFields.name) || '');
+    var ownFields = null;
+    try { ownFields = tool.getFields ? tool.getFields() : null; } catch (error) {}
+    var readyRecordId = readyFields && (readyFields.id || readyFields._id || readyFields.objectId || readyFields.recordId);
+    var fieldRecordId = ownFields && (ownFields.id || ownFields._id || ownFields.objectId || ownFields.recordId);
+    _ownRecordId = String(readyRecordId || fieldRecordId || '');
+    var readyObjectType = readyFields && (readyFields.cmsObjectType || readyFields.objectType);
+    var fieldObjectType = ownFields && (ownFields.cmsObjectType || ownFields.objectType);
+    _ownObjectType = String(readyObjectType || fieldObjectType || '');
+    var readySource = readyFields && (readyFields.source || readyFields.collection || readyFields._source);
+    var fieldSource = ownFields && (ownFields.source || ownFields.collection || ownFields._source);
+    var sourceValue = String(readySource || fieldSource || '');
+    _ownSource = /^om_(private_)?objects$/.test(sourceValue) ? sourceValue : '';
     var ownTypeIdSource = (readyFields && readyFields.typeId) ? readyFields.typeId : '';
-    if (!ownTypeIdSource) {
-      try {
-        var folderFields = tool.getFields ? tool.getFields() : null;
-        if (folderFields && folderFields.typeId) ownTypeIdSource = folderFields.typeId;
-      } catch (error) {}
-    }
+    if (!ownTypeIdSource && ownFields && ownFields.typeId) ownTypeIdSource = ownFields.typeId;
     _ownTypeId = String(ownTypeIdSource || '');
     logDiagnostics('ready-folder', 'leaf folder (typeId): ' + (_ownTypeId || '(none)'));
+    logDiagnostics('ready-record', 'record id: ' + (_ownRecordId || '(none)') + ' · type: ' + (_ownObjectType || '(none)'));
     try {
       tool.declareOutput({
         type: 'object',
@@ -2062,6 +3096,7 @@
           toolParams: { type: 'string' }, toolOutputSchema: { type: 'string' }, toolValidationEnabled: { type: 'string' },
           toolCategories: { type: 'array' }, toolTags: { type: 'array' },
           docs: { type: 'object', description: 'Per-document target references only - document content lives in separate CMS objects.' },
+          codeParts: { type: 'object', description: 'Per-part object references (html/css/js) - the code itself lives in tool-code-parts-applicationstore objects.' },
           shots: { type: 'array', description: 'Screenshot metadata - storage URLs only, never file bytes.' }
         }
       });
@@ -2089,6 +3124,42 @@
         {
           name: 'versionsTargetType', label: 'Versions Target Object Type', type: 'text', default: DEFAULT_VERSIONS_TARGET_TYPE, severity: 'goodToHave',
           hint: 'CMS object type holding code snapshots - one object per push, newest 20 kept per tool.'
+        },
+        {
+          name: 'codePartsTargetType', label: 'Code Parts Target Object Type', type: 'text', default: DEFAULT_CODE_PARTS_TARGET_TYPE, severity: 'goodToHave',
+          hint: 'Object type holding the code parts (html/css/js) - one object per part, split into numbered chunk objects above codeChunkKb. Default: tool-code-parts-applicationstore (Application Store namespace). It must be listed in the field allowedObjectTypes.'
+        },
+        {
+          name: 'codeChunkKb', label: 'Code Chunk Size (KB)', type: 'text', default: String(DEFAULT_CODE_CHUNK_KB), severity: 'goodToHave',
+          hint: 'Maximum code per part object (UTF-8 bytes). A part above this size is split into numbered chunks (chunkIndex/chunkCount) in the same object type. Default 800 KB, safely under the 1 MB document limit.'
+        },
+        {
+          name: 'cmsAdminBaseUrl', label: 'CMS Admin Base URL', type: 'text', default: DEFAULT_CMS_ADMIN_BASE_URL, severity: 'goodToHave',
+          hint: 'CMS host tried for /__/firebase/init.json when auto-detecting the Firestore project id. Default: https://applicationstore.uniconhub.com.'
+        },
+        {
+          name: 'firestoreProjectId', label: 'Firestore Project ID', type: 'text', default: '', severity: 'goodToHave',
+          hint: 'Firebase project id used to build DIRECT Firestore document links in DB Docs and on the fire icons: console.firebase.google.com/project/<id>/firestore/databases/<db>/data/~2F<collection>~2F<docId>. When empty, the tool auto-detects it from a screenshot storage URL, the record shell, or /__/firebase/init.json.'
+        },
+        {
+          name: 'firestoreDatabaseId', label: 'Firestore Database ID', type: 'text', default: '-default-', severity: 'goodToHave',
+          hint: 'Database id used in direct Firestore links. The Firebase default database id is -default-.'
+        },
+        {
+          name: 'firestoreDefaultCollection', label: 'Firestore Default Collection', type: 'text', default: DEFAULT_FIRESTORE_COLLECTION, severity: 'goodToHave',
+          hint: 'Collection used when an object type has no entry in Firestore Collection Map. Default: om_objects.'
+        },
+        {
+          name: 'firestoreCollectionMap', label: 'Firestore Collection Map', type: 'text', default: JSON.stringify(DEFAULT_FIRESTORE_COLLECTION_MAP), severity: 'goodToHave',
+          hint: 'JSON map of CMS object type -> Firestore collection, e.g. {"tool-code-parts-applicationstore":"om_private_objects"}. Types not listed use the default collection or the record source.'
+        },
+        {
+          name: 'versionSnapshotMaxKb', label: 'Version Snapshot Max (KB)', type: 'text', default: String(DEFAULT_VERSION_SNAPSHOT_MAX_KB), severity: 'goodToHave',
+          hint: 'A version object stores HTML + CSS + JS in one document. Snapshots above this size are skipped with a warning until chunked snapshots exist.'
+        },
+        {
+          name: 'codeSplitThresholdKb', label: 'Code Split Threshold (KB)', type: 'text', default: '500', severity: 'goodToHave',
+          hint: 'Above this total code size (html+css+js combined) the code splits into per-part objects, each with its own 1 MB budget. Below 80% of this value it merges back into the record. The record itself keeps only refs while split.'
         },
         {
           name: 'docsFolderTypeMap', label: 'Docs Folder Type Map', type: 'text', default: JSON.stringify(DEFAULT_DOCS_FOLDER_TYPE_MAP), severity: 'goodToHave',
@@ -2122,12 +3193,14 @@
 
     migrateLegacyDocContent(value);
     DB = normalize(value);
+    initCodePartsMemory();
     _readOnly = !!tool.isReadOnly();
     wireEvents();
     renderAll();
     lockUI();
     refreshUser();
     reportValidation();
+    detectFirestoreProjectId([readyFields, ownFields]);
 
     tool.onValueChange(function (newValue) {
       if (_saving) return;
@@ -2144,6 +3217,8 @@
       _user = user || getUserSafe();
       renderUser();
       lockUI();
+      renderAccessLinks();
+      logRolesChange();
     });
   });
 })();

@@ -22,8 +22,8 @@ folder). They are NOT part of this tool - matches the existing SHIP-CMS-PLAN.
 
 ```
 One tool record (HtmlToolLibraryItem instance)
- +-- tool value (setValue) ............ tool definition + code + doc drafts + shot URLs
- |     (saved back to sibling fields as today)
+ +-- tool value (setValue) ............ tool definition + metadata + doc targets + shot URLs
+ |     (saved back to sibling fields as today; NO code since 2026-11-24)
  +-- CMS storage bucket ............... screenshot files (PNG), referenced by URL only
  |
  +-- Target objects (tool.requestObjects)
@@ -33,7 +33,11 @@ One tool record (HtmlToolLibraryItem instance)
       |     updates doc      ->  data.htmlPage.code.{html,css,js} + seo
       |     presentation doc ->  data.htmlPage.code.{html,css,js} + seo
       +-- social application objects .... structured social content (NOT a page)
-      +-- tool-code-versions-uniconbaseapps objects .... code snapshots, max 20 per tool
+      +-- tool-code-versions-applicationstore objects .... code snapshots, max 20 per tool
+      +-- tool-code-parts-applicationstore objects ..... ONE object per code part
+      |     html part        ->  {toolSlug, part:'html', code}
+      |     css part         ->  {toolSlug, part:'css', code}
+      |     js part          ->  {toolSlug, part:'js', code}
 ```
 
 Every target object carries a stable identification so a re-push UPDATES
@@ -176,7 +180,7 @@ inside the tool's own 1 MB object):
   settings.allowObjectCRUD: 'yes'
   settings.allowedObjectTypes: [
     { mainObjectType: "website-builder-uniconbaseapps", role: 'editor', scope: 'shared', targetCollection: 'public' },
-    { mainObjectType: "tool-social-content-uniconbaseapps",       role: 'editor', scope: 'shared', targetCollection: 'public' },
+    { mainObjectType: "tool-social-content-applicationstore",       role: 'editor', scope: 'shared', targetCollection: 'public' },
     { mainObjectType: "<versions type>",     role: 'editor', scope: 'shared', targetCollection: 'public' }
   ]
   settings.allowUpload: 'yes'   (for screenshots)
@@ -191,7 +195,7 @@ inside the tool's own 1 MB object):
 3. SOCIAL is not a website page - it gets its own application; social
    media integrations come later.
 4. Code versioning: push updates the tool record in place AND snapshots
-   the code into a separate cmsObjectType (tool-code-versions-uniconbaseapps); return to
+   the code into a separate cmsObjectType (tool-code-versions-applicationstore); return to
    any older version; auto-delete everything older than the newest 20.
 5. Auto generation + auto push from the repo: the repo docs pipeline
    (docs:generate) produces the content and the push goes through the
@@ -241,12 +245,48 @@ live in the tool record. Every document must be its own Firestore
 document in another cmsObjectType. This section replaces the "drafts in
 tool value" part of sections 2 and 3.
 
+### 9.0 Code parts (2026-11-24 - dynamic: combined below 500 KB, split above)
+
+Big tools outgrew the record's single 1 MB Firestore budget, so code
+storage is now DYNAMIC:
+
+- COMBINED (default): the html/css/js blocks stay in the record value
+  exactly as before while the total code size stays at or below
+  codeSplitThresholdKb (default 500 KB). No part objects are created.
+- SPLIT: the moment the total code size crosses the threshold the three
+  blocks are pushed into ONE object per part of type
+tool-code-parts-applicationstore - each part gets its own 1 MB budget -
+  and the record keeps only refs:
+
+  draft.codeParts = {
+    html: { objectId, pushedAt, pushedSignature },
+    css:  { objectId, pushedAt, pushedSignature },
+    js:   { objectId, pushedAt, pushedSignature }
+  }
+
+- MERGE BACK: when the total code size drops below 80% of the threshold
+  the code returns to the record and the part objects are deleted
+  (hysteresis prevents flapping at the boundary).
+- Behavior: transitions happen automatically after a 1.2s debounce of
+  editing or on blur. While split, edits re-push each part; a push
+  failure or a missing object API keeps the code in the record so
+  nothing is ever lost. Version snapshots read from memory and are
+  unchanged. Minification is NOT applied - readable source stays
+  diffable; shrinking a part further should be done by moving embedded
+  assets to storage URLs.
+
 ### 9.1 New storage model
 
 Tool record value (the ONLY 1 MB budget for code):
   { version, draft: { toolName, toolIcon, ..., toolHtmlCode, toolCssCode,
-    toolJsCode, toolParams, toolOutputSchema, ..., toolCategories,
+    toolJsCode (legacy fallback copies only - emptied after each push),
+    toolParams, toolOutputSchema, ..., toolCategories,
     toolTags, shots (URL metadata only),
+    codeParts: {
+      html: { objectId, pushedAt, pushedSignature },
+      css:  { objectId, pushedAt, pushedSignature },
+      js:   { objectId, pushedAt, pushedSignature }
+    },
     docs: {
       webpage:      { target: {objectType, objectId, slug, pushedAt, pushedSignature} },
       help:         { target: ... },
@@ -262,8 +302,10 @@ Separate Firestore documents (one object each, each with its own 1 MB):
   - help         -> website-builder page object
   - updates      -> website-builder page object
   - presentation -> website-builder page object
-  - social       -> social object (tool-social-content-uniconbaseapps)
+  - social       -> social object (tool-social-content-applicationstore)
   - code snapshots -> versions objects (already separate, newest 20)
+  - code parts (html/css/js) -> tool-code-parts-applicationstore objects
+    (see 9.0 - 1 MB per part; the record keeps refs only)
 
 ### 9.2 Editor behavior
 

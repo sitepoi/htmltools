@@ -1,7 +1,22 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-html-tool-rules.txt — VERSION 3.16 — 2026-11-24
+html-tool-rules.txt — VERSION 3.18 — 2026-11-25
 
-CHANGELOG v3.16: vision is called BROWSER-DIRECT (D-HTMLT-35). The CMS mints a
+CHANGELOG v3.18: requestObjects('update') now MERGES `productData.data_categoriesBased`
+over the stored values instead of writing the map wholesale (D-HTMLT-40). A tool
+that chunks large code into several objects can update ONE key (`code`) without
+erasing `toolSlug` / `part` / `chunkIndex` / `chunkCount` / `pushedAt`.
+create still returns the new object including `id`; delete still hard-deletes;
+one document is still 1 MiB (the CMS does no chunking — the split/chunk sizes
+are the tool's business). Previous changelog v3.17: an `-applicationstore` id is no longer unconditionally the
+store. The CMS now checks OWNERSHIP before routing: a type is tenant-owned when
+it is REGISTERED in the tenant's object types, or when its id ends with that
+tenant's own id (`…-<tenantId>`). Owned ids use the tenant's tables (create /
+update / delete allowed subject to allowedObjectTypes); unowned ids keep the
+PUBLIC READ-ONLY store behaviour and now say so explicitly ("belongs to the
+platform store, not to this tenant"). Being in allowedObjectTypes does NOT
+grant ownership (D-HTMLT-39). Also, the AI model is chosen by the CMS — the
+field's `aiModel` param, default `deepseek-flash` — and can never be passed by
+the tool (D-HTMLT-38, D-AICH-03). Previous changelog v3.16: vision is called BROWSER-DIRECT (D-HTMLT-35). The CMS mints a
 120 s scoped JWT and the page images go straight from the browser to the
 gateway, so no serverless function sits in the path and no platform budget can
 cut a 90-120 s model call. The server relay remains as an automatic fallback.
@@ -382,6 +397,17 @@ ALWAYS end with `-uniconbaseapps`.
      A tenant-local type MUST NEVER end with `-applicationstore` and MUST
      NEVER carry a store type's name — reads would be routed to the store and
      the local objects would silently never appear.
+
+     RUNTIME PRECEDENCE (v3.17, D-HTMLT-39): the suffix is a ROUTING KEY, not
+     an ownership proof. The CMS asks "does this tenant own the id?" first and
+     only unowned ids follow the routing table above. Owned means EITHER
+     (a) the id is registered in the tenant's object types, OR (b) the id ends
+     with `-<that tenant's tenant id>`. An owned id reads and writes the
+     tenant's own tables (still subject to allowObjectCRUD + allowedObjectTypes).
+     Being listed in `allowedObjectTypes` does NOT make an id owned — the
+     allowlist can only permit access to a type the tenant already owns.
+     Practical rule: keep local type names free of reserved suffixes. Only a
+     platform-published type may carry `-applicationstore`.
 
   WHY THIS IS MANDATORY: type ids are permanent keys. Choosing them before any
   tenant holds data costs nothing; renaming a type that already contains
@@ -863,9 +889,11 @@ Sends a prompt to the CMS AI service and returns the response text.
 Limits: 120 second timeout per request.
         1 concurrent requests maximum (additional requests are queued).
         Dynamic prompt limit based on the AI model's context window
-        (e.g. ~2.4M chars for DeepSeek V4 Pro, ~307K for GPT-5 Nano).
-        Prompts exceeding the model limit are truncated; check the error
-        param for a truncation notice.
+        (e.g. ~1M tokens for deepseek-flash). Prompts exceeding the model
+        limit are truncated; check the error param for a truncation notice.
+        THE MODEL IS NOT YOURS TO CHOOSE (v3.17): the CMS decides it from the
+        field's `aiModel` param, default `deepseek-flash`. There is no model
+        argument on requestAI/requestAIStream — anything you post is ignored.
         The AI Gateway is called directly from the browser via a JWT token
         (no server-side proxy bottleneck).
 Requires: allowAi: 'yes' in toolParams.
@@ -1337,6 +1365,12 @@ unlimited objects across unlimited types.
 
   update: { mainObjectType, objectId, productData: { data_categoriesBased: {...} }, name? }
           • Only include fields you want to change — partial updates are supported
+          • MERGE SEMANTICS (v3.18, D-HTMLT-40): the keys you send are merged
+            over the stored data_categoriesBased values; every other key in the
+            document is preserved. Send ONLY the keys you changed.
+          • Requires a known base version: query/get the object first (or pass
+            baseVersion) — the CMS rejects an update it cannot order ("Object
+            version unknown - load the object first")
           • Omit productData to only update the name, or vice versa
           result: { ok: true }
 
