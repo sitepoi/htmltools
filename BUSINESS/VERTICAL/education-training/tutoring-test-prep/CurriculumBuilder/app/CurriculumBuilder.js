@@ -1,4 +1,4 @@
-/* js build 2026-11-18-108 */
+/* js build 2026-11-18-129 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-108';
+var TOOL_BUILD = '2026-11-18-129';
 // Boot diagnostic: which build is running, and is the large-file download channel present?
 (function logFileChannelAvailability() {
   console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' · Curriculum Builder');
@@ -100,7 +100,8 @@ var mainDocuments = [];          // reference PDFs in CMS storage: { id, name, u
 var orphanedStorageFiles = [];   // files the host refused to delete: { url, label, deletedAt } (purge list)
 var curriculumLanguage = '';     // language saved with the curriculum (default OCR language)
 var curriculumPictureDetection = '';   // '' = tool parameter | 'auto' | 'local' | 'vision'
-var curriculumVisionPageMaxSide = 0;   // 0 = tool parameter, else 600..2048 px
+var curriculumVisionPageMaxSide = 0;   // 0 = tool parameter, else 600..4096 px
+var curriculumRephrasePrompt = '';     // '' = built-in default, else the author's own rephrasing rules
 var studioOcrLanguageOverride = ''; // per-document OCR language chosen in the Process drawer
 var editingSectionIdx = null;    // Index being edited in editingSectionParent
 var editingSectionParent = null; // Array that holds the section being edited (sections or a parent's children)
@@ -120,6 +121,7 @@ var editingHtmlDocUrls = [];
 var editingHiddenDocUrls = [];  // URLs hidden from student view
 var editingFlashcards = [];     // Flashcards (generated from PDFs)
 var editingHtmlCode = '';       // Raw HTML code (not URL — embedded directly)
+var editingLessonLegacyContent = ''; // legacy rich-text 'content' field: kept as-is, never rewritten
 var editingStudyHtmlData = null;   // JSON data: { components: [...] }
 var editingPresentationHtml = '';  // AI-generated presentation HTML (slides)
 var editingHiddenSections = [];    // Content sections hidden from students
@@ -464,6 +466,17 @@ function writeLessonSummaryFields(les) {
   les.hasNotes = hasLessonNotes(les);
   les.hasStudyContent = hasLessonStudyContent(les);
   les.hasPresentation = !!(les.presentationHtml && String(les.presentationHtml).length > 20);
+  // Reference extracts are heavy (the lesson doc owns them). These two light
+  // fields keep the relation visible in the lists and in the reference library
+  // WITHOUT loading every lesson doc.
+  var lessonReferenceDocs = Array.isArray(les.referenceDocs) ? les.referenceDocs : [];
+  les.referenceDocCount = lessonReferenceDocs.length;
+  var lessonReferencePartIds = [];
+  for (var referenceIndex = 0; referenceIndex < lessonReferenceDocs.length; referenceIndex++) {
+    var referenceEntry = lessonReferenceDocs[referenceIndex];
+    if (referenceEntry && referenceEntry.partId) lessonReferencePartIds.push(referenceEntry.partId);
+  }
+  les.referencePartIds = lessonReferencePartIds;
   return les;
 }
 
@@ -3003,6 +3016,9 @@ function buildMediaSummary(les) {
   if (presCount > 0) chips.push(chip('📊', presCount, 'Slides'));
   var studyCount = countList(les.studyDocPdfUrls);
   if (studyCount > 0) chips.push(chip('📖', studyCount, 'Docs'));
+  // Reference extracts live in the lesson doc; the light index keeps the count here.
+  var referenceCount = Number(les.referenceDocCount) || (Array.isArray(les.referenceDocs) ? les.referenceDocs.length : 0);
+  if (referenceCount > 0) chips.push(chip('📎', referenceCount, 'Refs'));
   var wsCount = countList(les.worksheetPdfUrls);
   if (wsCount > 0) chips.push(chip('📝', wsCount, 'Sheets'));
   var akCount = countList(les.answerKeyPdfUrls);
@@ -3080,31 +3096,7 @@ function syncDrawerScrollLock() {
   else document.body.classList.remove('drawer-scroll-locked');
 }
 
-/* ── HTML Editor ── */
-function execCmd(cmd, val) { document.execCommand(cmd, false, val); }
-function getHtmlContent() { var contentEl = el('html-editor-content'); return contentEl ? (contentEl.innerHTML || '') : ''; }
-function setHtmlContent(html) { var contentEl = el('html-editor-content'); if (contentEl) contentEl.innerHTML = html || ''; }
-
 /* ── Sandbox-safe link URL input ── */
-function showLinkUrlInput() {
-  var existing = showLinkUrlInput._overlay;
-  if (existing) existing.remove();
-  var overlay = document.createElement('div');
-  overlay.className = 'link-url-overlay';
-  overlay.innerHTML = '<div class="link-url-box"><div class="link-url-label">Enter URL:</div><input class="form-input" id="link-url-input" type="url" placeholder="https://..." value="https://"><div class="link-url-actions"><button class="btn btn-outline btn-sm" id="link-url-cancel">Cancel</button><button class="btn btn-primary btn-sm" id="link-url-ok">Insert Link</button></div></div>';
-  document.body.appendChild(overlay);
-  showLinkUrlInput._overlay = overlay;
-  var input = overlay.querySelector('#link-url-input');
-  setTimeout(function() { input.focus(); input.select(); }, 50);
-  overlay.querySelector('#link-url-cancel').addEventListener('click', function() { overlay.remove(); showLinkUrlInput._overlay = null; });
-  overlay.querySelector('#link-url-ok').addEventListener('click', function() {
-    var url = input.value.trim();
-    overlay.remove(); showLinkUrlInput._overlay = null;
-    if (url) { el('html-editor-content').focus(); execCmd('createlink', url); }
-  });
-  overlay.addEventListener('click', function(e) { if (e.target === overlay) { overlay.remove(); showLinkUrlInput._overlay = null; } });
-  document.addEventListener('keydown', function onEsc(e) { if (e.key === 'Escape') { overlay.remove(); showLinkUrlInput._overlay = null; document.removeEventListener('keydown', onEsc); } });
-}
 
 /* ── Confirm dialog ── */
 var _confirmCallback = null;
@@ -3317,6 +3309,12 @@ function loadCurriculum(val) {
   if (curriculumValue && curriculumValue.visionPageMaxSide !== undefined) {
     curriculumVisionPageMaxSide = normalizeVisionPageMaxSide(curriculumValue.visionPageMaxSide);
   }
+  // The rephrasing rules live with the curriculum: the code ships a default,
+  // the author can replace it in Settings.
+  if (curriculumValue && typeof curriculumValue.rephrasePrompt === 'string') {
+    curriculumRephrasePrompt = normalizeRephrasePrompt(curriculumValue.rephrasePrompt);
+  }
+  syncRephrasePromptSettings();
   syncStudioPictureDetectionControls();
   // GUARD: an empty value must NEVER wipe a curriculum that is already on
   // screen. Keep the screen and keep reading tool.getValue() instead.
@@ -3499,6 +3497,7 @@ function buildCurriculumValueForCms() {
   if (curriculumLanguage) curriculumValue.language = curriculumLanguage;
   if (curriculumPictureDetection) curriculumValue.pictureDetection = curriculumPictureDetection;
   if (curriculumVisionPageMaxSide) curriculumValue.visionPageMaxSide = curriculumVisionPageMaxSide;
+  if (curriculumRephrasePrompt) curriculumValue.rephrasePrompt = curriculumRephrasePrompt;
   // Reference documents live in their OWN CMS objects when the store is ready,
   // so the curriculum record carries no library metadata at all. The legacy
   // list is only written back when object CRUD is unavailable.
@@ -5051,7 +5050,7 @@ function startAddLesson() {
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
   updateHtmlPreview();
-  setHtmlContent('');
+  editingLessonLegacyContent = '';
   editingSourceLinks = []; editingSourceLinkIdx = null;
   renderSourceLinksEditorList();
   hideSubModal('source-link-editor-panel');
@@ -5064,7 +5063,11 @@ function startAddLesson() {
   switchLessonEditorTab('info');
   updateAllVisToggles();
   updateLessonEditorDocLink(null);  // clear doc link for new lesson
-  el('lesson-editor-heading').textContent = 'Add Lesson';
+  var modalAddSection = (editingSectionParent && editingSectionIdx !== null) ? editingSectionParent[editingSectionIdx] : null;
+  var modalAddSectionLabel = sectionNumberLabelOf(modalAddSection);
+  el('lesson-editor-heading').textContent = 'Add Lesson' +
+    (modalAddSectionLabel ? ' · ' + modalAddSectionLabel : '') +
+    ' · position ' + (editingLessons.length + 1);
 }
 
 /** Populate the lesson editor fields from a lesson data object */
@@ -5111,7 +5114,9 @@ function populateEditorFromLesson(les) {
   normalizeStudyContentInput(false);
   renderStudyDocStudio();
   updateHtmlPreview();
-  setHtmlContent(les.content || '');
+  // Legacy rich text: display-only data from the old editor. It is preserved
+  // verbatim on save; the Study Content code editor is the editable source.
+  editingLessonLegacyContent = les.content || '';
   var srcVal = les.sourceUrls;
   if (srcVal && typeof srcVal === 'string') { try { srcVal = JSON.parse(srcVal); } catch(e) { srcVal = null; } }
   editingSourceLinks = (srcVal && Array.isArray(srcVal)) ? JSON.parse(JSON.stringify(srcVal)) : [];
@@ -5128,7 +5133,13 @@ function populateEditorFromLesson(les) {
   populateLessonSectionSelect(currentSectionForPicker ? currentSectionForPicker.id : '', !!editingDirectSection);
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
-  el('lesson-editor-heading').textContent = 'Edit Lesson';
+  var editorContext = currentEditingLessonContext();
+  var editorLessonLabel = lessonNumberLabelOf(editorContext.section, editorContext.lesson);
+  var headingElement = el('lesson-editor-heading');
+  if (headingElement) {
+    headingElement.textContent = 'Edit Lesson' + (editorLessonLabel ? ' · ' + editorLessonLabel : '');
+    headingElement.title = (les.title ? les.title + ' - ' : '') + (editorLessonLabel || 'Lesson');
+  }
   // Show lesson doc link if available
   updateLessonEditorDocLink(les);
 }
@@ -5146,7 +5157,7 @@ function editLesson(idx) {
 function saveLessonFromEditor() {
   var title = el('edit-lesson-title').value.trim();
   if (!title) { tool.notify('Lesson title is required.', 'warning'); return; }
-  var content = getHtmlContent();
+  var content = editingLessonLegacyContent;
   var order = parseInt(el('edit-lesson-order').value) || editingLessons.length + 1;
   var minutes = parseInt(el('edit-lesson-minutes').value) || 0;
   // Sync HTML code from textarea (v2 takes priority, fall back to v1)
@@ -5304,8 +5315,7 @@ function updateAllVisToggles() {
     'studyDocs': editingStudyDocPdfUrls.length > 0,
     'worksheets': editingWorksheetPdfUrls.length > 0,
     'answerKeys': editingAnswerKeyPdfUrls.length > 0,
-    'webDocs': editingHtmlDocUrls.length > 0,
-    'notes': !!(typeof getHtmlContent === 'function' && getHtmlContent())
+    'webDocs': editingHtmlDocUrls.length > 0
   };
 
   var toggles = document.querySelectorAll('.vis-tab-toggle');
@@ -5353,7 +5363,7 @@ function autoSaveCurrentLesson() {
       title: title,
       order: order,
       estimatedMinutes: minutes,
-      content: getHtmlContent() || null
+      content: editingLessonLegacyContent || null
     };
     targetArray.push(newLesson);
     editingLessonIdx = targetArray.length - 1;
@@ -5380,7 +5390,7 @@ function autoSaveCurrentLesson() {
   targetLesson.sourceUrls = editingSourceLinks.length > 0 ? JSON.parse(JSON.stringify(editingSourceLinks)) : null;
   targetLesson.hiddenSections = editingHiddenSections.length > 0 ? JSON.parse(JSON.stringify(editingHiddenSections)) : null;
   // Also sync content (rich text) and pdf urls to keep lesson doc complete
-  targetLesson.content = getHtmlContent() || null;
+  targetLesson.content = editingLessonLegacyContent || null;
   targetLesson.youtubeUrls = editingYoutubeUrls.length > 0 ? JSON.parse(JSON.stringify(editingYoutubeUrls)) : null;
   targetLesson.presentationPdfUrls = editingPresentationPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingPresentationPdfUrls)) : null;
   targetLesson.studyDocPdfUrls = editingStudyDocPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingStudyDocPdfUrls)) : null;
@@ -5460,7 +5470,7 @@ function startAddLessonDirect(sectionId) {
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
   updateHtmlPreview();
-  setHtmlContent('');
+  editingLessonLegacyContent = '';
   editingSourceLinks = []; editingSourceLinkIdx = null;
   renderSourceLinksEditorList();
   hideSubModal('source-link-editor-panel');
@@ -5472,7 +5482,10 @@ function startAddLessonDirect(sectionId) {
   switchLessonEditorTab('info');
   updateAllVisToggles();
   updateLessonEditorDocLink(null);  // clear doc link for new lesson
-  el('lesson-editor-heading').textContent = 'Add Lesson to ' + (editingDirectSection.title || 'Section');
+  var addSectionLabel = sectionNumberLabelOf(editingDirectSection);
+  el('lesson-editor-heading').textContent = 'Add Lesson' +
+    (addSectionLabel ? ' · ' + addSectionLabel : '') +
+    ' · position ' + ((editingDirectSection.lessons || []).length + 1);
 }
 
 function editLessonDirect(sectionId, lessonIdx) {
@@ -6025,18 +6038,10 @@ function renderPdfEditorList() {
   var list = el('pdf-list-all');
   var count = el('pdf-count-all');
   if (!list) return;
-  var rows = [];
-  var typeKeys = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
-  for (var t = 0; t < typeKeys.length; t++) {
-    var arr = getPdfArray(typeKeys[t]);
-    for (var i = 0; i < arr.length; i++) rows.push({ type: typeKeys[t], idx: i, url: arr[i], role: 'real' });
-  }
-  for (var s = 0; s < editingStudyDocSources.length; s++) {
-    rows.push({ type: editingStudyDocSources[s].type || 'studyDoc', url: editingStudyDocSources[s].url, role: 'source' });
-  }
+  var rows = lessonDocumentEntries();
   if (count) count.textContent = rows.length + ' document(s)';
   if (rows.length === 0) {
-    list.innerHTML = '<div style="padding:10px 12px;text-align:center;color:var(--text-muted);font-size:12px;">No documents yet. Click "+ Add URL" or "⬆ Upload". ✅ Ready = your processed file used for AI content generation. 🧭 Sample = an outside sample used only to create your own Ready document.</div>';
+    list.innerHTML = '<div style="padding:10px 12px;text-align:center;color:var(--text-muted);font-size:12px;">No documents yet. Click "+ Add URL" or "⬆ Upload" and confirm the copyright line. ✅ Ready = your processed file used for AI content generation and shown to students. Outside source material belongs in 📚 Reference documents.</div>';
     return;
   }
   list.innerHTML = rows.map(function(row) {
@@ -6044,7 +6049,7 @@ function renderPdfEditorList() {
     var displayName = readableFileName(row.url);
     var isHidden = row.role === 'real' && editingHiddenDocUrls.indexOf(row.url) !== -1;
     var typeBadge = '<span class="doc-type-badge">' + (info.icon || '📎') + ' ' + esc(info.label || row.type) + '</span>';
-    var roleBadge = row.role === 'real' ? '<span class="doc-role-badge real">✅ Ready</span>' : '<span class="doc-role-badge source">🧭 Sample</span>';
+    var roleBadge = row.role === 'real' ? '<span class="doc-role-badge real">✅ Ready</span>' : '<span class="doc-role-badge source" title="An older processing input. Promote it to Ready or move outside material to the Reference documents.">🧭 Legacy sample</span>';
     var imageCount = studioDocImageCount(row.url);
     var imageNote = imageCount ? ' · 🖼 ' + imageCount + ' image(s)' : '';
     var originUrl = studioDocOriginUrl(row.url);
@@ -6164,13 +6169,19 @@ function openPdfEditor(type, idx, sourceUrl) {
 }
 
 /** Reflect the current role in the edit drawer's Ready/Sample switch.
- *  Checked = Ready (positive state), unchecked = Sample. */
+ *  Checked = Ready (positive state), unchecked = Sample.
+ *  A NEW lesson document is always Ready: outside/source material belongs in
+ *  the curriculum Reference documents, so the switch is only shown when an
+ *  existing legacy Sample is edited (so it can be promoted). */
 function updatePdfEditorRoleSwitch() {
   var roleSwitch = el('edit-pdf-item-role');
   var stateEl = el('pdf-editor-role-state');
   var visGroup = el('pdf-editor-vis-group');
   var roleHint = el('pdf-editor-role-hint');
+  var roleGroup = el('pdf-editor-role-group');
   var isSample = !!editingPdfSourceUrl;
+  var isNewDocument = !isSample && (editingPdfIdx === null || editingPdfIdx === undefined);
+  if (roleGroup) roleGroup.style.display = isNewDocument ? 'none' : '';
   if (roleSwitch) roleSwitch.checked = !isSample;
   if (stateEl) stateEl.textContent = isSample ? 'Sample' : 'Ready';
   if (visGroup) visGroup.style.display = isSample ? 'none' : '';
@@ -6507,8 +6518,8 @@ function startStudioGenerateNewContent() {
 function openStudioGenerateOptionsDialog(docUrl) {
   var currentDetectionMode = effectivePictureDetectionMode();
   var selectedPageSize = resolveVisionPageMaxSide();
-  var pageSizeOptions = [1200, 1600, 2048].map(function(sizeValue) {
-    return '<option value="' + sizeValue + '"' + (sizeValue === selectedPageSize ? ' selected' : '') + '>' + sizeValue + ' px</option>';
+  var pageSizeOptions = VISION_PAGE_SIZE_OPTIONS.map(function(sizeValue) {
+    return '<option value="' + sizeValue + '"' + (sizeValue === selectedPageSize ? ' selected' : '') + '>' + visionPageSizeLabel(sizeValue) + '</option>';
   }).join('');
   var bodyHtml =
     '<div class="sd-modal-section">' +
@@ -6522,9 +6533,10 @@ function openStudioGenerateOptionsDialog(docUrl) {
         '<span><strong>No pictures</strong> - skip the picture step entirely: no extraction and no AI vision calls. The content is generated from the document text only.</span></label>' +
     '</div>' +
     '<div class="sd-modal-section" id="sd-gen-size-section">' +
-      '<div class="sd-modal-label">AI page size</div>' +
+      '<div class="sd-modal-label">Page image size (long side)</div>' +
       '<select class="form-input" id="sd-gen-ai-size">' + pageSizeOptions + '</select>' +
-      '<div class="sd-modal-hint">Larger pages find small pictures in dense layouts and cost more.</div>' +
+      '<div class="sd-modal-hint">The page picture sent to AI vision: this is the length of its LONGER side (width or height, whichever is bigger); the other side follows the page shape. ' +
+        '1600 px is the default - 2560-4096 px give sharper crops of small pictures, but cost more AI tokens and take longer; 800 px is the cheapest.</div>' +
     '</div>' +
     '<div class="sd-modal-actions">' +
       '<button type="button" class="btn btn-outline" data-sd-close>Cancel</button>' +
@@ -6822,9 +6834,9 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
             if (onDone) onDone('no-text');
             return;
           }
-          // Reference documents are processed separately; their generated
-          // content is context for THIS real content and is never saved here.
-          var referenceContext = referenceLibraryGeneratedContext();
+          // Reference documents are processed separately; the parts sent to
+          // THIS lesson are the context for its real content.
+          var referenceContext = referenceLibraryGeneratedContext(null, editingReferenceDocs);
           if (referenceContext) {
             combinedText += '\n\n--- MATERIAL GENERATED FROM THE REFERENCE LIBRARY ---\n\n' + referenceContext;
           }
@@ -7552,6 +7564,26 @@ var studioLocalPdfName = '';   // original file name of the local PDF
 var studioLocalPdfBlobUrl = ''; // blob: URL of the local PDF, used for the preview
 var studioPreviewBlobUrl = ''; // blob: URL built from the CMS relay preview
 
+/* ── Review workspace: copyright similarity check + editor chat + regeneration ──
+   Everything below belongs to ONE document and lives in memory only. The
+   document itself keeps its generated content - never the review notes. */
+var STUDIO_REVIEW_SOURCE_LIMIT = 30000;       // source characters sent to the similarity check
+var STUDIO_REVIEW_GENERATED_LIMIT = 60000;    // generated html characters sent to the similarity check
+var STUDIO_REVIEW_CHAT_SOURCE_LIMIT = 12000;  // smaller excerpts keep each chat answer fast
+var STUDIO_REVIEW_CHAT_GENERATED_LIMIT = 20000;
+var STUDIO_REVIEW_CHAT_TURN_LIMIT = 8;        // previous messages kept in the chat prompt
+var STUDIO_GENERATED_HISTORY_LIMIT = 5;       // previous generated versions kept for undo
+var studioReviewDocUrl = '';         // document the review state below belongs to
+var studioReviewSourceText = '';     // cached text of that source document
+var studioReviewReport = null;       // last parsed similarity report
+var studioReviewReportRaw = '';      // the raw answer when it was not valid JSON
+var studioReviewComparedInfo = null; // { sourceCharacters, generatedCharacters, truncated }
+var studioReviewChat = [];           // [{ role: 'user' | 'editor', text }]
+var studioReviewStash = {};          // { docUrl: review state } - survives switching documents
+var studioReviewBusy = false;        // similarity check running
+var studioReviewChatBusy = false;    // chat answer running
+var studioGeneratedHistory = {};     // { docUrl: [previous generated versions] }
+
 /* ── Large-file download channel (tool.requestFileBinary) ──
    html-tool-rules v3.1: the parent CMS downloads the whole file in the
    browser and hands the COMPLETE ArrayBuffer to the tool - no 500 KB cap and
@@ -7790,9 +7822,14 @@ function fetchDocumentBytes(sourceUrl, options, onDone) {
   var cacheKey = 'file|' + sourceUrl;
   if (studioFileBytesCache[cacheKey]) {
     var cachedEntry = studioFileBytesCache[cacheKey];
-    if (requestOptions.onProgress) requestOptions.onProgress(cachedEntry.byteLength, cachedEntry.byteLength);
-    onDone(null, cachedEntry.bytes, cachedEntry);
-    return;
+    // A consumer that hands the bytes to PDF.js empties their buffer; never
+    // serve such an entry - fall through and download the file again.
+    if (!cachedEntry.bytes || !cachedEntry.bytes.length) delete studioFileBytesCache[cacheKey];
+    else {
+      if (requestOptions.onProgress) requestOptions.onProgress(cachedEntry.byteLength, cachedEntry.byteLength);
+      onDone(null, cachedEntry.bytes, cachedEntry);
+      return;
+    }
   }
   function finishDownload(errorCode, fileBytes, meta) {
     var waitingCallbacks = studioFileBytesInflight[cacheKey] || [];
@@ -8227,7 +8264,20 @@ function pdfDictionaryEntryText(dictionaryText, entryName) {
     }
     return null;
   }
-  var tokenMatch = /^(\d+\s+\d+\s+R|\/[^\s<>\[\]()\/]+|[+-]?[\d.]+|\([^)]*\)|true|false|null)/.exec(dictionaryText.substring(valueStart));
+  // Hex string (<0012AB...>) - the security handler stores /O and /U this way.
+  if (firstCharacter === '<') {
+    var hexEnd = dictionaryText.indexOf('>', valueStart);
+    if (hexEnd === -1) return null;
+    return dictionaryText.substring(valueStart, hexEnd + 1);
+  }
+  // Literal string: an escaped ')' does NOT close it, so the token has to be
+  // walked instead of matched (an /O or /U value can contain anything).
+  if (firstCharacter === '(') {
+    var literalEnd = pdfLiteralStringEnd(dictionaryText, valueStart);
+    if (literalEnd === -1) return null;
+    return dictionaryText.substring(valueStart, literalEnd + 1);
+  }
+  var tokenMatch = /^(\d+\s+\d+\s+R|\/[^\s<>\[\]()\/]+|[+-]?[\d.]+|true|false|null)/.exec(dictionaryText.substring(valueStart));
   return tokenMatch ? tokenMatch[0] : null;
 }
 
@@ -8274,8 +8324,9 @@ function pdfCollectClassicObjects(pdfText) {
 }
 
 /** Objects stored inside a compressed /Type /ObjStm container have no streams.
- *  Inflate each container and register the embedded object dictionaries. */
-function pdfExpandPdfObjectStreams(pdfObjects) {
+ *  Inflate each container and register the embedded object dictionaries.
+ *  For an encrypted document the container itself is decrypted first. */
+function pdfExpandPdfObjectStreams(pdfObjects, securityHandler) {
   var containerNumbers = Object.keys(pdfObjects);
   for (var containerIndex = 0; containerIndex < containerNumbers.length; containerIndex++) {
     var containerObject = pdfObjects[containerNumbers[containerIndex]];
@@ -8285,8 +8336,12 @@ function pdfExpandPdfObjectStreams(pdfObjects) {
     var firstOffsetMatch = /\/First\s+(\d+)/.exec(containerObject.dictionaryText);
     if (!countMatch || !firstOffsetMatch) continue;
     var inflatedContainer = null;
-    try { inflatedContainer = inflatePdfFlateStream(containerObject.streamBytes); }
-    catch (inflateContainerError) {
+    try {
+      var containerStreamBytes = securityHandler
+        ? securityHandler.decryptStream(containerObject.number, containerObject.generation || 0, containerObject.streamBytes)
+        : containerObject.streamBytes;
+      inflatedContainer = inflatePdfFlateStream(containerStreamBytes);
+    } catch (inflateContainerError) {
       console.warn('[PDF:SPLIT] an object stream could not be inflated:', inflateContainerError);
       continue;
     }
@@ -8412,22 +8467,1113 @@ function pdfWithDirectStreamLength(dictionaryText, byteLength) {
   return trimmedDictionary;
 }
 
+/** True when the NEWEST revision of the file carries an /Encrypt entry.
+ *  Only the latest trailer counts: an older revision may still mention
+ *  /Encrypt in a trailer that a later, unencrypted update replaced. */
+function pdfLatestTrailerHasEncryption(pdfBytes) {
+  if (!pdfBytes || !pdfBytes.length) return false;
+  var pdfText = bytesToLatin1String(pdfBytes);
+  var trailerText = pdfLatestTrailerText(pdfText);
+  if (trailerText) return trailerText.indexOf('/Encrypt') !== -1;
+  // No readable trailer at all (damaged cross-reference): fall back to the
+  // file text, otherwise an encrypted file would be copied as raw bytes.
+  return pdfText.indexOf('/Encrypt') !== -1;
+}
+
+/* ── PDF security handler: decrypting "copy-protected" PDFs ──
+   A PDF can carry an /Encrypt dictionary and still open without a password:
+   the owner set permissions only (empty user password). Every real PDF tool
+   (Acrobat, qpdf, pypdf...) decrypts such a file before copying pages - that
+   is why they can split it and a plain byte copy cannot. The code below is a
+   self-contained implementation of the standard security handler (ISO 32000
+   Algorithms 1-7 and 2.A/2.B) so the splitter can do the same. */
+var PDF_PASSWORD_PADDING = [
+  0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
+  0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A
+];
+
+/** Copy several byte arrays into one */
+function pdfJoinBytes(byteParts) {
+  var totalLength = 0;
+  for (var partIndex = 0; partIndex < byteParts.length; partIndex++) {
+    if (byteParts[partIndex]) totalLength += byteParts[partIndex].length;
+  }
+  var joined = new Uint8Array(totalLength);
+  var writeOffset = 0;
+  for (var copyIndex = 0; copyIndex < byteParts.length; copyIndex++) {
+    var partBytes = byteParts[copyIndex];
+    if (!partBytes || !partBytes.length) continue;
+    joined.set(partBytes, writeOffset);
+    writeOffset += partBytes.length;
+  }
+  return joined;
+}
+
+function pdfBytesEqual(firstBytes, secondBytes) {
+  if (!firstBytes || !secondBytes || firstBytes.length !== secondBytes.length) return false;
+  for (var byteIndex = 0; byteIndex < firstBytes.length; byteIndex++) {
+    if (firstBytes[byteIndex] !== secondBytes[byteIndex]) return false;
+  }
+  return true;
+}
+
+/* ── MD5 (RFC 1321) - the security handler hashes with it ── */
+var pdfMd5SineTable = null;
+function pdfMd5Table() {
+  if (pdfMd5SineTable) return pdfMd5SineTable;
+  var sineTable = [];
+  for (var tableIndex = 0; tableIndex < 64; tableIndex++) {
+    sineTable.push(Math.floor(Math.abs(Math.sin(tableIndex + 1)) * 4294967296) >>> 0);
+  }
+  pdfMd5SineTable = sineTable;
+  return sineTable;
+}
+
+function pdfMd5(bytes) {
+  var sineTable = pdfMd5Table();
+  var shiftTable = [
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+  ];
+  var messageLength = bytes.length;
+  var paddedLength = (((messageLength + 8) >> 6) + 1) << 6;
+  var buffer = new Uint8Array(paddedLength);
+  buffer.set(bytes);
+  buffer[messageLength] = 0x80;
+  var bitLengthLow = (messageLength * 8) >>> 0;
+  var bitLengthHigh = Math.floor(messageLength / 536870912) >>> 0;
+  buffer[paddedLength - 8] = bitLengthLow & 0xFF;
+  buffer[paddedLength - 7] = (bitLengthLow >>> 8) & 0xFF;
+  buffer[paddedLength - 6] = (bitLengthLow >>> 16) & 0xFF;
+  buffer[paddedLength - 5] = (bitLengthLow >>> 24) & 0xFF;
+  buffer[paddedLength - 4] = bitLengthHigh & 0xFF;
+  buffer[paddedLength - 3] = (bitLengthHigh >>> 8) & 0xFF;
+  buffer[paddedLength - 2] = (bitLengthHigh >>> 16) & 0xFF;
+  buffer[paddedLength - 1] = (bitLengthHigh >>> 24) & 0xFF;
+
+  var stateA = 0x67452301, stateB = 0xefcdab89, stateC = 0x98badcfe, stateD = 0x10325476;
+  var words = new Array(16);
+  for (var blockOffset = 0; blockOffset < paddedLength; blockOffset += 64) {
+    for (var wordIndex = 0; wordIndex < 16; wordIndex++) {
+      var wordOffset = blockOffset + wordIndex * 4;
+      words[wordIndex] = (buffer[wordOffset] | (buffer[wordOffset + 1] << 8) |
+        (buffer[wordOffset + 2] << 16) | (buffer[wordOffset + 3] << 24)) >>> 0;
+    }
+    var hashA = stateA, hashB = stateB, hashC = stateC, hashD = stateD;
+    for (var roundIndex = 0; roundIndex < 64; roundIndex++) {
+      var mixValue, wordPosition;
+      if (roundIndex < 16) {
+        mixValue = (hashB & hashC) | (~hashB & hashD);
+        wordPosition = roundIndex;
+      } else if (roundIndex < 32) {
+        mixValue = (hashD & hashB) | (~hashD & hashC);
+        wordPosition = (5 * roundIndex + 1) & 15;
+      } else if (roundIndex < 48) {
+        mixValue = hashB ^ hashC ^ hashD;
+        wordPosition = (3 * roundIndex + 5) & 15;
+      } else {
+        mixValue = hashC ^ (hashB | ~hashD);
+        wordPosition = (7 * roundIndex) & 15;
+      }
+      var rotated = (hashA + mixValue + sineTable[roundIndex] + words[wordPosition]) >>> 0;
+      var shiftAmount = shiftTable[roundIndex];
+      rotated = ((rotated << shiftAmount) | (rotated >>> (32 - shiftAmount))) >>> 0;
+      rotated = (rotated + hashB) >>> 0;
+      hashA = hashD;
+      hashD = hashC;
+      hashC = hashB;
+      hashB = rotated;
+    }
+    stateA = (stateA + hashA) >>> 0;
+    stateB = (stateB + hashB) >>> 0;
+    stateC = (stateC + hashC) >>> 0;
+    stateD = (stateD + hashD) >>> 0;
+  }
+  var digest = new Uint8Array(16);
+  var digestStates = [stateA, stateB, stateC, stateD];
+  for (var stateIndex = 0; stateIndex < 4; stateIndex++) {
+    digest[stateIndex * 4] = digestStates[stateIndex] & 0xFF;
+    digest[stateIndex * 4 + 1] = (digestStates[stateIndex] >>> 8) & 0xFF;
+    digest[stateIndex * 4 + 2] = (digestStates[stateIndex] >>> 16) & 0xFF;
+    digest[stateIndex * 4 + 3] = (digestStates[stateIndex] >>> 24) & 0xFF;
+  }
+  return digest;
+}
+
+/* ── RC4 (used by the older revisions) ── */
+function pdfRc4(keyBytes, dataBytes) {
+  var state = new Uint8Array(256);
+  var keyIndex = 0;
+  for (var stateIndex = 0; stateIndex < 256; stateIndex++) state[stateIndex] = stateIndex;
+  for (stateIndex = 0; stateIndex < 256; stateIndex++) {
+    keyIndex = (keyIndex + state[stateIndex] + keyBytes[stateIndex % keyBytes.length]) & 0xFF;
+    var swapped = state[stateIndex];
+    state[stateIndex] = state[keyIndex];
+    state[keyIndex] = swapped;
+  }
+  var output = new Uint8Array(dataBytes.length);
+  var firstIndex = 0;
+  var secondIndex = 0;
+  for (var byteIndex = 0; byteIndex < dataBytes.length; byteIndex++) {
+    firstIndex = (firstIndex + 1) & 0xFF;
+    secondIndex = (secondIndex + state[firstIndex]) & 0xFF;
+    var temporary = state[firstIndex];
+    state[firstIndex] = state[secondIndex];
+    state[secondIndex] = temporary;
+    output[byteIndex] = dataBytes[byteIndex] ^ state[(state[firstIndex] + state[secondIndex]) & 0xFF];
+  }
+  return output;
+}
+
+/* ── AES (128/192/256, CBC) ──
+   The S-box is DERIVED from the field inverse + affine transform instead of
+   256 hand-typed constants - one typo there would silently corrupt every
+   decrypted stream. */
+var pdfAesSbox = null;
+var pdfAesInvSbox = null;
+
+function pdfAesXtime(value) {
+  return ((value << 1) ^ ((value & 0x80) ? 0x1B : 0)) & 0xFF;
+}
+
+function pdfAesMultiply(firstValue, secondValue) {
+  var resultValue = 0;
+  var leftValue = firstValue;
+  var rightValue = secondValue;
+  while (rightValue) {
+    if (rightValue & 1) resultValue ^= leftValue;
+    leftValue = pdfAesXtime(leftValue);
+    rightValue >>= 1;
+  }
+  return resultValue & 0xFF;
+}
+
+function pdfAesBuildTables() {
+  if (pdfAesSbox) return;
+  var exponentTable = new Uint8Array(256);
+  var logarithmTable = new Uint8Array(256);
+  var generatorValue = 1;
+  for (var exponentIndex = 0; exponentIndex < 255; exponentIndex++) {
+    exponentTable[exponentIndex] = generatorValue;
+    logarithmTable[generatorValue] = exponentIndex;
+    generatorValue ^= pdfAesXtime(generatorValue); // multiply by 3
+  }
+  var sbox = new Uint8Array(256);
+  var invSbox = new Uint8Array(256);
+  for (var byteValue = 0; byteValue < 256; byteValue++) {
+    var inverseValue = byteValue === 0 ? 0 : exponentTable[(255 - logarithmTable[byteValue]) % 255];
+    var affineValue = inverseValue;
+    var rotatedValue = inverseValue;
+    for (var shiftIndex = 0; shiftIndex < 4; shiftIndex++) {
+      rotatedValue = ((rotatedValue << 1) | (rotatedValue >> 7)) & 0xFF;
+      affineValue ^= rotatedValue;
+    }
+    var sboxValue = (affineValue ^ 0x63) & 0xFF;
+    sbox[byteValue] = sboxValue;
+    invSbox[sboxValue] = byteValue;
+  }
+  pdfAesSbox = sbox;
+  pdfAesInvSbox = invSbox;
+}
+
+function pdfAesExpandKey(keyBytes) {
+  pdfAesBuildTables();
+  var keyWords = keyBytes.length / 4;
+  var roundCount = keyWords + 6;
+  var totalWords = (roundCount + 1) * 4;
+  var expandedKey = new Uint8Array(totalWords * 4);
+  expandedKey.set(keyBytes);
+  var roundConstant = 1;
+  for (var wordIndex = keyWords; wordIndex < totalWords; wordIndex++) {
+    var previousOffset = (wordIndex - 1) * 4;
+    var wordBytes = [
+      expandedKey[previousOffset], expandedKey[previousOffset + 1],
+      expandedKey[previousOffset + 2], expandedKey[previousOffset + 3]
+    ];
+    if (wordIndex % keyWords === 0) {
+      var firstByte = wordBytes[0];
+      wordBytes[0] = pdfAesSbox[wordBytes[1]] ^ roundConstant;
+      wordBytes[1] = pdfAesSbox[wordBytes[2]];
+      wordBytes[2] = pdfAesSbox[wordBytes[3]];
+      wordBytes[3] = pdfAesSbox[firstByte];
+      roundConstant = pdfAesXtime(roundConstant);
+    } else if (keyWords > 6 && wordIndex % keyWords === 4) {
+      for (var substituteIndex = 0; substituteIndex < 4; substituteIndex++) {
+        wordBytes[substituteIndex] = pdfAesSbox[wordBytes[substituteIndex]];
+      }
+    }
+    var sourceOffset = (wordIndex - keyWords) * 4;
+    for (var keyByteIndex = 0; keyByteIndex < 4; keyByteIndex++) {
+      expandedKey[wordIndex * 4 + keyByteIndex] = expandedKey[sourceOffset + keyByteIndex] ^ wordBytes[keyByteIndex];
+    }
+  }
+  return { bytes: expandedKey, rounds: roundCount };
+}
+
+function pdfAesAddRoundKey(stateBytes, expandedKey, roundIndex) {
+  var keyOffset = roundIndex * 16;
+  for (var stateIndex = 0; stateIndex < 16; stateIndex++) stateBytes[stateIndex] ^= expandedKey[keyOffset + stateIndex];
+}
+
+function pdfAesSubBytes(stateBytes, boxTable) {
+  for (var stateIndex = 0; stateIndex < 16; stateIndex++) stateBytes[stateIndex] = boxTable[stateBytes[stateIndex]];
+}
+
+function pdfAesShiftRows(stateBytes) {
+  var carried = stateBytes[1];
+  stateBytes[1] = stateBytes[5]; stateBytes[5] = stateBytes[9]; stateBytes[9] = stateBytes[13]; stateBytes[13] = carried;
+  carried = stateBytes[2]; stateBytes[2] = stateBytes[10]; stateBytes[10] = carried;
+  carried = stateBytes[6]; stateBytes[6] = stateBytes[14]; stateBytes[14] = carried;
+  carried = stateBytes[15]; stateBytes[15] = stateBytes[11]; stateBytes[11] = stateBytes[7];
+  stateBytes[7] = stateBytes[3]; stateBytes[3] = carried;
+}
+
+function pdfAesInverseShiftRows(stateBytes) {
+  var carried = stateBytes[13];
+  stateBytes[13] = stateBytes[9]; stateBytes[9] = stateBytes[5]; stateBytes[5] = stateBytes[1]; stateBytes[1] = carried;
+  carried = stateBytes[2]; stateBytes[2] = stateBytes[10]; stateBytes[10] = carried;
+  carried = stateBytes[6]; stateBytes[6] = stateBytes[14]; stateBytes[14] = carried;
+  carried = stateBytes[3]; stateBytes[3] = stateBytes[7]; stateBytes[7] = stateBytes[11];
+  stateBytes[11] = stateBytes[15]; stateBytes[15] = carried;
+}
+
+function pdfAesMixColumns(stateBytes) {
+  for (var columnIndex = 0; columnIndex < 4; columnIndex++) {
+    var columnOffset = columnIndex * 4;
+    var byte0 = stateBytes[columnOffset], byte1 = stateBytes[columnOffset + 1];
+    var byte2 = stateBytes[columnOffset + 2], byte3 = stateBytes[columnOffset + 3];
+    var combined = byte0 ^ byte1 ^ byte2 ^ byte3;
+    stateBytes[columnOffset] = byte0 ^ combined ^ pdfAesXtime(byte0 ^ byte1);
+    stateBytes[columnOffset + 1] = byte1 ^ combined ^ pdfAesXtime(byte1 ^ byte2);
+    stateBytes[columnOffset + 2] = byte2 ^ combined ^ pdfAesXtime(byte2 ^ byte3);
+    stateBytes[columnOffset + 3] = byte3 ^ combined ^ pdfAesXtime(byte3 ^ byte0);
+  }
+}
+
+function pdfAesInverseMixColumns(stateBytes) {
+  for (var columnIndex = 0; columnIndex < 4; columnIndex++) {
+    var columnOffset = columnIndex * 4;
+    var byte0 = stateBytes[columnOffset], byte1 = stateBytes[columnOffset + 1];
+    var byte2 = stateBytes[columnOffset + 2], byte3 = stateBytes[columnOffset + 3];
+    stateBytes[columnOffset] = pdfAesMultiply(byte0, 14) ^ pdfAesMultiply(byte1, 11) ^ pdfAesMultiply(byte2, 13) ^ pdfAesMultiply(byte3, 9);
+    stateBytes[columnOffset + 1] = pdfAesMultiply(byte0, 9) ^ pdfAesMultiply(byte1, 14) ^ pdfAesMultiply(byte2, 11) ^ pdfAesMultiply(byte3, 13);
+    stateBytes[columnOffset + 2] = pdfAesMultiply(byte0, 13) ^ pdfAesMultiply(byte1, 9) ^ pdfAesMultiply(byte2, 14) ^ pdfAesMultiply(byte3, 11);
+    stateBytes[columnOffset + 3] = pdfAesMultiply(byte0, 11) ^ pdfAesMultiply(byte1, 13) ^ pdfAesMultiply(byte2, 9) ^ pdfAesMultiply(byte3, 14);
+  }
+}
+
+function pdfAesEncryptBlock(stateBytes, expandedKey, roundCount) {
+  pdfAesAddRoundKey(stateBytes, expandedKey.bytes, 0);
+  for (var roundIndex = 1; roundIndex < roundCount; roundIndex++) {
+    pdfAesSubBytes(stateBytes, pdfAesSbox);
+    pdfAesShiftRows(stateBytes);
+    pdfAesMixColumns(stateBytes);
+    pdfAesAddRoundKey(stateBytes, expandedKey.bytes, roundIndex);
+  }
+  pdfAesSubBytes(stateBytes, pdfAesSbox);
+  pdfAesShiftRows(stateBytes);
+  pdfAesAddRoundKey(stateBytes, expandedKey.bytes, roundCount);
+}
+
+function pdfAesDecryptBlock(stateBytes, expandedKey, roundCount) {
+  pdfAesAddRoundKey(stateBytes, expandedKey.bytes, roundCount);
+  for (var roundIndex = roundCount - 1; roundIndex >= 1; roundIndex--) {
+    pdfAesInverseShiftRows(stateBytes);
+    pdfAesSubBytes(stateBytes, pdfAesInvSbox);
+    pdfAesAddRoundKey(stateBytes, expandedKey.bytes, roundIndex);
+    pdfAesInverseMixColumns(stateBytes);
+  }
+  pdfAesInverseShiftRows(stateBytes);
+  pdfAesSubBytes(stateBytes, pdfAesInvSbox);
+  pdfAesAddRoundKey(stateBytes, expandedKey.bytes, 0);
+}
+
+/** AES-CBC decrypt (PKCS#7 padding removed); the IV is passed separately */
+function pdfAesCbcDecrypt(keyBytes, ivBytes, dataBytes) {
+  if (!dataBytes || !keyBytes || (keyBytes.length !== 16 && keyBytes.length !== 24 && keyBytes.length !== 32)) {
+    return new Uint8Array(0);
+  }
+  if (dataBytes.length < 32 || (dataBytes.length % 16) !== 0) return new Uint8Array(0);
+  var expandedKey = pdfAesExpandKey(keyBytes);
+  var blockCount = Math.floor(dataBytes.length / 16);
+  var output = new Uint8Array(blockCount * 16);
+  var previousBlock = ivBytes;
+  for (var blockIndex = 0; blockIndex < blockCount; blockIndex++) {
+    var blockOffset = blockIndex * 16;
+    var cipherBlock = dataBytes.subarray(blockOffset, blockOffset + 16);
+    var stateBytes = new Uint8Array(16);
+    stateBytes.set(cipherBlock);
+    pdfAesDecryptBlock(stateBytes, expandedKey, expandedKey.rounds);
+    for (var byteIndex = 0; byteIndex < 16; byteIndex++) {
+      output[blockOffset + byteIndex] = stateBytes[byteIndex] ^ previousBlock[byteIndex];
+    }
+    previousBlock = cipherBlock;
+  }
+  var paddingLength = output[output.length - 1];
+  if (paddingLength >= 1 && paddingLength <= 16 && paddingLength <= output.length) {
+    var paddingValid = true;
+    for (var paddingIndex = output.length - paddingLength; paddingIndex < output.length; paddingIndex++) {
+      if (output[paddingIndex] !== paddingLength) { paddingValid = false; break; }
+    }
+    if (paddingValid) return output.subarray(0, output.length - paddingLength);
+  }
+  return output;
+}
+
+/** AES-CBC encrypt without padding (the data must be a multiple of 16 bytes) */
+function pdfAesCbcEncryptNoPadding(keyBytes, ivBytes, dataBytes) {
+  var expandedKey = pdfAesExpandKey(keyBytes);
+  var blockCount = Math.floor(dataBytes.length / 16);
+  var output = new Uint8Array(blockCount * 16);
+  var previousBlock = ivBytes;
+  for (var blockIndex = 0; blockIndex < blockCount; blockIndex++) {
+    var blockOffset = blockIndex * 16;
+    var stateBytes = new Uint8Array(16);
+    for (var byteIndex = 0; byteIndex < 16; byteIndex++) {
+      stateBytes[byteIndex] = dataBytes[blockOffset + byteIndex] ^ previousBlock[byteIndex];
+    }
+    pdfAesEncryptBlock(stateBytes, expandedKey, expandedKey.rounds);
+    output.set(stateBytes, blockOffset);
+    previousBlock = stateBytes;
+  }
+  return output;
+}
+
+/* ── SHA-256 / SHA-384 / SHA-512 (only revision 5/6 files need them) ──
+   The round constants are the fractional parts of the cube/square roots of
+   the first primes: they are COMPUTED with BigInt instead of pasted, so a
+   single mistyped digit cannot break the key derivation. */
+var pdfShaConstantCache = null;
+
+function pdfBigIntegerSquareRoot(value) {
+  if (value < BigInt(2)) return value;
+  var estimate = value;
+  var nextEstimate = (estimate + value / estimate) / BigInt(2);
+  while (nextEstimate < estimate) {
+    estimate = nextEstimate;
+    nextEstimate = (estimate + value / estimate) / BigInt(2);
+  }
+  return estimate;
+}
+
+function pdfBigIntegerCubeRoot(value) {
+  if (value < BigInt(2)) return value;
+  var estimate = value;
+  var nextEstimate = (estimate + estimate + value / (estimate * estimate)) / BigInt(3);
+  while (nextEstimate < estimate) {
+    estimate = nextEstimate;
+    nextEstimate = (estimate + estimate + value / (estimate * estimate)) / BigInt(3);
+  }
+  return estimate;
+}
+
+function pdfFirstPrimes(primeCount) {
+  var primes = [];
+  var candidate = 2;
+  while (primes.length < primeCount) {
+    var isPrime = true;
+    for (var divisor = 2; divisor * divisor <= candidate; divisor++) {
+      if (candidate % divisor === 0) { isPrime = false; break; }
+    }
+    if (isPrime) primes.push(candidate);
+    candidate++;
+  }
+  return primes;
+}
+
+function pdfShaConstants() {
+  if (pdfShaConstantCache) return pdfShaConstantCache;
+  if (typeof BigInt !== 'function') throw new Error('BigInt is not available in this browser.');
+  var mask32 = BigInt(0xFFFFFFFF);
+  var mask64 = (BigInt(0xFFFFFFFF) << BigInt(32)) | BigInt(0xFFFFFFFF);
+  var primes = pdfFirstPrimes(80);
+  var k256 = [];
+  var iv256 = [];
+  for (var constantIndex = 0; constantIndex < 64; constantIndex++) {
+    var cubeScaled = pdfBigIntegerCubeRoot(BigInt(primes[constantIndex]) << BigInt(96));
+    k256.push(Number(cubeScaled & mask32));
+  }
+  for (var ivIndex = 0; ivIndex < 8; ivIndex++) {
+    var rootScaled = pdfBigIntegerSquareRoot(BigInt(primes[ivIndex]) << BigInt(64));
+    iv256.push(Number(rootScaled & mask32));
+  }
+  var k512 = [];
+  var iv512 = [];
+  var iv384 = [];
+  for (constantIndex = 0; constantIndex < 80; constantIndex++) {
+    k512.push(pdfBigIntegerCubeRoot(BigInt(primes[constantIndex]) << BigInt(192)) & mask64);
+  }
+  for (ivIndex = 0; ivIndex < 8; ivIndex++) {
+    iv512.push(pdfBigIntegerSquareRoot(BigInt(primes[ivIndex]) << BigInt(128)) & mask64);
+  }
+  for (ivIndex = 0; ivIndex < 8; ivIndex++) {
+    iv384.push(pdfBigIntegerSquareRoot(BigInt(primes[8 + ivIndex]) << BigInt(128)) & mask64);
+  }
+  pdfShaConstantCache = { k256: k256, iv256: iv256, k512: k512, iv512: iv512, iv384: iv384, mask32: mask32, mask64: mask64 };
+  return pdfShaConstantCache;
+}
+
+function pdfRotateRight32(value, shiftAmount) {
+  return ((value >>> shiftAmount) | (value << (32 - shiftAmount))) >>> 0;
+}
+
+function pdfSha256(bytes) {
+  var constants = pdfShaConstants();
+  var messageLength = bytes.length;
+  var paddedLength = (((messageLength + 8) >> 6) + 1) << 6;
+  var buffer = new Uint8Array(paddedLength);
+  buffer.set(bytes);
+  buffer[messageLength] = 0x80;
+  var bitLength = messageLength * 8;
+  var bitLengthHigh = Math.floor(bitLength / 4294967296);
+  var bitLengthLow = bitLength >>> 0;
+  buffer[paddedLength - 8] = (bitLengthHigh >>> 24) & 0xFF;
+  buffer[paddedLength - 7] = (bitLengthHigh >>> 16) & 0xFF;
+  buffer[paddedLength - 6] = (bitLengthHigh >>> 8) & 0xFF;
+  buffer[paddedLength - 5] = bitLengthHigh & 0xFF;
+  buffer[paddedLength - 4] = (bitLengthLow >>> 24) & 0xFF;
+  buffer[paddedLength - 3] = (bitLengthLow >>> 16) & 0xFF;
+  buffer[paddedLength - 2] = (bitLengthLow >>> 8) & 0xFF;
+  buffer[paddedLength - 1] = bitLengthLow & 0xFF;
+
+  var hashWords = constants.iv256.slice();
+  var schedule = new Array(64);
+  for (var blockOffset = 0; blockOffset < paddedLength; blockOffset += 64) {
+    for (var wordIndex = 0; wordIndex < 16; wordIndex++) {
+      var wordOffset = blockOffset + wordIndex * 4;
+      schedule[wordIndex] = ((buffer[wordOffset] << 24) | (buffer[wordOffset + 1] << 16) |
+        (buffer[wordOffset + 2] << 8) | buffer[wordOffset + 3]) >>> 0;
+    }
+    for (wordIndex = 16; wordIndex < 64; wordIndex++) {
+      var word15 = schedule[wordIndex - 15];
+      var word2 = schedule[wordIndex - 2];
+      var lowerSigma0 = (pdfRotateRight32(word15, 7) ^ pdfRotateRight32(word15, 18) ^ (word15 >>> 3)) >>> 0;
+      var lowerSigma1 = (pdfRotateRight32(word2, 17) ^ pdfRotateRight32(word2, 19) ^ (word2 >>> 10)) >>> 0;
+      schedule[wordIndex] = (schedule[wordIndex - 16] + lowerSigma0 + schedule[wordIndex - 7] + lowerSigma1) >>> 0;
+    }
+    var workA = hashWords[0], workB = hashWords[1], workC = hashWords[2], workD = hashWords[3];
+    var workE = hashWords[4], workF = hashWords[5], workG = hashWords[6], workH = hashWords[7];
+    for (wordIndex = 0; wordIndex < 64; wordIndex++) {
+      var upperSigma1 = (pdfRotateRight32(workE, 6) ^ pdfRotateRight32(workE, 11) ^ pdfRotateRight32(workE, 25)) >>> 0;
+      var choice = (workE & workF) ^ (~workE & workG);
+      var tempFirst = (workH + upperSigma1 + choice + constants.k256[wordIndex] + schedule[wordIndex]) >>> 0;
+      var upperSigma0 = (pdfRotateRight32(workA, 2) ^ pdfRotateRight32(workA, 13) ^ pdfRotateRight32(workA, 22)) >>> 0;
+      var majority = (workA & workB) ^ (workA & workC) ^ (workB & workC);
+      var tempSecond = (upperSigma0 + majority) >>> 0;
+      workH = workG; workG = workF; workF = workE;
+      workE = (workD + tempFirst) >>> 0;
+      workD = workC; workC = workB; workB = workA;
+      workA = (tempFirst + tempSecond) >>> 0;
+    }
+    hashWords[0] = (hashWords[0] + workA) >>> 0;
+    hashWords[1] = (hashWords[1] + workB) >>> 0;
+    hashWords[2] = (hashWords[2] + workC) >>> 0;
+    hashWords[3] = (hashWords[3] + workD) >>> 0;
+    hashWords[4] = (hashWords[4] + workE) >>> 0;
+    hashWords[5] = (hashWords[5] + workF) >>> 0;
+    hashWords[6] = (hashWords[6] + workG) >>> 0;
+    hashWords[7] = (hashWords[7] + workH) >>> 0;
+  }
+  var digest = new Uint8Array(32);
+  for (var digestIndex = 0; digestIndex < 8; digestIndex++) {
+    digest[digestIndex * 4] = (hashWords[digestIndex] >>> 24) & 0xFF;
+    digest[digestIndex * 4 + 1] = (hashWords[digestIndex] >>> 16) & 0xFF;
+    digest[digestIndex * 4 + 2] = (hashWords[digestIndex] >>> 8) & 0xFF;
+    digest[digestIndex * 4 + 3] = hashWords[digestIndex] & 0xFF;
+  }
+  return digest;
+}
+
+function pdfRotateRight64(value, shiftAmount) {
+  var shift = BigInt(shiftAmount);
+  var mask = pdfShaConstants().mask64;
+  return ((value >> shift) | (value << (BigInt(64) - shift))) & mask;
+}
+
+/** SHA-512 core; `useSha384` switches the initial state and the output size */
+function pdfSha512Core(bytes, useSha384) {
+  var constants = pdfShaConstants();
+  var mask64 = constants.mask64;
+  var messageLength = bytes.length;
+  var paddedLength = (((messageLength + 16) >> 7) + 1) << 7;
+  var buffer = new Uint8Array(paddedLength);
+  buffer.set(bytes);
+  buffer[messageLength] = 0x80;
+  var bitLength = BigInt(messageLength) * BigInt(8);
+  for (var lengthByteIndex = 0; lengthByteIndex < 8; lengthByteIndex++) {
+    buffer[paddedLength - 1 - lengthByteIndex] = Number((bitLength >> (BigInt(8) * BigInt(lengthByteIndex))) & BigInt(0xFF));
+  }
+  var hashWords = (useSha384 ? constants.iv384 : constants.iv512).slice();
+  var schedule = new Array(80);
+  for (var blockOffset = 0; blockOffset < paddedLength; blockOffset += 128) {
+    for (var wordIndex = 0; wordIndex < 16; wordIndex++) {
+      var wordValue = BigInt(0);
+      for (var byteIndex = 0; byteIndex < 8; byteIndex++) {
+        wordValue = (wordValue << BigInt(8)) | BigInt(buffer[blockOffset + wordIndex * 8 + byteIndex]);
+      }
+      schedule[wordIndex] = wordValue;
+    }
+    for (wordIndex = 16; wordIndex < 80; wordIndex++) {
+      var word15 = schedule[wordIndex - 15];
+      var word2 = schedule[wordIndex - 2];
+      var lowerSigma0 = pdfRotateRight64(word15, 1) ^ pdfRotateRight64(word15, 8) ^ (word15 >> BigInt(7));
+      var lowerSigma1 = pdfRotateRight64(word2, 19) ^ pdfRotateRight64(word2, 61) ^ (word2 >> BigInt(6));
+      schedule[wordIndex] = (schedule[wordIndex - 16] + lowerSigma0 + schedule[wordIndex - 7] + lowerSigma1) & mask64;
+    }
+    var workA = hashWords[0], workB = hashWords[1], workC = hashWords[2], workD = hashWords[3];
+    var workE = hashWords[4], workF = hashWords[5], workG = hashWords[6], workH = hashWords[7];
+    for (wordIndex = 0; wordIndex < 80; wordIndex++) {
+      var upperSigma1 = pdfRotateRight64(workE, 14) ^ pdfRotateRight64(workE, 18) ^ pdfRotateRight64(workE, 41);
+      var choice = (workE & workF) ^ (~workE & workG);
+      var tempFirst = (workH + upperSigma1 + choice + constants.k512[wordIndex] + schedule[wordIndex]) & mask64;
+      var upperSigma0 = pdfRotateRight64(workA, 28) ^ pdfRotateRight64(workA, 34) ^ pdfRotateRight64(workA, 39);
+      var majority = (workA & workB) ^ (workA & workC) ^ (workB & workC);
+      var tempSecond = (upperSigma0 + majority) & mask64;
+      workH = workG; workG = workF; workF = workE;
+      workE = (workD + tempFirst) & mask64;
+      workD = workC; workC = workB; workB = workA;
+      workA = (tempFirst + tempSecond) & mask64;
+    }
+    hashWords[0] = (hashWords[0] + workA) & mask64;
+    hashWords[1] = (hashWords[1] + workB) & mask64;
+    hashWords[2] = (hashWords[2] + workC) & mask64;
+    hashWords[3] = (hashWords[3] + workD) & mask64;
+    hashWords[4] = (hashWords[4] + workE) & mask64;
+    hashWords[5] = (hashWords[5] + workF) & mask64;
+    hashWords[6] = (hashWords[6] + workG) & mask64;
+    hashWords[7] = (hashWords[7] + workH) & mask64;
+  }
+  var outputLength = useSha384 ? 48 : 64;
+  var digest = new Uint8Array(outputLength);
+  for (var digestIndex = 0; digestIndex < outputLength; digestIndex++) {
+    var wordShift = BigInt(64 - 8 * (digestIndex % 8) - 8);
+    digest[digestIndex] = Number((hashWords[Math.floor(digestIndex / 8)] >> wordShift) & BigInt(0xFF));
+  }
+  return digest;
+}
+
+function pdfSha512(bytes) { return pdfSha512Core(bytes, false); }
+function pdfSha384(bytes) { return pdfSha512Core(bytes, true); }
+
+/** UTF-8 bytes of a password (empty when no password is given) */
+function pdfPasswordBytes(passwordText) {
+  var textValue = passwordText == null ? '' : String(passwordText);
+  if (!textValue) return new Uint8Array(0);
+  if (typeof TextEncoder === 'function') return new TextEncoder().encode(textValue);
+  var encodedText = unescape(encodeURIComponent(textValue));
+  var encodedBytes = new Uint8Array(encodedText.length);
+  for (var textIndex = 0; textIndex < encodedText.length; textIndex++) encodedBytes[textIndex] = encodedText.charCodeAt(textIndex);
+  return encodedBytes;
+}
+
+/** ISO 32000 Algorithm 2: the padded 32-byte password */
+function pdfPaddedPassword(passwordText) {
+  var padded = new Uint8Array(32);
+  var passwordBytes = pdfPasswordBytes(passwordText);
+  var copyLength = Math.min(32, passwordBytes.length);
+  padded.set(passwordBytes.subarray(0, copyLength), 0);
+  for (var paddingIndex = 0; paddingIndex < 32 - copyLength; paddingIndex++) {
+    padded[copyLength + paddingIndex] = PDF_PASSWORD_PADDING[paddingIndex];
+  }
+  return padded;
+}
+
+/** Raw bytes of a hex string (without the angle brackets) */
+function pdfHexStringToBytes(hexText) {
+  var cleanHex = String(hexText).replace(/[^0-9A-Fa-f]/g, '');
+  if (cleanHex.length % 2) cleanHex += '0';
+  var hexBytes = new Uint8Array(cleanHex.length / 2);
+  for (var hexIndex = 0; hexIndex < hexBytes.length; hexIndex++) {
+    hexBytes[hexIndex] = parseInt(cleanHex.substr(hexIndex * 2, 2), 16);
+  }
+  return hexBytes;
+}
+
+/** Index of the ')' that closes a literal string starting at `startIndex` */
+function pdfLiteralStringEnd(textValue, startIndex) {
+  var depth = 0;
+  for (var scanIndex = startIndex; scanIndex < textValue.length; scanIndex++) {
+    var character = textValue.charAt(scanIndex);
+    if (character === '\\') { scanIndex++; continue; }
+    if (character === '(') depth++;
+    else if (character === ')') {
+      depth--;
+      if (depth === 0) return scanIndex;
+    }
+  }
+  return -1;
+}
+
+/** Raw bytes of a literal string (escapes resolved, parentheses excluded) */
+function pdfLiteralStringToBytes(literalText) {
+  var literalBytes = [];
+  for (var literalIndex = 0; literalIndex < literalText.length; literalIndex++) {
+    var literalCharacter = literalText.charAt(literalIndex);
+    if (literalCharacter === '\\') {
+      var nextCharacter = literalText.charAt(literalIndex + 1);
+      if (nextCharacter >= '0' && nextCharacter <= '7') {
+        var octalText = '';
+        while (octalText.length < 3 && literalText.charAt(literalIndex + 1) >= '0' && literalText.charAt(literalIndex + 1) <= '7') {
+          octalText += literalText.charAt(literalIndex + 1);
+          literalIndex++;
+        }
+        literalBytes.push(parseInt(octalText, 8) & 0xFF);
+        continue;
+      }
+      if (nextCharacter === '\n' || nextCharacter === '\r') { literalIndex++; continue; }
+      var escapeMap = { n: 10, r: 13, t: 9, b: 8, f: 12, '(': 40, ')': 41, '\\': 92 };
+      literalBytes.push(escapeMap[nextCharacter] !== undefined ? escapeMap[nextCharacter] : nextCharacter.charCodeAt(0));
+      literalIndex++;
+      continue;
+    }
+    literalBytes.push(literalCharacter.charCodeAt(0) & 0xFF);
+  }
+  return new Uint8Array(literalBytes);
+}
+
+/** Read one entry of a PDF dictionary as raw bytes (literal or hex string) */
+function pdfDictionaryStringBytes(dictionaryText, entryName) {
+  var entryValue = pdfDictionaryEntryText(dictionaryText, entryName);
+  if (!entryValue) return null;
+  if (entryValue.charAt(0) === '<' && entryValue.charAt(1) !== '<') {
+    return pdfHexStringToBytes(entryValue);
+  }
+  if (entryValue.charAt(0) === '(') {
+    return pdfLiteralStringToBytes(entryValue.substring(1, entryValue.length - 1));
+  }
+  return null;
+}
+
+/** Number inside a dictionary entry (0 when it is missing) */
+function pdfDictionaryNumber(dictionaryText, entryName) {
+  var entryValue = pdfDictionaryEntryText(dictionaryText, entryName);
+  if (!entryValue) return 0;
+  var numberMatch = /[+-]?\d+/.exec(entryValue);
+  return numberMatch ? parseInt(numberMatch[0], 10) : 0;
+}
+
+/** Name inside a dictionary entry without the leading slash ('') */
+function pdfDictionaryName(dictionaryText, entryName) {
+  var entryValue = pdfDictionaryEntryText(dictionaryText, entryName);
+  if (!entryValue || entryValue.charAt(0) !== '/') return '';
+  return entryValue.substring(1);
+}
+
+/** The dictionary that starts at (or after) `startIndex`, or '' */
+function pdfDictionaryAt(textValue, startIndex) {
+  if (startIndex < 0) return '';
+  var dictStart = textValue.indexOf('<<', startIndex);
+  if (dictStart === -1) return '';
+  var depth = 0;
+  for (var scanIndex = dictStart; scanIndex < textValue.length - 1; scanIndex++) {
+    if (textValue.charAt(scanIndex) === '<' && textValue.charAt(scanIndex + 1) === '<') {
+      depth++;
+      scanIndex++;
+    } else if (textValue.charAt(scanIndex) === '>' && textValue.charAt(scanIndex + 1) === '>') {
+      depth--;
+      scanIndex++;
+      if (depth === 0) return textValue.substring(dictStart, scanIndex + 1);
+    }
+  }
+  return '';
+}
+
+/** The trailer dictionary of the NEWEST revision (classic trailer or xref stream) */
+function pdfLatestTrailerText(pdfText) {
+  var tailText = pdfText.substring(Math.max(0, pdfText.length - 4096));
+  var startxrefPattern = /startxref\s+(\d+)/g;
+  var startxrefMatch;
+  var lastStartxref = -1;
+  while ((startxrefMatch = startxrefPattern.exec(tailText))) lastStartxref = parseInt(startxrefMatch[1], 10);
+  if (lastStartxref >= 0 && lastStartxref < pdfText.length) {
+    var xrefText = pdfText.substring(lastStartxref, Math.min(pdfText.length, lastStartxref + 400000));
+    if (/^\s*xref\b/.test(xrefText)) {
+      var trailerIndex = xrefText.indexOf('trailer');
+      if (trailerIndex !== -1) {
+        var classicTrailer = pdfDictionaryAt(xrefText, trailerIndex + 7);
+        if (classicTrailer) return classicTrailer;
+      }
+    } else {
+      var objectHeader = /^\s*\d+\s+\d+\s+obj/.exec(xrefText);
+      if (objectHeader) {
+        var streamTrailer = pdfDictionaryAt(xrefText, objectHeader[0].length);
+        if (streamTrailer) return streamTrailer;
+      }
+    }
+  }
+  // Incremental updates append their trailer: the LAST one is the current one.
+  var lastTrailerIndex = pdfText.lastIndexOf('trailer');
+  if (lastTrailerIndex !== -1) return pdfDictionaryAt(pdfText, lastTrailerIndex + 7);
+  return '';
+}
+
+/** Encrypt dictionary referenced by the newest trailer ('' when there is none).
+ *  A dangling or non-standard /Encrypt entry is NOT treated as encryption:
+ *  some files carry a stale entry from an earlier revision. */
+function pdfEncryptionDictionaryText(pdfText, pdfObjects, trailerText) {
+  if (!trailerText || trailerText.indexOf('/Encrypt') === -1) return '';
+  var referenceMatch = /\/Encrypt\s+(\d+)\s+(\d+)\s+R/.exec(trailerText);
+  if (referenceMatch) {
+    var encryptionObject = pdfObjects[parseInt(referenceMatch[1], 10)];
+    if (!encryptionObject || !encryptionObject.dictionaryText) return '';
+    if (encryptionObject.dictionaryText.indexOf('<<') === -1) return '';
+    return encryptionObject.dictionaryText;
+  }
+  if (/\/Encrypt\s*<</.test(trailerText)) {
+    var inlineDictionary = pdfDictionaryAt(trailerText, trailerText.indexOf('/Encrypt'));
+    if (inlineDictionary) return inlineDictionary;
+  }
+  return '';
+}
+
+/** Every dictionary in the file that could be the /Encrypt dictionary.
+ *  A damaged file may point /Encrypt at the wrong object number, so any
+ *  standard dictionary carrying /O and /U is tried as well. */
+function pdfEncryptionDictionaryCandidates(pdfText, pdfObjects, trailerText) {
+  var candidates = [];
+  var trailerNamesEncryption = !!trailerText && trailerText.indexOf('/Encrypt') !== -1;
+  // Without a readable trailer the file text is the only hint we have.
+  if (!trailerNamesEncryption && (trailerText || pdfText.indexOf('/Encrypt') === -1)) return candidates;
+  var referencedText = pdfEncryptionDictionaryText(pdfText, pdfObjects, trailerText);
+  if (referencedText) candidates.push(referencedText);
+  var objectNumbers = Object.keys(pdfObjects);
+  for (var objectIndex = 0; objectIndex < objectNumbers.length; objectIndex++) {
+    var candidateObject = pdfObjects[objectNumbers[objectIndex]];
+    if (!candidateObject || !candidateObject.dictionaryText) continue;
+    var candidateText = candidateObject.dictionaryText;
+    if (candidateText.indexOf('/Standard') === -1) continue;
+    if (!/\/Filter\s*\/Standard/.test(candidateText)) continue;
+    if (!/\/O\s*[<(]/.test(candidateText) || !/\/U\s*[<(]/.test(candidateText)) continue;
+    if (candidates.indexOf(candidateText) !== -1) continue;
+    candidates.push(candidateText);
+  }
+  return candidates;
+}
+
+/** Message used whenever a PDF cannot be decrypted by the built-in handler */
+function pdfEncryptionFailureText() {
+  return 'This PDF is copy-protected and this tool cannot decrypt its protection. ' +
+    'Open it in a PDF app and save a new copy (that removes the protection), then upload that copy and split it.';
+}
+
+/** Message for a file whose password check does not accept an empty password */
+function pdfOpenPasswordFailureText() {
+  return 'This PDF is protected and its password check did not accept an empty password, so its pages cannot be ' +
+    'unlocked here. If the file opens without a password in your reader, open it in a PDF app and save a new copy ' +
+    '(or print it to a new PDF), then upload that copy and split it.';
+}
+
+/** First string of the /ID array that follows `/ID` at `idKeyIndex` */
+function pdfIdBytesAt(textValue, idKeyIndex) {
+  if (idKeyIndex === -1) return null;
+  var arrayStart = textValue.indexOf('[', idKeyIndex);
+  if (arrayStart === -1) return null;
+  var valueStart = arrayStart + 1;
+  while (valueStart < textValue.length && /\s/.test(textValue.charAt(valueStart))) valueStart++;
+  var firstCharacter = textValue.charAt(valueStart);
+  if (firstCharacter === '<') {
+    var hexEnd = textValue.indexOf('>', valueStart);
+    if (hexEnd === -1) return null;
+    return pdfHexStringToBytes(textValue.substring(valueStart + 1, hexEnd));
+  }
+  if (firstCharacter === '(') {
+    var literalEnd = pdfLiteralStringEnd(textValue, valueStart);
+    if (literalEnd === -1) return null;
+    return pdfLiteralStringToBytes(textValue.substring(valueStart + 1, literalEnd));
+  }
+  return null;
+}
+
+/** Revisions 2-4 derive the file key from a password, /O, /P and the first /ID */
+function pdfDeriveFileKeyLegacy(revision, keyBits, permissionFlags, ownerBytes, idBytes, encryptMetadata) {
+  var keyLengthBytes = revision === 2 ? 5 : Math.floor(keyBits / 8);
+  if (keyLengthBytes < 5) keyLengthBytes = 5;
+  if (keyLengthBytes > 16) keyLengthBytes = 16;
+  var permissionBytes = new Uint8Array([
+    permissionFlags & 0xFF, (permissionFlags >>> 8) & 0xFF,
+    (permissionFlags >>> 16) & 0xFF, (permissionFlags >>> 24) & 0xFF
+  ]);
+  var keyInput = pdfJoinBytes([
+    pdfPaddedPassword(''),
+    ownerBytes,
+    permissionBytes,
+    idBytes || new Uint8Array(0),
+    (revision >= 4 && !encryptMetadata) ? new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]) : new Uint8Array(0)
+  ]);
+  var fileKey = pdfMd5(keyInput);
+  if (revision >= 3) {
+    for (var rehashIndex = 0; rehashIndex < 50; rehashIndex++) {
+      fileKey = pdfMd5(fileKey.subarray(0, keyLengthBytes));
+    }
+  }
+  return fileKey.subarray(0, keyLengthBytes);
+}
+
+/** Algorithm 6: does the empty user password really open this file? */
+function pdfUserPasswordMatches(fileKey, revision, idBytes, userBytes) {
+  if (!fileKey || !userBytes || userBytes.length < 16) return false;
+  var userCheck;
+  if (revision === 2) {
+    userCheck = pdfRc4(fileKey, new Uint8Array(PDF_PASSWORD_PADDING));
+  } else {
+    var userHash = pdfMd5(pdfJoinBytes([new Uint8Array(PDF_PASSWORD_PADDING), idBytes || new Uint8Array(0)]));
+    userCheck = pdfRc4(fileKey, userHash);
+    for (var userRound = 1; userRound <= 19; userRound++) {
+      var roundKey = new Uint8Array(fileKey.length);
+      for (var roundKeyIndex = 0; roundKeyIndex < fileKey.length; roundKeyIndex++) {
+        roundKey[roundKeyIndex] = fileKey[roundKeyIndex] ^ userRound;
+      }
+      userCheck = pdfRc4(roundKey, userCheck);
+    }
+  }
+  return pdfBytesEqual(userCheck.subarray(0, 16), userBytes.subarray(0, 16));
+}
+
+/* A split runs once per page range with the SAME byte array, and revision 6
+   hashing is expensive: remember the handler for the bytes we just parsed.
+   `undefined` means "not computed yet", `null` means "not encrypted". */
+var pdfSecurityHandlerCache = (typeof WeakMap === 'function') ? new WeakMap() : null;
+var pdfSecurityHandlerLastBytes = null;
+var pdfSecurityHandlerLastValue = undefined;
+
+function pdfCachedSecurityHandler(pdfBytes) {
+  if (pdfSecurityHandlerLastBytes === pdfBytes) return pdfSecurityHandlerLastValue;
+  if (pdfSecurityHandlerCache && pdfSecurityHandlerCache.has(pdfBytes)) {
+    pdfSecurityHandlerLastBytes = pdfBytes;
+    pdfSecurityHandlerLastValue = pdfSecurityHandlerCache.get(pdfBytes);
+    return pdfSecurityHandlerLastValue;
+  }
+  return undefined;
+}
+
+function pdfStoreSecurityHandler(pdfBytes, securityHandler) {
+  pdfSecurityHandlerLastBytes = pdfBytes;
+  pdfSecurityHandlerLastValue = securityHandler;
+  if (pdfSecurityHandlerCache) pdfSecurityHandlerCache.set(pdfBytes, securityHandler);
+}
+
+/** Open the standard security handler of one document (null when the file is
+ *  not encrypted). An object with `error` describes a file we cannot read. */
+function pdfOpenSecurityHandler(pdfText, pdfObjects, trailerText) {
+  var encryptionCandidates = pdfEncryptionDictionaryCandidates(pdfText, pdfObjects, trailerText);
+  if (!encryptionCandidates.length) return null;
+  var firstErrorText = '';
+  for (var candidateIndex = 0; candidateIndex < encryptionCandidates.length; candidateIndex++) {
+    var attempt = pdfOpenStandardHandler(encryptionCandidates[candidateIndex], pdfText, trailerText, pdfObjects);
+    if (attempt && !attempt.error) return attempt;
+    if (attempt && attempt.error && !firstErrorText) firstErrorText = attempt.error;
+  }
+  return { error: firstErrorText || pdfEncryptionFailureText() };
+}
+
+/** Try ONE /Encrypt dictionary: read it, derive the key, verify the password */
+function pdfOpenStandardHandler(encryptionText, pdfText, trailerText, pdfObjects) {
+  var filterName = pdfDictionaryName(encryptionText, 'Filter');
+  if (filterName !== 'Standard') {
+    // A public-key or unknown handler: not a password, but not readable either.
+    return { error: pdfEncryptionFailureText() };
+  }
+  var version = pdfDictionaryNumber(encryptionText, 'V');
+  var revision = pdfDictionaryNumber(encryptionText, 'R');
+  var keyBits = pdfDictionaryNumber(encryptionText, 'Length') || 40;
+  var permissionFlags = pdfDictionaryNumber(encryptionText, 'P');
+  var ownerBytes = pdfDictionaryStringBytes(encryptionText, 'O');
+  var userBytes = pdfDictionaryStringBytes(encryptionText, 'U');
+  var encryptMetadata = !/\/EncryptMetadata\s+false/.test(encryptionText);
+  if (!ownerBytes || !userBytes) return { error: pdfEncryptionFailureText() };
+
+  // Which filter protects streams? (revision 4+ stores it in /CF -> /StmF)
+  var streamMethod = 'RC4';
+  var stringMethod = 'RC4';
+  var cryptFilterKeyBits = 0;
+  if (version >= 4) {
+    var streamFilterName = pdfDictionaryName(encryptionText, 'StmF') || 'Identity';
+    var stringFilterName = pdfDictionaryName(encryptionText, 'StrF') || 'Identity';
+    var cryptFilterTable = pdfDictionaryEntryText(encryptionText, 'CF') || '';
+    var readCryptFilter = function(cryptFilterName) {
+      if (cryptFilterName === 'Identity') return { method: 'Identity', keyBits: 0, known: true };
+      var cryptFilterStart = cryptFilterTable.indexOf('/' + cryptFilterName);
+      var cryptFilterText = cryptFilterStart === -1 ? '' : pdfDictionaryAt(cryptFilterTable, cryptFilterStart);
+      if (!cryptFilterText) {
+        // The filter entry may be an indirect reference: /CF << /StdCF 7 0 R >>
+        var referenceValue = cryptFilterStart === -1 ? '' : pdfDictionaryEntryText(cryptFilterTable, cryptFilterName);
+        var referenceMatch = referenceValue ? /^(\d+)\s+\d+\s+R/.exec(referenceValue) : null;
+        var referencedFilter = referenceMatch ? pdfObjects[parseInt(referenceMatch[1], 10)] : null;
+        if (referencedFilter && referencedFilter.dictionaryText) cryptFilterText = referencedFilter.dictionaryText;
+      }
+      if (!cryptFilterText) return { method: 'unknown', keyBits: 0, known: false };
+      var cryptMethod = pdfDictionaryName(cryptFilterText, 'CFM');
+      var filterLength = pdfDictionaryNumber(cryptFilterText, 'Length');
+      // Inside /CF the length is in BYTES (16); some producers write bits.
+      var filterKeyBits = 0;
+      if (filterLength >= 5 && filterLength <= 32) filterKeyBits = filterLength * 8;
+      else if (filterLength > 32 && filterLength <= 256) filterKeyBits = filterLength;
+      var method = 'RC4';
+      if (cryptMethod === 'AESV2') method = 'AESV2';
+      else if (cryptMethod === 'AESV3') method = 'AESV3';
+      else if (cryptMethod === 'None') method = 'Identity';
+      else if (cryptMethod !== 'V2') method = 'unknown';
+      return { method: method, keyBits: filterKeyBits, known: method !== 'unknown' };
+    };
+    var streamFilter = readCryptFilter(streamFilterName);
+    var stringFilter = readCryptFilter(stringFilterName);
+    streamMethod = streamFilter.method;
+    stringMethod = stringFilter.method;
+    cryptFilterKeyBits = streamFilter.keyBits;
+    // An unknown filter must NOT be guessed: writing still-encrypted streams
+    // into a "decrypted" part would silently corrupt the PDF.
+    if (!streamFilter.known) return { error: pdfEncryptionFailureText() };
+  }
+
+  function buildHandler(resolvedFileKey, resolvedKeyBits) {
+    return {
+      version: version,
+      revision: revision,
+      keyBits: resolvedKeyBits,
+      streamMethod: streamMethod,
+      stringMethod: stringMethod,
+      fileKey: resolvedFileKey,
+      decryptStream: function(objectNumber, generationNumber, streamBytes) {
+        if (!streamBytes || !streamBytes.length) return streamBytes;
+        if (streamMethod === 'Identity') return streamBytes;
+        var objectKey = resolvedFileKey;
+        if (revision <= 4) {
+          var objectKeyInput = new Uint8Array(resolvedFileKey.length + 5 + (streamMethod === 'AESV2' ? 4 : 0));
+          objectKeyInput.set(resolvedFileKey, 0);
+          objectKeyInput[resolvedFileKey.length] = objectNumber & 0xFF;
+          objectKeyInput[resolvedFileKey.length + 1] = (objectNumber >> 8) & 0xFF;
+          objectKeyInput[resolvedFileKey.length + 2] = (objectNumber >> 16) & 0xFF;
+          objectKeyInput[resolvedFileKey.length + 3] = generationNumber & 0xFF;
+          objectKeyInput[resolvedFileKey.length + 4] = (generationNumber >> 8) & 0xFF;
+          if (streamMethod === 'AESV2') {
+            objectKeyInput[resolvedFileKey.length + 5] = 0x73;
+            objectKeyInput[resolvedFileKey.length + 6] = 0x41;
+            objectKeyInput[resolvedFileKey.length + 7] = 0x6C;
+            objectKeyInput[resolvedFileKey.length + 8] = 0x54;
+          }
+          objectKey = pdfMd5(objectKeyInput).subarray(0, Math.min(resolvedFileKey.length + 5, 16));
+        }
+        if (streamMethod === 'RC4') return pdfRc4(objectKey, streamBytes);
+        if (streamBytes.length < 32) return streamBytes;
+        return pdfAesCbcDecrypt(objectKey, streamBytes.subarray(0, 16), streamBytes.subarray(16));
+      },
+      describe: function() {
+        if (revision >= 5) return 'AES-256 (revision ' + revision + ')';
+        if (streamMethod === 'AESV2') return 'AES-128 (revision ' + revision + ')';
+        return 'RC4-' + resolvedKeyBits + ' (revision ' + revision + ')';
+      }
+    };
+  }
+
+  // Nothing to decrypt: the file protects strings only.
+  if (streamMethod === 'Identity') return buildHandler(null, keyBits);
+
+  if (revision <= 4) {
+    // The key length comes from the crypt filter and/or the dictionary; when a
+    // damaged file states it in only one place (or wrongly), try the usual
+    // values until the empty password validates.
+    var keyBitCandidates = [];
+    if (revision === 2) {
+      keyBitCandidates.push(40);
+    } else {
+      if (cryptFilterKeyBits) keyBitCandidates.push(cryptFilterKeyBits);
+      if (keyBits && keyBitCandidates.indexOf(keyBits) === -1) keyBitCandidates.push(keyBits);
+      if (keyBitCandidates.indexOf(128) === -1) keyBitCandidates.push(128);
+      if (keyBitCandidates.indexOf(40) === -1) keyBitCandidates.push(40);
+    }
+    // The /ID belongs to the newest trailer; a broken file may only carry it in
+    // an older one, and a file without /ID at all uses an empty string.
+    var idCandidates = [];
+    var latestIdBytes = pdfIdBytesAt(trailerText, trailerText.indexOf('/ID'));
+    if (latestIdBytes) idCandidates.push(latestIdBytes);
+    var firstIdBytes = pdfIdBytesAt(pdfText, pdfText.indexOf('/ID'));
+    if (firstIdBytes && !(latestIdBytes && pdfBytesEqual(firstIdBytes, latestIdBytes))) idCandidates.push(firstIdBytes);
+    idCandidates.push(new Uint8Array(0));
+
+    for (var bitsIndex = 0; bitsIndex < keyBitCandidates.length; bitsIndex++) {
+      for (var idIndex = 0; idIndex < idCandidates.length; idIndex++) {
+        var candidateKey = pdfDeriveFileKeyLegacy(revision, keyBitCandidates[bitsIndex], permissionFlags,
+          ownerBytes, idCandidates[idIndex], encryptMetadata);
+        if (pdfUserPasswordMatches(candidateKey, revision, idCandidates[idIndex], userBytes)) {
+          return buildHandler(candidateKey, keyBitCandidates[bitsIndex]);
+        }
+      }
+    }
+    developerLog('[PDF:SECURITY] no empty-password match (V' + version + '/R' + revision + ', declared ' + keyBits +
+      ' bit, filter ' + cryptFilterKeyBits + ' bit, ' + keyBitCandidates.length + ' key length(s) x ' +
+      idCandidates.length + ' ID(s))');
+    return { error: pdfOpenPasswordFailureText() };
+  }
+
+  if (revision === 5 || revision === 6) {
+    if (userBytes.length < 48 || ownerBytes.length < 48) return { error: pdfEncryptionFailureText() };
+    if (typeof BigInt !== 'function') return { error: pdfEncryptionFailureText() };
+    var encryptedFileKey = pdfDictionaryStringBytes(encryptionText, 'UE');
+    if (!encryptedFileKey || encryptedFileKey.length < 32) return { error: pdfEncryptionFailureText() };
+    var passwordBytes = pdfPasswordBytes('');
+    // qpdf/pypdf (and Adobe) hash the password + salt only; a few producers
+    // follow the ISO text and include the 48-byte U string. Try both.
+    var userDataCandidates = [new Uint8Array(0), userBytes.subarray(0, 48)];
+    for (var userDataIndex = 0; userDataIndex < userDataCandidates.length; userDataIndex++) {
+      var userData = userDataCandidates[userDataIndex];
+      var userValidationHash = pdfRevisedHash(passwordBytes, userBytes.subarray(32, 40), userData, revision);
+      if (!pdfBytesEqual(userValidationHash.subarray(0, 32), userBytes.subarray(0, 32))) continue;
+      var userKeyHash = pdfRevisedHash(passwordBytes, userBytes.subarray(40, 48), userData, revision);
+      var decryptedFileKey = pdfAesCbcDecrypt(userKeyHash.subarray(0, 32), new Uint8Array(16), encryptedFileKey.subarray(0, 32));
+      if (!decryptedFileKey || decryptedFileKey.length < 32) continue;
+      return buildHandler(decryptedFileKey.subarray(0, 32), keyBits);
+    }
+    developerLog('[PDF:SECURITY] no empty-password match (V' + version + '/R' + revision + ', AES-256)');
+    return { error: pdfOpenPasswordFailureText() };
+  }
+  return { error: pdfEncryptionFailureText() };
+}
+
+/** ISO 32000-2 Algorithm 2.A/2.B: the key hash of revisions 5 and 6 */
+function pdfRevisedHash(passwordBytes, saltBytes, userKeyBytes, revision) {
+  var hashValue = pdfSha256(pdfJoinBytes([passwordBytes, saltBytes, userKeyBytes]));
+  if (revision === 5) return hashValue;
+  var roundIndex = 0;
+  while (true) {
+    var blockBytes = pdfJoinBytes([passwordBytes, hashValue, userKeyBytes]);
+    var repeatedBytes = new Uint8Array(blockBytes.length * 64);
+    for (var repeatIndex = 0; repeatIndex < 64; repeatIndex++) repeatedBytes.set(blockBytes, repeatIndex * blockBytes.length);
+    var encryptedBytes = pdfAesCbcEncryptNoPadding(hashValue.subarray(0, 16), hashValue.subarray(16, 32), repeatedBytes);
+    var selector = 0;
+    for (var selectorIndex = 0; selectorIndex < 16; selectorIndex++) selector = (selector + encryptedBytes[selectorIndex]) % 3;
+    if (selector === 0) hashValue = pdfSha256(encryptedBytes);
+    else if (selector === 1) hashValue = pdfSha384(encryptedBytes);
+    else hashValue = pdfSha512(encryptedBytes);
+    roundIndex++;
+    if (roundIndex >= 64 && encryptedBytes[encryptedBytes.length - 1] <= roundIndex - 32) break;
+  }
+  return hashValue.subarray(0, 32);
+}
+
 /** Build a new PDF that contains only the requested page range. */
 function pdfSplitPdfPageRange(pdfBytes, firstPageNumber, lastPageNumber) {
   if (!pdfBytes || !pdfBytes.length) throw new Error('The PDF file is empty.');
   var pdfText = bytesToLatin1String(pdfBytes);
   if (pdfText.substring(0, 5) !== '%PDF-') throw new Error('This file is not a PDF document.');
-  if (/\/Encrypt\s+(\d+\s+\d+\s+R|<<)/.test(pdfText)) {
-    throw new Error('This PDF is encrypted. Remove the password protection first, then split it.');
-  }
 
   var pdfObjects = pdfCollectClassicObjects(pdfText);
+  // A copy-protected PDF (empty user password, permissions only) is decrypted
+  // here, exactly like every other PDF tool does before it copies pages.
+  var securityHandler = pdfCachedSecurityHandler(pdfBytes);
+  if (securityHandler === undefined) {
+    securityHandler = pdfOpenSecurityHandler(pdfText, pdfObjects, pdfLatestTrailerText(pdfText));
+    pdfStoreSecurityHandler(pdfBytes, securityHandler);
+  }
+  if (securityHandler && securityHandler.error) throw new Error(securityHandler.error);
+  if (securityHandler) developerLog('[PDF:SECURITY] decrypted as ' + securityHandler.describe());
   var catalogNumber = pdfFindCatalogNumber(pdfText);
   var pageEntries = pdfCollectPageEntries(pdfObjects, catalogNumber);
   if (!pageEntries.length || pdfText.indexOf('/ObjStm') !== -1) {
     // Pages and resources may live in compressed object streams - expand them,
     // but never let one malformed stream break the whole split.
-    try { pdfExpandPdfObjectStreams(pdfObjects); }
+    try { pdfExpandPdfObjectStreams(pdfObjects, securityHandler); }
     catch (objectStreamError) { console.warn('[PDF:SPLIT] object streams could not be expanded:', objectStreamError); }
     pageEntries = pdfCollectPageEntries(pdfObjects, catalogNumber);
   }
@@ -8538,7 +9684,13 @@ function pdfSplitPdfPageRange(pdfBytes, firstPageNumber, lastPageNumber) {
     var newObjectNumber = numberMap[dependencyNumbers[dependencyWriteIndex]];
     var rewrittenDictionary = pdfRewriteObjectReferences(dependencyObject.dictionaryText || '', numberMap);
     if (dependencyObject.streamBytes) {
-      writePdfObject(newObjectNumber, pdfWithDirectStreamLength(rewrittenDictionary, dependencyObject.streamBytes.length), dependencyObject.streamBytes);
+      // Encrypted streams are decrypted with the object key, so the part we
+      // write is a normal, unprotected PDF.
+      var streamBytesToWrite = securityHandler
+        ? securityHandler.decryptStream(dependencyObject.number, dependencyObject.generation || 0, dependencyObject.streamBytes)
+        : dependencyObject.streamBytes;
+      if (!streamBytesToWrite || !streamBytesToWrite.length) streamBytesToWrite = dependencyObject.streamBytes;
+      writePdfObject(newObjectNumber, pdfWithDirectStreamLength(rewrittenDictionary, streamBytesToWrite.length), streamBytesToWrite);
     } else {
       writePdfObject(newObjectNumber, rewrittenDictionary, null);
     }
@@ -8798,6 +9950,777 @@ function canvasToStudioImage(canvas, name, callback) {
   } catch (encodeError) {
     callback('browser could not encode the image: ' + encodeError.message);
   }
+}
+
+/* ── Picture anchors and deterministic placement ──
+   A picture is NEVER placed by guessing. At extraction time every picture
+   records WHERE it came from and WHAT text surrounded it:
+
+     sourcePage     page of the document the picture was captured from
+     orderOnPage    1-based reading order on that page
+     pageOrder      page then position, used to keep the document order
+     sourceBox      normalised rectangle on the page (when known)
+     anchorBefore   the text directly above the picture
+     anchorAfter    the text directly below it
+     anchorHeading  the nearest heading above it
+     anchorSource   text-layer | vision | none
+     pinnedHeading  a section the author pinned the picture to
+
+   The generation prompt lists these anchors, and after the AI answers
+   verifyAndRepairStudioPicturePlacement() moves every figure to its anchor,
+   inserts the pictures the model forgot, removes duplicates and restores
+   page order - with a report instead of silent drops. */
+
+var STUDIO_ANCHOR_TEXT_LIMIT = 240;
+var STUDIO_SOURCE_TEXT_LIMIT = 120000;
+var studioPlacementReports = {};
+var STUDIO_ANCHOR_STOPWORDS = {
+  the: 1, and: 1, for: 1, with: 1, that: 1, this: 1, from: 1, into: 1, are: 1, was: 1, were: 1,
+  has: 1, have: 1, had: 1, not: 1, but: 1, you: 1, your: 1, its: 1, his: 1, her: 1, their: 1,
+  can: 1, may: 1, will: 1, would: 1, should: 1, could: 1, than: 1, then: 1, they: 1, them: 1,
+  there: 1, when: 1, where: 1, which: 1, what: 1, who: 1, how: 1, all: 1, any: 1, each: 1,
+  also: 1, such: 1, some: 1, more: 1, most: 1, very: 1, only: 1, just: 1, about: 1, above: 1,
+  below: 1, over: 1, under: 1, between: 1, after: 1, before: 1, same: 1, other: 1, our: 1
+};
+
+/** Page order key: page first, then the position of the picture on that page */
+function studioPicturePageOrder(pageNumber, orderOnPage) {
+  return (Math.max(0, Number(pageNumber) || 0) * 1000) + Math.max(0, Number(orderOnPage) || 0);
+}
+
+/** Write the captured anchor fields onto a freshly encoded gallery picture */
+function attachStudioPictureAnchor(pictureImage, anchorInfo) {
+  if (!pictureImage) return pictureImage;
+  var anchor = anchorInfo || {};
+  var sourcePage = Math.max(0, parseInt(anchor.sourcePage, 10) || 0);
+  var orderOnPage = Math.max(0, parseInt(anchor.orderOnPage, 10) || 0);
+  pictureImage.sourcePage = sourcePage;
+  pictureImage.orderOnPage = orderOnPage;
+  pictureImage.pageOrder = studioPicturePageOrder(sourcePage, orderOnPage);
+  pictureImage.detectedBy = anchor.detectedBy || pictureImage.detectedBy || '';
+  pictureImage.anchorSource = anchor.anchorSource || 'none';
+  if (anchor.sourceBox) {
+    pictureImage.sourceBox = {
+      x: Number(anchor.sourceBox.x) || 0,
+      y: Number(anchor.sourceBox.y) || 0,
+      width: Number(anchor.sourceBox.width) || 0,
+      height: Number(anchor.sourceBox.height) || 0
+    };
+  }
+  if (anchor.anchorBefore) pictureImage.anchorBefore = normalizeAnchorSnippet(anchor.anchorBefore, true);
+  if (anchor.anchorAfter) pictureImage.anchorAfter = normalizeAnchorSnippet(anchor.anchorAfter, false);
+  if (anchor.anchorHeading) pictureImage.anchorHeading = normalizeAnchorSnippet(anchor.anchorHeading, false);
+  return pictureImage;
+}
+
+/** One-line snippet of page text (tail = the end nearest the picture) */
+function normalizeAnchorSnippet(textValue, keepTail) {
+  var snippet = String(textValue || '').replace(/\s+/g, ' ').trim();
+  if (snippet.length > STUDIO_ANCHOR_TEXT_LIMIT) {
+    snippet = keepTail
+      ? snippet.substring(snippet.length - STUDIO_ANCHOR_TEXT_LIMIT)
+      : snippet.substring(0, STUDIO_ANCHOR_TEXT_LIMIT);
+  }
+  return snippet;
+}
+
+/** Text items of one page grouped into lines, in rendered-canvas pixels.
+ *  Each line keeps its height so a heading can be told from body text. */
+function pageTextLinesForAnchor(textContent, pageViewport) {
+  var textItems = (textContent && textContent.items) || [];
+  if (!pageViewport) return [];
+  var itemBoxes = [];
+  for (var itemIndex = 0; itemIndex < textItems.length; itemIndex++) {
+    var textItem = textItems[itemIndex];
+    if (!textItem || !textItem.str || !textItem.transform) continue;
+    var transformedMatrix = null;
+    try {
+      transformedMatrix = multiplyPdfMatrices(pageViewport.transform, textItem.transform);
+    } catch (transformError) {
+      transformedMatrix = null;
+    }
+    if (!transformedMatrix) continue;
+    var fontHeight = Math.hypot(transformedMatrix[2], transformedMatrix[3]) || 10;
+    var itemLeft = transformedMatrix[4];
+    var itemBaseline = transformedMatrix[5];
+    itemBoxes.push({
+      text: String(textItem.str),
+      left: itemLeft,
+      top: itemBaseline - fontHeight,
+      bottom: itemBaseline + fontHeight * 0.35,
+      height: fontHeight
+    });
+  }
+  if (!itemBoxes.length) return [];
+  itemBoxes.sort(function(firstBox, secondBox) {
+    var verticalTolerance = Math.max(3, firstBox.height * 0.4);
+    if (Math.abs(firstBox.top - secondBox.top) > verticalTolerance) return firstBox.top - secondBox.top;
+    return firstBox.left - secondBox.left;
+  });
+  var pageLines = [];
+  var currentLine = null;
+  for (var boxIndex = 0; boxIndex < itemBoxes.length; boxIndex++) {
+    var itemBox = itemBoxes[boxIndex];
+    var sameLine = currentLine && itemBox.top < currentLine.bottom && itemBox.bottom > currentLine.top;
+    if (sameLine) {
+      currentLine.text += ' ' + itemBox.text;
+      currentLine.top = Math.min(currentLine.top, itemBox.top);
+      currentLine.bottom = Math.max(currentLine.bottom, itemBox.bottom);
+      currentLine.height = Math.max(currentLine.height, itemBox.height);
+      continue;
+    }
+    if (currentLine) pageLines.push(currentLine);
+    currentLine = { text: itemBox.text, top: itemBox.top, bottom: itemBox.bottom, height: itemBox.height };
+  }
+  if (currentLine) pageLines.push(currentLine);
+  for (var lineIndex = 0; lineIndex < pageLines.length; lineIndex++) {
+    pageLines[lineIndex].text = String(pageLines[lineIndex].text || '').replace(/\s+/g, ' ').trim();
+  }
+  return pageLines;
+}
+
+/** The text above, below and the nearest heading of a picture rectangle */
+function pictureAnchorFromPageLines(pageLines, pictureRect, pageHeight) {
+  var anchor = { before: '', after: '', heading: '', source: 'none' };
+  if (!pageLines || !pageLines.length || !pictureRect) return anchor;
+  var pageTotalHeight = Math.max(1, Number(pageHeight) || 1000);
+  var maximumGap = Math.max(90, pageTotalHeight * 0.22);
+  var linesAbove = [];
+  var linesBelow = [];
+  for (var lineIndex = 0; lineIndex < pageLines.length; lineIndex++) {
+    var pageLine = pageLines[lineIndex];
+    if (!pageLine.text) continue;
+    if (pageLine.bottom <= pictureRect.top + 3) linesAbove.push(pageLine);
+    else if (pageLine.top >= pictureRect.top + pictureRect.height - 3) linesBelow.push(pageLine);
+  }
+  linesAbove.sort(function(firstLine, secondLine) { return secondLine.bottom - firstLine.bottom; });
+  linesBelow.sort(function(firstLine, secondLine) { return firstLine.top - secondLine.top; });
+
+  var beforeParts = [];
+  for (var aboveIndex = 0; aboveIndex < linesAbove.length && beforeParts.length < 2; aboveIndex++) {
+    var aboveLine = linesAbove[aboveIndex];
+    if ((pictureRect.top - aboveLine.bottom) > maximumGap) break;
+    beforeParts.unshift(aboveLine.text);
+  }
+  anchor.before = normalizeAnchorSnippet(beforeParts.join(' '), true);
+
+  var afterParts = [];
+  for (var belowIndex = 0; belowIndex < linesBelow.length && afterParts.length < 2; belowIndex++) {
+    var belowLine = linesBelow[belowIndex];
+    if ((belowLine.top - (pictureRect.top + pictureRect.height)) > maximumGap) break;
+    afterParts.push(belowLine.text);
+  }
+  anchor.after = normalizeAnchorSnippet(afterParts.join(' '), false);
+
+  var biggestHeadingLine = null;
+  for (var headingIndex = 0; headingIndex < linesAbove.length; headingIndex++) {
+    var headingLine = linesAbove[headingIndex];
+    if ((pictureRect.top - headingLine.bottom) > maximumGap * 2.4) break;
+    if (!headingLine.text || headingLine.text.length > 120) continue;
+    if (headingLine.text.split(' ').length > 14) continue;
+    if (!biggestHeadingLine || headingLine.height > biggestHeadingLine.height * 1.15) {
+      biggestHeadingLine = { text: headingLine.text, height: headingLine.height };
+    }
+  }
+  if (biggestHeadingLine) anchor.heading = normalizeAnchorSnippet(biggestHeadingLine.text, false);
+  anchor.source = (anchor.before || anchor.after || anchor.heading) ? 'text-layer' : 'none';
+  return anchor;
+}
+
+/** "p.12 · #2" ('' when the page is unknown) */
+function studioPicturePositionLabel(image) {
+  if (!image || !image.sourcePage) return '';
+  var positionLabel = 'p.' + image.sourcePage;
+  if (image.orderOnPage) positionLabel += ' · #' + image.orderOnPage;
+  return positionLabel;
+}
+
+/** The anchor line shown on a gallery card and in the prompt map */
+function studioPictureAnchorSummary(image) {
+  if (!image) return '';
+  if (image.pinnedHeading) return 'Pinned to "' + image.pinnedHeading + '"';
+  if (image.anchorBefore) return 'after: "' + image.anchorBefore + '"';
+  if (image.caption) return image.caption;
+  if (image.anchorAfter) return 'before: "' + image.anchorAfter + '"';
+  return '';
+}
+
+/** Build the placement map lines sent with the generation prompt */
+function buildStudioPictureMapLines(galleryImages) {
+  var mapLines = [];
+  var images = galleryImages || [];
+  for (var imageIndex = 0; imageIndex < images.length; imageIndex++) {
+    var galleryImage = images[imageIndex] || {};
+    var mapParts = ['{{IMG' + imageIndex + '}}'];
+    if (galleryImage.sourcePage) mapParts.push('page ' + galleryImage.sourcePage);
+    if (galleryImage.orderOnPage) mapParts.push('picture #' + galleryImage.orderOnPage + ' on that page');
+    if (galleryImage.kind) mapParts.push('kind: ' + String(galleryImage.kind));
+    if (galleryImage.caption) mapParts.push('caption: "' + String(galleryImage.caption).substring(0, 220) + '"');
+    if (galleryImage.pinnedHeading) {
+      mapParts.push('PINNED: must stay inside the section titled "' + String(galleryImage.pinnedHeading).substring(0, 160) + '"');
+    }
+    if (galleryImage.anchorHeading) mapParts.push('nearest heading: "' + String(galleryImage.anchorHeading).substring(0, 160) + '"');
+    if (galleryImage.anchorBefore) mapParts.push('the text right before it ends with: "' + String(galleryImage.anchorBefore) + '"');
+    if (galleryImage.anchorAfter) mapParts.push('the text right after it begins with: "' + String(galleryImage.anchorAfter) + '"');
+    if (!galleryImage.sourcePage && !galleryImage.caption && !galleryImage.anchorBefore) {
+      mapParts.push('no location recorded - place it where its subject is discussed');
+    }
+    mapParts.push('file: ' + (galleryImage.name || ('picture-' + (imageIndex + 1))));
+    mapLines.push(mapParts.join(' | '));
+  }
+  return mapLines;
+}
+
+/** HTML -> plain text used only for anchor matching */
+function htmlToPlacementPlainText(htmlText) {
+  return String(htmlText || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Words worth comparing: lower case, no stop words, no short noise */
+function studioPlacementWords(textValue) {
+  var plainText = String(textValue || '').toLowerCase();
+  var rawWords = plainText.split(/[^0-9a-z\u00c0-\u024f\u0370-\u03ff\u0400-\u04ff\u0590-\u06ff]+/i);
+  var usefulWords = [];
+  for (var wordIndex = 0; wordIndex < rawWords.length; wordIndex++) {
+    var rawWord = rawWords[wordIndex];
+    if (!rawWord || rawWord.length < 3) continue;
+    if (STUDIO_ANCHOR_STOPWORDS[rawWord]) continue;
+    usefulWords.push(rawWord);
+  }
+  return usefulWords;
+}
+
+/** Words of one text that also appear in a pre-computed word set */
+function studioPlacementWordScore(blockWordSet, wantedWords) {
+  if (!blockWordSet || !wantedWords || !wantedWords.length) return 0;
+  var matchCount = 0;
+  for (var wordIndex = 0; wordIndex < wantedWords.length; wordIndex++) {
+    if (blockWordSet[wantedWords[wordIndex]]) matchCount++;
+  }
+  return matchCount;
+}
+
+var STUDIO_BLOCK_TAGS = {
+  p: 1, figure: 1, table: 1, ul: 1, ol: 1, dl: 1, blockquote: 1, pre: 1, address: 1,
+  h1: 1, h2: 1, h3: 1, h4: 1
+};
+var STUDIO_VOID_TAGS = {
+  img: 1, br: 1, hr: 1, input: 1, meta: 1, link: 1, source: 1, col: 1, area: 1,
+  base: 1, embed: 1, param: 1, track: 1, wbr: 1
+};
+
+/** Top-level block elements of a generated fragment, with their offsets.
+ *  Container elements (section, div, nav) are NOT blocks: their children are,
+ *  which keeps each paragraph its own placement target. */
+function scanStudioHtmlBlocks(htmlText) {
+  var html = String(htmlText || '');
+  var blocks = [];
+  var openBlocks = [];
+  var tagPattern = /<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*?(\/?)>/g;
+  var tagMatch;
+  while ((tagMatch = tagPattern.exec(html))) {
+    var isClosingTag = tagMatch[1] === '/';
+    var tagName = String(tagMatch[2] || '').toLowerCase();
+    var isSelfClosing = tagMatch[3] === '/' || STUDIO_VOID_TAGS[tagName];
+    if (isSelfClosing) {
+      if (!isClosingTag && !openBlocks.length && (tagName === 'img' || tagName === 'hr')) {
+        blocks.push({ start: tagMatch.index, end: tagPattern.lastIndex, html: html.substring(tagMatch.index, tagPattern.lastIndex) });
+      }
+      continue;
+    }
+    if (!STUDIO_BLOCK_TAGS[tagName]) continue;
+    if (!isClosingTag) {
+      openBlocks.push({ tagName: tagName, start: tagMatch.index });
+      continue;
+    }
+    for (var openIndex = openBlocks.length - 1; openIndex >= 0; openIndex--) {
+      if (openBlocks[openIndex].tagName !== tagName) continue;
+      var openedBlock = openBlocks.splice(openIndex, 1)[0];
+      if (!openBlocks.length) {
+        blocks.push({ start: openedBlock.start, end: tagPattern.lastIndex, html: html.substring(openedBlock.start, tagPattern.lastIndex) });
+      }
+      break;
+    }
+  }
+  if (openBlocks.length) {
+    blocks.push({ start: openBlocks[0].start, end: html.length, html: html.substring(openBlocks[0].start) });
+  }
+  return blocks;
+}
+
+/** Token spellings the model may use for one picture */
+function studioImageTokenVariants(tokenIndex) {
+  return ['{{IMG' + tokenIndex + '}}', '{{ IMG' + tokenIndex + ' }}', '[[IMG' + tokenIndex + ']]', 'IMG:' + tokenIndex];
+}
+
+/** First position where a picture is referenced (token or already-replaced URL) */
+function studioImageReferencePosition(htmlText, galleryImage, tokenIndex, startAt) {
+  var fromIndex = Math.max(0, Number(startAt) || 0);
+  var positions = [];
+  var tokenVariants = studioImageTokenVariants(tokenIndex);
+  for (var variantIndex = 0; variantIndex < tokenVariants.length; variantIndex++) {
+    var variantPosition = htmlText.indexOf(tokenVariants[variantIndex], fromIndex);
+    if (variantPosition >= 0) positions.push(variantPosition);
+  }
+  var imageSource = imageSrcForGeneratedContent(galleryImage);
+  if (imageSource) {
+    var sourcePosition = htmlText.indexOf(imageSource, fromIndex);
+    if (sourcePosition >= 0) positions.push(sourcePosition);
+  }
+  if (!positions.length) return -1;
+  positions.sort(function(firstPosition, secondPosition) { return firstPosition - secondPosition; });
+  return positions[0];
+}
+
+/** The <figure> or bare <img> that contains a reference position */
+function studioReferenceRangeAround(htmlText, referencePosition) {
+  var figureStart = htmlText.lastIndexOf('<figure', referencePosition);
+  if (figureStart !== -1) {
+    var figureEndBefore = htmlText.lastIndexOf('</figure>', referencePosition);
+    var figureEnd = htmlText.indexOf('</figure>', referencePosition);
+    if (figureEndBefore < figureStart && figureEnd !== -1) {
+      return { start: figureStart, end: figureEnd + 9 };
+    }
+  }
+  var imageStart = htmlText.lastIndexOf('<img', referencePosition);
+  if (imageStart !== -1) {
+    var imageClose = htmlText.indexOf('>', imageStart);
+    if (imageClose !== -1 && imageClose >= referencePosition) {
+      return { start: imageStart, end: imageClose + 1 };
+    }
+  }
+  return null;
+}
+
+/** Alt text of a gallery picture (caption, else a neutral description) */
+function studioImageAltText(galleryImage) {
+  if (!galleryImage) return 'Illustration';
+  var altSource = galleryImage.caption || galleryImage.anchorHeading || '';
+  if (!altSource) altSource = (galleryImage.kind ? String(galleryImage.kind) : 'Illustration');
+  return String(altSource).substring(0, 160);
+}
+
+/** Caption of a gallery picture ('' when it has none) */
+function studioImageCaptionText(galleryImage) {
+  if (!galleryImage || !galleryImage.caption) return '';
+  return String(galleryImage.caption).substring(0, 300);
+}
+
+/** A figure that always carries the token, a real alt and the caption */
+function buildStudioFigureHtml(galleryImage, tokenIndex) {
+  var token = '{{IMG' + tokenIndex + '}}';
+  var captionText = studioImageCaptionText(galleryImage);
+  return '<figure><img src="' + token + '" alt="' + esc(studioImageAltText(galleryImage)) + '">' +
+    (captionText ? '<figcaption>' + esc(captionText) + '</figcaption>' : '') +
+    '</figure>';
+}
+
+/** Keep the model's own figure markup, but force token + alt + caption */
+function normalizeStudioFigureHtml(existingHtml, galleryImage, tokenIndex) {
+  var figureHtml = String(existingHtml || '').trim();
+  if (!figureHtml) return buildStudioFigureHtml(galleryImage, tokenIndex);
+  if (figureHtml.indexOf('<figure') !== 0) figureHtml = '<figure>' + figureHtml + '</figure>';
+  // Without an <img> inside it the "figure" is not a picture at all.
+  if (!/<img\b/i.test(figureHtml)) return buildStudioFigureHtml(galleryImage, tokenIndex);
+  var token = '{{IMG' + tokenIndex + '}}';
+  figureHtml = figureHtml.replace(/(<img\b[^>]*?\bsrc\s*=\s*")([^"]*)(")/i, '$1' + token + '$3');
+  if (!/<img\b[^>]*\balt\s*=\s*"[^"]*[^\s"][^"]*"/i.test(figureHtml)) {
+    figureHtml = figureHtml.replace(/<img\b/i, '<img alt="' + esc(studioImageAltText(galleryImage)) + '"');
+  }
+  var captionText = studioImageCaptionText(galleryImage);
+  if (captionText) {
+    if (/<figcaption\b[^>]*>\s*<\/figcaption>/i.test(figureHtml)) {
+      figureHtml = figureHtml.replace(/<figcaption\b[^>]*>\s*<\/figcaption>/i,
+        '<figcaption>' + esc(captionText) + '</figcaption>');
+    } else if (!/<figcaption\b/i.test(figureHtml)) {
+      if (/<\/figure>\s*$/i.test(figureHtml)) {
+        figureHtml = figureHtml.replace(/<\/figure>\s*$/i, '<figcaption>' + esc(captionText) + '</figcaption></figure>');
+      } else {
+        figureHtml += '<figcaption>' + esc(captionText) + '</figcaption>';
+      }
+    }
+  }
+  return figureHtml;
+}
+
+/** The heading block whose text matches a pinned heading */
+function findStudioHeadingBlockIndex(blockInfoList, headingText) {
+  var wantedWords = studioPlacementWords(headingText);
+  if (!wantedWords.length) return -1;
+  var wantedKey = wantedWords.join(' ');
+  for (var blockIndex = 0; blockIndex < blockInfoList.length; blockIndex++) {
+    if (!blockInfoList[blockIndex].isHeading) continue;
+    if (blockInfoList[blockIndex].wordKey === wantedKey) return blockIndex;
+  }
+  for (var fuzzyIndex = 0; fuzzyIndex < blockInfoList.length; fuzzyIndex++) {
+    if (!blockInfoList[fuzzyIndex].isHeading) continue;
+    if (studioPlacementWordScore(blockInfoList[fuzzyIndex].wordSet, wantedWords) >= 2) return fuzzyIndex;
+  }
+  return -1;
+}
+
+/** The block a picture should sit after, from its anchors. -1 = no match. */
+function findBestStudioAnchorBlock(blockInfoList, galleryImage) {
+  var anchorWords = studioPlacementWords(galleryImage.anchorBefore);
+  var captionWords = studioPlacementWords(galleryImage.caption);
+  var headingWords = studioPlacementWords(galleryImage.anchorHeading);
+  if (!anchorWords.length && !captionWords.length && !headingWords.length) return { blockIndex: -1, reason: '' };
+  var bestBlockIndex = -1;
+  var bestScore = 0;
+  var secondScore = 0;
+  for (var blockIndex = 0; blockIndex < blockInfoList.length; blockIndex++) {
+    var blockInfo = blockInfoList[blockIndex];
+    if (blockInfo.isHeading || blockInfo.isFigure) continue;
+    var blockScore = (studioPlacementWordScore(blockInfo.wordSet, anchorWords) * 3) +
+      (studioPlacementWordScore(blockInfo.wordSet, captionWords) * 2) +
+      studioPlacementWordScore(blockInfo.wordSet, headingWords);
+    if (blockScore > bestScore) {
+      secondScore = bestScore;
+      bestScore = blockScore;
+      bestBlockIndex = blockIndex;
+    } else if (blockScore > secondScore) {
+      secondScore = blockScore;
+    }
+  }
+  // A single shared word is noise; a real anchor shares several words and
+  // must clearly beat every other block.
+  if (bestBlockIndex < 0 || bestScore < 6 || bestScore < secondScore + 3) return { blockIndex: -1, reason: '' };
+  return { blockIndex: bestBlockIndex, reason: anchorWords.length ? 'text-anchor' : 'caption-anchor' };
+}
+
+/** Verify and repair the placement of every gallery picture in one pass.
+ *  Returns { html, report } and never throws on odd model output. */
+function verifyAndRepairStudioPicturePlacement(htmlText) {
+  var sourceHtml = String(htmlText || '');
+  var galleryImages = editingStudyDocImages || [];
+  var placementReport = {
+    total: galleryImages.length, placed: 0, moved: 0, inserted: 0, duplicates: 0,
+    unanchored: 0, orderAdjusted: 0, changed: false, details: []
+  };
+  if (!galleryImages.length) return { html: sourceHtml, report: placementReport };
+
+  var rawBlocks = scanStudioHtmlBlocks(sourceHtml);
+  var blockInfoList = [];
+  for (var blockIndex = 0; blockIndex < rawBlocks.length; blockIndex++) {
+    var blockText = htmlToPlacementPlainText(rawBlocks[blockIndex].html);
+    var blockWords = studioPlacementWords(blockText);
+    var wordSet = {};
+    for (var wordIndex = 0; wordIndex < blockWords.length; wordIndex++) wordSet[blockWords[wordIndex]] = true;
+    blockInfoList.push({
+      start: rawBlocks[blockIndex].start,
+      end: rawBlocks[blockIndex].end,
+      isHeading: /^<h[1-4]\b/i.test(rawBlocks[blockIndex].html),
+      isFigure: /^<figure\b/i.test(rawBlocks[blockIndex].html),
+      isFigure: /^<figure\b/i.test(rawBlocks[blockIndex].html),
+      isFigure: /^<figure\b/i.test(rawBlocks[blockIndex].html),
+      wordSet: wordSet,
+      wordKey: blockWords.join(' ')
+    });
+  }
+  function blockIndexAt(position) {
+    for (var findIndex = 0; findIndex < blockInfoList.length; findIndex++) {
+      if (position >= blockInfoList[findIndex].start && position < blockInfoList[findIndex].end) return findIndex;
+    }
+    return -1;
+  }
+
+  var pictureEntries = [];
+  for (var imageIndex = 0; imageIndex < galleryImages.length; imageIndex++) {
+    var galleryImage = galleryImages[imageIndex];
+    var referencePosition = studioImageReferencePosition(sourceHtml, galleryImage, imageIndex, 0);
+    var referenceRange = null;
+    var bareTokenRange = null;
+    var originalBlockIndex = -1;
+    var duplicateRanges = [];
+    var figureHtml = buildStudioFigureHtml(galleryImage, imageIndex);
+    if (referencePosition >= 0) {
+      referenceRange = studioReferenceRangeAround(sourceHtml, referencePosition);
+      if (!referenceRange) {
+        // A token written as plain text (not inside an <img>) is removed and
+        // replaced by the figure - otherwise it would appear twice.
+        var tokenText = sourceHtml.substring(referencePosition, referencePosition + 2);
+        if (tokenText === '{{' || tokenText === '[[') {
+          bareTokenRange = { start: referencePosition, end: referencePosition + ('{{IMG' + imageIndex + '}}').length };
+        }
+      }
+      if (referenceRange) {
+        originalBlockIndex = blockIndexAt(referenceRange.start);
+        figureHtml = normalizeStudioFigureHtml(sourceHtml.substring(referenceRange.start, referenceRange.end), galleryImage, imageIndex);
+        var laterPosition = studioImageReferencePosition(sourceHtml, galleryImage, imageIndex, referenceRange.end);
+        while (laterPosition >= 0 && duplicateRanges.length < 20) {
+          var laterRange = studioReferenceRangeAround(sourceHtml, laterPosition);
+          if (!laterRange) break;
+          duplicateRanges.push(laterRange);
+          laterPosition = studioImageReferencePosition(sourceHtml, galleryImage, imageIndex, laterRange.end);
+        }
+      }
+    }
+    pictureEntries.push({
+      image: galleryImage,
+      tokenIndex: imageIndex,
+      referenceRange: referenceRange,
+      bareTokenRange: bareTokenRange,
+      originalBlockIndex: originalBlockIndex,
+      duplicateRanges: duplicateRanges,
+      figureHtml: figureHtml
+    });
+  }
+
+  var removalEdits = [];
+  var insertionEdits = [];
+  var previousPictureOffset = 0;
+  for (var placeIndex = 0; placeIndex < pictureEntries.length; placeIndex++) {
+    var placementEntry = pictureEntries[placeIndex];
+    var placementImage = placementEntry.image;
+    var targetBlockIndex = -1;
+    var placementReason = '';
+    var pinnedHeadingText = String(placementImage.pinnedHeading || '').trim();
+    if (pinnedHeadingText) {
+      targetBlockIndex = findStudioHeadingBlockIndex(blockInfoList, pinnedHeadingText);
+      if (targetBlockIndex >= 0) placementReason = 'pinned';
+    }
+    if (targetBlockIndex < 0) {
+      var anchorMatch = findBestStudioAnchorBlock(blockInfoList, placementImage);
+      if (anchorMatch.blockIndex >= 0) {
+        targetBlockIndex = anchorMatch.blockIndex;
+        placementReason = anchorMatch.reason;
+      }
+    }
+    var targetOffset;
+    if (targetBlockIndex >= 0) {
+      targetOffset = blockInfoList[targetBlockIndex].end;
+    } else if (placementEntry.referenceRange) {
+      // Nothing says the picture is in the wrong place: keep the position the
+      // model chose (the order rule below can still move it down the page).
+      targetOffset = placementEntry.referenceRange.start;
+      placementReason = 'kept-position';
+    } else {
+      targetOffset = sourceHtml.length;
+      placementReason = 'end-of-document';
+    }
+    var hasAnyAnchor = !!(pinnedHeadingText || placementImage.anchorBefore || placementImage.anchorAfter || placementImage.caption);
+    if (!hasAnyAnchor) placementReport.unanchored++;
+    if (targetOffset < previousPictureOffset) {
+      targetOffset = previousPictureOffset;
+      placementReport.orderAdjusted++;
+      placementReason += '+order';
+    }
+
+    // A figure that already sits right after the target block needs no edit -
+    // only whitespace may stand between them.
+    var isAlreadyInPlace = false;
+    if (placementEntry.referenceRange) {
+      var gapStart = Math.min(targetOffset, placementEntry.referenceRange.start);
+      var gapEnd = Math.max(targetOffset, placementEntry.referenceRange.start);
+      isAlreadyInPlace = placementEntry.referenceRange.start >= targetOffset &&
+        /^\s*$/.test(sourceHtml.substring(gapStart, gapEnd));
+    }
+    previousPictureOffset = isAlreadyInPlace
+      ? Math.max(previousPictureOffset, placementEntry.referenceRange.start)
+      : targetOffset;
+
+    var wasMissing = !placementEntry.referenceRange;
+    if (wasMissing) placementReport.inserted++;
+    else if (isAlreadyInPlace) placementReport.placed++;
+    else placementReport.moved++;
+    placementReport.duplicates += placementEntry.duplicateRanges.length;
+    placementReport.details.push({
+      name: placementImage.name || ('picture ' + (placementEntry.tokenIndex + 1)),
+      positionLabel: studioPicturePositionLabel(placementImage),
+      action: wasMissing ? 'inserted' : (isAlreadyInPlace ? 'kept' : 'moved'),
+      reason: placementReason
+    });
+    if (placementEntry.bareTokenRange) {
+      removalEdits.push({
+        start: placementEntry.bareTokenRange.start,
+        end: placementEntry.bareTokenRange.end,
+        text: '',
+        priority: 0,
+        sequence: removalEdits.length
+      });
+    }
+    for (var duplicateIndex = 0; duplicateIndex < placementEntry.duplicateRanges.length; duplicateIndex++) {
+      var duplicateRange = placementEntry.duplicateRanges[duplicateIndex];
+      removalEdits.push({ start: duplicateRange.start, end: duplicateRange.end, text: '', priority: 0, sequence: removalEdits.length });
+    }
+    if (!isAlreadyInPlace) {
+      if (placementEntry.referenceRange) {
+        removalEdits.push({
+          start: placementEntry.referenceRange.start,
+          end: placementEntry.referenceRange.end,
+          text: '',
+          priority: 0,
+          sequence: removalEdits.length
+        });
+      }
+      insertionEdits.push({ start: targetOffset, end: targetOffset, text: placementEntry.figureHtml, priority: 1, sequence: 1000 + insertionEdits.length });
+    }
+  }
+
+  var allEdits = removalEdits.concat(insertionEdits);
+  allEdits.sort(function(firstEdit, secondEdit) {
+    if (firstEdit.start !== secondEdit.start) return firstEdit.start - secondEdit.start;
+    if (firstEdit.priority !== secondEdit.priority) return firstEdit.priority - secondEdit.priority;
+    return firstEdit.sequence - secondEdit.sequence;
+  });
+  var repairedHtml = '';
+  var cursor = 0;
+  for (var editIndex = 0; editIndex < allEdits.length; editIndex++) {
+    var currentEdit = allEdits[editIndex];
+    var editStart = Math.max(cursor, currentEdit.start);
+    if (editStart > cursor) repairedHtml += sourceHtml.substring(cursor, editStart);
+    repairedHtml += currentEdit.text;
+    cursor = Math.max(cursor, currentEdit.end);
+  }
+  repairedHtml += sourceHtml.substring(cursor);
+  repairedHtml = repairedHtml.replace(/<p\b[^>]*>\s*<\/p>/gi, '');
+  placementReport.changed = repairedHtml !== sourceHtml;
+  return { html: placementReport.changed ? repairedHtml : sourceHtml, report: placementReport };
+}
+
+/** Compact placement report rendered above the picture gallery */
+function renderStudioPlacementReportHtml(placementReport) {
+  if (!placementReport || !placementReport.total) return '';
+  var isClean = !placementReport.inserted && !placementReport.moved && !placementReport.duplicates && !placementReport.orderAdjusted;
+  var reportHtml = '<div class="sd-placement-report' + (isClean ? ' is-clean' : '') + '">' +
+    '<div class="sd-placement-head">' + (isClean ? '✅' : '🖼') + ' Placement: ' +
+    placementReport.placed + ' placed · ' + placementReport.moved + ' moved · ' +
+    placementReport.inserted + ' inserted · ' + placementReport.duplicates + ' duplicate(s) removed</div>';
+  for (var detailIndex = 0; detailIndex < placementReport.details.length; detailIndex++) {
+    var detailEntry = placementReport.details[detailIndex];
+    if (detailEntry.action === 'kept') continue;
+    var actionLabel = detailEntry.action === 'inserted' ? '➕ inserted' : '↔ moved';
+    reportHtml += '<div class="sd-placement-line">' + actionLabel + ' · ' + esc(detailEntry.name) +
+      (detailEntry.positionLabel ? ' (' + esc(detailEntry.positionLabel) + ')' : '') +
+      (detailEntry.reason ? ' · ' + esc(detailEntry.reason) : '') + '</div>';
+  }
+  return reportHtml + '</div>';
+}
+
+/** Show the last placement report in the Pictures pane */
+function renderStudioPlacementReportPanel() {
+  var reportHost = el('sd-placement-report');
+  if (!reportHost) return;
+  var storedReport = studioPlacementReports[studioCurrentDocUrl];
+  if (!storedReport || !storedReport.total) {
+    reportHost.hidden = true;
+    reportHost.innerHTML = '';
+    return;
+  }
+  reportHost.hidden = false;
+  reportHost.innerHTML = renderStudioPlacementReportHtml(storedReport);
+}
+
+/** Headings of the current generated document (for the pin picker) */
+function studioGeneratedHeadingList() {
+  var generatedEntry = editingStudyDocGeneratedHtmlMap[studioCurrentDocUrl];
+  var generatedHtml = generatedEntry ? generatedEntry.html : studioGeneratedHtml;
+  var headingTexts = [];
+  var headingPattern = /<h([1-4])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
+  var headingMatch;
+  while ((headingMatch = headingPattern.exec(String(generatedHtml || ''))) && headingTexts.length < 80) {
+    var headingText = htmlToPlacementPlainText(headingMatch[2]);
+    if (headingText && headingTexts.indexOf(headingText) === -1) headingTexts.push(headingText);
+  }
+  return headingTexts;
+}
+
+/** 📌 Pin a picture to a section of the generated document */
+function openStudioPicturePinDialog(imageIndex) {
+  var galleryImage = editingStudyDocImages[imageIndex];
+  if (!galleryImage) return;
+  var headingTexts = studioGeneratedHeadingList();
+  if (!headingTexts.length) {
+    tool.notify('Generate the content first - the pin needs the section headings of the generated document.', 'warning');
+    return;
+  }
+  var optionHtml = '<option value="">Automatic - use the text anchor</option>';
+  for (var headingIndex = 0; headingIndex < headingTexts.length; headingIndex++) {
+    optionHtml += '<option value="' + esc(headingTexts[headingIndex]) + '"' +
+      (galleryImage.pinnedHeading === headingTexts[headingIndex] ? ' selected' : '') + '>' +
+      esc(headingTexts[headingIndex]) + '</option>';
+  }
+  openStudioModal('📌 Place "' + (galleryImage.name || 'picture') + '"',
+    '<div class="form-group"><label class="form-label" for="sd-pin-heading-select">Section of the generated document</label>' +
+    '<select class="form-input" id="sd-pin-heading-select">' + optionHtml + '</select>' +
+    '<span class="form-hint">A pinned picture always goes inside that section, whatever the text anchor says. Automatic uses the captured anchor text.</span></div>' +
+    '<div class="sd-pin-anchor">' + (studioPictureAnchorSummary(galleryImage) ? esc(studioPictureAnchorSummary(galleryImage)) : 'No anchor captured for this picture.') + '</div>' +
+    '<div class="sd-modal-actions"><button type="button" class="btn btn-outline" data-sd-close>Cancel</button>' +
+    '<button type="button" class="btn btn-primary" id="sd-pin-apply">💾 Save placement</button></div>');
+  var applyButton = el('sd-pin-apply');
+  if (applyButton) {
+    applyButton.addEventListener('click', function() {
+      var headingSelect = el('sd-pin-heading-select');
+      setStudioPicturePin(imageIndex, headingSelect ? headingSelect.value : '');
+      closeStudioModal();
+    });
+  }
+}
+
+/** Store (or clear) the manual pin of one picture */
+function setStudioPicturePin(imageIndex, headingText) {
+  var galleryImage = editingStudyDocImages[imageIndex];
+  if (!galleryImage) return;
+  galleryImage.pinnedHeading = String(headingText || '').trim();
+  persistStudioImages();
+  autoSaveCurrentLesson();
+  renderStudyDocImageGallery();
+  tool.notify(galleryImage.pinnedHeading
+    ? 'Picture pinned to "' + galleryImage.pinnedHeading + '".'
+    : 'Pin removed - the captured text anchor is used.', 'success');
+}
+
+/** Move a picture earlier/later in the generation order */
+function moveStudioPicture(imageIndex, direction) {
+  var targetIndex = imageIndex + (direction < 0 ? -1 : 1);
+  if (targetIndex < 0 || targetIndex >= editingStudyDocImages.length) return;
+  if (!editingStudyDocImages[imageIndex] || !editingStudyDocImages[targetIndex]) return;
+  var movedImage = editingStudyDocImages[imageIndex];
+  editingStudyDocImages[imageIndex] = editingStudyDocImages[targetIndex];
+  editingStudyDocImages[targetIndex] = movedImage;
+  persistStudioImages();
+  autoSaveCurrentLesson();
+  renderStudyDocImageGallery();
+  tool.notify('Picture moved to position ' + (targetIndex + 1) + ' of ' + editingStudyDocImages.length + '. Run 🖼 on the Generated tab to apply the new order.', 'info');
+}
+
+/** 🖼 Check placement button: repair the saved generated content in place */
+function runStudioPlacementCheck() {
+  var documentUrl = studioCurrentDocUrl;
+  if (!documentUrl) { tool.notify('Open a document first.', 'warning'); return; }
+  var generatedEntry = editingStudyDocGeneratedHtmlMap[documentUrl];
+  if (!generatedEntry || !generatedEntry.html) {
+    tool.notify('Generate the content first - there is nothing to check yet.', 'warning');
+    return;
+  }
+  var placementResult = verifyAndRepairStudioPicturePlacement(generatedEntry.html);
+  studioPlacementReports[documentUrl] = placementResult.report;
+  if (!placementResult.report.changed) {
+    renderStudioPlacementReportPanel();
+    tool.notify('Picture placement is already correct: ' + placementResult.report.placed + ' placed, nothing to fix.', 'success');
+    return;
+  }
+  rememberStudioGeneratedVersion(documentUrl);
+  generatedEntry.html = replaceStudioImageTokens(placementResult.html);
+  generatedEntry.generatedAt = Date.now();
+  editingStudyDocGeneratedHtmlMap[documentUrl] = generatedEntry;
+  studioGeneratedHtml = generatedEntry.html;
+  renderStudioGeneratedPreview();
+  renderStudioPlacementReportPanel();
+  autoSaveCurrentLesson();
+  var placementSummary = '🖼 Placement fixed: ' + placementResult.report.moved + ' moved, ' +
+    placementResult.report.inserted + ' inserted, ' + placementResult.report.duplicates + ' duplicate(s) removed.';
+  setStudioStatus(placementSummary + ' Use ↩ Previous version in Review to undo.', 'ok');
+  tool.notify(placementSummary, 'success');
 }
 
 /** Indexed color (palette) images: map each index byte to the inline palette */
@@ -9428,14 +11351,14 @@ function arrangeStudioDrawerLayout() {
   if (!studioDrawer.getAttribute('data-active-tab')) studioDrawer.setAttribute('data-active-tab', 'document');
 }
 
-/* ── Workspace tabs: Source / Generated / Side by Side / Pictures ── */
+/* ── Workspace tabs: Source / Generated / Side by Side / Review / Pictures ── */
 var studioCompareMode = false;
 
-/** Show one workspace tab ('document' = Source, 'content' = Generated, 'compare', 'pictures') */
+/** Show one workspace tab ('document' = Source, 'content' = Generated, 'compare', 'review', 'pictures') */
 function switchStudioTab(tabName) {
   var previewColumns = el('sd-preview-columns');
   if (!previewColumns) return;
-  var allowedTabs = ['document', 'content', 'compare', 'pictures'];
+  var allowedTabs = ['document', 'content', 'compare', 'review', 'pictures'];
   var chosenTab = allowedTabs.indexOf(tabName) === -1 ? 'document' : tabName;
   previewColumns.setAttribute('data-tab', chosenTab);
   var studioDrawer = el('sd-studio-drawer');
@@ -9445,6 +11368,7 @@ function switchStudioTab(tabName) {
     { id: 'btn-sd-tab-document', name: 'document' },
     { id: 'btn-sd-tab-content', name: 'content' },
     { id: 'btn-sd-compare', name: 'compare' },
+    { id: 'btn-sd-tab-review', name: 'review' },
     { id: 'btn-sd-tab-pictures', name: 'pictures' }
   ];
   for (var tabIndex = 0; tabIndex < tabButtons.length; tabIndex++) {
@@ -9454,6 +11378,7 @@ function switchStudioTab(tabName) {
     tabButton.classList.toggle('sd-tab-active', isActiveTab);
     tabButton.setAttribute('aria-selected', isActiveTab ? 'true' : 'false');
   }
+  if (chosenTab === 'review') renderStudioReviewPane();
   tool.resize();
 }
 
@@ -9507,7 +11432,8 @@ function addPastedStudioScreenshot(screenshotDataUrl, screenshotWidth, screensho
     height: screenshotHeight || 0,
     dataUrl: screenshotDataUrl,
     sizeKb: Math.max(1, Math.round(screenshotDataUrl.length * 0.75 / 1024)),
-    role: 'real'
+    role: 'real',
+    detectedBy: 'pasted'
   });
   var newImageIndex = editingStudyDocImages.length - 1;
   persistStudioImages();
@@ -9686,8 +11612,7 @@ function adoptMirroredStudioDocumentUrl(originalDocumentUrl, fileMeta) {
     if (editingStudyDocImagesMap[storageUrl]) {
       editingStudyDocImages = JSON.parse(JSON.stringify(editingStudyDocImagesMap[storageUrl]));
     }
-    var drawerTitle = el('sd-drawer-title');
-    if (drawerTitle) drawerTitle.textContent = readableFileName(storageUrl);
+    updateStudioDrawerHeading(storageUrl);
     loadStudioGeneratedForDoc(storageUrl);
     renderStudyDocImageGallery();
     updateStudioOriginalSourceButton();
@@ -9724,7 +11649,7 @@ function schedulePdfPreviewRetry() {
     pdfPreviewRetryTimer = null;
     if (!studioCurrentDocUrl) return;
     if (pdfJsLibraryAvailable()) {
-      console.warn('[STUDIO:PREVIEW] PDF.js appeared after the preview opened - rendering now');
+      developerLog('[STUDIO:PREVIEW] PDF.js appeared after the preview opened - rendering now');
       loadStudioDocumentPreview();
       return;
     }
@@ -10034,15 +11959,75 @@ function pdfEmbeddedPictureRegions(operatorList, pageViewport) {
   var operationCodes = (operatorList && operatorList.fnArray) || [];
   var operationArguments = (operatorList && operatorList.argsArray) || [];
   var identityMatrix = [1, 0, 0, 1, 0, 0];
-  var savedMatrices = [];
+  // A content stream is a stack of states: q/Q saves and restores the matrix
+  // AND the clip. Ignoring the clip (the old behaviour) kept the invisible
+  // part of an image that the page clips away - the classic "extra empty space
+  // at the bottom of the crop".
+  var savedStates = [];
   var currentMatrix = identityMatrix;
+  var currentClipBox = null;      // null = the whole page
+  var currentPathBox = null;      // bounding box of the path being built
   var pageWidth = pageViewport.width;
   var pageHeight = pageViewport.height;
   var pageArea = Math.max(1, pageWidth * pageHeight);
   var minimumSidePixels = Math.max(32, Math.round(pageViewport.scale * 18));
   var picturePadding = Math.max(2, Math.round(pageViewport.scale * 1.5));
   var pictureRegions = [];
-  var scanStats = { imageOperations: 0, inlineImageOperations: 0, maskOperations: 0, regionsKept: 0, regionsDroppedSmall: 0, regionsMapped: 0, operatorCount: operationCodes.length };
+  var scanStats = { imageOperations: 0, inlineImageOperations: 0, maskOperations: 0, regionsKept: 0, regionsDroppedSmall: 0, regionsDroppedClipped: 0, regionsClipped: 0, regionsMapped: 0, operatorCount: operationCodes.length };
+
+  /** Add one path point (PDF user space) to the bounding box of the path */
+  function addPathPoint(userX, userY) {
+    if (typeof userX !== 'number' || typeof userY !== 'number' || isNaN(userX) || isNaN(userY)) return;
+    var deviceX = currentMatrix[0] * userX + currentMatrix[2] * userY + currentMatrix[4];
+    var deviceY = currentMatrix[1] * userX + currentMatrix[3] * userY + currentMatrix[5];
+    var viewportPoint = pdfUserPointToViewportPoint(pageViewport, deviceX, deviceY);
+    if (!viewportPoint || isNaN(viewportPoint[0]) || isNaN(viewportPoint[1])) return;
+    if (!currentPathBox) {
+      currentPathBox = { left: viewportPoint[0], top: viewportPoint[1], right: viewportPoint[0], bottom: viewportPoint[1] };
+      return;
+    }
+    if (viewportPoint[0] < currentPathBox.left) currentPathBox.left = viewportPoint[0];
+    if (viewportPoint[0] > currentPathBox.right) currentPathBox.right = viewportPoint[0];
+    if (viewportPoint[1] < currentPathBox.top) currentPathBox.top = viewportPoint[1];
+    if (viewportPoint[1] > currentPathBox.bottom) currentPathBox.bottom = viewportPoint[1];
+  }
+
+  /** Every coordinate pair of a flat array (curve control points included:
+   *  the box may only get larger, so a curve is never cut by its clip) */
+  function addPathPointPairs(coordinateList) {
+    if (!coordinateList || !coordinateList.length) return;
+    for (var coordinateIndex = 0; coordinateIndex + 1 < coordinateList.length; coordinateIndex += 2) {
+      addPathPoint(Number(coordinateList[coordinateIndex]), Number(coordinateList[coordinateIndex + 1]));
+    }
+  }
+
+  /** Box of the path builder op that holds all its points in one array
+   *  (PDF.js 4+ constructPath: [miniOps, coords] or [miniOps, coords, minMax]) */
+  function addConstructPathPoints(argumentList) {
+    var coordinateList = null;
+    for (var argumentIndex = 0; argumentIndex < argumentList.length; argumentIndex++) {
+      var argumentValue = argumentList[argumentIndex];
+      if (!argumentValue || typeof argumentValue.length !== 'number' || argumentValue.length < 4) continue;
+      if (typeof argumentValue[0] !== 'number') continue;
+      if (argumentValue.length % 2 !== 0) continue;
+      if (!coordinateList || argumentValue.length > coordinateList.length) coordinateList = argumentValue;
+    }
+    addPathPointPairs(coordinateList);
+  }
+
+  /** Intersection of two viewport boxes (an empty box means "not visible") */
+  function intersectViewportBoxes(firstBox, secondBox) {
+    if (!firstBox) return secondBox;
+    if (!secondBox) return firstBox;
+    var overlapLeft = Math.max(firstBox.left, secondBox.left);
+    var overlapTop = Math.max(firstBox.top, secondBox.top);
+    var overlapRight = Math.min(firstBox.right, secondBox.right);
+    var overlapBottom = Math.min(firstBox.bottom, secondBox.bottom);
+    if (overlapRight <= overlapLeft || overlapBottom <= overlapTop) {
+      return { left: overlapLeft, top: overlapTop, right: overlapLeft, bottom: overlapTop };
+    }
+    return { left: overlapLeft, top: overlapTop, right: overlapRight, bottom: overlapBottom };
+  }
 
   function boxOfUnitSquare(pdfMatrix) {
     var unitCorners = [[0, 0], [1, 0], [0, 1], [1, 1]];
@@ -10066,11 +12051,17 @@ function pdfEmbeddedPictureRegions(operatorList, pageViewport) {
     var operationCode = operationCodes[operationIndex];
     var operationArgs = operationArguments[operationIndex] || [];
     if (operationCode === ops.save) {
-      savedMatrices.push(currentMatrix);
+      savedStates.push({ matrix: currentMatrix, clip: currentClipBox });
+      currentPathBox = null;
       continue;
     }
     if (operationCode === ops.restore) {
-      if (savedMatrices.length) currentMatrix = savedMatrices.pop();
+      if (savedStates.length) {
+        var restoredState = savedStates.pop();
+        currentMatrix = restoredState.matrix;
+        currentClipBox = restoredState.clip;
+      }
+      currentPathBox = null;
       continue;
     }
     if (operationCode === ops.transform) {
@@ -10078,13 +12069,60 @@ function pdfEmbeddedPictureRegions(operatorList, pageViewport) {
       continue;
     }
     if (operationCode === ops.paintFormXObjectBegin) {
-      savedMatrices.push(currentMatrix);
+      savedStates.push({ matrix: currentMatrix, clip: currentClipBox });
       var formMatrix = operationArgs[0];
       if (formMatrix && formMatrix.length === 6) currentMatrix = multiplyPdfMatrices(currentMatrix, formMatrix);
+      currentPathBox = null;
       continue;
     }
     if (operationCode === ops.paintFormXObjectEnd) {
-      if (savedMatrices.length) currentMatrix = savedMatrices.pop();
+      if (savedStates.length) {
+        var closedFormState = savedStates.pop();
+        currentMatrix = closedFormState.matrix;
+        currentClipBox = closedFormState.clip;
+      }
+      currentPathBox = null;
+      continue;
+    }
+    // Path building: the next clip is the bounding box of these points.
+    if (operationCode === ops.moveTo || operationCode === ops.lineTo) {
+      if (operationArgs.length >= 2) addPathPoint(Number(operationArgs[0]), Number(operationArgs[1]));
+      continue;
+    }
+    if (operationCode === ops.curveTo || operationCode === ops.curveTo2 || operationCode === ops.curveTo3) {
+      addPathPointPairs(operationArgs);
+      continue;
+    }
+    if (operationCode === ops.rectangle) {
+      if (operationArgs.length >= 4) {
+        var rectangleX = Number(operationArgs[0]);
+        var rectangleY = Number(operationArgs[1]);
+        var rectangleWidth = Number(operationArgs[2]);
+        var rectangleHeight = Number(operationArgs[3]);
+        if (!isNaN(rectangleX) && !isNaN(rectangleY) && !isNaN(rectangleWidth) && !isNaN(rectangleHeight)) {
+          addPathPoint(rectangleX, rectangleY);
+          addPathPoint(rectangleX + rectangleWidth, rectangleY + rectangleHeight);
+        }
+      }
+      continue;
+    }
+    if (operationCode === ops.constructPath) {
+      addConstructPathPoints(operationArgs);
+      continue;
+    }
+    if (operationCode === ops.closePath) continue;
+    if (operationCode === ops.clip || operationCode === ops.eoClip) {
+      if (currentPathBox) {
+        currentClipBox = intersectViewportBoxes(currentClipBox, currentPathBox);
+        var clipWidth = currentClipBox.right - currentClipBox.left;
+        var clipHeight = currentClipBox.bottom - currentClipBox.top;
+        if (clipWidth <= 1 || clipHeight <= 1) currentClipBox = { left: 0, top: 0, right: 0, bottom: 0 };
+      }
+      currentPathBox = null;
+      continue;
+    }
+    if (operationCode === ops.endPath) {
+      currentPathBox = null;
       continue;
     }
     var imageObjectId = null;
@@ -10103,17 +12141,35 @@ function pdfEmbeddedPictureRegions(operatorList, pageViewport) {
     if (!imageObjectId && !inlineImageObject) continue;
     var pictureBox = boxOfUnitSquare(currentMatrix);
     if (!pictureBox) continue;
-    var regionWidth = pictureBox.right - pictureBox.left;
-    var regionHeight = pictureBox.bottom - pictureBox.top;
+    // The VISIBLE part of the picture: a clip can cut an oversized image.
+    // Only the visible part is a picture on the page, so the crop uses it.
+    var visibleBox = pictureBox;
+    var isClipped = false;
+    if (currentClipBox) {
+      var clippedLeft = Math.max(pictureBox.left, currentClipBox.left);
+      var clippedTop = Math.max(pictureBox.top, currentClipBox.top);
+      var clippedRight = Math.min(pictureBox.right, currentClipBox.right);
+      var clippedBottom = Math.min(pictureBox.bottom, currentClipBox.bottom);
+      if (clippedRight - clippedLeft <= 1 || clippedBottom - clippedTop <= 1) {
+        scanStats.regionsDroppedClipped++;
+        continue;
+      }
+      isClipped = clippedLeft > pictureBox.left + 2 || clippedTop > pictureBox.top + 2 ||
+        clippedRight < pictureBox.right - 2 || clippedBottom < pictureBox.bottom - 2;
+      if (isClipped) visibleBox = { left: clippedLeft, top: clippedTop, right: clippedRight, bottom: clippedBottom };
+    }
+    var regionWidth = visibleBox.right - visibleBox.left;
+    var regionHeight = visibleBox.bottom - visibleBox.top;
     if (regionWidth < minimumSidePixels || regionHeight < minimumSidePixels) { scanStats.regionsDroppedSmall++; continue; }
     // A picture painted over the whole page is a page background or a scan.
     // It is NOT dropped here: combinePictureRegionSources() keeps it only
     // when the page has no text layer and no other picture.
-    var isPageBackground = regionWidth * regionHeight > pageArea * 0.85;
-    var regionLeft = Math.max(0, Math.floor(pictureBox.left - picturePadding));
-    var regionTop = Math.max(0, Math.floor(pictureBox.top - picturePadding));
-    var regionRight = Math.min(pageWidth, Math.ceil(pictureBox.right + picturePadding));
-    var regionBottom = Math.min(pageHeight, Math.ceil(pictureBox.bottom + picturePadding));
+    var isPageBackground = (pictureBox.right - pictureBox.left) * (pictureBox.bottom - pictureBox.top) > pageArea * 0.85;
+    if (isClipped) scanStats.regionsClipped++;
+    var regionLeft = Math.max(0, Math.floor(visibleBox.left - picturePadding));
+    var regionTop = Math.max(0, Math.floor(visibleBox.top - picturePadding));
+    var regionRight = Math.min(pageWidth, Math.ceil(visibleBox.right + picturePadding));
+    var regionBottom = Math.min(pageHeight, Math.ceil(visibleBox.bottom + picturePadding));
     if (regionRight - regionLeft < 24 || regionBottom - regionTop < 24) { scanStats.regionsDroppedSmall++; continue; }
     scanStats.regionsKept++;
     pictureRegions.push({
@@ -10124,6 +12180,9 @@ function pdfEmbeddedPictureRegions(operatorList, pageViewport) {
       objectId: imageObjectId || null,
       inlineImageObject: inlineImageObject || null,
       isPageBackground: isPageBackground,
+      // A clipped picture must be taken from the RENDERED page: its decoded
+      // original still holds the part the page hides.
+      isClipped: isClipped,
       originalPlacementMatrix: isAxisAlignedPdfMatrix(currentMatrix) ? currentMatrix.slice(0, 6) : null
     });
   }
@@ -10573,11 +12632,22 @@ function pictureVisionDetectionEnabled() {
   return toolCapability('aiVision');
 }
 
+/** Sizes offered for the AI page picture: the LONGEST side in pixels.
+ *  72 dpi (scale 1) is not enough to crop a small picture cleanly, so the
+ *  render below scales the vector page UP when a larger size is chosen. */
+var VISION_PAGE_SIZE_OPTIONS = [800, 1200, 1600, 2048, 2560, 3072, 4096];
+var VISION_PAGE_MAX_SIZE = 4096;
+
+/** "1600 px" - always the longer side (width or height, whichever is bigger) */
+function visionPageSizeLabel(sizeValue) {
+  return sizeValue + ' px';
+}
+
 /** Vision render size in px: 0 = follow the tool parameter */
 function normalizeVisionPageMaxSide(rawSize) {
   var pageSize = parseInt(rawSize, 10);
   if (!pageSize || pageSize < 600) return 0;
-  if (pageSize > 2048) return 2048;
+  if (pageSize > VISION_PAGE_MAX_SIZE) return VISION_PAGE_MAX_SIZE;
   return pageSize;
 }
 
@@ -10585,8 +12655,101 @@ function normalizeVisionPageMaxSide(rawSize) {
 function resolveVisionPageMaxSide() {
   var pageSize = curriculumVisionPageMaxSide || parseInt(tool.param('visionPageMaxSide', '1600'), 10);
   if (!pageSize || pageSize < 600) pageSize = 1600;
-  if (pageSize > 2048) pageSize = 2048;
+  if (pageSize > VISION_PAGE_MAX_SIZE) pageSize = VISION_PAGE_MAX_SIZE;
   return pageSize;
+}
+
+/* ── Rephrasing rules ──
+   THE editing contract of every AI rewrite: coverage, rewriting, originality,
+   document shape and the silent self-check. It is shown in
+   Settings → ✍️ AI rephrasing rules; a curriculum can store its own version.
+   The tool always appends its technical HTML output rules on top of this. */
+var DEFAULT_REPHRASE_RULES =
+  'You are a senior instructional designer and technical writer. Turn the document given at the end of this prompt into ONE complete, self-contained study document in your own words.\n\n' +
+
+  'PART 1 - COVERAGE CONTRACT (highest priority: zero omission)\n' +
+  '- Keep, without exception: every rule, prohibition, permission, obligation and exception; every scenario, worked example and case; every number (amounts, speeds, distances, times, dates, ages, limits, percentages, ratios, points, penalties); every name, symbol, marking, sign, label and unit; every condition, hazard and special case; every warning, caution and every "must", "never", "always"; every cause-and-effect chain and every "if X, then Y"; every definition, acronym and term; every comparison and contrast; every list with all of its items, in order.\n' +
+  '- Never compress: do not summarise, merge, group or "clean up" distinct rules; no "etc.", "and so on", "..." or "[see above]"; items that look repeated are usually separate rules - keep them all; a paragraph with three ideas must become three explained points, not one bullet; no example is too small to keep.\n' +
+  '- Never truncate. A long answer is expected: the last section must be as complete as the first.\n' +
+  '- Expand only additively: one or two clarifying sentences per rule that explain the SAME rule. Never invent a rule, number, law, name, date, penalty or scenario the document does not support. If the document is ambiguous, keep it ambiguous instead of guessing with outside knowledge.\n' +
+  '- Accuracy beats elegance; completeness beats brevity.\n\n' +
+
+  'PART 2 - REWRITING RULES (a real rewrite, not a light edit)\n' +
+  '1. Rebuild every sentence: do not keep a source sentence and swap a word or two - new structure, new word order, new wording.\n' +
+  '2. Keep the meaning complete and exact: never drop, change or invent a fact, rule, definition, number, formula, date, name or technical term.\n' +
+  '3. Keep terms, names and formulas exactly as written. Quote verbatim only what must stay verbatim (law, formal definitions, direct quotations) inside <blockquote>.\n' +
+  '4. Restructure where it helps: merge or split paragraphs, reorder inside a section, turn prose into lists and lists into prose.\n' +
+  '5. Change the voice and the rhythm (active/passive, sentence length, connectors) and prefer short, clear sentences.\n' +
+  '6. Rewrite heading text too, but never lose a section or a heading level.\n' +
+  '7. Do not summarise the document away and do not shorten it; only merge real repetition.\n' +
+  '8. Give every rule its own scenario-driven explanation instead of a bare checklist line.\n' +
+  '9. Do not add examples, opinions, advice or facts that the document does not contain.\n' +
+  '10. If a sentence is short and generic, join it with the next one and rewrite the pair as one thought - never leave a stub sentence.\n' +
+  '11. Write in the same language as the document and do not mix languages, except for terms that must stay in their original form.\n\n' +
+
+  'PART 3 - ORIGINALITY AND SILENCE (the document must stand entirely on its own)\n' +
+  '- Never reveal the origin: no file name, organisation, author, publisher, book or course title, edition or website - not in the title, headings, body text, captions, alt text, ids or comments.\n' +
+  '- No provenance and no meta talk: no "based on", "adapted from", "compiled from", "source", "according to", and no sentence explaining where the content came from. No disclaimers about advice or accuracy unless the document itself contains them.\n' +
+  '- No external links, QR codes, promotional text or calls to action.\n' +
+  '- Standard terms, official denominations, laws and definitions stay exact; rephrase the explanation around them and never rename a regulated term.\n' +
+  '- Do not reuse a distinctive phrase, metaphor, coined label or example wording from the document when a plain alternative exists.\n\n' +
+
+  'PART 4 - DOCUMENT SHAPE\n' +
+  '- Start with ONE <h1> naming the subject in your own words: neutral, descriptive, never the origin.\n' +
+  '- If the document has four or more major parts, follow the <h1> with a short contents list (<nav><ol><li><a href="#id">...</a></li></ol></nav>) and give every linked <h2> a matching unique id.\n' +
+  '- <h2> for major parts, <h3> for topics, <h4> only for fine detail. Never skip a level and never leave a heading without content.\n' +
+  '- Mirror the document\'s own logic and order of ideas. Open each major section with two to four sentences of plain-language overview, then the full detail - the overview never replaces the detail.\n' +
+  '- Turn dense numeric or comparative content into a real <table> with <caption> and <thead>; the prose stays as well.\n' +
+  '- Use <dl> for definitions, <ul>/<ol> for lists and <strong>/<em> sparingly. Use <blockquote> for a key rule, warning or exception worth calling out, but the same rule must also appear in the body text.\n' +
+  '- Optional: end with a short "Quick reference" list restating the rules in compressed form. It is an addition, never a replacement.\n\n' +
+
+  'PART 5 - SILENT SELF-CHECK (do not print it)\n' +
+  '- Enumerate every heading, bullet, rule, number and warning of the document, map each one to a section of your output, then re-read the document and add whatever is missing.\n' +
+  '- Confirm: nothing was summarised away, no sentence is copied or lightly reworded, no origin is named, and the last section is as complete as the first.';
+
+/** '' or the author's rules, trimmed and bounded */
+function normalizeRephrasePrompt(rawPrompt) {
+  var promptText = typeof rawPrompt === 'string' ? rawPrompt : '';
+  promptText = promptText.replace(/\r\n/g, '\n').trim();
+  if (promptText.length > 20000) promptText = promptText.substring(0, 20000);
+  return promptText;
+}
+
+/** The rules that are actually sent: saved curriculum text, else the default */
+function resolveRephraseRules() {
+  return curriculumRephrasePrompt || DEFAULT_REPHRASE_RULES;
+}
+
+/** Settings card: show the saved rules, or the built-in ones when none exist */
+function syncRephrasePromptSettings() {
+  var promptField = el('curriculum-rephrase-prompt');
+  if (promptField) promptField.value = resolveRephraseRules();
+  var stateElement = el('curriculum-rephrase-state');
+  if (stateElement) {
+    stateElement.textContent = curriculumRephrasePrompt
+      ? 'This curriculum uses its own contract (' + formatCount(curriculumRephrasePrompt.length) + ' characters). The built-in text is not sent while this is saved.'
+      : 'Nothing saved yet - these are the built-in rules. Edit them and press Save to make them this curriculum\'s own.';
+  }
+}
+
+/** "💾 Save these rules": the built-in text unchanged means "no custom rules" */
+function saveRephrasePromptFromSettings() {
+  var promptField = el('curriculum-rephrase-prompt');
+  var normalizedRules = normalizeRephrasePrompt(promptField ? promptField.value : '');
+  curriculumRephrasePrompt = (normalizedRules === DEFAULT_REPHRASE_RULES) ? '' : normalizedRules;
+  syncRephrasePromptSettings();
+  saveCurriculum();
+  tool.notify(curriculumRephrasePrompt
+    ? 'Rephrasing rules saved with this curriculum ✅'
+    : 'These are the built-in rules - nothing extra is stored ✅', 'success');
+}
+
+/** "↩ Restore the built-in rules" */
+function resetRephrasePromptToDefault() {
+  curriculumRephrasePrompt = '';
+  syncRephrasePromptSettings();
+  saveCurriculum();
+  tool.notify('Built-in rephrasing rules restored.', 'info');
 }
 
 /** Instruction sent with every page batch (the gateway allows 2000 chars) */
@@ -10601,23 +12764,65 @@ function buildVisionPictureInstruction() {
     'Give every box as fractions of that page: x, y, width and height between 0 and 1, top-left origin.';
 }
 
+/** A model box in any shape a vision provider can answer -> {x, y, width,
+ *  height} in 0..1. The documented shape is {x, y, width, height}; the other
+ *  shapes are accepted so an adapting gateway cannot silently shift a crop:
+ *  [x1, y1, x2, y2], [x, y, width, height] and {left, top, right, bottom}. */
+function normalizeVisionBoxValues(rawBox) {
+  if (!rawBox) return null;
+  if (typeof rawBox.length === 'number' && !rawBox.width) {
+    if (rawBox.length < 4) return null;
+    var arrayFirstX = Number(rawBox[0]);
+    var arrayFirstY = Number(rawBox[1]);
+    var arraySecondX = Number(rawBox[2]);
+    var arraySecondY = Number(rawBox[3]);
+    if (isNaN(arrayFirstX) || isNaN(arrayFirstY) || isNaN(arraySecondX) || isNaN(arraySecondY)) return null;
+    if (arraySecondX > arrayFirstX && arraySecondY > arrayFirstY &&
+        arraySecondX <= 1.5 && arraySecondY <= 1.5 &&
+        (arraySecondX - arrayFirstX) < 1.5 && (arraySecondY - arrayFirstY) < 1.5) {
+      return { x: arrayFirstX, y: arrayFirstY, width: arraySecondX - arrayFirstX, height: arraySecondY - arrayFirstY };
+    }
+    return { x: arrayFirstX, y: arrayFirstY, width: arraySecondX, height: arraySecondY };
+  }
+  if (typeof rawBox !== 'object') return null;
+  if (typeof rawBox.right !== 'undefined' || typeof rawBox.bottom !== 'undefined') {
+    var cornerLeft = Number(rawBox.left) || 0;
+    var cornerTop = Number(rawBox.top) || 0;
+    return {
+      x: cornerLeft,
+      y: cornerTop,
+      width: (Number(rawBox.right) || 0) - cornerLeft,
+      height: (Number(rawBox.bottom) || 0) - cornerTop
+    };
+  }
+  return {
+    x: Number(rawBox.x) || 0,
+    y: Number(rawBox.y) || 0,
+    width: Number(rawBox.width) || 0,
+    height: Number(rawBox.height) || 0
+  };
+}
+
 /** Normalised model box -> pixel rectangle inside the rendered page (padded) */
 function visionBoxToCropRect(visionRegion, canvasWidth, canvasHeight) {
-  var visionBox = (visionRegion && visionRegion.box) ? visionRegion.box : null;
+  var visionBox = normalizeVisionBoxValues(visionRegion ? visionRegion.box : null);
   if (!visionBox) return null;
-  var boxLeft = Number(visionBox.x) || 0;
-  var boxTop = Number(visionBox.y) || 0;
-  var boxWidth = Number(visionBox.width) || 0;
-  var boxHeight = Number(visionBox.height) || 0;
+  var boxLeft = visionBox.x;
+  var boxTop = visionBox.y;
+  var boxWidth = visionBox.width;
+  var boxHeight = visionBox.height;
   if (boxWidth <= 0 || boxHeight <= 0) return null;
-  // A box outside 0..1 is not normalised (pixel coordinates, a 0..1000 scale
-  // or a different corner order): clamping it would crop a wrong, often
-  // page-sized picture, so the caller skips it instead.
+  // A box far outside 0..1 is not normalised (pixel coordinates or a 0..1000
+  // scale): clamping it would crop a wrong, often page-sized picture, so the
+  // caller skips it instead. A box that only slightly overshoots 0/1 is
+  // clamped (that is a tight box, not a wrong scale).
   if (boxLeft > 1.5 || boxTop > 1.5 || boxWidth > 1.5 || boxHeight > 1.5) return null;
-  // 1.2% padding: model boxes are precise but not pixel exact, and cutting a
-  // photo edge is worse than keeping a thin margin around it.
-  var padX = Math.round(canvasWidth * 0.012);
-  var padY = Math.round(canvasHeight * 0.012);
+  // 2% padding (at least 6 px): model boxes are precise but not pixel exact,
+  // and cutting a photo edge is worse than keeping a thin margin around it.
+  // refineStudioCropRect() then trims the margin again where it is really
+  // empty and grows the crop where the picture continues.
+  var padX = Math.max(6, Math.round(canvasWidth * 0.02));
+  var padY = Math.max(6, Math.round(canvasHeight * 0.02));
   var regionLeft = Math.max(0, Math.floor(boxLeft * canvasWidth - padX));
   var regionTop = Math.max(0, Math.floor(boxTop * canvasHeight - padY));
   var regionRight = Math.min(canvasWidth, Math.ceil((boxLeft + boxWidth) * canvasWidth + padX));
@@ -10628,6 +12833,219 @@ function visionBoxToCropRect(visionRegion, canvasWidth, canvasHeight) {
     width: Math.max(1, regionRight - regionLeft),
     height: Math.max(1, regionBottom - regionTop)
   };
+}
+
+/** Grow a crop to the real picture edge and drop empty page space.
+ *  A model box is normalised, so it is never pixel exact: it can clip a few
+ *  pixels of the picture (a cut top or bottom) or keep white page space below
+ *  it. The rendered page is the truth, so the crop is refined from its own
+ *  pixels:
+ *    1. the search area around the box is measured row by row and column by
+ *       column for ink,
+ *    2. a DENSE band that continues directly outside the box is the same
+ *       picture, so the crop grows to it (a caption is sparse text ink and
+ *       never qualifies),
+ *    3. empty rows/columns at the edges are trimmed (bounded by maxTrim), so
+ *       white page space does not travel into the saved picture.
+ *  Whenever anything looks unusual the incoming rectangle is returned as is. */
+function refineStudioCropRect(pageCanvas, baseRect, options) {
+  if (!pageCanvas || !baseRect) return baseRect;
+  var refineOptions = options || {};
+  var pageWidth = pageCanvas.width || 0;
+  var pageHeight = pageCanvas.height || 0;
+  if (!pageWidth || !pageHeight) return baseRect;
+  var baseLeft = Math.max(0, Math.floor(baseRect.left));
+  var baseTop = Math.max(0, Math.floor(baseRect.top));
+  var baseRight = Math.min(pageWidth, Math.ceil(baseRect.left + baseRect.width));
+  var baseBottom = Math.min(pageHeight, Math.ceil(baseRect.top + baseRect.height));
+  if (baseRight - baseLeft < 12 || baseBottom - baseTop < 12) return baseRect;
+  var smallerSide = Math.min(pageWidth, pageHeight);
+  // maxGrow 0 is a valid request ("trim only"), so it is not treated as unset.
+  var maxGrow = (typeof refineOptions.maxGrow === 'number')
+    ? Math.max(0, Math.round(refineOptions.maxGrow))
+    : Math.max(8, Math.round(smallerSide * 0.02));
+  var requestedMaxTrim = (typeof refineOptions.maxTrim === 'number') ? Math.max(0, Math.round(refineOptions.maxTrim)) : 0;
+  // The trim budget follows the BOX, not the page: a model box can keep a
+  // lot of white page below a picture. Only empty rows are removed - real
+  // content always stops the trim.
+  var verticalTrimCap = requestedMaxTrim || Math.max(8, Math.round((baseBottom - baseTop) * 0.35));
+  var horizontalTrimCap = requestedMaxTrim || Math.max(8, Math.round((baseRight - baseLeft) * 0.35));
+  var searchLeft = Math.max(0, baseLeft - maxGrow);
+  var searchTop = Math.max(0, baseTop - maxGrow);
+  var searchRight = Math.min(pageWidth, baseRight + maxGrow);
+  var searchBottom = Math.min(pageHeight, baseBottom + maxGrow);
+  var searchWidth = searchRight - searchLeft;
+  var searchHeight = searchBottom - searchTop;
+  if (searchWidth < 8 || searchHeight < 8) return baseRect;
+  // Work on a small copy: row/column DENSITY only needs a coarse map, and a
+  // full-resolution getImageData() of a 4000 px page would cost ~100 MB.
+  var coverageScale = Math.min(1, 640 / Math.max(searchWidth, searchHeight));
+  var coverageWidth = Math.max(8, Math.round(searchWidth * coverageScale));
+  var coverageHeight = Math.max(8, Math.round(searchHeight * coverageScale));
+  var coverageCanvas = document.createElement('canvas');
+  coverageCanvas.width = coverageWidth;
+  coverageCanvas.height = coverageHeight;
+  var coverageContext = coverageCanvas.getContext('2d');
+  if (!coverageContext) return baseRect;
+  var coveragePixels;
+  try {
+    coverageContext.drawImage(pageCanvas, searchLeft, searchTop, searchWidth, searchHeight, 0, 0, coverageWidth, coverageHeight);
+    coveragePixels = coverageContext.getImageData(0, 0, coverageWidth, coverageHeight).data;
+  } catch (coverageError) {
+    return baseRect;
+  }
+  if (!coveragePixels) return baseRect;
+  var pixelsPerCoverageX = searchWidth / coverageWidth;
+  var pixelsPerCoverageY = searchHeight / coverageHeight;
+  var rowInk = new Float32Array(coverageHeight);
+  var columnInk = new Float32Array(coverageWidth);
+  for (var coverageY = 0; coverageY < coverageHeight; coverageY++) {
+    var coverageRowOffset = coverageY * coverageWidth * 4;
+    for (var coverageX = 0; coverageX < coverageWidth; coverageX++) {
+      var coverageOffset = coverageRowOffset + coverageX * 4;
+      if (coveragePixels[coverageOffset + 3] < 20) continue;
+      var coverageRed = coveragePixels[coverageOffset];
+      var coverageGreen = coveragePixels[coverageOffset + 1];
+      var coverageBlue = coveragePixels[coverageOffset + 2];
+      // Near-white is page (or picture background); everything else is ink.
+      if (coverageRed > 246 && coverageGreen > 246 && coverageBlue > 246) continue;
+      rowInk[coverageY] += 1;
+      columnInk[coverageX] += 1;
+    }
+  }
+  function averageRowCoverage(firstRow, lastRow) {
+    if (lastRow < firstRow) return 0;
+    var rowTotal = 0;
+    var rowCount = 0;
+    for (var rowIndex = firstRow; rowIndex <= lastRow; rowIndex++) {
+      if (rowIndex < 0 || rowIndex >= coverageHeight) continue;
+      rowTotal += rowInk[rowIndex] / coverageWidth;
+      rowCount++;
+    }
+    return rowCount ? rowTotal / rowCount : 0;
+  }
+  function averageColumnCoverage(firstColumn, lastColumn) {
+    if (lastColumn < firstColumn) return 0;
+    var columnTotal = 0;
+    var columnCount = 0;
+    for (var columnIndex = firstColumn; columnIndex <= lastColumn; columnIndex++) {
+      if (columnIndex < 0 || columnIndex >= coverageWidth) continue;
+      columnTotal += columnInk[columnIndex] / coverageHeight;
+      columnCount++;
+    }
+    return columnCount ? columnTotal / columnCount : 0;
+  }
+  var emptyCoverage = 0.012;
+  var baseTopRow = Math.max(0, Math.floor((baseTop - searchTop) / pixelsPerCoverageY));
+  var baseBottomRow = Math.min(coverageHeight - 1, Math.ceil((baseBottom - searchTop) / pixelsPerCoverageY) - 1);
+  var baseLeftColumn = Math.max(0, Math.floor((baseLeft - searchLeft) / pixelsPerCoverageX));
+  var baseRightColumn = Math.min(coverageWidth - 1, Math.ceil((baseRight - searchLeft) / pixelsPerCoverageX) - 1);
+  var firstInkRow = -1, lastInkRow = -1, firstInkColumn = -1, lastInkColumn = -1;
+  for (var rowScan = 0; rowScan < coverageHeight; rowScan++) {
+    if ((rowInk[rowScan] / coverageWidth) < emptyCoverage) continue;
+    if (firstInkRow < 0) firstInkRow = rowScan;
+    lastInkRow = rowScan;
+  }
+  for (var columnScan = 0; columnScan < coverageWidth; columnScan++) {
+    if ((columnInk[columnScan] / coverageHeight) < emptyCoverage) continue;
+    if (firstInkColumn < 0) firstInkColumn = columnScan;
+    lastInkColumn = columnScan;
+  }
+  var referenceDepth = Math.max(2, Math.round(coverageHeight * 0.05));
+  var referenceWidth = Math.max(2, Math.round(coverageWidth * 0.05));
+  var refinedLeft = baseLeft;
+  var refinedTop = baseTop;
+  var refinedRight = baseRight;
+  var refinedBottom = baseBottom;
+  // 1) GROW into a band that continues the picture. Both the band average and
+  //    the band/reference ratio must be high: a photo row is dense, a caption
+  //    or a heading row is sparse, so text is never pulled into the crop.
+  if (firstInkRow >= 0 && firstInkRow < baseTopRow && (baseTopRow - firstInkRow) * pixelsPerCoverageY <= maxGrow) {
+    var topBandCoverage = averageRowCoverage(firstInkRow, baseTopRow - 1);
+    var topReferenceCoverage = averageRowCoverage(baseTopRow, Math.min(coverageHeight - 1, baseTopRow + referenceDepth));
+    if (topBandCoverage >= 0.06 && topReferenceCoverage >= 0.02 && topBandCoverage >= topReferenceCoverage * 0.55) {
+      refinedTop = searchTop + Math.floor(firstInkRow * pixelsPerCoverageY);
+    }
+  }
+  if (lastInkRow > baseBottomRow && (lastInkRow - baseBottomRow) * pixelsPerCoverageY <= maxGrow) {
+    var bottomBandCoverage = averageRowCoverage(baseBottomRow + 1, lastInkRow);
+    var bottomReferenceCoverage = averageRowCoverage(Math.max(0, baseBottomRow - referenceDepth), baseBottomRow);
+    if (bottomBandCoverage >= 0.06 && bottomReferenceCoverage >= 0.02 && bottomBandCoverage >= bottomReferenceCoverage * 0.55) {
+      refinedBottom = searchTop + Math.ceil((lastInkRow + 1) * pixelsPerCoverageY);
+    }
+  }
+  if (firstInkColumn >= 0 && firstInkColumn < baseLeftColumn && (baseLeftColumn - firstInkColumn) * pixelsPerCoverageX <= maxGrow) {
+    var leftBandCoverage = averageColumnCoverage(firstInkColumn, baseLeftColumn - 1);
+    var leftReferenceCoverage = averageColumnCoverage(baseLeftColumn, Math.min(coverageWidth - 1, baseLeftColumn + referenceWidth));
+    if (leftBandCoverage >= 0.06 && leftReferenceCoverage >= 0.02 && leftBandCoverage >= leftReferenceCoverage * 0.55) {
+      refinedLeft = searchLeft + Math.floor(firstInkColumn * pixelsPerCoverageX);
+    }
+  }
+  if (lastInkColumn > baseRightColumn && (lastInkColumn - baseRightColumn) * pixelsPerCoverageX <= maxGrow) {
+    var rightBandCoverage = averageColumnCoverage(baseRightColumn + 1, lastInkColumn);
+    var rightReferenceCoverage = averageColumnCoverage(Math.max(0, baseRightColumn - referenceWidth), baseRightColumn);
+    if (rightBandCoverage >= 0.06 && rightReferenceCoverage >= 0.02 && rightBandCoverage >= rightReferenceCoverage * 0.55) {
+      refinedRight = searchLeft + Math.ceil((lastInkColumn + 1) * pixelsPerCoverageX);
+    }
+  }
+  // 2) TRIM empty rows/columns at the outer edges (the loose side of a model
+  //    box, or the pad that turned out to be page). Content stops the trim.
+  var trimSteps = 0;
+  var maxTrimSteps = Math.max(1, Math.ceil(verticalTrimCap / Math.max(1, pixelsPerCoverageY)));
+  while (refinedTop < refinedBottom - 8 && trimSteps < maxTrimSteps) {
+    var topTrimRow = Math.floor((refinedTop - searchTop) / pixelsPerCoverageY);
+    if ((rowInk[topTrimRow] || 0) / coverageWidth > emptyCoverage) break;
+    refinedTop += Math.ceil(pixelsPerCoverageY);
+    trimSteps++;
+  }
+  trimSteps = 0;
+  maxTrimSteps = Math.max(1, Math.ceil(verticalTrimCap / Math.max(1, pixelsPerCoverageY)));
+  while (refinedBottom > refinedTop + 8 && trimSteps < maxTrimSteps) {
+    var bottomTrimRow = Math.min(coverageHeight - 1, Math.ceil((refinedBottom - searchTop) / pixelsPerCoverageY) - 1);
+    if ((rowInk[bottomTrimRow] || 0) / coverageWidth > emptyCoverage) break;
+    refinedBottom -= Math.ceil(pixelsPerCoverageY);
+    trimSteps++;
+  }
+  trimSteps = 0;
+  maxTrimSteps = Math.max(1, Math.ceil(horizontalTrimCap / Math.max(1, pixelsPerCoverageX)));
+  while (refinedLeft < refinedRight - 8 && trimSteps < maxTrimSteps) {
+    var leftTrimColumn = Math.floor((refinedLeft - searchLeft) / pixelsPerCoverageX);
+    if ((columnInk[leftTrimColumn] || 0) / coverageHeight > emptyCoverage) break;
+    refinedLeft += Math.ceil(pixelsPerCoverageX);
+    trimSteps++;
+  }
+  trimSteps = 0;
+  maxTrimSteps = Math.max(1, Math.ceil(horizontalTrimCap / Math.max(1, pixelsPerCoverageX)));
+  while (refinedRight > refinedLeft + 8 && trimSteps < maxTrimSteps) {
+    var rightTrimColumn = Math.min(coverageWidth - 1, Math.ceil((refinedRight - searchLeft) / pixelsPerCoverageX) - 1);
+    if ((columnInk[rightTrimColumn] || 0) / coverageHeight > emptyCoverage) break;
+    refinedRight -= Math.ceil(pixelsPerCoverageX);
+    trimSteps++;
+  }
+  // 3) A small breathing margin so the crop never touches the ink exactly.
+  var edgePadding = Math.max(2, Math.round(smallerSide * 0.004));
+  refinedLeft = Math.max(0, refinedLeft - edgePadding);
+  refinedTop = Math.max(0, refinedTop - edgePadding);
+  refinedRight = Math.min(pageWidth, refinedRight + edgePadding);
+  refinedBottom = Math.min(pageHeight, refinedBottom + edgePadding);
+  // 4) Safety: an unusable or exploded rectangle falls back to the model box.
+  if (refinedRight - refinedLeft < 8 || refinedBottom - refinedTop < 8) return baseRect;
+  var baseArea = (baseRight - baseLeft) * (baseBottom - baseTop);
+  var refinedArea = (refinedRight - refinedLeft) * (refinedBottom - refinedTop);
+  if (refinedArea > baseArea * 2.5 + 4000) return baseRect;
+  return {
+    left: refinedLeft,
+    top: refinedTop,
+    width: refinedRight - refinedLeft,
+    height: refinedBottom - refinedTop
+  };
+}
+
+/** Trim obviously empty page space from a crop WITHOUT growing it.
+ *  Used for a picture that is cropped from the page and has no model box -
+ *  the page margins around a scanned figure stay out of the saved picture. */
+function trimStudioCropRectToContent(pageCanvas, cropRect) {
+  return refineStudioCropRect(pageCanvas, cropRect, { maxGrow: 0, maxTrim: Math.max(8, Math.round(Math.min(pageCanvas.width, pageCanvas.height) * 0.04)) });
 }
 
 /** Overlapping area of two page rectangles */
@@ -10687,13 +13105,15 @@ function embeddedPicturesCoveringVisionBox(visionRect, embeddedPictureRegions) {
   return coveringPictures;
 }
 
-/** Render one page for the vision request (JPEG, longest side capped) */
+/** Render one page for the vision request (JPEG, longest side set by the user) */
 function renderVisionPageImage(pdfDocument, pageNumber, maxSide) {
   return pdfDocument.getPage(pageNumber).then(function(pdfPage) {
     var unitViewport = pdfPage.getViewport({ scale: 1 });
     var longestSide = Math.max(unitViewport.width, unitViewport.height, 1);
-    var fitScale = Math.min(1, maxSide / longestSide);
-    var visionRenderScale = Math.max(0.2, fitScale);
+    // A PDF page at scale 1 is only ~72 dpi. Scaling UP renders the same
+    // vectors at more pixels, so the crops really are sharper - it is not an
+    // empty interpolation of a small bitmap.
+    var visionRenderScale = Math.min(8, Math.max(0.2, maxSide / longestSide));
     var visionViewport = pdfPage.getViewport({ scale: visionRenderScale });
     var visionCanvas = document.createElement('canvas');
     visionCanvas.width = Math.max(1, Math.floor(visionViewport.width));
@@ -10710,7 +13130,11 @@ function renderVisionPageImage(pdfDocument, pageNumber, maxSide) {
           // The canvas is kept so the crop below uses the EXACT pixels the
           // model saw (same size, same edges) instead of a second render.
           canvas: visionCanvas,
-          renderScale: visionRenderScale
+          renderScale: visionRenderScale,
+          // Where every text line sits on the page the model saw - the crop
+          // rects use the same pixels, so the anchor text really belongs to
+          // the picture that is captured there.
+          textLines: pageTextLinesForAnchor(textContent, visionViewport)
         };
       });
     });
@@ -10873,7 +13297,7 @@ function requestVisionPictureRegions(pageImages, maxRegions, onDone) {
 }
 
 /** Crop every AI box of one page from a fresh render of that page */
-function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pageScale, collectedPictures, onDone, visionPageCanvas, visionRenderScale) {
+function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pageScale, collectedPictures, onDone, visionPageCanvas, visionRenderScale, visionPageLines) {
   var pageRegions = (visionPageResult && visionPageResult.regions) ? visionPageResult.regions : [];
   if (!pageRegions.length) { onDone(); return; }
   var pageIsScan = !!(visionPageResult && visionPageResult.isScan);
@@ -10897,6 +13321,7 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
       pageCanvasReady = pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: cropViewport }).promise;
     }
     pageCanvasReady.then(function() {
+      var pageLines = visionPageLines || [];
       var readOperatorList = (typeof pdfPage.getOperatorList === 'function')
         ? pdfPage.getOperatorList().catch(function(operatorListError) {
             console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' operator list failed:', operatorListError);
@@ -10910,10 +13335,28 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
         var capturedCount = 0;
         var acceptedRegions = [];
 
-        function decorateVisionPicture(pictureImage, visionRegion) {
+        function decorateVisionPicture(pictureImage, visionRegion, pictureRect) {
           pictureImage.detectedBy = 'ai-vision';
           if (visionRegion.caption) pictureImage.caption = String(visionRegion.caption).substring(0, 300);
           if (visionRegion.kind) pictureImage.kind = String(visionRegion.kind);
+          var textAnchor = pictureRect
+            ? pictureAnchorFromPageLines(pageLines, pictureRect, pageCanvas.height)
+            : { before: '', after: '', heading: '', source: 'none' };
+          attachStudioPictureAnchor(pictureImage, {
+            sourcePage: pageNumber,
+            orderOnPage: capturedCount + 1,
+            detectedBy: 'ai-vision',
+            sourceBox: pictureRect ? {
+              x: pictureRect.left / Math.max(1, pageCanvas.width),
+              y: pictureRect.top / Math.max(1, pageCanvas.height),
+              width: pictureRect.width / Math.max(1, pageCanvas.width),
+              height: pictureRect.height / Math.max(1, pageCanvas.height)
+            } : null,
+            anchorBefore: textAnchor.before,
+            anchorAfter: textAnchor.after,
+            anchorHeading: textAnchor.heading,
+            anchorSource: textAnchor.source !== 'none' ? 'text-layer' : (visionRegion.caption ? 'vision' : 'none')
+          });
           return pictureImage;
         }
 
@@ -10924,13 +13367,17 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
             var embeddedRegion = embeddedRegionList[embeddedListIndex];
             embeddedListIndex++;
             var nativeCanvas = null;
-            if (embeddedRegion.objectId) nativeCanvas = pdfPageImageCanvas(pdfPage, embeddedRegion.objectId);
-            else if (embeddedRegion.inlineImageObject) nativeCanvas = pdfImageObjectToCanvas(embeddedRegion.inlineImageObject);
+            // A clipped picture is only partly visible: its decoded original
+            // still holds the hidden part, so it is not used here.
+            if (!embeddedRegion.isClipped) {
+              if (embeddedRegion.objectId) nativeCanvas = pdfPageImageCanvas(pdfPage, embeddedRegion.objectId);
+              else if (embeddedRegion.inlineImageObject) nativeCanvas = pdfImageObjectToCanvas(embeddedRegion.inlineImageObject);
+            }
             if (!nativeCanvas) { captureNextEmbeddedPicture(); return; }
             var embeddedPictureName = 'page-' + pageNumber + '-' + (capturedCount + 1) + '.jpg';
             canvasToStudioImage(nativeCanvas, embeddedPictureName, function(nativeError, nativePicture) {
               if (!nativeError && nativePicture) {
-                collectedPictures.push(decorateVisionPicture(nativePicture, visionRegion));
+                collectedPictures.push(decorateVisionPicture(nativePicture, visionRegion, embeddedRegion));
                 acceptedRegions.push(embeddedRegion);
                 capturedCount++;
               } else if (nativeError) {
@@ -10994,14 +13441,14 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
             return;
           }
           var pictureName = 'page-' + pageNumber + '-' + (capturedCount + 1) + '.jpg';
-          if (embeddedMatch) {
+          if (embeddedMatch && !embeddedMatch.isClipped) {
             var nativeCanvas = null;
             if (embeddedMatch.objectId) nativeCanvas = pdfPageImageCanvas(pdfPage, embeddedMatch.objectId);
             else if (embeddedMatch.inlineImageObject) nativeCanvas = pdfImageObjectToCanvas(embeddedMatch.inlineImageObject);
             if (nativeCanvas) {
               canvasToStudioImage(nativeCanvas, pictureName, function(nativeError, nativePicture) {
                 if (!nativeError && nativePicture) {
-                  collectedPictures.push(decorateVisionPicture(nativePicture, visionRegion));
+                  collectedPictures.push(decorateVisionPicture(nativePicture, visionRegion, embeddedMatch));
                   acceptedRegions.push(embeddedMatch);
                   capturedCount++;
                 } else if (nativeError) {
@@ -11012,11 +13459,12 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
               return;
             }
           }
-
           // 2) Merged arrangement (or vector artwork): crop the box. When the
           // box was snapped to an embedded picture but its native pixels are
           // unavailable, crop THAT image rectangle (never the loose box).
-          var cropRect = embeddedMatch ? embeddedMatch : visionRect;
+          // The crop is refined against the page pixels: a tight model box is
+          // grown to the picture edge and empty page space is trimmed away.
+          var cropRect = refineStudioCropRect(pageCanvas, embeddedMatch ? embeddedMatch : visionRect);
           try {
             var regionCanvas = document.createElement('canvas');
             regionCanvas.width = cropRect.width;
@@ -11026,7 +13474,7 @@ function captureVisionPagePictures(pdfDocument, pageNumber, visionPageResult, pa
               0, 0, cropRect.width, cropRect.height);
             canvasToStudioImage(regionCanvas, pictureName, function(cropError, croppedPicture) {
               if (!cropError && croppedPicture) {
-                collectedPictures.push(decorateVisionPicture(croppedPicture, visionRegion));
+                collectedPictures.push(decorateVisionPicture(croppedPicture, visionRegion, cropRect));
                 acceptedRegions.push(cropRect);
                 capturedCount++;
               } else if (cropError) {
@@ -11331,7 +13779,7 @@ function importPdfIllustrations(pdfBytes, onDone) {
             captureVisionPagePictures(pdfDocument, cropPageNumber, visionPageResult, pageScale, collectedPictures, function() {
               releaseRenderedPage(renderedPageForCrop);
               cropNextPage();
-            }, renderedPageForCrop ? renderedPageForCrop.canvas : null, renderedPageForCrop ? renderedPageForCrop.renderScale : 0);
+            }, renderedPageForCrop ? renderedPageForCrop.canvas : null, renderedPageForCrop ? renderedPageForCrop.renderScale : 0, renderedPageForCrop ? renderedPageForCrop.textLines : []);
           }
           cropNextPage();
         });
@@ -11362,7 +13810,7 @@ function importPdfIllustrations(pdfBytes, onDone) {
     });
   }
 
-  function inspectPage(pdfDocument, pageNumber, collectedPictures, onPageDone) {
+function inspectPage(pdfDocument, pageNumber, collectedPictures, onPageDone) {
     pdfDocument.getPage(pageNumber).then(function(pdfPage) {
       var pageViewport = pdfPage.getViewport({ scale: pageScale });
       var pageCanvas = document.createElement('canvas');
@@ -11378,37 +13826,62 @@ function importPdfIllustrations(pdfBytes, onDone) {
       readOperatorList.then(function(operatorList) {
         var embeddedPictureRegions = operatorList ? pdfEmbeddedPictureRegions(operatorList, pageViewport) : [];
         if (!operatorList) {
-          console.warn('[STUDIO:PICTURES] page ' + pageNumber + ': no operator list (pdf.js getOperatorList is unavailable) - using the rendered page only');
+          developerLog('[STUDIO:PICTURES] page ' + pageNumber + ': no operator list (pdf.js getOperatorList is unavailable) - using the rendered page only');
         }
         pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: pageViewport }).promise.then(function() {
-          function capturePictureRegions(pictureRegions) {
+          function capturePictureRegions(pictureRegions, pageLines) {
             if (!pictureRegions.length) { onPageDone(); return; }
             var regionIndex = 0;
+            function decorateLocalPicture(pictureImage, pictureRegion, pictureOrder) {
+              var textAnchor = pictureAnchorFromPageLines(pageLines || [], pictureRegion, pageCanvas.height);
+              attachStudioPictureAnchor(pictureImage, {
+                sourcePage: pageNumber,
+                orderOnPage: pictureOrder,
+                detectedBy: (pictureRegion.objectId || pictureRegion.inlineImageObject) ? 'local-embedded' : 'local-drawing',
+                sourceBox: {
+                  x: pictureRegion.left / Math.max(1, pageCanvas.width),
+                  y: pictureRegion.top / Math.max(1, pageCanvas.height),
+                  width: pictureRegion.width / Math.max(1, pageCanvas.width),
+                  height: pictureRegion.height / Math.max(1, pageCanvas.height)
+                },
+                anchorBefore: textAnchor.before,
+                anchorAfter: textAnchor.after,
+                anchorHeading: textAnchor.heading,
+                anchorSource: textAnchor.source
+              });
+              return pictureImage;
+            }
             function captureNextRegion() {
               if (regionIndex >= pictureRegions.length) { onPageDone(); return; }
               var pictureRegion = pictureRegions[regionIndex];
               regionIndex++;
+              var pictureOrder = regionIndex;
               var pictureName = 'page-' + pageNumber + '-' + regionIndex + '.jpg';
               // Prefer the ORIGINAL image pixels: PDF.js has them decoded after
               // the page render, so a photo is saved complete - no crop, no
-              // lost edge and the native resolution of the file.
+              // lost edge and the native resolution of the file. A clipped
+              // picture is the exception: only the rendered page shows which
+              // part of the image the page really displays.
               var originalImageCanvas = null;
-              if (pictureRegion.objectId) originalImageCanvas = pdfPageImageCanvas(pdfPage, pictureRegion.objectId);
-              else if (pictureRegion.inlineImageObject) originalImageCanvas = pdfImageObjectToCanvas(pictureRegion.inlineImageObject);
+              if (!pictureRegion.isClipped) {
+                if (pictureRegion.objectId) originalImageCanvas = pdfPageImageCanvas(pdfPage, pictureRegion.objectId);
+                else if (pictureRegion.inlineImageObject) originalImageCanvas = pdfImageObjectToCanvas(pictureRegion.inlineImageObject);
+              }
               if (originalImageCanvas) {
                 canvasToStudioImage(originalImageCanvas, pictureName, function(encodeError, pictureImage) {
                   if (encodeError || !pictureImage) console.warn('[STUDIO:PICTURES] ' + pictureName + ' could not be encoded:', encodeError);
-                  else collectedPictures.push(pictureImage);
+                  else collectedPictures.push(decorateLocalPicture(pictureImage, pictureRegion, pictureOrder));
                   captureNextRegion();
                 });
                 return;
               }
-              cropPictureRegion(pageCanvas, pictureRegion, pictureName, collectedPictures, captureNextRegion);
+              cropPictureRegion(pageCanvas, pictureRegion, pictureName, pictureOrder, pageLines, collectedPictures, captureNextRegion, decorateLocalPicture);
             }
             captureNextRegion();
           }
           pdfPage.getTextContent().then(function(textContent) {
             var textBoxes = pdfTextItemBoxes(textContent, pageViewport);
+            var pageLines = pageTextLinesForAnchor(textContent, pageViewport);
             // 2) Vector drawings (charts, shapes) have no image object.
             var drawingPictureRegions = detectPagePictureRegions(pageCanvas, textBoxes);
             if (embeddedPictureRegions.length || drawingPictureRegions.length) {
@@ -11420,10 +13893,10 @@ function importPdfIllustrations(pdfBytes, onDone) {
             drawingPictureCount += drawingPictureRegions.length;
             scanSummary = 'build ' + TOOL_BUILD + ' · ' + embeddedPictureCount + ' embedded image(s), ' +
               drawingPictureCount + ' drawing region(s) on ' + inspectedPageCount + ' page(s)';
-            capturePictureRegions(combinePictureRegionSources(embeddedPictureRegions, drawingPictureRegions, pageCanvas, textBoxes));
+            capturePictureRegions(combinePictureRegionSources(embeddedPictureRegions, drawingPictureRegions, pageCanvas, textBoxes), pageLines);
           }).catch(function(textError) {
             console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' text boxes could not be read:', textError);
-            capturePictureRegions(combinePictureRegionSources(embeddedPictureRegions, [], pageCanvas, []));
+            capturePictureRegions(combinePictureRegionSources(embeddedPictureRegions, [], pageCanvas, []), []);
           });
         }).catch(function(renderError) {
           console.warn('[STUDIO:PICTURES] page ' + pageNumber + ' could not be rendered:', renderError);
@@ -11436,15 +13909,21 @@ function importPdfIllustrations(pdfBytes, onDone) {
     });
   }
 
-  function cropPictureRegion(pageCanvas, pictureRegion, pictureName, collectedPictures, onCropped) {
+  function cropPictureRegion(pageCanvas, pictureRegion, pictureName, pictureOrder, pageLines, collectedPictures, onCropped, decoratePicture) {
     try {
+      // A drawing region comes from a coarse cell scan, so it can keep page
+      // space at the edges. Trimming to the real ink fixes that; a whole-page
+      // region (a scan) is captured exactly as it is.
+      var isWholePage = pictureRegion.left <= 0 && pictureRegion.top <= 0 &&
+        pictureRegion.width >= pageCanvas.width - 1 && pictureRegion.height >= pageCanvas.height - 1;
+      var cropRegion = isWholePage ? pictureRegion : trimStudioCropRectToContent(pageCanvas, pictureRegion);
       var cropCanvas = document.createElement('canvas');
-      cropCanvas.width = Math.max(1, Math.floor(pictureRegion.width));
-      cropCanvas.height = Math.max(1, Math.floor(pictureRegion.height));
-      cropCanvas.getContext('2d').drawImage(pageCanvas, pictureRegion.left, pictureRegion.top, pictureRegion.width, pictureRegion.height, 0, 0, pictureRegion.width, pictureRegion.height);
+      cropCanvas.width = Math.max(1, Math.floor(cropRegion.width));
+      cropCanvas.height = Math.max(1, Math.floor(cropRegion.height));
+      cropCanvas.getContext('2d').drawImage(pageCanvas, cropRegion.left, cropRegion.top, cropRegion.width, cropRegion.height, 0, 0, cropRegion.width, cropRegion.height);
       canvasToStudioImage(cropCanvas, pictureName, function(encodeError, pictureImage) {
         if (encodeError || !pictureImage) console.warn('[STUDIO:PICTURES] ' + pictureName + ' could not be encoded:', encodeError);
-        else collectedPictures.push(pictureImage);
+        else collectedPictures.push(decoratePicture ? decoratePicture(pictureImage, cropRegion, pictureOrder) : pictureImage);
         onCropped();
       });
     } catch (cropError) {
@@ -11563,7 +14042,7 @@ function ocrPdfBytesToText(pdfBytes, onDone) {
     var pageTexts = [];
     function ocrNextPage(pageNumber) {
       if (pageNumber > pagesToOcr) {
-        var combinedText = pageTexts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+        var combinedText = buildMarkedSourceText(pageTexts);
         onDone(null, combinedText, pagesToOcr, pdfDocument.numPages);
         return;
       }
@@ -11576,7 +14055,7 @@ function ocrPdfBytesToText(pdfBytes, onDone) {
         pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: pageViewport }).promise.then(function() {
           runOcrOnCanvas(pageCanvas, function(ocrError, pageText) {
             if (ocrError) console.warn('[STUDIO:OCR] page ' + pageNumber + ' failed:', ocrError);
-            if (pageText && pageText.trim()) pageTexts.push(pageText.trim());
+            pageTexts.push({ pageNumber: pageNumber, text: (pageText && pageText.trim()) ? pageText.trim() : '' });
             ocrNextPage(pageNumber + 1);
           });
         }).catch(function(renderError) {
@@ -11771,6 +14250,31 @@ function renderStudyDocStudio() {
   renderPdfEditorList();
 }
 
+/** Document Studio header: the file name plus the lesson number and the
+ *  document number in that lesson, so the open file is unambiguous. */
+function updateStudioDrawerHeading(docUrl, isReferenceDocument) {
+  var titleElement = el('sd-drawer-title');
+  var subtitleElement = el('sd-drawer-subtitle');
+  var referenceDocument = (typeof isReferenceDocument === 'boolean') ? isReferenceDocument : isReferenceLibraryUrl(docUrl);
+  var documentRole = studioDocRole(docUrl);
+  if (titleElement) titleElement.textContent = readableFileName(docUrl);
+  if (!subtitleElement) return;
+  var numberPieces = [];
+  if (!referenceDocument) {
+    var lessonContext = currentEditingLessonContext();
+    var lessonLabel = lessonNumberLabelOf(lessonContext.section, lessonContext.lesson);
+    if (lessonLabel) numberPieces.push(lessonLabel);
+    var documentLabel = lessonDocumentNumberLabel(docUrl);
+    if (documentLabel) numberPieces.push(documentLabel);
+  }
+  var documentKindText = referenceDocument
+    ? '📚 Reference document - generated content is AI context only, never student-facing'
+    : (documentRole === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document');
+  var numbersPrefix = numberPieces.length ? '📍 ' + numberPieces.join(' · ') + ' · ' : '';
+  subtitleElement.textContent = numbersPrefix + documentKindText + ' · ' + editingStudyDocImages.length + ' image(s)';
+  subtitleElement.title = (numberPieces.length ? numberPieces.join(' · ') + '\n' : '') + documentKindText;
+}
+
 /** Open the Document Studio drawer for one document (final or source) */
 function openStudioDrawerForDoc(docUrl) {
   if (!docUrl) { tool.notify('No document to open.', 'warning'); return; }
@@ -11795,16 +14299,8 @@ function openStudioDrawerForDoc(docUrl) {
   if (removedDuplicateImages) persistStudioImages();
   var role = studioDocRole(docUrl);
   var isReferenceDocument = isReferenceLibraryUrl(docUrl);
-  var titleEl = el('sd-drawer-title');
-  var subtitleEl = el('sd-drawer-subtitle');
   var roleButton = el('btn-sd-make-role');
-  if (titleEl) titleEl.textContent = readableFileName(docUrl);
-  if (subtitleEl) {
-    var documentKindText = isReferenceDocument
-      ? '📚 Reference document - generated content is AI context only, never student-facing'
-      : (role === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document');
-    subtitleEl.textContent = documentKindText + ' · ' + editingStudyDocImages.length + ' image(s)';
-  }
+  updateStudioDrawerHeading(docUrl, isReferenceDocument);
   // A reference document/part is never a lesson document, so the Ready/Sample
   // switch does not apply and must not be offered.
   if (roleButton) {
@@ -11817,6 +14313,7 @@ function openStudioDrawerForDoc(docUrl) {
   syncStudioOcrLanguageSelect();
   syncStudioPictureDetectionControls();
   loadStudioGeneratedForDoc(docUrl);
+  resetStudioReviewForDoc(docUrl);
   showStudioGeneratedView('preview');
   loadStudioDocumentPreview();
   renderStudyDocImageGallery();
@@ -12015,29 +14512,35 @@ function publishGeneratedToStudyContent(mode) {
   setStudioStatus('✅ Study Content updated (student-facing). Generated copies stay attached to their source documents.', 'ok');
 }
 
-/* ── Quality report: a separate AI call that compares Source vs Generated ──
-   Temporary result: shown in a modal + logged to the console, never saved. */
-function buildStudyContentQualityPrompt(sourceText, generatedHtml) {
-  return 'You are a strict editorial reviewer for educational content. Compare the SOURCE text with the GENERATED document.\n' +
+/* ── Copyright similarity check: SOURCE text vs GENERATED html ──
+   This call only compares, it never rewrites. Its findings are quoted in the
+   Review tab and become the revision brief of the regeneration. */
+function buildCopyrightSimilarityPrompt(sourceText, generatedHtml) {
+  return 'You are a copyright and originality reviewer for educational content. Compare the SOURCE text with the GENERATED document that was derived from it.\n' +
+    'You do not rewrite anything here. You only report what still looks copied, and what a rewrite must change.\n\n' +
     'Return ONLY one JSON object (no markdown, no prose) with exactly these keys:\n' +
-    '{"coverageScore":0-100,"similarityScore":0-100,"similarityRisk":"low|medium|high",' +
-    '"coveredPoints":["..."],"missingPoints":["..."],"addedInformation":["..."],' +
-    '"unverifiableClaims":["..."],"qualityVerdict":"one short paragraph","recommendations":["..."]}\n\n' +
-    'RULES:\n' +
-    '- coverageScore: how completely the generated document covers the facts, terms, numbers, definitions and rules of the source. 90+ only when nothing important is missing.\n' +
-    '- similarityScore: textual similarity to the source. 0 = fully independently rewritten, 100 = verbatim copy. Above 40 is a copyright/plagiarism risk.\n' +
-    '- similarityRisk must follow the score: low < 25, medium 25-50, high > 50.\n' +
-    '- missingPoints: facts, definitions or examples from the source that the generated document lost or changed.\n' +
-    '- addedInformation: statements in the generated document that are NOT in the source. Mark each with "(safe general knowledge)" or "(needs verification)".\n' +
-    '- unverifiableClaims: added specifics (numbers, dates, names, statistics) that cannot be confirmed from the source. These must be removed or sourced.\n' +
-    '- Never invent source content and never claim the source says something it does not.\n' +
-    '- Recommendations must be concrete edits, max 6 items.\n\n' +
+    '{"riskLevel":"low|medium|high","similarityScore":0,"summary":"...",' +
+    '"verbatimMatches":[{"sourceText":"...","generatedText":"...","note":"..."}],' +
+    '"nearVerbatimMatches":[{"sourceText":"...","generatedText":"...","note":"..."}],' +
+    '"distinctiveReuse":[{"phrase":"...","where":"...","note":"..."}],' +
+    '"structuralMatches":["..."],"coverageGaps":["..."],"addedOrUnsupported":["..."],"fixPlan":["..."]}\n\n' +
+    'HOW TO JUDGE:\n' +
+    '- similarityScore is the estimated percentage of generated sentences that still follow the source too closely. 0 = fully independent rewrite, 100 = copied.\n' +
+    '- riskLevel follows the score: low < 20, medium 20-45, high > 45.\n' +
+    '- verbatimMatches: word-for-word runs (8+ words). Copy the shortest overlapping run, at most 25 words per side.\n' +
+    '- nearVerbatimMatches: the same sentence with a few synonyms swapped, or the same clause order with a changed subject. Show source and generated side by side.\n' +
+    '- distinctiveReuse: unusual phrases, metaphors, coined labels, example wording or invented scenario details that were reused. Name where each one sits.\n' +
+    '- structuralMatches: places where the section order, the example sequence or the bullet structure is still a copy of the source.\n' +
+    '- Not a problem, never list these: standard technical terms, official definitions, laws, formulas, numbers, proper names and short functional phrases such as "in this case" or "for example".\n' +
+    '- coverageGaps: what the generated document lost or changed. addedOrUnsupported: what it added without support in the source.\n' +
+    '- fixPlan: at most 8 concrete rewrite instructions, each naming the section or the passage it applies to.\n' +
+    '- Only report real overlaps you can quote. Never invent a passage and never claim the source says something it does not. If nothing overlaps, return empty arrays and a low score.\n\n' +
     'SOURCE DOCUMENT TEXT:\n"""\n' + sourceText + '\n"""\n\n' +
     'GENERATED DOCUMENT HTML:\n"""\n' + generatedHtml + '\n"""';
 }
 
-/** Parse the AI JSON defensively (accepts code fences and surrounding prose) */
-function parseQualityReport(rawText) {
+/** Parse the review JSON defensively (accepts code fences and surrounding prose) */
+function parseStudioReviewReportJson(rawText) {
   var reportText = String(rawText || '').replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
   var firstBrace = reportText.indexOf('{');
   var lastBrace = reportText.lastIndexOf('}');
@@ -12045,77 +14548,498 @@ function parseQualityReport(rawText) {
   try { return JSON.parse(reportText); } catch (parseError) { return null; }
 }
 
-function showQualityReportModal(report, rawText) {
-  var bodyHtml = '';
-  if (!report) {
-    bodyHtml = '<div class="sd-modal-section"><div class="sd-modal-label">The AI answer was not valid JSON</div>' +
-      '<pre class="sd-quality-raw">' + esc(String(rawText || '').slice(0, 6000)) + '</pre></div>';
-  } else {
-    function scoreRow(labelText, scoreValue, isRisk) {
-      var safeScore = Math.max(0, Math.min(100, Math.round(Number(scoreValue) || 0)));
-      return '<div class="sd-quality-score">' +
-        '<span class="sd-quality-score-label">' + esc(labelText) + '</span>' +
-        '<span class="sd-quality-bar' + (isRisk ? ' is-risk' : '') + '"><span style="width:' + safeScore + '%"></span></span>' +
-        '<strong>' + safeScore + '</strong>' +
-      '</div>';
-    }
-    function listBlock(titleText, items) {
-      if (!items || !items.length) return '';
-      var listItems = '';
-      for (var itemIndex = 0; itemIndex < items.length; itemIndex++) listItems += '<li>' + esc(String(items[itemIndex])) + '</li>';
-      return '<div class="sd-quality-section"><h4>' + esc(titleText) + '</h4><ul>' + listItems + '</ul></div>';
-    }
-    bodyHtml = '<div class="sd-quality-scores">' +
-        scoreRow('Coverage', report.coverageScore, false) +
-        scoreRow('Similarity', report.similarityScore, true) +
-      '</div>' +
-      '<div class="sd-quality-section"><h4>Similarity risk: ' + esc(String(report.similarityRisk || 'unknown')).toUpperCase() + '</h4>' +
-        '<ul><li>' + esc(String(report.qualityVerdict || 'No verdict returned.')) + '</li></ul></div>' +
-      listBlock('Missing from the generated document', report.missingPoints) +
-      listBlock('Added information (not in the source)', report.addedInformation) +
-      listBlock('Unverifiable claims - remove or source', report.unverifiableClaims) +
-      listBlock('Recommended edits', report.recommendations) +
-      listBlock('Covered well', report.coveredPoints) +
-      '<div class="sd-modal-section" style="margin-top:14px"><div class="sd-modal-label">Temporary result - not saved with the document</div></div>';
-  }
-  openStudioModal('🔍 Quality report (temporary)', bodyHtml);
+/** The CMS relay returns a string, or an object carrying the text */
+function studioAiResultText(aiResult) {
+  if (typeof aiResult === 'string') return aiResult;
+  return (aiResult && (aiResult.text || aiResult.content || aiResult.message)) || '';
 }
 
-function runStudyContentQualityCheck() {
+/** Danger styling for the report header */
+function studioRiskLevelClass(riskLevel) {
+  var normalizedRisk = String(riskLevel || '').toLowerCase();
+  if (normalizedRisk === 'high') return 'is-high';
+  if (normalizedRisk === 'medium') return 'is-medium';
+  return 'is-low';
+}
+
+/** "Source | Generated" side-by-side quote pairs */
+function studioReviewQuotePairs(titleText, matches) {
+  if (!matches || !matches.length) return '';
+  var pairHtml = '';
+  for (var matchIndex = 0; matchIndex < matches.length; matchIndex++) {
+    var matchEntry = matches[matchIndex] || {};
+    var sourceQuote = typeof matchEntry === 'string' ? '' : String(matchEntry.sourceText || '');
+    var generatedQuote = typeof matchEntry === 'string' ? String(matchEntry) : String(matchEntry.generatedText || '');
+    var matchNote = typeof matchEntry === 'string' ? '' : String(matchEntry.note || '');
+    pairHtml += '<div class="sd-review-pair">' +
+      '<div class="sd-review-side is-source"><span>Source</span><p>' + esc(sourceQuote) + '</p></div>' +
+      '<div class="sd-review-side is-generated"><span>Generated</span><p>' + esc(generatedQuote) + '</p></div>' +
+      (matchNote ? '<div class="sd-review-pair-note">' + esc(matchNote) + '</div>' : '') +
+    '</div>';
+  }
+  return '<div class="sd-review-section"><h4>' + esc(titleText) + ' <span class="sd-review-count">' + matches.length + '</span></h4>' + pairHtml + '</div>';
+}
+
+/** Bullet list block (skipped when empty) */
+function studioReviewListBlock(titleText, items) {
+  if (!items || !items.length) return '';
+  var listItems = '';
+  for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    var itemText = (items[itemIndex] && typeof items[itemIndex] === 'object')
+      ? (items[itemIndex].note || items[itemIndex].phrase || JSON.stringify(items[itemIndex]))
+      : String(items[itemIndex]);
+    listItems += '<li>' + esc(itemText) + '</li>';
+  }
+  return '<div class="sd-review-section"><h4>' + esc(titleText) + ' <span class="sd-review-count">' + items.length + '</span></h4><ul>' + listItems + '</ul></div>';
+}
+
+/** Reused distinctive wording: phrase + where it sits + why it matters */
+function studioReviewPhraseList(titleText, items) {
+  if (!items || !items.length) return '';
+  var listItems = '';
+  for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    var phraseEntry = items[itemIndex] || {};
+    var phraseText = typeof phraseEntry === 'string' ? phraseEntry : String(phraseEntry.phrase || '');
+    var whereText = typeof phraseEntry === 'string' ? '' : String(phraseEntry.where || '');
+    var noteText = typeof phraseEntry === 'string' ? '' : String(phraseEntry.note || '');
+    listItems += '<li><strong>"' + esc(phraseText) + '"</strong>' +
+      (whereText ? ' <span class="sd-review-where">' + esc(whereText) + '</span>' : '') +
+      (noteText ? ' - ' + esc(noteText) : '') + '</li>';
+  }
+  return '<div class="sd-review-section"><h4>' + esc(titleText) + ' <span class="sd-review-count">' + items.length + '</span></h4><ul>' + listItems + '</ul></div>';
+}
+
+function renderStudioReviewReport() {
+  var reportElement = el('sd-review-report');
+  if (!reportElement) return;
+  if (!studioGeneratedHtml) {
+    reportElement.innerHTML = '<div class="sd-review-empty">Generate the content first (✨ in the Generated tab), then check it here.</div>';
+    return;
+  }
+  if (studioReviewBusy) {
+    reportElement.innerHTML = '<div class="sd-review-empty">🔍 Reading the source and comparing it with the generated text…</div>';
+    return;
+  }
+  if (!studioReviewReport && !studioReviewReportRaw) {
+    reportElement.innerHTML = '<div class="sd-review-empty"><strong>No similarity check yet.</strong><br>' +
+      'Press <strong>🔍 Check similarity</strong> to find the passages that still read like the original.</div>';
+    return;
+  }
+  if (!studioReviewReport) {
+    reportElement.innerHTML = '<div class="sd-review-section"><h4>The check answered, but not as JSON</h4>' +
+      '<pre class="sd-review-raw">' + esc(String(studioReviewReportRaw || '').slice(0, 8000)) + '</pre></div>';
+    return;
+  }
+  var report = studioReviewReport;
+  var riskLevel = String(report.riskLevel || 'unknown').toLowerCase();
+  var similarityScore = Math.max(0, Math.min(100, Math.round(Number(report.similarityScore) || 0)));
+  var riskLabelText = riskLevel === 'high' ? 'HIGH RISK - rewrite before using'
+    : (riskLevel === 'medium' ? 'MEDIUM RISK - several passages still too close' : 'LOW RISK - independently rewritten');
+  var reportHtml = '<div class="sd-review-verdict ' + studioRiskLevelClass(riskLevel) + '">' +
+      '<div class="sd-review-verdict-score">' + similarityScore + '<span>/100</span></div>' +
+      '<div class="sd-review-verdict-text"><strong>' + esc(riskLabelText) + '</strong>' +
+        '<p>' + esc(String(report.summary || 'No summary returned.')) + '</p></div>' +
+    '</div>' +
+    '<div class="sd-review-meter"><span style="width:' + similarityScore + '%"></span></div>';
+  reportHtml += studioReviewQuotePairs('Word-for-word copies - rebuild these sentences', report.verbatimMatches);
+  reportHtml += studioReviewQuotePairs('Too close - same sentence, new words', report.nearVerbatimMatches);
+  reportHtml += studioReviewPhraseList('Reused distinctive wording', report.distinctiveReuse);
+  reportHtml += studioReviewListBlock('Structure still copied from the original', report.structuralMatches);
+  reportHtml += studioReviewListBlock('Content lost in the generated version - bring it back', report.coverageGaps);
+  reportHtml += studioReviewListBlock('Added without support in the source - remove or verify', report.addedOrUnsupported);
+  reportHtml += studioReviewListBlock('Fix plan', report.fixPlan);
+  var hasFindings = (report.verbatimMatches || []).length + (report.nearVerbatimMatches || []).length +
+    (report.distinctiveReuse || []).length + (report.structuralMatches || []).length +
+    (report.coverageGaps || []).length + (report.addedOrUnsupported || []).length + (report.fixPlan || []).length;
+  if (!hasFindings) {
+    reportHtml += '<div class="sd-review-empty">No overlapping passage and no missing content was reported for this version.' +
+      ' You can still ask for improvements in the chat and regenerate.</div>';
+  }
+  reportHtml += '<div class="sd-review-footnote">🧪 AI estimate, not a legal opinion. The report and the chat stay in this drawer - the document keeps only its generated content.</div>';
+  reportElement.innerHTML = reportHtml;
+}
+
+function renderStudioReviewChat() {
+  var logElement = el('sd-review-chat-log');
+  if (!logElement) return;
+  if (!studioReviewChat.length) {
+    logElement.innerHTML = '<div class="sd-review-empty">Ask about this document, for example: “Is section 3 still too close to the original?”, “Rewrite the introduction in a more practical tone”, “Add a short summary at the end of each chapter”.</div>';
+    return;
+  }
+  var chatHtml = '';
+  for (var messageIndex = 0; messageIndex < studioReviewChat.length; messageIndex++) {
+    var chatMessage = studioReviewChat[messageIndex] || {};
+    var messageRole = chatMessage.role === 'user' ? 'user' : 'editor';
+    chatHtml += '<div class="sd-review-msg is-' + messageRole + '">' +
+      '<div class="sd-review-msg-role">' + (messageRole === 'user' ? '👤 You' : '🧠 Editor') + '</div>' +
+      '<div class="sd-review-msg-text">' + esc(String(chatMessage.text || '')) + '</div>' +
+    '</div>';
+  }
+  if (studioReviewChatBusy) {
+    chatHtml += '<div class="sd-review-msg is-editor is-busy"><div class="sd-review-msg-role">🧠 Editor</div>' +
+      '<div class="sd-review-msg-text">reading the document…</div></div>';
+  }
+  logElement.innerHTML = chatHtml;
+  logElement.scrollTop = logElement.scrollHeight;
+}
+
+/** Redraw the whole Review pane and its button states */
+function renderStudioReviewPane() {
+  renderStudioReviewReport();
+  renderStudioReviewChat();
+  var generatedAvailable = !!studioGeneratedHtml;
+  var checkButton = el('btn-sd-review-check');
+  if (checkButton) checkButton.disabled = studioReviewBusy || !generatedAvailable;
+  var sendButton = el('btn-sd-review-send');
+  if (sendButton) {
+    sendButton.disabled = studioReviewBusy || studioReviewChatBusy || !generatedAvailable;
+    sendButton.textContent = studioReviewChatBusy ? '⏳ Thinking…' : '💬 Ask';
+  }
+  var regenerateButton = el('btn-sd-review-regenerate');
+  if (regenerateButton) regenerateButton.disabled = studioReviewBusy || studioReviewChatBusy || !generatedAvailable;
+  var undoButton = el('btn-sd-review-undo');
+  if (undoButton) {
+    var versionHistory = studioGeneratedHistory[studioCurrentDocUrl] || [];
+    undoButton.hidden = versionHistory.length === 0;
+    undoButton.textContent = '↩ Previous version' + (versionHistory.length > 1 ? ' (' + versionHistory.length + ')' : '');
+  }
+  var comparedElement = el('sd-review-compared');
+  if (comparedElement) {
+    comparedElement.textContent = studioReviewComparedInfo
+      ? '📏 ' + formatCount(studioReviewComparedInfo.sourceCharacters) + ' source chars · ' +
+        formatCount(studioReviewComparedInfo.generatedCharacters) + ' generated chars' +
+        (studioReviewComparedInfo.truncated ? ' · truncated' : '')
+      : '';
+  }
+  var tabCountElement = el('sd-review-tab-count');
+  if (tabCountElement) {
+    var tabRiskLevel = studioReviewReport ? String(studioReviewReport.riskLevel || '').toLowerCase() : '';
+    tabCountElement.style.display = studioReviewReport ? 'inline-block' : 'none';
+    tabCountElement.textContent = tabRiskLevel === 'high' ? '!' : (tabRiskLevel === 'medium' ? '·' : '✓');
+    tabCountElement.className = 'sd-tab-count sd-review-tab-risk ' + (studioReviewReport ? studioRiskLevelClass(tabRiskLevel) : '');
+  }
+}
+
+/** Start from a clean review state when another document is opened. Every
+ *  document keeps its own report and chat for the session (studioReviewStash). */
+function resetStudioReviewForDoc(documentUrl) {
+  var nextDocumentUrl = documentUrl || '';
+  if (studioReviewDocUrl === nextDocumentUrl) {
+    renderStudioReviewPane();
+    return;
+  }
+  if (studioReviewDocUrl) {
+    studioReviewStash[studioReviewDocUrl] = {
+      sourceText: studioReviewSourceText,
+      report: studioReviewReport,
+      reportRaw: studioReviewReportRaw,
+      comparedInfo: studioReviewComparedInfo,
+      chat: studioReviewChat
+    };
+  }
+  var restoredState = studioReviewStash[nextDocumentUrl] || null;
+  studioReviewDocUrl = nextDocumentUrl;
+  studioReviewSourceText = restoredState ? restoredState.sourceText : '';
+  studioReviewReport = restoredState ? restoredState.report : null;
+  studioReviewReportRaw = restoredState ? restoredState.reportRaw : '';
+  studioReviewComparedInfo = restoredState ? restoredState.comparedInfo : null;
+  studioReviewChat = restoredState ? restoredState.chat : [];
+  // A run that belonged to the previous document must not paint this one.
+  studioReviewBusy = false;
+  studioReviewChatBusy = false;
+  renderStudioReviewPane();
+}
+
+/** Cache the source text of the open document (downloaded once per document) */
+function ensureStudioReviewSourceText(onDone) {
+  if (studioReviewSourceText) { onDone('', studioReviewSourceText); return; }
+  readSourceDocumentText(function(readError, sourceText) {
+    if (!readError && sourceText) studioReviewSourceText = sourceText;
+    onDone(readError, sourceText || '');
+  });
+}
+
+/** Cut a text to a character budget and report whether it was cut */
+function clampReviewText(textValue, maxCharacters) {
+  var fullText = String(textValue || '');
+  return {
+    text: fullText.length > maxCharacters ? fullText.slice(0, maxCharacters) : fullText,
+    fullLength: fullText.length,
+    truncated: fullText.length > maxCharacters
+  };
+}
+
+/** Run the copyright similarity check for the document open in the drawer */
+function startStudioReviewCheck() {
   if (typeof tool.requestAI !== 'function') {
-    tool.notify('AI is not enabled for this tool (allowAI).', 'warning');
+    tool.notify('AI is not enabled for this tool (allowAI: yes in the field settings).', 'warning');
     return;
   }
   if (!studioCurrentDocUrl) { tool.notify('Open a document first.', 'warning'); return; }
-  if (!studioGeneratedHtml) { tool.notify('Generate the document first (✨ Generate Study Content).', 'warning'); return; }
-  var qualityButton = el('btn-sd-quality');
-  if (qualityButton) qualityButton.disabled = true;
+  if (!studioGeneratedHtml) { tool.notify('Generate the content first (✨ Generate New Content).', 'warning'); return; }
+  if (studioReviewBusy) return;
+  studioReviewBusy = true;
+  var checkingDocUrl = studioCurrentDocUrl;
+  switchStudioTab('review');
+  renderStudioReviewPane();
   setStudioStatus('🔍 Comparing the source document with the generated content…', 'busy');
-  readSourceDocumentText(function(readError, sourceText) {
+  ensureStudioReviewSourceText(function(readError, sourceText) {
     if (readError || !sourceText) {
-      if (qualityButton) qualityButton.disabled = false;
+      studioReviewBusy = false;
+      renderStudioReviewPane();
       setStudioStatus('❌ ' + (readError || 'The source text could not be read.'), 'warn');
       return;
     }
-    var qualityPrompt = buildStudyContentQualityPrompt(sourceText.slice(0, 20000), studioGeneratedHtml.slice(0, 40000));
-    tool.requestAI(qualityPrompt, null, function(aiError, aiResult) {
-      if (qualityButton) qualityButton.disabled = false;
-      var rawText = (typeof aiResult === 'string')
-        ? aiResult
-        : ((aiResult && (aiResult.text || aiResult.content || aiResult.message)) || '');
+    var sourceSlice = clampReviewText(sourceText, STUDIO_REVIEW_SOURCE_LIMIT);
+    var generatedSlice = clampReviewText(studioGeneratedHtml, STUDIO_REVIEW_GENERATED_LIMIT);
+    studioReviewComparedInfo = {
+      sourceCharacters: sourceSlice.text.length,
+      generatedCharacters: generatedSlice.text.length,
+      truncated: sourceSlice.truncated || generatedSlice.truncated
+    };
+    renderStudioReviewPane();
+    tool.requestAI(buildCopyrightSimilarityPrompt(sourceSlice.text, generatedSlice.text), null, function(aiError, aiResult) {
+      if (studioCurrentDocUrl !== checkingDocUrl) return; // another document is open now
+      studioReviewBusy = false;
+      var rawText = studioAiResultText(aiResult);
       // html-tool-rules: a truncation notice arrives as an error while the
       // (truncated) answer is still returned - use the answer when it exists.
       if (aiError && !rawText) {
-        console.warn('[STUDIO:QUALITY] AI call failed: ' + aiError);
-        setStudioStatus('❌ Quality check failed: ' + describeAiChannelFailure(aiError) + ' Try again.', 'warn');
+        console.warn('[STUDIO:REVIEW] similarity check failed: ' + aiError);
+        renderStudioReviewPane();
+        setStudioStatus('❌ The check failed: ' + describeAiChannelFailure(aiError) + ' Try again.', 'warn');
         return;
       }
-      if (aiError) console.warn('[STUDIO:QUALITY] AI answered with a warning: ' + aiError);
-      var report = parseQualityReport(rawText);
-      setStudioStatus('✅ Quality report ready (temporary - not saved).', 'ok');
-      showQualityReportModal(report, rawText);
+      if (aiError) console.warn('[STUDIO:REVIEW] the model answered with a warning: ' + aiError);
+      var parsedReport = parseStudioReviewReportJson(rawText);
+      studioReviewReport = parsedReport;
+      studioReviewReportRaw = parsedReport ? '' : rawText;
+      renderStudioReviewPane();
+      if (!parsedReport) {
+        setStudioStatus('⚠️ The check answered, but not as JSON - the raw answer is shown in the Review tab.', 'warn');
+        return;
+      }
+      var riskText = String(parsedReport.riskLevel || 'unknown').toUpperCase();
+      var scoreValue = Math.round(Number(parsedReport.similarityScore) || 0);
+      var problemCount = (parsedReport.verbatimMatches || []).length + (parsedReport.nearVerbatimMatches || []).length;
+      var checkSummary = '🔍 Similarity ' + scoreValue + '/100 (' + riskText + ')' +
+        (problemCount ? ' · ' + problemCount + ' passage(s) too close' : ' · no copied passage reported');
+      setStudioStatus(checkSummary + '. Chat about it below, then ⚡ Regenerate with this feedback.',
+        riskText === 'HIGH' ? 'warn' : 'ok');
     });
   });
+}
+
+/** Toolbar 🔍: show the Review tab and start a check */
+function openStudioReviewAndCheck() {
+  switchStudioTab('review');
+  startStudioReviewCheck();
+}
+
+/** Chat prompt for the open document (report + conversation + excerpts) */
+function buildStudioReviewChatPrompt(questionText) {
+  var sourceSlice = clampReviewText(studioReviewSourceText, STUDIO_REVIEW_CHAT_SOURCE_LIMIT);
+  var generatedSlice = clampReviewText(studioGeneratedHtml, STUDIO_REVIEW_CHAT_GENERATED_LIMIT);
+  var reportText = studioReviewReport ? JSON.stringify(studioReviewReport) : '(no similarity check has been run yet)';
+  if (reportText.length > 6000) reportText = reportText.slice(0, 6000);
+  var transcriptText = '';
+  var recentTurns = studioReviewChat.slice(-STUDIO_REVIEW_CHAT_TURN_LIMIT);
+  for (var turnIndex = 0; turnIndex < recentTurns.length; turnIndex++) {
+    var turnMessage = recentTurns[turnIndex] || {};
+    if (!turnMessage.text) continue;
+    transcriptText += (turnMessage.role === 'user' ? 'AUTHOR: ' : 'EDITOR: ') + String(turnMessage.text).slice(0, 1200) + '\n\n';
+  }
+  return 'You are the editor of ONE generated study document. The author asks you about it.\n' +
+    'You receive the SOURCE text it was rewritten from, the GENERATED html and the last similarity report.\n\n' +
+    'ANSWER RULES:\n' +
+    '- Plain text only: short paragraphs and "- " bullets. No markdown headings, no code fences, no HTML unless the author explicitly asks for it.\n' +
+    '- Be concrete: name the section, quote at most 20 words, and say exactly what to change.\n' +
+    '- Never invent facts, numbers, names or passages that are not in the source or the generated document. When the source does not support something, say so.\n' +
+    '- Every rewrite you suggest must follow the curriculum rephrasing rules: rebuild each sentence completely, keep facts and terms exact, add nothing.\n' +
+    '- Stay under 250 words unless the author asks for a full rewrite of one section.\n\n' +
+    'LAST SIMILARITY REPORT (JSON):\n' + reportText + '\n\n' +
+    (transcriptText ? 'CONVERSATION SO FAR:\n' + transcriptText : '') +
+    'SOURCE TEXT' + (sourceSlice.truncated ? ' (first ' + formatCount(sourceSlice.text.length) + ' of ' + formatCount(sourceSlice.fullLength) + ' characters)' : '') + ':\n"""\n' + sourceSlice.text + '\n"""\n\n' +
+    'GENERATED HTML' + (generatedSlice.truncated ? ' (first ' + formatCount(generatedSlice.text.length) + ' of ' + formatCount(generatedSlice.fullLength) + ' characters)' : '') + ':\n"""\n' + generatedSlice.text + '\n"""\n\n' +
+    'AUTHOR: ' + questionText + '\n\nEDITOR:';
+}
+
+/** Ask the editor about the open document */
+function sendStudioReviewMessage() {
+  if (studioReviewChatBusy || studioReviewBusy) return;
+  var inputElement = el('sd-review-input');
+  var questionText = inputElement ? String(inputElement.value || '').trim() : '';
+  if (!questionText) { tool.notify('Write a question or an instruction first.', 'warning'); return; }
+  if (!studioGeneratedHtml) { tool.notify('Generate the content first.', 'warning'); return; }
+  if (typeof tool.requestAI !== 'function') {
+    tool.notify('AI is not enabled for this tool (allowAI: yes in the field settings).', 'warning');
+    return;
+  }
+  studioReviewChat.push({ role: 'user', text: questionText });
+  if (inputElement) inputElement.value = '';
+  studioReviewChatBusy = true;
+  var askingDocUrl = studioCurrentDocUrl;
+  renderStudioReviewPane();
+  setStudioStatus('💬 The editor is reading the document…', 'busy');
+  ensureStudioReviewSourceText(function(readError, sourceText) {
+    if (readError || !sourceText) {
+      studioReviewChatBusy = false;
+      studioReviewChat.push({ role: 'editor', text: '⚠️ The source text could not be read: ' + (readError || 'empty text') });
+      renderStudioReviewPane();
+      setStudioStatus('❌ ' + (readError || 'The source text could not be read.'), 'warn');
+      return;
+    }
+    tool.requestAI(buildStudioReviewChatPrompt(questionText), null, function(aiError, aiResult) {
+      if (studioCurrentDocUrl !== askingDocUrl) return; // another document is open now
+      studioReviewChatBusy = false;
+      var answerText = studioAiResultText(aiResult);
+      if (aiError && !answerText) {
+        console.warn('[STUDIO:REVIEW] chat failed: ' + aiError);
+        studioReviewChat.push({ role: 'editor', text: '⚠️ The editor could not answer: ' + describeAiChannelFailure(aiError) });
+        renderStudioReviewPane();
+        setStudioStatus('❌ The editor could not answer. Try again.', 'warn');
+        return;
+      }
+      if (aiError) console.warn('[STUDIO:REVIEW] the model answered with a warning: ' + aiError);
+      studioReviewChat.push({ role: 'editor', text: String(answerText || '').trim() || '(the editor returned an empty answer)' });
+      renderStudioReviewPane();
+      setStudioStatus('✅ Editor answer ready. Ask again or press ⚡ Regenerate with this feedback.', 'ok');
+    });
+  });
+}
+
+function clearStudioReviewChat() {
+  if (!studioReviewChat.length) return;
+  studioReviewChat = [];
+  renderStudioReviewPane();
+  setStudioStatus('🧹 Review chat cleared.', 'ok');
+}
+
+/** Turn the report and the conversation into instructions for the rewrite */
+function buildStudioRevisionBrief() {
+  var briefPieces = [];
+  var report = studioReviewReport;
+  if (report) {
+    var riskLevel = String(report.riskLevel || 'unknown').toLowerCase();
+    briefPieces.push('The copyright check rated the previous version ' + riskLevel +
+      (report.similarityScore !== undefined ? ' (similarity ' + Math.round(Number(report.similarityScore) || 0) + '/100)' : '') +
+      (report.summary ? ': ' + String(report.summary) : ''));
+    var verbatimMatches = Array.isArray(report.verbatimMatches) ? report.verbatimMatches : [];
+    for (var verbatimIndex = 0; verbatimIndex < verbatimMatches.length; verbatimIndex++) {
+      var verbatimEntry = verbatimMatches[verbatimIndex] || {};
+      briefPieces.push('WORD-FOR-WORD COPY - rebuild this sentence from scratch: the source says "' +
+        String(verbatimEntry.sourceText || '').slice(0, 300) + '"; the previous version still said "' +
+        String(verbatimEntry.generatedText || '').slice(0, 300) + '".');
+    }
+    var nearMatches = Array.isArray(report.nearVerbatimMatches) ? report.nearVerbatimMatches : [];
+    for (var nearIndex = 0; nearIndex < nearMatches.length; nearIndex++) {
+      var nearEntry = nearMatches[nearIndex] || {};
+      briefPieces.push('TOO CLOSE - same sentence with synonyms swapped, restructure it completely: source "' +
+        String(nearEntry.sourceText || '').slice(0, 300) + '"; previous version "' +
+        String(nearEntry.generatedText || '').slice(0, 300) + '".');
+    }
+    var distinctiveItems = Array.isArray(report.distinctiveReuse) ? report.distinctiveReuse : [];
+    for (var distinctiveIndex = 0; distinctiveIndex < distinctiveItems.length; distinctiveIndex++) {
+      var distinctiveEntry = distinctiveItems[distinctiveIndex] || {};
+      briefPieces.push('REUSED WORDING - replace "' + String(distinctiveEntry.phrase || '') + '"' +
+        (distinctiveEntry.where ? ' in ' + String(distinctiveEntry.where) : '') +
+        (distinctiveEntry.note ? ' (' + String(distinctiveEntry.note) + ')' : '') + '.');
+    }
+    var structuralItems = Array.isArray(report.structuralMatches) ? report.structuralMatches : [];
+    for (var structuralIndex = 0; structuralIndex < structuralItems.length; structuralIndex++) {
+      briefPieces.push('STRUCTURE STILL COPIED - change the order or the grouping: ' + String(structuralItems[structuralIndex]));
+    }
+    var gapItems = Array.isArray(report.coverageGaps) ? report.coverageGaps : [];
+    for (var gapIndex = 0; gapIndex < gapItems.length; gapIndex++) {
+      briefPieces.push('RESTORE the content the previous version lost: ' + String(gapItems[gapIndex]));
+    }
+    var addedItems = Array.isArray(report.addedOrUnsupported) ? report.addedOrUnsupported : [];
+    for (var addedIndex = 0; addedIndex < addedItems.length; addedIndex++) {
+      briefPieces.push('REMOVE or support what the previous version added without support in the document: ' + String(addedItems[addedIndex]));
+    }
+    var planItems = Array.isArray(report.fixPlan) ? report.fixPlan : [];
+    if (planItems.length) {
+      briefPieces.push('APPLY THESE EDITS:\n- ' + planItems.join('\n- '));
+    }
+  }
+  var conversationLines = [];
+  for (var chatIndex = 0; chatIndex < studioReviewChat.length; chatIndex++) {
+    var chatMessage = studioReviewChat[chatIndex] || {};
+    if (!chatMessage.text) continue;
+    conversationLines.push((chatMessage.role === 'user' ? 'AUTHOR: ' : 'EDITOR NOTE: ') + String(chatMessage.text).slice(0, 1200));
+  }
+  if (conversationLines.length) {
+    briefPieces.push('CONVERSATION ABOUT THIS DOCUMENT - apply every author instruction:\n' + conversationLines.join('\n'));
+  }
+  return briefPieces.join('\n\n');
+}
+
+/** Rewrite the whole generated document with the report + chat as instructions */
+function regenerateStudioFromReview() {
+  if (studioReviewBusy || studioReviewChatBusy) return;
+  if (!studioCurrentDocUrl) { tool.notify('Open a document first.', 'warning'); return; }
+  if (!studioGeneratedHtml) { tool.notify('Generate the content first.', 'warning'); return; }
+  var revisionBrief = buildStudioRevisionBrief();
+  if (!revisionBrief) {
+    tool.notify('Run 🔍 Check similarity or write an instruction in the chat first - otherwise there is nothing to apply.', 'warning');
+    return;
+  }
+  ensureStudioReviewSourceText(function(readError, sourceText) {
+    if (readError || !sourceText) {
+      setStudioStatus('❌ ' + (readError || 'The source text could not be read.'), 'warn');
+      return;
+    }
+    var regeneratingDocUrl = studioCurrentDocUrl;
+    var hadReport = !!studioReviewReport;
+    setStudioStatus('⚡ Rewriting the document with the review feedback…', 'busy');
+    runStudioGenerationStream(
+      buildStudioHtmlPrompt(sourceText, editingStudyDocImages, revisionBrief),
+      '⚡ Rewriting the document with the review feedback',
+      function(resultCode) {
+        if (resultCode) return; // the stream itself reported the failure
+        if (studioCurrentDocUrl !== regeneratingDocUrl) return;
+        if (hadReport) startStudioReviewCheck(); // verify that the problems are gone
+      }
+    );
+  });
+}
+
+/** Keep the previous generated version of a document so a rewrite can be undone */
+function rememberStudioGeneratedVersion(documentUrl) {
+  if (!documentUrl) return;
+  var existingEntry = editingStudyDocGeneratedHtmlMap[documentUrl];
+  if (!existingEntry || !existingEntry.html) return;
+  var versionHistory = studioGeneratedHistory[documentUrl] || (studioGeneratedHistory[documentUrl] = []);
+  var lastVersion = versionHistory.length ? versionHistory[versionHistory.length - 1] : null;
+  if (lastVersion && lastVersion.html === existingEntry.html) return;
+  versionHistory.push({
+    html: existingEntry.html,
+    generatedAt: existingEntry.generatedAt || 0,
+    sourceLabel: existingEntry.sourceLabel || '',
+    docName: existingEntry.docName || ''
+  });
+  while (versionHistory.length > STUDIO_GENERATED_HISTORY_LIMIT) versionHistory.shift();
+}
+
+/** Put the last generated version back (after a regeneration) */
+function undoStudioGeneratedVersion() {
+  var documentUrl = studioCurrentDocUrl;
+  var versionHistory = studioGeneratedHistory[documentUrl] || [];
+  if (!documentUrl || !versionHistory.length) {
+    tool.notify('There is no previous generated version for this document.', 'info');
+    return;
+  }
+  var previousVersion = versionHistory.pop();
+  editingStudyDocGeneratedHtmlMap[documentUrl] = previousVersion;
+  studioGeneratedHtml = previousVersion.html || '';
+  studioReviewReport = null;
+  studioReviewReportRaw = '';
+  studioReviewComparedInfo = null;
+  saveGeneratedContentForReferenceDocument(documentUrl, studioGeneratedHtml, previousVersion.sourceLabel || '');
+  renderStudioGeneratedPreview();
+  renderStudioReviewPane();
+  tool.notify('Restored the previous generated version.', 'success');
+  setStudioStatus('↩ Previous generated version restored. Run 🔍 Check similarity to review it.', 'ok');
 }
 
 function closeStudioDrawer() {
@@ -12173,8 +15097,7 @@ function toggleStudioDocRole() {
   }
   var roleButton = el('btn-sd-make-role');
   if (roleButton) roleButton.textContent = studioDocRole(studioCurrentDocUrl) === 'final' ? '🔄 To Sample' : '🔄 To Ready';
-  var subtitleEl = el('sd-drawer-subtitle');
-  if (subtitleEl) subtitleEl.textContent = (studioDocRole(studioCurrentDocUrl) === 'final' ? '✅ Ready document - processed, shown to students' : '🧭 Sample document - input for creating your Ready document') + ' · ' + editingStudyDocImages.length + ' image(s)';
+  updateStudioDrawerHeading(studioCurrentDocUrl);
   renderPdfEditorList();
   autoSaveLessonAfterDocumentChange('document role changed');
 }
@@ -12247,8 +15170,9 @@ function renderStudyDocImageGallery() {
   }
   if (tabCountEl) tabCountEl.textContent = String(editingStudyDocImages.length);
   if (!editingStudyDocImages.length) {
-    grid.innerHTML = '<div class="sd-empty">No pictures yet. Use “Get Pictures”, “Add Image”, or paste a screenshot with Ctrl+V.</div>';
+    grid.innerHTML = '<div class="sd-empty">No pictures yet. Use “Get Pictures”, “Crop from Page”, “Add Image”, or paste a screenshot with Ctrl+V.</div>';
     updateStudioSelectionUi();
+    renderStudioPlacementReportPanel();
     return;
   }
   grid.innerHTML = editingStudyDocImages.map(function(image, idx) {
@@ -12265,7 +15189,19 @@ function renderStudyDocImageGallery() {
           '<button type="button" class="sd-version-btn' + (showGenerated ? ' active' : '') + '" data-sd-version="' + idx + '" data-version="generated">Generated</button>' +
         '</div>'
       : '';
-    var imageCardTitle = 'Click to view large' + (image.caption ? ' · ' + image.caption : '');
+    var positionLabel = studioPicturePositionLabel(image);
+    var anchorSummary = studioPictureAnchorSummary(image);
+    var imageCardTitle = 'Click to view large' +
+      (positionLabel ? ' · ' + positionLabel : '') +
+      (anchorSummary ? ' · ' + anchorSummary : '') +
+      (image.caption ? ' · ' + image.caption : '');
+    var anchorLine = positionLabel || anchorSummary
+      ? '<span class="sd-image-anchor" title="' + esc(anchorSummary || 'No text anchor captured') + '">' +
+          (positionLabel ? '<b>' + esc(positionLabel) + '</b>' : '') +
+          (image.pinnedHeading ? ' 📌' : '') +
+          (anchorSummary ? ' ' + esc(anchorSummary) : '') +
+        '</span>'
+      : '<span class="sd-image-anchor is-missing">⚠️ no page anchor</span>';
     return '<div class="sd-image-card' + (imageRole === 'source' ? ' is-source' : '') + '">' +
       '<label class="sd-image-check"><input type="checkbox" data-sd-select="' + idx + '"' +
         (studioSelectedImageIds[image.id] ? ' checked' : '') + '> select</label>' +
@@ -12273,17 +15209,22 @@ function renderStudyDocImageGallery() {
       versionToggle +
       '<div class="sd-image-meta">' + esc(image.name) +
         '<span class="sd-muted">' + (isImageHosted(image) ? '🔗 hosted · ' : '⚠️ not uploaded · ') + (image.ocrText ? '📝 text · ' : '') + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB</span>' +
+        anchorLine +
         badgeHtml +
       '</div>' +
       '<div class="sd-image-actions">' +
         '<button type="button" class="sd-image-role ' + (imageRole === 'source' ? 'is-source' : 'is-real') + '" data-sd-role="' + idx + '" title="Click to switch: Real = used directly by generated content, Source = needs a generated version">' +
           (imageRole === 'source' ? '◐ Source' : '● Real') + '</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" data-sd-pin="' + idx + '" title="Pin this picture to a section of the generated document">📌</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" data-sd-move="' + idx + '" data-direction="-1"' + (idx === 0 ? ' disabled' : '') + ' title="Move this picture earlier in the generation order">◀</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" data-sd-move="' + idx + '" data-direction="1"' + (idx === editingStudyDocImages.length - 1 ? ' disabled' : '') + ' title="Move this picture later in the generation order">▶</button>' +
         '<button type="button" class="btn btn-sm btn-outline" data-sd-regen="' + idx + '" title="Generate or regenerate a version of this picture">🎨</button>' +
         '<button type="button" class="btn btn-sm btn-danger" data-sd-remove="' + idx + '">🗑</button>' +
       '</div>' +
     '</div>';
   }).join('');
   updateStudioSelectionUi();
+  renderStudioPlacementReportPanel();
 }
 
 /** Switch a picture between Real (use directly) and Source (needs a generated version) */
@@ -12357,12 +15298,14 @@ function uploadStudioGeneratedImageToStorage(imageIndex, onDone) {
   });
 }
 
-function openStudioModal(title, bodyHtml) {
+function openStudioModal(title, bodyHtml, extraModalClass) {
   closeStudioModal();
   var overlay = document.createElement('div');
   overlay.className = 'sd-modal-overlay';
   overlay.id = 'sd-modal-overlay';
-  overlay.innerHTML = '<div class="sd-modal"><div class="sd-modal-header">' + esc(title) + '<button type="button" class="sd-modal-close" data-sd-close>✕</button></div><div class="sd-modal-body" id="sd-modal-body">' + bodyHtml + '</div></div>';
+  var modalClassName = 'sd-modal' + (extraModalClass ? ' ' + extraModalClass : '');
+  overlay.innerHTML = '<div class="' + modalClassName + '"><div class="sd-modal-header"><span class="sd-modal-title" id="sd-modal-title">' + esc(title) +
+    '</span><button type="button" class="sd-modal-close" data-sd-close>✕</button></div><div class="sd-modal-body" id="sd-modal-body">' + bodyHtml + '</div></div>';
   document.body.appendChild(overlay);
   overlay.addEventListener('click', function(event) {
     if (event.target === overlay) { closeStudioModal(); return; }
@@ -12372,6 +15315,11 @@ function openStudioModal(title, bodyHtml) {
 
 function closeStudioModal() {
   studioImageViewIndex = null;
+  // Any popup that closed also ends the page preview session.
+  referencePreviewPageNumber = 0;
+  // The crop tool owns a rendered page, pointer listeners and a PDF document;
+  // closing the popup always releases them.
+  teardownStudioCropTool();
   var overlay = el('sd-modal-overlay');
   if (overlay) overlay.remove();
 }
@@ -12440,6 +15388,40 @@ function openStudioImageView(imageIndex) {
 
 /* ── Studio actions: upload, extract, generate ── */
 /** Upload dialog: choose the document type, then pick the file */
+/** Gate in front of every way a document enters a lesson: the author must
+ *  confirm that using it raises no copyright issue. Outside / third-party
+ *  source material belongs in the curriculum Reference documents instead. */
+function confirmLessonDocumentCopyright(onConfirmed) {
+  openStudioModal('📋 Before this document is added',
+    '<div class="sd-modal-section">' +
+      '<label class="sd-choice-row"><input type="checkbox" id="sd-copyright-confirm">' +
+        '<span><strong>I confirm this document can be used in this lesson without a copyright issue</strong> - ' +
+        'it is our own material, licensed for us, or in the public domain.</span></label>' +
+      '<div class="sd-modal-hint">Do not add a document you are not allowed to publish. ' +
+        'Outside or third-party source material belongs in <strong>📚 Reference documents</strong> ' +
+        '(curriculum level): upload it there once, prepare the parts, then send them to this lesson.</div>' +
+    '</div>' +
+    '<div class="sd-modal-actions">' +
+      '<button type="button" class="btn btn-outline" data-sd-close>Cancel</button>' +
+      '<button type="button" class="btn btn-primary" id="sd-copyright-continue" disabled style="opacity:0.55">Continue</button>' +
+    '</div>');
+  var confirmCheckbox = el('sd-copyright-confirm');
+  var continueButton = el('sd-copyright-continue');
+  if (confirmCheckbox && continueButton) {
+    confirmCheckbox.addEventListener('change', function() {
+      continueButton.disabled = !this.checked;
+      continueButton.style.opacity = this.checked ? '' : '0.55';
+    });
+  }
+  if (continueButton) {
+    continueButton.addEventListener('click', function() {
+      if (confirmCheckbox && !confirmCheckbox.checked) return;
+      closeStudioModal();
+      if (onConfirmed) onConfirmed();
+    });
+  }
+}
+
 function openUploadDocumentDialog() {
   var typeKeys = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
   var optionsHtml = typeKeys.map(function(t) {
@@ -12496,7 +15478,7 @@ function openUploadDocumentDialog() {
 function addStudyDocImageDirectly() {
   if (!studioCurrentDocUrl) { tool.notify('Open a document in the Studio drawer first (⚙️ button).', 'warning'); return; }
   function storeUploadedImage(uploadedName, uploadedUrl, uploadedSizeKb) {
-    editingStudyDocImages.push({ id: genId(), name: uploadedName, width: 0, height: 0, url: uploadedUrl, sizeKb: uploadedSizeKb || 0, role: 'real' });
+    editingStudyDocImages.push({ id: genId(), name: uploadedName, width: 0, height: 0, url: uploadedUrl, sizeKb: uploadedSizeKb || 0, role: 'real', detectedBy: 'uploaded' });
     persistStudioImages();
     renderStudyDocImageGallery();
     renderPdfEditorList();
@@ -12525,6 +15507,742 @@ function addStudyDocImageDirectly() {
     }
     storeUploadedImage(uploadedFile.name, uploadedFile.url, 0);
   });
+}
+
+/* ── ✂️ Manual crop: the third capture method ──
+   Some pictures are not boxed correctly by a detector: a scan with a margin
+   baked into the image, a figure that touches its caption, a drawing cut by a
+   clip. Here the author decides: the page is rendered at a chosen size, a box
+   is dragged on it with the mouse, and exactly those pixels become a gallery
+   picture - with the same page anchor, CMS upload and save path as an
+   automatically captured picture. */
+var STUDIO_CROP_PAGE_SIZES = [1200, 1600, 2048, 2560, 3072, 4096];
+var STUDIO_CROP_DEFAULT_PAGE_SIZE = 2048;
+var STUDIO_CROP_MIN_SELECTION_PX = 8;
+var studioCropState = null;
+var studioCropDragMoveHandler = null;
+var studioCropDragEndHandler = null;
+var studioCropWindowResizeHandler = null;
+var studioCropEscapeHandler = null;
+
+function defaultStudioCropState() {
+  return {
+    docUrl: '',
+    pdfDocument: null,
+    pageNumber: 1,
+    pageTotal: 0,
+    pageRenderSize: STUDIO_CROP_DEFAULT_PAGE_SIZE,
+    pageCanvas: null,
+    pageLines: [],
+    scale: 1,
+    zoom: 'fit-width',
+    selection: null,
+    dragMode: '',
+    dragAnchor: null,
+    dragStartPointer: null,
+    dragStartSelection: null,
+    busy: false,
+    saving: false
+  };
+}
+
+/** "✂️ Crop from Page": render the page and let the author pick the area */
+function openStudioCropTool() {
+  if (!studioCurrentDocUrl) {
+    tool.notify('Open a document in the Studio drawer first.', 'warning');
+    return;
+  }
+  if (!pdfJsLibraryAvailable()) {
+    tool.notify('Page rendering is not enabled for this tool, so the crop tool cannot show a page (allowPdfRender).', 'warning');
+    return;
+  }
+  openStudioModal('✂️ Crop pictures from a page', buildStudioCropToolHtml(), 'sd-crop-modal');
+  studioCropState = defaultStudioCropState();
+  studioCropState.docUrl = studioCurrentDocUrl;
+  bindStudioCropTool();
+  loadStudioCropDocument();
+}
+
+function buildStudioCropToolHtml() {
+  var sizeOptionsHtml = '';
+  for (var sizeIndex = 0; sizeIndex < STUDIO_CROP_PAGE_SIZES.length; sizeIndex++) {
+    var sizeValue = STUDIO_CROP_PAGE_SIZES[sizeIndex];
+    sizeOptionsHtml += '<option value="' + sizeValue + '"' +
+      (sizeValue === STUDIO_CROP_DEFAULT_PAGE_SIZE ? ' selected' : '') + '>' + sizeValue + ' px</option>';
+  }
+  return '<div class="sd-crop">' +
+      '<div class="sd-crop-toolbar">' +
+        '<span class="sd-crop-group">' +
+          '<button type="button" class="btn btn-sm btn-outline" id="sd-crop-prev" title="Previous page" disabled>◀</button>' +
+          '<span class="sd-crop-page-label">Page <input class="form-input sd-crop-page-input" id="sd-crop-page" type="number" min="1" value="1"> of <span id="sd-crop-page-total">…</span></span>' +
+          '<button type="button" class="btn btn-sm btn-outline" id="sd-crop-next" title="Next page" disabled>▶</button>' +
+        '</span>' +
+        '<span class="sd-crop-group">' +
+          '<label class="sd-crop-label" for="sd-crop-render-size">Page size</label>' +
+          '<select class="form-input sd-crop-select" id="sd-crop-render-size" title="The page is rendered at this size (longer side). Larger = a sharper crop, slower to render.">' + sizeOptionsHtml + '</select>' +
+        '</span>' +
+        '<span class="sd-crop-group">' +
+          '<label class="sd-crop-label" for="sd-crop-zoom">Zoom</label>' +
+          '<select class="form-input sd-crop-select" id="sd-crop-zoom" title="Fit width fills the area and scrolls down; Fit page shows everything; a percentage is one page pixel to one CSS pixel or more">' +
+            '<option value="fit-width" selected>Fit width</option>' +
+            '<option value="fit">Fit page</option>' +
+            '<option value="0.5">50%</option>' +
+            '<option value="0.75">75%</option>' +
+            '<option value="0.9">90%</option>' +
+            '<option value="1">100%</option>' +
+            '<option value="1.5">150%</option>' +
+            '<option value="2">200%</option>' +
+            '<option value="3">300%</option>' +
+          '</select>' +
+        '</span>' +
+        '<span class="sd-crop-group sd-crop-group-right">' +
+          '<button type="button" class="btn btn-sm btn-outline" id="sd-crop-whole-page" disabled>Whole page</button>' +
+          '<button type="button" class="btn btn-sm btn-outline" id="sd-crop-clear" disabled>Clear</button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="sd-crop-stage-wrap" id="sd-crop-stage-wrap">' +
+        '<div class="sd-crop-stage" id="sd-crop-stage"><div class="sd-crop-empty" id="sd-crop-empty">Reading the document…</div></div>' +
+      '</div>' +
+      '<div class="sd-crop-saved" id="sd-crop-saved" hidden></div>' +
+      '<div class="sd-crop-hint">Drag on the page to select the picture. Drag inside the selection to move it, or a corner to resize it. The crop is taken from the <strong>Page size</strong> render, so a bigger size gives a sharper picture. Saved crops of this page appear under the page - click ✕ on one to drop it.</div>' +
+      '<div class="sd-crop-footer">' +
+        '<span class="sd-crop-info" id="sd-crop-info">No area selected.</span>' +
+        '<span class="sd-crop-preview"><canvas id="sd-crop-preview" width="1" height="1"></canvas></span>' +
+        '<button type="button" class="btn btn-primary" id="sd-crop-save" disabled>✂️ Save this area as a picture</button>' +
+      '</div>' +
+      '<div class="sd-crop-status" id="sd-crop-status"></div>' +
+    '</div>';
+}
+
+function bindStudioCropTool() {
+  var previousButton = el('sd-crop-prev');
+  if (previousButton) previousButton.addEventListener('click', function() {
+    if (!studioCropState) return;
+    goToStudioCropPage(studioCropState.pageNumber - 1);
+  });
+  var nextButton = el('sd-crop-next');
+  if (nextButton) nextButton.addEventListener('click', function() {
+    if (!studioCropState) return;
+    goToStudioCropPage(studioCropState.pageNumber + 1);
+  });
+  var pageInput = el('sd-crop-page');
+  if (pageInput) pageInput.addEventListener('change', function() {
+    goToStudioCropPage(this.value);
+  });
+  var sizeSelect = el('sd-crop-render-size');
+  if (sizeSelect) sizeSelect.addEventListener('change', function() {
+    changeStudioCropRenderSize(this.value);
+  });
+  var zoomSelect = el('sd-crop-zoom');
+  if (zoomSelect) zoomSelect.addEventListener('change', function() {
+    if (!studioCropState) return;
+    studioCropState.zoom = this.value;
+    applyStudioCropZoom();
+  });
+  var savedStrip = el('sd-crop-saved');
+  if (savedStrip) savedStrip.addEventListener('click', function(event) {
+    var stripTarget = event.target;
+    if (!stripTarget || !stripTarget.closest) return;
+    var removeTarget = stripTarget.closest('[data-crop-remove]');
+    if (!removeTarget) return;
+    removeStudioCropSavedPicture(parseInt(removeTarget.getAttribute('data-crop-remove'), 10));
+  });
+  var wholePageButton = el('sd-crop-whole-page');
+  if (wholePageButton) wholePageButton.addEventListener('click', function() {
+    if (!studioCropState || !studioCropState.pageCanvas) return;
+    studioCropState.selection = { x: 0, y: 0, width: 1, height: 1 };
+    renderStudioCropSelection();
+  });
+  var clearButton = el('sd-crop-clear');
+  if (clearButton) clearButton.addEventListener('click', function() {
+    if (!studioCropState) return;
+    studioCropState.selection = null;
+    renderStudioCropSelection();
+  });
+  var saveButton = el('sd-crop-save');
+  if (saveButton) saveButton.addEventListener('click', function() { saveStudioCropSelection(); });
+  var stage = el('sd-crop-stage');
+  if (stage) stage.addEventListener('pointerdown', beginStudioCropDrag);
+  studioCropWindowResizeHandler = function() { applyStudioCropZoom(); };
+  window.addEventListener('resize', studioCropWindowResizeHandler);
+  // Capture phase: Escape closes THIS popup, not the whole Studio drawer.
+  studioCropEscapeHandler = function(event) {
+    if (!studioCropState) return;
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    closeStudioModal();
+  };
+  document.addEventListener('keydown', studioCropEscapeHandler, true);
+}
+
+/** Read the bytes of the open document (local copy first, CMS download second) */
+function readOpenDocumentPdfBytes(onDone) {
+  var sourceUrl = studioCurrentDocUrl;
+  if (!sourceUrl) { onDone('no_document', null, null); return; }
+  if (studioLocalPdfBytes && studioLocalPdfUrl === sourceUrl) { onDone(null, studioLocalPdfBytes, null); return; }
+  if (!binaryFileChannelAvailable()) { onDone('no_channel', null, null); return; }
+  fetchDocumentBytes(sourceUrl, { purpose: 'manual-crop' }, function(fetchError, documentBytes, documentMeta) {
+    if (fetchError || !documentBytes || !documentBytes.length) {
+      onDone(fetchError || 'empty', null, documentMeta);
+      return;
+    }
+    adoptMirroredStudioDocumentUrl(sourceUrl, documentMeta);
+    onDone(null, documentBytes, documentMeta);
+  });
+}
+
+function describeStudioCropLoadFailure(errorCode, documentMeta) {
+  if (errorCode === 'no_document') return 'Open a document in the Studio drawer first.';
+  if (errorCode === 'no_channel') return 'File downloads are switched off for this tool (allowFileFetch: yes is needed to read the page).';
+  if (errorCode === 'empty') return 'The document was downloaded but it is empty.';
+  return describeDocumentDownloadFailure(errorCode, documentMeta, studioCurrentDocUrl);
+}
+
+function loadStudioCropDocument() {
+  var state = studioCropState;
+  if (!state) return;
+  setStudioCropStatus('⏳ Reading the document…', 'busy');
+  readOpenDocumentPdfBytes(function(readError, pdfBytes, documentMeta) {
+    if (!studioCropState || studioCropState !== state) return;
+    if (readError || !pdfBytes || !pdfBytes.length) {
+      var failureText = describeStudioCropLoadFailure(readError, documentMeta);
+      setStudioCropStatus('❌ ' + failureText, 'warn');
+      var emptyElement = el('sd-crop-empty');
+      if (emptyElement) emptyElement.textContent = failureText;
+      return;
+    }
+    // The toolkit takes ownership of the buffer it receives, so it always gets
+    // a fresh copy (the same rule as the reference splitter).
+    var toolkitBytes = copyPdfBytesForToolkit(pdfBytes) || new Uint8Array(pdfBytes);
+    window.pdfjsLib.getDocument({ data: toolkitBytes }).promise.then(function(pdfDocument) {
+      if (!studioCropState || studioCropState !== state) {
+        try { pdfDocument.destroy(); } catch (lateDocumentError) { /* already gone */ }
+        return;
+      }
+      state.pdfDocument = pdfDocument;
+      state.pageTotal = pdfDocument.numPages;
+      var totalElement = el('sd-crop-page-total');
+      if (totalElement) totalElement.textContent = String(pdfDocument.numPages);
+      var pageInput = el('sd-crop-page');
+      if (pageInput) pageInput.max = String(pdfDocument.numPages);
+      state.pageNumber = 1;
+      renderStudioCropPage();
+    }).catch(function(openError) {
+      if (!studioCropState || studioCropState !== state) return;
+      console.warn('[STUDIO:CROP] the document could not be opened:', openError);
+      setStudioCropStatus('❌ The document could not be opened for the crop tool - try the page preview again.', 'warn');
+    });
+  });
+}
+
+function renderStudioCropPage() {
+  var state = studioCropState;
+  if (!state || !state.pdfDocument || state.busy) return;
+  state.busy = true;
+  setStudioCropStatus('⏳ Rendering page ' + state.pageNumber + ' at ' + state.pageRenderSize + ' px…', 'busy');
+  var renderSizeLimit = state.pageRenderSize;
+  var pageNumberToRender = state.pageNumber;
+  state.pdfDocument.getPage(pageNumberToRender).then(function(pdfPage) {
+    var unitViewport = pdfPage.getViewport({ scale: 1 });
+    var longestSide = Math.max(unitViewport.width, unitViewport.height, 1);
+    var renderScale = Math.min(12, Math.max(0.2, renderSizeLimit / longestSide));
+    var pageViewport = pdfPage.getViewport({ scale: renderScale });
+    var pageCanvas = document.createElement('canvas');
+    pageCanvas.width = Math.max(1, Math.floor(pageViewport.width));
+    pageCanvas.height = Math.max(1, Math.floor(pageViewport.height));
+    return pdfPage.render({ canvasContext: pageCanvas.getContext('2d'), viewport: pageViewport }).promise.then(function() {
+      return pdfPage.getTextContent().then(function(textContent) {
+        return { pageCanvas: pageCanvas, pageLines: pageTextLinesForAnchor(textContent, pageViewport) };
+      }, function(textError) {
+        console.warn('[STUDIO:CROP] the page text could not be read (anchors will be empty):', textError);
+        return { pageCanvas: pageCanvas, pageLines: [] };
+      });
+    });
+  }).then(function(renderResult) {
+    if (!studioCropState || studioCropState !== state) return;
+    state.pageCanvas = renderResult.pageCanvas;
+    state.pageLines = renderResult.pageLines;
+    state.busy = false;
+    mountStudioCropCanvas();
+    setStudioCropStatus('', '');
+    updateStudioCropPageButtons();
+  }).catch(function(pageError) {
+    if (!studioCropState || studioCropState !== state) return;
+    state.busy = false;
+    console.warn('[STUDIO:CROP] page ' + pageNumberToRender + ' could not be rendered:', pageError);
+    setStudioCropStatus('❌ Page ' + pageNumberToRender + ' could not be rendered.', 'warn');
+  });
+}
+
+/** Put the rendered page and the selection overlay into the modal */
+function mountStudioCropCanvas() {
+  var state = studioCropState;
+  var stage = el('sd-crop-stage');
+  if (!state || !stage || !state.pageCanvas) return;
+  stage.innerHTML = '';
+  stage.appendChild(state.pageCanvas);
+  state.pageCanvas.className = 'sd-crop-page';
+  var selectionElement = document.createElement('div');
+  selectionElement.className = 'sd-crop-selection';
+  selectionElement.id = 'sd-crop-selection';
+  selectionElement.style.display = 'none';
+  selectionElement.innerHTML = '<span class="sd-crop-handle" data-crop-handle="nw"></span>' +
+    '<span class="sd-crop-handle" data-crop-handle="ne"></span>' +
+    '<span class="sd-crop-handle" data-crop-handle="sw"></span>' +
+    '<span class="sd-crop-handle" data-crop-handle="se"></span>';
+  stage.appendChild(selectionElement);
+  applyStudioCropZoom();
+  renderStudioCropSavedStrip();
+}
+
+/** Display scale.
+ *  "Fit width" fills the stage width (the page scrolls vertically), "Fit page"
+ *  shows the whole page, and a percentage is one page pixel to one CSS pixel
+ *  (or more) so fine detail can be selected precisely. */
+function applyStudioCropZoom() {
+  var state = studioCropState;
+  var stageWrap = el('sd-crop-stage-wrap');
+  var stage = el('sd-crop-stage');
+  if (!state || !state.pageCanvas || !stageWrap || !stage) return;
+  var pageCanvas = state.pageCanvas;
+  var wrapWidth = Math.max(120, (stageWrap.clientWidth || 600) - 24);
+  var wrapHeight = Math.max(120, (stageWrap.clientHeight || 400) - 24);
+  var fitWidthScale = wrapWidth / Math.max(1, pageCanvas.width);
+  var fitPageScale = Math.min(fitWidthScale, wrapHeight / Math.max(1, pageCanvas.height));
+  var zoomValue = state.zoom;
+  var displayScale;
+  if (zoomValue === 'fit-width') displayScale = fitWidthScale;
+  else if (zoomValue === 'fit') displayScale = fitPageScale;
+  else displayScale = Math.max(0.05, Number(zoomValue) || 1);
+  state.scale = displayScale;
+  var displayWidth = Math.max(1, Math.round(pageCanvas.width * displayScale));
+  var displayHeight = Math.max(1, Math.round(pageCanvas.height * displayScale));
+  pageCanvas.style.width = displayWidth + 'px';
+  pageCanvas.style.height = displayHeight + 'px';
+  stage.style.width = displayWidth + 'px';
+  stage.style.height = displayHeight + 'px';
+  renderStudioCropSelection();
+  updateStudioCropPageButtons();
+}
+
+function updateStudioCropPageButtons() {
+  var state = studioCropState;
+  var previousButton = el('sd-crop-prev');
+  var nextButton = el('sd-crop-next');
+  var pageInput = el('sd-crop-page');
+  var wholePageButton = el('sd-crop-whole-page');
+  var clearButton = el('sd-crop-clear');
+  var canUsePage = !!(state && state.pageCanvas && !state.busy);
+  if (previousButton) previousButton.disabled = !canUsePage || state.pageNumber <= 1;
+  if (nextButton) nextButton.disabled = !canUsePage || state.pageNumber >= state.pageTotal;
+  if (wholePageButton) wholePageButton.disabled = !canUsePage;
+  if (clearButton) clearButton.disabled = !canUsePage;
+  if (pageInput) pageInput.disabled = !canUsePage;
+}
+
+/** Overlay + summary + preview for the current selection */
+function renderStudioCropSelection() {
+  var state = studioCropState;
+  var selectionElement = el('sd-crop-selection');
+  var saveButton = el('sd-crop-save');
+  if (!state || !selectionElement) return;
+  var selection = state.selection;
+  var hasSelection = !!(selection && selection.width > 0.002 && selection.height > 0.002 && state.pageCanvas);
+  if (hasSelection) {
+    selectionElement.style.display = '';
+    selectionElement.style.left = (selection.x * 100) + '%';
+    selectionElement.style.top = (selection.y * 100) + '%';
+    selectionElement.style.width = (selection.width * 100) + '%';
+    selectionElement.style.height = (selection.height * 100) + '%';
+  } else {
+    selectionElement.style.display = 'none';
+  }
+  var cropRect = hasSelection ? studioCropSelectionPixels() : null;
+  if (saveButton) saveButton.disabled = !cropRect || state.busy || state.saving;
+  updateStudioCropSelectionInfo(cropRect);
+  drawStudioCropPreview(cropRect);
+}
+
+/** The selection in rendered-page pixels (rounded and clamped to the page) */
+function studioCropSelectionPixels() {
+  var state = studioCropState;
+  if (!state || !state.pageCanvas || !state.selection) return null;
+  var selection = state.selection;
+  if (!(selection.width > 0) || !(selection.height > 0)) return null;
+  var pageWidth = state.pageCanvas.width;
+  var pageHeight = state.pageCanvas.height;
+  var cropLeft = Math.max(0, Math.min(pageWidth - 1, Math.round(selection.x * pageWidth)));
+  var cropTop = Math.max(0, Math.min(pageHeight - 1, Math.round(selection.y * pageHeight)));
+  var cropRight = Math.max(cropLeft + 1, Math.min(pageWidth, Math.round((selection.x + selection.width) * pageWidth)));
+  var cropBottom = Math.max(cropTop + 1, Math.min(pageHeight, Math.round((selection.y + selection.height) * pageHeight)));
+  return { left: cropLeft, top: cropTop, width: cropRight - cropLeft, height: cropBottom - cropTop };
+}
+
+function updateStudioCropSelectionInfo(cropRect) {
+  var state = studioCropState;
+  var infoElement = el('sd-crop-info');
+  if (!infoElement) return;
+  if (!state || !state.pageCanvas) {
+    infoElement.textContent = 'No page loaded yet.';
+    return;
+  }
+  if (!cropRect) {
+    infoElement.textContent = 'No area selected - drag on the page to choose the picture.';
+    return;
+  }
+  infoElement.textContent = 'Selection ' + cropRect.width + ' × ' + cropRect.height + ' px · page rendered at ' +
+    state.pageCanvas.width + ' × ' + state.pageCanvas.height + ' px';
+}
+
+function drawStudioCropPreview(cropRect) {
+  var state = studioCropState;
+  var previewCanvas = el('sd-crop-preview');
+  if (!previewCanvas) return;
+  var previewWidth = 1;
+  var previewHeight = 1;
+  if (cropRect && cropRect.width > 0 && cropRect.height > 0) {
+    // One scale for BOTH sides: capping width and height separately turned a
+    // tall selection into a square preview, which made the crop look wrong.
+    var previewScale = Math.min(1, 320 / cropRect.width, 200 / cropRect.height);
+    previewWidth = Math.max(1, Math.round(cropRect.width * previewScale));
+    previewHeight = Math.max(1, Math.round(cropRect.height * previewScale));
+  }
+  if (previewCanvas.width !== previewWidth) previewCanvas.width = previewWidth;
+  if (previewCanvas.height !== previewHeight) previewCanvas.height = previewHeight;
+  var previewContext = previewCanvas.getContext('2d');
+  if (!previewContext) return;
+  previewContext.fillStyle = '#f1f5f9';
+  previewContext.fillRect(0, 0, previewWidth, previewHeight);
+  if (!cropRect || !state || !state.pageCanvas) return;
+  try {
+    previewContext.drawImage(state.pageCanvas, cropRect.left, cropRect.top, cropRect.width, cropRect.height, 0, 0, previewWidth, previewHeight);
+  } catch (previewError) {
+    // The preview is a convenience; the saved crop is unaffected.
+  }
+}
+
+/** Pictures already saved from the open page, shown under the stage.
+ *  It answers "what did I just capture?" without leaving the popup and lets a
+ *  wrong crop be dropped on the spot. */
+function renderStudioCropSavedStrip() {
+  var state = studioCropState;
+  var strip = el('sd-crop-saved');
+  if (!strip) return;
+  if (!state || !state.pageCanvas) {
+    strip.hidden = true;
+    strip.innerHTML = '';
+    return;
+  }
+  var savedItemsHtml = '';
+  var savedCount = 0;
+  for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+    var savedImage = editingStudyDocImages[imageIndex];
+    if (!savedImage || savedImage.sourcePage !== state.pageNumber || !savedImage.manualCrop) continue;
+    var savedSrc = imageContentSrc(savedImage);
+    if (!savedSrc) continue;
+    savedCount++;
+    savedItemsHtml += '<div class="sd-crop-saved-item">' +
+      '<img src="' + savedSrc + '" alt="' + esc(savedImage.name) + '" title="' + esc(savedImage.name) + '">' +
+      '<button type="button" data-crop-remove="' + imageIndex + '" title="Remove this saved crop from the document">✕</button>' +
+      '<span>' + (savedImage.width || '?') + '×' + (savedImage.height || '?') + '</span>' +
+      '</div>';
+  }
+  if (!savedCount) {
+    strip.hidden = true;
+    strip.innerHTML = '';
+    return;
+  }
+  strip.hidden = false;
+  strip.innerHTML = '<span class="sd-crop-saved-title">✓ Saved from page ' + state.pageNumber + ' (' + savedCount + ')</span>' + savedItemsHtml;
+}
+
+/** Remove one saved crop from the page strip */
+function removeStudioCropSavedPicture(imageIndex) {
+  var savedImage = editingStudyDocImages[imageIndex];
+  if (!savedImage) return;
+  var savedName = savedImage.name;
+  editingStudyDocImages.splice(imageIndex, 1);
+  studioImagePreviewVersion = {};
+  persistStudioImages();
+  renderStudyDocImageGallery();
+  renderPdfEditorList();
+  renderStudioCropSavedStrip();
+  autoSaveCurrentLesson();
+  deleteStudioImageStorageFiles([savedImage], function(deleteSummary) {
+    notifyStorageDeletionResult(deleteSummary, 1);
+  });
+  setStudioCropStatus('Removed ' + savedName + ' from this document.', 'ok');
+}
+
+function setStudioCropStatus(message, kind) {
+  var statusElement = el('sd-crop-status');
+  if (!statusElement) return;
+  statusElement.textContent = message || '';
+  statusElement.className = 'sd-crop-status' + (kind ? ' is-' + kind : '');
+}
+
+/** Pointer position as a fraction of the page (0..1 on both axes) */
+function studioCropPointerFractions(pointerEvent) {
+  var stage = el('sd-crop-stage');
+  if (!stage || !pointerEvent) return null;
+  var stageBox = stage.getBoundingClientRect();
+  if (!stageBox.width || !stageBox.height) return null;
+  var fractionX = (pointerEvent.clientX - stageBox.left) / stageBox.width;
+  var fractionY = (pointerEvent.clientY - stageBox.top) / stageBox.height;
+  return {
+    x: Math.max(0, Math.min(1, fractionX)),
+    y: Math.max(0, Math.min(1, fractionY))
+  };
+}
+
+function beginStudioCropDrag(pointerEvent) {
+  var state = studioCropState;
+  if (!state || !state.pageCanvas || state.busy || state.saving) return;
+  if (pointerEvent.button !== undefined && pointerEvent.button !== 0 && pointerEvent.pointerType === 'mouse') return;
+  var pointer = studioCropPointerFractions(pointerEvent);
+  if (!pointer) return;
+  var handleElement = (pointerEvent.target && pointerEvent.target.closest) ? pointerEvent.target.closest('[data-crop-handle]') : null;
+  var handleName = handleElement ? handleElement.getAttribute('data-crop-handle') : '';
+  var selection = state.selection;
+  var insideSelection = !!(selection && pointer.x > selection.x && pointer.x < selection.x + selection.width &&
+    pointer.y > selection.y && pointer.y < selection.y + selection.height);
+  state.dragStartPointer = pointer;
+  state.dragStartSelection = selection
+    ? { x: selection.x, y: selection.y, width: selection.width, height: selection.height }
+    : null;
+  if (handleName) {
+    state.dragMode = 'resize-' + handleName;
+  } else if (insideSelection) {
+    state.dragMode = 'move';
+  } else {
+    state.dragMode = 'new';
+    state.dragAnchor = pointer;
+    state.selection = { x: pointer.x, y: pointer.y, width: 0, height: 0 };
+  }
+  studioCropDragMoveHandler = function(moveEvent) { moveStudioCropDrag(moveEvent); };
+  studioCropDragEndHandler = function() { endStudioCropDrag(); };
+  window.addEventListener('pointermove', studioCropDragMoveHandler);
+  window.addEventListener('pointerup', studioCropDragEndHandler);
+  window.addEventListener('pointercancel', studioCropDragEndHandler);
+  pointerEvent.preventDefault();
+}
+
+function moveStudioCropDrag(pointerEvent) {
+  var state = studioCropState;
+  if (!state || !state.dragMode) return;
+  var pointer = studioCropPointerFractions(pointerEvent);
+  if (!pointer) return;
+  if (state.dragMode === 'new' && state.dragAnchor) {
+    state.selection = {
+      x: Math.min(state.dragAnchor.x, pointer.x),
+      y: Math.min(state.dragAnchor.y, pointer.y),
+      width: Math.abs(pointer.x - state.dragAnchor.x),
+      height: Math.abs(pointer.y - state.dragAnchor.y)
+    };
+  } else if (state.dragMode === 'move' && state.dragStartSelection && state.dragStartPointer) {
+    var moveX = pointer.x - state.dragStartPointer.x;
+    var moveY = pointer.y - state.dragStartPointer.y;
+    state.selection = {
+      x: Math.max(0, Math.min(1 - state.dragStartSelection.width, state.dragStartSelection.x + moveX)),
+      y: Math.max(0, Math.min(1 - state.dragStartSelection.height, state.dragStartSelection.y + moveY)),
+      width: state.dragStartSelection.width,
+      height: state.dragStartSelection.height
+    };
+  } else if (state.dragMode.indexOf('resize-') === 0 && state.dragStartSelection) {
+    var handleName = state.dragMode.substring('resize-'.length);
+    var resizeLeft = state.dragStartSelection.x;
+    var resizeTop = state.dragStartSelection.y;
+    var resizeRight = resizeLeft + state.dragStartSelection.width;
+    var resizeBottom = resizeTop + state.dragStartSelection.height;
+    var minimumSize = 0.01;
+    if (handleName.indexOf('n') !== -1) resizeTop = Math.min(pointer.y, resizeBottom - minimumSize);
+    if (handleName.indexOf('s') !== -1) resizeBottom = Math.max(pointer.y, resizeTop + minimumSize);
+    if (handleName.indexOf('w') !== -1) resizeLeft = Math.min(pointer.x, resizeRight - minimumSize);
+    if (handleName.indexOf('e') !== -1) resizeRight = Math.max(pointer.x, resizeLeft + minimumSize);
+    resizeLeft = Math.max(0, resizeLeft);
+    resizeTop = Math.max(0, resizeTop);
+    resizeRight = Math.min(1, resizeRight);
+    resizeBottom = Math.min(1, resizeBottom);
+    state.selection = {
+      x: resizeLeft,
+      y: resizeTop,
+      width: Math.max(minimumSize, resizeRight - resizeLeft),
+      height: Math.max(minimumSize, resizeBottom - resizeTop)
+    };
+  }
+  renderStudioCropSelection();
+  pointerEvent.preventDefault();
+}
+
+function endStudioCropDrag() {
+  var state = studioCropState;
+  if (studioCropDragMoveHandler) {
+    window.removeEventListener('pointermove', studioCropDragMoveHandler);
+    studioCropDragMoveHandler = null;
+  }
+  if (studioCropDragEndHandler) {
+    window.removeEventListener('pointerup', studioCropDragEndHandler);
+    window.removeEventListener('pointercancel', studioCropDragEndHandler);
+    studioCropDragEndHandler = null;
+  }
+  if (!state) return;
+  if (state.selection && state.pageCanvas) {
+    var selectionWidthPx = state.selection.width * state.pageCanvas.width;
+    var selectionHeightPx = state.selection.height * state.pageCanvas.height;
+    if (selectionWidthPx < STUDIO_CROP_MIN_SELECTION_PX || selectionHeightPx < STUDIO_CROP_MIN_SELECTION_PX) state.selection = null;
+  }
+  state.dragMode = '';
+  state.dragAnchor = null;
+  state.dragStartPointer = null;
+  state.dragStartSelection = null;
+  renderStudioCropSelection();
+}
+
+function goToStudioCropPage(pageNumber) {
+  var state = studioCropState;
+  if (!state || !state.pdfDocument || state.busy) return;
+  var requestedPage = parseInt(pageNumber, 10);
+  if (!requestedPage || requestedPage < 1 || requestedPage > state.pageTotal) {
+    var pageInput = el('sd-crop-page');
+    if (pageInput) pageInput.value = String(state.pageNumber);
+    return;
+  }
+  if (requestedPage === state.pageNumber && state.pageCanvas) return;
+  state.pageNumber = requestedPage;
+  state.selection = null;
+  var currentPageInput = el('sd-crop-page');
+  if (currentPageInput) currentPageInput.value = String(requestedPage);
+  renderStudioCropPage();
+}
+
+function changeStudioCropRenderSize(requestedSize) {
+  var state = studioCropState;
+  if (!state) return;
+  var nextSize = parseInt(requestedSize, 10);
+  if (!nextSize || nextSize < 600) nextSize = STUDIO_CROP_DEFAULT_PAGE_SIZE;
+  if (nextSize > 4096) nextSize = 4096;
+  state.pageRenderSize = nextSize;
+  // The selection is stored as page fractions, so it keeps covering exactly
+  // the same part of the page at the new resolution.
+  renderStudioCropPage();
+}
+
+function nextStudioCropPictureName(pageNumber) {
+  var usedNames = {};
+  for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+    var existingImage = editingStudyDocImages[imageIndex];
+    if (existingImage && existingImage.name) usedNames[String(existingImage.name)] = true;
+  }
+  var namePrefix = 'page-' + pageNumber + '-crop-';
+  var nameNumber = 1;
+  while (usedNames[namePrefix + nameNumber + '.jpg']) nameNumber++;
+  return namePrefix + nameNumber + '.jpg';
+}
+
+/** Crop the selection, store it in the gallery and upload it to CMS storage */
+function saveStudioCropSelection() {
+  var state = studioCropState;
+  if (!state || !state.pageCanvas || state.saving) return;
+  var cropRect = studioCropSelectionPixels();
+  if (!cropRect || cropRect.width < STUDIO_CROP_MIN_SELECTION_PX || cropRect.height < STUDIO_CROP_MIN_SELECTION_PX) {
+    tool.notify('Select an area on the page first.', 'warning');
+    return;
+  }
+  var cropCanvas = document.createElement('canvas');
+  cropCanvas.width = cropRect.width;
+  cropCanvas.height = cropRect.height;
+  cropCanvas.getContext('2d').drawImage(state.pageCanvas,
+    cropRect.left, cropRect.top, cropRect.width, cropRect.height,
+    0, 0, cropRect.width, cropRect.height);
+  var pictureName = nextStudioCropPictureName(state.pageNumber);
+  var croppedPageNumber = state.pageNumber;
+  var croppedPageWidth = state.pageCanvas.width;
+  var croppedPageHeight = state.pageCanvas.height;
+  var croppedPageLines = state.pageLines;
+  var croppedRenderSize = state.pageRenderSize;
+  state.saving = true;
+  renderStudioCropSelection();
+  canvasToStudioImage(cropCanvas, pictureName, function(encodeError, pictureImage) {
+    if (!studioCropState || studioCropState !== state) return;
+    state.saving = false;
+    if (encodeError || !pictureImage) {
+      setStudioCropStatus('❌ ' + (encodeError || 'The crop could not be encoded.'), 'warn');
+      renderStudioCropSelection();
+      return;
+    }
+    var textAnchor = pictureAnchorFromPageLines(croppedPageLines, cropRect, croppedPageHeight);
+    var picturesOnPage = 0;
+    for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+      if (editingStudyDocImages[imageIndex] && editingStudyDocImages[imageIndex].sourcePage === croppedPageNumber) picturesOnPage++;
+    }
+    attachStudioPictureAnchor(pictureImage, {
+      sourcePage: croppedPageNumber,
+      orderOnPage: picturesOnPage + 1,
+      detectedBy: 'manual-crop',
+      sourceBox: {
+        x: cropRect.left / Math.max(1, croppedPageWidth),
+        y: cropRect.top / Math.max(1, croppedPageHeight),
+        width: cropRect.width / Math.max(1, croppedPageWidth),
+        height: cropRect.height / Math.max(1, croppedPageHeight)
+      },
+      anchorBefore: textAnchor.before,
+      anchorAfter: textAnchor.after,
+      anchorHeading: textAnchor.heading,
+      anchorSource: textAnchor.source !== 'none' ? 'text-layer' : 'none'
+    });
+    pictureImage.manualCrop = true;
+    pictureImage.pageRenderMaxSide = croppedRenderSize;
+    editingStudyDocImages.push(pictureImage);
+    var newImageIndex = editingStudyDocImages.length - 1;
+    persistStudioImages();
+    renderStudyDocImageGallery();
+    renderPdfEditorList();
+    autoSaveCurrentLesson();
+    state.selection = null;
+    renderStudioCropSelection();
+    renderStudioCropSavedStrip();
+    setStudioCropStatus('⏳ Saving ' + pictureName + ' (' + cropRect.width + ' × ' + cropRect.height + ' px) and uploading it to CMS storage…', 'busy');
+    uploadStudioImageToStorage(newImageIndex, function(uploaded) {
+      renderStudyDocImageGallery();
+      autoSaveCurrentLesson();
+      if (!studioCropState || studioCropState !== state) return;
+      renderStudioCropSavedStrip();
+      if (uploaded) {
+        setStudioCropStatus('✅ ' + pictureName + ' is in the document gallery and uploaded to CMS storage. Drag another area, or close this window.', 'ok');
+        tool.notify(pictureName + ' saved and uploaded ✅', 'success');
+      } else {
+        setStudioCropStatus('⚠️ ' + pictureName + ' is in the gallery but could not be uploaded (picture upload needs allowBinaryUpload: yes). Drag another area or close this window.', 'warn');
+      }
+    });
+  });
+}
+
+/** Close everything the crop tool set up (called by closeStudioModal) */
+function teardownStudioCropTool() {
+  var state = studioCropState;
+  if (state && state.pdfDocument) {
+    try { state.pdfDocument.destroy(); } catch (destroyError) { /* the document may already be gone */ }
+  }
+  studioCropState = null;
+  if (studioCropDragMoveHandler) {
+    window.removeEventListener('pointermove', studioCropDragMoveHandler);
+    studioCropDragMoveHandler = null;
+  }
+  if (studioCropDragEndHandler) {
+    window.removeEventListener('pointerup', studioCropDragEndHandler);
+    window.removeEventListener('pointercancel', studioCropDragEndHandler);
+    studioCropDragEndHandler = null;
+  }
+  if (studioCropWindowResizeHandler) {
+    window.removeEventListener('resize', studioCropWindowResizeHandler);
+    studioCropWindowResizeHandler = null;
+  }
+  if (studioCropEscapeHandler) {
+    document.removeEventListener('keydown', studioCropEscapeHandler, true);
+    studioCropEscapeHandler = null;
+  }
 }
 
 /* ── Picture identity ── */
@@ -12649,6 +16367,7 @@ function decodeAndStorePdfImages(candidates, onDone) {
       for (var newKeyIndex = 0; newKeyIndex < decodedKeys.length; newKeyIndex++) {
         knownImageKeys[decodedKeys[newKeyIndex]] = true;
       }
+      if (!decodedImage.detectedBy) decodedImage.detectedBy = 'raw-scan';
       editingStudyDocImages.push(decodedImage);
       addedImageCount++;
     }
@@ -12714,7 +16433,11 @@ function normalizeMainDocumentList(rawList) {
       name: listEntry.name || 'Reference document',
       url: listEntry.url,
       sizeKb: listEntry.sizeKb || 0,
-      addedAt: listEntry.addedAt || ''
+      addedAt: listEntry.addedAt || '',
+      // Legacy hosts keep the library inside the curriculum value: the split
+      // parts and the ignored pages must survive that round trip too.
+      parts: normalizeReferenceParts(listEntry.parts),
+      ignoredPages: normalizeIgnoredPageNumbers(listEntry.ignoredPages)
     });
   }
   return normalizedList;
@@ -12790,6 +16513,21 @@ function normalizeReferenceParts(rawParts) {
   return normalizedParts;
 }
 
+/** Pages the author skipped (table of contents, cover...): sorted numbers */
+function normalizeIgnoredPageNumbers(rawPages) {
+  var ignoredPageNumbers = [];
+  if (!Array.isArray(rawPages)) return ignoredPageNumbers;
+  var seenPageNumbers = {};
+  for (var pageIndex = 0; pageIndex < rawPages.length; pageIndex++) {
+    var pageNumber = parseInt(rawPages[pageIndex], 10);
+    if (!pageNumber || pageNumber < 1 || seenPageNumbers[pageNumber]) continue;
+    seenPageNumbers[pageNumber] = true;
+    ignoredPageNumbers.push(pageNumber);
+  }
+  ignoredPageNumbers.sort(function(firstPage, secondPage) { return firstPage - secondPage; });
+  return ignoredPageNumbers;
+}
+
 /** Parts exactly as they are stored in the CMS object (inline pictures stripped) */
 function serializeReferencePartsForStore(referenceParts) {
   var storedParts = [];
@@ -12839,7 +16577,8 @@ function referenceEntryFromObject(referenceObject) {
     generatedAt: storedEntry.generatedAt || '',
     generatedSourceLabel: storedEntry.generatedSourceLabel || '',
     generatedDroppedImages: storedEntry.generatedDroppedImages || 0,
-    parts: normalizeReferenceParts(storedEntry.parts)
+    parts: normalizeReferenceParts(storedEntry.parts),
+    ignoredPages: normalizeIgnoredPageNumbers(storedEntry.ignoredPages)
   };
 }
 
@@ -12890,7 +16629,8 @@ function saveReferenceDocumentToCms(referenceEntry, onDone) {
     generatedHtml: storedGeneratedHtml,
     generatedAt: referenceEntry.generatedAt || '',
     generatedSourceLabel: referenceEntry.generatedSourceLabel || '',
-    parts: serializeReferencePartsForStore(referenceEntry.parts)
+    parts: serializeReferencePartsForStore(referenceEntry.parts),
+    ignoredPages: normalizeIgnoredPageNumbers(referenceEntry.ignoredPages)
   });
   if (referenceEntry.objectId) {
     tool.requestObjects('update', {
@@ -12967,10 +16707,49 @@ function deleteReferenceDocumentFromCms(referenceEntry, onDone) {
   });
 }
 
+/** Generated content of ONE lesson reference entry (part first, then document).
+ *  Returns null when the link no longer exists in the library. */
+function findReferenceGeneratedContent(lessonReference) {
+  if (!lessonReference) return null;
+  var targetPartId = lessonReference.partId || '';
+  var targetUrl = lessonReference.url || '';
+  var targetLibraryId = lessonReference.libraryId || '';
+  for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+    var referenceEntry = mainDocuments[documentIndex];
+    if (!referenceEntry) continue;
+    var entryParts = referenceEntry.parts || [];
+    var partEntry = null;
+    if (targetPartId) {
+      for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+        if (entryParts[partIndex] && entryParts[partIndex].partId === targetPartId) { partEntry = entryParts[partIndex]; break; }
+      }
+    } else if (targetUrl) {
+      for (var urlPartIndex = 0; urlPartIndex < entryParts.length; urlPartIndex++) {
+        if (entryParts[urlPartIndex] && entryParts[urlPartIndex].url === targetUrl) { partEntry = entryParts[urlPartIndex]; break; }
+      }
+    }
+    if (partEntry) {
+      return {
+        html: partEntry.generatedHtml || '',
+        label: (partEntry.name || 'reference part') +
+          (partEntry.fromPage ? ' (pages ' + partEntry.fromPage + '-' + partEntry.toPage + ')' : '')
+      };
+    }
+    if (targetLibraryId && targetLibraryId !== referenceEntry.id) continue;
+    if (targetUrl && targetUrl !== referenceEntry.url) continue;
+    if (!targetLibraryId && !targetUrl) continue;
+    return { html: referenceEntry.generatedHtml || '', label: referenceEntry.name || 'reference document' };
+  }
+  return null;
+}
+
 /** Generated reference text used as context for the REAL content generation.
- *  Whole-document content and the content generated from each split part are
- *  both included - the parts are what the lessons actually use. */
-function referenceLibraryGeneratedContext(maxCharacters) {
+ *  With `lessonReferenceDocs` the lesson's OWN list is walked in its order, so
+ *  the author decides what feeds the lesson (and in which priority: the list
+ *  order fills the character budget first). Entries ticked off ("use in AI"
+ *  unchecked) are skipped. Without a lesson list the whole library is used,
+ *  exactly as before. */
+function referenceLibraryGeneratedContext(maxCharacters, lessonReferenceDocs) {
   var contextBudget = maxCharacters || parseInt(tool.param('referenceContextMaxChars', '40000'), 10);
   if (!contextBudget || contextBudget < 1000) contextBudget = 40000;
   var contextPieces = [];
@@ -12983,6 +16762,22 @@ function referenceLibraryGeneratedContext(maxCharacters) {
     contextPieces.push('REFERENCE MATERIAL: ' + labelText + '\n' + plainText.substring(0, sliceLength));
     usedCharacters += sliceLength;
   }
+
+  var linkedReferences = Array.isArray(lessonReferenceDocs) ? lessonReferenceDocs : [];
+  if (linkedReferences.length) {
+    for (var referenceIndex = 0; referenceIndex < linkedReferences.length && usedCharacters < contextBudget; referenceIndex++) {
+      var linkedReference = linkedReferences[referenceIndex];
+      if (!linkedReference) continue;
+      // The author can switch one part off for AI use (quality preference).
+      if (linkedReference.useInGeneration === false) continue;
+      var generatedReference = findReferenceGeneratedContent(linkedReference);
+      if (!generatedReference) continue;
+      addContextText(generatedReference.html, generatedReference.label);
+    }
+    return contextPieces.join('\n\n');
+  }
+
+  // No lesson open (or a lesson without reference files): whole library.
   for (var documentIndex = 0; documentIndex < mainDocuments.length && usedCharacters < contextBudget; documentIndex++) {
     var referenceEntry = mainDocuments[documentIndex];
     if (!referenceEntry) continue;
@@ -13071,7 +16866,8 @@ function addMainDocumentEntry(documentName, documentUrl, documentSizeKb) {
     generatedHtml: '',
     generatedAt: '',
     generatedSourceLabel: '',
-    parts: []
+    parts: [],
+    ignoredPages: []
   };
   mainDocuments.push(newReferenceEntry);
   renderMainDocumentsList();
@@ -13205,6 +17001,127 @@ var referenceSplitterPageCount = 0;
 var referenceSplitterBusy = false;
 var referenceSplitterSelectedPartIds = {};
 
+/* Page preview state (memory only - thumbnail data URLs are never stored) */
+var REFERENCE_PAGE_BATCH = 24;
+var referencePageRenderLimit = 0;
+var referencePageThumbCache = {};
+var referencePageRenderQueue = [];
+var referencePageRenderBusy = false;
+var referenceSelectedPages = {};
+/* Pages the author skipped for THIS document ({ pageNumber: true }), mirrored
+   into documentEntry.ignoredPages so the mark survives a reload. */
+var referenceIgnoredPages = {};
+/* Which page state the grid shows: all | available | ignored | used */
+var referencePageFilter = 'all';
+var REFERENCE_PAGE_FILTERS = ['all', 'available', 'ignored', 'used'];
+var referencePageCountFailed = false;
+var referencePageRenderFailures = 0;
+var referencePageReadFailureText = '';
+/* Large page renders for the popup: document id -> { pageNumber: dataUrl }.
+   A tile image is a 0.42-scale thumbnail and is NEVER reused as the preview. */
+var referencePageLargePreviewCache = {};
+var referencePagePreviewZoomed = false;
+/* Page shown in the preview popup (0 = the popup is closed) */
+var referencePreviewPageNumber = 0;
+/** High-resolution render scale for the page preview popup (tiles use 0.42) */
+var REFERENCE_PAGE_PREVIEW_SCALE = 2.5;
+
+/* The document bytes are downloaded ONCE through the parent CMS
+   (tool.requestFileBinary). The iframe may NOT fetch the storage URL itself:
+   the frame Content Security Policy blocks it ("Fetch API cannot load ...
+   violates the document's Content Security Policy"). Every PDF toolkit call
+   for the splitter therefore uses { binary }. */
+var referenceDocumentBytesCache = {};   // document id -> { bytes, byteLength }
+var referenceDocumentBytesLoading = {}; // document id -> [callbacks]
+
+/** Bytes of one reference document from the session cache */
+function cachedReferenceDocumentBytes(documentEntry) {
+  if (!documentEntry || !documentEntry.id) return null;
+  var cachedEntry = referenceDocumentBytesCache[documentEntry.id];
+  if (!cachedEntry || !cachedEntry.bytes) return null;
+  // PDF.js TRANSFERS the buffer it is handed, which empties that view. A
+  // detached entry reports length 0 - drop it so the file is downloaded again
+  // instead of failing every later call with 'invalid_input'.
+  if (!cachedEntry.bytes.length) {
+    delete referenceDocumentBytesCache[documentEntry.id];
+    developerLog('[REF:PAGES] the cached bytes were emptied by the PDF toolkit - downloading the document again');
+    return null;
+  }
+  return cachedEntry;
+}
+
+/** A FRESH Uint8Array copy for one PDF toolkit call.
+ *  The toolkit transfers the buffer it receives to its worker, so handing it
+ *  the cached master works exactly once: page 1 renders, then the emptied
+ *  array makes page 2 fail with 'invalid_input'. Every call gets its own copy. */
+function copyPdfBytesForToolkit(pdfBytes) {
+  if (!pdfBytes) return null;
+  var sourceBytes = pdfBytes;
+  if (!(sourceBytes instanceof Uint8Array)) {
+    if (typeof ArrayBuffer !== 'undefined' && sourceBytes instanceof ArrayBuffer) sourceBytes = new Uint8Array(sourceBytes);
+    else if (sourceBytes && typeof sourceBytes.byteLength === 'number') sourceBytes = new Uint8Array(sourceBytes.buffer || sourceBytes);
+    else return null;
+  }
+  if (!sourceBytes.length) return null;
+  var copiedBytes = new Uint8Array(sourceBytes.length);
+  copiedBytes.set(sourceBytes);
+  return copiedBytes;
+}
+
+/** A fresh copy of the cached document bytes for one toolkit call */
+function referenceBytesCopyForToolkit(cachedEntry) {
+  if (!cachedEntry || !cachedEntry.bytes) return null;
+  return copyPdfBytesForToolkit(cachedEntry.bytes);
+}
+
+/** Download the document once through the parent CMS and share it with callers */
+function loadReferenceDocumentBytes(documentEntry, onProgress, onDone) {
+  if (!documentEntry || !documentEntry.url) { onDone('invalid_url', null, null); return; }
+  var cachedEntry = cachedReferenceDocumentBytes(documentEntry);
+  if (cachedEntry) { onDone(null, cachedEntry.bytes, cachedEntry); return; }
+  if (referenceDocumentBytesLoading[documentEntry.id]) {
+    referenceDocumentBytesLoading[documentEntry.id].push(onDone);
+    return;
+  }
+  referenceDocumentBytesLoading[documentEntry.id] = [onDone];
+  var fetchOptions = { purpose: 'reference-document' };
+  if (onProgress) fetchOptions.onProgress = onProgress;
+  fetchDocumentBytes(documentEntry.url, fetchOptions, function(fetchError, documentBytes, documentMeta) {
+    var waitingCallbacks = referenceDocumentBytesLoading[documentEntry.id] || [];
+    delete referenceDocumentBytesLoading[documentEntry.id];
+    if (!fetchError && documentBytes && documentBytes.length) {
+      // Always keep our OWN record with the bytes: the meta shape of the
+      // download channel is not guaranteed to carry them.
+      referenceDocumentBytesCache[documentEntry.id] = {
+        bytes: documentBytes,
+        byteLength: documentBytes.length,
+        contentType: (documentMeta && documentMeta.contentType) || '',
+        fileName: (documentMeta && documentMeta.fileName) || ''
+      };
+    }
+    for (var callbackIndex = 0; callbackIndex < waitingCallbacks.length; callbackIndex++) {
+      waitingCallbacks[callbackIndex](fetchError, documentBytes, documentMeta);
+    }
+  });
+}
+
+function resetReferencePagePreview() {
+  referencePageRenderLimit = 0;
+  referencePageThumbCache = {};
+  referencePageRenderQueue = [];
+  referencePageRenderBusy = false;
+  referenceSelectedPages = {};
+  referenceIgnoredPages = {};
+  referencePageFilter = 'all';
+  referencePageCountFailed = false;
+  referencePageRenderFailures = 0;
+  referencePageReadFailureText = '';
+  referenceDocumentBytesCache = {};
+  referenceDocumentBytesLoading = {};
+  referencePageLargePreviewCache = {};
+  referencePagePreviewZoomed = false;
+}
+
 /** Find one reference library entry by its library id */
 function findMainDocumentById(documentId) {
   for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
@@ -13239,8 +17156,111 @@ function closeReferenceSplitter() {
   if (drawer) drawer.classList.remove('sd-drawer-open');
   if (backdrop) backdrop.classList.remove('sd-drawer-backdrop-open');
   referenceSplitterBusy = false;
+  // A page preview can only belong to this drawer: never leave it floating.
+  if (referencePreviewPageNumber) {
+    referencePreviewPageNumber = 0;
+    closeStudioModal();
+  }
   syncDrawerScrollLock();
   tool.resize();
+}
+
+/* ── Split methods: the drawer shows ONE way to split at a time ──
+   pick  = choose the pages in the preview grid (default)
+   chunk = cut the whole document every N pages
+   range = type the page numbers (fallback when previews are not possible) */
+var referenceSplitMethod = 'pick';
+var referenceSplitMethodUserChosen = false;
+var REFERENCE_SPLIT_METHODS = ['pick', 'chunk', 'range'];
+
+/** Show one split method and hide the other two */
+function setReferenceSplitMethod(methodName, fromUser) {
+  if (fromUser) referenceSplitMethodUserChosen = true;
+  var nextMethod = REFERENCE_SPLIT_METHODS.indexOf(methodName) === -1 ? 'pick' : methodName;
+  referenceSplitMethod = nextMethod;
+  for (var methodIndex = 0; methodIndex < REFERENCE_SPLIT_METHODS.length; methodIndex++) {
+    var panelElement = el('ref-split-panel-' + REFERENCE_SPLIT_METHODS[methodIndex]);
+    if (panelElement && panelElement.classList) {
+      if (REFERENCE_SPLIT_METHODS[methodIndex] === nextMethod) panelElement.classList.add('is-active');
+      else panelElement.classList.remove('is-active');
+    }
+  }
+  if (typeof document.querySelectorAll === 'function') {
+    var methodButtons = document.querySelectorAll('[data-ref-split-method]');
+    for (var buttonIndex = 0; buttonIndex < methodButtons.length; buttonIndex++) {
+      var methodButton = methodButtons[buttonIndex];
+      if (!methodButton || !methodButton.classList) continue;
+      if (methodButton.getAttribute('data-ref-split-method') === nextMethod) methodButton.classList.add('is-active');
+      else methodButton.classList.remove('is-active');
+    }
+  }
+  if (nextMethod === 'chunk') updateReferenceChunkSummary();
+}
+
+/** Can this host render page previews at all? */
+function referencePagePreviewsAvailable() {
+  return pdfToolkitAvailable() && tool.pdf && typeof tool.pdf.renderPage === 'function';
+}
+
+/** Open on "Pick pages", but fall back to the typed range when the pages
+ *  cannot be shown (no PDF tools, download refused, unknown page count). */
+function autoSelectReferenceSplitMethod() {
+  if (referenceSplitMethodUserChosen) return;
+  if (referenceSplitterPageCount && referencePagePreviewsAvailable()) setReferenceSplitMethod('pick');
+  else setReferenceSplitMethod('range');
+}
+
+/* ── Drawer steps: 1 Split -> 2 Parts -> 3 Send to lessons ── */
+var referenceSplitStep = 'split';
+var REFERENCE_SPLIT_STEPS = ['split', 'parts', 'send'];
+
+/** Show one drawer step and hide the other two */
+function setReferenceSplitStep(stepName) {
+  var nextStep = REFERENCE_SPLIT_STEPS.indexOf(stepName) === -1 ? 'split' : stepName;
+  referenceSplitStep = nextStep;
+  // The drawer widens on the matching step (CSS keyed on data-step).
+  var drawerElement = el('ref-split-drawer');
+  if (drawerElement && drawerElement.setAttribute) drawerElement.setAttribute('data-step', nextStep);
+  for (var stepIndex = 0; stepIndex < REFERENCE_SPLIT_STEPS.length; stepIndex++) {
+    var stepPanel = el('ref-split-step-panel-' + REFERENCE_SPLIT_STEPS[stepIndex]);
+    if (stepPanel && stepPanel.classList) {
+      if (REFERENCE_SPLIT_STEPS[stepIndex] === nextStep) stepPanel.classList.add('is-active');
+      else stepPanel.classList.remove('is-active');
+    }
+  }
+  if (typeof document.querySelectorAll === 'function') {
+    var stepButtons = document.querySelectorAll('[data-ref-split-step]');
+    for (var buttonIndex = 0; buttonIndex < stepButtons.length; buttonIndex++) {
+      var stepButton = stepButtons[buttonIndex];
+      if (!stepButton || !stepButton.classList) continue;
+      if (stepButton.getAttribute('data-ref-split-step') === nextStep) stepButton.classList.add('is-active');
+      else stepButton.classList.remove('is-active');
+    }
+  }
+  if (nextStep === 'send') renderReferenceSendStep();
+}
+
+/** Live summary of the "every N pages" option */
+function updateReferenceChunkSummary() {
+  var summaryElement = el('ref-split-chunk-summary');
+  if (!summaryElement) return;
+  var totalPages = referenceSplitterPageCount || 0;
+  // An empty or invalid input falls back to the same default the split uses.
+  var pagesPerPart = parseInt((el('ref-split-every') || {}).value, 10);
+  if (!pagesPerPart || pagesPerPart < 1) pagesPerPart = 10;
+  if (!totalPages) {
+    summaryElement.textContent = 'The page count is not known, so a whole-document split is not possible - use the page range option.';
+    summaryElement.style.color = '#b45309';
+    return;
+  }
+  var partCount = Math.ceil(totalPages / pagesPerPart);
+  if (partCount > 40) {
+    summaryElement.textContent = '❌ ' + totalPages + ' page(s) would become ' + partCount + ' parts - 40 per run is the limit. Use larger parts.';
+    summaryElement.style.color = '#b91c1c';
+    return;
+  }
+  summaryElement.textContent = '➡️ ' + totalPages + ' page(s) → ' + partCount + ' part(s) of up to ' + pagesPerPart + ' page(s) each.';
+  summaryElement.style.color = '';
 }
 
 function openReferenceSplitter(documentId) {
@@ -13250,12 +17270,20 @@ function openReferenceSplitter(documentId) {
   referenceSplitterPageCount = 0;
   referenceSplitterBusy = false;
   referenceSplitterSelectedPartIds = {};
+  referenceSplitMethodUserChosen = false;
+  setReferenceSplitMethod('pick');
+  setReferenceSplitStep('split');
+  resetReferencePagePreview();
+  // Ignore marks belong to the document, so they are loaded with it.
+  referenceIgnoredPages = referenceIgnoredPageMap(documentEntry);
+  syncReferencePageFilterButtons();
   var titleElement = el('ref-split-title');
   if (titleElement) titleElement.textContent = '📚 ' + (documentEntry.name || 'Reference document');
   var metaElement = el('ref-split-meta');
   if (metaElement) metaElement.textContent = 'Reading the page count…';
   setReferenceSplitterStatus('', '');
   renderReferenceSplitterParts(documentEntry);
+  renderReferencePageGrid(documentEntry);
   syncReferenceSplitterRangeInputs(documentEntry);
   var drawer = el('ref-split-drawer');
   var backdrop = el('ref-split-backdrop');
@@ -13266,13 +17294,24 @@ function openReferenceSplitter(documentId) {
   loadReferenceDocumentPageCount(documentEntry, function(pageCount, readFailureText) {
     if (referenceSplitterDocumentId !== documentEntry.id) return;
     referenceSplitterPageCount = pageCount || 0;
+    referencePageCountFailed = !referenceSplitterPageCount;
+    referencePageReadFailureText = readFailureText || '';
     var partCount = (documentEntry.parts || []).length;
     var metaText = referenceSplitterPageCount
       ? ('📄 ' + referenceSplitterPageCount + ' page(s) · ✂️ ' + partCount + ' part(s)')
       : ('📄 page count not available · ✂️ ' + partCount + ' part(s)');
     if (metaElement) metaElement.textContent = metaText;
     if (readFailureText) setReferenceSplitterStatus('⚠️ ' + readFailureText, 'warn');
+    else setReferenceSplitterStatus('', '');
     syncReferenceSplitterRangeInputs(documentEntry);
+    updateReferenceChunkSummary();
+    renderReferencePageGrid(documentEntry);
+    autoSelectReferenceSplitMethod();
+  }, function(loadedBytes, totalBytes) {
+    if (referenceSplitterDocumentId !== documentEntry.id || !metaElement) return;
+    if (!totalBytes) return;
+    metaElement.textContent = '⏳ Reading the document for the page preview… ' +
+      formatFileSize(loadedBytes || 0) + ' of ' + formatFileSize(totalBytes);
   });
 }
 
@@ -13289,30 +17328,35 @@ function syncReferenceSplitterRangeInputs(documentEntry) {
   if (toInput) toInput.value = endPage;
 }
 
-/** Read the document page count. The PDF toolkit can read a URL directly, so
- *  the CMS download cap does not apply; the download is only the fallback. */
-function loadReferenceDocumentPageCount(referenceEntry, onDone) {
-  function countFromDownloadedFile() {
-    fetchDocumentBytes(referenceEntry.url, { purpose: 'reference-page-count' }, function(fetchError, documentBytes, documentMeta) {
-      if (fetchError || !documentBytes || !documentBytes.length) {
-        onDone(0, describeReferenceReadFailure(fetchError, documentMeta, referenceEntry.url));
-        return;
-      }
-      countLibraryDocumentPages(documentBytes, function(pageCount) { onDone(pageCount, ''); });
-    });
-  }
-  if (pdfToolkitAvailable()) {
+/** Read the document page count from the bytes the parent CMS delivered.
+ *  The iframe cannot fetch the storage URL itself (frame CSP), so a download
+ *  through tool.requestFileBinary is the primary path; the toolkit URL form is
+ *  only tried when that download is refused. */
+function loadReferenceDocumentPageCount(referenceEntry, onDone, onProgress) {
+  function countFromToolkitUrl(failureText) {
+    if (!pdfToolkitAvailable()) { onDone(0, failureText); return; }
     try {
       tool.pdf.pageCount({ url: referenceEntry.url }, function(countError, totalPages) {
         if (!countError && totalPages) { onDone(totalPages, ''); return; }
-        countFromDownloadedFile();
+        onDone(0, failureText);
       });
-      return;
     } catch (pageCountThrow) {
       console.warn('[REF:SPLIT] toolkit page count threw:', pageCountThrow);
+      onDone(0, failureText);
     }
   }
-  countFromDownloadedFile();
+  loadReferenceDocumentBytes(referenceEntry, onProgress, function(fetchError, documentBytes, documentMeta) {
+    if (!fetchError && documentBytes && documentBytes.length) {
+      countLibraryDocumentPages(documentBytes, function(pageCount) {
+        if (pageCount) onDone(pageCount, '');
+        else countFromToolkitUrl('The page count could not be read from this document.');
+      });
+      return;
+    }
+    var failureText = describeReferenceReadFailure(fetchError, documentMeta, referenceEntry.url);
+    developerLog('[REF:SPLIT] the document could not be downloaded (' + (fetchError || 'empty') + ') - trying the PDF toolkit by URL');
+    countFromToolkitUrl(failureText);
+  });
 }
 
 /** Plain explanation for a document the splitter could not read */
@@ -13327,33 +17371,32 @@ function describeReferenceReadFailure(errorCode, fetchResult, documentUrl) {
 }
 
 /** Cut the reference document into the requested page ranges.
- *  Toolkit by URL first (no download cap), downloaded file as the fallback. */
+ *  Bytes delivered by the parent CMS first; the toolkit URL form is only the
+ *  fallback for hosts whose frame policy allows it. */
 function splitReferenceDocumentRanges(referenceEntry, pageRanges, onDone) {
-  function splitDownloadedFile() {
-    fetchDocumentBytes(referenceEntry.url, { purpose: 'reference-split' }, function(fetchError, documentBytes, documentMeta) {
-      if (fetchError || !documentBytes || !documentBytes.length) {
-        onDone(describeReferenceReadFailure(fetchError, documentMeta, referenceEntry.url), null);
-        return;
-      }
-      var splitResults = [];
-      var rangeIndex = 0;
-      function splitNextRange() {
-        if (rangeIndex >= pageRanges.length) { onDone(null, splitResults); return; }
-        var pageRange = pageRanges[rangeIndex];
-        rangeIndex++;
-        splitLibraryPageRange(documentBytes, pageRange.first, pageRange.last, function(rangeError, splitResult) {
-          if (rangeError || !splitResult) {
-            onDone('Pages ' + pageRange.first + '-' + pageRange.last + ' could not be copied (' + (rangeError || 'unknown error') + ').', null);
-            return;
-          }
-          splitResults.push({ first: splitResult.firstPage, last: splitResult.lastPage, bytes: splitResult.bytes });
-          splitNextRange();
-        });
-      }
-      splitNextRange();
-    });
+  function splitWithDocumentBytes(documentBytes) {
+    var splitResults = [];
+    var rangeIndex = 0;
+    function splitNextRange() {
+      if (rangeIndex >= pageRanges.length) { onDone(null, splitResults); return; }
+      var pageRange = pageRanges[rangeIndex];
+      rangeIndex++;
+      splitLibraryPageRange(documentBytes, pageRange.first, pageRange.last, function(rangeError, splitResult) {
+        if (rangeError || !splitResult) {
+          // A sentence-long reason must not be wrapped in brackets: it reads as
+          // a real explanation, not as an error code.
+          onDone('Pages ' + pageRange.first + '-' + pageRange.last + ' could not be copied. ' +
+            (rangeError || 'Unknown error.'), null);
+          return;
+        }
+        splitResults.push({ first: splitResult.firstPage, last: splitResult.lastPage, bytes: splitResult.bytes });
+        splitNextRange();
+      });
+    }
+    splitNextRange();
   }
-  if (pdfToolkitAvailable()) {
+  function splitWithToolkitUrl(failureText) {
+    if (!pdfToolkitAvailable()) { onDone(failureText, null); return; }
     try {
       tool.pdf.split({ url: referenceEntry.url }, pageRanges, function(splitError, splitParts) {
         if (!splitError && splitParts && splitParts.length) {
@@ -13366,15 +17409,22 @@ function splitReferenceDocumentRanges(referenceEntry, pageRanges, onDone) {
           }
           if (toolkitResults.length) { onDone(null, toolkitResults); return; }
         }
-        console.warn('[REF:SPLIT] the PDF toolkit could not split by URL (' + (splitError || 'no parts returned') + ') - downloading the file instead');
-        splitDownloadedFile();
+        onDone(failureText, null);
       });
-      return;
     } catch (splitThrow) {
       console.warn('[REF:SPLIT] toolkit split threw:', splitThrow);
+      onDone(failureText, null);
     }
   }
-  splitDownloadedFile();
+  loadReferenceDocumentBytes(referenceEntry, null, function(fetchError, documentBytes, documentMeta) {
+    if (!fetchError && documentBytes && documentBytes.length) {
+      splitWithDocumentBytes(documentBytes);
+      return;
+    }
+    var failureText = describeReferenceReadFailure(fetchError, documentMeta, referenceEntry.url);
+    developerLog('[REF:SPLIT] the document could not be downloaded (' + (fetchError || 'empty') + ') - trying the PDF toolkit by URL');
+    splitWithToolkitUrl(failureText);
+  });
 }
 
 /** Upload one split part and return the part entry to store */
@@ -13414,8 +17464,9 @@ function saveReferenceEntryAfterChange(referenceEntry, onDone) {
   if (onDone) onDone();
 }
 
-/** Split + upload the ranges, then store all new parts on the entry */
-function startReferenceSplit(documentEntry, pageRanges) {
+/** Split + upload the ranges, then store all new parts on the entry.
+ *  onUploaded(parts) runs after the parts are stored (used by the visual page picker). */
+function startReferenceSplit(documentEntry, pageRanges, onUploaded) {
   if (referenceSplitterBusy) return;
   if (typeof tool.requestUploadBinary !== 'function') {
     setReferenceSplitterStatus('❌ Uploading is not enabled for this tool (allowBinaryUpload).', 'error');
@@ -13441,12 +17492,15 @@ function startReferenceSplit(documentEntry, pageRanges) {
       documentEntry.parts = (documentEntry.parts || []).concat(uploadedParts);
       saveReferenceEntryAfterChange(documentEntry, function() {
         renderReferenceSplitterParts(documentEntry);
+        renderReferencePageGrid(documentEntry);
         renderMainDocumentsList();
         syncReferenceSplitterRangeInputs(documentEntry);
         var doneText = '✅ ' + uploadedParts.length + ' part(s) uploaded to CMS storage.';
         if (uploadProblems.length) doneText += ' ' + uploadProblems.length + ' part(s) failed: ' + uploadProblems[0];
         setReferenceSplitterStatus(doneText, uploadProblems.length ? 'warn' : 'ok');
         tool.notify(uploadedParts.length + ' reference part(s) ready. Tick them and send them to lessons.', 'success');
+        setReferenceSplitStep('parts');
+        if (onUploaded) onUploaded(uploadedParts);
       });
     }
     function uploadNextPart() {
@@ -13488,7 +17542,7 @@ function splitReferenceIntoEqualParts() {
   var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
   if (!documentEntry || referenceSplitterBusy) return;
   if (!referenceSplitterPageCount) {
-    setReferenceSplitterStatus('❌ The page count is not available yet. Split one range at a time instead.', 'error');
+    setReferenceSplitterStatus('❌ The page count is not available yet. Use the page range option instead.', 'error');
     return;
   }
   var pagesPerPart = parseInt((el('ref-split-every') || {}).value, 10) || 10;
@@ -13504,34 +17558,875 @@ function splitReferenceIntoEqualParts() {
   startReferenceSplit(documentEntry, pageRanges);
 }
 
+/* ── Visual page previews: choose the split ranges by looking at the pages ── */
+
+/** Pages already covered by a stored part: { pageNumber: part name } */
+function referencePagesCoveredByParts(documentEntry) {
+  var coverage = {};
+  var entryParts = (documentEntry && documentEntry.parts) ? documentEntry.parts : [];
+  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+    var partEntry = entryParts[partIndex];
+    if (!partEntry) continue;
+    for (var pageNumber = partEntry.fromPage; pageNumber <= partEntry.toPage; pageNumber++) {
+      coverage[pageNumber] = partEntry.name || ('pages ' + partEntry.fromPage + '-' + partEntry.toPage);
+    }
+  }
+  return coverage;
+}
+
+/** Parts in page order. The split number IS the position in this list, so a
+ *  list sorted by page always reads #1, #2, #3 even when the author split the
+ *  document backwards. */
+function referenceOrderedParts(documentEntry) {
+  var entryParts = (documentEntry && documentEntry.parts) ? documentEntry.parts.slice() : [];
+  entryParts.sort(function(firstPart, secondPart) {
+    var firstStart = parseInt(firstPart && firstPart.fromPage, 10) || 0;
+    var secondStart = parseInt(secondPart && secondPart.fromPage, 10) || 0;
+    if (firstStart !== secondStart) return firstStart - secondStart;
+    var firstEnd = parseInt(firstPart && firstPart.toPage, 10) || 0;
+    var secondEnd = parseInt(secondPart && secondPart.toPage, 10) || 0;
+    return firstEnd - secondEnd;
+  });
+  return entryParts;
+}
+
+/** partId -> split number (1-based, page order) */
+function referencePartNumberMap(documentEntry) {
+  var numberByPartId = {};
+  var orderedParts = referenceOrderedParts(documentEntry);
+  for (var partIndex = 0; partIndex < orderedParts.length; partIndex++) {
+    var partEntry = orderedParts[partIndex];
+    if (partEntry && partEntry.partId) numberByPartId[partEntry.partId] = partIndex + 1;
+  }
+  return numberByPartId;
+}
+
+/** Which lessons hold one split part. Uses the light index kept in the lesson
+ *  summary fields; falls back to the heavy list while it is still in memory. */
+function referencePartUsage(partId) {
+  var usage = { lessonCount: 0, labels: [] };
+  if (!partId) return usage;
+  collectAllLessons().forEach(function(lessonRef) {
+    var lessonObject = lessonRef.lesson || {};
+    var indexedPartIds = Array.isArray(lessonObject.referencePartIds) ? lessonObject.referencePartIds : [];
+    var holdsPart = indexedPartIds.indexOf(partId) !== -1;
+    if (!holdsPart) {
+      var heavyReferenceDocs = Array.isArray(lessonObject.referenceDocs) ? lessonObject.referenceDocs : [];
+      for (var referenceIndex = 0; referenceIndex < heavyReferenceDocs.length; referenceIndex++) {
+        if (heavyReferenceDocs[referenceIndex] && heavyReferenceDocs[referenceIndex].partId === partId) { holdsPart = true; break; }
+      }
+    }
+    if (!holdsPart) return;
+    usage.lessonCount++;
+    var lessonLabel = lessonNumberLabelOf(lessonRef.section, lessonObject);
+    usage.labels.push((lessonLabel ? '§ ' + lessonLabel + ' · ' : '') + (lessonObject.title || 'Untitled lesson'));
+  });
+  return usage;
+}
+
+/** Split number of every page that already sits inside a part: { pageNumber: 3 }.
+ *  The numbers follow the page order of the parts, so the same number is shown
+ *  on the page tile and in the parts list. */
+function referencePagePartNumberMap(documentEntry) {
+  var partNumberMap = {};
+  var numberByPartId = referencePartNumberMap(documentEntry);
+  var orderedParts = referenceOrderedParts(documentEntry);
+  for (var partIndex = 0; partIndex < orderedParts.length; partIndex++) {
+    var partEntry = orderedParts[partIndex];
+    if (!partEntry) continue;
+    var partNumber = numberByPartId[partEntry.partId] || (partIndex + 1);
+    var firstPartPage = parseInt(partEntry.fromPage, 10) || 0;
+    var lastPartPage = parseInt(partEntry.toPage, 10) || firstPartPage;
+    for (var pageNumber = firstPartPage; pageNumber <= lastPartPage; pageNumber++) {
+      if (pageNumber > 0 && !partNumberMap[pageNumber]) partNumberMap[pageNumber] = partNumber;
+    }
+  }
+  return partNumberMap;
+}
+
+/** Ignored pages of one stored entry as a lookup map */
+function referenceIgnoredPageMap(documentEntry) {
+  var ignoredMap = {};
+  var storedIgnoredPages = (documentEntry && documentEntry.ignoredPages) ? documentEntry.ignoredPages : [];
+  var normalizedIgnoredPages = normalizeIgnoredPageNumbers(storedIgnoredPages);
+  for (var pageIndex = 0; pageIndex < normalizedIgnoredPages.length; pageIndex++) {
+    ignoredMap[normalizedIgnoredPages[pageIndex]] = true;
+  }
+  return ignoredMap;
+}
+
+/** The ignored-page map that belongs to the document on screen */
+function currentReferenceIgnoredPages(documentEntry) {
+  if (documentEntry && documentEntry.id === referenceSplitterDocumentId) return referenceIgnoredPages;
+  return referenceIgnoredPageMap(documentEntry);
+}
+
+/** Store the ignore marks of the open document in its CMS object */
+function persistReferenceIgnoredPages(documentEntry) {
+  if (!documentEntry) return;
+  var ignoredPageNumbers = [];
+  var ignoredPageKeys = Object.keys(referenceIgnoredPages);
+  for (var keyIndex = 0; keyIndex < ignoredPageKeys.length; keyIndex++) {
+    ignoredPageNumbers.push(parseInt(ignoredPageKeys[keyIndex], 10));
+  }
+  documentEntry.ignoredPages = normalizeIgnoredPageNumbers(ignoredPageNumbers);
+  saveReferenceEntryAfterChange(documentEntry);
+}
+
+/** Does this page belong to the filter the author picked? */
+function referencePageMatchesFilter(pageNumber, ignoredMap, partNumberMap) {
+  var isIgnoredPage = !!ignoredMap[pageNumber];
+  var isUsedPage = !!partNumberMap[pageNumber];
+  if (referencePageFilter === 'available') return !isIgnoredPage && !isUsedPage;
+  if (referencePageFilter === 'ignored') return isIgnoredPage;
+  if (referencePageFilter === 'used') return isUsedPage;
+  return true;
+}
+
+/** Highlight the active filter chip (no grid repaint) */
+function syncReferencePageFilterButtons() {
+  if (typeof document.querySelectorAll !== 'function') return;
+  var filterButtons = document.querySelectorAll('[data-ref-page-filter]');
+  for (var filterIndex = 0; filterIndex < filterButtons.length; filterIndex++) {
+    var filterButton = filterButtons[filterIndex];
+    if (!filterButton || !filterButton.classList || !filterButton.getAttribute) continue;
+    if (filterButton.getAttribute('data-ref-page-filter') === referencePageFilter) filterButton.classList.add('is-active');
+    else filterButton.classList.remove('is-active');
+  }
+}
+
+/** Show only the pages of one state (all / available / ignored / used) */
+function setReferencePageFilter(filterName) {
+  referencePageFilter = REFERENCE_PAGE_FILTERS.indexOf(filterName) === -1 ? 'all' : filterName;
+  syncReferencePageFilterButtons();
+  renderReferencePageGrid(findMainDocumentById(referenceSplitterDocumentId));
+}
+
+/** Page counts on the four filter chips */
+function updateReferencePageFilterCounts(totalPages, ignoredMap, partNumberMap) {
+  var usedPageCount = 0;
+  var ignoredPageCount = 0;
+  var availablePageCount = 0;
+  for (var pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+    var isUsedPage = !!partNumberMap[pageNumber];
+    var isIgnoredPage = !!ignoredMap[pageNumber];
+    if (isUsedPage) usedPageCount++;
+    if (isIgnoredPage) ignoredPageCount++;
+    if (!isUsedPage && !isIgnoredPage) availablePageCount++;
+  }
+  var countTargets = {
+    all: totalPages,
+    available: availablePageCount,
+    ignored: ignoredPageCount,
+    used: usedPageCount
+  };
+  var countNames = Object.keys(countTargets);
+  for (var countIndex = 0; countIndex < countNames.length; countIndex++) {
+    var countElement = el('ref-filter-count-' + countNames[countIndex]);
+    if (countElement) countElement.textContent = String(countTargets[countNames[countIndex]]);
+  }
+}
+
+/** Explanation shown in the grid when the active filter has no page */
+function referenceEmptyFilterText() {
+  if (referencePageFilter === 'available') return 'Every page is already used or ignored. Switch to “Used” or “Ignored” to see them.';
+  if (referencePageFilter === 'ignored') return 'No page is ignored yet. Click 🚫 on a page you do not want to split (a table of contents, a cover, an index) and it will be listed here.';
+  if (referencePageFilter === 'used') return 'No page has been split yet. Select pages and click “✂️ Split … & upload”.';
+  return 'No page to show for this document.';
+}
+
+/** Mark or unmark one page as ignored (skipped) for the next splits */
+function toggleReferencePageIgnore(pageNumber) {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!documentEntry || !pageNumber) return;
+  var partNumberMap = referencePagePartNumberMap(documentEntry);
+  if (referenceIgnoredPages[pageNumber]) {
+    delete referenceIgnoredPages[pageNumber];
+    setReferenceSplitterStatus('Page ' + pageNumber + ' is available again.', 'ok');
+  } else {
+    referenceIgnoredPages[pageNumber] = true;
+    // An ignored page can never stay selected for a split.
+    delete referenceSelectedPages[pageNumber];
+    setReferenceSplitterStatus(partNumberMap[pageNumber]
+      ? ('Page ' + pageNumber + ' is marked as ignored (it stays inside split #' + partNumberMap[pageNumber] + ').')
+      : ('Page ' + pageNumber + ' is marked as ignored - it will not be offered for splitting.'), '');
+  }
+  renderReferencePageGrid(documentEntry);
+  persistReferenceIgnoredPages(documentEntry);
+}
+
+/** Render the page tiles (cached thumbnails are reused; missing ones are queued) */
+function renderReferencePageGrid(documentEntry) {
+  var gridElement = el('ref-split-pages-grid');
+  if (!gridElement) return;
+  var totalPages = referenceSplitterPageCount || 0;
+  var selectionElement = el('ref-split-page-selection');
+  var noteElement = el('ref-split-pages-note');
+  var moreButton = el('btn-ref-split-pages-more');
+  var selectedCount = Object.keys(referenceSelectedPages).length;
+  if (selectionElement) selectionElement.textContent = selectedCount + ' page(s) selected';
+  var splitSelectedButton = el('btn-ref-split-selected');
+  if (splitSelectedButton) {
+    var selectedRangeCount = selectedReferencePageRanges().length;
+    if (!selectedCount) {
+      splitSelectedButton.textContent = '✂️ Select pages to split';
+      splitSelectedButton.disabled = true;
+      splitSelectedButton.style.opacity = '0.55';
+    } else {
+      splitSelectedButton.textContent = selectedRangeCount > 1
+        ? ('✂️ Split ' + selectedRangeCount + ' parts from ' + selectedCount + ' page(s) & upload')
+        : ('✂️ Split ' + selectedCount + ' page(s) & upload');
+      splitSelectedButton.disabled = false;
+      splitSelectedButton.style.opacity = '';
+    }
+  }
+  if (!totalPages) {
+    gridElement.innerHTML = '';
+    if (noteElement) {
+      noteElement.textContent = referencePageCountFailed
+        ? ((referencePageReadFailureText ? referencePageReadFailureText + ' ' : '') +
+          'Use the "⌨️ Page range" option to split pages by number.')
+        : 'Reading the page count…';
+    }
+    if (moreButton) moreButton.style.display = 'none';
+    if (referencePageCountFailed) autoSelectReferenceSplitMethod();
+    return;
+  }
+  if (!referencePagePreviewsAvailable()) {
+    gridElement.innerHTML = '';
+    if (noteElement) noteElement.textContent = 'Page previews need the CMS PDF tools. Ask an administrator to enable "PDF tools (browser-side)" for this field - the "⌨️ Page range" option still works.';
+    if (moreButton) moreButton.style.display = 'none';
+    autoSelectReferenceSplitMethod();
+    return;
+  }
+  if (!referencePageRenderLimit) referencePageRenderLimit = Math.min(totalPages, REFERENCE_PAGE_BATCH);
+  var shownPages = Math.min(totalPages, referencePageRenderLimit);
+  var coverage = referencePagesCoveredByParts(documentEntry);
+  var ignoredMap = currentReferenceIgnoredPages(documentEntry);
+  var partNumberMap = referencePagePartNumberMap(documentEntry);
+  updateReferencePageFilterCounts(totalPages, ignoredMap, partNumberMap);
+  syncReferencePageFilterButtons();
+  var tilesHtml = '';
+  var hiddenTileCount = 0;
+  for (var pageNumber = 1; pageNumber <= shownPages; pageNumber++) {
+    if (!referencePageMatchesFilter(pageNumber, ignoredMap, partNumberMap)) { hiddenTileCount++; continue; }
+    var cachedThumb = referencePageThumbCache[pageNumber] || '';
+    var isSelected = !!referenceSelectedPages[pageNumber];
+    var isIgnoredPage = !!ignoredMap[pageNumber];
+    var partNumber = partNumberMap[pageNumber] || 0;
+    var coveredLabel = coverage[pageNumber] || '';
+    var tileClasses = 'ref-page-tile';
+    if (isSelected) tileClasses += ' is-selected';
+    if (isIgnoredPage) tileClasses += ' is-ignored';
+    if (partNumber) tileClasses += ' is-used';
+    var tileTitle = 'Page ' + pageNumber;
+    if (partNumber) tileTitle += ' · already inside split #' + partNumber;
+    if (isIgnoredPage) tileTitle += ' · ignored';
+    if (!partNumber && !isIgnoredPage) tileTitle += isSelected ? ' · selected (click to remove)' : ' · click to select for the next split';
+    var tileTagsHtml = '';
+    if (partNumber) tileTagsHtml += '<span class="ref-page-tag is-used" title="Already in ' + esc(coveredLabel || 'a split') + '">#' + partNumber + '</span>';
+    if (isIgnoredPage) tileTagsHtml += '<span class="ref-page-tag is-ignored" title="Ignored page">IGNORED</span>';
+    if (isSelected) tileTagsHtml += '<span class="ref-page-tag is-selected">SELECTED</span>';
+    tilesHtml += '<div class="' + tileClasses + '" data-ref-page="' + pageNumber + '" title="' + esc(tileTitle) + '">' +
+      (cachedThumb
+        ? '<img src="' + esc(cachedThumb) + '" alt="Page ' + pageNumber + '" loading="lazy">'
+        : '<span class="ref-page-placeholder">…</span>') +
+      '<span class="ref-page-num">' + pageNumber + '</span>' +
+      (tileTagsHtml ? '<span class="ref-page-tags">' + tileTagsHtml + '</span>' : '') +
+      '<button type="button" class="ref-page-action ref-page-open" data-ref-page-open="' + pageNumber + '" title="Preview page ' + pageNumber + ' in full size">🔍</button>' +
+      '<button type="button" class="ref-page-action ref-page-ignore" data-ref-page-ignore="' + pageNumber + '" title="' +
+        (isIgnoredPage ? 'Make page ' + pageNumber + ' available again' : 'Ignore page ' + pageNumber + ' (table of contents, cover, ...)') +
+        '">' + (isIgnoredPage ? '↩' : '🚫') + '</button>' +
+    '</div>';
+  }
+  if (!tilesHtml) tilesHtml = '<div class="ref-pages-empty">' + esc(referenceEmptyFilterText()) + '</div>';
+  gridElement.innerHTML = tilesHtml;
+  if (noteElement) {
+    var filterLabelText = referencePageFilter === 'all' ? 'all pages' : (referencePageFilter + ' pages');
+    noteElement.textContent = shownPages + ' of ' + totalPages + ' page(s) shown · ' + filterLabelText +
+      (hiddenTileCount ? ' · ' + hiddenTileCount + ' hidden by the filter' : '') +
+      (selectedCount ? ' · ' + selectedCount + ' selected' : '');
+  }
+  if (moreButton) moreButton.style.display = shownPages < totalPages ? '' : 'none';
+  queueReferencePageThumbnails(1, shownPages);
+}
+
+/** Queue the missing thumbnails of a page range (one PDF.js render at a time) */
+function queueReferencePageThumbnails(fromPage, toPage) {
+  for (var pageNumber = fromPage; pageNumber <= toPage; pageNumber++) {
+    if (referencePageThumbCache[pageNumber]) continue;
+    if (referencePageRenderQueue.indexOf(pageNumber) !== -1) continue;
+    referencePageRenderQueue.push(pageNumber);
+  }
+  processReferencePageThumbnailQueue();
+}
+
+function processReferencePageThumbnailQueue() {
+  if (referencePageRenderBusy) return;
+  if (!tool.pdf || typeof tool.pdf.renderPage !== 'function') {
+    developerLog('[REF:PAGES] page previews are unavailable on this host (tool.pdf.renderPage is missing)');
+    referencePageRenderQueue = [];
+    return;
+  }
+  var nextPage = referencePageRenderQueue.shift();
+  if (!nextPage) return;
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!documentEntry) { referencePageRenderQueue = []; return; }
+  var cachedEntry = cachedReferenceDocumentBytes(documentEntry);
+  if (!cachedEntry) {
+    // The document download is still running (or failed). Wait for the SAME
+    // parent-CMS download - a URL fetch inside the frame is blocked by CSP.
+    referencePageRenderBusy = true;
+    loadReferenceDocumentBytes(documentEntry, null, function(loadError, documentBytes, documentMeta) {
+      referencePageRenderBusy = false;
+      if (loadError || !documentBytes || !documentBytes.length) {
+        referencePageRenderQueue = [];
+        referencePageReadFailureText = describeReferenceReadFailure(loadError, documentMeta, documentEntry.url);
+        var failedNoteElement = el('ref-split-pages-note');
+        if (failedNoteElement) failedNoteElement.textContent = referencePageReadFailureText;
+        return;
+      }
+      referencePageRenderQueue.unshift(nextPage);
+      processReferencePageThumbnailQueue();
+    });
+    return;
+  }
+  var documentUint8 = referenceBytesCopyForToolkit(cachedEntry);
+  if (!documentUint8) { referencePageRenderQueue = []; return; }
+  referencePageRenderBusy = true;
+  try {
+    tool.pdf.renderPage({ binary: documentUint8 }, nextPage, { scale: 0.42, format: 'jpeg', quality: 0.7 }, function(renderError, pageResult) {
+      referencePageRenderBusy = false;
+      if (!renderError && pageResult && pageResult.dataUrl) {
+        referencePageRenderFailures = 0;
+        referencePageThumbCache[nextPage] = pageResult.dataUrl;
+        updateReferencePageThumbnail(nextPage, '');
+      } else {
+        referencePageRenderFailures++;
+        // 'invalid_input' after a good first page means the bytes we hold are
+        // no longer usable: throw the cache away so the next open re-downloads.
+        if (renderError === 'invalid_input') delete referenceDocumentBytesCache[documentEntry.id];
+        if (referencePageRenderFailures === 1) {
+          console.warn('[REF:PAGES] page ' + nextPage + ' preview could not be rendered:', renderError || 'no image returned');
+        }
+        updateReferencePageThumbnail(nextPage, 'failed');
+        if (referencePageRenderFailures >= 3) {
+          referencePageRenderQueue = [];
+          var pagesNoteElement = el('ref-split-pages-note');
+          if (pagesNoteElement) pagesNoteElement.textContent = 'Page previews could not be rendered for this document - use the "⌨️ Page range" option.';
+          return;
+        }
+      }
+      processReferencePageThumbnailQueue();
+    });
+  } catch (renderThrow) {
+    referencePageRenderBusy = false;
+    console.warn('[REF:PAGES] page preview threw:', renderThrow);
+  }
+}
+
+/** Swap one placeholder for its rendered thumbnail */
+function updateReferencePageThumbnail(pageNumber, failedKind) {
+  var gridElement = el('ref-split-pages-grid');
+  if (!gridElement || !gridElement.querySelector) return;
+  var tileElement = gridElement.querySelector('[data-ref-page="' + pageNumber + '"]');
+  if (!tileElement || !tileElement.querySelector) return;
+  var placeholder = tileElement.querySelector('.ref-page-placeholder');
+  if (!placeholder) return;
+  if (failedKind === 'failed') {
+    placeholder.className = 'ref-page-placeholder is-failed';
+    placeholder.textContent = '!';
+    return;
+  }
+  var thumbnailUrl = referencePageThumbCache[pageNumber] || '';
+  if (!thumbnailUrl) return;
+  if (!placeholder.parentNode || !placeholder.parentNode.replaceChild) return;
+  var imageElement = document.createElement('img');
+  imageElement.src = thumbnailUrl;
+  imageElement.alt = 'Page ' + pageNumber;
+  imageElement.setAttribute('loading', 'lazy');
+  placeholder.parentNode.replaceChild(imageElement, placeholder);
+}
+
+/** Click a tile: select / deselect that page for the next split.
+ *  Ignored pages and pages that already belong to a split are never selected,
+ *  so the same page cannot be cut twice by accident. */
+function toggleReferencePageSelection(pageNumber) {
+  if (!pageNumber) return;
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (referenceSelectedPages[pageNumber]) {
+    delete referenceSelectedPages[pageNumber];
+    renderReferencePageGrid(documentEntry);
+    syncReferenceRangeFromSelectedPages();
+    return;
+  }
+  var ignoredMap = currentReferenceIgnoredPages(documentEntry);
+  if (ignoredMap[pageNumber]) {
+    setReferenceSplitterStatus('🚫 Page ' + pageNumber + ' is marked as ignored - click ↩ on the page to make it available again.', 'warn');
+    return;
+  }
+  var partNumberMap = referencePagePartNumberMap(documentEntry);
+  if (partNumberMap[pageNumber]) {
+    setReferenceSplitterStatus('📦 Page ' + pageNumber + ' is already inside split #' + partNumberMap[pageNumber] +
+      '. Delete that part in step 2 if you really want to split this page again.', 'warn');
+    return;
+  }
+  referenceSelectedPages[pageNumber] = true;
+  setReferenceSplitterStatus('', '');
+  renderReferencePageGrid(documentEntry);
+  syncReferenceRangeFromSelectedPages();
+}
+
+/** Keep the manual From/To inputs on the selected page window */
+function syncReferenceRangeFromSelectedPages() {
+  var selectedNumbers = Object.keys(referenceSelectedPages).map(Number).sort(function(firstPage, secondPage) { return firstPage - secondPage; });
+  if (!selectedNumbers.length) return;
+  var fromInput = el('ref-split-from');
+  var toInput = el('ref-split-to');
+  if (fromInput) fromInput.value = selectedNumbers[0];
+  if (toInput) toInput.value = selectedNumbers[selectedNumbers.length - 1];
+}
+
+/** Every run of consecutive selected pages becomes one split range */
+function selectedReferencePageRanges() {
+  var selectedNumbers = Object.keys(referenceSelectedPages).map(Number).sort(function(firstPage, secondPage) { return firstPage - secondPage; });
+  var pageRanges = [];
+  for (var pageIndex = 0; pageIndex < selectedNumbers.length; pageIndex++) {
+    var pageNumber = selectedNumbers[pageIndex];
+    var previousRange = pageRanges[pageRanges.length - 1];
+    if (previousRange && pageNumber === previousRange.last + 1) previousRange.last = pageNumber;
+    else pageRanges.push({ first: pageNumber, last: pageNumber });
+  }
+  return pageRanges;
+}
+
+/** "Select available": every visible page that is neither used nor ignored */
+function selectAllReferencePages(isSelected) {
+  referenceSelectedPages = {};
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (isSelected && referenceSplitterPageCount) {
+    var ignoredMap = currentReferenceIgnoredPages(documentEntry);
+    var partNumberMap = referencePagePartNumberMap(documentEntry);
+    for (var pageNumber = 1; pageNumber <= referenceSplitterPageCount; pageNumber++) {
+      if (ignoredMap[pageNumber] || partNumberMap[pageNumber]) continue;
+      // Keep the selection inside what the author can actually see.
+      if (!referencePageMatchesFilter(pageNumber, ignoredMap, partNumberMap)) continue;
+      referenceSelectedPages[pageNumber] = true;
+    }
+  }
+  renderReferencePageGrid(documentEntry);
+  syncReferenceRangeFromSelectedPages();
+}
+
+/** "Split selected pages & upload": each consecutive run becomes its own part.
+ *  Ignored pages and pages already inside a part are dropped from the selection. */
+function splitReferenceSelectedPages() {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!documentEntry || referenceSplitterBusy) return;
+  var ignoredMap = currentReferenceIgnoredPages(documentEntry);
+  var partNumberMap = referencePagePartNumberMap(documentEntry);
+  var blockedPageNumbers = [];
+  var pageNumberKeys = Object.keys(referenceSelectedPages);
+  for (var keyIndex = 0; keyIndex < pageNumberKeys.length; keyIndex++) {
+    var selectedPageNumber = parseInt(pageNumberKeys[keyIndex], 10);
+    if (!ignoredMap[selectedPageNumber] && !partNumberMap[selectedPageNumber]) continue;
+    delete referenceSelectedPages[selectedPageNumber];
+    blockedPageNumbers.push(selectedPageNumber);
+  }
+  var pageRanges = selectedReferencePageRanges();
+  if (blockedPageNumbers.length) {
+    blockedPageNumbers.sort(function(firstPage, secondPage) { return firstPage - secondPage; });
+    renderReferencePageGrid(documentEntry);
+    setReferenceSplitterStatus('⚠️ ' + blockedPageNumbers.length + ' selected page(s) are ignored or already used (' +
+      blockedPageNumbers.join(', ') + ') and were left out of this split.', 'warn');
+  }
+  if (!pageRanges.length) {
+    setReferenceSplitterStatus('❌ Select the pages first - click the page previews above.', 'error');
+    return;
+  }
+  if (pageRanges.length > 40) {
+    setReferenceSplitterStatus('❌ That selection would create ' + pageRanges.length + ' parts. Select fewer separate runs (40 parts per run is the limit).', 'error');
+    return;
+  }
+  startReferenceSplit(documentEntry, pageRanges, function() {
+    referenceSelectedPages = {};
+    renderReferencePageGrid(documentEntry);
+  });
+}
+
+/** The large-render cache of one document */
+function referencePagePreviewCacheFor(documentEntry) {
+  if (!documentEntry || !documentEntry.id) return {};
+  if (!referencePageLargePreviewCache[documentEntry.id]) referencePageLargePreviewCache[documentEntry.id] = {};
+  return referencePageLargePreviewCache[documentEntry.id];
+}
+
+/** Fill the preview stage with a message instead of a page image */
+function fillReferencePagePreviewMessage(messageText) {
+  var stageElement = el('ref-preview-stage');
+  if (stageElement) stageElement.innerHTML = '<div class="ref-preview-message">' + esc(messageText) + '</div>';
+  var zoomButton = el('btn-ref-preview-zoom');
+  if (zoomButton) zoomButton.style.display = 'none';
+}
+
+/** Put one rendered page into the preview stage */
+function fillReferencePagePreview(pageNumber, imageUrl, renderedWidth, renderedHeight) {
+  var stageElement = el('ref-preview-stage');
+  if (!stageElement) return;
+  stageElement.innerHTML = '<img class="ref-preview-img" id="ref-preview-image" src="' + esc(imageUrl) +
+    '" alt="Page ' + pageNumber + '" title="Click the page to switch between fit width and full size">';
+  var imageElement = el('ref-preview-image');
+  if (imageElement && imageElement.addEventListener) {
+    imageElement.addEventListener('click', function() { setReferencePagePreviewZoom(!referencePagePreviewZoomed); });
+  }
+  var metaElement = el('ref-preview-meta');
+  if (metaElement) {
+    // The page number lives in the navigation bar, so this line only carries
+    // the render details.
+    metaElement.textContent = (renderedWidth && renderedHeight ? renderedWidth + ' × ' + renderedHeight + ' px · ' : '') +
+      'click the page to switch between fit width and full size';
+  }
+  var zoomButton = el('btn-ref-preview-zoom');
+  if (zoomButton) zoomButton.style.display = '';
+  setReferencePagePreviewZoom(false);
+}
+
+/** Switch the preview between fit-to-width and 1:1 pixels */
+function setReferencePagePreviewZoom(zoomed) {
+  referencePagePreviewZoomed = !!zoomed;
+  var imageElement = el('ref-preview-image');
+  if (imageElement && imageElement.classList) {
+    if (referencePagePreviewZoomed) imageElement.classList.add('is-full-size');
+    else imageElement.classList.remove('is-full-size');
+  }
+  var stageElement = el('ref-preview-stage');
+  if (stageElement && stageElement.classList) {
+    if (referencePagePreviewZoomed) stageElement.classList.add('is-zoomed');
+    else stageElement.classList.remove('is-zoomed');
+  }
+  var zoomButton = el('btn-ref-preview-zoom');
+  if (zoomButton) {
+    if (referencePagePreviewZoomed) {
+      zoomButton.textContent = '↔️ Fit width';
+      zoomButton.className = 'btn btn-sm btn-primary';
+    } else {
+      zoomButton.textContent = '🔍 Full size';
+      zoomButton.className = 'btn btn-sm btn-outline';
+    }
+  }
+}
+
+/** Large preview of one page: always a fresh high-resolution render.
+ *  The grid tile image is a 0.42-scale thumbnail and is never shown here.
+ *  Previous/Next, Ignore and Select work inside the popup, so the whole
+ *  document can be reviewed page by page without going back to the grid. */
+function openReferencePagePreview(pageNumber) {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!documentEntry || !pageNumber) return;
+  referencePagePreviewZoomed = false;
+  openStudioModal('Page ' + pageNumber + ' preview',
+    '<div class="ref-preview-toolbar">' +
+      '<div class="ref-preview-nav">' +
+        '<button type="button" class="btn btn-sm btn-outline" id="btn-ref-preview-prev" title="Previous page (Left arrow)">‹ Previous</button>' +
+        '<span class="ref-preview-page" id="ref-preview-page">Page ' + pageNumber + '</span>' +
+        '<button type="button" class="btn btn-sm btn-outline" id="btn-ref-preview-next" title="Next page (Right arrow)">Next ›</button>' +
+      '</div>' +
+      '<div class="ref-preview-tools">' +
+        '<span class="ref-preview-status" id="ref-preview-status"></span>' +
+        '<button type="button" class="btn btn-sm btn-ghost" id="btn-ref-preview-ignore">🚫 Ignore this page</button>' +
+        '<button type="button" class="btn btn-sm btn-primary" id="btn-ref-preview-select">✓ Select for split</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" id="btn-ref-preview-zoom" style="display:none">🔍 Full size</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="ref-preview-stage" id="ref-preview-stage">' +
+      '<div class="ref-preview-message">⏳ Rendering page ' + pageNumber + ' at full size…</div>' +
+    '</div>' +
+    '<div class="ref-preview-meta" id="ref-preview-meta"></div>',
+    'sd-modal-wide');
+  // openStudioModal closes any previous popup, so the page is set afterwards.
+  referencePreviewPageNumber = pageNumber;
+  bindReferencePagePreviewControls();
+  refreshReferencePagePreview();
+}
+
+/** Wire the popup buttons (the popup body is rebuilt on every open) */
+function bindReferencePagePreviewControls() {
+  var previousButton = el('btn-ref-preview-prev');
+  if (previousButton) previousButton.addEventListener('click', function() { goToReferencePreviewPage(-1); });
+  var nextButton = el('btn-ref-preview-next');
+  if (nextButton) nextButton.addEventListener('click', function() { goToReferencePreviewPage(1); });
+  var zoomButton = el('btn-ref-preview-zoom');
+  if (zoomButton) zoomButton.addEventListener('click', function() { setReferencePagePreviewZoom(!referencePagePreviewZoomed); });
+  var ignoreButton = el('btn-ref-preview-ignore');
+  if (ignoreButton) ignoreButton.addEventListener('click', toggleReferencePreviewIgnore);
+  var selectButton = el('btn-ref-preview-select');
+  if (selectButton) selectButton.addEventListener('click', toggleReferencePreviewSelect);
+}
+
+/** Previous / next page inside the preview popup (clamped to the document) */
+function goToReferencePreviewPage(stepDirection) {
+  if (!referencePreviewPageNumber) return;
+  var totalPages = referenceSplitterPageCount || 0;
+  var nextPageNumber = referencePreviewPageNumber + stepDirection;
+  if (nextPageNumber < 1) nextPageNumber = 1;
+  if (totalPages && nextPageNumber > totalPages) nextPageNumber = totalPages;
+  if (nextPageNumber === referencePreviewPageNumber) return;
+  referencePreviewPageNumber = nextPageNumber;
+  // The state buttons and the image both follow the new page.
+  refreshReferencePagePreview();
+}
+
+/** Repaint the popup toolbar for the page on screen, then load its image */
+function refreshReferencePagePreview() {
+  var pageNumber = referencePreviewPageNumber;
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!pageNumber || !documentEntry) return;
+  var totalPages = referenceSplitterPageCount || 0;
+  var partNumberMap = referencePagePartNumberMap(documentEntry);
+  var ignoredMap = currentReferenceIgnoredPages(documentEntry);
+  var partNumber = partNumberMap[pageNumber] || 0;
+  var isIgnoredPage = !!ignoredMap[pageNumber];
+  var isSelectedPage = !!referenceSelectedPages[pageNumber];
+
+  var titleElement = el('sd-modal-title');
+  if (titleElement) titleElement.textContent = 'Page ' + pageNumber + ' preview';
+  var pageLabelElement = el('ref-preview-page');
+  if (pageLabelElement) pageLabelElement.textContent = 'Page ' + pageNumber + (totalPages ? ' of ' + totalPages : '');
+
+  var previousButton = el('btn-ref-preview-prev');
+  if (previousButton) {
+    previousButton.disabled = pageNumber <= 1;
+    previousButton.title = pageNumber <= 1 ? 'This is the first page' : 'Previous page (Left arrow)';
+  }
+  var nextButton = el('btn-ref-preview-next');
+  if (nextButton) {
+    var lastPageNumber = totalPages || pageNumber;
+    nextButton.disabled = pageNumber >= lastPageNumber;
+    nextButton.title = pageNumber >= lastPageNumber ? 'This is the last page' : 'Next page (Right arrow)';
+  }
+
+  // The status chip always says what this page currently means for the split.
+  var statusElement = el('ref-preview-status');
+  if (statusElement) {
+    var statusClassNames = 'ref-preview-status';
+    var statusText = 'Available - not split yet';
+    if (partNumber) {
+      statusClassNames += ' is-used';
+      statusText = 'Already inside split #' + partNumber;
+    } else if (isIgnoredPage) {
+      statusClassNames += ' is-ignored';
+      statusText = 'Ignored page';
+    } else if (isSelectedPage) {
+      statusClassNames += ' is-selected';
+      statusText = 'Selected for the next split';
+    }
+    statusElement.className = statusClassNames;
+    statusElement.textContent = statusText;
+  }
+
+  var ignoreButton = el('btn-ref-preview-ignore');
+  if (ignoreButton) {
+    ignoreButton.textContent = isIgnoredPage ? '↩ Make available' : '🚫 Ignore this page';
+    ignoreButton.className = isIgnoredPage ? 'btn btn-sm btn-outline' : 'btn btn-sm btn-ghost';
+    ignoreButton.title = isIgnoredPage
+      ? ('Page ' + pageNumber + ' becomes available for splitting again')
+      : ('Skip page ' + pageNumber + ' (table of contents, cover, index, ...)');
+  }
+
+  var selectButton = el('btn-ref-preview-select');
+  if (selectButton) {
+    if (partNumber) {
+      selectButton.textContent = '📦 In split #' + partNumber;
+      selectButton.disabled = true;
+      selectButton.className = 'btn btn-sm btn-outline';
+      selectButton.title = 'This page is already inside split #' + partNumber + ' - delete that part in step 2 to cut it again.';
+    } else if (isIgnoredPage) {
+      selectButton.textContent = '✓ Select for split';
+      selectButton.disabled = true;
+      selectButton.className = 'btn btn-sm btn-outline';
+      selectButton.title = 'An ignored page cannot be selected - click ↩ Make available first.';
+    } else if (isSelectedPage) {
+      selectButton.textContent = '✕ Remove from selection';
+      selectButton.disabled = false;
+      selectButton.className = 'btn btn-sm btn-outline';
+      selectButton.title = 'Remove page ' + pageNumber + ' from the next split';
+    } else {
+      selectButton.textContent = '✓ Select for split';
+      selectButton.disabled = false;
+      selectButton.className = 'btn btn-sm btn-primary';
+      selectButton.title = 'Add page ' + pageNumber + ' to the next split';
+    }
+  }
+
+  renderReferencePagePreviewImage(documentEntry, pageNumber);
+}
+
+/** Load the high-resolution image of one page (cache first, then PDF.js) */
+function renderReferencePagePreviewImage(documentEntry, pageNumber) {
+  var previewCache = referencePagePreviewCacheFor(documentEntry);
+  if (previewCache[pageNumber]) {
+    fillReferencePagePreview(pageNumber, previewCache[pageNumber], 0, 0);
+    return;
+  }
+  if (!pdfToolkitAvailable() || !tool.pdf || typeof tool.pdf.renderPage !== 'function') {
+    fillReferencePagePreviewMessage('Page previews need the CMS PDF tools ("PDF tools (browser-side)" in the field settings).');
+    return;
+  }
+  fillReferencePagePreviewMessage('⏳ Rendering page ' + pageNumber + ' at full size…');
+  function renderAtFullSize(cachedEntry) {
+    // Big pages can exceed the canvas limits of the browser, so fall back to
+    // a smaller (still readable) scale instead of showing nothing.
+    var previewScales = [REFERENCE_PAGE_PREVIEW_SCALE, 1.6, 1.0];
+    function renderWithScale(scaleIndex) {
+      var documentUint8 = referenceBytesCopyForToolkit(cachedEntry);
+      if (!documentUint8) {
+        fillReferencePagePreviewMessage('The document bytes are not available any more - close this window and open ⚙️ Process again.');
+        return;
+      }
+      var renderScale = previewScales[scaleIndex];
+      try {
+        tool.pdf.renderPage({ binary: documentUint8 }, pageNumber, { scale: renderScale, format: 'jpeg', quality: 0.92 }, function(renderError, pageResult) {
+          // The author may have moved to another page while this render ran.
+          if (referencePreviewPageNumber !== pageNumber) return;
+          if (!renderError && pageResult && pageResult.dataUrl) {
+            previewCache[pageNumber] = pageResult.dataUrl;
+            fillReferencePagePreview(pageNumber, pageResult.dataUrl, pageResult.width, pageResult.height);
+            return;
+          }
+          // The bytes we hold may have been emptied by the toolkit: drop them
+          // so the next attempt downloads the document again.
+          if (renderError === 'invalid_input') delete referenceDocumentBytesCache[documentEntry.id];
+          var nextScale = previewScales[scaleIndex + 1];
+          if (nextScale && renderError !== 'invalid_input' && renderError !== 'unsupported') {
+            developerLog('[REF:PAGES] page ' + pageNumber + ' failed at scale ' + renderScale + ' (' + (renderError || 'no image') + ') - retrying at ' + nextScale);
+            renderWithScale(scaleIndex + 1);
+            return;
+          }
+          fillReferencePagePreviewMessage('Page ' + pageNumber + ' could not be rendered (' + (renderError || 'no image returned') + ').');
+        });
+      } catch (renderThrow) {
+        console.warn('[REF:PAGES] large page preview threw:', renderThrow);
+        fillReferencePagePreviewMessage('Page ' + pageNumber + ' could not be rendered.');
+      }
+    }
+    renderWithScale(0);
+  }
+  var cachedEntry = cachedReferenceDocumentBytes(documentEntry);
+  if (cachedEntry) { renderAtFullSize(cachedEntry); return; }
+  var metaElement = el('ref-preview-meta');
+  if (metaElement) metaElement.textContent = '⏳ Reading the document…';
+  loadReferenceDocumentBytes(documentEntry, null, function(loadError, documentBytes, documentMeta) {
+    if (referencePreviewPageNumber !== pageNumber) return;
+    if (loadError || !documentBytes || !documentBytes.length) {
+      fillReferencePagePreviewMessage(describeReferenceReadFailure(loadError, documentMeta, documentEntry.url));
+      return;
+    }
+    renderAtFullSize(cachedReferenceDocumentBytes(documentEntry));
+  });
+}
+
+/** Popup action: ignore / un-ignore the page on screen */
+function toggleReferencePreviewIgnore() {
+  var pageNumber = referencePreviewPageNumber;
+  if (!pageNumber) return;
+  toggleReferencePageIgnore(pageNumber);
+  refreshReferencePagePreview();
+}
+
+/** Popup action: select / unselect the page on screen for the next split */
+function toggleReferencePreviewSelect() {
+  var pageNumber = referencePreviewPageNumber;
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  if (!pageNumber || !documentEntry) return;
+  if (referencePagePartNumberMap(documentEntry)[pageNumber]) return;
+  if (currentReferenceIgnoredPages(documentEntry)[pageNumber]) return;
+  toggleReferencePageSelection(pageNumber);
+  refreshReferencePagePreview();
+}
+
+/** How many pages a split part holds (0 when the range is unknown) */
+function referencePartPageCount(partEntry) {
+  var firstPage = parseInt(partEntry && partEntry.fromPage, 10) || 0;
+  var lastPage = parseInt(partEntry && partEntry.toPage, 10) || firstPage;
+  if (firstPage < 1 || lastPage < firstPage) return 0;
+  return lastPage - firstPage + 1;
+}
+
+/** "pages 17-22 · 6 pages · 428 KB · ✓ content ready" */
+function referencePartMetaText(partEntry) {
+  if (!partEntry) return '';
+  var pageCount = referencePartPageCount(partEntry);
+  var sizeText = partEntry.sizeKb ? (Math.max(1, Math.round(partEntry.sizeKb)) + ' KB') : 'PDF';
+  return 'pages ' + partEntry.fromPage + '-' + partEntry.toPage +
+    (pageCount ? ' · ' + pageCount + ' page' + (pageCount === 1 ? '' : 's') : '') +
+    ' · ' + sizeText +
+    (partEntry.generatedHtml ? ' · ✓ content ready' : ' · no content yet');
+}
+
+/** The "📤 Send … to lessons" button follows the ticked parts.
+ *  Called after every tick, otherwise the button would never enable. */
+function updateReferenceSendButtonState(documentEntry) {
+  var sendButton = el('btn-ref-split-send');
+  var entryParts = (documentEntry && documentEntry.parts) ? documentEntry.parts : [];
+  var selectedPartCount = 0;
+  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+    if (entryParts[partIndex] && referenceSplitterSelectedPartIds[entryParts[partIndex].partId]) selectedPartCount++;
+  }
+  if (sendButton) {
+    if (selectedPartCount) {
+      sendButton.textContent = '📤 Send ' + selectedPartCount + ' selected part(s) to lessons →';
+      sendButton.disabled = false;
+      sendButton.style.opacity = '';
+    } else {
+      sendButton.textContent = '📤 Tick the parts to send →';
+      sendButton.disabled = true;
+      sendButton.style.opacity = '0.55';
+    }
+  }
+  return selectedPartCount;
+}
+
 /** Render the parts list of the open reference document */
 function renderReferenceSplitterParts(documentEntry) {
   var listElement = el('ref-split-parts-list');
   var countElement = el('ref-split-parts-count');
+  var stepCountElement = el('ref-split-step-parts-count');
   var emptyElement = el('ref-split-empty');
   var entryParts = (documentEntry && documentEntry.parts) ? documentEntry.parts : [];
   if (countElement) countElement.textContent = entryParts.length + ' part(s)';
+  if (stepCountElement) stepCountElement.textContent = String(entryParts.length);
   if (emptyElement) emptyElement.style.display = entryParts.length ? 'none' : '';
+  updateReferenceSendButtonState(documentEntry);
+  if (referenceSplitStep === 'send') renderReferenceSendStep();
   if (!listElement) return;
+  var orderedParts = referenceOrderedParts(documentEntry);
+  var numberByPartId = referencePartNumberMap(documentEntry);
   var rowsHtml = '';
-  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
-    var partEntry = entryParts[partIndex];
+  for (var partIndex = 0; partIndex < orderedParts.length; partIndex++) {
+    var partEntry = orderedParts[partIndex];
     if (!partEntry) continue;
+    var partNumber = numberByPartId[partEntry.partId] || (partIndex + 1);
     var isSelected = !!referenceSplitterSelectedPartIds[partEntry.partId];
-    var partSize = partEntry.sizeKb ? (Math.max(1, Math.round(partEntry.sizeKb)) + ' KB') : 'PDF';
-    var partGenerated = partEntry.generatedHtml ? ' · 🤖 generated' : '';
+    var partUsage = referencePartUsage(partEntry.partId);
+    var usageHtml = partUsage.lessonCount
+      ? '<span class="ref-split-part-used" title="' + esc(partUsage.labels.join('\n')) + '">📚 ' + partUsage.lessonCount +
+        ' lesson' + (partUsage.lessonCount === 1 ? '' : 's') + '</span>'
+      : '<span class="ref-split-part-unused" title="This part is not attached to any lesson yet - tick it and use 📤 Send … to lessons">not sent yet</span>';
     rowsHtml += '<div class="ref-split-part-row">' +
       '<input type="checkbox" class="ref-split-part-check" data-ref-part-check="' + esc(partEntry.partId) + '"' +
         (isSelected ? ' checked' : '') + ' title="Tick to send this part to lessons">' +
+      '<span class="ref-split-part-index" title="Part ' + partNumber + ' of ' + orderedParts.length + ' - numbered by page order, the pages of this part show #' + partNumber + '">' +
+        '<b>' + partNumber + '</b><em>part</em></span>' +
       '<div class="ref-split-part-main">' +
         '<div class="ref-split-part-name">' + esc(partEntry.name) + '</div>' +
-        '<div class="ref-split-part-meta">pages ' + esc(String(partEntry.fromPage)) + '-' + esc(String(partEntry.toPage)) +
-          ' · ' + esc(partSize) + partGenerated + '</div>' +
+        '<div class="ref-split-part-meta">' + esc(referencePartMetaText(partEntry)) + '</div>' +
       '</div>' +
+      usageHtml +
       '<div class="ref-split-part-actions">' +
-        '<button type="button" class="btn btn-sm btn-outline" data-ref-part-open="' + esc(partEntry.partId) + '" title="Open the part file">👁</button>' +
-        '<button type="button" class="btn btn-sm btn-outline" data-ref-part-generate="' + esc(partEntry.partId) + '" title="Open this part in the Document Studio and generate content from it">⚙️</button>' +
-        '<button type="button" class="btn btn-sm btn-danger" data-ref-part-delete="' + esc(partEntry.partId) + '" title="Delete this part">🗑</button>' +
+        '<button type="button" class="btn btn-xs btn-outline" data-ref-part-open="' + esc(partEntry.partId) + '" title="Open the part file">👁</button>' +
+        '<button type="button" class="btn btn-xs btn-outline" data-ref-part-generate="' + esc(partEntry.partId) + '" title="Open this part in the Document Studio and generate content from it - the content is stored here, once, and used as reference context everywhere">' +
+          (partEntry.generatedHtml ? '✨ Generate again' : '✨ Generate') + '</button>' +
+        '<button type="button" class="btn btn-xs btn-danger" data-ref-part-delete="' + esc(partEntry.partId) + '" title="Delete this part">🗑</button>' +
       '</div>' +
     '</div>';
   }
@@ -13570,10 +18465,12 @@ function openReferenceSendDialog() {
     if (partEntry && referenceSplitterSelectedPartIds[partEntry.partId]) selectedPartIds.push(partEntry.partId);
   }
   if (!selectedPartIds.length) {
-    tool.notify('Tick at least one part to send to lessons.', 'warning');
+    setReferenceSplitStep('parts');
+    setReferenceSplitterStatus('❌ Tick at least one part in step 2 to send it to lessons.', 'error');
     return;
   }
-  openReferenceDistributeDialog(documentEntry, selectedPartIds);
+  setReferenceSplitterStatus('', '');
+  openReferenceSendStep(documentEntry, selectedPartIds);
 }
 
 /** Delete one part: CMS object first, then the storage file */
@@ -13587,6 +18484,8 @@ function deleteReferenceSplitPart(partId) {
     delete referenceSplitterSelectedPartIds[partId];
     saveReferenceEntryAfterChange(documentEntry, function() {
       renderReferenceSplitterParts(documentEntry);
+      // Split numbers shifted: repaint the tiles so every # stays correct.
+      renderReferencePageGrid(documentEntry);
       renderMainDocumentsList();
       syncReferenceSplitterRangeInputs(documentEntry);
       tool.notify('Reference part deleted.', 'info');
@@ -13606,10 +18505,91 @@ function bindReferenceSplitterEvents() {
   if (doneButton) doneButton.addEventListener('click', closeReferenceSplitter);
   var backdrop = el('ref-split-backdrop');
   if (backdrop) backdrop.addEventListener('click', closeReferenceSplitter);
+  if (typeof document.querySelectorAll === 'function') {
+    var methodButtons = document.querySelectorAll('[data-ref-split-method]');
+    for (var methodIndex = 0; methodIndex < methodButtons.length; methodIndex++) {
+      methodButtons[methodIndex].addEventListener('click', function(event) {
+        var clickedButton = event && event.currentTarget ? event.currentTarget : null;
+        if (!clickedButton) return;
+        setReferenceSplitMethod(clickedButton.getAttribute('data-ref-split-method'), true);
+      });
+    }
+  }
+  var everyInput = el('ref-split-every');
+  if (everyInput) everyInput.addEventListener('input', updateReferenceChunkSummary);
+  if (typeof document.querySelectorAll === 'function') {
+    var stepButtons = document.querySelectorAll('[data-ref-split-step]');
+    for (var stepIndex = 0; stepIndex < stepButtons.length; stepIndex++) {
+      stepButtons[stepIndex].addEventListener('click', function(event) {
+        var clickedStep = event && event.currentTarget ? event.currentTarget : null;
+        if (clickedStep) setReferenceSplitStep(clickedStep.getAttribute('data-ref-split-step'));
+      });
+    }
+  }
+  var moreSplitButton = el('btn-ref-split-more');
+  if (moreSplitButton) moreSplitButton.addEventListener('click', function() { setReferenceSplitStep('split'); });
   var rangeButton = el('btn-ref-split-range');
   if (rangeButton) rangeButton.addEventListener('click', splitReferencePageRange);
   var equalButton = el('btn-ref-split-equal');
   if (equalButton) equalButton.addEventListener('click', splitReferenceIntoEqualParts);
+  var pagesGrid = el('ref-split-pages-grid');
+  if (pagesGrid) {
+    pagesGrid.addEventListener('click', function(event) {
+      if (!event.target || !event.target.closest) return;
+      var previewButton = event.target.closest('[data-ref-page-open]');
+      if (previewButton) {
+        openReferencePagePreview(parseInt(previewButton.getAttribute('data-ref-page-open'), 10));
+        return;
+      }
+      var ignoreButton = event.target.closest('[data-ref-page-ignore]');
+      if (ignoreButton) {
+        toggleReferencePageIgnore(parseInt(ignoreButton.getAttribute('data-ref-page-ignore'), 10));
+        return;
+      }
+      var pageTile = event.target.closest('[data-ref-page]');
+      if (pageTile) toggleReferencePageSelection(parseInt(pageTile.getAttribute('data-ref-page'), 10));
+    });
+  }
+  // Page preview popup: Left/Right move through the pages, Escape closes only
+  // the popup (capture phase, so the drawer stays open).
+  document.addEventListener('keydown', function(event) {
+    if (!referencePreviewPageNumber) return;
+    if (!el('sd-modal-overlay')) { referencePreviewPageNumber = 0; return; }
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault(); event.stopPropagation();
+      goToReferencePreviewPage(-1);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault(); event.stopPropagation();
+      goToReferencePreviewPage(1);
+    } else if (event.key === 'Escape') {
+      event.stopPropagation();
+      referencePreviewPageNumber = 0;
+      closeStudioModal();
+    }
+  }, true);
+  if (typeof document.querySelectorAll === 'function') {
+    var filterButtons = document.querySelectorAll('[data-ref-page-filter]');
+    for (var filterIndex = 0; filterIndex < filterButtons.length; filterIndex++) {
+      filterButtons[filterIndex].addEventListener('click', function(event) {
+        var clickedFilter = event && event.currentTarget ? event.currentTarget : null;
+        if (!clickedFilter) return;
+        setReferencePageFilter(clickedFilter.getAttribute('data-ref-page-filter'));
+      });
+    }
+  }
+  var pagesMoreButton = el('btn-ref-split-pages-more');
+  if (pagesMoreButton) {
+    pagesMoreButton.addEventListener('click', function() {
+      referencePageRenderLimit += REFERENCE_PAGE_BATCH;
+      renderReferencePageGrid(findMainDocumentById(referenceSplitterDocumentId));
+    });
+  }
+  var pagesAllButton = el('btn-ref-split-pages-all');
+  if (pagesAllButton) pagesAllButton.addEventListener('click', function() { selectAllReferencePages(true); });
+  var pagesClearButton = el('btn-ref-split-pages-clear');
+  if (pagesClearButton) pagesClearButton.addEventListener('click', function() { selectAllReferencePages(false); });
+  var splitSelectedButton = el('btn-ref-split-selected');
+  if (splitSelectedButton) splitSelectedButton.addEventListener('click', splitReferenceSelectedPages);
   var selectAllButton = el('btn-ref-split-select-all');
   if (selectAllButton) {
     selectAllButton.addEventListener('click', function() {
@@ -13626,6 +18606,8 @@ function bindReferenceSplitterEvents() {
       if (!checkbox) return;
       if (event.target.checked) referenceSplitterSelectedPartIds[checkbox] = true;
       else delete referenceSplitterSelectedPartIds[checkbox];
+      // The "Send … to lessons" button follows the ticks.
+      updateReferenceSendButtonState(findMainDocumentById(referenceSplitterDocumentId));
     });
     partsList.addEventListener('click', function(event) {
       if (!event.target || !event.target.closest) return;
@@ -13658,11 +18640,6 @@ var referenceDistributeDocumentId = '';
 var referenceDistributePartIds = [];
 var referenceDistributeTargets = [];
 
-function closeReferenceDistributeDialog() {
-  var overlay = el('ref-distribute-overlay');
-  if (overlay) overlay.style.display = 'none';
-}
-
 /** Every lesson in the tree with its section number, sorted like the UI */
 function buildReferenceDistributeTargets() {
   var targets = [];
@@ -13681,7 +18658,10 @@ function buildReferenceDistributeTargets() {
           sectionTitle: sectionObject.title || 'Untitled',
           lesson: lessonObject,
           title: lessonObject.title || 'Untitled lesson',
-          referenceCount: Array.isArray(lessonObject.referenceDocs) ? lessonObject.referenceDocs.length : 0
+          // The heavy referenceDocs live in the lesson doc; the light index is
+          // what the main record knows about them.
+          referenceCount: Number(lessonObject.referenceDocCount) ||
+            (Array.isArray(lessonObject.referenceDocs) ? lessonObject.referenceDocs.length : 0)
         });
       }
       walkSections(sectionObject.children, sectionNumber);
@@ -13691,29 +18671,91 @@ function buildReferenceDistributeTargets() {
   return targets;
 }
 
-function openReferenceDistributeDialog(documentEntry, partIds) {
+/** Step 3: the chosen parts on the left, the lessons they can go to on the right */
+function openReferenceSendStep(documentEntry, partIds) {
   referenceDistributeDocumentId = documentEntry.id;
   referenceDistributePartIds = partIds.slice();
   referenceDistributeTargets = buildReferenceDistributeTargets();
-  var summaryElement = el('ref-distribute-summary');
-  if (summaryElement) {
-    var partPages = [];
-    for (var partIndex = 0; partIndex < documentEntry.parts.length; partIndex++) {
-      var partEntry = documentEntry.parts[partIndex];
-      if (partEntry && partIds.indexOf(partEntry.partId) !== -1) partPages.push(partEntry.fromPage + '-' + partEntry.toPage);
-    }
-    summaryElement.textContent = partIds.length + ' part(s) of "' + documentEntry.name + '": pages ' +
-      partPages.join(', ') + '. Tick the lessons that should receive them.';
-  }
-  var filterInput = el('ref-dist-filter');
+  var filterInput = el('ref-split-send-filter');
   if (filterInput) filterInput.value = '';
   renderReferenceDistributeLessonList('');
-  var overlay = el('ref-distribute-overlay');
-  if (overlay) overlay.style.display = 'flex';
+  setReferenceSplitStep('send');
+  renderReferenceSendStep();
+}
+
+/** Step 3 left column: the parts that will be sent */
+function renderReferenceSendStep() {
+  var partsContainer = el('ref-split-send-parts');
+  var documentEntry = findMainDocumentById(referenceDistributeDocumentId);
+  var numberByPartId = referencePartNumberMap(documentEntry);
+  var partEntries = [];
+  var orderedParts = referenceOrderedParts(documentEntry);
+  for (var partIndex = 0; partIndex < orderedParts.length; partIndex++) {
+    if (orderedParts[partIndex] && referenceDistributePartIds.indexOf(orderedParts[partIndex].partId) !== -1) {
+      partEntries.push(orderedParts[partIndex]);
+    }
+  }
+  if (partsContainer) {
+    if (!partEntries.length) {
+      partsContainer.innerHTML = '<div class="ref-split-send-part"><div class="ref-split-send-part-main">' +
+        '<div class="ref-split-send-part-name">No part selected</div>' +
+        '<div class="ref-split-send-part-meta">Go back with ← Change and tick the parts to send.</div>' +
+      '</div></div>';
+    } else {
+      var rowsHtml = '';
+      for (var rowIndex = 0; rowIndex < partEntries.length; rowIndex++) {
+        var partEntry = partEntries[rowIndex];
+        var partNumber = numberByPartId[partEntry.partId] || (rowIndex + 1);
+        rowsHtml += '<div class="ref-split-send-part">' +
+          '<span class="ref-split-part-index ref-split-part-index-sm"><b>' + partNumber + '</b><em>part</em></span>' +
+          '<div class="ref-split-send-part-main">' +
+            '<div class="ref-split-send-part-name">' + esc(partEntry.name) + '</div>' +
+            '<div class="ref-split-send-part-meta">' + esc(referencePartMetaText(partEntry)) + '</div>' +
+          '</div>' +
+          '<button type="button" class="btn btn-sm btn-outline" data-ref-send-remove="' + esc(partEntry.partId) + '" title="Do not send this part">✕</button>' +
+        '</div>';
+      }
+      partsContainer.innerHTML = rowsHtml;
+    }
+  }
+  var partsTitleElement = el('ref-split-send-parts-title');
+  if (partsTitleElement) partsTitleElement.textContent = '📦 Parts to send (' + partEntries.length + ')';
+  updateReferenceSendSummary();
+}
+
+/** How many lessons are ticked in step 3 */
+function countCheckedReferenceSendLessons() {
+  if (typeof document.querySelectorAll !== 'function') return 0;
+  var checkboxes = document.querySelectorAll('#ref-split-send-lessons input[data-dist-lesson]');
+  var checkedCount = 0;
+  for (var checkboxIndex = 0; checkboxIndex < checkboxes.length; checkboxIndex++) {
+    if (checkboxes[checkboxIndex].checked) checkedCount++;
+  }
+  return checkedCount;
+}
+
+/** "2 part(s) → 3 lesson(s)" line and the apply button label */
+function updateReferenceSendSummary() {
+  var summaryElement = el('ref-split-send-summary');
+  var applyButton = el('btn-ref-split-send-apply');
+  var lessonsTitleElement = el('ref-split-send-lessons-title');
+  var partCount = referenceDistributePartIds.length;
+  var lessonCount = countCheckedReferenceSendLessons();
+  if (lessonsTitleElement) lessonsTitleElement.textContent = '📚 Lessons that receive them (' + lessonCount + ' ticked)';
+  if (summaryElement) {
+    if (!partCount) summaryElement.textContent = 'No part selected - go back to step 2 and tick the parts to send.';
+    else if (!lessonCount) summaryElement.textContent = '➡️ ' + partCount + ' part(s) ready. Tick at least one lesson on the right.';
+    else summaryElement.textContent = '➡️ ' + partCount + ' part(s) → ' + lessonCount + ' lesson(s). Existing reference files stay; a part is never added twice.';
+  }
+  if (applyButton) {
+    applyButton.textContent = '📚 Add ' + partCount + ' part(s) to ' + lessonCount + ' lesson(s)';
+    applyButton.disabled = !partCount || !lessonCount;
+    applyButton.style.opacity = (!partCount || !lessonCount) ? '0.55' : '';
+  }
 }
 
 function renderReferenceDistributeLessonList(filterText) {
-  var container = el('ref-distribute-lessons');
+  var container = el('ref-split-send-lessons');
   if (!container) return;
   var lowerFilter = String(filterText || '').toLowerCase();
   var rowsHtml = '';
@@ -13737,13 +18779,15 @@ function renderReferenceDistributeLessonList(filterText) {
   if (currentSectionNumber) rowsHtml += '</div>';
   if (!rowsHtml) rowsHtml = '<div class="ref-dist-lesson">No lesson matches that filter.</div>';
   container.innerHTML = rowsHtml;
+  updateReferenceSendSummary();
 }
 
 function setAllReferenceDistributeLessonsChecked(isChecked) {
-  var checkboxes = document.querySelectorAll('#ref-distribute-lessons input[data-dist-lesson]');
+  var checkboxes = document.querySelectorAll('#ref-split-send-lessons input[data-dist-lesson]');
   for (var checkboxIndex = 0; checkboxIndex < checkboxes.length; checkboxIndex++) {
     checkboxes[checkboxIndex].checked = isChecked;
   }
+  updateReferenceSendSummary();
 }
 
 /** The lesson currently open in the lesson editor ('' when none) */
@@ -13773,7 +18817,9 @@ function referencePartAsLessonEntry(documentEntry, partEntry) {
     toPage: partEntry.toPage,
     url: partEntry.url,
     sizeKb: partEntry.sizeKb,
-    addedAt: new Date().toISOString()
+    addedAt: new Date().toISOString(),
+    // Quality preference: the author can switch it off for AI generation.
+    useInGeneration: true
   };
 }
 
@@ -13796,7 +18842,20 @@ function addReferencePartsToLesson(lessonObject, documentEntry, partEntries, onD
       updatedDocs.push(referencePartAsLessonEntry(documentEntry, partEntry));
       addedCount++;
     }
-    if (!addedCount) { onDone({ added: 0 }); return; }
+    if (!addedCount) {
+      // Legacy lesson: its doc already holds these parts, but the light index
+      // (referenceDocCount / referencePartIds) may predate this build. Refresh
+      // it so the parts list can show the relation; nothing heavy is copied
+      // back into the main record.
+      var existingPartIds = [];
+      for (var existingIndex = 0; existingIndex < updatedDocs.length; existingIndex++) {
+        if (updatedDocs[existingIndex] && updatedDocs[existingIndex].partId) existingPartIds.push(updatedDocs[existingIndex].partId);
+      }
+      lessonObject.referenceDocCount = updatedDocs.length;
+      lessonObject.referencePartIds = existingPartIds;
+      onDone({ added: 0 });
+      return;
+    }
     lessonObject.referenceDocs = updatedDocs;
     if (!canUseLessonDocs()) { onDone({ added: addedCount }); return; }
     saveLessonDoc(lessonObject, function(docError, docId) {
@@ -13831,14 +18890,14 @@ function syncOpenLessonReferenceEditor(documentEntry, partEntries, updatedLesson
 /** "Add to lessons" in the picker */
 function applyReferencePartDistribution() {
   var documentEntry = findMainDocumentById(referenceDistributeDocumentId);
-  if (!documentEntry) { closeReferenceDistributeDialog(); return; }
+  if (!documentEntry) { setReferenceSplitStep('parts'); return; }
   var partEntries = [];
   var entryParts = documentEntry.parts || [];
   for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
     if (entryParts[partIndex] && referenceDistributePartIds.indexOf(entryParts[partIndex].partId) !== -1) partEntries.push(entryParts[partIndex]);
   }
   var selectedTargets = [];
-  var checkboxes = document.querySelectorAll('#ref-distribute-lessons input[data-dist-lesson]');
+  var checkboxes = document.querySelectorAll('#ref-split-send-lessons input[data-dist-lesson]');
   for (var checkboxIndex = 0; checkboxIndex < checkboxes.length; checkboxIndex++) {
     if (!checkboxes[checkboxIndex].checked) continue;
     var targetKey = checkboxes[checkboxIndex].getAttribute('data-dist-lesson');
@@ -13850,10 +18909,10 @@ function applyReferencePartDistribution() {
     }
   }
   if (!partEntries.length || !selectedTargets.length) {
-    tool.notify('Tick at least one lesson (and one part) first.', 'warning');
+    tool.notify('Tick at least one lesson on the right first.', 'warning');
     return;
   }
-  closeReferenceDistributeDialog();
+  setReferenceSplitStep('parts');
   setReferenceSplitterStatus('📤 Adding ' + partEntries.length + ' part(s) to ' + selectedTargets.length + ' lesson(s)…', 'busy');
   var remainingLessons = selectedTargets.length;
   var updatedLessons = 0;
@@ -13875,31 +18934,50 @@ function applyReferencePartDistribution() {
         }
         renderSections();
         syncOpenLessonReferenceEditor(documentEntry, partEntries, updatedLessonIds);
+        // The parts list now shows which lessons hold each part.
+        renderReferenceSplitterParts(documentEntry);
         var summaryText = updatedLessons + ' lesson(s) updated' +
           (skippedLessons ? ', ' + skippedLessons + ' already had these parts' : '') +
           (failedLessons ? ', ' + failedLessons + ' failed' : '');
-        setReferenceSplitterStatus('✅ ' + summaryText + '.', failedLessons ? 'warn' : 'ok');
-        tool.notify('Reference parts: ' + summaryText + '.', failedLessons ? 'warning' : 'success');
+        var sentToLabel = selectedTargets.length === 1
+          ? ('§ ' + selectedTargets[0].sectionNumber + ' · ' + selectedTargets[0].title)
+          : (selectedTargets.length + ' lessons');
+        setReferenceSplitterStatus('✅ ' + summaryText + '. Open ' + sentToLabel +
+          ' and use its 📎 References tab to see them.', failedLessons ? 'warn' : 'ok');
+        tool.notify('Reference parts: ' + summaryText + '. They are listed in the lesson drawer under 📎 References.',
+          failedLessons ? 'warning' : 'success');
       });
     })(selectedTargets[targetIndex]);
   }
 }
 
 function bindReferenceDistributeEvents() {
-  var closeButton = el('btn-ref-distribute-close');
-  if (closeButton) closeButton.addEventListener('click', closeReferenceDistributeDialog);
-  var cancelButton = el('btn-ref-distribute-cancel');
-  if (cancelButton) cancelButton.addEventListener('click', closeReferenceDistributeDialog);
-  var applyButton = el('btn-ref-distribute-apply');
+  var applyButton = el('btn-ref-split-send-apply');
   if (applyButton) applyButton.addEventListener('click', applyReferencePartDistribution);
-  var selectAllButton = el('btn-ref-distribute-all');
+  var selectAllButton = el('btn-ref-split-send-all');
   if (selectAllButton) selectAllButton.addEventListener('click', function() { setAllReferenceDistributeLessonsChecked(true); });
-  var clearButton = el('btn-ref-distribute-none');
+  var clearButton = el('btn-ref-split-send-none');
   if (clearButton) clearButton.addEventListener('click', function() { setAllReferenceDistributeLessonsChecked(false); });
-  var filterInput = el('ref-dist-filter');
+  var filterInput = el('ref-split-send-filter');
   if (filterInput) filterInput.addEventListener('input', function() { renderReferenceDistributeLessonList(filterInput.value); });
-  var overlay = el('ref-distribute-overlay');
-  if (overlay) overlay.addEventListener('click', function(event) { if (event.target === overlay) closeReferenceDistributeDialog(); });
+  var lessonsContainer = el('ref-split-send-lessons');
+  if (lessonsContainer) {
+    lessonsContainer.addEventListener('change', function() { updateReferenceSendSummary(); });
+  }
+  var changeButton = el('btn-ref-split-send-change');
+  if (changeButton) changeButton.addEventListener('click', function() { setReferenceSplitStep('parts'); });
+  var sendPartsContainer = el('ref-split-send-parts');
+  if (sendPartsContainer) {
+    sendPartsContainer.addEventListener('click', function(event) {
+      var removeButton = (event.target && event.target.closest) ? event.target.closest('[data-ref-send-remove]') : null;
+      if (!removeButton) return;
+      var removePartId = removeButton.getAttribute('data-ref-send-remove');
+      referenceDistributePartIds = referenceDistributePartIds.filter(function(partId) { return partId !== removePartId; });
+      delete referenceSplitterSelectedPartIds[removePartId];
+      renderReferenceSplitterParts(findMainDocumentById(referenceSplitterDocumentId));
+      renderReferenceSendStep();
+    });
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -13960,24 +19038,57 @@ function referenceDocumentUrls() {
   return referenceUrls;
 }
 
+/** "📚 Manual 2026 · Part #2" for one lesson reference entry */
+function referenceDocDisplayLabel(referenceEntry) {
+  var displayLabel = '📎 ';
+  var libraryEntry = referenceEntry.libraryId ? findMainDocumentById(referenceEntry.libraryId) : null;
+  var partNumber = 0;
+  if (libraryEntry) {
+    var numberByPartId = referencePartNumberMap(libraryEntry);
+    if (referenceEntry.partId && numberByPartId[referenceEntry.partId]) partNumber = numberByPartId[referenceEntry.partId];
+    if (!partNumber && referenceEntry.url) {
+      var orderedParts = referenceOrderedParts(libraryEntry);
+      for (var partIndex = 0; partIndex < orderedParts.length; partIndex++) {
+        if (orderedParts[partIndex] && orderedParts[partIndex].url === referenceEntry.url) { partNumber = partIndex + 1; break; }
+      }
+    }
+    if (libraryEntry.name) displayLabel += libraryEntry.name + ' · ';
+  }
+  if (partNumber) displayLabel += 'Part #' + partNumber + ' · ';
+  return displayLabel + (referenceEntry.name || 'Reference extract');
+}
+
 /** List of the lesson's reference extracts */
 function renderReferenceDocsEditorList() {
   var listContainer = el('reference-docs-list');
   var countElement = el('reference-docs-count');
   if (countElement) countElement.textContent = editingReferenceDocs.length + ' reference document(s)';
+  // The tab itself carries the number, so a lesson that received parts shows it
+  // without opening the tab.
+  var referencesTab = document.querySelector ? document.querySelector('.lesson-tab[data-lesson-tab="references"]') : null;
+  if (referencesTab) {
+    referencesTab.textContent = '📎 References' + (editingReferenceDocs.length ? ' (' + editingReferenceDocs.length + ')' : '');
+  }
   if (!listContainer) return;
   if (!editingReferenceDocs.length) {
-    listContainer.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px">No reference extracts yet. Use "➕ Add from Reference Library" to copy the pages this lesson needs.</div>';
+    listContainer.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px">No reference extracts yet. Send them from the curriculum reference library (⚙️ Process → Parts → 📤 Send … to lessons), or use "➕ Add from Reference Library".</div>';
     return;
   }
   listContainer.innerHTML = editingReferenceDocs.map(function(referenceEntry, referenceIndex) {
     var pageLabel = 'pages ' + referenceEntry.fromPage + '-' + referenceEntry.toPage;
-    return '<div class="reference-doc-item">' +
+    var partPageCount = referencePartPageCount(referenceEntry);
+    var usedForAi = referenceEntry.useInGeneration !== false;
+    return '<div class="reference-doc-item' + (usedForAi ? '' : ' is-ai-off') + '">' +
       '<div class="reference-doc-info">' +
-        '<div class="reference-doc-name">📎 ' + esc(referenceEntry.name || 'Reference extract') + '</div>' +
-        '<div class="reference-doc-meta">' + esc(pageLabel) + (referenceEntry.sizeKb ? ' · ' + Math.max(1, Math.round(referenceEntry.sizeKb)) + ' KB' : '') + '</div>' +
+        '<div class="reference-doc-name">' + esc(referenceDocDisplayLabel(referenceEntry)) + '</div>' +
+        '<div class="reference-doc-meta">' + esc(pageLabel) +
+          (partPageCount ? ' · ' + partPageCount + ' page' + (partPageCount === 1 ? '' : 's') : '') +
+          (referenceEntry.sizeKb ? ' · ' + Math.max(1, Math.round(referenceEntry.sizeKb)) + ' KB' : '') +
+          (usedForAi ? '' : ' · 🚫 not used for AI') + '</div>' +
       '</div>' +
       '<div class="reference-doc-actions">' +
+        '<label class="ref-doc-use" title="Use this part when the AI writes content for this lesson (quality preference - a part can be kept as a student resource and still be left out of the AI context).">' +
+          '<input type="checkbox" data-ref-doc-use="' + referenceIndex + '"' + (usedForAi ? ' checked' : '') + '> AI</label>' +
         '<button type="button" class="btn btn-sm btn-outline" data-ref-doc-open="' + referenceIndex + '">👁 Open</button>' +
         '<button type="button" class="btn btn-sm btn-danger" data-ref-doc-delete="' + referenceIndex + '">🗑</button>' +
       '</div>' +
@@ -13991,6 +19102,14 @@ function bindReferenceDocsEditorEvents() {
   if (addButton) addButton.addEventListener('click', openLibraryRefDialog);
   var listContainer = el('reference-docs-list');
   if (listContainer) {
+    listContainer.addEventListener('change', function(event) {
+      var useCheckbox = event.target && event.target.getAttribute ? event.target.getAttribute('data-ref-doc-use') : null;
+      if (useCheckbox === null || useCheckbox === undefined) return;
+      var useIndex = parseInt(useCheckbox, 10);
+      if (!editingReferenceDocs[useIndex]) return;
+      editingReferenceDocs[useIndex].useInGeneration = !!event.target.checked;
+      renderReferenceDocsEditorList();
+    });
     listContainer.addEventListener('click', function(event) {
       var openButton = event.target && event.target.closest ? event.target.closest('[data-ref-doc-open]') : null;
       if (openButton) {
@@ -14015,8 +19134,10 @@ function bindReferenceDocsEditorEvents() {
 /** Page count reported by the host PDF toolkit (0 when it is unavailable) */
 function countLibraryDocumentPages(pdfBytes, onDone) {
   if (!pdfToolkitAvailable()) { onDone(0); return; }
+  var toolkitBytes = copyPdfBytesForToolkit(pdfBytes);
+  if (!toolkitBytes) { onDone(0); return; }
   try {
-    tool.pdf.pageCount({ binary: new Uint8Array(pdfBytes) }, function(countError, totalPages) {
+    tool.pdf.pageCount({ binary: toolkitBytes }, function(countError, totalPages) {
       if (countError || !totalPages) { onDone(0); return; }
       onDone(totalPages);
     });
@@ -14024,6 +19145,63 @@ function countLibraryDocumentPages(pdfBytes, onDone) {
     console.warn('[PDF:TOOLKIT] page count failed:', countCallError);
     onDone(0);
   }
+}
+
+/* ── Keeping the console readable while the host toolkit parses a PDF ──
+   pdf-lib logs one warning per broken object ("Trying to parse invalid
+   object…", "Invalid object ref…"). A PDF with a damaged cross-reference
+   table produces thousands of them - pure library noise that hides the real
+   messages. Only these two exact pdf-lib sentences are dropped, and only
+   while a split is running; everything else still reaches the console. */
+var pdfLibraryQuietDepth = 0;
+var pdfLibraryQuietRestoreTimer = 0;
+var pdfLibraryQuietOriginalWarn = null;
+var pdfLibraryQuietOriginalLog = null;
+
+function isPdfLibraryParseNoise(logArguments) {
+  if (!logArguments || !logArguments.length) return false;
+  var firstArgument = logArguments[0];
+  if (typeof firstArgument !== 'string') return false;
+  return firstArgument.indexOf('Trying to parse invalid object') !== -1 ||
+    firstArgument.indexOf('Invalid object ref') !== -1;
+}
+
+function installPdfLibraryQuiet() {
+  if (pdfLibraryQuietOriginalWarn) return;
+  pdfLibraryQuietOriginalWarn = console.warn;
+  pdfLibraryQuietOriginalLog = console.log;
+  function makeFilteredConsoleLogger(originalLogger) {
+    return function() {
+      if (isPdfLibraryParseNoise(arguments)) return;
+      return originalLogger.apply(console, arguments);
+    };
+  }
+  console.warn = makeFilteredConsoleLogger(pdfLibraryQuietOriginalWarn);
+  console.log = makeFilteredConsoleLogger(pdfLibraryQuietOriginalLog);
+}
+
+function removePdfLibraryQuiet() {
+  if (!pdfLibraryQuietOriginalWarn) return;
+  console.warn = pdfLibraryQuietOriginalWarn;
+  console.log = pdfLibraryQuietOriginalLog;
+  pdfLibraryQuietOriginalWarn = null;
+  pdfLibraryQuietOriginalLog = null;
+  pdfLibraryQuietDepth = 0;
+}
+
+function beginPdfLibraryQuiet() {
+  pdfLibraryQuietDepth++;
+  if (pdfLibraryQuietDepth > 1) return;
+  installPdfLibraryQuiet();
+  // Safety net: never leave the console filtered if a callback never fires.
+  pdfLibraryQuietRestoreTimer = setTimeout(removePdfLibraryQuiet, 60000);
+}
+
+function endPdfLibraryQuiet() {
+  if (pdfLibraryQuietDepth > 0) pdfLibraryQuietDepth--;
+  if (pdfLibraryQuietDepth > 0) return;
+  if (pdfLibraryQuietRestoreTimer) { clearTimeout(pdfLibraryQuietRestoreTimer); pdfLibraryQuietRestoreTimer = 0; }
+  removePdfLibraryQuiet();
 }
 
 /** Extract one page range: host PDF toolkit (pdf-lib) first, local splitter second */
@@ -14037,11 +19215,26 @@ function splitLibraryPageRange(pdfBytes, firstPage, lastPage, onDone) {
     }
   }
   if (!pdfToolkitAvailable()) { splitLocally(); return; }
+  // pdf-lib cannot decrypt: for an encrypted file it would log a warning per
+  // object and fail. The local splitter decrypts it, so it goes first.
+  var knownSecurityHandler = pdfCachedSecurityHandler(pdfBytes);
+  var isEncryptedDocument = knownSecurityHandler === undefined
+    ? pdfLatestTrailerHasEncryption(pdfBytes)
+    : !!knownSecurityHandler;
+  if (isEncryptedDocument) {
+    developerLog('[PDF:TOOLKIT] the document is encrypted - the local splitter decrypts it');
+    splitLocally();
+    return;
+  }
+  var toolkitBytes = copyPdfBytesForToolkit(pdfBytes);
+  if (!toolkitBytes) { splitLocally(); return; }
+  beginPdfLibraryQuiet();
   try {
-    tool.pdf.split({ binary: new Uint8Array(pdfBytes) }, [{ first: firstPage, last: lastPage }], function(splitError, splitParts) {
+    tool.pdf.split({ binary: toolkitBytes }, [{ first: firstPage, last: lastPage }], function(splitError, splitParts) {
+      endPdfLibraryQuiet();
       var splitPart = (splitParts && splitParts.length) ? splitParts[0] : null;
       if (splitError || !splitPart || !splitPart.bytes) {
-        console.warn('[PDF:TOOLKIT] split failed (' + splitError + ') - using the local splitter');
+        developerLog('[PDF:TOOLKIT] split failed (' + splitError + ') - using the local splitter');
         splitLocally();
         return;
       }
@@ -14052,7 +19245,8 @@ function splitLibraryPageRange(pdfBytes, firstPage, lastPage, onDone) {
       });
     });
   } catch (splitCallError) {
-    console.warn('[PDF:TOOLKIT] split threw:', splitCallError);
+    endPdfLibraryQuiet();
+    developerLog('[PDF:TOOLKIT] split threw: ' + splitCallError);
     splitLocally();
   }
 }
@@ -14202,6 +19396,82 @@ function buildSectionChoiceList() {
   }
   walkSections(sections, '');
   return sectionChoices;
+}
+
+/** "§ 1.2" for one live section object ('' when the section is not in the tree) */
+function sectionNumberLabelOf(sectionObject) {
+  if (!sectionObject || !sectionObject.id) return '';
+  var sectionChoices = buildSectionChoiceList();
+  for (var choiceIndex = 0; choiceIndex < sectionChoices.length; choiceIndex++) {
+    if (sectionChoices[choiceIndex].id === sectionObject.id) return '§ ' + sectionChoices[choiceIndex].number;
+  }
+  return '';
+}
+
+/** "§ 1.2 · Lesson 3 of 7" for one live lesson object (the position students see) */
+function lessonNumberLabelOf(sectionObject, lessonObject) {
+  var labelPieces = [];
+  var sectionLabel = sectionNumberLabelOf(sectionObject);
+  if (sectionLabel) labelPieces.push(sectionLabel);
+  if (!sectionObject || !lessonObject) return labelPieces.join(' · ');
+  var sortedLessons = (sectionObject.lessons || []).slice().sort(byOrder);
+  var lessonPosition = 0;
+  for (var lessonIndex = 0; lessonIndex < sortedLessons.length; lessonIndex++) {
+    if (sortedLessons[lessonIndex].id === lessonObject.id) { lessonPosition = lessonIndex + 1; break; }
+  }
+  if (!lessonPosition) lessonPosition = parseInt(lessonObject.order, 10) || 0;
+  if (lessonPosition) {
+    labelPieces.push('Lesson ' + lessonPosition + (sortedLessons.length ? ' of ' + sortedLessons.length : ''));
+  }
+  return labelPieces.join(' · ');
+}
+
+/** The section + lesson currently loaded in the lesson editor (nulls when none) */
+function currentEditingLessonContext() {
+  if (editingDirectSection) {
+    var foundSection = findSectionById(editingDirectSection.id);
+    var directSection = foundSection ? foundSection.section : editingDirectSection;
+    var directLesson = (editingLessonIdx !== null && directSection && directSection.lessons) ? directSection.lessons[editingLessonIdx] : null;
+    return { section: directSection, lesson: directLesson || null };
+  }
+  if (editingSectionIdx !== null && editingSectionParent) {
+    var modalSection = editingSectionParent[editingSectionIdx];
+    var modalLesson = (editingLessonIdx !== null && modalSection && modalSection.lessons) ? modalSection.lessons[editingLessonIdx] : null;
+    return { section: modalSection || null, lesson: modalLesson || null };
+  }
+  return { section: null, lesson: null };
+}
+
+/** The lesson's documents in the SAME order the Documents list shows them */
+function lessonDocumentEntries() {
+  var documentRows = [];
+  var typeKeys = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
+  for (var typeIndex = 0; typeIndex < typeKeys.length; typeIndex++) {
+    var typeUrls = getPdfArray(typeKeys[typeIndex]);
+    for (var urlIndex = 0; urlIndex < typeUrls.length; urlIndex++) {
+      documentRows.push({ type: typeKeys[typeIndex], idx: urlIndex, url: typeUrls[urlIndex], role: 'real' });
+    }
+  }
+  for (var sourceIndex = 0; sourceIndex < editingStudyDocSources.length; sourceIndex++) {
+    documentRows.push({
+      type: editingStudyDocSources[sourceIndex].type || 'studyDoc',
+      url: editingStudyDocSources[sourceIndex].url,
+      role: 'source'
+    });
+  }
+  return documentRows;
+}
+
+/** "Document 2 of 5" for one document URL of the open lesson */
+function lessonDocumentNumberLabel(documentUrl) {
+  if (!documentUrl) return '';
+  var documentRows = lessonDocumentEntries();
+  for (var rowIndex = 0; rowIndex < documentRows.length; rowIndex++) {
+    if (documentRows[rowIndex].url === documentUrl) {
+      return 'Document ' + (rowIndex + 1) + ' of ' + documentRows.length;
+    }
+  }
+  return '';
 }
 
 /** Refresh the picker label ("§ 1.2 · Name · 3 lessons") and the position total */
@@ -14401,26 +19671,44 @@ function moveLessonToSlot(fromSectionId, fromLessonIndex, toSectionId, targetLes
 }
 
 
-/* ── Studio generation: AI rewrites the document into raw HTML ── */
-function buildStudioHtmlPrompt(sourceText, imageCount) {
-  var prompt = 'You are an expert educational content editor. REPHRASE the document below into clean, well-structured HTML for a study guide. This is a rewriting step - the result is raw course content that will be edited and styled later.\n\n' +
-    'OUTPUT RULES (strict):\n' +
-    '- Return ONLY the HTML fragment: no markdown, no code fences, no JSON, no explanations, no <html>/<head>/<body> wrapper.\n' +
-    '- Start with an <h1> title that you rewrite from the document, then use <h2>/<h3> sections, <p>, <ul>/<ol>/<li>, <table>/<thead>/<tbody>/<tr>/<th>/<td>, <blockquote>, <strong>, <em> and <figure>/<figcaption>.\n' +
-    '- Never copy sentences verbatim - rewrite everything in your own words while keeping every fact, number, rule and term exact.\n' +
-    '- Keep the full content of the document (do not summarize it away) and keep a logical reading order.\n' +
-    '- Do not add styling attributes, classes, scripts or inline CSS - semantic HTML only.\n' +
-    '- Use proper text for headings and lists; do not wrap whole paragraphs in <div>.\n';
-  if (imageCount > 0) {
-    prompt += '\nIMAGES: the document has ' + imageCount + ' image(s). Use the exact placeholder tokens below as image sources, for example: <figure><img src="{{IMG0}}" alt="short description"><figcaption>caption</figcaption></figure>. Place an image exactly where the document discusses that figure, chart, diagram or screenshot. Use each placeholder at most once and only where it belongs.\n';
-    for (var imageIndex = 0; imageIndex < imageCount; imageIndex++) {
-      var imageLabel = (editingStudyDocImages[imageIndex] && editingStudyDocImages[imageIndex].name) ? editingStudyDocImages[imageIndex].name : ('image-' + (imageIndex + 1));
-      prompt += '{{IMG' + imageIndex + '}} = ' + imageLabel + '\n';
+/* ── Studio generation: AI rewrites the document into raw HTML ──
+   The editorial contract lives in Settings (✍️ AI rephrasing rules, default
+   DEFAULT_REPHRASE_RULES): coverage, rewriting, originality, document shape
+   and the silent self-check. This function only wraps it in the technical
+   rules the tool itself needs. `revisionBrief` carries the review findings
+   and the review chat into a REGENERATION of the same document. */
+function buildStudioHtmlPrompt(sourceText, galleryImages, revisionBrief) {
+  var prompt =
+    'Write ONE study document from the DOCUMENT TEXT at the end of this prompt, following the editing contract below completely.\n\n' +
+    resolveRephraseRules() + '\n\n' +
+    'TECHNICAL OUTPUT RULES (always required, whatever the contract above says):\n' +
+    '- Return ONLY the HTML fragment: no markdown, no code fences, no JSON, no explanations, no <html>/<head>/<body> wrapper, no <style>, no <script>.\n' +
+    '- Allowed tags: h1-h4, p, ul, ol, li, dl, dt, dd, table, caption, thead, tbody, tfoot, tr, th, td, blockquote, strong, em, b, i, u, code, sub, sup, br, hr, figure, figcaption, img, section, nav and a (internal #anchors only).\n' +
+    '- No class, style or data-* attributes, no ids except the heading anchors of the contents list, no scripts, no event handlers.\n' +
+    '- Never wrap whole paragraphs in <div>, and never output empty elements, placeholder text or "..." anywhere.\n';
+  var pictureList = galleryImages || [];
+  if (pictureList.length > 0) {
+    prompt += '\nIMAGES - PLACEMENT MAP (this map is the ground truth for picture placement):\n' +
+      '- Every picture below was extracted from a recorded position in the source. The map says exactly where it belongs.\n' +
+      '- Output ONE <figure> per token: <figure><img src="{{IMGn}}" alt="short description"><figcaption>caption text</figcaption></figure>.\n' +
+      '- Use every token EXACTLY ONCE. Never leave a token unused, never repeat one, never invent a picture that is not in this map.\n' +
+      '- Keep the figures in the order of this map (page order) and never reorder them.\n' +
+      '- Place a figure immediately AFTER the paragraph that ends with the quoted "text right before it ends with", or after the paragraph that discusses its caption / nearest heading.\n' +
+      '- A picture marked PINNED goes inside that section and nowhere else.\n' +
+      '- alt text and figcaption describe what the reader should notice and must not name the origin.\n' +
+      '- The document text uses "--- PAGE n ---" markers: a page number in the map refers to those markers.\n' +
+      'PICTURE MAP:\n';
+    var pictureMapLines = buildStudioPictureMapLines(pictureList);
+    for (var pictureMapIndex = 0; pictureMapIndex < pictureMapLines.length; pictureMapIndex++) {
+      prompt += pictureMapLines[pictureMapIndex] + '\n';
     }
   } else {
-    prompt += '\nIMAGES: none available - do not add <img> tags.\n';
+    prompt += '\nIMAGES: none available - do not output <img> tags and do not describe pictures that are not there.\n';
   }
-  prompt += '\nDocument:\n"""\n' + sourceText + '\n"""\n\nRETURN THE HTML NOW (start with <h1>):';
+  if (revisionBrief) {
+    prompt += '\nREVISION BRIEF - a reviewer compared the previous version with the document and found the problems below (or asked for these changes). Apply them on top of EVERY rule above and return the COMPLETE document again, never only the changed parts:\n"""\n' + revisionBrief + '\n"""\n';
+  }
+  prompt += '\nDOCUMENT TEXT:\n"""\n' + sourceText + '\n"""\n\nRETURN THE HTML NOW (start with <h1>):';
   return prompt;
 }
 
@@ -14568,6 +19856,85 @@ function pdfHasTextLayer(pdfBytes) {
   return false;
 }
 
+/** Text of every page, read with the CMS PDF renderer. Unlike the raw
+ *  content-stream scraper this keeps the page boundaries, so the prompt can
+ *  say "--- PAGE 12 ---" and a picture anchor has a page to point at. */
+function extractPdfPagesTextLocally(pdfBytes, onDone) {
+  if (!pdfJsLibraryAvailable() || !pdfBytes || !pdfBytes.length) { onDone('no-renderer'); return; }
+  window.pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) }).promise.then(function(pdfDocument) {
+    var pageTexts = [];
+    function readNextPage(pageNumber) {
+      if (pageNumber > pdfDocument.numPages) {
+        onDone(null, buildMarkedSourceText(pageTexts), pageTexts);
+        return;
+      }
+      pdfDocument.getPage(pageNumber).then(function(pdfPage) {
+        return pdfPage.getTextContent();
+      }).then(function(textContent) {
+        var pagePieces = [];
+        var textItems = (textContent && textContent.items) || [];
+        for (var itemIndex = 0; itemIndex < textItems.length; itemIndex++) {
+          var textItem = textItems[itemIndex];
+          if (!textItem || typeof textItem.str !== 'string') continue;
+          pagePieces.push(textItem.str);
+          if (textItem.hasEOL) pagePieces.push('\n');
+        }
+        var pageText = pagePieces.join(' ')
+          .replace(/ ?\n ?/g, '\n')
+          .replace(/[ \t]{2,}/g, ' ')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+        pageTexts.push({ pageNumber: pageNumber, text: pageText });
+        readNextPage(pageNumber + 1);
+      }).catch(function(pageTextError) {
+        console.warn('[STUDIO:TEXT] page ' + pageNumber + ' text could not be read:', pageTextError);
+        pageTexts.push({ pageNumber: pageNumber, text: '' });
+        readNextPage(pageNumber + 1);
+      });
+    }
+    readNextPage(1);
+  }).catch(function(pagedOpenError) {
+    onDone(String((pagedOpenError && pagedOpenError.message) || pagedOpenError));
+  });
+}
+
+/** "--- PAGE n ---" marked document text, or '' when no page has text */
+function buildMarkedSourceText(pageTexts) {
+  if (!pageTexts || !pageTexts.length) return '';
+  var markedPieces = [];
+  for (var pageIndex = 0; pageIndex < pageTexts.length; pageIndex++) {
+    var pageEntry = pageTexts[pageIndex];
+    if (!pageEntry.text) continue;
+    markedPieces.push('--- PAGE ' + pageEntry.pageNumber + ' ---\n' + pageEntry.text);
+  }
+  return markedPieces.join('\n\n');
+}
+
+/** Read a PDF as marked page text, falling back to the stream scraper */
+function readDocumentTextWithPages(pdfBytes, onReady) {
+  var fallbackText = '';
+  try { fallbackText = extractPdfTextLocally(pdfBytes); } catch (fallbackError) { fallbackText = ''; }
+  if (!pdfJsLibraryAvailable() || !pdfBytes || !pdfBytes.length) {
+    onReady(fallbackText, [], 'local PDF text (approximate)');
+    return;
+  }
+  extractPdfPagesTextLocally(pdfBytes, function(pagedError, markedText, pageTexts) {
+    if (!pagedError && markedText && markedText.replace(/\s+/g, '').length >= 200) {
+      onReady(markedText, pageTexts, 'PDF text · ' + pageTexts.length + ' page(s) with markers');
+      return;
+    }
+    onReady(fallbackText, [], 'local PDF text (approximate)');
+  });
+}
+
+/** Cap the prompt text without ever silently losing the end */
+function limitStudioSourceText(textValue) {
+  var sourceText = String(textValue || '');
+  if (sourceText.length <= STUDIO_SOURCE_TEXT_LIMIT) return sourceText;
+  return sourceText.substring(0, STUDIO_SOURCE_TEXT_LIMIT) +
+    '\n\n[The document was cut at ' + STUDIO_SOURCE_TEXT_LIMIT + ' characters to fit the prompt.]';
+}
+
 /** Approximate text extraction from a PDF byte array - no server involved */
 function extractPdfTextLocally(pdfBytes) {
   // Image-only scans have nothing to extract - skip the stream walk entirely.
@@ -14619,13 +19986,13 @@ function readSourceDocumentText(onDone) {
 
   /** Deliver the document text, adding OCR text from the gallery pictures
    *  when the document itself carries little text. */
-  function deliverSourceText(sourceText, sourceLabel) {
+  function deliverSourceText(sourceText, sourceLabel, pageTexts) {
     lastStudioTextSourceLabel = sourceLabel || '';
-    var baseText = String(sourceText || '');
+    var baseText = limitStudioSourceText(sourceText);
     var ocrGalleryEnabled = String(tool.param('ocrGalleryImages', 'yes')).toLowerCase() !== 'no';
     var textIsEnough = baseText.replace(/\s+/g, '').length > 8000;
     if (!ocrEngineAvailable() || !ocrGalleryEnabled || !editingStudyDocImages.length || textIsEnough) {
-      onDone(null, baseText.substring(0, 15000), sourceLabel);
+      onDone(null, baseText, sourceLabel);
       return;
     }
     startStudioStatusTicker('🔍 Reading the text inside the document pictures');
@@ -14633,16 +20000,20 @@ function readSourceDocumentText(onDone) {
       var combinedText = baseText;
       if (imageText) combinedText += '\n\nTEXT RECOGNIZED INSIDE THE DOCUMENT IMAGES:\n' + imageText;
       var combinedLabel = sourceLabel + (imagesRead ? ' + OCR of ' + imagesRead + ' picture(s)' : '');
-      onDone(null, combinedText.substring(0, 15000), combinedLabel);
+      onDone(null, limitStudioSourceText(combinedText), combinedLabel);
     });
   }
   if (localBytesAvailable) {
     setStudioStatus('📝 Reading the PDF text locally in your browser…', 'busy');
-    try { localText = extractPdfTextLocally(studioLocalPdfBytes); } catch (localTextError) { localText = ''; }
-    if (localText && localText.replace(/\s+/g, '').length >= 200) {
-      deliverSourceText(localText, 'local PDF text (approximate)');
-      return;
-    }
+    readDocumentTextWithPages(studioLocalPdfBytes, function(localReadText, localReadPages, localReadLabel) {
+      localText = localReadText;
+      if (localText && localText.replace(/\s+/g, '').length >= 200) {
+        deliverSourceText(localText, localReadLabel, localReadPages);
+        return;
+      }
+      startDownload();
+    });
+    return;
   }
   function useLocalText(reason) {
     if (localText && localText.replace(/\s+/g, '').length >= 200) {
@@ -14700,38 +20071,49 @@ function readSourceDocumentText(onDone) {
       useLocalText((downloadNote || '') + (readError ? (' The CMS text service failed: ' + readError + '.') : ' The CMS text service returned no text.'));
     });
   }
-  // Full-file download: text documents are decoded, PDFs go through the local
-  // text extractor - no relay size cap involved.
-  var downloadProgress = { loadedBytes: 0, totalBytes: 0 };
-  startStudioStatusTicker('⏳ Downloading the document to read its text', function() {
-    if (!downloadProgress.loadedBytes) return '';
-    return formatFileSize(downloadProgress.loadedBytes) + (downloadProgress.totalBytes ? ' of ' + formatFileSize(downloadProgress.totalBytes) : '');
-  });
-  fetchDocumentBytes(sourceUrl, {
-    purpose: 'text',
-    onProgress: function(loadedBytes, totalBytes) {
-      downloadProgress.loadedBytes = loadedBytes || 0;
-      downloadProgress.totalBytes = totalBytes || 0;
-    }
-  }, function(fetchError, documentBytes, documentMeta) {
-    var downloadedText = '';
-    if (!fetchError && documentBytes && documentBytes.length) {
-      adoptMirroredStudioDocumentUrl(sourceUrl, documentMeta);
-      readablePdfBytes = documentBytes;
-      if (isTextDocumentUrl(sourceUrl)) {
-        downloadedText = decodeTextBytes(documentBytes);
-      } else {
-        try { downloadedText = extractPdfTextLocally(documentBytes); } catch (pdfTextError) { downloadedText = ''; }
+  function startDownload() {
+    // Full-file download: text documents are decoded, PDFs are read page by
+    // page (with page markers) - no relay size cap involved.
+    var downloadProgress = { loadedBytes: 0, totalBytes: 0 };
+    startStudioStatusTicker('⏳ Downloading the document to read its text', function() {
+      if (!downloadProgress.loadedBytes) return '';
+      return formatFileSize(downloadProgress.loadedBytes) + (downloadProgress.totalBytes ? ' of ' + formatFileSize(downloadProgress.totalBytes) : '');
+    });
+    fetchDocumentBytes(sourceUrl, {
+      purpose: 'text',
+      onProgress: function(loadedBytes, totalBytes) {
+        downloadProgress.loadedBytes = loadedBytes || 0;
+        downloadProgress.totalBytes = totalBytes || 0;
       }
-    }
-    if (downloadedText && downloadedText.replace(/\s+/g, '').length >= 200) {
-      deliverSourceText(downloadedText, (documentMeta && documentMeta.fromLocalFile)
-        ? 'local PDF text (approximate)'
-        : 'downloaded file (read in your browser)');
-      return;
-    }
-    readThroughCmsTextService(fetchError ? (' ' + describeFileFetchError(fetchError, documentMeta)) : '');
-  });
+    }, function(fetchError, documentBytes, documentMeta) {
+      if (!fetchError && documentBytes && documentBytes.length) {
+        adoptMirroredStudioDocumentUrl(sourceUrl, documentMeta);
+        readablePdfBytes = documentBytes;
+        if (isTextDocumentUrl(sourceUrl)) {
+          var textDocumentContent = decodeTextBytes(documentBytes);
+          if (textDocumentContent && textDocumentContent.replace(/\s+/g, '').length >= 200) {
+            deliverSourceText(textDocumentContent, 'text document');
+            return;
+          }
+          readThroughCmsTextService('');
+          return;
+        }
+        readDocumentTextWithPages(documentBytes, function(downloadedText, downloadedPages, downloadedLabel) {
+          if (downloadedText && downloadedText.replace(/\s+/g, '').length >= 200) {
+            var downloadLabel = (documentMeta && documentMeta.fromLocalFile)
+              ? 'local PDF text (' + downloadedPages.length + ' pages)'
+              : 'downloaded file (' + (downloadedPages.length || '?') + ' pages, read in your browser)';
+            deliverSourceText(downloadedText, downloadLabel, downloadedPages);
+            return;
+          }
+          readThroughCmsTextService('');
+        });
+        return;
+      }
+      readThroughCmsTextService(fetchError ? (' ' + describeFileFetchError(fetchError, documentMeta)) : '');
+    });
+  }
+  startDownload();
 }
 
 function generateStudyGuideFromStudioDoc(onDone) {
@@ -14758,62 +20140,82 @@ function generateStudyGuideFromStudioDoc(onDone) {
     }
     var promptSourceText = sourceText;
     if (!isReferenceLibraryUrl(sourceUrl)) {
-      var referenceContextText = referenceLibraryGeneratedContext();
+      var referenceContextText = referenceLibraryGeneratedContext(null, editingReferenceDocs);
       if (referenceContextText) {
         promptSourceText += '\n\n--- MATERIAL GENERATED FROM THE REFERENCE LIBRARY ---\n\n' + referenceContextText;
       }
     }
-    var prompt = buildStudioHtmlPrompt(promptSourceText, editingStudyDocImages.length);
-    var fullResponse = '';
-    var streamedCharacters = 0;
-    var streamFinished = false;
-    var lastPreviewRenderedAt = 0;
-    // Raw HTML rewriting of a long document can take many minutes - allow 15.
-    var streamWatchdog = setTimeout(function() {
+    var prompt = buildStudioHtmlPrompt(promptSourceText, editingStudyDocImages);
+    runStudioGenerationStream(prompt, '✨ AI is writing the generated content as HTML (step 2 of 2)', onDone);
+  });
+}
+
+/** One streaming run whose answer becomes the generated content of the open
+ *  document. Used by the first generation and by "Regenerate with feedback". */
+function runStudioGenerationStream(prompt, runningLabel, onDone) {
+  setStudioActionButtonsBusy(true);
+  var generationDocUrl = studioCurrentDocUrl;
+  var genStatusEl = el('sd-gen-status');
+  var streamPreviewFrame = el('sd-gen-preview');
+  if (genStatusEl) genStatusEl.textContent = '⏳ writing HTML…';
+  if (streamPreviewFrame) streamPreviewFrame.srcdoc = '';
+  var fullResponse = '';
+  var streamedCharacters = 0;
+  var streamFinished = false;
+  var lastPreviewRenderedAt = 0;
+  // Raw HTML rewriting of a long document can take many minutes - allow 15.
+  var streamWatchdog = setTimeout(function() {
+    if (streamFinished) return;
+    streamFinished = true;
+    setStudioActionButtonsBusy(false);
+    setStudioStatus('❌ The AI did not finish within 15 minutes. Nothing was replaced - try again.', 'warn');
+    if (genStatusEl) genStatusEl.textContent = '';
+    tool.notify('AI generation timed out. Try again.', 'error');
+    if (onDone) onDone('stream-timeout');
+  }, 15 * 60 * 1000);
+  startStudioStatusTicker(runningLabel + ' · source: ' + (lastStudioTextSourceLabel || 'the document'), function() {
+    renderStudioHtmlStreamPreview(fullResponse);
+    return formatCount(streamedCharacters) + ' characters of HTML';
+  });
+  tool.requestAIStream(prompt, null, {
+    onToken: function(token) {
+      if (streamFinished) return;
+      fullResponse += token;
+      streamedCharacters += token.length;
+      if (genStatusEl) genStatusEl.textContent = '⏳ writing HTML… ' + formatCount(streamedCharacters) + ' chars';
+      // Throttled live render (~1/second) so the preview grows while the AI writes.
+      var previewNow = Date.now();
+      if (previewNow - lastPreviewRenderedAt > 900) {
+        lastPreviewRenderedAt = previewNow;
+        renderStudioHtmlStreamPreview(fullResponse);
+      }
+    },
+    onComplete: function() {
       if (streamFinished) return;
       streamFinished = true;
-      setStudioActionButtonsBusy(false);
-      setStudioStatus('❌ The AI did not finish within 15 minutes. Nothing was replaced - try again.', 'warn');
-      if (genStatusEl) genStatusEl.textContent = '';
-      tool.notify('AI generation timed out. Try again.', 'error');
-      if (onDone) onDone('stream-timeout');
-    }, 15 * 60 * 1000);
-    if (genStatusEl) genStatusEl.textContent = '⏳ writing HTML…';
-    startStudioStatusTicker('✨ AI is writing the generated content as HTML (step 2 of 2 · source: ' + textSourceLabel + ')', function() {
-      renderStudioHtmlStreamPreview(fullResponse);
-      return formatCount(streamedCharacters) + ' characters of HTML';
-    });
-    tool.requestAIStream(prompt, null, {
-      onToken: function(token) {
-        if (streamFinished) return;
-        fullResponse += token;
-        streamedCharacters += token.length;
-        if (genStatusEl) genStatusEl.textContent = '⏳ writing HTML… ' + formatCount(streamedCharacters) + ' chars';
-        // Throttled live render (~1/second) so the preview grows while the AI writes.
-        var previewNow = Date.now();
-        if (previewNow - lastPreviewRenderedAt > 900) {
-          lastPreviewRenderedAt = previewNow;
-          renderStudioHtmlStreamPreview(fullResponse);
-        }
-      },
-      onComplete: function() {
-        if (streamFinished) return;
-        streamFinished = true;
-        clearTimeout(streamWatchdog);
-        finishStudioHtmlGeneration(fullResponse, onDone);
-      },
-      onError: function(streamError) {
-        if (streamFinished) return;
-        streamFinished = true;
-        clearTimeout(streamWatchdog);
+      clearTimeout(streamWatchdog);
+      // The answer belongs to the document that was open when the run started.
+      if (studioCurrentDocUrl !== generationDocUrl) {
         setStudioActionButtonsBusy(false);
-        setStudioStatus('❌ Generation failed: ' + describeAiChannelFailure(streamError), 'warn');
+        setStudioStatus('⚠️ Another document was opened while the AI was writing - the answer was discarded.', 'warn');
         if (genStatusEl) genStatusEl.textContent = '';
-        if (streamPreviewFrame) streamPreviewFrame.srcdoc = '';
-        tool.notify('Generation failed: ' + describeAiChannelFailure(streamError), 'error');
-        if (onDone) onDone(streamError);
+        tool.notify('Generation discarded: the open document changed while the AI was writing.', 'warning');
+        if (onDone) onDone('doc-changed');
+        return;
       }
-    });
+      finishStudioHtmlGeneration(fullResponse, onDone);
+    },
+    onError: function(streamError) {
+      if (streamFinished) return;
+      streamFinished = true;
+      clearTimeout(streamWatchdog);
+      setStudioActionButtonsBusy(false);
+      setStudioStatus('❌ Generation failed: ' + describeAiChannelFailure(streamError), 'warn');
+      if (genStatusEl) genStatusEl.textContent = '';
+      if (streamPreviewFrame) streamPreviewFrame.srcdoc = '';
+      tool.notify('Generation failed: ' + describeAiChannelFailure(streamError), 'error');
+      if (onDone) onDone(streamError);
+    }
   });
 }
 
@@ -14837,7 +20239,9 @@ function finishStudioHtmlGeneration(rawResponse, onDone) {
     if (onDone) onDone('empty');
     return;
   }
-  var generatedHtml = replaceStudioImageTokens(raw);
+  var placementResult = verifyAndRepairStudioPicturePlacement(raw);
+  if (studioCurrentDocUrl) studioPlacementReports[studioCurrentDocUrl] = placementResult.report;
+  var generatedHtml = replaceStudioImageTokens(placementResult.html);
   // Generated content is its OWN document-level artefact. It is never written
   // into the student Study Content directly - the author promotes it with
   // "⬆ Add to Study Content" when it is good enough.
@@ -14847,16 +20251,25 @@ function finishStudioHtmlGeneration(rawResponse, onDone) {
     sourceLabel: lastStudioTextSourceLabel || '',
     docName: readableFileName(studioCurrentDocUrl)
   };
+  // A regeneration keeps the version it replaces, so the author can undo it.
+  rememberStudioGeneratedVersion(studioCurrentDocUrl);
   if (studioCurrentDocUrl) editingStudyDocGeneratedHtmlMap[studioCurrentDocUrl] = generatedEntry;
   studioGeneratedHtml = generatedHtml;
   // A reference document keeps its generated content in its own CMS object -
   // never in the curriculum record.
   if (studioCurrentDocUrl) saveGeneratedContentForReferenceDocument(studioCurrentDocUrl, generatedHtml, lastStudioTextSourceLabel);
   renderStudioGeneratedPreview();
+  renderStudioReviewPane();
+  renderStudioPlacementReportPanel();
   if (genStatusEl) genStatusEl.textContent = '✅ generated · ' + formatCount(generatedHtml.length) + ' chars';
   var imageCount = countHtmlImages(generatedHtml);
   var status = '✅ Generated content saved for this source document (' + formatCount(generatedHtml.length) + ' characters';
   if (imageCount) status += ', ' + imageCount + ' image(s) linked';
+  if (placementResult.report.total) {
+    status += ' · pictures: ' + placementResult.report.placed + ' placed, ' + placementResult.report.moved +
+      ' moved, ' + placementResult.report.inserted + ' inserted';
+    if (placementResult.report.duplicates) status += ', ' + placementResult.report.duplicates + ' duplicate(s) removed';
+  }
   status += '). It is NOT student-facing yet - use “⬆ Add to Study Content” in the Generated tab.';
   if (generatedHtml.length > 700 * 1024) {
     status += ' ⚠️ ' + Math.round(generatedHtml.length / 1024) + ' KB - close to the Firestore 1 MB document limit.';
@@ -15466,11 +20879,22 @@ function bindEvents() {
   // Study Document Studio buttons (all guarded - the drawer markup may be
   // absent in stale harness snapshots).
   var btnUploadDocument = el('btn-upload-document');
-  if (btnUploadDocument) btnUploadDocument.addEventListener('click', openUploadDocumentDialog);
+  if (btnUploadDocument) btnUploadDocument.addEventListener('click', function() {
+    confirmLessonDocumentCopyright(openUploadDocumentDialog);
+  });
   var btnAddDocument = el('btn-add-document');
-  if (btnAddDocument) btnAddDocument.addEventListener('click', function() { openPdfEditor('studyDoc', null); });
+  if (btnAddDocument) btnAddDocument.addEventListener('click', function() {
+    confirmLessonDocumentCopyright(function() { openPdfEditor('studyDoc', null); });
+  });
+  // Rephrasing rules: saved with the curriculum, or the built-in text.
+  var btnSaveRephrasePrompt = el('btn-save-rephrase-prompt');
+  if (btnSaveRephrasePrompt) btnSaveRephrasePrompt.addEventListener('click', saveRephrasePromptFromSettings);
+  var btnResetRephrasePrompt = el('btn-reset-rephrase-prompt');
+  if (btnResetRephrasePrompt) btnResetRephrasePrompt.addEventListener('click', resetRephrasePromptToDefault);
   var btnSdAddImage = el('btn-sd-add-image');
   if (btnSdAddImage) btnSdAddImage.addEventListener('click', addStudyDocImageDirectly);
+  var btnSdManualCrop = el('btn-sd-manual-crop');
+  if (btnSdManualCrop) btnSdManualCrop.addEventListener('click', openStudioCropTool);
   arrangeStudioDrawerLayout();
   var btnSdGenerateImage = el('btn-sd-generate-image');
   if (btnSdGenerateImage) btnSdGenerateImage.addEventListener('click', openGenerateImageForSelection);
@@ -15521,6 +20945,8 @@ function bindEvents() {
   if (btnSdExtract) btnSdExtract.addEventListener('click', function() { extractStudyDocImages(); });
   var btnSdGenerate = el('btn-sd-generate');
   if (btnSdGenerate) btnSdGenerate.addEventListener('click', startStudioGenerateNewContent);
+  var btnSdCheckPlacement = el('btn-sd-check-placement');
+  if (btnSdCheckPlacement) btnSdCheckPlacement.addEventListener('click', runStudioPlacementCheck);
   var btnSdRefreshPreview = el('btn-sd-refresh-preview');
   if (btnSdRefreshPreview) btnSdRefreshPreview.addEventListener('click', function() { loadStudioDocumentPreview(); });
   var btnSdOpenDoc = el('btn-sd-open-doc');
@@ -15569,10 +20995,32 @@ function bindEvents() {
   if (btnSdTabDocument) btnSdTabDocument.addEventListener('click', function() { switchStudioTab('document'); });
   var btnSdTabContent = el('btn-sd-tab-content');
   if (btnSdTabContent) btnSdTabContent.addEventListener('click', function() { switchStudioTab('content'); });
+  var btnSdTabReview = el('btn-sd-tab-review');
+  if (btnSdTabReview) btnSdTabReview.addEventListener('click', function() { switchStudioTab('review'); });
   var btnSdTabPictures = el('btn-sd-tab-pictures');
   if (btnSdTabPictures) btnSdTabPictures.addEventListener('click', function() { switchStudioTab('pictures'); });
   var btnSdQuality = el('btn-sd-quality');
-  if (btnSdQuality) btnSdQuality.addEventListener('click', runStudyContentQualityCheck);
+  if (btnSdQuality) btnSdQuality.addEventListener('click', openStudioReviewAndCheck);
+  var btnSdReviewCheck = el('btn-sd-review-check');
+  if (btnSdReviewCheck) btnSdReviewCheck.addEventListener('click', startStudioReviewCheck);
+  var btnSdReviewSend = el('btn-sd-review-send');
+  if (btnSdReviewSend) btnSdReviewSend.addEventListener('click', sendStudioReviewMessage);
+  var btnSdReviewRegenerate = el('btn-sd-review-regenerate');
+  if (btnSdReviewRegenerate) btnSdReviewRegenerate.addEventListener('click', regenerateStudioFromReview);
+  var btnSdReviewUndo = el('btn-sd-review-undo');
+  if (btnSdReviewUndo) btnSdReviewUndo.addEventListener('click', undoStudioGeneratedVersion);
+  var btnSdReviewClearChat = el('btn-sd-review-clear-chat');
+  if (btnSdReviewClearChat) btnSdReviewClearChat.addEventListener('click', clearStudioReviewChat);
+  var sdReviewInput = el('sd-review-input');
+  if (sdReviewInput) {
+    // Enter sends, Shift+Enter starts a new line - the usual chat habit.
+    sdReviewInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendStudioReviewMessage();
+      }
+    });
+  }
   var generatedViewButtons = document.querySelectorAll('#sd-gen-view [data-sd-gen-view]');
   for (var generatedViewIndex = 0; generatedViewIndex < generatedViewButtons.length; generatedViewIndex++) {
     generatedViewButtons[generatedViewIndex].addEventListener('click', function() {
@@ -15622,6 +21070,13 @@ function bindEvents() {
       if (viewTarget) { openStudioImageView(parseInt(viewTarget.getAttribute('data-sd-view'), 10)); return; }
       var regenTarget = target.closest('[data-sd-regen]');
       if (regenTarget) { openStudioRegenerateDialog([parseInt(regenTarget.getAttribute('data-sd-regen'), 10)]); return; }
+      var pinTarget = target.closest('[data-sd-pin]');
+      if (pinTarget) { openStudioPicturePinDialog(parseInt(pinTarget.getAttribute('data-sd-pin'), 10)); return; }
+      var moveTarget = target.closest('[data-sd-move]');
+      if (moveTarget) {
+        moveStudioPicture(parseInt(moveTarget.getAttribute('data-sd-move'), 10), parseInt(moveTarget.getAttribute('data-direction'), 10) || 1);
+        return;
+      }
       var roleTarget = target.closest('[data-sd-role]');
       if (roleTarget) { toggleStudioImageRole(parseInt(roleTarget.getAttribute('data-sd-role'), 10)); return; }
       var versionTarget = target.closest('[data-sd-version]');
@@ -15745,18 +21200,6 @@ function bindEvents() {
   });
   el('btn-confirm-no').addEventListener('click', function() { hideConfirm(); });
 
-  var toolbar = el('html-editor-toolbar');
-  if (toolbar) {
-    toolbar.addEventListener('click', function(e) {
-      var btn = e.target.closest('button');
-      if (!btn) return;
-      var cmd = btn.getAttribute('data-cmd');
-      if (cmd === 'createlink') { showLinkUrlInput(); }
-      else if (cmd) { execCmd(cmd, btn.getAttribute('data-val') || null); }
-      el('html-editor-content').focus();
-    });
-  }
-
   el('modal-overlay').addEventListener('click', function(e) { if (e.target === el('modal-overlay')) closeSectionEditor(); });
 
   var backdrop = el('sub-modal-backdrop');
@@ -15780,8 +21223,6 @@ function bindEvents() {
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-      var distributeOverlay = el('ref-distribute-overlay');
-      if (distributeOverlay && distributeOverlay.style.display !== 'none') { closeReferenceDistributeDialog(); return; }
       var referenceSplitDrawer = el('ref-split-drawer');
       if (referenceSplitDrawer && referenceSplitDrawer.classList.contains('sd-drawer-open')) { closeReferenceSplitter(); return; }
       var studioDrawer = el('sd-studio-drawer');
@@ -15831,7 +21272,7 @@ function startCurriculumTool(val, fields) {
       { value: 'vision', label: 'AI vision only (needs Allow AI Vision)' },
       { value: 'local', label: 'Local detection only (no AI cost)' }
     ], hint: 'Who decides where each picture is. AI vision reads the rendered page and decides whether nearby fragments are ONE picture or several; it needs the Allow AI Vision channel and costs model tokens per page. Local detection uses the PDF image objects plus a pixel scan (free, but cannot judge content).' },
-    { name: 'visionPageMaxSide', label: 'AI Vision Page Size (px)', type: 'text', default: '1600', severity: 'optional', hint: 'Longest side of the page image sent to AI vision (600-2048). 1600 is sharper for complex layouts; smaller is cheaper and faster.' },
+    { name: 'visionPageMaxSide', label: 'AI Vision Page Size (px)', type: 'text', default: '1600', severity: 'optional', hint: 'Longest side (width or height, whichever is bigger) of the page image sent to AI vision: 600-4096. 1600 is the default; 2560-4096 are sharper for small pictures but cost more and are slower.' },
     { name: 'visionMaxRegions', label: 'AI Vision Max Pictures per Page', type: 'text', default: '30', severity: 'optional', hint: 'Upper bound of picture boxes the model may return for one page (5-50).' },
     { name: 'referenceContextMaxChars', label: 'Reference Context Budget', type: 'text', default: '40000', severity: 'optional', hint: 'How many characters of the content generated from the reference library may be added as context when the REAL study content is generated. The reference documents and their generated content are stored in their own CMS objects, never in the curriculum.' },
     { name: 'ocrLanguage', label: 'OCR Language', type: 'select', default: 'eng', severity: 'optional', options: [

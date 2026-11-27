@@ -1,4 +1,4 @@
-<!-- html build 2026-11-18-81 -->
+<!-- html build 2026-11-18-94 -->
 <div id="app">
   <!-- HEADER -->
   <header class="app-header">
@@ -58,6 +58,24 @@
 
   <!-- TAB: SETTINGS -->
   <section class="main-tab-panel" data-main-panel="settings">
+    <div class="settings-card">
+      <div class="settings-header">
+        <strong>✍️ AI rephrasing rules</strong>
+        <span class="form-hint">The complete editing contract of every AI rewrite: coverage, rewriting, originality, document shape and self-check. It is sent with every Reference document → ✨ Generate.</span>
+      </div>
+      <div class="settings-body">
+        <div class="form-group">
+          <label class="form-label" for="curriculum-rephrase-prompt">How the AI must rewrite a document</label>
+          <textarea class="form-input form-textarea" id="curriculum-rephrase-prompt" rows="22" spellcheck="false" style="min-height:380px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.55" title="The full editing contract sent to the AI with every rewrite. It is saved with this curriculum; when nothing is saved the built-in contract is used."></textarea>
+          <span class="form-hint" id="curriculum-rephrase-state">Nothing saved yet - the built-in contract is shown.</span>
+          <span class="form-hint">The technical output rules (HTML fragment only, allowed tags, no styles or scripts) are always added by the tool; up to 20,000 characters are stored.</span>
+          <div class="ref-split-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-save-rephrase-prompt" title="Save these rules with this curriculum">💾 Save these rules</button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-reset-rephrase-prompt" title="Delete the saved rules and use the built-in ones again">↩ Restore the built-in rules</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="settings-card">
       <div class="settings-header">
         <strong>⚙️ Settings</strong>
@@ -228,81 +246,152 @@
   </div>
 
   <!-- REFERENCE DOCUMENT SPLITTER DRAWER -->
-  <div class="sd-drawer" id="ref-split-drawer" aria-label="Reference document splitter">
+  <div class="sd-drawer" id="ref-split-drawer" data-step="split" aria-label="Reference document splitter">
     <div class="sd-drawer-header">
       <div class="ref-split-heading">
         <div class="sd-drawer-title" id="ref-split-title">Reference document</div>
-        <div class="ref-split-sub">Split this document once, then send the parts to lessons or generate content from a part.</div>
+        <div class="ref-split-sub">Split once → ✨ generate the content of a part here → 📤 send the ready parts to lessons.</div>
       </div>
       <button type="button" class="sd-drawer-close" id="btn-ref-split-close" title="Close">✕</button>
     </div>
     <div class="sd-drawer-body">
       <div class="ref-split-meta" id="ref-split-meta">Reading the page count…</div>
 
-      <div class="ref-split-card">
-        <div class="ref-split-card-title">✂️ Create a part</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="ref-split-from">From page</label>
-            <input class="form-input" type="number" id="ref-split-from" min="1" value="1">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="ref-split-to">To page</label>
-            <input class="form-input" type="number" id="ref-split-to" min="1" value="10">
-          </div>
-        </div>
-        <div class="ref-split-actions">
-          <button type="button" class="btn btn-primary btn-sm" id="btn-ref-split-range">✂️ Split range &amp; upload</button>
-          <span class="ref-split-inline">
-            <label class="form-label" for="ref-split-every" style="margin:0">Every</label>
-            <input class="form-input ref-split-every" type="number" id="ref-split-every" min="1" value="10" title="Pages per part">
-            <button type="button" class="btn btn-outline btn-sm" id="btn-ref-split-equal">⚡ Split whole document</button>
-          </span>
-        </div>
-        <div class="form-hint">Each part becomes its own small PDF in CMS storage. Nothing is written to a lesson until you tick the parts and send them.</div>
-        <div class="ref-split-status" id="ref-split-status"></div>
+      <div class="ref-split-steps" role="tablist" aria-label="Split steps">
+        <button type="button" class="ref-split-step is-active" data-ref-split-step="split" title="Step 1 - cut the document into parts">
+          <span class="ref-split-step-num">1</span> ✂️ Split
+        </button>
+        <button type="button" class="ref-split-step" data-ref-split-step="parts" title="Step 2 - review the parts you created">
+          <span class="ref-split-step-num">2</span> 📦 Parts <span class="ref-split-step-count" id="ref-split-step-parts-count">0</span>
+        </button>
+        <button type="button" class="ref-split-step" data-ref-split-step="send" title="Step 3 - give the parts to lessons">
+          <span class="ref-split-step-num">3</span> 📤 Send to lessons
+        </button>
       </div>
 
-      <div class="ref-split-parts-head">
-        <strong>Parts</strong>
-        <span class="ref-split-parts-tools">
-          <span id="ref-split-parts-count">0 part(s)</span>
-          <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-select-all" title="Tick / untick every part">✓ Select all</button>
-        </span>
+      <div class="ref-split-status" id="ref-split-status"></div>
+
+      <div class="ref-split-step-panel is-active" id="ref-split-step-panel-split">
+        <div class="ref-split-card">
+          <div class="ref-split-card-title">✂️ Create parts</div>
+          <div class="ref-split-methods" role="tablist" aria-label="How to split">
+            <button type="button" class="ref-split-method is-active" data-ref-split-method="pick" title="Choose the pages you can see">🖼️ Pick pages</button>
+            <button type="button" class="ref-split-method" data-ref-split-method="chunk" title="Cut the whole document into equal parts">🔢 Every N pages</button>
+            <button type="button" class="ref-split-method" data-ref-split-method="range" title="Type the page numbers">⌨️ Page range</button>
+          </div>
+
+          <div class="ref-split-panel is-active" id="ref-split-panel-pick">
+            <div class="form-hint">Click a page to select it - each run of neighbouring pages becomes one part. <strong>#1, #2…</strong> marks a page that is already inside that split, <strong>IGNORED</strong> marks a page you skipped (a table of contents, a cover). 🚫 ignores a page, ↩ makes it available again, 🔍 opens the full-size preview.</div>
+            <div class="ref-split-pages-head">
+              <strong>Pages</strong>
+              <span class="ref-split-parts-tools">
+                <span id="ref-split-page-selection">0 page(s) selected</span>
+                <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-pages-all" title="Select every page that is not used and not ignored">✓ Select available</button>
+                <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-pages-clear" title="Clear the page selection">Clear</button>
+              </span>
+            </div>
+            <div class="ref-page-filters" role="tablist" aria-label="Page filter">
+              <button type="button" class="ref-page-filter is-active" data-ref-page-filter="all" title="Show every page">All <span class="ref-page-filter-count" id="ref-filter-count-all">0</span></button>
+              <button type="button" class="ref-page-filter" data-ref-page-filter="available" title="Pages that are neither used nor ignored">Available <span class="ref-page-filter-count" id="ref-filter-count-available">0</span></button>
+              <button type="button" class="ref-page-filter" data-ref-page-filter="ignored" title="Pages you marked as ignored">Ignored <span class="ref-page-filter-count" id="ref-filter-count-ignored">0</span></button>
+              <button type="button" class="ref-page-filter" data-ref-page-filter="used" title="Pages that already belong to a split">Used <span class="ref-page-filter-count" id="ref-filter-count-used">0</span></button>
+            </div>
+            <div class="ref-split-pages" id="ref-split-pages-grid"></div>
+            <div class="ref-split-pages-more">
+              <button type="button" class="btn btn-outline btn-sm" id="btn-ref-split-pages-more">Show more pages</button>
+              <span class="form-hint" id="ref-split-pages-note">Open a document to see its pages.</span>
+            </div>
+            <div class="ref-split-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-ref-split-selected" title="Cut every run of consecutive selected pages into its own part">✂️ Select pages to split</button>
+            </div>
+          </div>
+
+          <div class="ref-split-panel" id="ref-split-panel-chunk">
+            <div class="form-hint">Cut the whole document into equal parts - one part every N pages.</div>
+            <div class="form-row">
+              <div class="form-group ref-split-every-group">
+                <label class="form-label" for="ref-split-every">Pages per part</label>
+                <input class="form-input ref-split-every" type="number" id="ref-split-every" min="1" value="10" title="Pages per part">
+              </div>
+            </div>
+            <div class="form-hint" id="ref-split-chunk-summary">Enter how many pages each part should hold.</div>
+            <div class="ref-split-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-ref-split-equal">⚡ Split whole document &amp; upload</button>
+            </div>
+          </div>
+
+          <div class="ref-split-panel" id="ref-split-panel-range">
+            <div class="form-hint">Create ONE part from the pages you type.</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="ref-split-from">From page</label>
+                <input class="form-input" type="number" id="ref-split-from" min="1" value="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="ref-split-to">To page</label>
+                <input class="form-input" type="number" id="ref-split-to" min="1" value="10">
+              </div>
+            </div>
+            <div class="ref-split-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-ref-split-range">✂️ Split range &amp; upload</button>
+            </div>
+          </div>
+
+          <div class="form-hint">Each part becomes its own small PDF in CMS storage. Nothing is written to a lesson until you send the parts in step 3.</div>
+        </div>
       </div>
-      <div class="ref-split-parts" id="ref-split-parts-list"></div>
-      <div class="ref-split-empty" id="ref-split-empty">No parts yet. Choose a page range above and press "Split range &amp; upload".</div>
+
+      <div class="ref-split-step-panel" id="ref-split-step-panel-parts">
+        <div class="ref-split-card">
+          <div class="ref-split-parts-head">
+            <strong>📦 Ready parts</strong>
+            <span class="ref-split-parts-tools">
+              <span id="ref-split-parts-count">0 part(s)</span>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-select-all" title="Tick / untick every part">✓ Select all</button>
+            </span>
+          </div>
+          <div class="form-hint">Parts are numbered <strong>by page order</strong> (the same # is shown on their pages). Tick the parts you want to give to lessons. ✨ Generate prepares the content of a part here, once - every lesson then uses it as reference material. The 📚 chip shows how many lessons already hold a part; 👁 opens the PDF, 🗑 deletes the part.</div>
+          <div class="ref-split-parts" id="ref-split-parts-list"></div>
+          <div class="ref-split-empty" id="ref-split-empty">No parts yet. Use step 1 to split the document.</div>
+          <div class="ref-split-actions">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-ref-split-more">← Split more</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-ref-split-send" title="Match the ticked parts with lessons">📤 Send selected parts to lessons →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ref-split-step-panel" id="ref-split-step-panel-send">
+        <div class="ref-split-send">
+          <div class="ref-split-send-col">
+            <div class="ref-split-send-head">
+              <strong id="ref-split-send-parts-title">📦 Parts to send</strong>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-send-change" title="Back to the parts list">← Change</button>
+            </div>
+            <div class="ref-split-send-parts" id="ref-split-send-parts"></div>
+          </div>
+          <div class="ref-split-send-col">
+            <div class="ref-split-send-head">
+              <strong id="ref-split-send-lessons-title">📚 Lessons that receive them</strong>
+              <span class="ref-split-parts-tools">
+                <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-send-all">Select all</button>
+                <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-send-none">Clear</button>
+              </span>
+            </div>
+            <input class="form-input ref-dist-filter" id="ref-split-send-filter" placeholder="Filter lessons…">
+            <div class="ref-dist-lessons" id="ref-split-send-lessons"></div>
+          </div>
+        </div>
+        <div class="ref-split-send-summary" id="ref-split-send-summary">Tick the lessons that should receive these parts.</div>
+        <div class="ref-split-actions">
+          <button type="button" class="btn btn-primary" id="btn-ref-split-send-apply" disabled>📚 Add parts to lessons</button>
+        </div>
+      </div>
     </div>
     <div class="sd-drawer-footer">
       <button type="button" class="btn btn-outline" id="btn-ref-split-done">Close</button>
-      <button type="button" class="btn btn-primary" id="btn-ref-split-send" title="Add the ticked parts to the reference files of the lessons you choose">📤 Send selected parts to lessons…</button>
     </div>
   </div>
   <div class="sd-drawer-backdrop" id="ref-split-backdrop"></div>
-
-  <!-- SEND REFERENCE PARTS TO LESSONS -->
-  <div class="modal-overlay" id="ref-distribute-overlay" style="display:none">
-    <div class="modal" style="max-width:660px">
-      <div class="modal-header">
-        <h3>📤 Send reference parts to lessons</h3>
-        <button class="btn-icon modal-close" id="btn-ref-distribute-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-hint" id="ref-distribute-summary"></div>
-        <input class="form-input ref-dist-filter" id="ref-dist-filter" type="search" placeholder="Filter lessons by name or section…">
-        <div class="ref-dist-tools">
-          <button type="button" class="btn btn-sm btn-outline" id="btn-ref-distribute-all">Select all</button>
-          <button type="button" class="btn btn-sm btn-outline" id="btn-ref-distribute-none">Clear</button>
-          <span class="form-hint" style="margin:0">The parts are added to each lesson's reference files - existing ones are kept.</span>
-        </div>
-        <div class="ref-dist-lessons" id="ref-distribute-lessons"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" id="btn-ref-distribute-cancel">Cancel</button>
-        <button class="btn btn-primary" id="btn-ref-distribute-apply">Add to selected lessons</button>
-      </div>
-    </div>
-  </div>
 
   <!-- LESSON DOCUMENTS BACKUP MODAL -->
   <div class="modal-overlay" id="lesson-backup-overlay" style="display:none">
@@ -442,7 +531,7 @@
           </div>
         </div>
         <div class="managed-list-items" id="pdf-list-all"></div>
-        <span class="form-hint">✅ Ready = your processed file, shown to students and used for AI content generation. 🧭 Sample = an outside sample used only to create your own Ready document. ✏️ edits a document (role, visibility, URL, delete). ⚙️ processes a document - extracts and uploads its images, then generates the study content. Deleting never affects content already generated.</span>
+        <span class="form-hint">✅ Ready = your processed file, shown to students and used for AI content generation. Outside or third-party source material belongs in 📚 Reference documents (curriculum level): upload it there once, prepare the parts with ✨ Generate, then send them to this lesson. ✏️ edits a document, ⚙️ processes it, and deleting never affects content already generated.</span>
       </div>
     </div>
     <div class="lesson-tab-panel" data-lesson-panel="references">
@@ -452,7 +541,7 @@
           <button type="button" class="btn btn-sm btn-primary" id="btn-add-reference-doc" title="Copy a page range of a main reference document into this lesson">➕ Add from Reference Library</button>
         </div>
         <div class="managed-list-items" id="reference-docs-list"></div>
-        <span class="form-hint">Reference extracts used only for AI generation: pick a main reference document and the pages this lesson needs. The selected pages are copied unchanged into a smaller PDF and added to this lesson.</span>
+        <span class="form-hint">Reference parts sent from the curriculum reference library (⚙️ Process → Parts → 📤 Send … to lessons) appear here. They are AI context only: the ✓ AI switch decides whether a part feeds this lesson's generation. The PDFs stay in CMS storage - nothing is copied into the lesson.</span>
       </div>
     </div>
     <div class="lesson-tab-panel" data-lesson-panel="studyHtml">
@@ -550,6 +639,11 @@
               <span class="sd-tab-icon" aria-hidden="true">⇔</span>
               <span class="sd-tab-text"><strong>Side by Side</strong><em>Source next to Generated</em></span>
             </button>
+            <button type="button" class="sd-tab" id="btn-sd-tab-review" role="tab" aria-selected="false">
+              <span class="sd-tab-icon" aria-hidden="true">🔍</span>
+              <span class="sd-tab-text"><strong>Review</strong><em>Copyright check &amp; chat</em></span>
+              <span class="sd-tab-count sd-review-tab-risk" id="sd-review-tab-count" style="display:none">✓</span>
+            </button>
             <button type="button" class="sd-tab" id="btn-sd-tab-pictures" role="tab" aria-selected="false">
               <span class="sd-tab-icon" aria-hidden="true">🖼</span>
               <span class="sd-tab-text"><strong>Pictures</strong><em>Real and Source pictures</em></span>
@@ -564,7 +658,8 @@
             <span class="sd-tab-actions" data-tab-group="content">
               <button type="button" class="sd-btn sd-btn-primary" id="btn-sd-generate" title="Capture the document's pictures when the gallery is empty, then let AI write the Generated version (nothing student-facing changes)">✨ Generate New Content</button>
               <span class="sd-toolbar-divider" aria-hidden="true"></span>
-              <button type="button" class="sd-icon-btn" id="btn-sd-quality" title="Quality Check: compare the source and the generated content - coverage, similarity (copyright risk) and unverifiable additions" aria-label="Quality Check">🔍</button>
+              <button type="button" class="sd-icon-btn" id="btn-sd-quality" title="Review: compare the source with the generated content, find copyright-risk passages, chat about the document and regenerate it" aria-label="Review">🔍</button>
+              <button type="button" class="sd-icon-btn" id="btn-sd-check-placement" title="Check picture placement: every extracted picture must appear exactly once, in page order, next to the text it belongs to. Fixes missing, duplicated and misplaced pictures." aria-label="Check picture placement">🖼</button>
               <button type="button" class="sd-icon-btn" id="btn-sd-publish" title="Add to Study Content: append this generated content to the lesson Study Content (student-facing)" aria-label="Add to Study Content">⬆</button>
               <button type="button" class="sd-icon-btn" id="btn-sd-replace-study" title="Replace: overwrite the lesson Study Content with this generated content" aria-label="Replace Study Content">⇄</button>
             </span>
@@ -607,6 +702,11 @@
               <button type="button" class="sd-icon-btn" id="btn-sd-store-copy" title="Import to CMS: download this outside document, store a copy in CMS storage (Firebase) and use the stored copy from now on" aria-label="Import to CMS" hidden>☁</button>
               <button type="button" class="sd-icon-btn" id="btn-sd-download-pdf" title="Download File: save the source document to your device (any size, any type)" aria-label="Download File">⬇</button>
             </span>
+            <span class="sd-tab-actions" data-tab-group="review">
+              <button type="button" class="sd-btn sd-btn-primary" id="btn-sd-review-check" title="Compare the source text with the generated content and list every passage that is still too close to the original">🔍 Check similarity</button>
+              <span class="sd-toolbar-divider" aria-hidden="true"></span>
+              <span class="sd-review-badge" title="Temporary: the report and the chat belong to this document while the drawer is open">🧪 temporary</span>
+            </span>
             <span class="sd-tab-actions" data-tab-group="pictures">
               <span class="sd-language sd-detection-control">
                 <label class="sd-language-label" for="sd-picture-detection" title="How pictures are found: Local uses PDF.js only (no AI cost), AI vision finds drawings and complex layouts better">🔎 Find</label>
@@ -616,18 +716,23 @@
                 </select>
               </span>
               <span class="sd-language sd-detection-control" id="sd-vision-size-control">
-                <label class="sd-language-label" for="sd-vision-page-size" title="Resolution of the page image sent to AI vision. Larger finds small pictures in dense layouts and costs more">AI size</label>
-                <select class="sd-select" id="sd-vision-page-size" title="Resolution of the page image sent to AI vision (larger = sharper for small pictures, more expensive).">
+                <label class="sd-language-label" for="sd-vision-page-size" title="The page picture sent to AI vision. This is the length of its LONGER side (width or height, whichever is bigger); the other side follows the page shape. Bigger = sharper crops of small pictures, more AI tokens.">Page image (long side)</label>
+                <select class="sd-select" id="sd-vision-page-size" title="Longer side of the page picture sent to AI vision in pixels (800-4096). 1600 is the default; 2560-4096 are sharper for small pictures but cost more and are slower.">
                   <option value="">Tool default</option>
+                  <option value="800">800 px</option>
                   <option value="1200">1200 px</option>
                   <option value="1600">1600 px</option>
                   <option value="2048">2048 px</option>
+                  <option value="2560">2560 px</option>
+                  <option value="3072">3072 px</option>
+                  <option value="4096">4096 px</option>
                 </select>
               </span>
               <span class="sd-toolbar-divider" aria-hidden="true"></span>
               <button type="button" class="sd-btn" id="btn-sd-extract" title="Capture the pictures in this document: embedded images keep their original quality, drawings and illustrations are cropped from the page">🧩 Get Pictures</button>
               <span class="sd-toolbar-divider" aria-hidden="true"></span>
               <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-add-image" title="Upload an image to this document's pictures">🖼 Add Image</button>
+              <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-manual-crop" title="Crop from a page: show the page, drag the exact area with the mouse and save it as a picture - choose the page render size for extra sharpness">✂️ Crop from Page</button>
               <button type="button" class="sd-btn sd-btn-quiet" id="btn-sd-generate-image" title="Create the AI generated version of the selected pictures (select at least one picture first)">🎨 Generate Image</button>
               <span class="sd-toolbar-spacer" aria-hidden="true"></span>
               <button type="button" class="sd-mini-btn" id="btn-sd-select-all" title="Select or unselect every picture">☑ All</button>
@@ -664,7 +769,32 @@
               <span class="sd-image-role is-real">● Real</span> used directly in generated content
               <span class="sd-image-role is-source">◐ Source</span> needs a 🎨 generated version
             </div>
+            <div class="sd-placement-report" id="sd-placement-report" hidden></div>
             <div class="sd-images-grid" id="sd-images-grid"><div class="sd-empty">No pictures yet. Use “Get Pictures”, “Add Image”, or paste a screenshot with Ctrl+V.</div></div>
+          </section>
+          <section class="sd-pane" id="sd-pane-review">
+            <div class="sd-pane-head">
+              <span>Review · source vs generated</span>
+              <span class="sd-pane-tools"><span class="sd-muted" id="sd-review-compared"></span></span>
+            </div>
+            <div class="sd-review-body">
+              <div class="sd-review-report" id="sd-review-report"></div>
+              <div class="sd-review-chat">
+                <div class="sd-review-chat-head">
+                  <span>💬 Editor chat <span class="sd-muted">- ask, then regenerate with the answer</span></span>
+                  <button type="button" class="sd-mini-btn" id="btn-sd-review-clear-chat" title="Clear this document's review chat">🧹 Clear</button>
+                </div>
+                <div class="sd-review-chat-log" id="sd-review-chat-log"></div>
+                <div class="sd-review-compose">
+                  <textarea class="sd-review-input" id="sd-review-input" rows="3" placeholder="Ask about this document, e.g. “Rewrite section 2 so it stops mirroring the original wording” or “Make the examples more practical”"></textarea>
+                  <div class="sd-review-actions">
+                    <button type="button" class="sd-btn sd-btn-primary" id="btn-sd-review-send">💬 Ask</button>
+                    <button type="button" class="sd-btn" id="btn-sd-review-regenerate" title="Rewrite the whole generated document applying the report and this conversation">⚡ Regenerate with this feedback</button>
+                    <button type="button" class="sd-mini-btn" id="btn-sd-review-undo" title="Put the previous generated version back" hidden>↩ Previous version</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
       </main>
@@ -697,7 +827,7 @@
         <option value="answerKey">🔑 Answer Key</option>
         <option value="htmlDoc">🌐 Web Document</option>
       </select>
-      <span class="form-hint">Choose the document type. You can change the role (Ready / Sample) and the student visibility with the switches below.</span>
+      <span class="form-hint">Choose the document type. A new document is added as ✅ Ready; student visibility is set with the switch below.</span>
     </div>
     <div class="form-group" id="pdf-editor-role-group">
       <div class="doc-switch-row">

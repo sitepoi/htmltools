@@ -1,4 +1,4 @@
-/* build 2026-11-13-5 */
+/* build 2026-11-26-6 */
 
 /* =====================================================================
    RestaurantOrderTakingApp - application-level ACTIVE ORDERS BOARD
@@ -31,7 +31,7 @@
 
 /* Tool build stamp - MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    bump on EVERY code change so stale CMS uploads are detectable. */
-var TOOL_BUILD = '2026-11-13-5';
+var TOOL_BUILD = '2026-11-26-6';
 console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp starting...');
 
 (function () {
@@ -159,13 +159,19 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   /* Restaurant scope (D-ROTA-42): the settings object of THIS restaurant,
      the state of the slug lookup, and the counts behind the empty state. */
   var _restaurantSettings = null;
-  var _restaurantState = 'pending';  /* pending | ready | no-context | not-found | duplicate | error */
+  var _restaurantState = 'pending';  /* pending | ready | slug-only | no-context | not-found | error */
+  var _resolvedSlug = '';            /* the slug this board was identified by when no restaurant document is read */
+  var _slugOnlyScopeKeys = [];       /* slug candidates used to scope orders when no restaurant object is read */
+  var _rememberedRestaurantId = '';  /* object id of the restaurant this board serves - kept in the tool's own saved value */
+  var _saveRequested = false;        /* the learned id was already sent to the host for saving this session */
   var _instanceRestaurantReferences = []; /* restaurant ids read from the board record (one record per restaurant) */
   var _boardRecordCount = 0;         /* board records found on the application page */
   var _boardRecordSummaries = [];    /* their restaurant references, for the diagnostic message */
   var _boardRecordError = '';        /* why the board-record list could not be read */
   var _boardRecordNotice = '';       /* 'not-allowed' | 'disabled' - read skipped on purpose */
-  var _restaurantSlugSuggestions = []; /* restaurant slugs found when no board record exists */
+  var _rawOrdersList = [];            /* raw orders of the last load - reused by the diagnostics */
+  var _rawRestaurantList = null;      /* raw restaurants of the last read - reused by the diagnostics */
+  var _rawBoardRecordList = null;     /* raw board records of the last read - reused by the diagnostics */
   var _diagDone = false;             /* the reachability dump is printed once per boot */
   var _allOrders = [];               /* every order of the last load, before scoping */
   var _hiddenOrderCount = 0;         /* orders that belong to another restaurant */
@@ -188,6 +194,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     ordersDataCategory: '',         /* empty = use the category the orders were read from (e.g. orderData) */
     toolAppType: 'restaurant-order-taking-app-easyorder', /* the per-restaurant record this board runs in */
     readBoardRecords: true,        /* read this application's own records to find the restaurant (needs the type in allowedObjectTypes) */
+    rememberRestaurantId: true,    /* ask the host to save the learned restaurant id (needs allowRequestSave) */
     allowUnassignedOrders: false,  /* legacy escape hatch - off by default (cross-restaurant risk) */
     autoRefreshSeconds: 20,
     newOrderNotifications: true,
@@ -575,6 +582,12 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       for (var i = 0; i < identifiers.length; i++) {
         if (keys.indexOf(identifiers[i]) === -1) keys.push(identifiers[i]);
       }
+      return keys;
+    }
+    /* A slug-only board scopes by the slug it was identified by; no
+       restaurant document is read for that (D-ROTA-57). */
+    for (var s = 0; s < _slugOnlyScopeKeys.length; s++) {
+      if (keys.indexOf(_slugOnlyScopeKeys[s]) === -1) keys.push(_slugOnlyScopeKeys[s]);
     }
     return keys;
   }
@@ -616,7 +629,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
   function restaurantScopeReport() {
     return {
-      slug: _restaurantSettings ? restaurantSlugOf(_restaurantSettings) : '',
+      slug: _restaurantSettings ? restaurantSlugOf(_restaurantSettings) : _resolvedSlug,
       state: _restaurantState,
       keys: restaurantScopeKeys(),
       visible: _orders.length,
@@ -704,15 +717,39 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     return values;
   }
 
+  /* The same references WITHOUT lowercasing. CMS object ids are case
+     sensitive, so a get() must use the value exactly as stored while the
+     matching still compares normalized keys (D-ROTA-55). */
+  function restaurantReferenceValuesOf(source) {
+    var values = [];
+    function push(value) {
+      var raw = String(restaurantKeyOfValue(value) || '').trim();
+      if (!raw) return;
+      for (var i = 0; i < values.length; i++) {
+        if (normalizeSlug(values[i]) === normalizeSlug(raw)) return;
+      }
+      values.push(raw);
+    }
+    if (!source || typeof source !== 'object') return values;
+    var bags = collectBags(source);
+    for (var b = 0; b < bags.length; b++) {
+      for (var k = 0; k < RESTAURANT_KEY_FIELDS.length; k++) push(findKey(bags[b], RESTAURANT_KEY_FIELDS[k]));
+      for (var f = 0; f < RESTAURANT_SLUG_FIELDS.length; f++) push(findKey(bags[b], RESTAURANT_SLUG_FIELDS[f]));
+    }
+    if (source.slug) push(source.slug);
+    return values;
+  }
+
   function restaurantCandidates() {
     var candidates = [];
     function push(value, source, strong) {
-      var key = normalizeSlug(value);
+      var raw = String(value === undefined || value === null ? '' : value).trim();
+      var key = normalizeSlug(raw);
       if (!key) return;
       for (var i = 0; i < candidates.length; i++) {
         if (candidates[i].key === key) return;
       }
-      candidates.push({ key: key, source: source, strong: strong !== false });
+      candidates.push({ key: key, raw: raw, source: source, strong: strong !== false });
     }
 
     /* 1) the per-restaurant board record (strongest: the record IS this
@@ -749,7 +786,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     if (!toolAppType || route.objectType !== toolAppType) { done(); return; }
 
     function pushRecordReferences(record) {
-      var references = restaurantReferenceOf(record);
+      var references = restaurantReferenceValuesOf(record);
       for (var i = 0; i < references.length; i++) {
         if (_instanceRestaurantReferences.indexOf(references[i]) === -1) _instanceRestaurantReferences.push(references[i]);
       }
@@ -762,9 +799,11 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
           : null;
         if (!record) {
           console.warn('[RestaurantOrderTakingApp] the board record ' + route.objectId + ' could not be read - add ' + _cfg.toolAppType + ' to settings.allowedObjectTypes (role editor, scope shared) so the restaurant reference can be resolved from it. Falling back to the page address.');
+          _rawBoardRecordList = [];
           done();
           return;
         }
+        _rawBoardRecordList = [record];
         pushRecordReferences(record);
         done();
       });
@@ -791,6 +830,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     tool.requestObjects('query', { mainObjectType: _cfg.toolAppType }, function (err, result) {
       _boardRecordError = err ? String(err) : '';
       var list = (!err && result && Array.isArray(result.objects)) ? result.objects : [];
+      _rawBoardRecordList = list;
       _boardRecordCount = list.length;
       _boardRecordSummaries = [];
       for (var i = 0; i < list.length && i < 8; i++) {
@@ -825,19 +865,34 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     return names.length ? names : null;
   }
 
-  /* Slugs of the restaurants the tool can see. Used only when the board has
-     no restaurant at all, so the message can say which values a board record
-     has to copy instead of staying generic (D-ROTA-54). */
-  function loadRestaurantSlugSuggestions(done) {
-    _restaurantSlugSuggestions = [];
-    if (!_cfg.settingsType || typeof tool === 'undefined' || typeof tool.requestObjects !== 'function') { done(); return; }
-    tool.requestObjects('query', { mainObjectType: _cfg.settingsType }, function (err, result) {
-      var list = (!err && result && Array.isArray(result.objects)) ? result.objects : [];
-      for (var i = 0; i < list.length && _restaurantSlugSuggestions.length < 6; i++) {
-        var slug = restaurantSlugOf(list[i]) || restaurantReferenceOf(list[i])[0] || list[i].slug || '';
-        if (slug && _restaurantSlugSuggestions.indexOf(slug) === -1) _restaurantSlugSuggestions.push(slug);
+  /* CMS object ids look like 2026-10-30-LP34LYAFHT-easyorder, a slug never
+     starts with a date. Used only to choose get() over no read at all
+     (D-ROTA-55 / D-ROTA-57). */
+  function looksLikeObjectId(value) {
+    return /^\d{4}-\d{2}-\d{2}-[A-Za-z0-9]{4,}-/.test(String(value || ''));
+  }
+
+  /* Reads ONE restaurant by object id. When the page address or the board
+     record names the restaurant by id, this avoids downloading the whole
+     restaurant collection (menus included). */
+  function tryGetRestaurantById(idCandidates, index, candidates, done) {
+    if (index >= idCandidates.length) { done(null); return; }
+    var wantedId = idCandidates[index].raw || idCandidates[index].key;
+    tool.requestObjects('get', { mainObjectType: _cfg.settingsType, objectId: wantedId }, function (err, result) {
+      var record = (!err && result)
+        ? (result.object || (Array.isArray(result.objects) ? result.objects[0] : null))
+        : null;
+      if (record) {
+        var identifiers = restaurantIdentifiersOf(record);
+        for (var c = 0; c < candidates.length; c++) {
+          if (identifiers.indexOf(candidates[c].key) !== -1) {
+            _rawRestaurantList = [record];
+            done(record);
+            return;
+          }
+        }
       }
-      done();
+      tryGetRestaurantById(idCandidates, index + 1, candidates, done);
     });
   }
 
@@ -862,10 +917,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       return 'The ' + boardType + ' records could not be read (' + recordError + '). Add ' + boardType + ' to settings.allowedObjectTypes (read) so the board can find its restaurant from its own record.';
     }
     var where = (route && route.objectType) ? ('/objects/' + route.objectType) : 'this page';
-    var known = (_restaurantSlugSuggestions && _restaurantSlugSuggestions.length)
-      ? '. Restaurants found: ' + _restaurantSlugSuggestions.join(', ') + '.'
-      : '.';
-    return 'This page (' + where + ') carries no ' + boardType + ' record, so nothing names the restaurant for this board. Create one board record per restaurant and give it the same slug as the ' + _cfg.settingsType + ' object' + known + ' Then open the board from that record\'s page (/objects/' + boardType + '/<record id>).';
+    return 'This page (' + where + ') carries no ' + boardType + ' record, so nothing names the restaurant for this board. Create one board record per restaurant, give it the same slug as the ' + _cfg.settingsType + ' object and store that object\'s id in its restaurantId field, then open the board from that record\'s page (/objects/' + boardType + '/<record id>).';
   }
 
   /* ------------------------------------------------ console diagnostics */
@@ -930,12 +982,21 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       }
     };
 
-    function queryType(sectionName, typeName, sampleSize, next, skipReason) {
-      var section = { type: typeName, error: '', count: 0, sample: [], skipped: skipReason || '' };
+    function queryType(sectionName, typeName, sampleSize, next, skipReason, preloaded) {
+      var section = { type: typeName, error: '', count: 0, sample: [], skipped: skipReason || '', reused: false };
       report[sectionName] = section;
       /* Never ask for a type the tool was told not to read - the host would
          answer with the same access warning the board just avoided. */
       if (skipReason) { next(); return; }
+      /* Documents already read in this session are reported as they are: the
+         diagnostics must not double the reads it is meant to explain. */
+      if (preloaded && typeof preloaded.length === 'number') {
+        section.reused = true;
+        section.count = preloaded.length;
+        for (var p = 0; p < preloaded.length && p < sampleSize; p++) section.sample.push(describeRecord(preloaded[p]));
+        next();
+        return;
+      }
       if (!typeName || typeof tool === 'undefined' || typeof tool.requestObjects !== 'function') { next(); return; }
       tool.requestObjects('query', { mainObjectType: typeName }, function (err, result) {
         if (err) section.error = String(err);
@@ -949,11 +1010,14 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     var boardSkipReason = !_cfg.readBoardRecords
       ? 'readBoardRecords = no'
       : (_boardRecordNotice === 'not-allowed' ? 'type not listed in settings.allowedObjectTypes' : '');
+    /* The board never asks for the restaurant collection: only for the ONE
+       document it was pointed at, by object id (D-ROTA-57). */
+    var restaurantSkipReason = _rawRestaurantList ? '' : 'the board reads only its own restaurant, by object id';
     queryType('boardRecords', _cfg.toolAppType, 3, function () {
       queryType('restaurants', _cfg.settingsType, 2, function () {
-        queryType('orders', _cfg.ordersType, 2, function () { done(report); });
-      });
-    }, boardSkipReason);
+        queryType('orders', _cfg.ordersType, 2, function () { done(report); }, '', _rawOrdersList);
+      }, restaurantSkipReason, _rawRestaurantList);
+    }, boardSkipReason, _rawBoardRecordList);
   }
 
   function logReachability() {
@@ -1153,6 +1217,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     _cfg.ordersDataCategory = String(paramRaw('ordersDataCategory', '')).trim();
     _cfg.toolAppType = String(paramRaw('toolAppType', 'restaurant-order-taking-app-easyorder')).trim() || 'restaurant-order-taking-app-easyorder';
     _cfg.readBoardRecords = String(paramRaw('readBoardRecords', 'yes')).toLowerCase() !== 'no';
+    _cfg.rememberRestaurantId = String(paramRaw('rememberRestaurantId', 'yes')).toLowerCase() !== 'no';
     _cfg.allowUnassignedOrders = String(paramRaw('allowUnassignedOrders', 'no')).toLowerCase() === 'yes';
     var refresh = parseInt(String(paramRaw('autoRefreshSeconds', '20')), 10);
     _cfg.autoRefreshSeconds = (isFinite(refresh) && refresh >= 0) ? refresh : 20;
@@ -1203,6 +1268,11 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
           name: 'readBoardRecords', label: 'Read board records',
           type: 'toggle', default: 'yes', severity: 'optional',
           hint: 'yes = the board reads its own application records to find the restaurant, which needs restaurant-order-taking-app-easyorder in settings.allowedObjectTypes (read). no = the board never asks for its own type (no host access warning) and relies on the record page or the restaurant page instead.'
+        },
+        {
+          name: 'rememberRestaurantId', label: 'Remember restaurant id',
+          type: 'toggle', default: 'yes', severity: 'optional',
+          hint: 'yes = after the board learns its restaurant object id it asks the host to save it with this record (tool.requestSave, which needs allowRequestSave = yes in the field settings), so later page loads read ONE restaurant document instead of the whole type. Turn it off when this field must never trigger a save by itself.'
         },
         {
           name: 'allowUnassignedOrders', label: 'Show orders without a restaurant',
@@ -1259,15 +1329,59 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     try {
       if (typeof tool.getValue === 'function') {
         var value = tool.getValue();
-        if (value && typeof value === 'object' && value.ui && typeof value.ui === 'object') {
-          var ui = value.ui;
-          if (TABS.some(function (t) { return t.id === ui.tab; })) _ui.tab = ui.tab;
-          if (ui.sort === 'waiting' || ui.sort === 'newest' || ui.sort === 'total') _ui.sort = ui.sort;
-          if (typeof ui.search === 'string') _ui.search = ui.search;
+        if (value && typeof value === 'object') {
+          /* The restaurant object id this board learned before: a single
+             get() instead of a discovery query (D-ROTA-58). */
+          if (typeof value.restaurantId === 'string' && looksLikeObjectId(value.restaurantId)) {
+            _rememberedRestaurantId = value.restaurantId;
+          }
+          if (value.ui && typeof value.ui === 'object') {
+            var ui = value.ui;
+            if (TABS.some(function (t) { return t.id === ui.tab; })) _ui.tab = ui.tab;
+            if (ui.sort === 'waiting' || ui.sort === 'newest' || ui.sort === 'total') _ui.sort = ui.sort;
+            if (typeof ui.search === 'string') _ui.search = ui.search;
+          }
         }
       }
     } catch (err) { /* ignore */ }
-    _lastStagedUi = JSON.stringify(_ui);
+    _lastStagedUi = stagedValueSignature();
+  }
+
+  /* Everything this tool stores in its own value: the UI state and the
+     restaurant object id it learned. */
+  function stagedValueSignature() {
+    return JSON.stringify({ ui: _ui, restaurantId: _rememberedRestaurantId || '' });
+  }
+
+  function savedValuePayload() {
+    var payload = { version: '1', ui: _ui };
+    if (_rememberedRestaurantId) payload.restaurantId = _rememberedRestaurantId;
+    return payload;
+  }
+
+  /* Stores the learned restaurant id and asks the host to COMMIT it
+     (D-ROTA-59). tool.setValue() only stages the value in the parent form, so
+     without tool.requestSave() the id is gone on the next page load and the
+     board would read the restaurant type again. requestSave needs
+     allowRequestSave = yes in this field's settings; when the host refuses,
+     the console names the id to paste into the record instead. */
+  function persistRememberedRestaurantId() {
+    _lastStagedUi = stagedValueSignature();
+    try { tool.setValue(savedValuePayload()); } catch (err) { /* ignore */ }
+    if (!_cfg.rememberRestaurantId || _saveRequested || typeof tool.requestSave !== 'function') return;
+    _saveRequested = true;
+    var learnedId = _rememberedRestaurantId;
+    try {
+      tool.requestSave(function (err, ok) {
+        if (err || !ok) {
+          console.warn('[RestaurantOrderTakingApp] the host did not save the learned restaurant object id (allowRequestSave is off for this field, or the form is read-only). The next page load reads the restaurant type once again. Store "' + learnedId + '" in the restaurantId field of this board record to make it permanent.');
+          return;
+        }
+        console.log('[RestaurantOrderTakingApp] the board asked the host to save its restaurant object id (' + learnedId + ') with this record, so the next load reads only that document.');
+      });
+    } catch (err) {
+      console.warn('[RestaurantOrderTakingApp] requestSave failed: ' + err + '. Store "' + learnedId + '" in the restaurantId field of this board record to make the single-document read permanent.');
+    }
   }
 
   function persistUiSoon() {
@@ -1277,11 +1391,11 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
 
   function persistUiNow() {
     if (_saveUiTimer) { clearTimeout(_saveUiTimer); _saveUiTimer = null; }
-    var json = JSON.stringify(_ui);
+    var json = stagedValueSignature();
     if (json === _lastStagedUi) return;
     _lastStagedUi = json;
     try {
-      tool.setValue({ version: '1', ui: _ui });
+      tool.setValue(savedValuePayload());
     } catch (err) { /* ignore */ }
   }
 
@@ -1373,6 +1487,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   function applyOrders(rawList) {
     var silentLoad = _silentNextLoad;
     _silentNextLoad = false;
+    _rawOrdersList = rawList;   /* kept so the diagnostics never re-read orders */
     var all = [];
     for (var i = 0; i < rawList.length; i++) {
       var order = normalizeOrder(rawList[i]);
@@ -1443,7 +1558,10 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     _boardRecordSummaries = [];
     _boardRecordError = '';
     _boardRecordNotice = '';
-    _restaurantSlugSuggestions = [];
+    _resolvedSlug = '';
+    _slugOnlyScopeKeys = [];
+    _rawRestaurantList = null;
+    _rawBoardRecordList = null;
     _restaurantState = 'pending';
 
     /* A multi-restaurant tenant cannot store the restaurant on the tool
@@ -1459,61 +1577,140 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
         ' | board record references: ' + (_instanceRestaurantReferences.length ? _instanceRestaurantReferences.join(', ') : 'none'));
       if (!candidates.length) {
         _restaurantState = 'no-context';
-        /* Name the restaurants that exist, so the message tells the admin
-           exactly which slugs a board record must copy (D-ROTA-54). */
-        loadRestaurantSlugSuggestions(function () {
-          console.warn('[RestaurantOrderTakingApp] this board cannot tell which restaurant it belongs to. Page: ' + (pageRoute.url || '(unavailable)') + '. ' + boardContextHint(_boardRecordCount, _boardRecordSummaries, pageRoute, _boardRecordError, _boardRecordNotice));
-          finishRestaurantLookup();
-        });
+        console.warn('[RestaurantOrderTakingApp] this board cannot tell which restaurant it belongs to. Page: ' + (pageRoute.url || '(unavailable)') + '. ' + boardContextHint(_boardRecordCount, _boardRecordSummaries, pageRoute, _boardRecordError, _boardRecordNotice));
+        finishRestaurantLookup();
         return;
       }
 
-      tool.requestObjects('query', { mainObjectType: _cfg.settingsType }, function (err, result) {
-        if (err) {
-          _restaurantState = 'error';
-          console.warn('[RestaurantOrderTakingApp] restaurant settings could not be read: ' + err + ' - the closing-time check stays off; orders stay scoped by the restaurant slug.');
-          finishRestaurantLookup();
-          return;
-        }
-        var list = (result && Array.isArray(result.objects)) ? result.objects : [];
-        var matches = [];
-        var matchedCandidate = '';
-        for (var c = 0; c < candidates.length; c++) {
-          for (var i = 0; i < list.length; i++) {
-            if (restaurantIdentifiersOf(list[i]).indexOf(candidates[c].key) === -1) continue;
-            if (matches.indexOf(list[i]) === -1) matches.push(list[i]);
-            if (!matchedCandidate) matchedCandidate = candidates[c].key + ' (' + candidates[c].source + ')';
-          }
-        }
-        if (matches.length === 1) {
-          acceptRestaurant(matches[0], matchedCandidate);
-          return;
-        }
-        if (matches.length > 1) {
-          _restaurantState = 'duplicate';
-          console.warn('[RestaurantOrderTakingApp] ' + matches.length + ' restaurants match "' + matchedCandidate + '" - the board stays closed until the match is unique.');
-          finishRestaurantLookup();
-          return;
-        }
-        /* Unambiguous single-restaurant tenant: the only restaurant is the
-           restaurant. Never applied when the tenant has several. */
-        if (list.length === 1) {
-          acceptRestaurant(list[0], 'the only restaurant of this tenant');
-          return;
-        }
-        _restaurantState = 'not-found';
-        var hasStrongCandidate = false;
-        for (var sc = 0; sc < candidates.length; sc++) {
-          if (candidates[sc].strong) { hasStrongCandidate = true; break; }
-        }
-        if (!hasStrongCandidate) _restaurantState = 'no-context';
-        console.warn('[RestaurantOrderTakingApp] no ' + _cfg.settingsType + ' object matches "' + candidates[0].key + '" (' + candidates[0].source + ') - ' + (hasStrongCandidate ? 'check that the board record slug equals the restaurant slug or that the page address points at an existing restaurant.' : 'this page carries no restaurant at all. Open the board from the restaurant page.') + ' The closing-time check stays off.');
-        finishRestaurantLookup();
-      });
+      /* Only ONE restaurant document is ever read (D-ROTA-58):
+         1. an object id on the board record or in the page address -> one get()
+         2. the object id this board already learned, kept in its own saved
+            value -> one get()
+         3. otherwise ONE discovery query of the restaurant type to learn the
+            object id from the slug; the id is remembered right away, so every
+            later load is a single get(). requestObjects has no field filter,
+            so step 3 is the only way to learn the id without an admin typing
+            it into the board record. */
+      var idCandidates = [];
+      for (var ci = 0; ci < candidates.length; ci++) {
+        if (looksLikeObjectId(candidates[ci].raw || candidates[ci].key)) idCandidates.push(candidates[ci]);
+      }
+      if (idCandidates.length) {
+        tryGetRestaurantById(idCandidates, 0, candidates, function (found) {
+          if (found) { acceptRestaurant(found, (idCandidates[0].raw || idCandidates[0].key) + ' (object id on the board record)', true); return; }
+          tryRememberedRestaurantId(candidates, 'the restaurant object ' + (idCandidates[0].raw || idCandidates[0].key) + ' could not be read');
+        });
+        return;
+      }
+      tryRememberedRestaurantId(candidates, '');
     });
   }
 
-  function acceptRestaurant(settingsObject, matchedBy) {
+  /* True when at least one candidate is a slug (not an object id). Only then
+     can a search of the restaurant type ever match: an object id is resolved
+     with a get(), never by reading the collection (D-ROTA-60). */
+  function hasSlugCandidate(candidates) {
+    for (var i = 0; i < candidates.length; i++) {
+      if (!looksLikeObjectId(candidates[i].raw || candidates[i].key)) return true;
+    }
+    return false;
+  }
+
+  /* Step 2 of the restaurant lookup: the id this board stored the last time
+     it resolved its restaurant. Reading it costs one document and keeps the
+     settings (currency, timezone, opening hours) available (D-ROTA-58). */
+  function tryRememberedRestaurantId(candidates, reason) {
+    if (!_rememberedRestaurantId || !looksLikeObjectId(_rememberedRestaurantId)) {
+      if (hasSlugCandidate(candidates)) { discoverRestaurantBySlug(candidates, reason); return; }
+      useRestaurantSlug(candidates, reason || 'the restaurant object could not be read');
+      return;
+    }
+    var rememberedCandidate = [{ key: normalizeSlug(_rememberedRestaurantId), raw: _rememberedRestaurantId, source: 'remembered id', strong: true }];
+    tryGetRestaurantById(rememberedCandidate, 0, candidates, function (found) {
+      if (found) { acceptRestaurant(found, 'the restaurant object id this board remembered', true); return; }
+      /* The remembered object is gone or belongs to another restaurant. */
+      _rememberedRestaurantId = '';
+      persistRememberedRestaurantId();
+      if (hasSlugCandidate(candidates)) {
+        discoverRestaurantBySlug(candidates, reason || 'the remembered restaurant object could not be read');
+        return;
+      }
+      useRestaurantSlug(candidates, reason || 'the remembered restaurant object could not be read');
+    });
+  }
+
+  /* Step 3 of the restaurant lookup: ONE query of the restaurant type, used
+     only to LEARN the object id of the slug the board was given. The API has
+     no field filter, so a slug cannot be resolved with a single document read;
+     this runs once per board, never on every refresh (D-ROTA-58). */
+  function discoverRestaurantBySlug(candidates, reason) {
+    if (typeof tool === 'undefined' || typeof tool.requestObjects !== 'function') {
+      useRestaurantSlug(candidates, reason);
+      return;
+    }
+    tool.requestObjects('query', { mainObjectType: _cfg.settingsType }, function (err, result) {
+      if (err) {
+        _rawRestaurantList = null;
+        console.warn('[RestaurantOrderTakingApp] the restaurant type could not be read once to learn the restaurant object id: ' + err + '. The board keeps working by slug; currency, timezone and the closing-time check stay off.');
+        useRestaurantSlug(candidates, reason);
+        return;
+      }
+      var list = (result && Array.isArray(result.objects)) ? result.objects : [];
+      _rawRestaurantList = list;
+      var matches = [];
+      var matchedCandidate = '';
+      for (var c = 0; c < candidates.length; c++) {
+        for (var i = 0; i < list.length; i++) {
+          if (restaurantIdentifiersOf(list[i]).indexOf(candidates[c].key) === -1) continue;
+          if (matches.indexOf(list[i]) === -1) matches.push(list[i]);
+          if (!matchedCandidate) matchedCandidate = candidates[c].key + ' (' + candidates[c].source + ')';
+        }
+      }
+      if (matches.length === 1) {
+        acceptRestaurant(matches[0], matchedCandidate);
+        return;
+      }
+      if (matches.length > 1) {
+        _restaurantState = 'not-found';
+        console.warn('[RestaurantOrderTakingApp] ' + matches.length + ' restaurants match "' + matchedCandidate + '" - the board stays closed until exactly one restaurant is unambiguous. Store the intended restaurant object id in the restaurantId field of this board record.');
+        finishRestaurantLookup();
+        return;
+      }
+      useRestaurantSlug(candidates, reason || 'no ' + _cfg.settingsType + ' object matches this slug');
+    });
+  }
+
+  /* Last resort (D-ROTA-58): the board knows its restaurant by slug but no
+     restaurant object could be read for it (the discovery query failed, or
+     several objects matched). The slug still scopes the orders, so the board
+     keeps working - currency, timezone and the opening hours stay off and the
+     banner names the exact field to fill. */
+  function useRestaurantSlug(candidates, reason) {
+    var chosen = null;
+    for (var i = 0; i < candidates.length; i++) {
+      if (looksLikeObjectId(candidates[i].raw || candidates[i].key)) continue;
+      if (!chosen || (candidates[i].strong && !chosen.strong)) chosen = candidates[i];
+    }
+    if (!chosen) {
+      _restaurantState = 'not-found';
+      console.warn('[RestaurantOrderTakingApp] ' + (reason || 'no restaurant could be identified') + '. The board reads no restaurant collection, so nothing else is tried. Check the restaurantId field of this board record: the object id must belong to an existing ' + _cfg.settingsType + ' object.');
+      finishRestaurantLookup();
+      return;
+    }
+    _resolvedSlug = chosen.key;
+    _slugOnlyScopeKeys = [];
+    for (var c = 0; c < candidates.length; c++) {
+      if (looksLikeObjectId(candidates[c].raw || candidates[c].key)) continue;
+      if (_slugOnlyScopeKeys.indexOf(candidates[c].key) === -1) _slugOnlyScopeKeys.push(candidates[c].key);
+    }
+    _restaurantState = 'slug-only';
+    console.log('[RestaurantOrderTakingApp] restaurant identified by slug "' + chosen.key + '" (' + chosen.source + ')' +
+      (reason ? ' - ' + reason : '') +
+      '. No restaurant settings could be read, so currency, timezone and the closing-time check are off. Store the restaurant object id in the restaurantId field of this board record to load them from one document.');
+    finishRestaurantLookup();
+  }
+
+  function acceptRestaurant(settingsObject, matchedBy, idCameFromBoard) {
     _restaurantSettings = settingsObject;
     _restaurantState = 'ready';
 
@@ -1523,7 +1720,26 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     _cfg.currency = restaurantCurrencyOf();
     _cfg.timeZone = restaurantTimeZoneOf();
 
-    console.log('[RestaurantOrderTakingApp] restaurant settings resolved by ' + matchedBy + ': ' + (restaurantSlugOf(settingsObject) || settingsObject.id) + '.');
+    /* Remember the object id, so the next load reads this one document with a
+       get() instead of asking for the restaurant type again (D-ROTA-58 /
+       D-ROTA-59). Only needed when the id had to be DISCOVERED - a record
+       that already carries it needs no save. */
+    var resolvedObjectId = String(settingsObject.id || '');
+    if (!idCameFromBoard && resolvedObjectId && resolvedObjectId !== _rememberedRestaurantId) {
+      _rememberedRestaurantId = resolvedObjectId;
+      persistRememberedRestaurantId();
+    }
+
+    console.log('[RestaurantOrderTakingApp] restaurant settings resolved by ' + matchedBy + ': ' + (restaurantSlugOf(settingsObject) || settingsObject.id) + ' (one document).');
+    /* A board that has the id on its record needs no hint; a board that found
+       its restaurant by reading the type once does (D-ROTA-58 / D-ROTA-59). */
+    if (!idCameFromBoard && resolvedObjectId) {
+      var recordRoute = parentPageRoute();
+      var recordPage = (recordRoute.objectId && normalizeSlug(recordRoute.objectType) === normalizeSlug(_cfg.toolAppType))
+        ? ' (this record: ' + (parentPageUrl() || '') + ')'
+        : '';
+      console.log('[RestaurantOrderTakingApp] restaurant object id ' + resolvedObjectId + '. Put that value in the restaurantId field of this board record' + recordPage + ' and save it, so every load reads only that one document and never the restaurant collection.');
+    }
     finishRestaurantLookup();
   }
 
@@ -1531,8 +1747,9 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     applyRestaurantScope();
     renderAll();
     /* When the restaurant could not be resolved, print what the tool reaches
-       so an admin can send one block instead of guessing (D-ROTA-53). */
-    if (_restaurantState !== 'ready') logReachability();
+       so an admin can send one block instead of guessing (D-ROTA-53). A
+       slug-only board works as designed, so it needs no dump. */
+    if (_restaurantState !== 'ready' && _restaurantState !== 'slug-only') logReachability();
   }
 
   /* The restaurant config object nests everything under restaurantDetails
@@ -2016,14 +2233,12 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     if (_restaurantState === 'no-context') {
       return 'This board cannot tell which restaurant it belongs to, so it shows no orders. Give the board record the same slug as the restaurant object, or open the board from the restaurant page.';
     }
-    if (_restaurantState === 'duplicate') {
-      return 'More than one restaurant object matches this board. The board stays closed until the match is unique.';
-    }
     if (_restaurantState === 'not-found') {
       return 'No restaurant object matches this board. A system admin must check the page address or the restaurant slug; until then only orders that carry it can appear here.';
     }
     if (_hiddenOrderCount) {
-      return 'No orders for this restaurant right now. ' + _hiddenOrderCount + ' order' + (_hiddenOrderCount === 1 ? '' : 's') + ' from another restaurant stay hidden.';
+      return 'No orders for this restaurant right now. ' + _hiddenOrderCount + ' order' + (_hiddenOrderCount === 1 ? '' : 's') + ' from another restaurant stay hidden.' +
+        (_restaurantState === 'slug-only' ? ' An order that carries only the restaurant object id cannot be matched until this board record stores that id in restaurantId.' : '');
     }
     if (_unassignedOrderCount) {
       return _unassignedOrderCount + ' order' + (_unassignedOrderCount === 1 ? '' : 's') + ' carry no restaurantSlug and are hidden. The order writer must store restaurantSlug = the restaurant slug on every order.';
@@ -2291,10 +2506,10 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       messages.push('This board cannot tell which restaurant it belongs to' +
         (pageRoute.url ? ' (page ' + pageRoute.url + ')' : '') +
         '. ' + boardContextHint(_boardRecordCount, _boardRecordSummaries, pageRoute, _boardRecordError, _boardRecordNotice));
+    } else if (_restaurantState === 'slug-only') {
+      messages.push('This board found its restaurant by slug (' + (_resolvedSlug || 'unknown') + ') but no restaurant settings could be read, so the currency, the timezone and the closing-time warning stay off. Store the restaurant object id in the restaurantId field of this board record to load them from one document.');
     } else if (_restaurantState === 'not-found') {
       messages.push('This board has no restaurant yet. Give the board record the same slug as the ' + _cfg.settingsType + ' object, or open the board from the restaurant object page.');
-    } else if (_restaurantState === 'duplicate') {
-      messages.push('Several ' + _cfg.settingsType + ' objects match this board. The board stays closed and the closing-time check stays off until the match is unique.');
     } else if (_restaurantState === 'error') {
       messages.push('The restaurant settings object could not be read, so the closing-time check is off. Orders stay scoped to the restaurant slug.');
     }
@@ -3355,10 +3570,11 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
     }
     /* A sample row without a restaurant would vanish from the scoped board,
        so the resolved restaurant of THIS board is stamped on it (D-ROTA-42).
-       The field is restaurantSlug - the value production orders carry. */
+       The field is restaurantSlug - the value production orders carry. A
+       slug-only board stamps the slug it was identified by (D-ROTA-57). */
     var scopedRestaurantKey = _restaurantSettings
       ? (restaurantSlugOf(_restaurantSettings) || restaurantKeyOfValue(_restaurantSettings.id))
-      : '';
+      : _resolvedSlug;
     if (scopedRestaurantKey) {
       var hasRestaurant = false;
       for (var rf = 0; rf < ORDER_RESTAURANT_FIELDS.length; rf++) {
@@ -3724,16 +3940,17 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   function bindSdkListeners() {
     if (typeof tool.onValueChange === 'function') {
       tool.onValueChange(function (value) {
-        if (value && typeof value === 'object' && value.ui && typeof value.ui === 'object') {
-          var json = JSON.stringify({ ui: value.ui });
-          if (json === _lastStagedUi) return; /* echo of our own save */
-          _lastStagedUi = json;
-          var ui = value.ui;
-          if (TABS.some(function (t) { return t.id === ui.tab; })) _ui.tab = ui.tab;
-          if (ui.sort === 'waiting' || ui.sort === 'newest' || ui.sort === 'total') _ui.sort = ui.sort;
-          if (typeof ui.search === 'string') _ui.search = ui.search;
-          renderAll();
-        }
+        if (!value || typeof value !== 'object' || !value.ui || typeof value.ui !== 'object') return;
+        var remoteRestaurantId = (typeof value.restaurantId === 'string' && looksLikeObjectId(value.restaurantId)) ? value.restaurantId : '';
+        var json = JSON.stringify({ ui: value.ui, restaurantId: remoteRestaurantId });
+        if (json === _lastStagedUi) return; /* echo of our own save */
+        _lastStagedUi = json;
+        if (remoteRestaurantId) _rememberedRestaurantId = remoteRestaurantId;
+        var ui = value.ui;
+        if (TABS.some(function (t) { return t.id === ui.tab; })) _ui.tab = ui.tab;
+        if (ui.sort === 'waiting' || ui.sort === 'newest' || ui.sort === 'total') _ui.sort = ui.sort;
+        if (typeof ui.search === 'string') _ui.search = ui.search;
+        renderAll();
       });
     }
     if (typeof tool.onReadonlyChange === 'function') {
@@ -3806,6 +4023,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       restaurantSlugOf: restaurantSlugOf,
       restaurantIdentifiersOf: restaurantIdentifiersOf,
       boardContextHint: boardContextHint,
+      looksLikeObjectId: looksLikeObjectId,
       collectReachability: collectReachability,
       logReachability: logReachability,
       dataCategoryOf: dataCategoryOf,
@@ -3813,6 +4031,7 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
       buildWriteAttempts: buildWriteAttempts,
       localOrderStateOf: function (orderId) { return _localOrderState[orderId] || null; },
       restaurantReferenceOf: restaurantReferenceOf,
+      restaurantReferenceValuesOf: restaurantReferenceValuesOf,
       restaurantScopeKeys: restaurantScopeKeys,
       restaurantScopeReport: restaurantScopeReport,
       restaurantCurrencyOf: restaurantCurrencyOf,
@@ -3843,4 +4062,4 @@ console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' RestaurantOrderTakingApp start
   }
 })();
 
-/* RESTAURANTORDERTAKINGAPP-JS-END build 2026-11-13-5 - if this line is missing in the CMS Tool Builder JS field, the JS was truncated */
+/* RESTAURANTORDERTAKINGAPP-JS-END build 2026-11-26-6 - if this line is missing in the CMS Tool Builder JS field, the JS was truncated */

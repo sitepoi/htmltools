@@ -425,6 +425,70 @@
   <code>acceptedAt</code> / <code>estimatedReadyAt</code> when the tenant
   defines them).</p>
 
+  <p class="note"><strong>What the board reads (document access report).</strong>
+  The DEV drawer counts every document the host loads for the tool:</p>
+  <table>
+    <tr><th>Report row</th><th>Cause in this tool</th></tr>
+    <tr><td>📦 <code>host:&lt;record id&gt;</code></td><td>the object the tool is
+    MOUNTED on - the host reads it to mount the field, not a tool request</td></tr>
+    <tr><td>🗂 <code>restaurant-order-taking-app-easyorder</code></td><td>one
+    <code>get</code> (record page) or one <code>query</code> (application page) in
+    <code>readInstanceRestaurantReference()</code></td></tr>
+    <tr><td>🗂 <code>restaurants-easyorder</code> - one document</td><td>the
+    board knows the restaurant OBJECT ID (board record <code>restaurantId</code>,
+    the restaurant page address, or the id it remembered in its own value) and
+    reads it with a single <code>get</code> (D-ROTA-55 / D-ROTA-58)</td></tr>
+    <tr><td>🗂 <code>restaurants-easyorder</code> - the type, ONCE</td><td>the
+    first load of a board whose record carries only a slug:
+    <code>requestObjects</code> has no field filter, so the board reads the type
+    once to learn the object id of its slug and remembers it. Every later load
+    is a single <code>get</code> (D-ROTA-58)</td></tr>
+    <tr><td>🗂 <code>restaurant-orders-easyorder</code> - every order</td><td>one
+    <code>query</code> of the order type per refresh; the restaurant scoping
+    happens in the tool because the API cannot filter by field value</td></tr>
+  </table>
+  <p class="note">The board reads the restaurant collection at most ONCE per
+  board, only to learn the object id of its slug, and then reads that single
+  document with a <code>get</code> (D-ROTA-58). The learned id is committed
+  with the record through <code>tool.requestSave()</code>, because
+  <code>tool.setValue()</code> only stages a value and loses it on reload
+  (D-ROTA-59) - that setting needs <code>allowRequestSave: yes</code> in the
+  field settings. Store the restaurant <strong>object id</strong> in the board
+  record (field <code>restaurantId</code>) to skip even that first read and to
+  keep the single-document read with no save at all - the object page address
+  <code>/objects/restaurants-easyorder/&lt;object id&gt;</code> shows the id, and
+  the console prints it the first time the board learns it. The diagnostics
+  reuse what this session already fetched (<code>reused: true</code>) and skip
+  the restaurant section when nothing was read. If the report still lists every
+  restaurant after that, the deployed build is older than
+  <code>2026-11-26-6</code>.</p>
+
+  <h4>Point a board at one restaurant by object id - recommended setup</h4>
+  <p>The CMS object API returns either ONE object by id or the whole type;
+  there is no field filter. A board that knows its restaurant object id
+  therefore reads a single document and never touches the other restaurants.
+  Three steps, once per board record:</p>
+  <ol>
+    <li><strong>Copy the restaurant object id.</strong> Open the restaurant in
+    the CMS - its address is
+    <code>/objects/restaurants-easyorder/&lt;object id&gt;</code>. The board also
+    prints it in the console (<code>restaurant object id ...</code>) the first
+    time it resolves its restaurant.</li>
+    <li><strong>Give the board type a field for it.</strong> Field Group
+    Designer -&gt; <code>restaurant-order-taking-app-easyorder</code> -&gt; add a
+    text field whose id is <code>restaurantId</code> (skip when it exists).</li>
+    <li><strong>Fill it.</strong> Open the board record
+    (<code>/objects/restaurant-order-taking-app-easyorder/&lt;record id&gt;</code>),
+    put the id into <code>restaurantId</code> and save. Keep the slug as it is -
+    the tool prefers the id.</li>
+  </ol>
+  <p>After that the console says <code>restaurant settings resolved by
+  &lt;object id&gt; (object id on the board record)</code>, the DEV report shows
+  one <code>restaurants-easyorder</code> row, and the restaurant collection is
+  never read - not even once. A record that carries only the id (no slug) works
+  as well. An id that points at a deleted object is reported and the board
+  stays closed instead of falling back to a collection read (D-ROTA-60).</p>
+
   <h4>Restaurant config object - the parts this tool reads</h4>
   <p>The restaurant object keeps the slug at the OBJECT level
   (<code>object.slug</code>, e.g. <code>pizza-lachine</code>) - not inside
@@ -1495,6 +1559,117 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
       <td>User sent the <code>[ROTA-DIAG]</code> block: 4 restaurants, 3 orders,
       data category <code>orderData</code>, top-level slugs present, zero board
       records.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-55</td><td>2026-11-26</td>
+      <td>Fewer documents per board: when a restaurant candidate looks like a CMS
+      object id (<code>yyyy-mm-dd-XXXX-…</code>), the board reads that ONE
+      restaurant with <code>requestObjects('get')</code> instead of downloading
+      the whole restaurant type (menus included). Slug-only references still
+      need the type query because <code>requestObjects</code> has no field
+      filter. The lookup also had a real bug: candidate keys were lowercased
+      before a <code>get</code>, and CMS ids are case sensitive;
+      <code>restaurantReferenceValuesOf()</code> now keeps the raw value while
+      matching stays normalized. The failure diagnostics and the restaurant slug
+      suggestions reuse documents already read in the session
+      (<code>reused: true</code>) instead of re-querying the three types, and
+      never read a type the board was told not to read.</td>
+      <td>User: the DEV document report showed 14 documents; asked why the board
+      reaches them.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-56</td><td>2026-11-26</td>
+      <td>A board record that links its restaurant by <code>slug</code> still
+      costs the whole restaurant type per page load: <code>requestObjects</code>
+      has no field filter, so the four restaurant documents (two of them carry
+      350.6 KB and 178.1 KB menus) are downloaded to find one slug. The board
+      says that out loud - after resolving, the console prints how many
+      restaurant documents the lookup took and the exact object id to store in
+      the board record's <code>restaurantId</code> field. Storing that id turns
+      the lookup into one <code>get</code> (D-ROTA-55). Slugs keep working as
+      the human readable matching key; the id is only an optimisation.</td>
+      <td>User: "still reading same 15 docs" after the by-id fast path shipped -
+      the record was still linked by slug.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-57</td><td>2026-11-26</td>
+      <td>The board never downloads the restaurant collection again. A slug-only
+      board record used to force a <code>query</code> of
+      <code>restaurants-easyorder</code>, which pulled every restaurant with its
+      full menu (350.6 KB + 178.1 KB on the live tenant) just to find one slug.
+      <code>requestObjects</code> has no field filter, so that query can never be
+      narrowed - the board now stops asking: a known object id is read with one
+      <code>get</code>, a slug-only record reads NO restaurant document and
+      scopes the orders by the slug itself (<code>restaurantState =
+      'slug-only'</code>). <code>queryRestaurants()</code>,
+      <code>loadRestaurantSlugSuggestions()</code> and the <code>duplicate</code>
+      state are deleted. Trade-off, stated plainly: without the restaurant
+      object the currency symbol, the tenant timezone and the closing-time
+      warning are unavailable, so the banner and the console name the exact fix
+      (store <code>restaurantId</code> = the object id in the board record). The
+      diagnostics never query the restaurant type either.</td>
+      <td>User: "then dont call them, just call your own restaurant only, fix
+      those problems" - after being told the 4 restaurant documents come from
+      the missing field filter.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-58</td><td>2026-11-26</td>
+      <td>D-ROTA-57 stopped the collection read but also stopped the restaurant
+      settings (no currency, timezone or closing time), which the user rejected.
+      The board now reads EXACTLY ONE restaurant document in every state:
+      (1) an object id on the board record or in the page address - one
+      <code>get</code>; (2) an id this board learned before and keeps in its own
+      saved value (<code>tool.setValue</code>, key
+      <code>restaurantId</code>) - one <code>get</code>; (3) only when neither
+      exists, ONE query of the restaurant type to learn the id of the slug, which
+      is remembered right away - so every later load is one <code>get</code>.
+      <code>requestObjects</code> cannot filter, so step 3 is the only way to
+      learn an id without an admin typing it. A board that has the id on its
+      record never runs step 3; the console prints the id and says where to paste
+      it to make the short path permanent. If the learned id stops resolving,
+      the cache is dropped and discovery runs again. A slug that matches no
+      restaurant falls back to slug-only mode (no settings, banner explains).</td>
+      <td>User: "now there is no restaurant data anymore ... I wanted you to call
+      your related restaurant only".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-59</td><td>2026-11-26</td>
+      <td>The remembered restaurant id did not survive a page reload, so the
+      board went back to reading the whole restaurant type on every load. Root
+      cause: <code>tool.setValue()</code> only STAGES a value in the parent form
+      - nothing is written until the record is saved (html-tool-rules,
+      Autosave). The board now calls <code>tool.requestSave()</code> once, right
+      after it learns the id, so the id is committed with the record and every
+      later load is one <code>get</code>. The save needs
+      <code>allowRequestSave: yes</code> in the field settings; when the host
+      refuses, the console names the id and the field to paste it into. New
+      toggle <code>rememberRestaurantId</code> (default yes) turns the save
+      request off for fields that must never save themselves. The board only
+      saves a LEARNED id - an id that is already on the record or in the saved
+      value never triggers a save.</td>
+      <td>User: "Again I started seeing 4 restaurants documents in list, why do
+      we see all or none? but not only one that is related".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-ROTA-60</td><td>2026-11-26</td>
+      <td>An object id is authoritative. When every restaurant reference the
+      board has is an object id (the board record carries <code>restaurantId</code>
+      and no slug), a failed <code>get</code> no longer falls back to a query of
+      the restaurant type - the board reports the broken id and stays closed,
+      because searching the collection cannot resolve an id. New
+      <code>hasSlugCandidate()</code> guards the discovery step. Section 4.1 now
+      carries the three-step setup (copy the object id, add the
+      <code>restaurantId</code> field to the board type, fill it in the record),
+      and the console prints the object id together with the record page to
+      paste it into.</td>
+      <td>User: "how can we relate the id instead of slug, guide me and lets
+      solve that so we can reach by id directly".</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
@@ -2605,8 +2780,49 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
   zero-record console line no longer blames `allowedObjectTypes`; the
   diagnostics `orderFieldsSeen` reads through the data category instead of the
   top level; smoke covers a fifth case (no board record at all) with 64 + 64 +
-  13 + 13 + 14 asserts.</p>
-
+  13 + 13 + 14 asserts.
+  2026-11-26 (build 2026-11-26-1) - document access reduced (D-ROTA-55): one
+  `get` for the restaurant when a candidate is an object id (the lowercased id
+  bug is fixed), diagnostics and slug suggestions reuse the documents of the
+  session, and the SSOT lists which report row comes from which code path;
+  smoke covers six configurations incl. a board record that carries the
+   restaurant object id (69 + 69 + 69 + 13 + 13 + 14 asserts).
+   2026-11-26 (build 2026-11-26-2) - a slug-only board record now says what its
+   lookup costs: the console reports how many restaurant documents were read and
+   prints the object id to store in the board record's `restaurantId` field, so
+   the next load is one `get` instead of the whole type (D-ROTA-56). The hint is
+   silent when the restaurant was already read by id. Smoke asserts both sides
+   (71 + 70 + 71 + 13 + 13 + 14 asserts).
+   2026-11-26 (build 2026-11-26-3) - the restaurant collection is never read
+   (D-ROTA-57): one `get` when the record carries the object id, no restaurant
+   document at all when it carries only a slug - the board scopes orders by that
+   slug and reports the missing currency/timezone/hours in the banner and the
+   console. `queryRestaurants()` and `loadRestaurantSlugSuggestions()` deleted;
+   the diagnostics skip the restaurant section instead of querying it; QA
+   imports stamp the slug-only restaurant too. Smoke asserts zero restaurant
+   queries and zero gets in slug mode, one get in id mode (72 + 70 + 72 + 13 +
+   13 + 14 asserts).
+   2026-11-26 (build 2026-11-26-4) - reads exactly ONE restaurant document in
+   every state (D-ROTA-58): object id on the record, an id remembered in the
+   tool's own saved value, or ONE discovery query whose id is then remembered;
+   the console prints that id and where to paste it. Smoke gains a
+   remembered-id mode (0 queries + 1 get) and asserts the learned id is stored;
+   72 + 72 + 73 + 72 + 13 + 13 + 14 asserts green.
+   2026-11-26 (build 2026-11-26-5) - the learned restaurant id now survives a
+   reload (D-ROTA-59): the board commits it with `tool.requestSave()` (needs
+   `allowRequestSave: yes`) instead of only staging it with `tool.setValue()`;
+   new toggle `rememberRestaurantId`; a refused save prints the id and the
+   field to store it in. Smoke adds a save-denied mode and asserts a save is
+   requested only for a LEARNED id; 74 + 72 + 74 + 74 + 74 + 13 + 13 + 14
+   asserts green.
+   2026-11-26 (build 2026-11-26-6) - an explicit restaurant object id is
+   authoritative (D-ROTA-60): when the board record carries only ids, a failed
+   get never falls back to a restaurant type query, so a stale id costs one get
+   and nothing else. 4.1 gained the three-step "point a board at one restaurant"
+   setup; the console prints the object id with the record page. Smoke adds a
+   record-id-only mode (1 get, 0 queries, no save) and a stale-id mode
+   (1 get, 0 queries, board closed); 74 + 72 + 74 + 72 + 15 + 74 + 74 + 13 +
+   13 + 14 asserts green.</p>
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
   linked to its release group (section 15). <strong>Before every push</strong>
@@ -2751,7 +2967,7 @@ setOrderStatus(orderId, STATUS_ACCEPTED, message, chosenMinutes);
 
   <div class="footer">
     Restaurant Order Taking App - single source of truth for all decisions
-    about this tool. Version 4.0, 2026-11-13.
+    about this tool. Version 4.6, 2026-11-26.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

@@ -1,6 +1,15 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-html-tool-rules.txt — VERSION 3.18 — 2026-11-25
+html-tool-rules.txt — VERSION 3.19 — 2026-11-26
 
+CHANGELOG v3.19: the DEV panel now REPORTS EVERY DOCUMENT the host read for a tool
+(D-HTMLT-42 / D-HTMLT-50), which makes "why did this tool touch that object?"
+answerable without reading the code first. Two separate lists — Tool code (the
+tool's own chunks + record) and Data (the mounted record + every object returned
+by requestObjects) — with per-document size, % of the 1 MiB per-document limit, a
+footer total (count + KB/MB, never a percentage) and a per-row Copy that puts the
+full document JSON on the clipboard. The panel was redesigned at the same time
+(light cards, segmented tabs, sans-serif UI font) — NO SDK contract changed. See
+DOCUMENT ACCESS REPORT.
 CHANGELOG v3.18: requestObjects('update') now MERGES `productData.data_categoriesBased`
 over the stored values instead of writing the map wholesale (D-HTMLT-40). A tool
 that chunks large code into several objects can update ONE key (`code`) without
@@ -427,6 +436,92 @@ Instead, always use `tool.onReady(cb)` as the single entry point.
 
 The parent CMS communicates with your iframe via postMessage. The SDK handles all
 of that for you — never write raw postMessage calls yourself.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOCUMENT ACCESS REPORT — PROVE WHICH DOCUMENTS A TOOL REACHED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The HOST (not the tool) records every document it reads on behalf of the tool in
+the current page session. That report is the audit trail for "why did this tool
+touch that object?" and it is the fastest way to find code that reads something
+it should not.
+
+WHERE TO SEE IT
+  1. Open the object page that hosts the tool.
+  2. Click the 🔧 DEV button next to the html-tool field (developers only).
+  3. The drawer has four tabs; two of them are the report:
+       Tool code  → the tool's OWN source: 📄 code chunks + 📦 tool record
+       Data       → the DATA it reached: 📦 main record (host:) + 🗂 query rows
+
+WHAT EACH ROW MEANS
+  icon  kind    source of the row
+  📦    main    A tool record. Three flavours:
+                  id = <tool document id>   the tool definition read by the loader
+                  id = cache:<tool id>      served from session memory (no read)
+                  id = host:<record id>     the CMS object this tool is MOUNTED on
+  📄    chunk   One code chunk of a chunked tool (JS code 1/2, CSS 2/2, …)
+  🗂    query   One object returned by tool.requestObjects (query / create /
+                 update / delete) — the label is the mainObjectType
+
+COLUMNS
+  document  friendly label
+  id        document id
+  size      serialized document bytes
+  %         share of the 1 MiB PER-DOCUMENT limit (amber from 60 %, red from 85 %)
+  footer    N documents · total KB/MB  — the total has NO percentage, because
+            1 MiB applies to one document, not to a list
+
+COPYING (to send to an AI or a colleague)
+  ⧉ on a row      copies that document's FULL JSON
+  ⎘ Copy all      copies the whole panel report, including a `documents` array:
+                  { kind, label, id, type, bytes, source }
+  The header shows "Copied N chars"; the console prints
+  "[html-tool:dev] copied N chars via clipboard-api|execCommand". If it says
+  "Clipboard blocked", the browser refused the write (focus/permission) — click
+  the row once more.
+
+HOW TO HAND THIS TO AN AI
+  Paste the `documents` array (or a single copied document) together with the
+tool's [HTML] / [CSS] / [JS] blocks and say exactly what to check, e.g.
+    "This tool is mounted on restaurant-order-taking-app. The report shows it
+     also reads restaurant-orders-easyorder 7 times and restaurants-easyorder 4
+     times. Find every code path that reads those types and tell me which ones
+     are unnecessary."
+  Every row carries the type and the action that triggered the read, so the AI
+  can map a row back to the SDK call that produced it.
+
+READING IT LIKE A DETECTIVE
+  • A `type` you did not design for = code reaching an unrelated collection.
+    Usual causes: a copy-pasted helper, a hardcoded mainObjectType, a "load
+    everything" query, or a widget left over from another tool.
+  • Many rows of the same type with DIFFERENT ids = a per-object loop, not one
+    query. Replace it with a single requestObjects query using filters.
+  • The same `obj:<type>:<action>` row repeating = the action ran again (timer,
+    interval, or a render path that re-fires it).
+  • `bytes: 0` on a 🗂 row = aggregate row (that action had no single document,
+    e.g. create/delete). It is not a broken read.
+  • `cache:` rows = no network read this session; the row only documents where
+    the code CAME FROM.
+  • A `[html-tool:guard] TRIPPED` line means the host REFUSED reads: the tool
+    exceeded 40 reads / 10 s for one key and is in a 30 s cooldown. That is a
+    loop in the tool, not a CMS problem.
+
+RULES FOR TOOL AUTHORS (keep the report clean)
+  • Read only the types declared in your allowedObjectTypes, and only those you
+    actually render.
+  • One requestObjects call per concern. Never call it from a render loop, a
+    setInterval, or on every postMessage.
+  • Fetch by id when you know the id; use query filters instead of downloading a
+    collection and filtering in JS.
+  • Never read at boot "just in case". Read when the user acts.
+  • Target: a handful of documents per tool. A report with dozens of rows of
+    types you do not use is a bug, not a caching opportunity.
+
+NOTES
+  • The report is per page session and in memory. A reload starts it empty.
+  • It lists what the HOST read on the tool's behalf. A tool talking straight to
+    an external service (relay fetch, AI, storage) does not appear.
+  • Sizes are serialized document bytes — comparable, but not Firestore billing
+    units.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CMS TYPE CATALOG FOR THIS TENANT
