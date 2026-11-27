@@ -1,4 +1,4 @@
-<!-- html build 2026-11-18-94 -->
+<!-- html build 2026-11-18-96 -->
 <div id="app">
   <!-- HEADER -->
   <header class="app-header">
@@ -72,6 +72,24 @@
           <div class="ref-split-actions">
             <button type="button" class="btn btn-primary btn-sm" id="btn-save-rephrase-prompt" title="Save these rules with this curriculum">💾 Save these rules</button>
             <button type="button" class="btn btn-outline btn-sm" id="btn-reset-rephrase-prompt" title="Delete the saved rules and use the built-in ones again">↩ Restore the built-in rules</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="settings-card">
+      <div class="settings-header">
+        <strong>🎨 AI image regeneration rules</strong>
+        <span class="form-hint">The contract the AI follows when it redraws a reference picture as our own version: same teaching subject and labels, clearly different artwork, no rights-protected material. It is sent with every picture generation of this curriculum.</span>
+      </div>
+      <div class="settings-body">
+        <div class="form-group">
+          <label class="form-label" for="curriculum-image-prompt">How the AI must redraw a reference picture</label>
+          <textarea class="form-input form-textarea" id="curriculum-image-prompt" rows="18" spellcheck="false" style="min-height:320px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.55" title="The rules sent with every picture generation. They are saved with this curriculum; when nothing is saved the built-in rules are used."></textarea>
+          <span class="form-hint" id="curriculum-image-state">Nothing saved yet - the built-in rules are shown.</span>
+          <span class="form-hint">The tool always appends its own mandatory safety block (same aspect ratio, clearly different artwork, no logos, watermarks, copyrighted characters or celebrity likeness); up to 20,000 characters are stored.</span>
+          <div class="ref-split-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-save-image-prompt" title="Save these rules with this curriculum">💾 Save these rules</button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-reset-image-prompt" title="Delete the saved rules and use the built-in ones again">↩ Restore the built-in rules</button>
           </div>
         </div>
       </div>
@@ -281,7 +299,7 @@
           </div>
 
           <div class="ref-split-panel is-active" id="ref-split-panel-pick">
-            <div class="form-hint">Click a page to select it - each run of neighbouring pages becomes one part. <strong>#1, #2…</strong> marks a page that is already inside that split, <strong>IGNORED</strong> marks a page you skipped (a table of contents, a cover). 🚫 ignores a page, ↩ makes it available again, 🔍 opens the full-size preview.</div>
+            <div class="form-hint">Click a page to select it - each run of neighbouring pages becomes one part. <strong>#1, #2…</strong> marks the parts a page already belongs to, <strong>IGNORED</strong> marks a page you skipped (a table of contents, a cover). 🚫 ignores a page, ↩ makes it available again, 🔍 opens the full-size preview. A page that is already used can be selected again: one page often holds the content of two lessons - the page is duplicated, and 🎯 Focus on each part records which half that lesson must use.</div>
             <div class="ref-split-pages-head">
               <strong>Pages</strong>
               <span class="ref-split-parts-tools">
@@ -350,7 +368,7 @@
               <button type="button" class="btn btn-sm btn-outline" id="btn-ref-split-select-all" title="Tick / untick every part">✓ Select all</button>
             </span>
           </div>
-          <div class="form-hint">Parts are numbered <strong>by page order</strong> (the same # is shown on their pages). Tick the parts you want to give to lessons. ✨ Generate prepares the content of a part here, once - every lesson then uses it as reference material. The 📚 chip shows how many lessons already hold a part; 👁 opens the PDF, 🗑 deletes the part.</div>
+          <div class="form-hint">Parts are numbered <strong>by page order</strong> (the same # is shown on their pages). Tick the parts you want to give to lessons. ✨ Generate prepares the content of a part here, once - every lesson then uses it as reference material. The 📚 chip shows how many lessons already hold a part; 👁 opens the PDF, 🎯 records which part of a shared page this part must use, 🗑 deletes the part.</div>
           <div class="ref-split-parts" id="ref-split-parts-list"></div>
           <div class="ref-split-empty" id="ref-split-empty">No parts yet. Use step 1 to split the document.</div>
           <div class="ref-split-actions">
@@ -555,6 +573,7 @@
       <div class="study-html-panel active" data-html-panel="preview">
         <div class="study-html-preview-toolbar">
           <button type="button" class="btn btn-outline btn-sm btn-generate-html" id="btn-generate-html-from-pdf-v2">🤖 Generate from PDFs</button>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-write-from-scratch" title="Write this lesson's Study Content from a conversation with the AI - no source document needed">✨ Write with AI chat</button>
           <button type="button" class="btn btn-sm vis-tab-toggle" id="vis-toggle-study" data-vis-key="studyContent" title="Toggle visibility for students" style="margin-left:6px;padding:3px 10px;font-size:11px;border:1px solid var(--border);border-radius:14px;background:#fff;cursor:pointer;font-family:inherit">👁️</button>
           <span id="generate-html-info-v2" style="display:none;font-size:12px;color:var(--text-muted);padding:4px 0">📭 Add PDFs first.</span>
         </div>
@@ -766,8 +785,8 @@
               </span>
             </div>
             <div class="sd-images-legend">
-              <span class="sd-image-role is-real">● Real</span> used directly in generated content
-              <span class="sd-image-role is-source">◐ Source</span> needs a 🎨 generated version
+              <span class="sd-image-role is-source">◐ Reference</span> kept as reference - generated content uses our accepted version once one exists
+              <span class="sd-image-role is-real">● Ours</span> our own picture, used directly
             </div>
             <div class="sd-placement-report" id="sd-placement-report" hidden></div>
             <div class="sd-images-grid" id="sd-images-grid"><div class="sd-empty">No pictures yet. Use “Get Pictures”, “Add Image”, or paste a screenshot with Ctrl+V.</div></div>

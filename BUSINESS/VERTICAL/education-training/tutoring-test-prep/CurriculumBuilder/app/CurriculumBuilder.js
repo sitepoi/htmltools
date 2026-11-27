@@ -1,4 +1,4 @@
-/* js build 2026-11-18-130 */
+/* js build 2026-11-18-132 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-130';
+var TOOL_BUILD = '2026-11-18-132';
 // Boot diagnostic: which build is running, and is the large-file download channel present?
 (function logFileChannelAvailability() {
   console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' · Curriculum Builder');
@@ -102,6 +102,7 @@ var curriculumLanguage = '';     // language saved with the curriculum (default 
 var curriculumPictureDetection = '';   // '' = tool parameter | 'auto' | 'local' | 'vision'
 var curriculumVisionPageMaxSide = 0;   // 0 = tool parameter, else 600..4096 px
 var curriculumRephrasePrompt = '';     // '' = built-in default, else the author's own rephrasing rules
+var curriculumImagePrompt = '';        // '' = built-in default, else the author's own picture redraw rules
 var studioOcrLanguageOverride = ''; // per-document OCR language chosen in the Process drawer
 var editingSectionIdx = null;    // Index being edited in editingSectionParent
 var editingSectionParent = null; // Array that holds the section being edited (sections or a parent's children)
@@ -825,31 +826,87 @@ function updateLessonDocWithRetry(lessonObj, heavyData, lessonDocId, attemptNumb
   });
 }
 
+/* Lesson-doc writes are SERIALIZED. Two autosaves one after the other (crop,
+ * then upload) used to read-modify-write the same document concurrently, and
+ * the older snapshot could win - which wiped the newest pictures. A queued job
+ * always re-reads the live lesson object, so the last state always wins. */
+var lessonDocWriteQueue = [];
+var lessonDocWriteBusy = false;
+
+function lessonDocWriteKey(lessonObj) {
+  return lessonObj && lessonObj.lessonDocId ? ('doc:' + lessonObj.lessonDocId) : ('new:' + ((lessonObj && lessonObj.id) || 'unknown'));
+}
+
 /** Create or update a lesson doc. Returns lessonDocId via callback. */
 function saveLessonDoc(lessonObj, callback) {
   if (!canUseLessonDocs()) {
     if (callback) callback(null, lessonObj.lessonDocId || null);
     return;
   }
-  var heavyData = extractHeavyLessonData(lessonObj);
-  var lessonDocId = lessonObj.lessonDocId;
+  var jobKey = lessonDocWriteKey(lessonObj);
+  // Coalesce: any number of edits made while a write is pending need ONE write.
+  for (var queueIndex = 0; queueIndex < lessonDocWriteQueue.length; queueIndex++) {
+    if (lessonDocWriteQueue[queueIndex].key === jobKey) {
+      if (callback) lessonDocWriteQueue[queueIndex].callbacks.push(callback);
+      return;
+    }
+  }
+  lessonDocWriteQueue.push({
+    key: jobKey,
+    lesson: lessonObj,
+    callbacks: callback ? [callback] : []
+  });
+  processLessonDocWriteQueue();
+}
 
-  if (lessonDocId) {
+function finishLessonDocWriteJob(job, writeError, writtenDocId) {
+  for (var callbackIndex = 0; callbackIndex < job.callbacks.length; callbackIndex++) {
+    try {
+      job.callbacks[callbackIndex](writeError || null, writtenDocId || job.lesson.lessonDocId || null);
+    } catch (callbackError) {
+      console.warn('[LESSON:DOC] save callback failed:', callbackError);
+    }
+  }
+}
+
+function processLessonDocWriteQueue() {
+  if (lessonDocWriteBusy) return;
+  var job = lessonDocWriteQueue.shift();
+  if (!job) return;
+  lessonDocWriteBusy = true;
+  // Build the payload NOW so a queued save always writes the newest state.
+  var heavyData;
+  try {
+    heavyData = extractHeavyLessonData(job.lesson);
+  } catch (payloadError) {
+    lessonDocWriteBusy = false;
+    console.warn('[LESSON:DOC] the payload could not be built:', payloadError);
+    finishLessonDocWriteJob(job, payloadError, null);
+    processLessonDocWriteQueue();
+    return;
+  }
+  function finish(writeError, writtenDocId) {
+    lessonDocWriteBusy = false;
+    finishLessonDocWriteJob(job, writeError, writtenDocId);
+    processLessonDocWriteQueue();
+  }
+  if (job.lesson.lessonDocId) {
     // Update existing lesson doc: read first, then merge, so a lesson object
     // whose heavy fields were already moved out can never erase the content.
-    updateLessonDocWithRetry(lessonObj, heavyData, lessonDocId, 0, callback);
-  } else {
-    // Create new lesson doc
-    tool.requestObjects('create', {
-      mainObjectType: LESSON_DOC_TYPE,
-      name: lessonObj.title || 'Lesson',
-      productData: { data_categoriesBased: { lessonJson: JSON.stringify(heavyData) } }
-    }, function(err, result) {
-      if (err) { console.warn('Lesson doc create failed:', err); }
-      var newId = (result && result.object) ? result.object.id : null;
-      if (callback) callback(err, newId);
-    });
+    updateLessonDocWithRetry(job.lesson, heavyData, job.lesson.lessonDocId, 0, finish);
+    return;
   }
+  tool.requestObjects('create', {
+    mainObjectType: LESSON_DOC_TYPE,
+    name: job.lesson.title || 'Lesson',
+    productData: { data_categoriesBased: { lessonJson: JSON.stringify(heavyData) } }
+  }, function(createError, createResult) {
+    if (createError) console.warn('Lesson doc create failed:', createError);
+    var newDocId = (createResult && createResult.object) ? createResult.object.id : null;
+    // Remember the id on the live object so a queued save updates this doc.
+    if (newDocId && !job.lesson.lessonDocId) job.lesson.lessonDocId = newDocId;
+    finish(createError, newDocId);
+  });
 }
 
 /** Load heavy lesson data from a lesson doc. Falls back to main doc data. */
@@ -3314,7 +3371,11 @@ function loadCurriculum(val) {
   if (curriculumValue && typeof curriculumValue.rephrasePrompt === 'string') {
     curriculumRephrasePrompt = normalizeRephrasePrompt(curriculumValue.rephrasePrompt);
   }
+  if (curriculumValue && typeof curriculumValue.imagePrompt === 'string') {
+    curriculumImagePrompt = normalizeImageRegenPrompt(curriculumValue.imagePrompt);
+  }
   syncRephrasePromptSettings();
+  syncImagePromptSettings();
   syncStudioPictureDetectionControls();
   // GUARD: an empty value must NEVER wipe a curriculum that is already on
   // screen. Keep the screen and keep reading tool.getValue() instead.
@@ -3412,11 +3473,15 @@ function cleanStudioImagesForSave(imageList, labelPrefix, inlineBudgetState) {
     }
     if (cleanedImage.url) delete cleanedImage.dataUrl;
     if (cleanedImage.generatedUrl) delete cleanedImage.generatedDataUrl;
+    if (cleanedImage.acceptedUrl) delete cleanedImage.acceptedDataUrl;
+    if (cleanedImage.candidateUrl) delete cleanedImage.candidateDataUrl;
     cleanedImages.push(cleanedImage);
-    if (inlineBudgetState && (cleanedImage.dataUrl || cleanedImage.generatedDataUrl)) {
+    if (inlineBudgetState && (cleanedImage.dataUrl || cleanedImage.generatedDataUrl || cleanedImage.acceptedDataUrl || cleanedImage.candidateDataUrl)) {
       var inlineImageBytes = 0;
       if (cleanedImage.dataUrl) inlineImageBytes += utf8ByteLength(cleanedImage.dataUrl);
       if (cleanedImage.generatedDataUrl) inlineImageBytes += utf8ByteLength(cleanedImage.generatedDataUrl);
+      if (cleanedImage.acceptedDataUrl) inlineImageBytes += utf8ByteLength(cleanedImage.acceptedDataUrl);
+      if (cleanedImage.candidateDataUrl) inlineImageBytes += utf8ByteLength(cleanedImage.candidateDataUrl);
       inlineBudgetState.entries.push({
         label: labelPrefix + '[' + imageIndex + ']',
         name: cleanedImage.name || '',
@@ -3440,6 +3505,8 @@ function applyInlineImageBudget(inlineBudgetState, budgetBytes) {
     var budgetEntry = inlineBudgetState.entries[entryIndex];
     delete budgetEntry.image.dataUrl;
     delete budgetEntry.image.generatedDataUrl;
+    delete budgetEntry.image.acceptedDataUrl;
+    delete budgetEntry.image.candidateDataUrl;
     inlineBudgetState.totalBytes -= budgetEntry.bytes;
     leftOutEntries.push(budgetEntry);
   }
@@ -3498,6 +3565,7 @@ function buildCurriculumValueForCms() {
   if (curriculumPictureDetection) curriculumValue.pictureDetection = curriculumPictureDetection;
   if (curriculumVisionPageMaxSide) curriculumValue.visionPageMaxSide = curriculumVisionPageMaxSide;
   if (curriculumRephrasePrompt) curriculumValue.rephrasePrompt = curriculumRephrasePrompt;
+  if (curriculumImagePrompt) curriculumValue.imagePrompt = curriculumImagePrompt;
   // Reference documents live in their OWN CMS objects when the store is ready,
   // so the curriculum record carries no library metadata at all. The legacy
   // list is only written back when object CRUD is unavailable.
@@ -3516,6 +3584,8 @@ function buildCurriculumValueForCms() {
           documentCopy.generatedDroppedImages = (Number(documentCopy.generatedDroppedImages) || 0) + strippedDocumentHtml.removedCount;
         }
       }
+      // Pictures of a reference document must be storage URLs in the record too.
+      documentCopy.documentImages = cleanReferenceDocumentImagesForSave(sourceDocument);
       recordDocuments.push(documentCopy);
     }
     curriculumValue.mainDocuments = recordDocuments;
@@ -5154,6 +5224,245 @@ function editLesson(idx) {
   });
 }
 
+/* ── ✨ Write Study Content from scratch with an AI chat ──
+   No reference document: the author explains the lesson in a chat, the AI
+   writes the HTML, and every further message revises the same draft. */
+var studioWriteChatMessages = [];   // { role: 'user' | 'assistant', text }
+var studioWriteDraftHtml = '';
+var studioWriteBusy = false;
+var studioWriteLessonKey = '';
+var studioWriteTokenCount = 0;
+
+var DEFAULT_STUDIO_WRITE_RULES =
+  'You are a senior instructional designer and subject-matter writer. You write ONE complete, self-contained lesson study document as an HTML FRAGMENT.\n\n' +
+  'CONTENT RULES\n' +
+  '- Write in the language of the author. If the author writes in Turkish, write the document in Turkish.\n' +
+  '- Cover exactly what the author asked for; never invent rules, numbers, names, dates or sources.\n' +
+  '- Teach, do not summarise: explain every concept, give worked examples, then a short self-check.\n' +
+  '- Use a clear structure: an <h1> title, <h2> major parts, <h3> topics, and a short contents list when there are four or more parts.\n' +
+  '- Use <p>, <ul>, <ol>, <dl>, <table> with <caption> and <thead>, <blockquote>, <strong> and <em>. Never skip a heading level.\n' +
+  '- Where a picture would help, write a clear placeholder sentence instead of inventing an image.\n\n' +
+  'TECHNICAL RULES\n' +
+  '- Answer with ONLY the HTML fragment: no markdown fences, no explanation before or after, no html, head, body, style or script elements.\n' +
+  '- No external CSS, fonts, images or links that the author did not give you.\n' +
+  '- Use semantic HTML only and make every id unique.\n\n' +
+  'REVISION MODE\n' +
+  '- When a current draft is included, revise that draft: keep everything the author did not ask to change and apply the newest request completely.\n' +
+  '- Never shorten the document unless the author asks for it.';
+
+function buildStudioWritePrompt() {
+  var lessonTitle = el('edit-lesson-title') ? el('edit-lesson-title').value.trim() : '';
+  var sectionName = el('lesson-section-name') ? el('lesson-section-name').textContent.trim() : '';
+  var conversationLines = [];
+  for (var messageIndex = 0; messageIndex < studioWriteChatMessages.length; messageIndex++) {
+    var chatMessage = studioWriteChatMessages[messageIndex];
+    if (!chatMessage || !chatMessage.text) continue;
+    conversationLines.push((chatMessage.role === 'user' ? 'AUTHOR: ' : 'YOU: ') + chatMessage.text);
+  }
+  var promptParts = [DEFAULT_STUDIO_WRITE_RULES];
+  promptParts.push('LESSON: ' + (lessonTitle || '(no title yet)') + (sectionName ? ' · section: ' + sectionName : ''));
+  promptParts.push('CONVERSATION:\n' + conversationLines.join('\n\n'));
+  if (studioWriteDraftHtml) {
+    var draftForPrompt = studioWriteDraftHtml;
+    if (draftForPrompt.length > 30000) draftForPrompt = draftForPrompt.substring(0, 30000) + '\n[draft truncated for the prompt]';
+    promptParts.push('CURRENT DRAFT (revise it and keep everything not asked to change):\n' + draftForPrompt);
+  }
+  promptParts.push('Answer with the complete updated HTML fragment only.');
+  return promptParts.join('\n\n');
+}
+
+/** The AI answer may arrive fenced or wrapped in a full page - keep the fragment */
+function extractStudioWriteHtml(aiResponse) {
+  var htmlText = String(aiResponse || '').trim();
+  htmlText = htmlText.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+  var firstTagIndex = htmlText.indexOf('<');
+  if (firstTagIndex > 0) htmlText = htmlText.substring(firstTagIndex);
+  var bodyMatch = htmlText.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch) htmlText = bodyMatch[1];
+  return htmlText.trim();
+}
+
+function writeStudioWritePreview(bodyHtml) {
+  var previewFrame = el('sd-write-preview');
+  if (!previewFrame) return;
+  try {
+    var frameDocument = previewFrame.contentDocument || (previewFrame.contentWindow && previewFrame.contentWindow.document);
+    if (!frameDocument) return;
+    frameDocument.open();
+    frameDocument.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+      'body{font-family:system-ui,"Segoe UI",Arial,sans-serif;line-height:1.6;color:#1e293b;padding:16px;margin:0}' +
+      'img{max-width:100%}table{border-collapse:collapse;width:100%}td,th{border:1px solid #cbd5e1;padding:6px;text-align:left}' +
+      '.empty{color:#64748b;font-size:13px;text-align:center;padding:40px 10px}' +
+      '</style></head><body>' + bodyHtml + '</body></html>');
+    frameDocument.close();
+  } catch (previewError) {
+    console.warn('[STUDIO:WRITE] the draft preview could not be rendered:', previewError);
+  }
+}
+
+function renderStudioWritePreview() {
+  if (!studioWriteDraftHtml) {
+    writeStudioWritePreview('<div class="empty">The draft appears here after the first message.</div>');
+    return;
+  }
+  writeStudioWritePreview(studioWriteDraftHtml);
+}
+
+function renderStudioWriteChat() {
+  var chatLog = el('sd-write-log');
+  if (chatLog) {
+    if (!studioWriteChatMessages.length) {
+      chatLog.innerHTML = '<div class="sd-write-empty">Describe the lesson you want. The first message creates the draft; every later message improves it.</div>';
+    } else {
+      var chatRows = [];
+      for (var messageIndex = 0; messageIndex < studioWriteChatMessages.length; messageIndex++) {
+        var chatMessage = studioWriteChatMessages[messageIndex];
+        var rowClass = chatMessage.role === 'user' ? 'is-user' : 'is-ai';
+        chatRows.push('<div class="sd-write-msg ' + rowClass + '"><div class="sd-write-role">' + (chatMessage.role === 'user' ? 'You' : 'AI') + '</div>' +
+          '<div class="sd-write-text">' + esc(chatMessage.text) + '</div></div>');
+      }
+      if (studioWriteBusy) chatRows.push('<div class="sd-write-msg is-ai"><div class="sd-write-role">AI</div><div class="sd-write-text">✍️ Writing…</div></div>');
+      chatLog.innerHTML = chatRows.join('');
+    }
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+  var sendButton = el('sd-write-send');
+  if (sendButton) {
+    sendButton.disabled = studioWriteBusy;
+    sendButton.textContent = studioWriteBusy ? '⏳ Writing…' : '💬 Send to AI';
+  }
+  var useButton = el('sd-write-use');
+  if (useButton) useButton.disabled = studioWriteBusy || !studioWriteDraftHtml;
+  var statusElement = el('sd-write-status');
+  if (statusElement && !studioWriteBusy) {
+    statusElement.textContent = studioWriteDraftHtml ? ('Draft ready · ' + formatCount(studioWriteDraftHtml.length) + ' characters') : 'No draft yet';
+  }
+}
+
+function streamStudioWriteDraft() {
+  var fullResponse = '';
+  var promptText = buildStudioWritePrompt();
+  try {
+    tool.requestAIStream(promptText, null, {
+      onToken: function(token) {
+        fullResponse += token;
+        studioWriteTokenCount += (token || '').length;
+        var statusElement = el('sd-write-status');
+        if (statusElement && studioWriteTokenCount % 400 < (token || '').length) {
+          statusElement.textContent = '✍️ Writing… ' + formatCount(studioWriteTokenCount) + ' characters';
+        }
+      },
+      onComplete: function() {
+        studioWriteBusy = false;
+        var generatedHtml = extractStudioWriteHtml(fullResponse);
+        if (!generatedHtml) {
+          studioWriteChatMessages.push({ role: 'assistant', text: 'The AI answered without HTML. Describe the lesson again with a little more detail.' });
+          renderStudioWriteChat();
+          return;
+        }
+        studioWriteDraftHtml = generatedHtml;
+        studioWriteChatMessages.push({ role: 'assistant', text: 'Draft ready · ' + formatCount(generatedHtml.length) + ' characters. Check the preview, then press ⬆ Use as Study Content - or keep chatting to improve it.' });
+        renderStudioWriteChat();
+        renderStudioWritePreview();
+      },
+      onError: function(streamError) {
+        studioWriteBusy = false;
+        studioWriteChatMessages.push({ role: 'assistant', text: 'The AI call failed: ' + describeAiChannelFailure(streamError) });
+        renderStudioWriteChat();
+      }
+    });
+  } catch (streamCallError) {
+    studioWriteBusy = false;
+    studioWriteChatMessages.push({ role: 'assistant', text: 'The AI channel is not available: ' + (streamCallError.message || streamCallError) });
+    renderStudioWriteChat();
+  }
+}
+
+function sendStudioWriteMessage() {
+  if (studioWriteBusy) return;
+  var inputField = el('sd-write-input');
+  var instruction = inputField ? inputField.value.trim() : '';
+  if (!instruction) {
+    tool.notify('Write what the lesson should contain first.', 'warning');
+    return;
+  }
+  studioWriteChatMessages.push({ role: 'user', text: instruction });
+  if (inputField) inputField.value = '';
+  studioWriteBusy = true;
+  studioWriteTokenCount = 0;
+  renderStudioWriteChat();
+  streamStudioWriteDraft();
+}
+
+function clearStudioWriteChat() {
+  studioWriteChatMessages = [];
+  studioWriteDraftHtml = '';
+  renderStudioWriteChat();
+  renderStudioWritePreview();
+}
+
+function useStudioWriteDraftForLesson() {
+  if (!studioWriteDraftHtml) return;
+  editingHtmlCode = studioWriteDraftHtml;
+  editingStudyHtmlData = null;
+  if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
+  if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
+  updateHtmlPreview();
+  closeStudioModal();
+  tool.notify('The draft is now in Study Content - press Save Lesson to store it.', 'success');
+}
+
+function openStudioWriteFromScratch() {
+  var lessonKey = (el('edit-lesson-title') ? el('edit-lesson-title').value : '') + '|' +
+    (el('edit-lesson-order') ? el('edit-lesson-order').value : '') + '|' +
+    (el('lesson-section-name') ? el('lesson-section-name').textContent : '');
+  if (lessonKey !== studioWriteLessonKey) {
+    studioWriteLessonKey = lessonKey;
+    studioWriteChatMessages = [];
+    studioWriteDraftHtml = '';
+  }
+  var bodyHtml =
+    '<div class="sd-write">' +
+      '<div class="sd-write-chat">' +
+        '<div class="sd-write-log" id="sd-write-log"></div>' +
+        '<textarea class="form-input sd-write-input" id="sd-write-input" rows="4" ' +
+          'placeholder="Explain the lesson: subject, level, what students must learn, the examples you want..."></textarea>' +
+        '<div class="sd-write-actions">' +
+          '<button type="button" class="btn btn-primary" id="sd-write-send">💬 Send to AI</button>' +
+          '<button type="button" class="btn btn-outline" id="sd-write-clear" title="Start a new conversation">🧹 Clear chat</button>' +
+          '<span class="sd-write-hint">Enter sends · Shift+Enter adds a line</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="sd-write-preview-col">' +
+        '<div class="sd-write-preview-head"><strong>Draft preview</strong><span id="sd-write-status">No draft yet</span></div>' +
+        '<iframe class="sd-write-preview" id="sd-write-preview" title="Draft preview"></iframe>' +
+      '</div>' +
+    '</div>' +
+    '<div class="sd-modal-actions">' +
+      '<button type="button" class="btn btn-outline" data-sd-close>Close</button>' +
+      '<button type="button" class="btn btn-primary" id="sd-write-use" disabled>⬆ Use as Study Content</button>' +
+    '</div>';
+  openStudioModal('✨ Write Study Content with AI', bodyHtml, 'sd-write-modal');
+  renderStudioWriteChat();
+  renderStudioWritePreview();
+  var sendButton = el('sd-write-send');
+  if (sendButton) sendButton.addEventListener('click', sendStudioWriteMessage);
+  var inputField = el('sd-write-input');
+  if (inputField) {
+    inputField.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendStudioWriteMessage();
+      }
+    });
+    inputField.focus();
+  }
+  var clearButton = el('sd-write-clear');
+  if (clearButton) clearButton.addEventListener('click', clearStudioWriteChat);
+  var useButton = el('sd-write-use');
+  if (useButton) useButton.addEventListener('click', useStudioWriteDraftForLesson);
+}
+
 function saveLessonFromEditor() {
   var title = el('edit-lesson-title').value.trim();
   if (!title) { tool.notify('Lesson title is required.', 'warning'); return; }
@@ -6368,12 +6677,13 @@ function imageContentSrc(image) {
   return image.dataUrl || '';
 }
 
-/* ── Picture roles and versions ──
-   Every gallery picture has a role and can carry a Generated version:
-     real   = used directly in generated content
-     source = must be replaced by a Generated version (a task)
-   The ORIGINAL always stays in url/dataUrl; the generated copy lives in
-   generatedUrl/generatedDataUrl. */
+/* ── Picture versions ──
+   Every gallery picture keeps THREE independent versions:
+     reference = url/dataUrl            the picture as it came from the source (always kept)
+     accepted  = acceptedUrl/DataUrl    OUR approved generated version (used in content)
+     candidate = candidateUrl/DataUrl   a generated draft waiting for accept/discard
+   generatedUrl/generatedDataUrl are the legacy accepted fields and are still read.
+   role: 'source' = reference that is not ours yet, 'real' = our own picture. */
 function studioImageRole(image) {
   return (image && image.role === 'source') ? 'source' : 'real';
 }
@@ -6383,20 +6693,57 @@ function defaultStudioImageRole() {
   return studioDocRole(studioCurrentDocUrl) === 'source' ? 'source' : 'real';
 }
 
-function studioImageHasGenerated(image) {
-  if (!image) return false;
-  if (typeof image.generatedUrl === 'string' && image.generatedUrl.indexOf('http') === 0) return true;
-  return !!(typeof image.generatedDataUrl === 'string' && image.generatedDataUrl);
+/** Hosted or inline source of the ACCEPTED generated version */
+function studioImageAcceptedSrc(image) {
+  if (!image) return '';
+  if (typeof image.acceptedUrl === 'string' && /^https?:\/\//i.test(image.acceptedUrl)) return image.acceptedUrl;
+  if (typeof image.acceptedDataUrl === 'string' && image.acceptedDataUrl) return image.acceptedDataUrl;
+  if (typeof image.generatedUrl === 'string' && /^https?:\/\//i.test(image.generatedUrl)) return image.generatedUrl;
+  if (typeof image.generatedDataUrl === 'string' && image.generatedDataUrl) return image.generatedDataUrl;
+  return '';
 }
 
-function studioImageGeneratedSrc(image) {
+/** Hosted or inline source of the CANDIDATE (draft) generated version */
+function studioImageCandidateSrc(image) {
   if (!image) return '';
-  if (typeof image.generatedUrl === 'string' && image.generatedUrl.indexOf('http') === 0) return image.generatedUrl;
-  return image.generatedDataUrl || '';
+  if (typeof image.candidateUrl === 'string' && /^https?:\/\//i.test(image.candidateUrl)) return image.candidateUrl;
+  if (typeof image.candidateDataUrl === 'string' && image.candidateDataUrl) return image.candidateDataUrl;
+  return '';
+}
+
+function studioImageHasAccepted(image) {
+  return !!studioImageAcceptedSrc(image);
+}
+
+function studioImageHasCandidate(image) {
+  return !!studioImageCandidateSrc(image);
+}
+
+/** Legacy name kept for every existing caller: "our generated version exists" */
+function studioImageHasGenerated(image) {
+  return studioImageHasAccepted(image);
+}
+
+/** Legacy name kept: the generated version that is used in content */
+function studioImageGeneratedSrc(image) {
+  return studioImageAcceptedSrc(image);
+}
+
+/** The picture generated content must use: accepted version wins over the reference */
+function studioImageContentSrc(image) {
+  if (!image) return '';
+  return studioImageAcceptedSrc(image) || imageContentSrc(image);
+}
+
+/** 'accepted' | 'candidate' | 'reference' | 'ours' - the state shown on the card */
+function studioImageUsageState(image) {
+  if (!image) return 'reference';
+  if (studioImageHasAccepted(image)) return 'accepted';
+  return studioImageRole(image) === 'source' ? 'reference' : 'ours';
 }
 
 function studioImageNeedsGeneratedVersion(image) {
-  return studioImageRole(image) === 'source' && !studioImageHasGenerated(image);
+  return studioImageRole(image) === 'source' && !studioImageHasAccepted(image);
 }
 
 /** How many Source pictures of the open document still wait for a generated version */
@@ -6408,11 +6755,10 @@ function countStudioImagesWaitingForGenerated() {
   return waitingCount;
 }
 
-/** Image source used inside GENERATED content: the generated version wins for a source picture */
+/** Image source used inside GENERATED content: our accepted version wins over the reference */
 function imageSrcForGeneratedContent(image) {
   if (!image) return '';
-  if (studioImageRole(image) === 'source' && studioImageHasGenerated(image)) return studioImageGeneratedSrc(image);
-  return imageContentSrc(image);
+  return studioImageContentSrc(image);
 }
 
 /** Upload ONE gallery image to CMS storage (requestUploadBinary contract from
@@ -6440,12 +6786,16 @@ function uploadStudioImageToStorage(imageIndex, onDone) {
 /** Resolve an image to a data URL usable as an AI reference (fetch hosted ones) */
 function resolveStudioImageDataUrl(image, onDone) {
   if (!image) { onDone(''); return; }
-  if (typeof image.dataUrl === 'string' && image.dataUrl.indexOf('data:') === 0) { onDone(image.dataUrl); return; }
-  var hostedUrl = (typeof image.url === 'string' && image.url.indexOf('http') === 0) ? image.url : '';
-  if (!hostedUrl && typeof image.dataUrl === 'string' && image.dataUrl.indexOf('http') === 0) hostedUrl = image.dataUrl;
-  if (!hostedUrl) { onDone(''); return; }
+  resolvePictureSourceDataUrl(imageContentSrc(image), onDone);
+}
+
+/** Resolve ONE version of a picture (a hosted URL or a data URL) to a data URL */
+function resolvePictureSourceDataUrl(pictureSource, onDone) {
+  if (!pictureSource) { onDone(''); return; }
+  if (pictureSource.indexOf('data:') === 0) { onDone(pictureSource); return; }
+  if (pictureSource.indexOf('http') !== 0) { onDone(''); return; }
   if (!binaryFileChannelAvailable()) { onDone(''); return; }
-  fetchDocumentBytes(hostedUrl, { purpose: 'ai-image' }, function(fetchError, imageBytes, imageMeta) {
+  fetchDocumentBytes(pictureSource, { purpose: 'ai-image' }, function(fetchError, imageBytes, imageMeta) {
     if (fetchError || !imageBytes || !imageBytes.length) { onDone(''); return; }
     var contentType = (imageMeta && imageMeta.contentType) || 'image/jpeg';
     onDone(bytesToDataUrl(imageBytes, contentType));
@@ -6489,6 +6839,38 @@ function uploadUnhostedStudioImages(onDone) {
   uploadNext();
 }
 
+/** On drawer open: pictures that still hold inline bytes get one upload retry.
+ *  Entries without any bytes are left alone (nothing to upload). */
+function retryUnhostedStudioImages() {
+  if (typeof tool.requestUploadBinary !== 'function') return;
+  var retryIndexes = [];
+  for (var imageIndex = 0; imageIndex < editingStudyDocImages.length; imageIndex++) {
+    var image = editingStudyDocImages[imageIndex];
+    if (!image || isImageHosted(image)) continue;
+    if (typeof image.dataUrl === 'string' && image.dataUrl.indexOf('data:') === 0) retryIndexes.push(imageIndex);
+  }
+  if (!retryIndexes.length) return;
+  var retryQueue = retryIndexes.slice();
+  var uploadedCount = 0;
+  function uploadNextRetry() {
+    if (!retryQueue.length) {
+      if (uploadedCount > 0) {
+        renderStudyDocImageGallery();
+        renderPdfEditorList();
+        persistStudioImages();
+        autoSaveCurrentLesson();
+        tool.notify('Uploaded ' + uploadedCount + ' picture(s) that were still only in this browser session.', 'success');
+      }
+      return;
+    }
+    uploadStudioImageToStorage(retryQueue.shift(), function(uploaded) {
+      if (uploaded) uploadedCount++;
+      uploadNextRetry();
+    });
+  }
+  uploadNextRetry();
+}
+
 /** ✨ Generate New Content button: confirm, then capture the pictures and generate the content */
 function startStudioGenerateNewContent() {
   var docUrl = studioCurrentDocUrl;
@@ -6496,7 +6878,7 @@ function startStudioGenerateNewContent() {
   var lowerUrl = docUrl.toLowerCase();
   var docType = studioDocType(docUrl);
   var isHtmlDocument = docType === 'htmlDoc' || /\.(html?|htm)(\?|#|$)/.test(lowerUrl);
-  var existingImages = editingStudyDocImagesMap[docUrl] || [];
+  var existingImages = studioStoredImagesFor(docUrl);
   if (!isHtmlDocument && !existingImages.length) {
     // No pictures yet: the capture step must run first, so let the user pick
     // the detector (and the AI page size) before any AI quota is spent.
@@ -6597,7 +6979,7 @@ function runStudioContentGenerationPipeline() {
   var lowerUrl = docUrl.toLowerCase();
   var docType = studioDocType(docUrl);
   var isHtmlDocument = docType === 'htmlDoc' || /\.(html?|htm)(\?|#|$)/.test(lowerUrl);
-  var existingImages = editingStudyDocImagesMap[docUrl];
+  var existingImages = studioStoredImagesFor(docUrl);
   var hasImages = !!(existingImages && existingImages.length > 0);
   // Consume the "No pictures" choice: it applies to this run only.
   var skipPicturesThisRun = skipPicturesForNextGeneration;
@@ -11451,9 +11833,81 @@ function studioDocRole(docUrl) {
   return studioDocType(docUrl) ? 'final' : '';
 }
 
-/** Write the working image array back to the per-document map */
+/** Every URL that belongs to one reference library entry (document + parts) */
+function referenceLibraryEntryUrls(referenceEntry) {
+  var entryUrls = [];
+  if (!referenceEntry) return entryUrls;
+  if (referenceEntry.url) entryUrls.push(referenceEntry.url);
+  var entryParts = referenceEntry.parts || [];
+  for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+    if (entryParts[partIndex] && entryParts[partIndex].url) entryUrls.push(entryParts[partIndex].url);
+  }
+  return entryUrls;
+}
+
+/** The reference entry (document or part parent) that owns a URL */
+function referenceLibraryOwnerForUrl(documentUrl) {
+  if (!documentUrl) return null;
+  for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+    var libraryEntry = mainDocuments[documentIndex];
+    if (!libraryEntry) continue;
+    if (referenceLibraryEntryUrls(libraryEntry).indexOf(documentUrl) !== -1) return libraryEntry;
+  }
+  return null;
+}
+
+/** The gallery stored in the reference object for one document/part URL */
+function referenceLibraryStoredImages(documentUrl) {
+  var ownerEntry = referenceLibraryOwnerForUrl(documentUrl);
+  if (!ownerEntry || !ownerEntry.documentImages || typeof ownerEntry.documentImages !== 'object') return null;
+  var storedList = ownerEntry.documentImages[documentUrl];
+  return Array.isArray(storedList) ? storedList : null;
+}
+
+/** Copy the open gallery into the reference object, then save it (debounced) */
+function persistStudioImagesToReferenceLibrary() {
+  var ownerEntry = referenceLibraryOwnerForUrl(studioCurrentDocUrl);
+  if (!ownerEntry) return false;
+  if (!ownerEntry.documentImages || typeof ownerEntry.documentImages !== 'object') ownerEntry.documentImages = {};
+  if (editingStudyDocImages.length) {
+    ownerEntry.documentImages[studioCurrentDocUrl] = JSON.parse(JSON.stringify(editingStudyDocImages));
+  } else {
+    delete ownerEntry.documentImages[studioCurrentDocUrl];
+  }
+  scheduleReferenceEntryImagesSave(ownerEntry);
+  return true;
+}
+
+/** Debounced save: cropping several pictures writes the reference object once */
+var pendingReferenceImagesSaveTimer = null;
+var pendingReferenceImagesEntry = null;
+function scheduleReferenceEntryImagesSave(referenceEntry) {
+  pendingReferenceImagesEntry = referenceEntry;
+  if (pendingReferenceImagesSaveTimer) clearTimeout(pendingReferenceImagesSaveTimer);
+  pendingReferenceImagesSaveTimer = setTimeout(function() {
+    pendingReferenceImagesSaveTimer = null;
+    var entryToSave = pendingReferenceImagesEntry;
+    pendingReferenceImagesEntry = null;
+    if (entryToSave) saveReferenceEntryAfterChange(entryToSave);
+  }, 500);
+}
+
+/** Write a pending reference-gallery save now (drawer close, page change) */
+function flushPendingReferenceImagesSave() {
+  if (!pendingReferenceImagesEntry) return;
+  clearTimeout(pendingReferenceImagesSaveTimer);
+  pendingReferenceImagesSaveTimer = null;
+  var entryToSave = pendingReferenceImagesEntry;
+  pendingReferenceImagesEntry = null;
+  if (entryToSave) saveReferenceEntryAfterChange(entryToSave);
+}
+
+/** Write the working image array back to the store that owns the open document */
 function persistStudioImages() {
   if (!studioCurrentDocUrl) return;
+  // Reference documents/parts live in their own CMS object: the curriculum
+  // record never carries their pictures.
+  if (persistStudioImagesToReferenceLibrary()) return;
   if (editingStudyDocImages.length) {
     editingStudyDocImagesMap[studioCurrentDocUrl] = JSON.parse(JSON.stringify(editingStudyDocImages));
   } else {
@@ -11462,7 +11916,7 @@ function persistStudioImages() {
 }
 
 function studioDocImageCount(docUrl) {
-  var images = editingStudyDocImagesMap[docUrl];
+  var images = studioStoredImagesFor(docUrl);
   return images ? images.length : 0;
 }
 
@@ -12750,6 +13204,138 @@ function resetRephrasePromptToDefault() {
   syncRephrasePromptSettings();
   saveCurriculum();
   tool.notify('Built-in rephrasing rules restored.', 'info');
+}
+
+/* ── Picture redraw rules ──
+   THE contract of every picture generation: same teaching subject and labels,
+   clearly new artwork, no rights-protected material. Shown in
+   Settings → 🎨 AI image regeneration rules; a curriculum can store its own
+   version. The tool always appends IMAGE_REGENERATION_SAFETY_CONTRACT. */
+var DEFAULT_IMAGE_REGEN_RULES =
+  'You redraw a reference picture so this course owns a NEW original artwork of the same teaching subject.\n\n' +
+
+  'PART 1 - THE SUBJECT MUST STAY THE SAME (fidelity)\n' +
+  '- Keep the teaching purpose and the message: the new picture explains exactly the same thing as the reference.\n' +
+  '- Keep every object that carries meaning: the same parts, the same relationships, the same sequence or layout logic, the same quantities and proportions that matter.\n' +
+  '- Keep every label, number, symbol, unit and abbreviation EXACTLY as written, re-set in a new typography. Never invent, correct or translate a label; never add explanatory sentences.\n' +
+  '- Keep the orientation (portrait stays portrait, landscape stays landscape) and the reference aspect ratio.\n' +
+  '- If the reference is a photo, produce a NEW original photograph-like image of the same subject; if it is a drawing, diagram, chart, map or illustration, produce a new one of the same kind.\n' +
+  '- A reader who knows the reference must still recognise the same subject, the same labels and the same teaching point.\n\n' +
+
+  'PART 2 - THE ARTWORK MUST BE CLEARLY DIFFERENT (originality)\n' +
+  '- Redraw from scratch. Do not trace, crop, recolour, filter or lightly retouch the reference, and do not reproduce its exact outlines.\n' +
+  '- Change the composition: new arrangement, new viewing angle or framing, new spacing, new background.\n' +
+  '- Change the visual language: new palette, new line weight, new shapes, new shading, new icon style.\n' +
+  '- Change every decorative and non-meaningful element completely (backgrounds, frames, ornaments, texture, lighting) and replace it with your own design.\n' +
+  '- The difference must be visible at a glance, not only in the pixels: a side-by-side comparison must show two different pictures of the same subject.\n' +
+  '- Keep the informative content identical while the artwork is unmistakably new.\n\n' +
+
+  'PART 3 - NEVER CARRY OVER RIGHTS-PROTECTED MATERIAL\n' +
+  '- No logos, brand marks, trademarks, product packaging or trade dress; replace a brand mark with a neutral generic shape or a plain word.\n' +
+  '- No watermarks, signatures, ownership stamps, copyright notices, QR codes or URLs.\n' +
+  '- No copyrighted characters, mascots, cartoon or film figures, celebrity or recognisable real-person likeness.\n' +
+  '- No identifiable school, club, company or team emblem; use neutral equivalents.\n' +
+  '- Do not imitate a named artist, studio or one specific existing illustration style.\n' +
+  '- If a person appears, show an anonymous, generic person.\n\n' +
+
+  'PART 4 - QUALITY FOR LEARNING MATERIAL\n' +
+  '- Clean, professional educational illustration; high contrast; readable at print size and on a phone.\n' +
+  '- Text must be spelled correctly, horizontal and large enough to read; no decorative or distorted lettering.\n' +
+  '- Plain white or transparent background unless the background itself carries meaning.\n' +
+  '- One single picture, full frame, no collage of unrelated images, no mockup frames, no drop shadow behind the canvas.\n' +
+  '- No border unless the reference has one, and then a new simple border.\n\n' +
+
+  'PART 5 - SILENT SELF-CHECK (do not print it)\n' +
+  '- Compare with the reference: same subject, same labels, same teaching point?\n' +
+  '- Is the artwork visibly different in composition, style and palette?\n' +
+  '- Any logo, watermark, signature, brand, copyrighted character or celebrity? Remove it.\n' +
+  '- Is every label spelled exactly as in the reference and readable?';
+
+/** Always appended, never editable: the copyright and output floor. */
+var IMAGE_REGENERATION_SAFETY_CONTRACT =
+  'MANDATORY OUTPUT CONTRACT (always applied): produce ONE new original picture that teaches the same subject as the reference, redrawn - never copied, traced or closely imitated. ' +
+  'Keep the reference aspect ratio and every label, number and symbol exactly as written. ' +
+  'Add no logo, brand, trademark, watermark, signature, QR code, copyrighted character, celebrity likeness or extra explanatory text. ' +
+  'Answer with the finished picture only.';
+
+/** '' or the author's picture rules, trimmed and bounded */
+function normalizeImageRegenPrompt(rawPrompt) {
+  var promptText = typeof rawPrompt === 'string' ? rawPrompt : '';
+  promptText = promptText.replace(/\r\n/g, '\n').trim();
+  if (promptText.length > 20000) promptText = promptText.substring(0, 20000);
+  return promptText;
+}
+
+/** The rules that are actually sent: saved curriculum text, else the default */
+function resolveImageRegenRules() {
+  return curriculumImagePrompt || DEFAULT_IMAGE_REGEN_RULES;
+}
+
+/** Settings card: show the saved rules, or the built-in ones when none exist */
+function syncImagePromptSettings() {
+  var promptField = el('curriculum-image-prompt');
+  if (promptField) promptField.value = resolveImageRegenRules();
+  var stateElement = el('curriculum-image-state');
+  if (stateElement) {
+    stateElement.textContent = curriculumImagePrompt
+      ? 'This curriculum uses its own picture rules (' + formatCount(curriculumImagePrompt.length) + ' characters). The built-in text is not sent while this is saved.'
+      : 'Nothing saved yet - these are the built-in rules. Edit them and press Save to make them this curriculum\'s own.';
+  }
+}
+
+/** "💾 Save these rules": the built-in text unchanged means "no custom rules" */
+function saveImagePromptFromSettings() {
+  var promptField = el('curriculum-image-prompt');
+  var normalizedRules = normalizeImageRegenPrompt(promptField ? promptField.value : '');
+  curriculumImagePrompt = (normalizedRules === DEFAULT_IMAGE_REGEN_RULES) ? '' : normalizedRules;
+  syncImagePromptSettings();
+  saveCurriculum();
+  tool.notify(curriculumImagePrompt
+    ? 'Picture regeneration rules saved with this curriculum ✅'
+    : 'These are the built-in picture rules - nothing extra is stored ✅', 'success');
+}
+
+/** "↩ Restore the built-in rules" */
+function resetImagePromptToDefault() {
+  curriculumImagePrompt = '';
+  syncImagePromptSettings();
+  saveCurriculum();
+  tool.notify('Built-in picture regeneration rules restored.', 'info');
+}
+
+/** The base instruction of a first generation: the rules + the safety floor */
+function buildStudioImageBasePrompt() {
+  return resolveImageRegenRules() + '\n\n' + IMAGE_REGENERATION_SAFETY_CONTRACT;
+}
+
+/** Prompt of one generation: rules + optional style direction + optional comment */
+function buildStudioImageRegenerationPrompt(styleDirection, extraInstruction) {
+  var promptParts = [resolveImageRegenRules()];
+  if (styleDirection) promptParts.push('STYLE DIRECTION: ' + styleDirection);
+  if (extraInstruction) promptParts.push('EXTRA INSTRUCTION FROM THE AUTHOR: ' + extraInstruction);
+  promptParts.push(IMAGE_REGENERATION_SAFETY_CONTRACT);
+  return promptParts.join('\n\n');
+}
+
+/** Prompt of a chat turn: rules + the author's conversation + the newest request */
+function buildStudioImageChatPrompt(image, newestInstruction) {
+  var authorMessages = [];
+  var chatMessages = (image && Array.isArray(image.imageChat)) ? image.imageChat : [];
+  for (var chatIndex = 0; chatIndex < chatMessages.length; chatIndex++) {
+    if (chatMessages[chatIndex] && chatMessages[chatIndex].role === 'user' && chatMessages[chatIndex].text) {
+      authorMessages.push(chatMessages[chatIndex].text);
+    }
+  }
+  if (authorMessages.length > 12) authorMessages = authorMessages.slice(authorMessages.length - 12);
+  var conversationLines = [];
+  for (var messageIndex = 0; messageIndex < authorMessages.length; messageIndex++) {
+    conversationLines.push('- ' + String(authorMessages[messageIndex]).slice(0, 400));
+  }
+  return resolveImageRegenRules() + '\n\n' +
+    'AUTHOR CONVERSATION ABOUT THIS PICTURE (oldest first):\n' + conversationLines.join('\n') + '\n\n' +
+    'Apply the whole conversation; the LAST instruction is the most important and must be visible in the result. ' +
+    'Keep everything the author liked and never undo an earlier accepted improvement unless the newest instruction asks for it.\n\n' +
+    'NEWEST REQUEST: ' + newestInstruction + '\n\n' + IMAGE_REGENERATION_SAFETY_CONTRACT;
 }
 
 /** Instruction sent with every page batch (the gateway allows 2000 chars) */
@@ -14290,8 +14876,14 @@ function openStudioDrawerForDoc(docUrl) {
   }
   persistStudioImages();
   studioCurrentDocUrl = docUrl;
-  editingStudyDocImages = (editingStudyDocImagesMap[docUrl] && Array.isArray(editingStudyDocImagesMap[docUrl]))
-    ? JSON.parse(JSON.stringify(editingStudyDocImagesMap[docUrl]))
+  // A reference document/part keeps its pictures in its own CMS object; a
+  // lesson document keeps them in the lesson document map. Reading the wrong
+  // store is why a reloaded drawer used to look empty.
+  var storedStudioImages = isReferenceLibraryUrl(docUrl)
+    ? referenceLibraryStoredImages(docUrl)
+    : editingStudyDocImagesMap[docUrl];
+  editingStudyDocImages = (storedStudioImages && Array.isArray(storedStudioImages))
+    ? JSON.parse(JSON.stringify(storedStudioImages))
     : [];
   // Repeated Extract clicks before duplicates were filtered can leave the same
   // picture several times in this list - collapse those copies when opening.
@@ -14317,6 +14909,7 @@ function openStudioDrawerForDoc(docUrl) {
   showStudioGeneratedView('preview');
   loadStudioDocumentPreview();
   renderStudyDocImageGallery();
+  retryUnhostedStudioImages();
   var drawer = el('sd-studio-drawer');
   var drawerBackdrop = el('sd-studio-backdrop');
   if (drawer) drawer.classList.add('sd-drawer-open');
@@ -14993,7 +15586,7 @@ function regenerateStudioFromReview() {
     var hadReport = !!studioReviewReport;
     setStudioStatus('⚡ Rewriting the document with the review feedback…', 'busy');
     runStudioGenerationStream(
-      buildStudioHtmlPrompt(sourceText, editingStudyDocImages, revisionBrief),
+      buildStudioHtmlPrompt(sourceText, editingStudyDocImages, revisionBrief, referencePartFocusNoteFor(studioCurrentDocUrl)),
       '⚡ Rewriting the document with the review feedback',
       function(resultCode) {
         if (resultCode) return; // the stream itself reported the failure
@@ -15043,6 +15636,7 @@ function undoStudioGeneratedVersion() {
 }
 
 function closeStudioDrawer() {
+  flushPendingReferenceImagesSave();
   persistStudioImages();
   studioCurrentDocUrl = '';
   editingStudyDocImages = [];
@@ -15166,7 +15760,7 @@ function renderStudyDocImageGallery() {
   var pendingImageCount = countStudioImagesWaitingForGenerated();
   if (countEl) {
     countEl.textContent = editingStudyDocImages.length + ' picture(s) · ' + totalStudioImageKb() + ' KB' +
-      (sourceImageCount ? ' · ' + sourceImageCount + ' source' + (pendingImageCount ? ' (' + pendingImageCount + ' need a generated version)' : '') : '');
+      (sourceImageCount ? ' · ' + sourceImageCount + ' reference' + (pendingImageCount ? ' (' + pendingImageCount + ' still need our version)' : '') : '');
   }
   if (tabCountEl) tabCountEl.textContent = String(editingStudyDocImages.length);
   if (!editingStudyDocImages.length) {
@@ -15177,16 +15771,44 @@ function renderStudyDocImageGallery() {
   }
   grid.innerHTML = editingStudyDocImages.map(function(image, idx) {
     var imageRole = studioImageRole(image);
-    var hasGenerated = studioImageHasGenerated(image);
-    var showGenerated = hasGenerated && studioImagePreviewVersion[idx] === 'generated';
-    var previewSrc = showGenerated ? studioImageGeneratedSrc(image) : imageContentSrc(image);
+    var hasAccepted = studioImageHasAccepted(image);
+    var hasCandidate = studioImageHasCandidate(image);
+    var previewMode = studioImagePreviewVersion[idx];
+    if (previewMode !== 'accepted' && previewMode !== 'candidate' && previewMode !== 'reference') {
+      previewMode = hasCandidate ? 'candidate' : (hasAccepted ? 'accepted' : 'reference');
+    }
+    if (previewMode === 'accepted' && !hasAccepted) previewMode = 'reference';
+    if (previewMode === 'candidate' && !hasCandidate) previewMode = hasAccepted ? 'accepted' : 'reference';
+    var previewSrc = previewMode === 'candidate' ? studioImageCandidateSrc(image)
+      : (previewMode === 'accepted' ? studioImageAcceptedSrc(image) : imageContentSrc(image));
     var badgeHtml = '';
-    if (imageRole === 'source' && !hasGenerated) badgeHtml += '<span class="sd-image-badge needs">⏳ needs generated version</span>';
-    if (hasGenerated) badgeHtml += '<span class="sd-image-badge ok">🎨 generated</span>';
-    var versionToggle = hasGenerated
-      ? '<div class="sd-image-version">' +
-          '<button type="button" class="sd-version-btn' + (!showGenerated ? ' active' : '') + '" data-sd-version="' + idx + '" data-version="original">Original</button>' +
-          '<button type="button" class="sd-version-btn' + (showGenerated ? ' active' : '') + '" data-sd-version="' + idx + '" data-version="generated">Generated</button>' +
+    if (hasAccepted) badgeHtml += '<span class="sd-image-badge ok">✅ our version</span>';
+    if (hasCandidate) badgeHtml += '<span class="sd-image-badge cand">🧪 candidate</span>';
+    if (!hasAccepted) {
+      badgeHtml += imageRole === 'source'
+        ? '<span class="sd-image-badge needs">📌 reference only</span>'
+        : '<span class="sd-image-badge real">● our picture</span>';
+    }
+    if (!isImageHosted(image)) {
+      var hasInlinePictureBytes = typeof image.dataUrl === 'string' && image.dataUrl.indexOf('data:') === 0;
+      badgeHtml += hasInlinePictureBytes
+        ? '<span class="sd-image-badge warn" data-sd-upload="' + idx + '" title="Click to upload this picture to CMS storage - until it is hosted it is not saved">⚠️ not stored · click to upload</span>'
+        : '<span class="sd-image-badge danger" title="Only the picture metadata was saved and the bytes are gone - crop or add the picture again">❌ picture data missing</span>';
+    }
+    var versionButtons =
+      '<button type="button" class="sd-version-btn' + (previewMode === 'reference' ? ' active' : '') + '" data-sd-version="' + idx + '" data-version="reference" title="The picture exactly as it came from the source - always kept">📌 Ref</button>';
+    if (hasAccepted) {
+      versionButtons += '<button type="button" class="sd-version-btn' + (previewMode === 'accepted' ? ' active' : '') + '" data-sd-version="' + idx + '" data-version="accepted" title="Our accepted version - generated content uses this one">✅ Ours</button>';
+    }
+    if (hasCandidate) {
+      versionButtons += '<button type="button" class="sd-version-btn' + (previewMode === 'candidate' ? ' active' : '') + '" data-sd-version="' + idx + '" data-version="candidate" title="A new draft that is not used in content until you accept it">🧪 Draft</button>';
+    }
+    var versionToggle = '<div class="sd-image-version">' + versionButtons + '</div>';
+    var candidateBar = hasCandidate
+      ? '<div class="sd-image-candidate-bar">' +
+          '<span class="sd-image-candidate-note">🧪 New draft - not used in content yet</span>' +
+          '<button type="button" class="btn btn-sm btn-outline" data-sd-accept="' + idx + '" title="Use this draft in the generated content - the reference picture is still kept">✅ Accept</button>' +
+          '<button type="button" class="btn btn-sm btn-outline" data-sd-discard="' + idx + '" title="Throw this draft away - reference and accepted version stay">🗑 Discard</button>' +
         '</div>'
       : '';
     var positionLabel = studioPicturePositionLabel(image);
@@ -15202,17 +15824,18 @@ function renderStudyDocImageGallery() {
           (anchorSummary ? ' ' + esc(anchorSummary) : '') +
         '</span>'
       : '<span class="sd-image-anchor is-missing">⚠️ no page anchor</span>';
-    return '<div class="sd-image-card' + (imageRole === 'source' ? ' is-source' : '') + '">' +
+    return '<div class="sd-image-card' + (imageRole === 'source' && !hasAccepted ? ' is-source' : '') + '">' +
       '<div class="sd-image-thumb">' +
         '<img src="' + previewSrc + '" alt="' + esc(image.name) + '" title="' + esc(imageCardTitle) + '" data-sd-view="' + idx + '">' +
         '<label class="sd-image-check" title="Select this picture">' +
           '<input type="checkbox" data-sd-select="' + idx + '" aria-label="Select ' + esc(image.name) + '"' +
             (studioSelectedImageIds[image.id] ? ' checked' : '') + '>' +
         '</label>' +
-        '<button type="button" class="sd-image-role ' + (imageRole === 'source' ? 'is-source' : 'is-real') + '" data-sd-role="' + idx + '" title="Click to switch: Real = used directly by generated content, Source = needs a generated version">' +
-          (imageRole === 'source' ? '◐ Source' : '● Real') + '</button>' +
+        '<button type="button" class="sd-image-role ' + (imageRole === 'source' ? 'is-source' : 'is-real') + '" data-sd-role="' + idx + '" title="Click to switch: Ours = our own picture used directly, Reference = a picture that still needs a generated version">' +
+          (imageRole === 'source' ? '◐ Reference' : '● Ours') + '</button>' +
       '</div>' +
       versionToggle +
+      candidateBar +
       '<div class="sd-image-meta">' + esc(image.name) +
         '<span class="sd-muted">' + (isImageHosted(image) ? '🔗 hosted · ' : '⚠️ not uploaded · ') + (image.ocrText ? '📝 text · ' : '') + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB</span>' +
         anchorLine +
@@ -15223,6 +15846,7 @@ function renderStudyDocImageGallery() {
         '<button type="button" class="btn btn-sm btn-outline" data-sd-move="' + idx + '" data-direction="-1"' + (idx === 0 ? ' disabled' : '') + ' title="Move this picture earlier in the generation order">◀</button>' +
         '<button type="button" class="btn btn-sm btn-outline" data-sd-move="' + idx + '" data-direction="1"' + (idx === editingStudyDocImages.length - 1 ? ' disabled' : '') + ' title="Move this picture later in the generation order">▶</button>' +
         '<button type="button" class="btn btn-sm btn-outline" data-sd-regen="' + idx + '" title="Generate or regenerate a version of this picture">🎨</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" data-sd-chat="' + idx + '" title="Chat with the AI about this picture and improve the generated version">💬</button>' +
         '<button type="button" class="btn btn-sm btn-danger" data-sd-remove="' + idx + '" title="Remove this picture from the document">🗑</button>' +
       '</div>' +
     '</div>';
@@ -15240,66 +15864,160 @@ function toggleStudioImageRole(imageIndex) {
   autoSaveCurrentLesson();
   renderStudyDocImageGallery();
   if (image.role === 'source' && !studioImageHasGenerated(image)) {
-    tool.notify('Marked as Source - press 🎨 Generate Image to create its generated version.', 'info');
+    tool.notify('Marked as Reference - press 🎨 Generate Image to create our own version of it.', 'info');
   } else if (image.role === 'real') {
-    tool.notify('Marked as Real - generated content uses this picture directly.', 'info');
+    tool.notify('Marked as Ours - generated content uses this picture directly.', 'info');
   }
 }
 
-/** Show the original or the generated version in the gallery card */
+/** Show one version of the picture in the gallery card */
 function setStudioImageVersion(imageIndex, version) {
-  studioImagePreviewVersion[imageIndex] = version === 'generated' ? 'generated' : 'original';
+  var allowedVersion = (version === 'accepted' || version === 'candidate' || version === 'reference') ? version : 'reference';
+  studioImagePreviewVersion[imageIndex] = allowedVersion;
   renderStudyDocImageGallery();
 }
 
-/** Store the AI result as the picture's GENERATED version (the original is kept) */
-function applyGeneratedVersionToStudioImage(imageIndex, generatedPicture, generatedPromptText) {
+/** Append one message to a picture's chat (capped so the record stays small) */
+function appendStudioImageChatMessage(image, messageRole, messageText) {
+  if (!image) return;
+  if (!Array.isArray(image.imageChat)) image.imageChat = [];
+  image.imageChat.push({
+    role: messageRole === 'user' ? 'user' : (messageRole === 'system' ? 'system' : 'assistant'),
+    text: String(messageText || '').slice(0, 500),
+    at: Date.now()
+  });
+  while (image.imageChat.length > 24) image.imageChat.shift();
+}
+
+/** Store an AI result as the picture's CANDIDATE (reference and accepted stay untouched) */
+function applyCandidateVersionToStudioImage(imageIndex, generatedPicture, generatedPromptText) {
   var targetImage = editingStudyDocImages[imageIndex];
-  if (!targetImage || !generatedPicture) return;
+  if (!targetImage || !generatedPicture) return false;
   // requestRegenerateImage answers with a CMS storage URL (already hosted);
   // the legacy requestGenerateImage path answers with an inline data URL.
-  var generatedUrl = generatedPicture.url || '';
-  var generatedDataUrl = generatedUrl ? '' : (generatedPicture.dataUrl || '');
-  if (!generatedUrl && !generatedDataUrl) return;
-  // Replacing an earlier generated copy leaves its uploaded file behind.
-  var previousGeneratedUrl = targetImage.generatedUrl || '';
-  targetImage.generatedDataUrl = generatedDataUrl;
-  targetImage.generatedUrl = generatedUrl;
-  if (generatedPicture.bytes) targetImage.generatedSizeKb = Math.max(1, Math.round(generatedPicture.bytes / 1024));
-  else if (generatedDataUrl) targetImage.generatedSizeKb = Math.max(1, Math.round(generatedDataUrl.length * 0.75 / 1024));
-  targetImage.generatedAt = Date.now();
-  targetImage.generatedPrompt = generatedPromptText || '';
+  var candidateUrl = generatedPicture.url || '';
+  var candidateDataUrl = candidateUrl ? '' : (generatedPicture.dataUrl || '');
+  if (!candidateUrl && !candidateDataUrl) return false;
+  // Replacing an earlier candidate leaves its uploaded file behind.
+  var previousCandidateUrl = targetImage.candidateUrl || '';
+  targetImage.candidateUrl = candidateUrl;
+  targetImage.candidateDataUrl = candidateDataUrl;
+  if (generatedPicture.bytes) targetImage.candidateSizeKb = Math.max(1, Math.round(generatedPicture.bytes / 1024));
+  else if (candidateDataUrl) targetImage.candidateSizeKb = Math.max(1, Math.round(candidateDataUrl.length * 0.75 / 1024));
+  targetImage.candidateAt = Date.now();
+  targetImage.candidatePrompt = generatedPromptText || '';
   if (!targetImage.role) targetImage.role = defaultStudioImageRole();
-  if (previousGeneratedUrl && previousGeneratedUrl !== generatedUrl) deleteStudioStorageFile(previousGeneratedUrl, targetImage.name);
-  studioImagePreviewVersion[imageIndex] = 'generated';
+  if (previousCandidateUrl && previousCandidateUrl !== candidateUrl) deleteStudioStorageFile(previousCandidateUrl, targetImage.name);
+  studioImagePreviewVersion[imageIndex] = 'candidate';
   persistStudioImages();
   renderStudyDocImageGallery();
   autoSaveCurrentLesson();
-  if (generatedUrl) return; // already in CMS storage - nothing to upload
-  uploadStudioGeneratedImageToStorage(imageIndex, function(uploaded) {
+  if (candidateUrl) return true; // already in CMS storage - nothing to upload
+  uploadStudioVersionToStorage(imageIndex, 'candidate', function(uploaded) {
     renderStudyDocImageGallery();
     if (uploaded) autoSaveCurrentLesson();
   });
+  return true;
 }
 
-/** Upload a picture's generated version so the lesson stores a hosted URL */
-function uploadStudioGeneratedImageToStorage(imageIndex, onDone) {
+/** Accept the candidate: it becomes OUR version and generated content uses it */
+function acceptStudioImageCandidate(imageIndex) {
+  var targetImage = editingStudyDocImages[imageIndex];
+  if (!targetImage || !studioImageHasCandidate(targetImage)) {
+    tool.notify('There is no candidate to accept for this picture.', 'warning');
+    return;
+  }
+  var previousAcceptedUrl = (targetImage.acceptedUrl || targetImage.generatedUrl || '');
+  targetImage.acceptedUrl = targetImage.candidateUrl || '';
+  targetImage.acceptedDataUrl = targetImage.candidateUrl ? '' : (targetImage.candidateDataUrl || '');
+  targetImage.acceptedSizeKb = targetImage.candidateSizeKb || 0;
+  targetImage.acceptedAt = Date.now();
+  targetImage.acceptedPrompt = targetImage.candidatePrompt || '';
+  targetImage.candidateUrl = '';
+  targetImage.candidateDataUrl = '';
+  delete targetImage.candidateSizeKb;
+  delete targetImage.candidateAt;
+  delete targetImage.candidatePrompt;
+  // The legacy generated fields are folded into the accepted fields.
+  delete targetImage.generatedUrl;
+  delete targetImage.generatedDataUrl;
+  delete targetImage.generatedSizeKb;
+  delete targetImage.generatedAt;
+  delete targetImage.generatedPrompt;
+  // An accepted version is our own artwork, so the picture is no longer a task.
+  targetImage.role = 'real';
+  if (previousAcceptedUrl && previousAcceptedUrl !== targetImage.acceptedUrl) {
+    deleteStudioStorageFile(previousAcceptedUrl, targetImage.name);
+  }
+  appendStudioImageChatMessage(targetImage, 'system', 'Candidate accepted as our version. The reference picture is still kept.');
+  studioImagePreviewVersion[imageIndex] = 'accepted';
+  persistStudioImages();
+  renderStudyDocImageGallery();
+  renderPdfEditorList();
+  autoSaveCurrentLesson();
+  tool.notify('✅ Accepted: generated content now uses this version. The reference picture is kept for another try.', 'success');
+}
+
+/** Throw the candidate away (the reference and the accepted version stay) */
+function discardStudioImageCandidate(imageIndex) {
+  var targetImage = editingStudyDocImages[imageIndex];
+  if (!targetImage || !studioImageHasCandidate(targetImage)) return;
+  var candidateUrl = targetImage.candidateUrl || '';
+  var candidateName = targetImage.name;
+  targetImage.candidateUrl = '';
+  targetImage.candidateDataUrl = '';
+  delete targetImage.candidateSizeKb;
+  delete targetImage.candidateAt;
+  delete targetImage.candidatePrompt;
+  studioImagePreviewVersion[imageIndex] = studioImageHasAccepted(targetImage) ? 'accepted' : 'reference';
+  persistStudioImages();
+  renderStudyDocImageGallery();
+  autoSaveCurrentLesson();
+  if (candidateUrl) deleteStudioStorageFile(candidateUrl, candidateName);
+  tool.notify('Candidate discarded. The reference picture and the accepted version are unchanged.', 'info');
+}
+
+/** Legacy helper: store a generated result and accept it in one step */
+function applyGeneratedVersionToStudioImage(imageIndex, generatedPicture, generatedPromptText) {
+  if (applyCandidateVersionToStudioImage(imageIndex, generatedPicture, generatedPromptText)) {
+    acceptStudioImageCandidate(imageIndex);
+  }
+}
+
+/** Upload one generated version ('accepted' or 'candidate') so the lesson stores a hosted URL */
+function uploadStudioVersionToStorage(imageIndex, version, onDone) {
   var image = editingStudyDocImages[imageIndex];
-  if (!image || !image.generatedDataUrl) { if (onDone) onDone(false); return; }
+  var isCandidate = version === 'candidate';
+  var versionDataUrl = image ? (isCandidate ? image.candidateDataUrl : image.acceptedDataUrl) : '';
+  if (!image || !versionDataUrl) { if (onDone) onDone(false); return; }
   if (typeof tool.requestUploadBinary !== 'function') { if (onDone) onDone(false); return; }
-  var uploadName = 'generated-' + (/^[^/\\]+$/.test(image.name || '') ? image.name : 'image') + '.jpg';
-  tool.requestUploadBinary({ dataUrl: image.generatedDataUrl, name: uploadName, contentType: 'image/jpeg' }, function(uploadError, uploadResult) {
+  var uploadName = (isCandidate ? 'candidate-' : 'generated-') + (/^[^/\\]+$/.test(image.name || '') ? image.name : 'image') + '.jpg';
+  tool.requestUploadBinary({ dataUrl: versionDataUrl, name: uploadName, contentType: 'image/jpeg' }, function(uploadError, uploadResult) {
     if (uploadError || !uploadResult || !uploadResult.url) {
-      console.warn('[STUDIO:IMAGES] generated version upload failed for ' + image.name + ': ' + (uploadError || 'empty result'));
+      console.warn('[STUDIO:IMAGES] ' + version + ' version upload failed for ' + image.name + ': ' + (uploadError || 'empty result'));
       if (onDone) onDone(false);
       return;
     }
-    image.generatedUrl = uploadResult.url;
-    image.generatedDataUrl = '';
-    if (uploadResult.sizeKb) image.generatedSizeKb = uploadResult.sizeKb;
+    if (isCandidate) {
+      // A newer candidate replaced this one while the upload was running.
+      if (image.candidateDataUrl !== versionDataUrl) { if (onDone) onDone(false); return; }
+      image.candidateUrl = uploadResult.url;
+      image.candidateDataUrl = '';
+      if (uploadResult.sizeKb) image.candidateSizeKb = uploadResult.sizeKb;
+    } else {
+      if (image.acceptedDataUrl !== versionDataUrl) { if (onDone) onDone(false); return; }
+      image.acceptedUrl = uploadResult.url;
+      image.acceptedDataUrl = '';
+      if (uploadResult.sizeKb) image.acceptedSizeKb = uploadResult.sizeKb;
+    }
     persistStudioImages();
     if (onDone) onDone(true);
   });
+}
+
+/** Legacy name kept for older callers */
+function uploadStudioGeneratedImageToStorage(imageIndex, onDone) {
+  uploadStudioVersionToStorage(imageIndex, 'accepted', onDone);
 }
 
 function openStudioModal(title, bodyHtml, extraModalClass) {
@@ -15344,31 +16062,41 @@ function openStudioImageView(imageIndex) {
   if (!image) return;
   var imageSrc = imageContentSrc(image);
   var imageRole = studioImageRole(image);
-  var hasGenerated = studioImageHasGenerated(image);
-  var generatedSrc = hasGenerated ? studioImageGeneratedSrc(image) : '';
+  var acceptedSrc = studioImageAcceptedSrc(image);
+  var candidateSrc = studioImageCandidateSrc(image);
   var pictureTotal = editingStudyDocImages.length;
   var navHtml = '<div class="sd-view-nav">' +
     (pictureTotal > 1 ? '<button type="button" class="sd-mini-btn" data-sd-view-prev title="Previous picture (Left arrow)">◀ Previous</button>' : '') +
     '<span class="sd-view-counter">' + (imageIndex + 1) + ' of ' + pictureTotal + '</span>' +
     (pictureTotal > 1 ? '<button type="button" class="sd-mini-btn" data-sd-view-next title="Next picture (Right arrow)">Next ▶</button>' : '') +
     '</div>';
-  var roleLine = '<div class="sd-view-role">Role: <strong>' + (imageRole === 'source' ? '◐ Source' : '● Real') + '</strong>' +
-    (imageRole === 'source' ? ' - generated content must use a generated version' : ' - generated content uses this picture directly') + '</div>';
-  var generatedBlock = hasGenerated
-    ? '<div class="sd-view-versions">' +
-        '<div><div class="sd-compare-label">Original (kept)</div><div class="sd-view-stage"><img class="sd-view-image" src="' + imageSrc + '" alt="Original"></div></div>' +
-        '<div><div class="sd-compare-label">Generated version · ' + (image.generatedSizeKb || '?') + ' KB</div><div class="sd-view-stage"><img class="sd-view-image" src="' + generatedSrc + '" alt="Generated"></div></div>' +
-      '</div>'
-    : '<div class="sd-view-stage"><img class="sd-view-image" src="' + imageSrc + '" alt="' + esc(image.name) + '"></div>';
-  var bodyHtml = navHtml + generatedBlock +
+  var stateLine = acceptedSrc
+    ? '✅ Our accepted version is used in generated content.'
+    : (imageRole === 'source'
+      ? '📌 Reference only - generated content still uses this picture as it is.'
+      : '● Marked as our own picture.');
+  var roleLine = '<div class="sd-view-role">' + stateLine + ' The reference picture is always kept.</div>';
+  var versionCards = '<div class="sd-view-versions">' +
+    '<div><div class="sd-compare-label">📌 Reference (kept)</div><div class="sd-view-stage"><img class="sd-view-image" src="' + imageSrc + '" alt="Reference"></div></div>';
+  if (acceptedSrc) {
+    versionCards += '<div><div class="sd-compare-label">✅ Ours (accepted) · ' + (image.acceptedSizeKb || image.generatedSizeKb || '?') + ' KB</div><div class="sd-view-stage"><img class="sd-view-image" src="' + acceptedSrc + '" alt="Accepted"></div></div>';
+  }
+  if (candidateSrc) {
+    versionCards += '<div><div class="sd-compare-label">🧪 Candidate (not used yet) · ' + (image.candidateSizeKb || '?') + ' KB</div><div class="sd-view-stage"><img class="sd-view-image" src="' + candidateSrc + '" alt="Candidate"></div></div>';
+  }
+  versionCards += '</div>';
+  var bodyHtml = navHtml + versionCards +
     '<div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-muted)">' + esc(image.name) + ' · ' + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB' + (isImageHosted(image) ? ' · 🔗 hosted' : '') + '</div>' +
     (image.caption ? '<div style="text-align:center;margin-top:6px;font-size:12px;color:var(--text-muted)">🤖 ' + esc(image.caption) + (image.kind ? ' · ' + esc(image.kind) : '') + '</div>' : '') +
     roleLine +
     '<div class="sd-modal-actions" style="justify-content:center">' +
-      '<button type="button" class="btn btn-outline" data-sd-view-open>↗ Open Original</button>' +
-      (hasGenerated ? '<button type="button" class="btn btn-outline" data-sd-view-open-generated>↗ Open Generated</button>' : '') +
-      '<button type="button" class="btn btn-outline" data-sd-view-download>⬇ Download Original</button>' +
-      '<button type="button" class="btn btn-primary" data-sd-view-regen>' + (hasGenerated ? '🎨 Regenerate Version' : '🎨 Generate Version') + '</button>' +
+      '<button type="button" class="btn btn-outline" data-sd-view-open>↗ Open Reference</button>' +
+      (acceptedSrc ? '<button type="button" class="btn btn-outline" data-sd-view-open-accepted>↗ Open Accepted</button>' : '') +
+      '<button type="button" class="btn btn-outline" data-sd-view-download>⬇ Download Reference</button>' +
+      '<button type="button" class="btn btn-outline" data-sd-view-chat>💬 Chat</button>' +
+      (candidateSrc ? '<button type="button" class="btn btn-outline" data-sd-view-accept>✅ Accept candidate</button>' : '') +
+      (candidateSrc ? '<button type="button" class="btn btn-outline" data-sd-view-discard>🗑 Discard candidate</button>' : '') +
+      '<button type="button" class="btn btn-primary" data-sd-view-regen>🎨 Generate ' + (acceptedSrc ? 'again' : 'our version') + '</button>' +
     '</div>';
   openStudioModal('🖼 ' + esc(image.name), bodyHtml);
   studioImageViewIndex = imageIndex;
@@ -15380,12 +16108,24 @@ function openStudioImageView(imageIndex) {
   if (nextButton) nextButton.addEventListener('click', function() { stepStudioImageView(1); });
   var openButton = modalBody.querySelector('[data-sd-view-open]');
   if (openButton) openButton.addEventListener('click', function() { tool.openUrl(imageSrc); });
-  var openGeneratedButton = modalBody.querySelector('[data-sd-view-open-generated]');
-  if (openGeneratedButton) openGeneratedButton.addEventListener('click', function() { tool.openUrl(generatedSrc); });
+  var openAcceptedButton = modalBody.querySelector('[data-sd-view-open-accepted]');
+  if (openAcceptedButton) openAcceptedButton.addEventListener('click', function() { tool.openUrl(acceptedSrc); });
   var downloadButton = modalBody.querySelector('[data-sd-view-download]');
   if (downloadButton) {
     downloadButton.addEventListener('click', function() { downloadStudioImageFile(imageIndex); });
   }
+  var chatButton = modalBody.querySelector('[data-sd-view-chat]');
+  if (chatButton) chatButton.addEventListener('click', function() { openStudioImageChat(imageIndex); });
+  var acceptButton = modalBody.querySelector('[data-sd-view-accept]');
+  if (acceptButton) acceptButton.addEventListener('click', function() {
+    acceptStudioImageCandidate(imageIndex);
+    openStudioImageView(imageIndex);
+  });
+  var discardButton = modalBody.querySelector('[data-sd-view-discard]');
+  if (discardButton) discardButton.addEventListener('click', function() {
+    discardStudioImageCandidate(imageIndex);
+    openStudioImageView(imageIndex);
+  });
   var regenButton = modalBody.querySelector('[data-sd-view-regen]');
   if (regenButton) regenButton.addEventListener('click', function() { closeStudioModal(); openStudioRegenerateDialog([imageIndex]); });
 }
@@ -16468,6 +17208,20 @@ function extractStudyDocImages(onDone) {
    their metadata, so every lesson can use any page range of them.
    ═══════════════════════════════════════════ */
 
+/** Stored galleries of one reference document: { documentUrl: [pictures] } */
+function normalizeReferenceDocumentImages(rawImageMap) {
+  var normalizedMap = {};
+  if (!rawImageMap || typeof rawImageMap !== 'object') return normalizedMap;
+  var imageMapKeys = Object.keys(rawImageMap);
+  for (var keyIndex = 0; keyIndex < imageMapKeys.length; keyIndex++) {
+    var documentKey = imageMapKeys[keyIndex];
+    var storedList = rawImageMap[documentKey];
+    if (!documentKey || !Array.isArray(storedList) || !storedList.length) continue;
+    normalizedMap[documentKey] = storedList;
+  }
+  return normalizedMap;
+}
+
 /** Clean the stored list into { id, name, url, sizeKb, addedAt } entries */
 function normalizeMainDocumentList(rawList) {
   if (!rawList) return [];
@@ -16488,7 +17242,8 @@ function normalizeMainDocumentList(rawList) {
       // Legacy hosts keep the library inside the curriculum value: the split
       // parts and the ignored pages must survive that round trip too.
       parts: normalizeReferenceParts(listEntry.parts),
-      ignoredPages: normalizeIgnoredPageNumbers(listEntry.ignoredPages)
+      ignoredPages: normalizeIgnoredPageNumbers(listEntry.ignoredPages),
+      documentImages: normalizeReferenceDocumentImages(listEntry.documentImages)
     });
   }
   return normalizedList;
@@ -16550,6 +17305,8 @@ function normalizeReferencePart(rawPart) {
     generatedHtml: rawPart.generatedHtml || '',
     generatedAt: rawPart.generatedAt || '',
     generatedSourceLabel: rawPart.generatedSourceLabel || ''
+,
+    focusNote: String(rawPart.focusNote || '').slice(0, 600)
   };
 }
 
@@ -16601,6 +17358,8 @@ function serializeReferencePartsForStore(referenceParts) {
       generatedHtml: partEntry.generatedHtml,
       generatedAt: partEntry.generatedAt,
       generatedSourceLabel: partEntry.generatedSourceLabel
+,
+      focusNote: partEntry.focusNote
     });
   }
   return storedParts;
@@ -16629,7 +17388,8 @@ function referenceEntryFromObject(referenceObject) {
     generatedSourceLabel: storedEntry.generatedSourceLabel || '',
     generatedDroppedImages: storedEntry.generatedDroppedImages || 0,
     parts: normalizeReferenceParts(storedEntry.parts),
-    ignoredPages: normalizeIgnoredPageNumbers(storedEntry.ignoredPages)
+    ignoredPages: normalizeIgnoredPageNumbers(storedEntry.ignoredPages),
+    documentImages: normalizeReferenceDocumentImages(storedEntry.documentImages)
   };
 }
 
@@ -16657,6 +17417,34 @@ function loadReferenceLibrary(onDone) {
   });
 }
 
+/** Stored galleries of a reference entry, cleaned for the CMS object.
+ *  Only URLs that belong to this entry keep a list; inline bytes are dropped
+ *  (pictures must live in CMS storage, never in the record). */
+function cleanReferenceDocumentImagesForSave(referenceEntry) {
+  var cleanedMap = normalizeReferenceDocumentImages(referenceEntry && referenceEntry.documentImages);
+  var allowedUrls = referenceLibraryEntryUrls(referenceEntry);
+  var storedMap = {};
+  var mapKeys = Object.keys(cleanedMap);
+  for (var keyIndex = 0; keyIndex < mapKeys.length; keyIndex++) {
+    var documentKey = mapKeys[keyIndex];
+    if (allowedUrls.indexOf(documentKey) === -1) continue;
+    var imageBudget = { entries: [], totalBytes: 0 };
+    var cleanedList = cleanStudioImagesForSave(cleanedMap[documentKey], 'reference document', imageBudget);
+    applyInlineImageBudget(imageBudget, MAX_SAVED_INLINE_IMAGE_BYTES);
+    if (cleanedList.length) storedMap[documentKey] = cleanedList;
+  }
+  return storedMap;
+}
+
+/** Pictures of a document from the store that owns it (reference or lesson) */
+function studioStoredImagesFor(docUrl) {
+  if (!docUrl) return [];
+  var storedList = isReferenceLibraryUrl(docUrl)
+    ? referenceLibraryStoredImages(docUrl)
+    : editingStudyDocImagesMap[docUrl];
+  return Array.isArray(storedList) ? storedList : [];
+}
+
 /** Create or update the object that holds one reference document */
 function saveReferenceDocumentToCms(referenceEntry, onDone) {
   if (!canUseReferenceStore() || !referenceEntry || !referenceEntry.url) { if (onDone) onDone(null); return; }
@@ -16681,7 +17469,8 @@ function saveReferenceDocumentToCms(referenceEntry, onDone) {
     generatedAt: referenceEntry.generatedAt || '',
     generatedSourceLabel: referenceEntry.generatedSourceLabel || '',
     parts: serializeReferencePartsForStore(referenceEntry.parts),
-    ignoredPages: normalizeIgnoredPageNumbers(referenceEntry.ignoredPages)
+    ignoredPages: normalizeIgnoredPageNumbers(referenceEntry.ignoredPages),
+    documentImages: cleanReferenceDocumentImagesForSave(referenceEntry)
   });
   if (referenceEntry.objectId) {
     tool.requestObjects('update', {
@@ -16891,12 +17680,19 @@ function renderMainDocumentsList() {
     var sizeLabel = documentEntry.sizeKb ? (Math.max(1, Math.round(documentEntry.sizeKb)) + ' KB') : 'PDF';
     var partCount = (documentEntry.parts || []).length;
     var partsLabel = partCount ? ' · ✂️ ' + partCount + ' part(s)' : '';
+    var referencePictureCount = 0;
+    var referenceImageMap = documentEntry.documentImages || {};
+    var referenceImageKeys = Object.keys(referenceImageMap);
+    for (var referenceImageIndex = 0; referenceImageIndex < referenceImageKeys.length; referenceImageIndex++) {
+      referencePictureCount += (referenceImageMap[referenceImageKeys[referenceImageIndex]] || []).length;
+    }
+    var picturesLabel = referencePictureCount ? ' · 🖼 ' + referencePictureCount + ' picture(s)' : '';
     var generatedLabel = documentEntry.generatedHtml
       ? ' · 🤖 ' + formatFileSize(utf8ByteLength(documentEntry.generatedHtml)) + ' generated'
       : '';
     listHtml += '<div class="ref-doc-row">' +
       '<div class="ref-doc-main"><strong>' + esc(documentEntry.name) + '</strong>' +
-      '<span class="ref-doc-meta">' + sizeLabel + partsLabel + generatedLabel + '</span></div>' +
+      '<span class="ref-doc-meta">' + sizeLabel + partsLabel + generatedLabel + picturesLabel + '</span></div>' +
       '<div class="ref-doc-actions">' +
         '<button class="btn btn-sm btn-outline" data-ref-open="' + esc(documentEntry.id) + '">👁 Open</button>' +
         '<button class="btn btn-sm btn-outline" data-ref-process="' + esc(documentEntry.id) + '" title="Split this document into smaller PDFs, then send the parts to lessons or generate content from a part">⚙️ Process</button>' +
@@ -16914,11 +17710,13 @@ function addMainDocumentEntry(documentName, documentUrl, documentSizeKb) {
     url: documentUrl,
     sizeKb: documentSizeKb || 0,
     addedAt: new Date().toISOString(),
+    generatedAt: new Date().toISOString(),
     generatedHtml: '',
     generatedAt: '',
     generatedSourceLabel: '',
     parts: [],
-    ignoredPages: []
+    ignoredPages: [],
+    documentImages: {}
   };
   mainDocuments.push(newReferenceEntry);
   renderMainDocumentsList();
@@ -16992,6 +17790,19 @@ function deleteMainDocument(documentId) {
     for (var partIndex = 0; partIndex < splitPartCount; partIndex++) {
       var splitPart = foundDocument.parts[partIndex];
       if (splitPart && splitPart.url) deletedFileEntries.push({ url: splitPart.url, label: splitPart.name || 'reference part' });
+    }
+    // Pictures captured while processing this reference document/part live in
+    // CMS storage too - remove every file the entry owns.
+    var storedImageMap = foundDocument.documentImages || {};
+    var storedImageKeys = Object.keys(storedImageMap);
+    for (var imageKeyIndex = 0; imageKeyIndex < storedImageKeys.length; imageKeyIndex++) {
+      var storedPictureList = storedImageMap[storedImageKeys[imageKeyIndex]] || [];
+      for (var storedPictureIndex = 0; storedPictureIndex < storedPictureList.length; storedPictureIndex++) {
+        var storedPictureUrls = studioImageStorageUrls(storedPictureList[storedPictureIndex]);
+        for (var storedUrlIndex = 0; storedUrlIndex < storedPictureUrls.length; storedUrlIndex++) {
+          deletedFileEntries.push({ url: storedPictureUrls[storedUrlIndex], label: (storedPictureList[storedPictureIndex] && storedPictureList[storedPictureIndex].name) || 'reference picture' });
+        }
+      }
     }
     if (documentIsStoredFile) deletedFileEntries.push({ url: foundDocument.url, label: foundDocument.name });
     if (!deletedFileEntries.length) {
@@ -17678,6 +18489,25 @@ function referencePartUsage(partId) {
 /** Split number of every page that already sits inside a part: { pageNumber: 3 }.
  *  The numbers follow the page order of the parts, so the same number is shown
  *  on the page tile and in the parts list. */
+/** All split numbers that contain each page: { pageNumber: [1, 3] }.
+ *  A page may belong to several parts on purpose (one page, two lessons). */
+function referencePagePartNumbersMap(documentEntry) {
+  var numbersByPage = {};
+  var orderedParts = referenceOrderedParts(documentEntry);
+  for (var partIndex = 0; partIndex < orderedParts.length; partIndex++) {
+    var partEntry = orderedParts[partIndex];
+    if (!partEntry) continue;
+    var firstPartPage = parseInt(partEntry.fromPage, 10) || 0;
+    var lastPartPage = parseInt(partEntry.toPage, 10) || firstPartPage;
+    for (var pageNumber = firstPartPage; pageNumber <= lastPartPage; pageNumber++) {
+      if (pageNumber < 1) continue;
+      if (!numbersByPage[pageNumber]) numbersByPage[pageNumber] = [];
+      numbersByPage[pageNumber].push(partIndex + 1);
+    }
+  }
+  return numbersByPage;
+}
+
 function referencePagePartNumberMap(documentEntry) {
   var partNumberMap = {};
   var numberByPartId = referencePartNumberMap(documentEntry);
@@ -17724,11 +18554,13 @@ function persistReferenceIgnoredPages(documentEntry) {
   saveReferenceEntryAfterChange(documentEntry);
 }
 
-/** Does this page belong to the filter the author picked? */
+/** Does this page belong to the filter the author picked?
+ *  "Available" means "not ignored": a used page can be split again because a
+ *  page often carries the content of two different lessons. */
 function referencePageMatchesFilter(pageNumber, ignoredMap, partNumberMap) {
   var isIgnoredPage = !!ignoredMap[pageNumber];
   var isUsedPage = !!partNumberMap[pageNumber];
-  if (referencePageFilter === 'available') return !isIgnoredPage && !isUsedPage;
+  if (referencePageFilter === 'available') return !isIgnoredPage;
   if (referencePageFilter === 'ignored') return isIgnoredPage;
   if (referencePageFilter === 'used') return isUsedPage;
   return true;
@@ -17763,7 +18595,7 @@ function updateReferencePageFilterCounts(totalPages, ignoredMap, partNumberMap) 
     var isIgnoredPage = !!ignoredMap[pageNumber];
     if (isUsedPage) usedPageCount++;
     if (isIgnoredPage) ignoredPageCount++;
-    if (!isUsedPage && !isIgnoredPage) availablePageCount++;
+    if (!isIgnoredPage) availablePageCount++;
   }
   var countTargets = {
     all: totalPages,
@@ -17780,7 +18612,7 @@ function updateReferencePageFilterCounts(totalPages, ignoredMap, partNumberMap) 
 
 /** Explanation shown in the grid when the active filter has no page */
 function referenceEmptyFilterText() {
-  if (referencePageFilter === 'available') return 'Every page is already used or ignored. Switch to “Used” or “Ignored” to see them.';
+  if (referencePageFilter === 'available') return 'Every page is ignored. Click ↩ on a page to make it available again.';
   if (referencePageFilter === 'ignored') return 'No page is ignored yet. Click 🚫 on a page you do not want to split (a table of contents, a cover, an index) and it will be listed here.';
   if (referencePageFilter === 'used') return 'No page has been split yet. Select pages and click “✂️ Split … & upload”.';
   return 'No page to show for this document.';
@@ -17855,6 +18687,7 @@ function renderReferencePageGrid(documentEntry) {
   var coverage = referencePagesCoveredByParts(documentEntry);
   var ignoredMap = currentReferenceIgnoredPages(documentEntry);
   var partNumberMap = referencePagePartNumberMap(documentEntry);
+  var partNumbersByPage = referencePagePartNumbersMap(documentEntry);
   updateReferencePageFilterCounts(totalPages, ignoredMap, partNumberMap);
   syncReferencePageFilterButtons();
   var tilesHtml = '';
@@ -17864,18 +18697,23 @@ function renderReferencePageGrid(documentEntry) {
     var cachedThumb = referencePageThumbCache[pageNumber] || '';
     var isSelected = !!referenceSelectedPages[pageNumber];
     var isIgnoredPage = !!ignoredMap[pageNumber];
-    var partNumber = partNumberMap[pageNumber] || 0;
+    var pagePartNumbers = partNumbersByPage[pageNumber] || [];
+    var partNumber = pagePartNumbers.length ? pagePartNumbers[0] : 0;
+    var pagePartLabel = '';
+    for (var pagePartIndex = 0; pagePartIndex < pagePartNumbers.length; pagePartIndex++) {
+      pagePartLabel += (pagePartLabel ? ' ' : '') + '#' + pagePartNumbers[pagePartIndex];
+    }
     var coveredLabel = coverage[pageNumber] || '';
     var tileClasses = 'ref-page-tile';
     if (isSelected) tileClasses += ' is-selected';
     if (isIgnoredPage) tileClasses += ' is-ignored';
     if (partNumber) tileClasses += ' is-used';
     var tileTitle = 'Page ' + pageNumber;
-    if (partNumber) tileTitle += ' · already inside split #' + partNumber;
+    if (pagePartNumbers.length) tileTitle += ' · already inside split ' + pagePartLabel + (pagePartNumbers.length > 1 ? ' (shared by ' + pagePartNumbers.length + ' parts)' : '');
     if (isIgnoredPage) tileTitle += ' · ignored';
     if (!partNumber && !isIgnoredPage) tileTitle += isSelected ? ' · selected (click to remove)' : ' · click to select for the next split';
     var tileTagsHtml = '';
-    if (partNumber) tileTagsHtml += '<span class="ref-page-tag is-used" title="Already in ' + esc(coveredLabel || 'a split') + '">#' + partNumber + '</span>';
+    if (pagePartNumbers.length) tileTagsHtml += '<span class="ref-page-tag is-used" title="Already in ' + esc(coveredLabel || 'a split') + (pagePartNumbers.length > 1 ? ' - shared by ' + pagePartNumbers.length + ' parts' : '') + '">' + pagePartLabel + '</span>';
     if (isIgnoredPage) tileTagsHtml += '<span class="ref-page-tag is-ignored" title="Ignored page">IGNORED</span>';
     if (isSelected) tileTagsHtml += '<span class="ref-page-tag is-selected">SELECTED</span>';
     tilesHtml += '<div class="' + tileClasses + '" data-ref-page="' + pageNumber + '" title="' + esc(tileTitle) + '">' +
@@ -18000,8 +18838,8 @@ function updateReferencePageThumbnail(pageNumber, failedKind) {
 }
 
 /** Click a tile: select / deselect that page for the next split.
- *  Ignored pages and pages that already belong to a split are never selected,
- *  so the same page cannot be cut twice by accident. */
+ *  One page MAY be split again: a page can carry the content of two lessons,
+ *  so blocking a used page was wrong. Only ignored pages stay blocked. */
 function toggleReferencePageSelection(pageNumber) {
   if (!pageNumber) return;
   var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
@@ -18018,12 +18856,12 @@ function toggleReferencePageSelection(pageNumber) {
   }
   var partNumberMap = referencePagePartNumberMap(documentEntry);
   if (partNumberMap[pageNumber]) {
-    setReferenceSplitterStatus('📦 Page ' + pageNumber + ' is already inside split #' + partNumberMap[pageNumber] +
-      '. Delete that part in step 2 if you really want to split this page again.', 'warn');
-    return;
+    setReferenceSplitterStatus('🔁 Page ' + pageNumber + ' is already inside split #' + partNumberMap[pageNumber] +
+      '. It can be split again - the new part duplicates the page. Open 🎯 Focus on either part to record which part of the page that lesson must use.', '');
+  } else {
+    setReferenceSplitterStatus('', '');
   }
   referenceSelectedPages[pageNumber] = true;
-  setReferenceSplitterStatus('', '');
   renderReferencePageGrid(documentEntry);
   syncReferenceRangeFromSelectedPages();
 }
@@ -18059,7 +18897,7 @@ function selectAllReferencePages(isSelected) {
     var ignoredMap = currentReferenceIgnoredPages(documentEntry);
     var partNumberMap = referencePagePartNumberMap(documentEntry);
     for (var pageNumber = 1; pageNumber <= referenceSplitterPageCount; pageNumber++) {
-      if (ignoredMap[pageNumber] || partNumberMap[pageNumber]) continue;
+      if (ignoredMap[pageNumber]) continue;
       // Keep the selection inside what the author can actually see.
       if (!referencePageMatchesFilter(pageNumber, ignoredMap, partNumberMap)) continue;
       referenceSelectedPages[pageNumber] = true;
@@ -18070,17 +18908,20 @@ function selectAllReferencePages(isSelected) {
 }
 
 /** "Split selected pages & upload": each consecutive run becomes its own part.
- *  Ignored pages and pages already inside a part are dropped from the selection. */
+ *  Ignored pages are dropped from the selection; a page that already belongs
+ *  to another part is allowed (the page is duplicated on purpose). */
 function splitReferenceSelectedPages() {
   var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
   if (!documentEntry || referenceSplitterBusy) return;
   var ignoredMap = currentReferenceIgnoredPages(documentEntry);
   var partNumberMap = referencePagePartNumberMap(documentEntry);
   var blockedPageNumbers = [];
+  var duplicatedPageNumbers = [];
   var pageNumberKeys = Object.keys(referenceSelectedPages);
   for (var keyIndex = 0; keyIndex < pageNumberKeys.length; keyIndex++) {
     var selectedPageNumber = parseInt(pageNumberKeys[keyIndex], 10);
-    if (!ignoredMap[selectedPageNumber] && !partNumberMap[selectedPageNumber]) continue;
+    if (partNumberMap[selectedPageNumber]) duplicatedPageNumbers.push(selectedPageNumber);
+    if (!ignoredMap[selectedPageNumber]) continue;
     delete referenceSelectedPages[selectedPageNumber];
     blockedPageNumbers.push(selectedPageNumber);
   }
@@ -18088,7 +18929,7 @@ function splitReferenceSelectedPages() {
   if (blockedPageNumbers.length) {
     blockedPageNumbers.sort(function(firstPage, secondPage) { return firstPage - secondPage; });
     renderReferencePageGrid(documentEntry);
-    setReferenceSplitterStatus('⚠️ ' + blockedPageNumbers.length + ' selected page(s) are ignored or already used (' +
+    setReferenceSplitterStatus('⚠️ ' + blockedPageNumbers.length + ' selected page(s) are ignored (' +
       blockedPageNumbers.join(', ') + ') and were left out of this split.', 'warn');
   }
   if (!pageRanges.length) {
@@ -18098,6 +18939,10 @@ function splitReferenceSelectedPages() {
   if (pageRanges.length > 40) {
     setReferenceSplitterStatus('❌ That selection would create ' + pageRanges.length + ' parts. Select fewer separate runs (40 parts per run is the limit).', 'error');
     return;
+  }
+  if (duplicatedPageNumbers.length) {
+    duplicatedPageNumbers.sort(function(firstPage, secondPage) { return firstPage - secondPage; });
+    tool.notify('Page(s) ' + duplicatedPageNumbers.join(', ') + ' are already in another part and will be duplicated in the new part. Use 🎯 Focus on both parts so each lesson keeps its own half.', 'info');
   }
   startReferenceSplit(documentEntry, pageRanges, function() {
     referenceSelectedPages = {};
@@ -18471,17 +19316,70 @@ function renderReferenceSplitterParts(documentEntry) {
       '<div class="ref-split-part-main">' +
         '<div class="ref-split-part-name">' + esc(partEntry.name) + '</div>' +
         '<div class="ref-split-part-meta">' + esc(referencePartMetaText(partEntry)) + '</div>' +
+        (partEntry.focusNote ? '<div class="ref-split-part-focus" title="' + esc(partEntry.focusNote) + '">🎯 ' + esc(partEntry.focusNote) + '</div>' : '') +
       '</div>' +
       usageHtml +
       '<div class="ref-split-part-actions">' +
         '<button type="button" class="btn btn-xs btn-outline" data-ref-part-open="' + esc(partEntry.partId) + '" title="Open the part file">👁</button>' +
         '<button type="button" class="btn btn-xs btn-outline" data-ref-part-generate="' + esc(partEntry.partId) + '" title="Open this part in the Document Studio and generate content from it - the content is stored here, once, and used as reference context everywhere">' +
           (partEntry.generatedHtml ? '✨ Generate again' : '✨ Generate') + '</button>' +
+        '<button type="button" class="btn btn-xs btn-outline" data-ref-part-focus="' + esc(partEntry.partId) + '" title="' + (partEntry.focusNote ? 'Edit the focus note' : 'Use only one half/part of this page - describe it here') + '">🎯' + (partEntry.focusNote ? '' : ' Focus') + '</button>' +
         '<button type="button" class="btn btn-xs btn-danger" data-ref-part-delete="' + esc(partEntry.partId) + '" title="Delete this part">🗑</button>' +
       '</div>' +
     '</div>';
   }
   listElement.innerHTML = rowsHtml;
+}
+
+/** The focus note of the reference part that owns a URL ('' when none) */
+function referencePartFocusNoteFor(documentUrl) {
+  if (!documentUrl) return '';
+  for (var documentIndex = 0; documentIndex < mainDocuments.length; documentIndex++) {
+    var entryParts = (mainDocuments[documentIndex] && mainDocuments[documentIndex].parts) || [];
+    for (var partIndex = 0; partIndex < entryParts.length; partIndex++) {
+      if (entryParts[partIndex] && entryParts[partIndex].url === documentUrl) return entryParts[partIndex].focusNote || '';
+    }
+  }
+  return '';
+}
+
+/** 🎯 "Use only this part of the page" note of one split part */
+function openReferencePartFocusDialog(partId) {
+  var documentEntry = findMainDocumentById(referenceSplitterDocumentId);
+  var partEntry = findReferenceSplitPart(documentEntry, partId);
+  if (!documentEntry || !partEntry) return;
+  var partNumber = referencePartNumberMap(documentEntry)[partId] || '';
+  openStudioModal('🎯 Focus of part ' + partNumber + ' - ' + esc(partEntry.name),
+    '<div class="sd-modal-builtin" style="margin-bottom:10px">A page can hold the content of two lessons. Describe which part of this page belongs to THIS part - the AI then writes the generated content from that focus only. Everything outside it is ignored.</div>' +
+    '<div class="sd-modal-section"><div class="sd-modal-label">Use only this part of the page</div>' +
+      '<textarea class="form-input form-textarea" id="ref-part-focus-input" rows="4" placeholder="e.g. Only the section above the Exercises heading, from 2.3 Gear shifting to the end of the page.">' + esc(partEntry.focusNote || '') + '</textarea>' +
+      '<div class="sd-modal-hint">Leave empty to use the whole page. Examples: only the top half - the diagram and its explanation; only the left column; only the part titled ... until ...</div></div>' +
+    '<div class="sd-modal-actions">' +
+      '<button type="button" class="btn btn-outline" data-sd-close>Cancel</button>' +
+      (partEntry.focusNote ? '<button type="button" class="btn btn-outline" id="ref-part-focus-clear">🧹 Use the whole page</button>' : '') +
+      '<button type="button" class="btn btn-primary" id="ref-part-focus-save">💾 Save focus</button>' +
+    '</div>');
+  var saveButton = el('ref-part-focus-save');
+  if (saveButton) saveButton.addEventListener('click', function() {
+    var focusInput = el('ref-part-focus-input');
+    partEntry.focusNote = focusInput ? String(focusInput.value || '').trim().slice(0, 600) : '';
+    saveReferenceEntryAfterChange(documentEntry, function() {
+      renderReferenceSplitterParts(documentEntry);
+      tool.notify(partEntry.focusNote
+        ? 'Focus saved - the generated content of this part uses only that part of the page.'
+        : 'Focus cleared - the whole page is used.', 'success');
+    });
+    closeStudioModal();
+  });
+  var clearButton = el('ref-part-focus-clear');
+  if (clearButton) clearButton.addEventListener('click', function() {
+    partEntry.focusNote = '';
+    saveReferenceEntryAfterChange(documentEntry, function() {
+      renderReferenceSplitterParts(documentEntry);
+      tool.notify('Focus cleared - the whole page is used.', 'info');
+    });
+    closeStudioModal();
+  });
 }
 
 /** One part of the open reference document by part id */
@@ -18531,6 +19429,10 @@ function deleteReferenceSplitPart(partId) {
   if (!documentEntry || !partEntry) return;
   sandboxConfirm('Delete the part "' + partEntry.name + '" (pages ' + partEntry.fromPage + '-' + partEntry.toPage + ')? ' +
     'The part file is deleted from CMS storage; copies already added to lessons stay.', function() {
+    // Pictures captured while processing this part belong to the part URL.
+    var partPicturesToDelete = (documentEntry.documentImages && documentEntry.documentImages[partEntry.url]) || [];
+    if (documentEntry.documentImages) delete documentEntry.documentImages[partEntry.url];
+    if (partPicturesToDelete.length) deleteStudioImageStorageFiles(partPicturesToDelete);
     documentEntry.parts = (documentEntry.parts || []).filter(function(entry) { return entry.partId !== partId; });
     delete referenceSplitterSelectedPartIds[partId];
     saveReferenceEntryAfterChange(documentEntry, function() {
@@ -18676,6 +19578,8 @@ function bindReferenceSplitterEvents() {
         openStudioDrawerForDoc(generatePart.url);
         return;
       }
+      var focusButton = event.target.closest('[data-ref-part-focus]');
+      if (focusButton) { openReferencePartFocusDialog(focusButton.getAttribute('data-ref-part-focus')); return; }
       var deleteButton = event.target.closest('[data-ref-part-delete]');
       if (deleteButton) deleteReferenceSplitPart(deleteButton.getAttribute('data-ref-part-delete'));
     });
@@ -19728,7 +20632,7 @@ function moveLessonToSlot(fromSectionId, fromLessonIndex, toSectionId, targetLes
    and the silent self-check. This function only wraps it in the technical
    rules the tool itself needs. `revisionBrief` carries the review findings
    and the review chat into a REGENERATION of the same document. */
-function buildStudioHtmlPrompt(sourceText, galleryImages, revisionBrief) {
+function buildStudioHtmlPrompt(sourceText, galleryImages, revisionBrief, focusBrief) {
   var prompt =
     'Write ONE study document from the DOCUMENT TEXT at the end of this prompt, following the editing contract below completely.\n\n' +
     resolveRephraseRules() + '\n\n' +
@@ -19737,6 +20641,10 @@ function buildStudioHtmlPrompt(sourceText, galleryImages, revisionBrief) {
     '- Allowed tags: h1-h4, p, ul, ol, li, dl, dt, dd, table, caption, thead, tbody, tfoot, tr, th, td, blockquote, strong, em, b, i, u, code, sub, sup, br, hr, figure, figcaption, img, section, nav and a (internal #anchors only).\n' +
     '- No class, style or data-* attributes, no ids except the heading anchors of the contents list, no scripts, no event handlers.\n' +
     '- Never wrap whole paragraphs in <div>, and never output empty elements, placeholder text or "..." anywhere.\n';
+  if (focusBrief) {
+    prompt += '\nSOURCE FOCUS - this page is shared between lessons. Teach ONLY the part described below:\n"""\n' + focusBrief + '\n"""\n' +
+      'Everything outside that focus is context only: do not teach it, do not summarise it and do not list it. Keep every detail INSIDE the focus.\n';
+  }
   var pictureList = galleryImages || [];
   if (pictureList.length > 0) {
     prompt += '\nIMAGES - PLACEMENT MAP (this map is the ground truth for picture placement):\n' +
@@ -20196,7 +21104,7 @@ function generateStudyGuideFromStudioDoc(onDone) {
         promptSourceText += '\n\n--- MATERIAL GENERATED FROM THE REFERENCE LIBRARY ---\n\n' + referenceContextText;
       }
     }
-    var prompt = buildStudioHtmlPrompt(promptSourceText, editingStudyDocImages);
+    var prompt = buildStudioHtmlPrompt(promptSourceText, editingStudyDocImages, null, referencePartFocusNoteFor(sourceUrl));
     runStudioGenerationStream(prompt, '✨ AI is writing the generated content as HTML (step 2 of 2)', onDone);
   });
 }
@@ -20371,22 +21279,22 @@ function updateStudioSelectionUi() {
   if (deleteButton) deleteButton.disabled = !selectedIndexes.length;
   var generateButton = el('btn-sd-bulk-generate');
   if (generateButton) {
-    var realSelectedCount = 0;
-    for (var realIndex = 0; realIndex < selectedIndexes.length; realIndex++) {
-      var selectedImage = editingStudyDocImages[selectedIndexes[realIndex]];
-      if (selectedImage && studioImageRole(selectedImage) === 'real') realSelectedCount++;
-    }
-    generateButton.disabled = !realSelectedCount;
-    generateButton.textContent = realSelectedCount ? ('🎨 Generate selected (' + realSelectedCount + ')') : '🎨 Generate selected';
+    generateButton.disabled = !selectedIndexes.length;
+    generateButton.textContent = selectedIndexes.length ? ('🎨 Generate selected (' + selectedIndexes.length + ')') : '🎨 Generate selected';
   }
 }
 
-/** Every CMS storage URL a picture owns (original upload + generated copy) */
+/** Every CMS storage URL a picture owns (reference upload + accepted + candidate) */
 function studioImageStorageUrls(image) {
   var storageUrls = [];
   if (!image) return storageUrls;
-  if (typeof image.url === 'string' && /^https?:\/\//i.test(image.url)) storageUrls.push(image.url);
-  if (typeof image.generatedUrl === 'string' && /^https?:\/\//i.test(image.generatedUrl)) storageUrls.push(image.generatedUrl);
+  var candidateUrls = [image.url, image.acceptedUrl, image.candidateUrl, image.generatedUrl];
+  for (var urlIndex = 0; urlIndex < candidateUrls.length; urlIndex++) {
+    var storageUrl = candidateUrls[urlIndex];
+    if (typeof storageUrl === 'string' && /^https?:\/\//i.test(storageUrl) && storageUrls.indexOf(storageUrl) === -1) {
+      storageUrls.push(storageUrl);
+    }
+  }
   return storageUrls;
 }
 
@@ -20552,19 +21460,14 @@ function deleteSelectedStudioImages() {
   }, 'Yes, Remove');
 }
 
-/** Bulk action: create/refresh the generated version of the selected Real pictures */
+/** Bulk action: create/refresh the generated version of the selected pictures */
 function generateSelectedStudioImages() {
   var selectedIndexes = studioSelectedImageIndexes();
-  var realIndexes = [];
-  for (var index = 0; index < selectedIndexes.length; index++) {
-    var image = editingStudyDocImages[selectedIndexes[index]];
-    if (image && studioImageRole(image) === 'real') realIndexes.push(selectedIndexes[index]);
-  }
-  if (!realIndexes.length) {
-    tool.notify('Select at least one Real picture first (Source pictures are generated one by one with 🎨).', 'warning');
+  if (!selectedIndexes.length) {
+    tool.notify('Select at least one picture first.', 'warning');
     return;
   }
-  openStudioRegenerateDialog(realIndexes);
+  openStudioRegenerateDialog(selectedIndexes);
 }
 
 function openStudioRegenerateDialog(imageIndexes) {
@@ -20572,31 +21475,32 @@ function openStudioRegenerateDialog(imageIndexes) {
   var chipsHtml = STUDIO_IMAGE_STYLES.map(function(style) {
     return '<button type="button" class="sd-style-chip" data-style="' + style.key + '">' + style.label + '</button>';
   }).join('');
-  openStudioModal('🎨 Generate Picture Version' + (imageIndexes.length > 1 ? 's (' + imageIndexes.length + ')' : ''),
-    '<div class="sd-modal-builtin" style="margin-bottom:10px">The original picture is kept. The AI result is stored as its Generated version and is what the generated content uses.</div>' +
-    '<div class="sd-modal-section"><div class="sd-modal-label">Style helpers (click to set the instruction)</div><div class="sd-style-chips">' + chipsHtml + '</div></div>' +
-    '<div class="sd-modal-section"><div class="sd-modal-label">Built-in instruction</div><div class="sd-modal-builtin" id="sd-regen-builtin">' + esc(STUDIO_IMAGE_STYLES[0].prompt) + '</div></div>' +
-    '<div class="sd-modal-section"><div class="sd-modal-label">Additional comment (optional)</div><textarea class="form-input form-textarea" id="sd-regen-comment" placeholder="e.g. use the same colors, remove the background, add labels..." style="min-height:70px"></textarea></div>' +
+  openStudioModal('🎨 Generate our own version' + (imageIndexes.length > 1 ? 's (' + imageIndexes.length + ')' : ''),
+    '<div class="sd-modal-builtin" style="margin-bottom:10px">The reference picture is always kept. A result is stored as a <strong>candidate</strong>: it only replaces the reference in generated content after you press <strong>✅ Accept</strong>.</div>' +
+    '<div class="sd-modal-section"><div class="sd-modal-label">Rules used for this curriculum <span class="sd-muted">(Settings → 🎨 AI image regeneration rules)</span></div>' +
+      '<div class="sd-modal-builtin sd-regen-prompt-preview" id="sd-regen-builtin">' + esc(buildStudioImageBasePrompt()) + '</div></div>' +
+    '<div class="sd-modal-section"><div class="sd-modal-label">Style direction (optional)</div><div class="sd-style-chips">' + chipsHtml + '</div></div>' +
+    '<div class="sd-modal-section"><div class="sd-modal-label">Extra instruction (optional)</div><textarea class="form-input form-textarea" id="sd-regen-comment" placeholder="e.g. keep the labels, use blue tones, remove the background..." style="min-height:70px"></textarea></div>' +
     '<div class="sd-modal-actions"><button type="button" class="btn btn-outline" data-sd-close>Cancel</button><button type="button" class="btn btn-primary" id="sd-regen-run">🚀 Generate</button></div>');
-  var builtinPrompt = STUDIO_IMAGE_STYLES[0].prompt;
-  var builtinEl = el('sd-regen-builtin');
+  var styleDirection = '';
   var chipButtons = document.querySelectorAll('#sd-modal-body .sd-style-chip');
   for (var c = 0; c < chipButtons.length; c++) {
     chipButtons[c].addEventListener('click', function() {
       var styleKey = this.getAttribute('data-style');
+      var chosenStyle = null;
       for (var s = 0; s < STUDIO_IMAGE_STYLES.length; s++) {
-        if (STUDIO_IMAGE_STYLES[s].key === styleKey) {
-          builtinPrompt = STUDIO_IMAGE_STYLES[s].prompt;
-          builtinEl.textContent = builtinPrompt;
-          break;
-        }
+        if (STUDIO_IMAGE_STYLES[s].key === styleKey) { chosenStyle = STUDIO_IMAGE_STYLES[s].prompt; break; }
       }
-      for (var t = 0; t < chipButtons.length; t++) chipButtons[t].classList.toggle('active', chipButtons[t] === this);
+      // Pressing the active chip again removes the style direction.
+      styleDirection = (styleDirection === chosenStyle) ? '' : (chosenStyle || '');
+      for (var t = 0; t < chipButtons.length; t++) {
+        chipButtons[t].classList.toggle('active', styleDirection && chipButtons[t] === this);
+      }
     });
   }
   el('sd-regen-run').addEventListener('click', function() {
     var commentText = el('sd-regen-comment').value.trim();
-    var finalPrompt = builtinPrompt + (commentText ? ' ' + commentText : '');
+    var finalPrompt = buildStudioImageRegenerationPrompt(styleDirection, commentText);
     closeStudioModal();
     runStudioImageRegenerationQueue(imageIndexes.slice(), finalPrompt);
   });
@@ -20697,7 +21601,7 @@ function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
   function processQueueItem() {
     if (!queue.length) {
       setStudioStatus('', '');
-      tool.notify('✅ Picture generation finished.', 'success');
+      tool.notify('✅ Picture generation finished. Review each candidate and press ✅ Accept on the ones you want.', 'success');
       renderStudyDocImageGallery();
       return;
     }
@@ -20705,8 +21609,10 @@ function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
     var originalImage = editingStudyDocImages[imageIndex];
     if (!originalImage) { processQueueItem(); return; }
     startStudioStatusTicker('🎨 AI is generating picture version ' + (queueTotal - queue.length) + ' of ' + queueTotal + ' (this can take up to 110 seconds)');
-    // Hosted images have no embedded data URL - fetch the bytes for the sample.
-    resolveStudioImageDataUrl(originalImage, function(sampleDataUrl) {
+    // A newer candidate or accepted version is a better sample than the
+    // reference, but the reference always decides the subject.
+    var sampleSource = studioImageCandidateSrc(originalImage) || studioImageAcceptedSrc(originalImage) || imageContentSrc(originalImage);
+    resolvePictureSourceDataUrl(sampleSource, function(sampleDataUrl) {
       if (!sampleDataUrl) {
         setStudioStatus('', '');
         tool.notify('The bytes of "' + (originalImage.name || 'picture') + '" could not be read, so it cannot be used as a sample.', 'warning');
@@ -20721,13 +21627,21 @@ function runStudioImageRegenerationQueue(imageIndexes, finalPrompt) {
           return;
         }
         setStudioStatus('', '');
-        openStudioImageCompare(imageIndex, generatedPicture.url || generatedPicture.dataUrl, function(decision) {
-          if (decision === 'again') queue.unshift(imageIndex);
-          if (decision === 'use') {
-            // The original picture is never overwritten: the AI result becomes its
-            // GENERATED version, which is what the generated content uses.
-            applyGeneratedVersionToStudioImage(imageIndex, generatedPicture, finalPrompt);
-            renderPdfEditorList();
+        // The result is a CANDIDATE until the author accepts it: the reference
+        // and any earlier accepted version stay untouched.
+        applyCandidateVersionToStudioImage(imageIndex, generatedPicture, finalPrompt);
+        appendStudioImageChatMessage(originalImage, 'assistant', 'First draft generated with the curriculum rules.');
+        persistStudioImages();
+        openStudioImageCompare(imageIndex, studioImageCandidateSrc(originalImage), function(decision) {
+          if (decision === 'again') {
+            discardStudioImageCandidate(imageIndex);
+            queue.unshift(imageIndex);
+          } else if (decision === 'accept') {
+            acceptStudioImageCandidate(imageIndex);
+          } else if (decision === 'chat') {
+            tool.notify('Picture chat opened - the remaining pictures were not generated. Run 🎨 again for them when you are done.', 'info');
+            openStudioImageChat(imageIndex);
+            return;
           }
           processQueueItem();
         });
@@ -20741,11 +21655,16 @@ function openStudioImageCompare(imageIndex, newPictureSource, decideCallback) {
   var originalImage = editingStudyDocImages[imageIndex];
   if (!originalImage) { decideCallback('keep'); return; }
   var bodyHtml = '<div class="sd-compare">' +
-    '<div class="sd-compare-side"><div class="sd-compare-label">Original (kept)</div><img src="' + imageContentSrc(originalImage) + '" alt="Original"></div>' +
-    '<div class="sd-compare-side"><div class="sd-compare-label">AI generated version</div><img src="' + newPictureSource + '" alt="Generated"></div>' +
+    '<div class="sd-compare-side"><div class="sd-compare-label">📌 Reference (always kept)</div><img src="' + imageContentSrc(originalImage) + '" alt="Reference"></div>' +
+    '<div class="sd-compare-side"><div class="sd-compare-label">🧪 New candidate (not used yet)</div><img src="' + newPictureSource + '" alt="Candidate"></div>' +
     '</div>' +
-    '<div class="sd-modal-builtin" style="margin-top:10px">Using the generated version keeps the original picture and adds it to the gallery as the Generated version. Generated content will use the generated version.</div>' +
-    '<div class="sd-modal-actions"><button type="button" class="btn btn-outline" data-sd-decide="again">🔄 Regenerate Again</button><button type="button" class="btn btn-outline" data-sd-decide="keep">↩ Keep Original Only</button><button type="button" class="btn btn-primary" data-sd-decide="use">✅ Use Generated Version</button></div>';
+    '<div class="sd-modal-builtin" style="margin-top:10px">Accepting makes this the version generated content uses; the reference stays saved, so you can always try again later.</div>' +
+    '<div class="sd-modal-actions">' +
+      '<button type="button" class="btn btn-outline" data-sd-decide="again">🔄 Regenerate again</button>' +
+      '<button type="button" class="btn btn-outline" data-sd-decide="chat">💬 Chat to improve</button>' +
+      '<button type="button" class="btn btn-outline" data-sd-decide="keep">🧪 Keep as candidate</button>' +
+      '<button type="button" class="btn btn-primary" data-sd-decide="accept">✅ Accept</button>' +
+    '</div>';
   openStudioModal('🔍 Compare: ' + esc(originalImage.name), bodyHtml);
   var decideButtons = document.querySelectorAll('#sd-modal-body [data-sd-decide]');
   for (var b = 0; b < decideButtons.length; b++) {
@@ -20756,6 +21675,136 @@ function openStudioImageCompare(imageIndex, newPictureSource, decideCallback) {
     });
   }
 }
+
+/* ── 💬 Picture chat: every message creates a new candidate ── */
+var studioImageChatIndex = null;
+
+function studioImageChatMessagesHtml(image) {
+  var messages = (image && Array.isArray(image.imageChat)) ? image.imageChat : [];
+  var chatRows = [];
+  for (var messageIndex = 0; messageIndex < messages.length; messageIndex++) {
+    var chatMessage = messages[messageIndex];
+    if (!chatMessage || !chatMessage.text) continue;
+    var rowClass = chatMessage.role === 'user' ? 'is-user' : (chatMessage.role === 'system' ? 'is-system' : 'is-ai');
+    var roleLabel = chatMessage.role === 'user' ? 'You' : (chatMessage.role === 'system' ? 'System' : 'AI');
+    chatRows.push('<div class="sd-image-chat-msg ' + rowClass + '"><div class="sd-image-chat-role">' + roleLabel + '</div>' +
+      '<div class="sd-image-chat-text">' + esc(chatMessage.text) + '</div></div>');
+  }
+  if (!chatRows.length) {
+    chatRows.push('<div class="sd-image-chat-empty">Describe how the picture should change. Every message creates a new candidate - accept it when you like it.</div>');
+  }
+  return chatRows.join('');
+}
+
+function openStudioImageChat(imageIndex) {
+  var chatImage = editingStudyDocImages[imageIndex];
+  if (!chatImage) return;
+  studioImageChatIndex = imageIndex;
+  var acceptedSource = studioImageAcceptedSrc(chatImage);
+  var candidateSource = studioImageCandidateSrc(chatImage);
+  var bodyHtml =
+    '<div class="sd-image-chat">' +
+      '<div class="sd-image-chat-side">' +
+        '<div class="sd-image-chat-thumb"><div class="sd-compare-label">📌 Reference</div><img src="' + imageContentSrc(chatImage) + '" alt="Reference"></div>' +
+        '<div class="sd-image-chat-thumb"><div class="sd-compare-label">✅ Ours (accepted)</div>' +
+          (acceptedSource ? '<img src="' + acceptedSource + '" alt="Accepted">' : '<div class="sd-image-chat-none">No accepted version yet</div>') + '</div>' +
+        '<div class="sd-image-chat-thumb"><div class="sd-compare-label">🧪 Candidate</div>' +
+          (candidateSource ? '<img src="' + candidateSource + '" alt="Candidate">' : '<div class="sd-image-chat-none">No candidate yet</div>') + '</div>' +
+      '</div>' +
+      '<div class="sd-image-chat-main">' +
+        '<div class="sd-image-chat-log" id="sd-image-chat-log">' + studioImageChatMessagesHtml(chatImage) + '</div>' +
+        '<textarea class="form-input sd-image-chat-input" id="sd-image-chat-input" rows="3" placeholder="e.g. Make the diagram flatter, use blue tones and keep every label"></textarea>' +
+        '<div class="sd-image-chat-actions">' +
+          '<button type="button" class="btn btn-primary" id="sd-image-chat-send">💬 Send &amp; create a draft</button>' +
+          (candidateSource ? '<button type="button" class="btn btn-outline" id="sd-image-chat-accept">✅ Accept candidate</button>' : '') +
+          (candidateSource ? '<button type="button" class="btn btn-outline" id="sd-image-chat-discard">🗑 Discard candidate</button>' : '') +
+          '<button type="button" class="btn btn-outline" id="sd-image-chat-reset" title="Clear this picture chat">🧹 Clear chat</button>' +
+        '</div>' +
+        '<div class="sd-image-chat-status" id="sd-image-chat-status"></div>' +
+      '</div>' +
+    '</div>';
+  openStudioModal('💬 Picture chat · ' + esc(chatImage.name), bodyHtml, 'sd-image-chat-modal');
+  var chatLogElement = el('sd-image-chat-log');
+  if (chatLogElement) chatLogElement.scrollTop = chatLogElement.scrollHeight;
+  var sendButton = el('sd-image-chat-send');
+  if (sendButton) sendButton.addEventListener('click', sendStudioImageChatInstruction);
+  var chatInput = el('sd-image-chat-input');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendStudioImageChatInstruction();
+      }
+    });
+    chatInput.focus();
+  }
+  var acceptButton = el('sd-image-chat-accept');
+  if (acceptButton) acceptButton.addEventListener('click', function() {
+    acceptStudioImageCandidate(studioImageChatIndex);
+    if (studioImageChatIndex !== null) openStudioImageChat(studioImageChatIndex);
+  });
+  var discardButton = el('sd-image-chat-discard');
+  if (discardButton) discardButton.addEventListener('click', function() {
+    discardStudioImageCandidate(studioImageChatIndex);
+    if (studioImageChatIndex !== null) openStudioImageChat(studioImageChatIndex);
+  });
+  var resetButton = el('sd-image-chat-reset');
+  if (resetButton) resetButton.addEventListener('click', function() {
+    var resetImage = editingStudyDocImages[studioImageChatIndex];
+    if (resetImage) {
+      resetImage.imageChat = [];
+      persistStudioImages();
+      autoSaveCurrentLesson();
+      openStudioImageChat(studioImageChatIndex);
+    }
+  });
+}
+
+function sendStudioImageChatInstruction() {
+  var imageIndex = studioImageChatIndex;
+  var chatImage = editingStudyDocImages[imageIndex];
+  if (!chatImage) return;
+  var chatInput = el('sd-image-chat-input');
+  var instruction = chatInput ? chatInput.value.trim() : '';
+  if (!instruction) return;
+  var sendButton = el('sd-image-chat-send');
+  if (sendButton) sendButton.disabled = true;
+  appendStudioImageChatMessage(chatImage, 'user', instruction);
+  persistStudioImages();
+  if (chatInput) chatInput.value = '';
+  var chatLogElement = el('sd-image-chat-log');
+  if (chatLogElement) {
+    chatLogElement.innerHTML = studioImageChatMessagesHtml(chatImage);
+    chatLogElement.scrollTop = chatLogElement.scrollHeight;
+  }
+  var chatStatus = el('sd-image-chat-status');
+  if (chatStatus) chatStatus.textContent = '🎨 Creating a new candidate… (this can take up to 110 seconds)';
+  // The newest candidate (or our accepted version) is the best starting point.
+  var sampleSource = studioImageCandidateSrc(chatImage) || studioImageAcceptedSrc(chatImage) || imageContentSrc(chatImage);
+  resolvePictureSourceDataUrl(sampleSource, function(sampleDataUrl) {
+    if (!sampleDataUrl) {
+      appendStudioImageChatMessage(chatImage, 'system', 'The picture bytes could not be read, so no candidate was created.');
+      persistStudioImages();
+      openStudioImageChat(imageIndex);
+      return;
+    }
+    var chatPrompt = buildStudioImageChatPrompt(chatImage, instruction);
+    requestRegeneratedStudioPicture(sampleDataUrl, chatPrompt, function(generateError, generatedPicture, generateErrorInfo) {
+      if (generateError || !generatedPicture) {
+        appendStudioImageChatMessage(chatImage, 'system', describePictureGenerationError(generateError, generateErrorInfo));
+        persistStudioImages();
+        openStudioImageChat(imageIndex);
+        return;
+      }
+      applyCandidateVersionToStudioImage(imageIndex, generatedPicture, chatPrompt);
+      appendStudioImageChatMessage(chatImage, 'assistant', 'New candidate created from your last instruction. Accept it if it is better, or keep chatting.');
+      persistStudioImages();
+      autoSaveCurrentLesson();
+      openStudioImageChat(imageIndex);
+    });
+  });
+}
+
 
 /* ═══════════════════════════════════════════
    ROLE CHECK
@@ -20942,6 +21991,11 @@ function bindEvents() {
   if (btnSaveRephrasePrompt) btnSaveRephrasePrompt.addEventListener('click', saveRephrasePromptFromSettings);
   var btnResetRephrasePrompt = el('btn-reset-rephrase-prompt');
   if (btnResetRephrasePrompt) btnResetRephrasePrompt.addEventListener('click', resetRephrasePromptToDefault);
+  // Picture redraw rules: saved with the curriculum, or the built-in text.
+  var btnSaveImagePrompt = el('btn-save-image-prompt');
+  if (btnSaveImagePrompt) btnSaveImagePrompt.addEventListener('click', saveImagePromptFromSettings);
+  var btnResetImagePrompt = el('btn-reset-image-prompt');
+  if (btnResetImagePrompt) btnResetImagePrompt.addEventListener('click', resetImagePromptToDefault);
   var btnSdAddImage = el('btn-sd-add-image');
   if (btnSdAddImage) btnSdAddImage.addEventListener('click', addStudyDocImageDirectly);
   var btnSdManualCrop = el('btn-sd-manual-crop');
@@ -21130,6 +22184,25 @@ function bindEvents() {
       }
       var roleTarget = target.closest('[data-sd-role]');
       if (roleTarget) { toggleStudioImageRole(parseInt(roleTarget.getAttribute('data-sd-role'), 10)); return; }
+      var acceptTarget = target.closest('[data-sd-accept]');
+      if (acceptTarget) { acceptStudioImageCandidate(parseInt(acceptTarget.getAttribute('data-sd-accept'), 10)); return; }
+      var discardTarget = target.closest('[data-sd-discard]');
+      if (discardTarget) { discardStudioImageCandidate(parseInt(discardTarget.getAttribute('data-sd-discard'), 10)); return; }
+      var chatTarget = target.closest('[data-sd-chat]');
+      if (chatTarget) { openStudioImageChat(parseInt(chatTarget.getAttribute('data-sd-chat'), 10)); return; }
+      var uploadTarget = target.closest('[data-sd-upload]');
+      if (uploadTarget) {
+        var uploadPictureIndex = parseInt(uploadTarget.getAttribute('data-sd-upload'), 10);
+        uploadStudioImageToStorage(uploadPictureIndex, function(uploaded) {
+          renderStudyDocImageGallery();
+          persistStudioImages();
+          autoSaveCurrentLesson();
+          tool.notify(uploaded
+            ? 'Picture stored in CMS storage ✅ - it is saved with the document now.'
+            : 'The picture could not be uploaded (allowBinaryUpload must be enabled).', uploaded ? 'success' : 'warning');
+        });
+        return;
+      }
       var versionTarget = target.closest('[data-sd-version]');
       if (versionTarget) {
         setStudioImageVersion(parseInt(versionTarget.getAttribute('data-sd-version'), 10), versionTarget.getAttribute('data-version'));
@@ -21179,6 +22252,8 @@ function bindEvents() {
       sandboxConfirm('🤖 Generate the study guide with AI from your Ready documents? The AI reads the documents and replaces the current lesson Study Content. It may take a few minutes.', function() { generateHtmlFromPdf(); }, 'Yes, Generate');
     });
   }
+  var btnWriteFromScratch = el('btn-write-from-scratch');
+  if (btnWriteFromScratch) btnWriteFromScratch.addEventListener('click', openStudioWriteFromScratch);
   var btnGenFlashcards = el('btn-generate-flashcards');
   if (btnGenFlashcards) {
     btnGenFlashcards.addEventListener('click', function() {
