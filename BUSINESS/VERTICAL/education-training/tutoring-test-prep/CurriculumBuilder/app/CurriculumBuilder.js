@@ -1,4 +1,4 @@
-/* js build 2026-11-18-129 */
+/* js build 2026-11-18-130 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
@@ -6,7 +6,7 @@
 ────────────────────────────────────────── */
 
 /* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
-var TOOL_BUILD = '2026-11-18-129';
+var TOOL_BUILD = '2026-11-18-130';
 // Boot diagnostic: which build is running, and is the large-file download channel present?
 (function logFileChannelAvailability() {
   console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' · Curriculum Builder');
@@ -15203,9 +15203,15 @@ function renderStudyDocImageGallery() {
         '</span>'
       : '<span class="sd-image-anchor is-missing">⚠️ no page anchor</span>';
     return '<div class="sd-image-card' + (imageRole === 'source' ? ' is-source' : '') + '">' +
-      '<label class="sd-image-check"><input type="checkbox" data-sd-select="' + idx + '"' +
-        (studioSelectedImageIds[image.id] ? ' checked' : '') + '> select</label>' +
-      '<img src="' + previewSrc + '" alt="' + esc(image.name) + '" title="' + esc(imageCardTitle) + '" data-sd-view="' + idx + '">' +
+      '<div class="sd-image-thumb">' +
+        '<img src="' + previewSrc + '" alt="' + esc(image.name) + '" title="' + esc(imageCardTitle) + '" data-sd-view="' + idx + '">' +
+        '<label class="sd-image-check" title="Select this picture">' +
+          '<input type="checkbox" data-sd-select="' + idx + '" aria-label="Select ' + esc(image.name) + '"' +
+            (studioSelectedImageIds[image.id] ? ' checked' : '') + '>' +
+        '</label>' +
+        '<button type="button" class="sd-image-role ' + (imageRole === 'source' ? 'is-source' : 'is-real') + '" data-sd-role="' + idx + '" title="Click to switch: Real = used directly by generated content, Source = needs a generated version">' +
+          (imageRole === 'source' ? '◐ Source' : '● Real') + '</button>' +
+      '</div>' +
       versionToggle +
       '<div class="sd-image-meta">' + esc(image.name) +
         '<span class="sd-muted">' + (isImageHosted(image) ? '🔗 hosted · ' : '⚠️ not uploaded · ') + (image.ocrText ? '📝 text · ' : '') + (image.width || '?') + '×' + (image.height || '?') + ' · ' + image.sizeKb + ' KB</span>' +
@@ -15213,13 +15219,11 @@ function renderStudyDocImageGallery() {
         badgeHtml +
       '</div>' +
       '<div class="sd-image-actions">' +
-        '<button type="button" class="sd-image-role ' + (imageRole === 'source' ? 'is-source' : 'is-real') + '" data-sd-role="' + idx + '" title="Click to switch: Real = used directly by generated content, Source = needs a generated version">' +
-          (imageRole === 'source' ? '◐ Source' : '● Real') + '</button>' +
         '<button type="button" class="btn btn-sm btn-outline" data-sd-pin="' + idx + '" title="Pin this picture to a section of the generated document">📌</button>' +
         '<button type="button" class="btn btn-sm btn-outline" data-sd-move="' + idx + '" data-direction="-1"' + (idx === 0 ? ' disabled' : '') + ' title="Move this picture earlier in the generation order">◀</button>' +
         '<button type="button" class="btn btn-sm btn-outline" data-sd-move="' + idx + '" data-direction="1"' + (idx === editingStudyDocImages.length - 1 ? ' disabled' : '') + ' title="Move this picture later in the generation order">▶</button>' +
         '<button type="button" class="btn btn-sm btn-outline" data-sd-regen="' + idx + '" title="Generate or regenerate a version of this picture">🎨</button>' +
-        '<button type="button" class="btn btn-sm btn-danger" data-sd-remove="' + idx + '">🗑</button>' +
+        '<button type="button" class="btn btn-sm btn-danger" data-sd-remove="' + idx + '" title="Remove this picture from the document">🗑</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -15596,22 +15600,53 @@ function buildStudioCropToolHtml() {
           '</select>' +
         '</span>' +
         '<span class="sd-crop-group sd-crop-group-right">' +
+          '<button type="button" class="btn btn-sm btn-outline sd-crop-help-btn" id="sd-crop-help-btn" title="How to crop a picture" aria-label="Help">?</button>' +
           '<button type="button" class="btn btn-sm btn-outline" id="sd-crop-whole-page" disabled>Whole page</button>' +
           '<button type="button" class="btn btn-sm btn-outline" id="sd-crop-clear" disabled>Clear</button>' +
         '</span>' +
       '</div>' +
-      '<div class="sd-crop-stage-wrap" id="sd-crop-stage-wrap">' +
-        '<div class="sd-crop-stage" id="sd-crop-stage"><div class="sd-crop-empty" id="sd-crop-empty">Reading the document…</div></div>' +
+      '<div class="sd-crop-help" id="sd-crop-help" hidden>' +
+        '<div class="sd-crop-help-head"><strong>How to crop a picture</strong><button type="button" class="sd-mini-btn" id="sd-crop-help-close" title="Close help">✕</button></div>' +
+        '<ul>' +
+          '<li>Drag on the page to draw the area you want.</li>' +
+          '<li>Drag inside the selection to move it, or a corner to resize it.</li>' +
+          '<li><strong>Page size</strong> is the resolution the page is rendered at - a bigger size gives a sharper crop.</li>' +
+          '<li><strong>Zoom</strong>: Fit width fills the area and scrolls down; Fit page shows everything; percentages are one page pixel to one CSS pixel or more.</li>' +
+          '<li>Press <strong>Save</strong> in the right panel. Crops of this page are listed under it, and ✕ drops one.</li>' +
+        '</ul>' +
       '</div>' +
-      '<div class="sd-crop-saved" id="sd-crop-saved" hidden></div>' +
-      '<div class="sd-crop-hint">Drag on the page to select the picture. Drag inside the selection to move it, or a corner to resize it. The crop is taken from the <strong>Page size</strong> render, so a bigger size gives a sharper picture. Saved crops of this page appear under the page - click ✕ on one to drop it.</div>' +
-      '<div class="sd-crop-footer">' +
-        '<span class="sd-crop-info" id="sd-crop-info">No area selected.</span>' +
-        '<span class="sd-crop-preview"><canvas id="sd-crop-preview" width="1" height="1"></canvas></span>' +
-        '<button type="button" class="btn btn-primary" id="sd-crop-save" disabled>✂️ Save this area as a picture</button>' +
+      '<div class="sd-crop-main">' +
+        '<div class="sd-crop-stage-col">' +
+          '<div class="sd-crop-stage-wrap" id="sd-crop-stage-wrap">' +
+            '<div class="sd-crop-stage" id="sd-crop-stage"><div class="sd-crop-empty" id="sd-crop-empty">Reading the document…</div></div>' +
+          '</div>' +
+        '</div>' +
+        '<aside class="sd-crop-side">' +
+          '<div class="sd-crop-side-block">' +
+            '<div class="sd-crop-side-title">Selection</div>' +
+            '<div class="sd-crop-preview"><canvas id="sd-crop-preview" width="1" height="1"></canvas></div>' +
+            '<div class="sd-crop-info" id="sd-crop-info">No area selected - drag on the page to choose the picture.</div>' +
+            '<button type="button" class="btn btn-primary sd-crop-save-btn" id="sd-crop-save" disabled>✂️ Save this area</button>' +
+          '</div>' +
+          '<div class="sd-crop-side-block sd-crop-side-saved">' +
+            '<div class="sd-crop-side-title" id="sd-crop-saved-title">Saved from this page</div>' +
+            '<div class="sd-crop-saved" id="sd-crop-saved" hidden></div>' +
+          '</div>' +
+        '</aside>' +
       '</div>' +
       '<div class="sd-crop-status" id="sd-crop-status"></div>' +
     '</div>';
+}
+
+/** Show/hide the "how to" panel. It is an in-place popover, never a modal:
+ *  opening a modal would close the crop popup (and its PDF document). */
+function toggleStudioCropHelp(forceOpen) {
+  var helpPanel = el('sd-crop-help');
+  if (!helpPanel) return;
+  var shouldOpen = (typeof forceOpen === 'boolean') ? forceOpen : helpPanel.hidden;
+  helpPanel.hidden = !shouldOpen;
+  var helpButton = el('sd-crop-help-btn');
+  if (helpButton) helpButton.classList.toggle('is-active', shouldOpen);
 }
 
 function bindStudioCropTool() {
@@ -15647,6 +15682,10 @@ function bindStudioCropTool() {
     if (!removeTarget) return;
     removeStudioCropSavedPicture(parseInt(removeTarget.getAttribute('data-crop-remove'), 10));
   });
+  var helpButton = el('sd-crop-help-btn');
+  if (helpButton) helpButton.addEventListener('click', function() { toggleStudioCropHelp(); });
+  var helpCloseButton = el('sd-crop-help-close');
+  if (helpCloseButton) helpCloseButton.addEventListener('click', function() { toggleStudioCropHelp(false); });
   var wholePageButton = el('sd-crop-whole-page');
   if (wholePageButton) wholePageButton.addEventListener('click', function() {
     if (!studioCropState || !studioCropState.pageCanvas) return;
@@ -15672,6 +15711,8 @@ function bindStudioCropTool() {
     event.preventDefault();
     event.stopPropagation();
     if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    var helpPanel = el('sd-crop-help');
+    if (helpPanel && !helpPanel.hidden) { toggleStudioCropHelp(false); return; }
     closeStudioModal();
   };
   document.addEventListener('keydown', studioCropEscapeHandler, true);
@@ -15905,7 +15946,7 @@ function drawStudioCropPreview(cropRect) {
   if (cropRect && cropRect.width > 0 && cropRect.height > 0) {
     // One scale for BOTH sides: capping width and height separately turned a
     // tall selection into a square preview, which made the crop look wrong.
-    var previewScale = Math.min(1, 320 / cropRect.width, 200 / cropRect.height);
+    var previewScale = Math.min(1, 200 / cropRect.width, 150 / cropRect.height);
     previewWidth = Math.max(1, Math.round(cropRect.width * previewScale));
     previewHeight = Math.max(1, Math.round(cropRect.height * previewScale));
   }
@@ -15929,8 +15970,10 @@ function drawStudioCropPreview(cropRect) {
 function renderStudioCropSavedStrip() {
   var state = studioCropState;
   var strip = el('sd-crop-saved');
+  var titleElement = el('sd-crop-saved-title');
   if (!strip) return;
   if (!state || !state.pageCanvas) {
+    if (titleElement) titleElement.textContent = 'Saved from this page';
     strip.hidden = true;
     strip.innerHTML = '';
     return;
@@ -15945,17 +15988,22 @@ function renderStudioCropSavedStrip() {
     savedCount++;
     savedItemsHtml += '<div class="sd-crop-saved-item">' +
       '<img src="' + savedSrc + '" alt="' + esc(savedImage.name) + '" title="' + esc(savedImage.name) + '">' +
+      '<div class="sd-crop-saved-main">' +
+        '<div class="sd-crop-saved-name" title="' + esc(savedImage.name) + '">◐ ' + esc(savedImage.name) + '</div>' +
+        '<div class="sd-crop-saved-size">' + (savedImage.width || '?') + ' × ' + (savedImage.height || '?') + ' px</div>' +
+      '</div>' +
       '<button type="button" data-crop-remove="' + imageIndex + '" title="Remove this saved crop from the document">✕</button>' +
-      '<span>' + (savedImage.width || '?') + '×' + (savedImage.height || '?') + '</span>' +
       '</div>';
   }
   if (!savedCount) {
+    if (titleElement) titleElement.textContent = 'Saved from this page';
     strip.hidden = true;
     strip.innerHTML = '';
     return;
   }
+  if (titleElement) titleElement.textContent = '✓ Saved from page ' + state.pageNumber + ' (' + savedCount + ')';
   strip.hidden = false;
-  strip.innerHTML = '<span class="sd-crop-saved-title">✓ Saved from page ' + state.pageNumber + ' (' + savedCount + ')</span>' + savedItemsHtml;
+  strip.innerHTML = savedItemsHtml;
 }
 
 /** Remove one saved crop from the page strip */
@@ -16192,6 +16240,9 @@ function saveStudioCropSelection() {
       anchorHeading: textAnchor.heading,
       anchorSource: textAnchor.source !== 'none' ? 'text-layer' : 'none'
     });
+    // A cropped picture is somebody else's material: it starts as a Source
+    // reference and only becomes Real when the author decides so.
+    pictureImage.role = 'source';
     pictureImage.manualCrop = true;
     pictureImage.pageRenderMaxSide = croppedRenderSize;
     editingStudyDocImages.push(pictureImage);
@@ -16210,8 +16261,8 @@ function saveStudioCropSelection() {
       if (!studioCropState || studioCropState !== state) return;
       renderStudioCropSavedStrip();
       if (uploaded) {
-        setStudioCropStatus('✅ ' + pictureName + ' is in the document gallery and uploaded to CMS storage. Drag another area, or close this window.', 'ok');
-        tool.notify(pictureName + ' saved and uploaded ✅', 'success');
+        setStudioCropStatus('✅ ' + pictureName + ' saved as Source and uploaded to CMS storage. Give it a 🎨 generated version when you want it in the content.', 'ok');
+        tool.notify(pictureName + ' saved as Source ✅', 'success');
       } else {
         setStudioCropStatus('⚠️ ' + pictureName + ' is in the gallery but could not be uploaded (picture upload needs allowBinaryUpload: yes). Drag another area or close this window.', 'warn');
       }

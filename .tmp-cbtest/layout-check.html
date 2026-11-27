@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Crop layout check</title>
+<link rel="stylesheet" href="../BUSINESS/VERTICAL/education-training/tutoring-test-prep/CurriculumBuilder/app/CurriculumBuilder.css">
+<style>
+  body { margin: 0; padding: 16px; background: #eef2f7; font-family: system-ui, sans-serif; }
+  .demo { width: 1260px; background: #fff; border: 1px solid #cbd5e1; margin-bottom: 20px; }
+  .demo .sd-crop-modal { height: 620px; max-width: none; border-radius: 0; box-shadow: none; }
+  .demo-page { width: 820px; height: 1400px; background: #fff; box-sizing: border-box; padding: 24px; font-size: 15px; line-height: 1.6; }
+  .demo-figure { width: 380px; height: 260px; background: linear-gradient(135deg, #f97316, #dc2626); border-radius: 8px; }
+  .demo-thumb { width: 46px; height: 46px; background: linear-gradient(135deg, #60a5fa, #2563eb); border-radius: 4px; }
+  #sd-studio-drawer { display: block; width: 1000px; background: #fff; border: 1px solid #cbd5e1; padding: 14px; }
+</style>
+</head>
+<body>
+  <div class="demo">
+    <div class="sd-modal sd-crop-modal">
+      <div class="sd-modal-header"><span class="sd-modal-title">✂️ Crop pictures from a page</span><button class="sd-modal-close">✕</button></div>
+      <div class="sd-modal-body">
+        <div class="sd-crop">
+          <div class="sd-crop-toolbar">
+            <span class="sd-crop-group">
+              <button class="btn btn-sm btn-outline">◀</button>
+              <span class="sd-crop-page-label">Page <input class="form-input sd-crop-page-input" value="3"> of 8</span>
+              <button class="btn btn-sm btn-outline">▶</button>
+            </span>
+            <span class="sd-crop-group"><span class="sd-crop-label">Page size</span><select class="form-input sd-crop-select"><option>2048 px</option></select></span>
+            <span class="sd-crop-group"><span class="sd-crop-label">Zoom</span><select class="form-input sd-crop-select"><option>Fit width</option></select></span>
+            <span class="sd-crop-group sd-crop-group-right">
+              <button class="btn btn-sm btn-outline sd-crop-help-btn">?</button>
+              <button class="btn btn-sm btn-outline">Whole page</button>
+              <button class="btn btn-sm btn-outline">Clear</button>
+            </span>
+          </div>
+          <div class="sd-crop-main">
+            <div class="sd-crop-stage-col">
+              <div class="sd-crop-stage-wrap">
+                <div class="sd-crop-stage" style="width:820px;height:1400px">
+                  <div class="demo-page">
+                    <h2>Vehicle controls</h2>
+                    <div class="demo-figure"></div>
+                    <p>The picture above is being cropped. Drag a corner to resize.</p>
+                  </div>
+                  <div class="sd-crop-selection" style="left:30px;top:70px;width:380px;height:260px">
+                    <span class="sd-crop-handle" data-crop-handle="nw"></span>
+                    <span class="sd-crop-handle" data-crop-handle="ne"></span>
+                    <span class="sd-crop-handle" data-crop-handle="sw"></span>
+                    <span class="sd-crop-handle" data-crop-handle="se"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <aside class="sd-crop-side">
+              <div class="sd-crop-side-block">
+                <div class="sd-crop-side-title">Selection</div>
+                <div class="sd-crop-preview"><canvas width="200" height="137" style="background:#fff"></canvas></div>
+                <div class="sd-crop-info">Selection 380 × 260 px · page rendered at 1583 × 2048 px</div>
+                <button class="btn btn-primary sd-crop-save-btn">✂️ Save this area</button>
+              </div>
+              <div class="sd-crop-side-block sd-crop-side-saved">
+                <div class="sd-crop-side-title">✓ Saved from page 3 (2)</div>
+                <div class="sd-crop-saved">
+                  <div class="sd-crop-saved-item">
+                    <div class="demo-thumb"></div>
+                    <div class="sd-crop-saved-main"><div class="sd-crop-saved-name">◐ page-3-crop-1.jpg</div><div class="sd-crop-saved-size">380 × 260 px</div></div>
+                    <button>✕</button>
+                  </div>
+                  <div class="sd-crop-saved-item">
+                    <div class="demo-thumb"></div>
+                    <div class="sd-crop-saved-main"><div class="sd-crop-saved-name">◐ page-3-crop-2.jpg</div><div class="sd-crop-saved-size">220 × 340 px</div></div>
+                    <button>✕</button>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+          <div class="sd-crop-status">✅ page-3-crop-2.jpg saved as Source and uploaded to CMS storage.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sd-studio-drawer">
+    <div class="sd-images-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div class="sd-image-card is-source">
+        <div class="sd-image-thumb">
+          <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400'%3E%3Crect width='300' height='400' fill='%23f97316'/%3E%3Ctext x='150' y='200' font-size='28' text-anchor='middle' fill='white'%3EPORTRAIT%3C/text%3E%3C/svg%3E" alt="portrait">
+          <label class="sd-image-check"><input type="checkbox"></label>
+          <button class="sd-image-role is-source">◐ Source</button>
+        </div>
+        <div class="sd-image-meta">page-3-crop-1.jpg<span class="sd-muted">🔗 hosted · 300×400 · 40 KB</span><span class="sd-image-anchor"><b>p.3 · #1</b> Turning the vehicle on</span></div>
+        <div class="sd-image-actions">
+          <button class="btn btn-sm btn-outline">📌</button>
+          <button class="btn btn-sm btn-outline">◀</button>
+          <button class="btn btn-sm btn-outline">▶</button>
+          <button class="btn btn-sm btn-outline">🎨</button>
+          <button class="btn btn-sm btn-danger">🗑</button>
+        </div>
+      </div>
+      <div class="sd-image-card">
+        <div class="sd-image-thumb">
+          <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='200'%3E%3Crect width='600' height='200' fill='%232563eb'/%3E%3Ctext x='300' y='110' font-size='30' text-anchor='middle' fill='white'%3EWIDE%3C/text%3E%3C/svg%3E" alt="wide">
+          <label class="sd-image-check"><input type="checkbox"></label>
+          <button class="sd-image-role is-real">● Real</button>
+        </div>
+        <div class="sd-image-meta">page-4-crop-1.jpg<span class="sd-muted">🔗 hosted · 600×200 · 30 KB</span><span class="sd-image-anchor"><b>p.4 · #1</b> Dashboard layout</span></div>
+        <div class="sd-image-actions">
+          <button class="btn btn-sm btn-outline">📌</button>
+          <button class="btn btn-sm btn-outline">◀</button>
+          <button class="btn btn-sm btn-outline">▶</button>
+          <button class="btn btn-sm btn-outline">🎨</button>
+          <button class="btn btn-sm btn-danger">🗑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
