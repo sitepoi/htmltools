@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CSJ Grant Application - Technical Source of Truth</title>
+  <!--
+  ────────────────────────────────────────────────────────────────────────────
+  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
+
+  HOW TO USE THIS TEMPLATE
+  0. The canonical rules entry point is _docs/DOCUMENTATION-RULES.md. This
+     template is the STRUCTURE; the rules document is the GOVERNANCE.
+  1. This template is copied into every tool folder as docs/ssot.html by
+     scripts/init-docs.js - never create a tool SSOT by hand.
+  2. Replace every [PLACEHOLDER] in the document.
+  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
+     Every decision row uses <prefix>-NN in order (01, 02, ...).
+  4. Remove all TEMPLATE comments (like this one) before the first publish.
+  5. Bump "Document version" on EVERY update, with "Last updated" date.
+  6. Never inline styles or scripts - the design lives in
+     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
+     linked below through ../../../../../../_docs/assets/.
+  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
+     marked ONE PUSH must ship in a single push and must never be split; a
+     RELATED group must not be broken across releases either. Each task
+     shows its main name collapsed and full details on click; the done
+     checkbox is remembered by the browser per document.
+  8. The right task panel (always visible on wide screens) is generated from
+     section 15 - never write tasks twice. Edit the board in section 15 and
+     the panel, progress bars, and sidebar counter follow automatically.
+  9. Task statuses: give a task `data-task-status` - `not-started` (default),
+     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
+     done checkbox switches the task to done; unticking returns it to the
+     previous status. Browser ticks stay in that browser only. PERMANENT
+     DONE is written into the file: set `data-task-status="done"` on the
+     task div (or `checked` on its checkbox) - `npm run rel` writes this
+     automatically for every pushed group.
+ 10. Ideas (section 16): future ideas are discussed there before they become
+     work. An agreed idea moves to the task list (section 15); a rejected one
+     is marked `data-idea-status="ignored"` with the reason in its details.
+     Done / waiting / ignored statistics update automatically.
+ 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
+     change is written in the risk register and linked to its release group
+     (`data-group`). Before every push, re-evaluate every OPEN risk of the
+     groups being pushed: solve them one by one (tick the checkbox), or mark
+     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
+     date, and update the `Last re-evaluation` line. Risk levels:
+     `critical` (mandatory - blocks every push until solved), `high` (blocks
+     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
+     A group shows PUSH READY in the task panel only when its tasks are done
+     AND it has no open risks.
+ 12. Push provenance: when running `npm run rel`, set
+     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
+     task in the shipped groups is stamped with the version, commit and
+     date-time of that push, and the groups move to "pushed".
+ 13. Satellite documents: docs/webpage.html, docs/help.html,
+     docs/presentation.html, docs/social.html are GENERATED from this file +
+     the code by scripts/generate-docs.js (run by npm run rel). They are
+     satellites - when they disagree with this SSOT, this SSOT wins.
+     docs/updates.html is maintained automatically by npm run rel.
+
+  GOVERNANCE RULES (apply to every tool SSOT in this repo)
+  - A tool SSOT is the REAL single source of truth for one tool (app,
+    listing, or reporting). There is exactly one SSOT per tool folder.
+  - No tool code change is made without updating the related document in
+    the SAME change. A decision that is not in section 11 did not happen.
+  - The decision register is APPEND-ONLY. Never delete rows; reverse a
+    decision by marking it "Reversed (date)" with a reason.
+  - When the code and the document disagree, the document is updated first to
+    capture the final decision, then the code follows. Never silently leave
+    them divergent.
+  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
+    always expanded next to their use.
+  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+    Status) - the automated change-documentation reads these rows.
+  - When a tool exposes a profileConfig parameter or a profiles/ preset
+    library, section 4.1 (Profile configuration usage) is MANDATORY and the
+    profile-usage task type in section 15 must be used. The Profiles copy
+    page (docs/profiles.html) is a convenience; section 4.1 is the
+    authoritative statement of which profile an application uses.
+  ────────────────────────────────────────────────────────────────────────────
+  -->
+  <!-- Optional: nicer webfont (Inter) when online; falls back to the system
+       font stack in ssot.css when offline. Remove this line to stay fully offline. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <!-- ── Table of contents - a CLOSED drawer opened with the ☰ button ── -->
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">CSJ Grant Application</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.1</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <!-- ── Task list - ALWAYS visible on the right on wide screens; on narrow
+       screens it becomes a drawer opened with the Tasks button. The list is
+       generated by ssot.js from section 15 - edit tasks ONLY in section 15. ── -->
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>CSJ Grant Application</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for every decision about the CSJ grant application
+    tool: the application header, contacts, addresses, job descriptions,
+    documents, readiness, status, snapshots, exports, multi-user saving,
+    per-user job ownership, branches with constituencies, national and local
+    priority definitions and job description alignment scoring.
+    Every decision made for this tool is logged in section 11 and this
+    document is updated in the same change as the code. When this document or
+    the code disagree, this document is the tiebreaker - it is updated to
+    capture the final decision, never silently left divergent.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.6</td></tr>
+    <tr><th>Last updated</th><td>2026-11-28</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT - BUILT, NOT PUBLISHED</span></td></tr>
+    <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (CSJGrantApplication).</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/build-harness.cjs</code>, <code>app/CSJGrantApplication.css</code>, <code>app/CSJGrantApplication.html</code>, <code>app/CSJGrantApplication.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>CSJ program policy, eligibility decisions, grant approval decisions, the CMS field-group designer, and a French interface. The tool prepares the application; it does not submit to the Government of Canada.</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code>, <code>help.html</code>, <code>presentation.html</code>, <code>social.html</code>, <code>updates.html</code>.</td></tr>
+  </table>
+
+  <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one tool and one set of invariants around
+  [what the tool does] - and it is the <strong>single source of truth for
+  every decision we make</strong> about this tool, now and in the future.
+  No decision is considered made until it is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this tool, the decision is added to section 11 with
+    a date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the
+    code disagree, the discrepancy is resolved in this document first (with a
+    dated decision), then applied to the code - never the other way around,
+    and never silently left divergent.</li>
+    <li><strong>Check before changing.</strong> Before changing any behavior
+    covered here, read the relevant section and the register; after the
+    change, update this document in the same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function, and code snippet in any update uses understandable names. No
+    cryptic abbreviations. Short names are allowed only for loop indexes and
+    universally known abbreviations (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use - in
+    prose, tables, and headings. Literal identifiers stay as they are.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> Two or more users can complete
+  the same CSJ application at the same time without silently losing each
+  other's work. Every saved unit is its own CMS document, every update writes
+  only the changed keys against a revision check, a dirty editor is never
+  replaced by a remote value, and a submitted application is frozen as a
+  separate snapshot. No entry is ever allowed to approach the 1 MiB Firestore
+  document limit.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <p>Every file involved in this tool: what it is for, and exactly which parts
+  of it belong to this tool. Links open the file in VS Code.</p>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/grants/CSJGrantApplication/app/CSJGrantApplication.html"><code>app/CSJGrantApplication.html</code></a></td>
+      <td>Tool markup: header, rail, panels, job drawer, modal and toast containers.</td>
+      <td>Whole file.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/grants/CSJGrantApplication/app/CSJGrantApplication.css"><code>app/CSJGrantApplication.css</code></a></td>
+      <td>All tool styles, responsive rules and the app shell layout.</td>
+      <td>Whole file, every selector is scoped by the <code>csj-</code> prefix.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/grants/CSJGrantApplication/app/CSJGrantApplication.js"><code>app/CSJGrantApplication.js</code></a></td>
+      <td>All application logic: CMS entry storage, saving, conflict handling, live refresh, readiness, status, snapshots, exports and permissions.</td>
+      <td>Whole file.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/grants/CSJGrantApplication/app/build-harness.cjs"><code>app/build-harness.cjs</code></a></td>
+      <td>Regenerates the test harness from the tool HTML and embeds the mock CMS SDK and sample data.</td>
+      <td>Whole file. Run it after every HTML change.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/grants/CSJGrantApplication/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Full-page harness with mock object storage, role switching, sample data, conflict simulation and inline JavaScript mode.</td>
+      <td>Generated file - edit the generator, not this file.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/grants/CSJGrantApplication/docs/ssot.html"><code>docs/ssot.html</code></a></td>
+      <td>This document: the decision register, requirements, design, tests, tasks and risks.</td>
+      <td>Whole file.</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <p>The starting picture of this tool: what is <strong>already
+  developed, shipped and in effect right now</strong>, before any new work.
+  This section is the factual baseline - when a planned change (sections
+  5-8) ships, its result moves here, and the release log (section 19) keeps
+  the full history. Planned work never appears in this table - planned work
+  belongs in the task list (section 15) and the ideas backlog (section 16).</p>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>One application header entry per tool instance, with program year and status</td><td><code>newApplicationRecord</code>, <code>createFirstApplication</code></td><td>2026-11-28</td><td>D-CSJG-01, D-CSJG-02</td></tr>
+    <tr><td>C-02</td><td>Organization information form with debounced autosave and partial updates</td><td><code>saveAppEntry</code>, <code>updateEntry</code></td><td>2026-11-28</td><td>D-CSJG-06</td></tr>
+    <tr><td>C-03</td><td>Contacts and addresses as independent entries, one document per row</td><td><code>openContactModal</code>, <code>openAddressModal</code></td><td>2026-11-28</td><td>D-CSJG-02</td></tr>
+    <tr><td>C-04</td><td>Full CSJ job description with Job details, Job description, Skills, Employment, Supervision, Mentorship, Recruitment and Priorities tabs</td><td><code>drawerDefinitionHtml</code> ... <code>drawerPrioritiesHtml</code></td><td>2026-11-28</td><td>D-CSJG-01, D-CSJG-29</td></tr>
+    <tr><td>C-05</td><td>Skill development plan with the eight CSJ skills plus an Other field</td><td><code>SKILL_DEFINITIONS</code>, <code>drawerSkillsHtml</code></td><td>2026-11-28</td><td>D-CSJG-01</td></tr>
+    <tr><td>C-06</td><td>Documents, hiring and discrimination policies, accessibility and training proof, accommodation plan</td><td><code>uploadDocument</code>, <code>openPolicyModal</code></td><td>2026-11-28</td><td>D-CSJG-10</td></tr>
+    <tr><td>C-07</td><td>Live readiness score with blockers and warnings, grouped by section</td><td><code>collectChecks</code>, <code>readinessSummary</code></td><td>2026-11-28</td><td>D-CSJG-13</td></tr>
+    <tr><td>C-08</td><td>Status workflow Draft - Internal review - Ready to submit - Submitted - Approved / Declined</td><td><code>setStatus</code>, <code>renderStatusActions</code></td><td>2026-11-28</td><td>D-CSJG-14</td></tr>
+    <tr><td>C-09</td><td>Frozen snapshot entry written on submit, separate from the live entries</td><td><code>createSnapshot</code></td><td>2026-11-28</td><td>D-CSJG-08</td></tr>
+    <tr><td>C-10</td><td>JSON backup export and A4 application package export</td><td><code>exportJson</code>, <code>buildPackageHtml</code></td><td>2026-11-28</td><td>D-CSJG-15</td></tr>
+    <tr><td>C-11</td><td>Every saved unit is a separate CMS object of one entry type</td><td><code>createEntry</code>, <code>queryEntries</code></td><td>2026-11-28</td><td>D-CSJG-02, D-CSJG-03</td></tr>
+    <tr><td>C-12</td><td>Read-before-write, changed-key-only updates and a revision conflict prompt</td><td><code>updateEntry</code>, <code>saveEntry</code></td><td>2026-11-28</td><td>D-CSJG-06</td></tr>
+    <tr><td>C-13</td><td>Live refresh on focus, after save and every 20 seconds while visible; dirty editors never replaced</td><td><code>refreshFromServer</code>, <code>ingestRemoteEntries</code></td><td>2026-11-28</td><td>D-CSJG-07</td></tr>
+    <tr><td>C-14</td><td>Viewer, editor and administrator gating, with submit, delete, reopen and snapshot deletion restricted to administrators</td><td><code>canWrite</code>, <code>isAdmin</code></td><td>2026-11-28</td><td>D-CSJG-14</td></tr>
+    <tr><td>C-15</td><td>Per-entry size guard: 200 KB warning, 400 KB hard stop, 1 MiB limit never approached</td><td><code>MAX_ENTRY_BYTES</code>, <code>dataSizeBytes</code></td><td>2026-11-28</td><td>D-CSJG-09</td></tr>
+    <tr><td>C-16</td><td>Test harness with sample data, role switch, read-only switch, conflict simulation and inline JavaScript mode</td><td><code>app/build-harness.cjs</code>, <code>app/test-harness.html</code></td><td>2026-11-28</td><td>D-CSJG-16</td></tr>
+    <tr><td>C-17</td><td>NOC 2021 job title picker that searches 516 unit group titles and their 3,581 illustrative job titles, then fills the job title, the NOC code and the NOC class title</td><td><code>NOC_2021_GROUPS</code>, <code>nocSearch</code>, <code>chooseNocGroup</code></td><td>2026-11-28</td><td>D-CSJG-17</td></tr>
+    <tr><td>C-18</td><td>Large tasks and responsibilities editor (360 px minimum) placed directly under the title and NOC block</td><td><code>drawerDefinitionHtml</code>, <code>.csj-rte-large</code></td><td>2026-11-28</td><td>D-CSJG-18</td></tr>
+    <tr><td>C-19</td><td>AI writing assistant that drafts or rewrites the tasks and responsibilities from a chat request, streams the answer, and offers Replace tasks and Append without ever saving the job, in a side-by-side workspace with the editor</td><td><code>aiSendMessage</code>, <code>aiTasksFromText</code>, <code>aiApplyTasks</code>, <code>drawerDescriptionHtml</code></td><td>2026-11-28</td><td>D-CSJG-19, D-CSJG-29</td></tr>
+    <tr><td>C-20</td><td>Per-job AI chat history saved in the shared <code>ai-chat-sessions-uniconbaseapps</code> type with the mandatory message fields, a 120 message cap and a 300 KB cap</td><td><code>aiPersistMessages</code>, <code>aiLoadForJob</code></td><td>2026-11-28</td><td>D-CSJG-20</td></tr>
+    <tr><td>C-21</td><td>Job ownership: an editor creates and edits only their own job descriptions and sees other jobs read-only as samples; an administrator edits every job and every organization setting</td><td><code>canEditJob</code>, <code>canEditDrawer</code>, <code>renderDrawerBody</code></td><td>2026-11-28</td><td>D-CSJG-21</td></tr>
+    <tr><td>C-22</td><td>Administrator-managed national priority definitions with a title, a description and keywords, edited as an item list rather than a text format</td><td><code>priorityEditorHtml</code>, <code>saveNationalPriorities</code></td><td>2026-11-28</td><td>D-CSJG-22, D-CSJG-28</td></tr>
+    <tr><td>C-23</td><td>Branches with a province and one of the 343 federal constituencies, and per-branch local priority definitions edited as an item list</td><td><code>openBranchModal</code>, <code>renderBranches</code>, <code>CONSTITUENCIES</code></td><td>2026-11-28</td><td>D-CSJG-23, D-CSJG-28</td></tr>
+    <tr><td>C-24</td><td>A job selects its branch, then selects supported national and local priorities from checkbox lists instead of typing them</td><td><code>drawerPrioritiesHtml</code>, <code>branchOptionsHtml</code></td><td>2026-11-28</td><td>D-CSJG-24</td></tr>
+    <tr><td>C-25</td><td>Regular job description alignment score: each selected priority is matched against its keywords and phrases in the description, and the job score is the average of the selected priorities</td><td><code>scoreJobPriorities</code>, <code>jobPriorityScore</code></td><td>2026-11-28</td><td>D-CSJG-25</td></tr>
+    <tr><td>C-26</td><td>Optional AI second-opinion priority score and an overall application score that combines readiness and the average job alignment score</td><td><code>aiScoreJob</code>, <code>overallScoreSummary</code>, <code>renderPriorityDashboard</code></td><td>2026-11-28</td><td>D-CSJG-26</td></tr>
+    <tr><td>C-27</td><td>Guided priority item editor: each priority is a card with Title, Keywords and Description, an Add button and a Remove button, for both national and branch-local lists</td><td><code>priorityEditorHtml</code>, <code>priorityFieldFromInput</code>, <code>addPriorityItem</code></td><td>2026-11-28</td><td>D-CSJG-28</td></tr>
+    <tr><td>C-28</td><td>Compact Job details tab with the Job title field always visible and the NOC search collapsible; a separate Job description tab with the task editor and the AI assistant side by side</td><td><code>drawerDefinitionHtml</code>, <code>drawerDescriptionHtml</code>, <code>.csj-jd-workspace</code></td><td>2026-11-28</td><td>D-CSJG-29</td></tr>
+  </table>
+  <p class="note">Capabilities listed here are in effect in the current build
+  and must keep working unless a decision in section 11 reverses them. The
+  build has not been published to the CMS yet; the CMS type registration and
+  allowed object types are tracked in section 15.</p>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <p>Terms used in this document, with the exact meaning used here.</p>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Application</td><td>One Canada Summer Jobs grant application for one organization and one program year. One tool instance holds one application.</td></tr>
+    <tr><td>Entry</td><td>One CMS document of type <code>canada-summer-jobs-grant-application-entry-uniconbaseapps</code>. It holds exactly one entity: the application header, one job, one contact, one address, one document or one snapshot.</td></tr>
+    <tr><td>Job</td><td>One position inside the application. It contains both the CSJ job description data and the application-specific employment, supervision, mentorship, recruitment and priority answers.</td></tr>
+    <tr><td>Snapshot</td><td>An immutable JSON copy of the whole application, written as its own entry when the application is submitted or when an administrator freezes a manual snapshot.</td></tr>
+    <tr><td>Revision</td><td>An integer on every entry. It increases on every successful save and drives the conflict check.</td></tr>
+    <tr><td>Blocker</td><td>A readiness check that prevents submission. Warnings do not prevent submission but are shown prominently.</td></tr>
+    <tr><td>Instance scope</td><td>The CMS object scope where the entries belong to the parent record that hosts the tool. The CMS filters queries by the parent automatically.</td></tr>
+    <tr><td>allowedObjectTypes</td><td>The field setting that lists the CMS object types this tool may read and write. It is configured in the field group designer.</td></tr>
+    <tr><td>Live refresh</td><td>The tool re-queries the entry list on focus, after save and every 20 seconds while visible, then merges changed entries. It is not a push subscription.</td></tr>
+    <tr><td>Readiness score</td><td>The percentage of all readiness checks that pass. It is not a grant eligibility score.</td></tr>
+    <tr><td>Branch</td><td>One physical location of the applicant organization. A branch stores a name, a province, one federal constituency and its own local priority definitions.</td></tr>
+    <tr><td>Constituency</td><td>One of the 343 federal electoral districts in the 2023 Representation Order. It is selected from an embedded list, not typed.</td></tr>
+    <tr><td>Local priority</td><td>A priority defined by the administrator for one branch, for example a regional labour need. A job selects the local priorities it supports.</td></tr>
+    <tr><td>National priority</td><td>A priority defined by the administrator once for the application, based on the current CSJ national priorities. A job selects the national priorities it supports.</td></tr>
+    <tr><td>Priority alignment score</td><td>For one job, the average of the match scores of its selected national and local priorities. Each priority scores by how many of its keywords and its phrase appear in the job description. It measures description alignment, not eligibility.</td></tr>
+    <tr><td>Overall application score</td><td>Half the readiness score plus half the average priority alignment score of all jobs. It is a preparation indicator only.</td></tr>
+  </table>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <ul>
+    <li>The existing process uses four CMS field groups: <code>CSJ - Job Descriptions - Base</code>, <code>Funding - CSJ - Required Information</code>, <code>CSJ - Jobs In Application</code>, <code>Funding - CSJ Application Required Documents</code> and <code>Funding - Conditional Requirements</code>.</li>
+    <li>The <code>CSJ - Jobs In Application</code> table references job descriptions through <code>cmsObjectType: canada-summer-jobs-grant-job-definitions-uniconbaseapps</code>, so the two applications are coupled and both must be maintained.</li>
+    <li>The field-group model has one data record per application. Two users editing different jobs, contacts or documents in the same record write the same document, so the last save wins and the other edits can disappear.</li>
+    <li>All data lives inside one Firestore document. A large application with many jobs and long descriptions moves toward the 1 MiB per-document limit with no guard.</li>
+    <li>There is no readiness check, no status lock, no frozen submission and no audit trail per entry.</li>
+  </ul>
+  <h3>5.2 Current implementation (verified from the supplied field definitions)</h3>
+  <pre>
+// Old model, summarised
+// One record = organization + contacts + addresses + every job + documents.
+// Job rows reference a separate job-description application by object id.
+// No per-entry concurrency boundary, no revision, no freeze, no size guard.
+  </pre>
+  <h3>5.3 Structural flaws</h3>
+  <ol>
+    <li><strong>One record is the concurrency boundary.</strong> Two people editing different jobs still write the same document, so one save can replace the other.</li>
+    <li><strong>The job description is a separate application.</strong> The application cannot be copied or frozen as one unit, and an edit to a shared job description can change a submitted application.</li>
+    <li><strong>No submission freeze.</strong> A submitted application can still be edited, so the version sent to the funder is not reconstructable.</li>
+    <li><strong>No size guard.</strong> The 1 MiB Firestore limit is discovered only when a save fails.</li>
+    <li><strong>No readiness model.</strong> Missing fields and documents are found at submission time, not while the team works.</li>
+  </ol>
+  <p class="risk"><strong>Root cause:</strong> the field-group model assumes one editor and one record. A team application needs a per-entity concurrency boundary, a frozen submission, and an explicit document-size budget.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li><strong>R-01 One central application tool.</strong> One tool instance prepares one Canada Summer Jobs application for one organization and one program year.</li>
+    <li><strong>R-02 CSJ-specific job descriptions.</strong> Each job holds the CSJ description, wage, language, skill development plan, employment terms, supervision, mentorship, recruitment plan and national/local priorities.</li>
+    <li><strong>R-03 Multi-user safety.</strong> Two users editing two different jobs, contacts, addresses, documents or the organization must not lose each other's work. A same-entry simultaneous edit must produce an explicit conflict, never a silent overwrite.</li>
+    <li><strong>R-04 No approach to 1 MiB.</strong> File binaries never enter a tool entry. Every entry is measured, warned at 200 KB, and blocked at 400 KB. Snapshots are separate entries and are capped at 400 KB.</li>
+    <li><strong>R-05 Readiness before submission.</strong> The tool lists blocking items and warnings across the organization, contacts, addresses, jobs and documents, and refuses submission while blockers remain.</li>
+    <li><strong>R-06 Frozen submission.</strong> Submitting writes a frozen snapshot and locks all entries. Only an administrator can reopen the application.</li>
+    <li><strong>R-07 Fail soft.</strong> If object storage or a type is not available, the tool explains the configuration problem, keeps editing in memory, and offers a JSON backup. It never fails silently.</li>
+    <li><strong>R-08 No legacy baggage.</strong> The old field groups are reference material only. There is no migration, no compatibility layer and no reuse of the old type.</li>
+    <li><strong>R-09 English only.</strong> Every label, message and exported document is English.</li>
+    <li><strong>R-10 Sandbox compliance.</strong> No localStorage, no fetch, no external scripts, no raw postMessage, no alert/confirm/prompt. All outside content and files go through the CMS SDK.</li>
+    <li><strong>R-11 Role gating.</strong> Viewers read only. Editors edit entries. Administrators also delete entries, change terminal status, submit and delete snapshots.</li>
+    <li><strong>R-12 Export.</strong> The application can be downloaded as JSON and exported as a print-ready A4 package, independent of the entries.</li>
+    <li><strong>R-13 AI assistance is optional and user-controlled.</strong> When the AI channel is enabled, the assistant drafts or revises only the tasks and responsibilities, only after an explicit request. It never changes another field and never saves the job; the user applies the draft and still presses Save job.</li>
+    <li><strong>R-14 AI chat is separate from application data.</strong> Conversation history lives in the shared AI chat session type, never in an application entry, so the entry size guard is unaffected.</li>
+    <li><strong>R-15 Per-user job ownership.</strong> An editor creates and edits only their own job descriptions. Other editors' jobs are visible read-only as samples and can be duplicated. An administrator edits every job and every organization setting.</li>
+    <li><strong>R-16 Administrator-managed priority definitions.</strong> National priorities are maintained once per application by an administrator. Every branch has its own local priorities, maintained by an administrator. Both lists use a guided item editor with Title, Keywords and Description fields. Job editors select from these lists and cannot invent entries in them.</li>
+    <li><strong>R-17 Branches and constituencies.</strong> The application holds any number of branches. Each branch names a province and one federal constituency from the embedded 343 district list.</li>
+    <li><strong>R-18 Regular scoring.</strong> Every job gets a deterministic alignment score from its selected priorities and its description text. The score updates without AI and without a save.</li>
+    <li><strong>R-19 Optional AI second opinion.</strong> When AI is enabled, the user can request an AI review of one job against its priorities. The AI score is displayed next to the regular score and is never saved automatically.</li>
+    <li><strong>R-20 Overall score.</strong> The dashboard shows an overall application score that combines readiness and the average job alignment score, with the component values visible.</li>
+    <li><strong>R-21 Priority lists are edited as items, not syntax.</strong> An administrator adds, edits and removes a priority as a card with separate Title, Keywords and Description fields. No pipe or comma parsing instructions are required.</li>
+    <li><strong>R-22 Writing workspace.</strong> The task editor and the AI assistant are visible at the same time on a dedicated Job description tab. The Job details tab stays compact: the Job title is always visible and the NOC search expands only when requested.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr>
+      <td><strong>A. Everything in one tool value</strong></td>
+      <td>Store the organization, jobs, contacts, addresses, documents and snapshots inside the tool field value.</td>
+      <td>No. It is one document, so different users editing different jobs still overwrite each other and the 1 MiB limit is shared.</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED (D-CSJG-02)</td>
+    </tr>
+    <tr>
+      <td><strong>B. One application object with embedded arrays</strong></td>
+      <td>Keep one CMS object per application and store jobs, contacts and documents as arrays inside it.</td>
+      <td>Partially. It is easier to export, but every save still writes the whole application object, so the concurrency problem remains.</td>
+      <td>Medium</td>
+      <td class="status-rejected">REJECTED (D-CSJG-02)</td>
+    </tr>
+    <tr>
+      <td><strong>C. One entry object per entity, one shared entry type</strong></td>
+      <td>One CMS document for the application header, one for each job, contact, address, document and snapshot. All use one type with an <code>entryType</code> field.</td>
+      <td>Yes. Different records write different documents; one query returns the application; revision checks protect same-entry edits; each document is small.</td>
+      <td>Medium</td>
+      <td class="status-adopted">ADOPTED (D-CSJG-02, D-CSJG-03)</td>
+    </tr>
+    <tr>
+      <td><strong>D. One object type per entity</strong></td>
+      <td>Separate types for applications, jobs, contacts, addresses, documents and snapshots.</td>
+      <td>Yes, but it costs six type registrations, six allowlist entries and six queries per refresh.</td>
+      <td>High</td>
+      <td class="status-rejected">DEFERRED - only if separate collections are required later (D-CSJG-03)</td>
+    </tr>
+    <tr>
+      <td><strong>E. Shared job-description library across applications and years</strong></td>
+      <td>A separate reusable job-description collection that every application references.</td>
+      <td>Not required. The user confirmed that managing the job descriptions inside the application is enough. A shared library can be added later without changing the application model.</td>
+      <td>Medium</td>
+      <td class="status-rejected">DEFERRED (I-CSJ-01)</td>
+    </tr>
+    <tr>
+      <td><strong>F. Separate job-description tool plus application tool</strong></td>
+      <td>Two tools: one for job descriptions, one for the application.</td>
+      <td>No. It repeats the old two-application problem and doubles the maintenance and configuration.</td>
+      <td>High</td>
+      <td class="status-rejected">REJECTED (D-CSJG-01)</td>
+    </tr>
+  </table>
+  <p><strong>Decision: C, one entry object per entity with one shared entry
+  type.</strong> The application header, each job, contact, address, document
+  and snapshot is its own CMS document. The tool queries the type once for the
+  current application, writes only the changed entry, and never stores binary
+  files in an entry.</p>
+  <h3>7.1 Answers to open questions</h3>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Do we need a CMS application and field-group UI for the job descriptions?</td><td>No. The tool renders the CSJ-specific job description form itself. One storage type registration is still needed for object CRUD (D-CSJG-03).</td></tr>
+    <tr><td>Is the old job-description type still needed?</td><td>No. It is retired. There is no migration and no compatibility layer (D-CSJG-11).</td></tr>
+    <tr><td>Should job descriptions be reusable across years?</td><td>Not in this build. Jobs live inside the application. A shared library is an idea, I-CSJ-01 (D-CSJG-05).</td></tr>
+    <tr><td>How are multiple users protected?</td><td>Each entity is a separate document, updates send only changed keys, every entry has a revision, dirty editors are never replaced, and same-entry conflicts require an explicit Reload or Keep mine choice (D-CSJG-06, D-CSJG-07).</td></tr>
+    <tr><td>How is the 1 MiB limit handled?</td><td>200 KB warning, 400 KB hard stop, binary files excluded, snapshots separate and capped at 400 KB (D-CSJG-09, D-CSJG-10).</td></tr>
+    <tr><td>What language is the tool in?</td><td>English only (D-CSJG-12).</td></tr>
+  </table>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Core invariant</h3>
+  <p class="note"><strong>Invariant CSJG-1.</strong> A save writes exactly one
+  entry document. The application is never written as a whole. A submitted
+  application is frozen as a separate snapshot entry. No entry may exceed
+  400 KB, and file binaries never enter an entry.</p>
+  <h3>8.2 Entry model and CMS storage</h3>
+  <p>All entries use one type:</p>
+  <pre>
+canada-summer-jobs-grant-application-entry-uniconbaseapps
+
+data_categoriesBased = {
+  entryType: "application" | "job" | "contact" | "address" | "document" | "snapshot" | "branch",
+  schemaVersion: 1,
+  revision: 1,
+  updatedAt: ISO timestamp,
+  updatedByUserId, updatedByName, updatedByEmail,
+  ownerUserId, ownerUserName, ownerUserEmail,   // jobs only
+  ...entity fields
+}
+  </pre>
+  <ul>
+    <li>The object <code>name</code> is a human label: the job title, the contact name, the file name, the branch name or "CSJ application YEAR".</li>
+    <li>A job entry stores <code>jobTitle</code>, <code>nocCode</code>, <code>nocTitle</code> (the official class title), <code>jobDescriptionHtml</code>, <code>ownerUserId</code>, <code>branchObjectId</code>, <code>supportedNationalPriorities</code>, <code>supportedLocalPriorities</code> and the rest of the CSJ job answers. <code>nocTitle</code> is additive; older entries normalize it to an empty string. Older jobs without an owner are adopted by an administrator on the next admin save.</li>
+    <li>A branch entry stores <code>branchName</code>, <code>province</code>, <code>constituency</code> and its own <code>localPriorities</code> list. The national priorities are stored on the application header.</li>
+    <li>The tool value stores only <code>{ schemaVersion, applicationEntryId, ui.section }</code>. It is a pointer, never the application data.</li>
+    <li>The field settings must include <code>{ mainObjectType: "canada-summer-jobs-grant-application-entry-uniconbaseapps", role: "editor", scope: "instance", targetCollection: "public" or "private" }</code>.</li>
+    <li>Instance scope binds every entry to the record that hosts the tool. The CMS filters queries by the parent automatically.</li>
+  </ul>
+  <h3>8.3 Save algorithm</h3>
+  <pre>
+saveEntry(record, options):
+  changed = keys where record differs from record._baseline
+  if changed is empty: return no-op
+  if size(record) &gt; 400 KB: block with a message
+  if record has no objectId: create entry, revision 1
+  else:
+    fresh = get(record.objectId)          // read before write
+    if fresh.revision &gt; record.revision and not overwrite:
+      conflicts = keys changed by both fresh and record
+      if conflicts: return "conflict" with the fresh entry
+    merged = fresh + changed
+    merged.revision = max(fresh.revision, record.revision) + 1
+    update(record.objectId, only changed keys + revision + stamps)
+  </pre>
+  <ul>
+    <li>Queries are serialized per entry with an in-memory queue, so one user cannot start two overlapping saves on the same entry.</li>
+    <li>If the CMS rejects an update with a version error, the tool re-reads once and retries with a fresh merge.</li>
+    <li>A same-entry conflict never overwrites silently. The editor shows Reload or Keep mine. Keep mine performs an explicit overwrite save.</li>
+    <li>Entries created while storage is unavailable stay in memory and are marked local; they are never written to the CMS later by surprise.</li>
+  </ul>
+  <h3>8.4 Live refresh</h3>
+  <ul>
+    <li>One query returns every entry of the current application.</li>
+    <li>Refresh runs on window focus, after every successful save, and every 20 seconds while the tab is visible. The interval is configurable and has a 10 second floor.</li>
+    <li>The remote list is merged by object id. A newer revision replaces a clean local entry. A dirty editor or a dirty organization form is never replaced; it receives a remote-change banner instead.</li>
+    <li>Entries removed remotely are removed from the lists. Local-only entries are kept.</li>
+    <li>There is no push subscription. The live chip states that the tool is on a refresh cadence, not a real-time socket.</li>
+  </ul>
+  <h3>8.5 Size guard</h3>
+  <ul>
+    <li>Every entry is measured as UTF-8 JSON before create or update.</li>
+    <li>Above 200 KB: a warning toast. Above 400 KB: the save is blocked.</li>
+    <li>The job description is capped at 20,000 plain-text characters.</li>
+    <li>Documents store only name, storage URL, size, MIME type and upload metadata. The binary is in CMS storage.</li>
+    <li>Snapshots are JSON in their own entry, capped at 400 KB. If the snapshot would be larger, the tool refuses and recommends the JSON export.</li>
+    <li>The NOC 2021 title index is embedded in the tool JS and adds about 120 KB to that code file only. It is not an application entry and has no effect on the entry budget.</li>
+    <li>The dashboard shows the largest entry, total stored bytes, the 1 MiB limit and the 400 KB tool stop.</li>
+  </ul>
+  <h3>8.6 Readiness and status</h3>
+  <ul>
+    <li>Every check is either a blocker or a warning. Blockers stop submission; warnings are shown but do not.</li>
+    <li>A job whose <code>nocCode</code> is not exactly five digits produces a warning, not a blocker, so a missing NOC suggestion never stops a first draft.</li>
+    <li>The score is the percentage of checks that pass. It is a completeness score, not an eligibility decision.</li>
+    <li>Statuses: Draft, Internal review, Ready to submit, Submitted, Approved, Declined. The last three lock every entry. Only administrators submit, mark approved or declined, and reopen.</li>
+    <li>Submission first creates a snapshot entry, then sets the application status to Submitted. If the snapshot fails, the status is not changed.</li>
+  </ul>
+  <h3>8.7 Exports</h3>
+  <ul>
+    <li>JSON export contains the application and every non-snapshot entry, with a schema version and export timestamp.</li>
+    <li>The PDF package is a self-contained A4 HTML document with organization, contacts, addresses, branches with local priorities, documents and every job. Each job shows its branch, its selected national and local priorities and its alignment score. It is passed to <code>tool.requestExportPdf</code>; if that channel is unavailable, a print-ready HTML file is downloaded instead.</li>
+  </ul>
+  <h3>8.8 Caller contract table</h3>
+  <table>
+    <tr><th>Caller</th><th>Required configuration or change</th></tr>
+    <tr><td>CMS field on the application record</td><td>Enable Object CRUD, upload, PDF export and request-save channels. Add the entry type with <code>role: editor</code>, <code>scope: instance</code> and the correct <code>targetCollection</code>.</td></tr>
+    <tr><td>Tool parameters</td><td><code>entryObjectType</code>, <code>applicationTitle</code>, <code>programYear</code>, <code>organizationName</code>, <code>minimumWage</code>, <code>liveSyncSeconds</code>, <code>allowAi</code> and <code>chatSessionObjectType</code>. The entry type is the only storage parameter.</td></tr>
+    <tr><td>AI writing assistant</td><td>The field must allow AI (<code>allowAi: yes</code>) and expose <code>tool.requestAI</code> or <code>tool.requestAIStream</code>. Add <code>ai-chat-sessions-uniconbaseapps</code> to <code>allowedObjectTypes</code> with <code>role: editor</code> and <code>scope: instance</code>. Without the type the assistant still drafts, but the chat is not saved and the tool reports the missing type.</td></tr>
+    <tr><td>Harness</td><td>Run <code>node app/build-harness.cjs</code> after every HTML change. Load <code>app/test-harness.html</code> over HTTP for the inline JavaScript mode.</td></tr>
+    <tr><td>Future shared job library</td><td>Would add a second type and a second allowlist entry. It is not part of this build; idea I-CSJ-01 requires a new decision.</td></tr>
+    <tr><td>Job ownership</td><td>No extra CMS configuration. Ownership is stored on each job entry and enforced by the tool UI and the save guard. The CMS host does not enforce a per-object owner, so a caller that bypasses the tool UI could still write another user's job. See L-14.</td></tr>
+  </table>
+
+  <h3>8.9 AI writing assistant for tasks and responsibilities</h3>
+  <ul>
+    <li>The Job description tab is a two-column workspace: the task editor on the left and the AI assistant on the right. On narrow screens the assistant moves below the editor, so both remain usable.</li>
+    <li>Quick actions fill the composer with a prepared request; the user edits or sends it. The editor and assistant scroll independently where space allows.</li>
+    <li>The prompt contains the job title, the selected NOC title and code, the current tasks (plain text) and the recent chat turns. It instructs the model to return only an HTML <code>&lt;ul&gt;</code> with 5 to 10 concrete tasks, to avoid inventing wages, hours, dates or benefits, and to treat the job data as data.</li>
+    <li>The response streams into the chat. The tool extracts the list items, caps them at 12 escaped bullets, and shows two actions: Replace tasks and Append. Applying changes only the editor and marks the drawer dirty; nothing is written until the user presses Save job.</li>
+    <li>Chat history is one CMS object per job of type <code>ai-chat-sessions-uniconbaseapps</code>, named <code>CSJ JD chat - &lt;jobObjectId&gt;</code>. Messages carry the mandatory role, text, time, userId and userName fields, plus optional jobObjectId, jobTitle, tasksHtml and isError.</li>
+    <li>The session is created after the first message. For a new unsaved job the conversation stays in memory until the job is created; the session is then created with the new id.</li>
+    <li>Caps: 120 messages and 300 KB per session; the oldest turns are trimmed. Each message text is capped at 4,000 characters and the prompt at 16,000 characters.</li>
+    <li>If the AI channel is off, the panel is disabled. If the chat session type is not authorized, drafting still works but the panel warns that chat is not saved and the tool calls <code>reportMissingParams</code>. A viewer sees the panel read-only.</li>
+    <li>The tool does not choose the model. The CMS field decides the AI model; the tool only sends prompt and context through <code>requestAI</code> or <code>requestAIStream</code>.</li>
+  </ul>
+
+  <h3>8.10 Job ownership</h3>
+  <ul>
+    <li>Every job stores <code>ownerUserId</code>, <code>ownerUserName</code> and <code>ownerUserEmail</code> from the CMS user at creation time. An editor who creates a job owns it.</li>
+    <li><code>canEditJob(job)</code> is true for an administrator on every job and for an editor only when the owner id matches the current user id. A job without an owner is editable by an administrator only.</li>
+    <li>The job list shows an owner chip. Opening another editor's job shows an owner banner, disables every field, the Save button, the NOC picker, the AI composer and the priority checkboxes, and offers Duplicate. A viewer gets the same read-only view for every job.</li>
+    <li>The save guard runs again in <code>saveEntry</code>, not only in the UI. An editor save on a job they do not own is refused with a clear message.</li>
+    <li>Administrators retain organization settings, contacts, addresses, documents, branches, national priorities, status, snapshots and deletion.</li>
+  </ul>
+
+  <h3>8.11 Branches, constituencies and priorities</h3>
+  <ul>
+    <li>The Branches panel lists the application's branches. An administrator adds a branch with a name, a province and one federal constituency from the embedded 343 district list. The list is a snapshot of the 2023 Representation Order and is not fetched at runtime.</li>
+    <li>A branch owns a local priority list. The national priority list is owned by the application header and edited once per program year. Both lists use the same guided item editor: each priority is a card with separate Title, Keywords and Description fields.</li>
+    <li>The editor has an Add button and a Remove button per card. Keywords are typed as a comma-separated list inside their own field; no pipe syntax or line format is shown to the user.</li>
+    <li>Saving a priority list keeps the id of every existing priority, including when its title is edited, so jobs keep their selections. A new priority gets an id from its title at save time.</li>
+    <li>The national list requires at least one priority and every card must have a title before the save is accepted. A local list may be empty; a blank local card blocks the branch save until it is titled or removed.</li>
+    <li>A job selects one branch. Its local priority checkboxes come from that branch; its national priority checkboxes come from the application header. A job with no branch shows a warning and selects from the national list only.</li>
+    <li>An editor sees the branch and priority definitions read-only. Only an administrator can add, edit or delete a branch or change a priority definition.</li>
+    <li>A branch that is still referenced by a job cannot be deleted; the tool reports how many jobs use it.</li>
+  </ul>
+
+  <h3>8.12 Regular alignment scoring</h3>
+  <ul>
+    <li>The description text is the plain text of <code>jobDescriptionHtml</code>, lowercased. The selected priorities are the national ids stored on the job plus the local ids resolved from its branch.</li>
+    <li>Each priority has a keyword list. A keyword may be a phrase. The tool counts a keyword as found when it appears as a whole word or phrase.</li>
+    <li>The priority score is the percentage of its keywords found, plus a small phrase bonus when the full priority title appears. A priority with no keywords scores by its phrase only.</li>
+    <li>The job score is the rounded average of the selected priority scores. No selected priority gives 0% and the label "No priorities selected". The score updates immediately when a checkbox changes and does not require a save.</li>
+    <li>The job list, the dashboard and the exported package show the score. The score measures how well the description reflects the chosen priorities; it is not a grant eligibility assessment.</li>
+  </ul>
+
+  <h3>8.13 AI second opinion and overall score</h3>
+  <ul>
+    <li>When AI is enabled, the priorities tab offers "AI score this job". The tool sends the job description and the selected priority titles with their keywords and asks for strict JSON: <code>{score, strengths, gaps}</code>.</li>
+    <li>The AI score is parsed, clamped to 0-100 and displayed next to the regular score with strengths and gaps. It is a second opinion and is not saved to the job.</li>
+    <li>An unparseable answer shows a clear message and leaves the job unchanged. An AI failure never blocks the regular score or the save path.</li>
+    <li>The dashboard overall score is <code>round(0.5 * readiness + 0.5 * averageJobPriorityScore)</code>. Jobs without a score are excluded from the job average; the note shows the readiness value, the job match value and how many jobs are scored.</li>
+  </ul>
+
+  <h3>8.14 Compact job details and the writing workspace</h3>
+  <ul>
+    <li>The Job details tab is deliberately small. The Job title input is always visible; the NOC search, NOC code and NOC site link live in a collapsible block controlled by one button.</li>
+    <li>The NOC block opens automatically for a new job or a job without a NOC code. It stays collapsed for a job that already has a title and a NOC code, leaving the title and the posting details as the main content.</li>
+    <li>Selecting a NOC result fills the title, the code and the class title in place. The search stays available so the user can try another result, and the compact status line shows the current code and class title.</li>
+    <li>The Job description tab holds the task editor and the AI assistant. Switching tabs syncs the rich-text editor into the drawer draft first, so no task text is lost.</li>
+    <li>The editor is a large workspace (520 px minimum on desktop) with the formatting toolbar, a live character count and the 20,000 character limit. The assistant panel is sticky beside it on wide screens.</li>
+  </ul>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>Object CRUD is not enabled on the field</td><td>The tool enters local mode, shows the storage banner with the expected type, disables live sync, and keeps editing in memory. JSON export still works.</td></tr>
+    <tr><td>The entry type is not in allowedObjectTypes</td><td>The query returns an error. The same local-mode banner explains the type and the allowlist requirement. Technical detail is written to the console only.</td></tr>
+    <tr><td>Two users edit two different jobs</td><td>Two different documents are written. Both saves succeed. The live refresh merges both.</td></tr>
+    <tr><td>Two users edit the same job and the second saves after the first</td><td>Read-before-write detects the newer revision. If the same keys changed, the second user gets the conflict banner with Reload and Keep mine. Keep mine is an explicit overwrite.</td></tr>
+    <tr><td>A remote edit arrives while the job drawer is dirty</td><td>The drawer is not replaced. The remote banner names the other user and time and offers Reload or Keep mine.</td></tr>
+    <tr><td>A remote edit arrives while the organization form is dirty</td><td>The top conflict banner appears. The form is not replaced. Reload latest discards local organization changes; Keep my changes performs an explicit overwrite.</td></tr>
+    <tr><td>A clean entry changes remotely</td><td>The entry is replaced in place and the lists refresh. No editor is open on it.</td></tr>
+    <tr><td>An entry is deleted remotely</td><td>The entry disappears from the list on the next refresh. An open editor receives a "no longer exists" save error.</td></tr>
+    <tr><td>An entry would exceed 400 KB</td><td>The save is refused before the CMS call, with the measured size and the 400 KB stop.</td></tr>
+    <tr><td>A snapshot would exceed 400 KB</td><td>Submission stops before the status change and recommends the JSON export.</td></tr>
+    <tr><td>The upload channel is unavailable</td><td>Upload shows a clear error. Existing entries are unaffected.</td></tr>
+    <tr><td>The PDF channel is unavailable</td><td>A print-ready HTML file is downloaded instead and the user is told to print it.</td></tr>
+    <tr><td>The application is submitted</td><td>Every write is refused until an administrator reopens the application as a draft.</td></tr>
+    <tr><td>A viewer opens the tool</td><td>All inputs and action buttons are disabled. Export remains available.</td></tr>
+    <tr><td>The host has no user API</td><td>The tool shows "CMS session" and allows editing; the CMS host enforces the real permission on every write.</td></tr>
+    <tr><td>Two users create the first application at the same moment</td><td>The tool re-queries before creating. If a header still exists after the create, the oldest header is adopted. A duplicate header is visible as an extra entry and can be removed by an administrator.</td></tr>
+    <tr><td>The NOC title search has no match</td><td>The result panel says so and offers the NOC site. The user can still type a 5-digit code; a known code fills the class title, an unknown code shows the warning line.</td></tr>
+    <tr><td>AI is not enabled on the field</td><td>The AI panel states that AI is off, shows no composer, and the rest of the job form works normally. A How to enable button reports the missing <code>allowAi</code> parameter.</td></tr>
+    <tr><td>The AI chat session type is not authorized</td><td>The assistant still drafts in memory and Apply still works, but the panel warns that chat is not saved and the tool reports the missing <code>chatSessionObjectType</code>. Application entries are untouched.</td></tr>
+    <tr><td>An AI request fails or times out</td><td>An error bubble appears in the chat. No task is changed until the user applies a draft, so a failed request has no effect on the job.</td></tr>
+    <tr><td>The AI returns prose without list items</td><td>No Apply buttons are shown because no task list could be extracted. The response stays as chat text and the editor is unchanged.</td></tr>
+    <tr><td>The user applies an AI draft</td><td>Only the tasks editor content changes and the job drawer becomes dirty. Nothing is written until the user presses Save job.</td></tr>
+    <tr><td>An editor opens another editor's job</td><td>The job opens read-only with an owner banner and a Duplicate action. Save, the NOC picker, the AI composer and the priority checkboxes are disabled.</td></tr>
+    <tr><td>An editor calls a save on a job they do not own</td><td>The save is refused before the CMS call with the owner name. No entry is written.</td></tr>
+    <tr><td>A job has no branch</td><td>The local priority list is empty and a warning asks for a branch. National priorities can still be selected and scored.</td></tr>
+    <tr><td>The job's branch was deleted</td><td>The job keeps its stored local ids but resolves no local priorities, shows the missing-branch warning and scores by its national priorities only. Deletion is normally blocked while jobs reference the branch.</td></tr>
+    <tr><td>No priorities are selected</td><td>The job score is 0% with the label No priorities selected. The dashboard job average excludes it; readiness adds a warning.</td></tr>
+    <tr><td>An administrator renames a priority title</td><td>The priority keeps its id because the item editor preserves it. Jobs that selected it keep the selection and the score recalculates with the new title and keywords.</td></tr>
+    <tr><td>A priority card has no title</td><td>The save is refused with a message asking for a title or removal of the empty card. Nothing is written.</td></tr>
+    <tr><td>The national priority list is empty</td><td>The save is refused because at least one national priority is required. The last saved list stays in effect.</td></tr>
+    <tr><td>The local priority list is empty</td><td>The branch saves with no local priorities; jobs at that branch score by their national priorities only.</td></tr>
+    <tr><td>AI scoring is requested while AI is off</td><td>The button is hidden or disabled and the regular score stays available. No request is sent.</td></tr>
+    <tr><td>AI scoring returns prose instead of JSON</td><td>The tool reports that the answer could not be read, keeps the regular score and does not change the job.</td></tr>
+    <tr><td>The user changes a priority checkbox</td><td>The score recalculates immediately. The job is not saved until the user presses Save job.</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>No push subscription. Live refresh is focus, save and a 20 second poll.</td><td>Another user's change can take up to 20 seconds to appear in a list.</td><td>Accepted (D-CSJG-07)</td></tr>
+    <tr><td>L-02</td><td>Same-entry simultaneous edits show a conflict prompt, not a field-by-field merge editor.</td><td>The second user must reload and reapply, or explicitly overwrite.</td><td>Accepted (D-CSJG-06)</td></tr>
+    <tr><td>L-03</td><td>No shared job-description library across years or applications.</td><td>A new year starts from scratch or by duplicating the application later.</td><td>Deferred to I-CSJ-01</td></tr>
+    <tr><td>L-04</td><td>No server-side schema validation beyond the CMS object rules.</td><td>The tool validates in the browser; a custom API caller could still write an invalid entry.</td><td>Accepted</td></tr>
+    <tr><td>L-05</td><td>English only.</td><td>A French application would need translated labels and exported text.</td><td>Deferred to I-CSJ-06</td></tr>
+    <tr><td>L-06</td><td>No migration from the old field groups.</td><td>Old applications are reference material only; the new tool starts empty.</td><td>Accepted by user (D-CSJG-11)</td></tr>
+    <tr><td>L-07</td><td>Snapshots are JSON inside one entry, capped at 400 KB.</td><td>A very large application cannot be snapshotted until the JSON export is used.</td><td>Accepted (D-CSJG-09)</td></tr>
+    <tr><td>L-08</td><td>No signature or submission receipt.</td><td>The tool prepares the package; submission to the funder remains external.</td><td>Deferred to I-CSJ-07</td></tr>
+    <tr><td>L-09</td><td>Document entries store only metadata and a storage link.</td><td>If the storage file is deleted outside the tool, the link is broken.</td><td>Accepted (D-CSJG-10)</td></tr>
+    <tr><td>L-10</td><td>Audit is limited to updated by and updated at on each entry.</td><td>No full field-level history per entry.</td><td>Deferred to I-CSJ-03</td></tr>
+    <tr><td>L-11</td><td>The built-in NOC index is fixed at NOC 2021 Version 1.0 and holds up to 8 illustrative titles per unit group.</td><td>A later NOC release or an uncommon example title is not in the picker; the official NOC site remains the exhaustive source.</td><td>Accepted (R-CSJ-13), refresh each grant cycle</td></tr>
+    <tr><td>L-12</td><td>AI output quality depends on the host model and is not fact-checked by the tool.</td><td>A draft can be generic or contain a duty that does not fit the placement; the user must review it before applying and saving.</td><td>Accepted (D-CSJG-19, R-CSJ-15)</td></tr>
+    <tr><td>L-13</td><td>AI chat history is capped at 120 messages and 300 KB per job; older messages are trimmed.</td><td>A very long conversation loses its oldest turns. The current tasks are always sent fresh, so drafting still works.</td><td>Accepted (D-CSJG-20)</td></tr>
+    <tr><td>L-14</td><td>Job ownership is enforced by the tool UI and the save guard, not by the CMS host.</td><td>A caller that talks to the SDK directly, outside the tool, could write another user's job. Normal tool use cannot.</td><td>Accepted with a documented risk (R-CSJ-17)</td></tr>
+    <tr><td>L-15</td><td>The constituency list is an embedded snapshot of the 2023 Representation Order.</td><td>A later boundary change needs a rebuild of the tool. The list is not fetched at runtime.</td><td>Accepted; refresh with the NOC and priority cycle</td></tr>
+    <tr><td>L-16</td><td>Priority ids are stable while a priority is edited; replacing a whole list with new cards creates new ids.</td><td>Editing a title no longer breaks job selections. Replacing the annual list still requires jobs to reselect the new items.</td><td>Accepted; edit existing cards when the meaning is unchanged</td></tr>
+    <tr><td>L-17</td><td>The regular score is keyword and phrase matching, not semantic reading.</td><td>A well-written description that uses different words can score low; a keyword-stuffed one can score high.</td><td>Accepted; the AI second opinion is the semantic check</td></tr>
+    <tr><td>L-18</td><td>The AI prioritization score is not saved.</td><td>It disappears on reload and is not part of the exported package. Only the regular score is persisted and exported.</td><td>Accepted (D-CSJG-26)</td></tr>
+    <tr><td>L-19</td><td>Priority cards are ordered by add sequence. There is no drag-and-drop reorder.</td><td>An administrator who wants a different display order removes and re-adds cards, or the list stays in its current order.</td><td>Accepted for this build</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <!-- TEMPLATE: replace D-CSJG below with the tool's unique prefix once,
+       then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr><td>D-CSJG-01</td><td>2026-11-28</td><td>Build one application-centric tool. One tool instance prepares one Canada Summer Jobs application for one organization and one program year.</td><td>The application is the unit that is submitted, reviewed and locked. A job-description-only tool cannot hold the organization, documents or status.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-02</td><td>2026-11-28</td><td>Store every entity as its own CMS document: application header, one document per job, contact, address, document and snapshot.</td><td>Different records are different writes, which is the only real concurrency boundary the CMS SDK provides. It also keeps each document small.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-03</td><td>2026-11-28</td><td>Use one shared entry type, <code>canada-summer-jobs-grant-application-entry-uniconbaseapps</code>, with an <code>entryType</code> field. No CMS application or field-group UI is created for the entries.</td><td>One type registration and one allowlist entry instead of six. One query returns the whole application. The old <code>...job-definitions...</code> type is retired.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-04</td><td>2026-11-28</td><td>Configure the entry type with <code>scope: instance</code>. The entries belong to the parent application record.</td><td>The CMS filters by the parent automatically and isolates one application from another. The exact <code>targetCollection</code> is a deployment configuration item.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-05</td><td>2026-11-28</td><td>Job descriptions live inside the application. There is no separate job-description library in this build.</td><td>The user confirmed that managing the JDs inside the application is enough. A shared library is a later idea and would add a second type.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-06</td><td>2026-11-28</td><td>Save with read-before-write, changed-key-only updates and a revision number on every entry. A same-entry conflict is shown to the user, never silently overwritten.</td><td>Protects different users editing different jobs and prevents the last-write-wins behavior of a single application record.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-07</td><td>2026-11-28</td><td>Live refresh on focus, after save and every 20 seconds while visible. A dirty editor or dirty organization form is never replaced by a remote value.</td><td>The SDK has no push subscription. A light poll gives near-live collaboration without continuous reads. Conflicts are surfaced explicitly.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-08</td><td>2026-11-28</td><td>Submitting creates a separate snapshot entry, then sets the application status to Submitted and locks all entries. Reopening is administrator-only.</td><td>A submitted application must not change when a job description is edited later. The snapshot is the audit copy.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-09</td><td>2026-11-28</td><td>Per-entry size guard: warn at 200 KB, hard stop at 400 KB. Snapshots are separate entries with a 400 KB cap. The job description is capped at 20,000 plain-text characters.</td><td>Keeps every document far below the 1 MiB Firestore limit and gives the user an actionable message instead of a failed save.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-10</td><td>2026-11-28</td><td>Document entries store file name, storage URL, size, MIME type and upload metadata only. Binary files stay in CMS storage.</td><td>Uploaded PDFs can be large. Storing bytes in the entry would break the 1 MiB budget immediately.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-11</td><td>2026-11-28</td><td>No migration and no compatibility with the old field groups or the old job-description type.</td><td>The user confirmed a complete new application. Migration code would add permanent baggage for a one-time value.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-12</td><td>2026-11-28</td><td>English-only interface and exported documents.</td><td>The CSJ field definitions supplied are English. A French interface is a later idea (I-CSJ-06).</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-13</td><td>2026-11-28</td><td>Readiness is a completeness score. Legal name, CRA business number, organization email, one primary contact, a mailing address, a job activity address, at least one job with its core fields, proof of business registration, proof of address and health and safety policy are blockers. The rest are warnings.</td><td>Prevents an obviously incomplete application from being frozen. The user can adjust which checks are blockers through a later decision.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-14</td><td>2026-11-28</td><td>Viewers read only. Editors edit entries and move Draft / Internal review / Ready. Administrators also delete entries, submit, mark Approved or Declined, reopen and delete snapshots.</td><td>Destructive and terminal actions need a narrower gate. The CMS host still enforces the real permission on every SDK call.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-15</td><td>2026-11-28</td><td>Provide a JSON backup and an A4 application package export. If the PDF channel is unavailable, download a print-ready HTML file.</td><td>The application must be usable outside the CMS and must not depend on one optional channel.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-16</td><td>2026-11-28</td><td>Keep a generated test harness with sample data, role switching, read-only switching, remote-edit conflict simulation and an inline JavaScript mode.</td><td>Most of the important behavior is asynchronous and multi-user. The harness makes it testable without touching production data.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-17</td><td>2026-11-28</td><td>Embed the NOC 2021 Version 1.0 unit group titles and up to 8 illustrative job titles per group in the tool JS. The picker searches both lists, ranks official titles first, and fills <code>jobTitle</code>, <code>nocCode</code> and <code>nocTitle</code>. A small alias list only improves the ranking of common CSJ titles.</td><td>The tool is sandboxed with no network. The index is official, versioned and about 120 KB in the code file; the three code files total about 370 KB, still well under the 1 MiB document limit. Users get an instant title search and a correct 5-digit code without leaving the drawer.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-18</td><td>2026-11-28</td><td>Move the job title and NOC block to the top of the Description tab and enlarge the tasks editor to a 360 px minimum, with the posting details below.</td><td>The title and the task list are what reviewers and hiring managers read first; they deserve the space and the top position.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-19</td><td>2026-11-28</td><td>Add an optional AI writing assistant to the tasks section. It sends an explicit user request plus the job title, NOC title and current tasks, streams the answer, and offers Replace tasks or Append. It never saves the job and never changes other fields.</td><td>Job-description writers need a fast first draft and a fast rewrite loop. A preview and explicit apply keep the reviewer in control and prevent silent content changes.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-20</td><td>2026-11-28</td><td>Persist one AI chat session per job in <code>ai-chat-sessions-uniconbaseapps</code> with the mandatory message fields. Cap the session at 120 messages and 300 KB, and create it after the first save for a new job.</td><td>The repository rules require the shared AI chat type for every AI chat. A per-job session keeps application entries small and keeps the conversation attached to the right job.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-21</td><td>2026-11-28</td><td>Store an owner on every job. Editors create and edit only their own jobs; other jobs are read-only samples that can be duplicated. Administrators edit every job and all organization settings.</td><td>The user asked for personal job-description ownership with read-only samples. Ownership on the job entry is the only per-job boundary the single shared entry type provides. The CMS host does not enforce it, so the tool enforces it in the UI and in the save guard (L-14).</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-22</td><td>2026-11-28</td><td>National priorities are administrator-managed definitions on the application, stored as title, description and keywords, and editable each program year.</td><td>The user needs to update the list to the current year's national priorities and wants editors to select instead of typing. One definition list keeps every job comparable for scoring.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-23</td><td>2026-11-28</td><td>A branch stores a name, a province, one federal constituency from the embedded 343 district list and its own local priority definitions.</td><td>The applicant has multiple branches in multiple constituencies, each with its own local priorities. Embedding the district list avoids a network call in the sandbox.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-24</td><td>2026-11-28</td><td>A job selects its branch and then selects supported national and local priorities from checkbox lists; it no longer types priority text.</td><td>Selection makes the data comparable for scoring, prevents spelling variants and lets the administrator change a definition in one place.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-25</td><td>2026-11-28</td><td>Score each job by the average keyword and phrase match of its selected priorities, calculated in the browser without AI and without a save.</td><td>Editors need immediate feedback while writing. A deterministic score works offline, costs nothing and is explainable.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-26</td><td>2026-11-28</td><td>Offer an optional AI second-opinion score that returns JSON and is displayed but not saved. Show an overall application score as half readiness and half the average job score.</td><td>The user asked for AI or regular scoring and an overall score. The regular score stays the persisted, deterministic value; AI adds a semantic check without becoming application data.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-27</td><td>2026-11-28</td><td>Include branches, selected priorities and the regular alignment score in the exported package.</td><td>A reviewer reading the printed package must see the same branch and priority context and the same score as the tool.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-28</td><td>2026-11-28</td><td>Replace the textarea priority editors with a guided item list. Each priority card has Title, Keywords and Description fields, an Add button and a Remove button. Existing ids are preserved when a card is edited.</td><td>The pipe-separated line format was hard to understand and easy to break. Separate fields make the definition obvious, keep keywords structured for scoring, and let a rename keep the job selections.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-CSJG-29</td><td>2026-11-28</td><td>Split the job drawer into a compact Job details tab and a Job description tab. The Job details tab always shows the Job title with collapsible NOC search; the Job description tab shows the task editor and the AI assistant side by side.</td><td>Writers need to see the description and the AI conversation at the same time. A dedicated workspace gives the editor room, keeps the title block small and prevents the long task area from pushing the posting details down.</td><td class="status-adopted">Adopted</td></tr>
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li><strong>This document is the single source of truth for every decision
+    about this tool.</strong> Every decision is recorded in section 11 with
+    a date, and the affected section is updated in the same change as the
+    code. A decision that is not in the register did not happen.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
+    delete rows.</li>
+    <li><strong>Review every new save path against CSJG-1.</strong> A save must write one entry, never the whole application, and must pass the 400 KB check.</li>
+    <li>Never introduce a path that saves the whole application as one document, bypasses the revision check or stores file bytes in an entry.</li>
+    <li>Global naming rule: any update - code or documentation - MUST use
+    understandable, self-explanatory names. No cryptic abbreviations. Existing
+    misleading names are renamed when their code is touched.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Application shell, rail, dashboard, organization, contacts, addresses, jobs, documents and review panels</td><td><code>app/CSJGrantApplication.html</code>, <code>app/CSJGrantApplication.css</code> - DONE</td></tr>
+    <tr><td>2</td><td>Entry storage, partial updates, revision conflict handling, live refresh and size guard</td><td><code>app/CSJGrantApplication.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Full CSJ job description and skill development plan</td><td><code>app/CSJGrantApplication.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Document uploads, policy table, conditional requirements and accommodation plan</td><td><code>app/CSJGrantApplication.js</code> - DONE</td></tr>
+    <tr><td>5</td><td>Readiness score, blockers, warnings, status flow, submit, snapshots and lock</td><td><code>app/CSJGrantApplication.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>JSON backup and A4 application package export</td><td><code>app/CSJGrantApplication.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Generated harness with sample data, role switch, read-only, conflict simulation and inline mode</td><td><code>app/build-harness.cjs</code>, <code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>8</td><td>SSOT with requirements, design, decisions, tests, tasks and risks</td><td><code>docs/ssot.html</code> - DONE</td></tr>
+    <tr><td>9</td><td>Register the entry type <code>canada-summer-jobs-grant-application-entry-uniconbaseapps</code> and add it to allowedObjectTypes</td><td>CMS field settings - PENDING</td></tr>
+    <tr><td>10</td><td>Two-user smoke test on the real CMS</td><td>CMS application record - PENDING</td></tr>
+    <tr><td>11</td><td>Satellite documents, screenshots and catalog registration</td><td><code>docs/</code>, <code>UNICON-TOOLS/tools-catalog/</code> - PENDING</td></tr>
+    <tr><td>12</td><td>NOC 2021 title picker, stored class title and larger tasks editor</td><td><code>app/CSJGrantApplication.js</code>, <code>app/CSJGrantApplication.css</code> - DONE</td></tr>
+    <tr><td>13</td><td>AI writing assistant with chat, Replace / Append and per-job chat history</td><td><code>app/CSJGrantApplication.js</code>, <code>app/CSJGrantApplication.css</code> - DONE</td></tr>
+    <tr><td>14</td><td>Per-user job ownership with read-only samples, duplicate and admin override</td><td><code>app/CSJGrantApplication.js</code> - DONE</td></tr>
+    <tr><td>15</td><td>Administrator national priority definitions, editable each program year</td><td><code>app/CSJGrantApplication.js</code>, <code>app/CSJGrantApplication.html</code> - DONE</td></tr>
+    <tr><td>16</td><td>Branches with province, 343 federal constituencies and local priority definitions</td><td><code>app/CSJGrantApplication.js</code> - DONE</td></tr>
+    <tr><td>17</td><td>Regular alignment score, AI second opinion, overall application score and package export details</td><td><code>app/CSJGrantApplication.js</code>, <code>app/CSJGrantApplication.css</code> - DONE</td></tr>
+    <tr><td>18</td><td>Guided national and local priority item editors with Add and Remove</td><td><code>app/CSJGrantApplication.html</code>, <code>app/CSJGrantApplication.js</code>, <code>app/CSJGrantApplication.css</code> - DONE</td></tr>
+    <tr><td>19</td><td>Compact Job details tab and side-by-side Job description workspace</td><td><code>app/CSJGrantApplication.html</code>, <code>app/CSJGrantApplication.js</code>, <code>app/CSJGrantApplication.css</code> - DONE</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <p>Decision points we resolve together before or during implementation.
+  Every answer becomes a dated row in section 11.</p>
+  <ol>
+    <li><strong>Public or private collection?</strong> The entry type needs a <code>targetCollection</code>. Public (<code>om_objects</code>) follows the public-access rules; private (<code>om_private_objects</code>) requires authentication. The tool behavior is identical; the field setting decides.</li>
+    <li><strong>Who may submit?</strong> The current build restricts submit, approve, decline, reopen and delete to administrators. Should an editor be allowed to submit a Ready application?</li>
+    <li><strong>Which documents are blockers?</strong> The current build blocks on proof of business registration, proof of address and the health and safety policy. Should the void cheque, hiring policy and discrimination policy also block submission?</li>
+    <li><strong>Minimum wage warning.</strong> The optional <code>minimumWage</code> parameter is not used yet. Should the tool warn when a job wage is below the provincial minimum?</li>
+    <li><strong>Shared job descriptions.</strong> Is there a real need to reuse the same job description across years or organizations, or is duplication inside the application enough?</li>
+    <li><strong>Snapshot retention.</strong> How many frozen snapshots should be kept? The current build never deletes them automatically.</li>
+    <li><strong>French interface.</strong> Is a French version of the tool and the exported package required in a later phase?</li>
+    <li><strong>Multi-organization instances.</strong> Should one tool instance hold one organization, or should a year instance hold several organizations?</li>
+    <li><strong>Attachment bundle.</strong> Should the PDF export include the uploaded documents, or only the application text and a document checklist?</li>
+    <li><strong>NOC index refresh.</strong> The tool embeds NOC 2021 Version 1.0. When should the index be regenerated for a new NOC release, and should the job form block a code that is absent from the embedded version?</li>
+    <li><strong>NOC as a blocker.</strong> A missing or malformed NOC code is currently a readiness warning. Should a Ready application require a 5-digit NOC code before it can be submitted?</li>
+    <li><strong>AI scope.</strong> The assistant currently edits only the tasks and responsibilities. Should it also rewrite the skill development plan, supervision text or the whole job description in a later phase?</li>
+    <li><strong>AI chat retention.</strong> Chat sessions are separate CMS objects with no automatic deletion. Should old sessions be deleted after the application is submitted, or kept for audit?</li>
+    <li><strong>Owner reassignment.</strong> When an editor leaves, should an administrator be able to move that editor's jobs to another owner? The current build leaves the jobs editable by administrators only.</li>
+    <li><strong>Score weight.</strong> The overall score is half readiness and half the average job alignment score. Is that the right weight, or should readiness dominate?</li>
+    <li><strong>Priority versioning.</strong> When the national priorities change for a new year, should old jobs keep the old priority ids for audit, or be remapped to the new list?</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE push (the badge
+  says so) or is a related set that must not be broken across releases.
+  Click a task to expand its full details. Tick the checkbox when a task is
+  done - progress is remembered by the browser per document and shown in the
+  sidebar.</p>
+
+  <p class="note"><strong>Profile usage management task type.</strong> When
+  this tool exposes a <code>profileConfig</code> parameter or a
+  <code>profiles/</code> preset library, add a release group with
+  <code>data-release-group="profile-usage"</code> and put
+  <code>data-task-type="profile-usage"</code> on every task in that group.
+  The group covers: registering selected profiles in section 4.1, keeping
+  <code>docs/profiles.html</code> and the test-harness preset selector in
+  sync, and testing segment switching plus answer preservation. See the
+  commented sample below.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong> - a task starts only when:
+      <ul>
+        <li>Its requirement is written in section 6.</li>
+        <li>Options are evaluated and the decision is logged (section 11).</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong> - a group is done only when:
+      <ul>
+        <li>All its tasks are checked.</li>
+        <li>Its open risks are solved or accepted (section 18).</li>
+        <li>Tests you chose to track pass (if any).</li>
+        <li>The document version is bumped and PUSH READY shows.</li>
+      </ul>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the
+    core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong
+    benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap
+    cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> -
+    unclear benefit or a product decision is required; see section 14.</li>
+  </ul>
+
+  <!-- Auto-updated by ssot.js: done / waiting percentages of ALL tasks below. -->
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <section class="task-group" data-release-group="csj-core" data-group-status="done">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Core application tool</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="csj-core">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="csj-core"></div></div>
+    <p class="task-group-note">Why these belong together: the entry storage, the forms, the readiness model, the status lock and the conflict handling form one application workflow. Shipping one without the others would leave the tool in a state where data can be lost.</p>
+
+    <div class="task-item" data-task-id="T-CSJ-01" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-01</span><span class="task-title">Application shell, rail, dashboard and six panels</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-01 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> fixed header with year, status, live chip and user chip; left rail; dashboard, organization, contacts, addresses, jobs, documents and review panels.</p><p><strong>Files:</strong> <code>app/CSJGrantApplication.html</code>, <code>app/CSJGrantApplication.css</code></p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-02" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-02</span><span class="task-title">Organization form with autosave and partial updates</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-02 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> the organization entry is saved 900 ms after a change, and only the changed keys plus the revision and user stamps are sent.</p><p><strong>Evidence:</strong> harness test showed a payload containing only <code>legalName</code>, <code>revision</code> and the user stamps.</p><p><strong>Files:</strong> <code>app/CSJGrantApplication.js</code></p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-03" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-03</span><span class="task-title">Contacts and addresses as independent entries</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-03 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> modal forms for contacts and addresses, each saved as its own CMS document.</p><p><strong>Files:</strong> <code>app/CSJGrantApplication.js</code></p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-04" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-04</span><span class="task-title">Full CSJ job description editor with seven tabs</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-04 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> Description, Skills, Employment, Supervision, Mentorship, Recruitment and Priorities. The description uses a sanitized rich-text editor with a 20,000 character limit.</p><p><strong>Files:</strong> <code>app/CSJGrantApplication.js</code></p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-05" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-05</span><span class="task-title">Skill development plan with the eight CSJ skills</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-05 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> Adaptability, Collaboration, Communication, Creativity and Innovation, Digital Skills, Numeracy, Problem-Solving, Technical Skills, plus Other. At least one skill is a blocker.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-06" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-06</span><span class="task-title">Documents, policy rows, conditional documents and accommodation plan</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-06 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> required uploads, hiring and discrimination policy rows, accessibility and training proof, and a 4,000 character accommodation plan. Only file metadata and the storage link are stored.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-07" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-07</span><span class="task-title">Readiness score with blockers and warnings</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-07 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> checks grouped by organization, contacts, addresses, jobs and documents; percentage score; blocking items listed on the dashboard and in Review.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-08" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-08</span><span class="task-title">Status workflow, submit, snapshot and lock</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-08 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> Draft, Internal review, Ready, Submitted, Approved, Declined. Submit creates a snapshot, then locks. Administrators can reopen.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-09" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-09</span><span class="task-title">Multi-user save, revision conflict and live refresh</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-09 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> one document per entry, changed-key-only updates, read-before-write, a per-entry queue, revision checks, explicit Reload / Keep mine, and refresh on focus, save and every 20 seconds.</p><p><strong>Evidence:</strong> the harness simulated a remote job edit while the drawer was dirty and showed the remote-change banner with both actions.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-10" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-10</span><span class="task-title">Generated harness with sample data, roles and conflict simulation</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-10 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> <code>build-harness.cjs</code> embeds the tool markup and a mock CMS with object storage, role switching, read-only, remote-edit simulation and inline JavaScript mode.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-17" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-17</span><span class="task-title">NOC 2021 title picker that fills the title and code</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-17 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> embedded 516 NOC 2021 unit group titles and 3,581 illustrative titles, then added a search box that ranks official titles first, accepts a 5-digit code, and fills <code>jobTitle</code>, <code>nocCode</code> and <code>nocTitle</code>. A small alias list improves the order for common CSJ titles.</p><p><strong>Evidence:</strong> headless harness probe returned 13110 Administrative assistants for "program assistant", 54100 for "camp counsellor" and 54100 for the code search; selecting a result filled all three fields and the status line.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-18" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-18</span><span class="task-title">Larger tasks and responsibilities editor under the title block</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-18 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> the Description tab now opens with the NOC title block, then a 360 px minimum rich-text editor for tasks, then the posting details. The editor keeps the list, bold and heading tools and the character counter.</p><p><strong>Evidence:</strong> the harness probe measured a 360 px editor at the default window size and the 390 px probe still reported no page horizontal overflow.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-19" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-19</span><span class="task-title">AI chat that drafts and edits the tasks and responsibilities</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-19 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> an AI panel under the tasks editor with quick prompts, a chat composer, streamed answers and Replace tasks / Append actions. The prompt carries the job title, NOC title, current tasks and recent turns and asks for a clean HTML list only. The tool never saves the job from the AI path.</p><p><strong>Evidence:</strong> the <code>?test=ai</code> probe produced a user message and an AI message, found the Replace action, and the editor contained the 7 generated tasks with the drawer marked Unsaved changes.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-20" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-20</span><span class="task-title">Per-job AI chat history with size caps and graceful degradation</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-20 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> one <code>ai-chat-sessions-uniconbaseapps</code> object per job with the mandatory message fields, a 120 message cap and a 300 KB cap. A new job creates its session after the first save. If the type is not authorized, the assistant still works in memory, the panel warns and the tool reports the missing type.</p><p><strong>Evidence:</strong> the probe created 1 session with 2 messages, a reload restored the conversation, and <code>?ai=noauth</code> produced 2 chat messages with 0 saved sessions and the expected warning.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-21" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-21</span><span class="task-title">Per-user job ownership, read-only samples and duplicate</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-21 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> every job stores owner fields. Editors edit only their own jobs; another editor's job opens read-only with an owner banner and Duplicate. Administrators edit all jobs and every organization setting. The save guard repeats the owner check.</p><p><strong>Evidence:</strong> <code>?role=editor&amp;test=ownership</code> reported the first job editable, the second job owned by Alex Morgan with title and save disabled, Add branch disabled, and 2 visible branch cards. <code>?role=editor&amp;test=editorperms</code> reported organization, upload, national priorities and Add branch disabled, Add job enabled, and a new job saved with owner <code>u_priya</code>.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-22" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-22</span><span class="task-title">Administrator national priority definitions</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-22 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> the Branches panel holds a national priority item editor. Each card has Title, Keywords and Description fields; Add and Remove manage the list. Saving replaces the header definition list, keeps existing ids and refreshes every job checkbox list. Editors see it read-only.</p><p><strong>Evidence:</strong> the admin probe used the component, saved a fourth national priority and read 4 back from the store; the national chips updated to 4; editors reported the national fields disabled with 3 cards.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-23" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-23</span><span class="task-title">Branches with province, 343 constituencies and local priorities</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-23 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> a branch modal captures name, province, constituency from the embedded 343 district list and local priorities. Branches are their own entries, render as cards and cannot be deleted while a job references them.</p><p><strong>Evidence:</strong> the admin probe found 343 constituency options, created a third branch, read 3 branches back from the store with 1 local priority, and the existing 2 branches rendered for an editor read-only.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-24" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-24</span><span class="task-title">Job branch selection and national / local priority checkboxes</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-24 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> the Priorities tab starts with a branch select. National priorities come from the application header and local priorities from the selected branch. Unchecking a branch clears local selections; changing a branch filters local ids to the new branch.</p><p><strong>Evidence:</strong> the admin probe started with 2 priority checkboxes at 56%, checked a third and the live score changed to 37%.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-25" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-25</span><span class="task-title">Regular job description alignment score</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-25 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> selected priorities are scored by whole-word keyword hits plus a full-phrase bonus, and the job score is their average. The score appears in the drawer card, the job list, the dashboard and the package.</p><p><strong>Evidence:</strong> the boot probe showed a 71% overall score built from 85% readiness and 56% job match, with Priority 56% and Priority 0% chips on the two jobs. The admin probe showed the score updating live from 56% to 37% on a checkbox change.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-26" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-26</span><span class="task-title">AI second-opinion score, overall score and package details</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-26 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> an AI score button asks only when AI is on and shows the regular score, the AI score, strengths and gaps, with a note that the AI value is not saved. The dashboard combines readiness and the average job score. The package lists branches and per-job priorities and alignment.</p><p><strong>Evidence:</strong> <code>?test=aiscore</code> found the button and the modal showed Regular score 56%, AI score 72%, strengths and gaps, and the not-saved note.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-27" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-27</span><span class="task-title">Guided national and local priority item editors</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-27 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> every priority is a card with separate Title, Keywords and Description fields, a Remove button and an Add button. National priorities use the component in the Branches panel; local priorities use the same component inside the branch modal. Existing ids survive an edit, blank cards block the save, and the national list must keep at least one item.</p><p><strong>Evidence:</strong> the admin probe used the component to add a local priority and a national priority. It found 343 constituency options, stored 3 branches with 1 local priority, stored 4 national priorities, and the editor probe found the national fields disabled with 3 cards for a non-admin.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-28" data-group="csj-core" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-28</span><span class="task-title">Compact Job details tab and side-by-side Job description workspace</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-28 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> the Job details tab always shows the Job title, with the NOC search in a collapsible block that opens for a new job or a job without a NOC code. The Job description tab places the large task editor and the AI assistant in a two-column workspace, stacking them below 1050 px. Switching tabs syncs the editor first.</p><p><strong>Evidence:</strong> the NOC probe opened the collapsible search, selected 13110 and 54100, and measured the description editor in the new tab. The AI probe used the same tab, streamed 2 messages, saved the session, and applied 7 bullets. Screenshots at 1400 px showed the editor and assistant side by side; the 390 px probe stayed inside the viewport.</p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="csj-cms" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: CMS registration and live smoke test</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="csj-cms">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="csj-cms"></div></div>
+    <p class="task-group-note">Why these belong together: the tool cannot save anything until the type and the field allowlist exist, and the two-user behavior must be proven on the real CMS before the tool is used for a real application.</p>
+
+    <div class="task-item" data-task-id="T-CSJ-11" data-group="csj-cms" data-task-status="not-started">
+      <details><summary><span class="task-id">T-CSJ-11</span><span class="task-title">Register the entry type and add it to allowedObjectTypes</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-11 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> add <code>canada-summer-jobs-grant-application-entry-uniconbaseapps</code> to the field allowed object types with role editor and scope instance, and set the correct <code>targetCollection</code>.</p><p><strong>Files:</strong> CMS field settings.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-12" data-group="csj-cms" data-task-status="not-started">
+      <details><summary><span class="task-id">T-CSJ-12</span><span class="task-title">Configure object CRUD, upload, PDF export, request save and parameters</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-12 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> enable the channels, set the program year, organization name and live-sync interval, and confirm the entry type parameter.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-13" data-group="csj-cms" data-task-status="not-started">
+      <details><summary><span class="task-id">T-CSJ-13</span><span class="task-title">Two-user live smoke test on the real CMS</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-13 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> open the same application in two browser sessions, edit two different jobs, confirm both survive; edit the same job, confirm the conflict banner; submit and confirm the lock and snapshot.</p></div></details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="csj-docs" data-group-status="in-progress">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Documentation, screenshots and catalog</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="csj-docs">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="csj-docs"></div></div>
+    <p class="task-group-note">Why these belong together: the SSOT, the satellites, the screenshots and the catalog entry must all describe the same published tool.</p>
+
+    <div class="task-item" data-task-id="T-CSJ-14" data-group="csj-docs" data-task-status="done">
+      <details><summary><span class="task-id">T-CSJ-14</span><span class="task-title">Fill the SSOT requirements, design, decisions, tests and tasks</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-14 as done" checked="checked" /></summary>
+      <div class="task-details"><p><strong>How we solved it:</strong> this document now records the application model, the entry type, the concurrency design, the size guard, the decisions and the open questions.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-15" data-group="csj-docs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-CSJ-15</span><span class="task-title">Generate the satellite documents and screenshots</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-15 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run the screenshots and docs generation after the CMS smoke test, then review the webpage, help, presentation and social pages. Remove every TEMPLATE comment from this SSOT before the first publish.</p></div></details>
+    </div>
+
+    <div class="task-item" data-task-id="T-CSJ-16" data-group="csj-docs" data-task-status="not-started">
+      <details><summary><span class="task-id">T-CSJ-16</span><span class="task-title">Register the tool idea and publish state in the catalog</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-CSJ-16 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> add the idea to <code>UNICON-TOOLS/tools-catalog/catalog-data.js</code> and the publish state, then rebuild the catalog.</p></div></details>
+    </div>
+  </section>
+
+  <!-- TEMPLATE: copy one .task-group block per release group. The group name,
+       the "ships together" reason, and the tasks inside form one unit.
+       Badge variants: "ONE PUSH - do not split" for groups that must ship in
+       a single push, or "RELATED - do not split" for groups that must not be
+       broken across releases.
+       data-group-status: planned | in-progress | testing | pushed.
+       PUSH READY is computed automatically by ssot.js. -->
+  <!-- PROFILE USAGE TASK TYPE SAMPLE (commented out - uncomment only when
+       this tool has profileConfig or profiles/). Keep the data-task-type
+       attribute on each task so reports can find profile-usage work.
+  <section class="task-group" data-release-group="profile-usage" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Profile usage management</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="profile-usage">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="profile-usage"></div></div>
+    <p class="task-group-note">Why these belong together: the profile register,
+    the copy page, the harness preset and the application configuration must
+    tell the same story.</p>
+    <div class="task-item" data-task-id="T-PU-01" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-01</span><span class="task-title">Register profile usage in section 4.1</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-01 as done" /></summary>
+      <div class="task-details"><p><strong>Problem it solves:</strong> nobody can tell which preset an application uses.</p><p><strong>How we will solve it:</strong> fill every row in section 4.1 with mode, segments, status and decision id.</p><p><strong>Files:</strong> <code>docs/ssot.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-02" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-02</span><span class="task-title">Keep profiles page and harness preset in sync</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-valuable">Very valuable</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-02 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> run <code>npm run docs:profiles -- &lt;Tool&gt;</code> and <code>node app/build-harness-presets.js</code> after every preset change.</p><p><strong>Files:</strong> <code>profiles/index.json</code>, <code>docs/profiles.html</code>, <code>app/test-harness.html</code></p></div></details>
+    </div>
+    <div class="task-item" data-task-id="T-PU-03" data-task-type="profile-usage" data-group="profile-usage" data-task-status="not-started">
+      <details><summary><span class="task-id">T-PU-03</span><span class="task-title">Test segment switching and answer preservation</span><span class="task-status-chip" data-task-status-chip></span><span class="task-priority status-mandatory">Mandatory</span><input type="checkbox" class="task-done-checkbox" aria-label="Mark T-PU-03 as done" /></summary>
+      <div class="task-details"><p><strong>How we will solve it:</strong> load the preset in the harness, switch every segment, verify the visible form and that saved values remain in the record.</p><p><strong>Files:</strong> <code>app/qa-segments.js</code>, <code>app/qa-presets.js</code></p></div></details>
+    </div>
+  </section>
+  END PROFILE USAGE TASK TYPE SAMPLE -->
+
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
+       uncomment it, and edit).
+  <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: [Group name]</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="[GROUP-KEY]">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="[GROUP-KEY]"></div></div>
+    <p class="task-group-note">Why these belong together: [the shared dependency -
+    e.g. "T-01 changes the protocol; T-02 and T-03 adapt every caller.
+    Publishing T-01 alone breaks all writers."]</p>
+
+    TEMPLATE (inside the commented sample): one .task-item block per task.
+    data-task-id must be unique across the whole document; data-group matches
+    the group key above. data-task-status: not-started | in-progress | ignored.
+    Done is the checkbox. The status chip is rendered by ssot.js.
+    PERMANENT DONE: write data-task-status="done" on the task div (or
+    checked="checked" on the checkbox) to mark it done for every browser;
+    npm run rel does this for pushed groups.
+    <div class="task-item" data-task-id="T-01" data-group="[GROUP-KEY]" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">[Short task name - the main name]</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> [why this task exists]</p>
+          <p><strong>How we will solve it:</strong> [approach, files]</p>
+          <p><strong>Benefit:</strong> [what the user or system gains]</p>
+          <p><strong>Files:</strong> <code>[file paths]</code></p>
+          <p><strong>Status:</strong> [edit data-task-status above - the chip updates automatically]</p>
+        </div>
+      </details>
+    </div>
+
+    TEMPLATE (inside the commented sample): duplicate the .task-item block above for T-02, T-03, ...
+  </section>
+  END OF TEMPLATE SAMPLE -->
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. We discuss each idea and
+  write the outcome inside its details. An agreed idea moves to the task list
+  (section 15) with a priority; a rejected idea is marked Ignored with the
+  reason. Tick the checkbox when an idea is done - progress is remembered by
+  the browser per document.</p>
+
+  <!-- Auto-updated by ssot.js: done / waiting / ignored percentages. -->
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-01" data-idea-status="discussing">
+    <details><summary><span class="idea-id">I-CSJ-01</span><span class="idea-title">Shared job-description library across years</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-01 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> a reusable collection of job descriptions that each application can import from, with a snapshot kept per application.</p><p><strong>Why:</strong> the same positions repeat every summer, and rewriting them is error-prone.</p><p><strong>Discussion:</strong> deferred. It adds a second type, a second allowlist entry and copy/sync rules. The current build keeps each job inside the application.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-02" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-02</span><span class="idea-title">One-page job description PDF per job</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-02 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> export a single job as a one-page sheet for internal review or a Job Bank draft.</p><p><strong>Why:</strong> the full application package is heavy when only one hiring manager needs one job.</p><p><strong>Discussion:</strong> the package builder already renders each job, so a per-job export is a small addition.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-03" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-03</span><span class="idea-title">Reviewer comments per entry</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-03 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> a small comment thread on each job, contact or document entry.</p><p><strong>Why:</strong> internal review currently happens outside the tool and the decisions are lost.</p><p><strong>Discussion:</strong> would be another entry type or an array field on each entry; needs a decision about visibility.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-04" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-04</span><span class="idea-title">Link jobs to the staff hours compliance tool</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-04 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> once a summer staff member is hired, connect the job entry to the weekly hours and permit process.</p><p><strong>Why:</strong> CSJ has a 30 to 40 hour weekly rule, and the existing people tools already track hours and permits.</p><p><strong>Discussion:</strong> integration only; no data should be duplicated.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-05" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-05</span><span class="idea-title">AI proofread of the job description</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-05 as done" checked="checked" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> ask the CMS AI channel to check a job description for clarity, inclusive language and CSJ relevance.</p><p><strong>Why:</strong> job descriptions are written by busy program staff and often miss the skill development angle.</p><p><strong>Outcome:</strong> shipped on 2026-11-28 as capability C-19 and decision D-CSJG-19, scoped to the tasks and responsibilities. The assistant drafts or rewrites the task list, never applies automatically, and never saves the job. A full proofread of every tab remains a future extension.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-06" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-06</span><span class="idea-title">French interface and French package</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-06 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> translate the tool labels, messages and exported package.</p><p><strong>Why:</strong> Canada Summer Jobs is a bilingual program.</p><p><strong>Discussion:</strong> not in this build. The user chose English only for now.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-07" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-07</span><span class="idea-title">Application package with attachment bundle</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-07 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> include the uploaded documents in one downloadable package.</p><p><strong>Why:</strong> the reviewer needs the text and the evidence together.</p><p><strong>Discussion:</strong> file bundling needs a binary channel and a size budget; the PDF package currently lists the documents and their links.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-08" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-08</span><span class="idea-title">Year-over-year application comparison</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-08 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> compare the current application with a previous year, job by job.</p><p><strong>Why:</strong> shows what changed in wages, hours, roles and priorities.</p><p><strong>Discussion:</strong> depends on a shared or copied job library or on the JSON backup.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-09" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-09</span><span class="idea-title">Status reminders by email</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-09 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> send a reminder to the application owner when the status sits in Internal review or Ready for too long.</p><p><strong>Why:</strong> grant deadlines are fixed and the tool knows the status.</p><p><strong>Discussion:</strong> requires the email channel and a scheduled job outside the tool; not a pure client feature.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-10" data-idea-status="new">
+    <details><summary><span class="idea-id">I-CSJ-10</span><span class="idea-title">NOC title and code suggestions</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-10 as done" checked="checked" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> help the user match the job title to a National Occupational Classification entry.</p><p><strong>Why:</strong> the CSJ job title should match the NOC, and the old tool only opened the NOC search in a new tab.</p><p><strong>Outcome:</strong> shipped on 2026-11-28 as capability C-17 and decision D-CSJG-17. The drawer searches the embedded NOC 2021 titles and illustrative job titles and fills the title, the code and the class title.</p></div></details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-CSJ-11" data-idea-status="discussing">
+    <details><summary><span class="idea-id">I-CSJ-11</span><span class="idea-title">Duplicate the application for the next year</span><span class="idea-status-chip" data-idea-status-chip></span><input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-CSJ-11 as done" /></summary>
+    <div class="idea-details"><p><strong>Idea:</strong> copy the header, jobs, contacts and addresses into a new program-year record, leaving documents and snapshots behind.</p><p><strong>Why:</strong> most of the application repeats every year.</p><p><strong>Discussion:</strong> valuable and small, but it needs a decision about which fields reset and whether documents carry over.</p></div></details>
+  </div>
+
+  <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
+       data-idea-status: new | discussing | ignored. Done = the checkbox. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">[Short idea name]</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> [what the idea is]</p>
+        <p><strong>Why:</strong> [what it would improve]</p>
+        <p><strong>Discussion / outcome:</strong> [notes and decisions; or "Ignored - reason"]</p>
+      </div>
+    </details>
+  </div>
+  END OF TEMPLATE SAMPLE -->
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>Preparation: serve the app folder over HTTP (for example
+  <code>python -m http.server 8799</code>), open
+  <code>app/test-harness.html?sample=1</code>, keep the browser console open,
+  and use the harness bar to switch role, read-only state and remote edits.
+  The real CMS pass needs two browser profiles signed in as two users who can
+  edit the same application record.</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>S-01 - boot and sample load.</strong> Steps: open the harness with <code>?sample=1</code>. PASS if the dashboard shows 2 jobs, 2 contacts, 6 documents and a readiness score above 80%.</li>
+    <li><strong>S-02 - organization autosave.</strong> Steps: open Organization, change the legal name, wait one second. PASS if the field shows Saved and the mock update payload contains only the legal name, the revision and the user stamps.</li>
+    <li><strong>S-03 - viewer read-only.</strong> Steps: open the harness with <code>?role=viewer&amp;section=organization</code>. PASS if every field is disabled, the user chip shows Viewer and no edit action is available.</li>
+    <li><strong>S-04 - job description and skill plan.</strong> Steps: open Job descriptions, open the first job, switch through all seven tabs. PASS if every tab renders, the eight skills show their descriptions and the rich-text description is preserved.</li>
+    <li><strong>S-05 - remote edit while the job drawer is dirty.</strong> Steps: open a job, change the title, click Simulate remote job edit, click Refresh. PASS if the drawer keeps the local title and shows the remote-change banner with Reload and Keep mine.</li>
+    <li><strong>S-06 - readiness and blockers.</strong> Steps: inspect the dashboard and Review. PASS if the blocker list matches the incomplete job and the document checks, and the score matches the checklist.</li>
+    <li><strong>S-07 - narrow layout.</strong> Steps: load the harness in a 390 px iframe and open the job drawer. PASS if the document width is not wider than the viewport and the drawer fits the viewport (the tab strip may scroll horizontally).</li>
+    <li><strong>S-08 - remote edit while the organization form is dirty.</strong> Steps: change the organization phone, use Simulate remote org edit, click Refresh. PASS if the top conflict banner appears and the form is not replaced.</li>
+    <li><strong>S-09 - submit, snapshot and lock.</strong> Steps: complete the blockers, set Ready, submit as administrator. PASS if a snapshot entry appears, the status becomes Submitted and every input is disabled.</li>
+    <li><strong>S-10 - storage off.</strong> Steps: open the harness with <code>?storage=off</code>. PASS if the storage banner explains the missing object storage, the live chip says Local only, editing still works and JSON export is available.</li>
+    <li><strong>S-11 - inline JavaScript mode.</strong> Steps: serve over HTTP and open <code>?inlinejs=1</code>. PASS if the tool boots from the inline script and the console shows the build line once.</li>
+    <li><strong>S-12 - exports.</strong> Steps: click Export JSON and Export PDF. PASS if the JSON downloads with the application and entries, and the PDF package opens from the returned file URL or the HTML fallback downloads.</li>
+    <li><strong>S-13 - two users, two jobs on the real CMS.</strong> Steps: two sessions edit two different jobs and save. PASS if both jobs retain their changes after a refresh.</li>
+    <li><strong>S-14 - two users, same job on the real CMS.</strong> Steps: both edit the same job, save one then the other. PASS if the second save either merges non-overlapping keys or shows the explicit conflict prompt; no silent overwrite.</li>
+    <li><strong>S-15 - NOC title search.</strong> Steps: open a job, type "program assistant" in the NOC search, then "camp counsellor". PASS if the first result for the first query is 13110 Administrative assistants, the first result for the second is 54100, and each row shows the official title, the code and the TEER level.</li>
+    <li><strong>S-16 - NOC selection and code search.</strong> Steps: select a search result, then type 54100 in the NOC code field. PASS if selecting fills the job title, the code and the status line with the class title; typing a known code fills the class title; an unknown code shows the warning line instead of a false title.</li>
+    <li><strong>S-17 - larger tasks editor and layout.</strong> Steps: open the Description tab at desktop width and at 390 px. PASS if the editor is at least 360 px tall on desktop, the title and NOC block is above it, the posting details are below it, and the page has no horizontal overflow.</li>
+    <li><strong>S-18 - AI draft and apply.</strong> Steps: open a job, type "Draft 6 tasks for this job" in the AI composer, send, then click Replace tasks. PASS if the answer streams into the chat, an Apply action appears only on the AI draft, the editor receives the generated bullets, the drawer becomes dirty, and no job save happens by itself.</li>
+    <li><strong>S-19 - AI persistence and degraded modes.</strong> Steps: reload the job and confirm the chat returns; then load with AI off and with the chat session type unauthorized. PASS if the conversation is restored after reload, the AI-off panel has no composer, and the unauthorized mode still drafts and applies but warns that chat is not saved and creates no session object.</li>
+    <li><strong>S-20 - editor ownership.</strong> Steps: open the harness as an editor with <code>?role=editor&amp;test=ownership</code>. PASS if the editor's own job is editable, another editor's job opens read-only with the owner banner and Duplicate, and Add branch is disabled.</li>
+    <li><strong>S-21 - editor permissions and owned create.</strong> Steps: <code>?role=editor&amp;test=editorperms</code> and create a job. PASS if organization, upload, national priorities and Add branch are disabled, Add job is enabled, and the new job is stored with the editor's owner id.</li>
+    <li><strong>S-22 - admin definitions, branches and selections.</strong> Steps: <code>?test=admin</code>; create a branch with a constituency and one local priority; save an updated national list; change a job priority checkbox. PASS if the constituency select has 343 options, the branch is stored as its own entry, the national list is stored, and the score changes immediately.</li>
+    <li><strong>S-23 - score display and overall score.</strong> Steps: load <code>?sample=1</code>. PASS if the dashboard shows the overall score with the readiness value, the job match value and the scored job count, and the job list shows a priority score chip per job.</li>
+    <li><strong>S-24 - AI second opinion.</strong> Steps: open a job, click AI score this job. PASS if the modal shows the regular score, the AI score, strengths, gaps and the not-saved note, and no job is written.</li>
+    <li><strong>S-25 - package details.</strong> Steps: export the PDF package. PASS if it lists branches with constituencies and local priorities, and every job shows its branch, selected national and local priorities and its alignment score.</li>
+    <li><strong>S-26 - narrow layout with branches.</strong> Steps: load at 390 px and open the branches panel and a job. PASS if the document is not wider than the viewport; only intentional horizontal scrollers overflow.</li>
+    <li><strong>S-27 - priority item editors.</strong> Steps: as an administrator, add a national priority card, fill Title, Keywords and Description, remove one card, then save. Open Add branch and repeat for a local priority. PASS if no pipe syntax is required, the cards keep their values, blank cards block the save, and the saved counts match the cards.</li>
+    <li><strong>S-28 - compact job details and writing workspace.</strong> Steps: open an existing job with a NOC code and a new job; switch between Job details and Job description at 1400 px and 390 px. PASS if the NOC search is collapsed for the existing job and expanded for the new job, the Job title is always visible, the task editor and AI assistant are side by side on desktop and stacked on mobile, and no page-level overflow appears.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>S-01, S-02, S-03, S-04, S-05, S-06, S-07</td><td>PASS</td><td>Verified on 2026-11-28 in headless Edge with the generated harness. The autosave partial payload was inspected, the conflict banner was captured, and the 390 px probe reported no horizontal overflow.</td></tr>
+    <tr><td>S-15, S-16, S-17</td><td>PASS</td><td>Verified on 2026-11-28 with the <code>?test=noc</code> harness probe: "program assistant" returned 13110 first, "camp counsellor" returned 54100 first, the code search returned 54100, selecting a result filled all three fields, typing 54100 into the code field replaced the auto-filled title and status, the editor measured 360 px, and the 390 px probe reported no page overflow.</td></tr>
+    <tr><td>S-18, S-19</td><td>PASS</td><td>Verified on 2026-11-28 with the <code>?test=ai</code> probe: 2 chat messages, 1 saved session with 2 messages, the Replace action applied 7 bullets and marked the drawer Unsaved changes; a reload restored the conversation; <code>?ai=off</code> showed the off notice with no composer; <code>?ai=noauth</code> produced 2 chat messages, 0 saved sessions and the not-saved warning.</td></tr>
+    <tr><td>S-20, S-21</td><td>PASS</td><td>Verified on 2026-11-28 (build 2026-11-28-4). Ownership probe: own job editable, Alex Morgan's job read-only with the owner banner, Add branch disabled, 2 branches visible. Editor probe: organization, upload, national priorities and Add branch disabled, Add job enabled, a new job stored with owner <code>u_priya</code>.</td></tr>
+    <tr><td>S-22</td><td>PASS</td><td>Verified on 2026-11-28 (build 2026-11-28-4). Admin probe: 343 constituency options, a third branch stored as its own entry with 1 local priority, national priorities saved and read back as 4, the priority checkbox changed the score from 56% to 37% immediately.</td></tr>
+    <tr><td>S-23, S-24, S-26</td><td>PASS</td><td>Verified on 2026-11-28 (build 2026-11-28-4). Boot probe: 16 sample entries, overall 71% from 85% readiness and 56% job match, job chips 56% and 0%. AI score probe: regular 56%, AI 72%, strengths, gaps and the not-saved note, no job write. 390 px probe: document width 489 inside a 504 px viewport, no page-level offenders.</td></tr>
+    <tr><td>S-25</td><td>PARTIAL</td><td>The package now contains the branch table and per-job branch, priority and score rows. The PDF path still needs a pass on the real host (S-12).</td></tr>
+    <tr><td>S-27, S-28</td><td>PASS</td><td>Verified on 2026-11-28 (build 2026-11-28-6; the feature probes ran on -5 and -6 only shortens the priority card textarea). Admin probe added a local card and a national card through the components, stored 3 branches with 1 local priority and 4 national priorities. Editor probe found the national fields disabled. NOC probe opened the collapsible search, selected 13110 and 54100, and measured the description editor in the new tab. AI probe streamed 2 messages and applied 7 bullets in the same workspace. 1400 px screenshots showed the two-column layout; 390 px reported zero page-level overflow.</td></tr>
+    <tr><td>S-08, S-09, S-10, S-11, S-12</td><td>PENDING</td><td>Harness logic exists; the scenarios need an explicit pass before publish.</td></tr>
+    <tr><td>S-13, S-14</td><td>PENDING</td><td>Requires the CMS type registration and two real user sessions.</td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when S-08 to S-19 pass, the CMS group tasks T-CSJ-11 to T-CSJ-13 are done, and no critical or high risk is open.</p>
+  <p><strong>Progress log:</strong> 2026-11-28 - harness booted over HTTP with 14 sample entries; readiness 91%; autosave payload contained only the changed legal name; viewer fields disabled; remote job edit while dirty produced the expected banner; 390 px probe reported document width 375 with no overflow. 2026-11-28 (build 2026-11-28-2) - NOC probe passed all three title searches, the selection filled title, code and class title, the tasks editor measured 360 px, and the enlarged 390 px drawer probe reported document width 477 inside a 492 px viewport. 2026-11-28 (build 2026-11-28-3) - AI probe streamed 2 messages, saved 1 session with 2 messages, Replace tasks applied 7 bullets and marked the drawer dirty, a reload restored the chat, AI off showed no composer, and the unauthorized chat type kept AI in memory with a clear warning. 2026-11-28 (build 2026-11-28-4) - ownership, editor permission, admin branch/priority and AI score probes passed; boot showed a 71% overall score from 85% readiness and 56% job match; the mobile probe reported zero page-level overflow. 2026-11-28 (build 2026-11-28-5) - replaced both priority textareas with item cards, split Job details from Job description, and placed the editor and AI side by side. Admin, editor, NOC, AI, ownership, AI score and mobile probes passed; the 1400 px screenshots showed the new layout and the 390 px probe reported no page-level overflow. 2026-11-28 (build 2026-11-28-6) - shortened the priority card Description field; boot and admin probes still pass.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is NOT pushed yet lives here,
+  linked to its release group (section 15). <strong>Before every push</strong>
+  re-evaluate every OPEN risk of the groups being pushed: solve them one by
+  one (tick the checkbox), or mark the risk Accepted
+  (<code>data-risk-status="accepted"</code>) with a reason and the date, and
+  update the <code>Last re-evaluation</code> line inside the risk. A group is
+  push-ready when its tasks are done AND it has no OPEN risks - the task
+  panel shows a PUSH READY badge per group and the open-risk count.</p>
+
+  <!-- Auto-updated by ssot.js: open / solved / accepted counts. -->
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-01" data-group="csj-cms" data-risk-level="high" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-01</span><span class="risk-title">Object type not registered in the CMS</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-01 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-11 to T-CSJ-13.</p><p><strong>What can go wrong:</strong> the tool requests <code>canada-summer-jobs-grant-application-entry-uniconbaseapps</code> and the CMS rejects it, so every save fails.</p><p><strong>Likelihood / impact:</strong> certain until the registration is done; high impact because the tool stays local only.</p><p><strong>Mitigation:</strong> the tool detects the failure, shows the storage banner and keeps working in local mode with JSON export. Register the type and run S-13 and S-14 before publish.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - open, registration pending.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-02" data-group="csj-cms" data-risk-level="critical" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-02</span><span class="risk-title">Wrong target collection for the entry type</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-02 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-11.</p><p><strong>What can go wrong:</strong> the field config points at the private collection while the app writes entries that must be visible to the organisation, or the reverse. Entries are then written where no one reads them.</p><p><strong>Likelihood / impact:</strong> medium likelihood if the config is set by hand; critical because data appears lost.</p><p><strong>Mitigation:</strong> document the exact config in section 4, verify with one write and one read in each role, and keep the target collection in a single constant in the JS.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - open, verify during registration.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-03" data-group="csj-core" data-risk-level="high" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-03</span><span class="risk-title">Same entry edited by two users at the same time</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-03 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-05, T-CSJ-06.</p><p><strong>What can go wrong:</strong> one user's save overwrites the other user's change on the same entry.</p><p><strong>Likelihood / impact:</strong> low for different jobs (each job is its own entry), higher for the organisation header; medium impact.</p><p><strong>Mitigation:</strong> read-before-write, changed-key-only payloads and a revision check. A stale revision stops the save and the user chooses Reload or Keep mine. Different entries never block each other.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - logic in place, S-14 still pending.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-04" data-group="" data-risk-level="medium" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-04</span><span class="risk-title">Live polling adds read load</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-04 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-07.</p><p><strong>What can go wrong:</strong> the tool re-reads entries every 20 seconds while the tab is visible, which costs reads and battery on a large application.</p><p><strong>Likelihood / impact:</strong> certain but small; a grant application is edited by a handful of people for a few weeks.</p><p><strong>Mitigation:</strong> refresh only while the tab is visible, skip while a modal or job drawer is dirty, and refresh on focus and after every save.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted, the interval is a deliberate trade for near-live collaboration.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-05" data-group="csj-core" data-risk-level="medium" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-05</span><span class="risk-title">Deleted document entries leave stored files behind</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-05 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-09.</p><p><strong>What can go wrong:</strong> deleting a document entry removes the metadata but not the uploaded file, so storage keeps the object.</p><p><strong>Likelihood / impact:</strong> likely over time; low impact, small files.</p><p><strong>Mitigation:</strong> the confirm dialog warns that the stored file is not deleted, and the deletion is logged with the storage URL so an administrator can clean up later.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted, cleanup is manual by design.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-06" data-group="csj-core" data-risk-level="low" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-06</span><span class="risk-title">Oversized entry approaches the storage limit</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-06 as solved" checked="checked" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-04, T-CSJ-10.</p><p><strong>What can go wrong:</strong> a very long job description or many text blocks make one entry too large to save.</p><p><strong>Likelihood / impact:</strong> low; one entry would have to reach hundreds of kilobytes.</p><p><strong>Mitigation:</strong> the description is capped at 20,000 plain-text characters, the dashboard warns at 200 KB, and the save stops at 400 KB with a clear message. Binaries are never stored in the entry.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - guards in place, keep the caps when adding fields.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-07" data-group="csj-core" data-risk-level="low" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-07</span><span class="risk-title">Snapshot copy grows the application record</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-07 as solved" checked="checked" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-08.</p><p><strong>What can go wrong:</strong> freezing a submitted application copies all entries into one value and pushes the record toward the limit.</p><p><strong>Likelihood / impact:</strong> low.</p><p><strong>Mitigation:</strong> the snapshot is written as its own entry, never inside the application entry, and the snapshot payload is capped at 400 KB. Only the application entry is read for the header.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - design in place.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-08" data-group="csj-core" data-risk-level="low" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-08</span><span class="risk-title">Stale view for up to 20 seconds</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-08 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-07.</p><p><strong>What can go wrong:</strong> a second user sees an older list until the next refresh.</p><p><strong>Likelihood / impact:</strong> always; low impact because destructive actions are administrator only and always re-read first.</p><p><strong>Mitigation:</strong> refresh on window focus, after save and on demand. The conflict check protects the write path.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted, true real-time would need a subscription channel.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-09" data-group="" data-risk-level="medium" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-09</span><span class="risk-title">Old CMS field-group applications are not migrated</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-09 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> the whole tool.</p><p><strong>What can go wrong:</strong> previous years' data stays in the old CMS screens and is not visible in this tool.</p><p><strong>Likelihood / impact:</strong> certain; low impact because the user decided there is no migration and no compatibility requirement.</p><p><strong>Mitigation:</strong> the old records stay untouched; the JSON import is the bridge if a copy is ever needed.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted by user decision D-CSJG-02.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-10" data-group="csj-core" data-risk-level="medium" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-10</span><span class="risk-title">Download is blocked by the host sandbox</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-10 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-10.</p><p><strong>What can go wrong:</strong> the sandboxed iframe refuses an anchor download, so the JSON or PDF export does nothing.</p><p><strong>Likelihood / impact:</strong> depends on the host; medium impact because export is the backup path.</p><p><strong>Mitigation:</strong> the export tries the host storage channel first, then an anchor download, then opens the HTML package in a new tab and reports which path was used.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - open until S-12 passes on the real host.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-11" data-group="csj-cms" data-risk-level="medium" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-11</span><span class="risk-title">Non-administrators cannot submit or delete</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-11 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-08.</p><p><strong>What can go wrong:</strong> editors finish the application but cannot submit it, so the process stalls until an administrator is available.</p><p><strong>Likelihood / impact:</strong> likely; low impact, it is an intentional control.</p><p><strong>Mitigation:</strong> the tool states the required role in the submit dialog and the administrator can reopen a submitted application.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - open by design, revisit if the organisation has no administrator.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-12" data-group="csj-docs" data-risk-level="low" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-12</span><span class="risk-title">Satellite docs and screenshots still describe the template</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-12 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-14, T-CSJ-15.</p><p><strong>What can go wrong:</strong> the help, webpage and presentation docs still hold scaffold text, so a user reads the wrong instructions.</p><p><strong>Likelihood / impact:</strong> certain until the docs pass runs; low impact.</p><p><strong>Mitigation:</strong> run <code>npm run docs:generate</code> and the screenshot capture for this tool, then read every generated page once.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - open.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-13" data-group="csj-core" data-risk-level="medium" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-13</span><span class="risk-title">Embedded NOC index becomes stale</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip"></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-13 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-17.</p><p><strong>What can go wrong:</strong> the tool embeds NOC 2021 Version 1.0 and keeps using it after the NOC is revised, so a title or code no longer matches the official classification.</p><p><strong>Likelihood / impact:</strong> certain over time; medium impact because reviewers compare the title with the current NOC.</p><p><strong>Mitigation:</strong> the tool shows the embedded version and links the NOC site, and the open questions require a data refresh before each grant cycle. The index is generated from the official StatCan CSV.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted for the 2027 cycle; refresh when NOC 2026 is adopted.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-14" data-group="csj-core" data-risk-level="medium" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-14</span><span class="risk-title">A search result suggests a similar but wrong NOC group</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip"></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-14 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-17.</p><p><strong>What can go wrong:</strong> a common title matches several unit groups and the user clicks the first row, recording a code that is not the closest fit.</p><p><strong>Likelihood / impact:</strong> possible for generic titles; medium impact because the code is part of the application.</p><p><strong>Mitigation:</strong> every row shows the official title, code and TEER level plus the matching illustrative title; selecting is explicit; the class title is stored next to the code so a mismatch is visible; the NOC site is one click away. The alias list only changes order and never picks automatically.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted, the user always confirms the row.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-15" data-group="csj-core" data-risk-level="medium" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-15</span><span class="risk-title">AI drafts a generic or inaccurate task list</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip"></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-15 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-19.</p><p><strong>What can go wrong:</strong> the model produces duties that do not fit the placement, or invents equipment or benefits that were not in the context.</p><p><strong>Likelihood / impact:</strong> possible with any model; medium impact if the user applies the draft without reading it.</p><p><strong>Mitigation:</strong> the prompt forbids invented facts and asks for concrete verbs; the draft stays in the chat until the user presses Replace or Append; the editor is still editable; the job is not saved until the user presses Save job.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted with explicit apply and review.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-16" data-group="csj-core" data-risk-level="medium" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-16</span><span class="risk-title">AI chat history is not saved when its type is unauthorized</span><span class="risk-severity-chip" data-risk-severity-chip"></span><span class="risk-status-chip" data-risk-status-chip"></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-16 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-20.</p><p><strong>What can go wrong:</strong> the field does not allow <code>ai-chat-sessions-uniconbaseapps</code>, so the conversation disappears on reload even though the assistant worked.</p><p><strong>Likelihood / impact:</strong> likely until the field is configured; low to medium impact because the job data is unaffected.</p><p><strong>Mitigation:</strong> the assistant still works in memory, the panel says the chat is not saved, and <code>reportMissingParams</code> asks the administrator to authorize the shared type. No application entry is touched by this failure.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted; configure the type before the pilot.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-17" data-group="csj-core" data-risk-level="high" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-17</span><span class="risk-title">Ownership is not enforced by the CMS host</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-17 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-21.</p><p><strong>What can go wrong:</strong> a user who calls the object SDK outside the tool can write another user's job, because the host grants write permission at the field level, not per entry owner.</p><p><strong>Likelihood / impact:</strong> low for normal users; medium impact if a user is technical and deliberately bypasses the UI.</p><p><strong>Mitigation:</strong> the tool disables every editor path and repeats the owner check in <code>saveEntry</code>. Administrators still see every job for review. Per-owner host rules would need a CMS capability that does not exist today.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - open, accepted only if the deployment trusts its editors.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-18" data-group="csj-core" data-risk-level="medium" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-18</span><span class="risk-title">Keyword score rewards wording, not real fit</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip"></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-18 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-25.</p><p><strong>What can go wrong:</strong> an editor adds priority words without real duties and the score rises; a good description in different words scores low.</p><p><strong>Likelihood / impact:</strong> possible; medium impact if the score is read as an eligibility judgment.</p><p><strong>Mitigation:</strong> the UI calls it an alignment indicator, shows the regular and AI values side by side, and the AI prompt asks for gaps rather than only a number. The readiness score remains separate.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - open; watch the first real applications.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-19" data-group="csj-core" data-risk-level="medium" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-19</span><span class="risk-title">Renamed priority drops existing job selections</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip"></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-19 as solved" checked="checked" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-22, T-CSJ-24, T-CSJ-27.</p><p><strong>What can go wrong:</strong> an earlier parser derived the priority id from its title, so renaming created a new id and jobs silently lost the selection.</p><p><strong>Likelihood / impact:</strong> no longer applies when a card is edited; the item editor keeps the existing id. Replacing the annual list with new cards still creates new ids.</p><p><strong>Mitigation:</strong> the guided item editor saves each card with its original id. The remaining yearly replacement case is documented in L-16 and the open question on priority versioning.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - solved by D-CSJG-28; edit existing cards to keep ids.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-20" data-group="csj-core" data-risk-level="medium" data-risk-status="open">
+    <details><summary><span class="risk-id">R-CSJ-20</span><span class="risk-title">Branch deletion leaves jobs without local priorities</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip"></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-20 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-23.</p><p><strong>What can go wrong:</strong> an administrator deletes a branch that jobs still reference, so those jobs lose their local priorities and their score.</p><p><strong>Likelihood / impact:</strong> low; deletion is blocked while any job references the branch, but a race between two sessions is possible.</p><p><strong>Mitigation:</strong> the delete action counts references and refuses; a job with a missing branch shows a warning and still scores its national priorities. Recreating the branch restores resolution if the object id matches, which it normally does not.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - open.</p></div></details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-CSJ-21" data-group="csj-core" data-risk-level="low" data-risk-status="accepted">
+    <details><summary><span class="risk-id">R-CSJ-21</span><span class="risk-title">AI score is not saved and may vary between runs</span><span class="risk-severity-chip" data-risk-severity-chip></span><span class="risk-status-chip" data-risk-status-chip"></span><input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-CSJ-21 as solved" /></summary>
+    <div class="risk-details"><p><strong>Applies to:</strong> T-CSJ-26.</p><p><strong>What can go wrong:</strong> the AI number is not persisted and can differ on a second request, so it cannot be used as an official score.</p><p><strong>Likelihood / impact:</strong> certain; low impact because it is explicitly a second opinion.</p><p><strong>Mitigation:</strong> the modal labels it as a second opinion and not saved, and the regular deterministic score is the value stored and exported.</p><p><strong>Last re-evaluation:</strong> 2026-11-28 - accepted.</p></div></details>
+  </div>
+
+  <!-- TEMPLATE: one .risk-item per risk or side effect. data-risk-id unique;
+       data-group = the release group it belongs to (must match a
+       data-release-group in section 15; leave empty for cross-cutting risks).
+       data-risk-level: critical (mandatory - blocks every push until solved)
+       | high (blocks unless accepted) | medium (warns) | low (nice-to-have,
+       reported only).
+       data-risk-status: open | accepted. Solved = the checkbox. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
+  <div class="risk-item" data-risk-id="R-01" data-group="[GROUP-KEY]" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">[Risk or side effect name]</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> [task T-xx / whole group]</p>
+        <p><strong>What can go wrong:</strong> [the side effect if this ships wrong]</p>
+        <p><strong>Likelihood / impact:</strong> [how likely, how bad]</p>
+        <p><strong>Mitigation:</strong> [what we do about it]</p>
+        <p><strong>Last re-evaluation:</strong> [date + result - update before every push]</p>
+      </div>
+    </details>
+  </div>
+  END OF TEMPLATE SAMPLE -->
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to test locally today: the
+  entry-per-record model, the changed-key-only saves, the revision check, the
+  NOC title picker, the user-controlled AI writing assistant, per-user job
+  ownership, administrator-managed national and branch local priorities with a
+  guided item editor, and deterministic alignment scoring are in place. The job
+  drawer now separates the compact Job details tab from a side-by-side Job
+  description workspace. The size guards keep every application write well
+  below the storage limit. Not yet safe to publish: the CMS object type is not
+  registered, the AI chat session type is not authorized, the ownership control
+  is tool-level only, the two-user scenarios S-13 and S-14 have not run, and
+  the export, storage-off and inline script scenarios are still pending. Publish
+  after those pass and every critical or high risk above is solved or accepted
+  with a reason.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. The <code>npm run rel</code> script appends
+  a row here automatically after every successful push - do not edit or remove
+  the marker comment below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    CSJ Grant Application - single source of truth for all decisions about this
+    tool. Version 0.6, 2026-11-28.
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync. Tasks stamped by <code>npm run rel</code> show the push version
+    they shipped in.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks. Critical risks block every push until solved; high
+    risks block unless accepted; medium risks warn; low risks are reported
+    only.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved
+    state. Tick the checkbox here or in section 18 - both stay in sync.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>

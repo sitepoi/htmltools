@@ -1,0 +1,519 @@
+<!-- html build 2026-11-28-5 -->
+<div class="csj-app" id="csjApp">
+
+  <!-- ══ Application header ══ -->
+  <header class="csj-header">
+    <div class="csj-brand">
+      <div class="csj-brand-mark" aria-hidden="true">CSJ</div>
+      <div class="csj-brand-text">
+        <h1 class="csj-title" id="csjTitle">CSJ Grant Application</h1>
+        <div class="csj-subline">
+          <span id="csjProgramYearLabel">Program year -</span>
+          <span class="csj-sep" aria-hidden="true"></span>
+          <span class="csj-status-pill is-draft" id="csjStatusPill">Draft</span>
+          <span class="csj-live-chip" id="csjLiveChip">Starting live sync...</span>
+        </div>
+      </div>
+    </div>
+    <div class="csj-header-right">
+      <span class="csj-user-chip" id="csjUserChip" hidden></span>
+      <span class="csj-build-badge" id="csjBuildBadge">tool build</span>
+      <button type="button" class="csj-btn csj-btn-quiet" id="csjBtnRefresh">Refresh</button>
+    </div>
+  </header>
+
+  <!-- ══ Boot state ══ -->
+  <div class="csj-boot" id="csjBoot">
+    <div class="csj-spinner" aria-hidden="true"></div>
+    <span id="csjBootText">Loading application...</span>
+  </div>
+
+  <!-- ══ Banners ══ -->
+  <div class="csj-banner csj-banner-lock" id="csjLockBanner" hidden></div>
+  <div class="csj-banner csj-banner-warn" id="csjStorageBanner" hidden></div>
+  <div class="csj-banner csj-banner-conflict" id="csjConflictBanner" hidden>
+    <div class="csj-banner-text" id="csjConflictText"></div>
+    <div class="csj-banner-actions">
+      <button type="button" class="csj-btn csj-btn-sm" id="csjConflictReload">Reload latest</button>
+      <button type="button" class="csj-btn csj-btn-sm csj-btn-danger" id="csjConflictKeep">Keep my changes</button>
+    </div>
+  </div>
+
+  <!-- ══ App shell ══ -->
+  <div class="csj-shell" id="csjShell" hidden>
+
+    <!-- Left rail -->
+    <nav class="csj-rail" id="csjRail" aria-label="Application sections">
+      <div class="csj-rail-group">
+        <div class="csj-rail-label">Application</div>
+        <button type="button" class="csj-nav is-active" data-section="dashboard">
+          <span class="csj-nav-icon" aria-hidden="true">&#9635;</span><span class="csj-nav-text">Dashboard</span>
+        </button>
+        <button type="button" class="csj-nav" data-section="organization">
+          <span class="csj-nav-icon" aria-hidden="true">&#9636;</span><span class="csj-nav-text">Organization</span>
+        </button>
+        <button type="button" class="csj-nav" data-section="contacts">
+          <span class="csj-nav-icon" aria-hidden="true">&#9678;</span><span class="csj-nav-text">Contacts</span>
+          <span class="csj-nav-count" id="csjNavContacts">0</span>
+        </button>
+        <button type="button" class="csj-nav" data-section="addresses">
+          <span class="csj-nav-icon" aria-hidden="true">&#8982;</span><span class="csj-nav-text">Addresses</span>
+          <span class="csj-nav-count" id="csjNavAddresses">0</span>
+        </button>
+      </div>
+      <div class="csj-rail-group">
+        <div class="csj-rail-label">Definitions</div>
+        <button type="button" class="csj-nav" data-section="branches">
+          <span class="csj-nav-icon" aria-hidden="true">&#9873;</span><span class="csj-nav-text">Branches and priorities</span>
+          <span class="csj-nav-count" id="csjNavBranches">0</span>
+        </button>
+      </div>
+      <div class="csj-rail-group">
+        <div class="csj-rail-label">Jobs and evidence</div>
+        <button type="button" class="csj-nav" data-section="jobs">
+          <span class="csj-nav-icon" aria-hidden="true">&#9635;</span><span class="csj-nav-text">Job descriptions</span>
+          <span class="csj-nav-count" id="csjNavJobs">0</span>
+        </button>
+        <button type="button" class="csj-nav" data-section="documents">
+          <span class="csj-nav-icon" aria-hidden="true">&#9639;</span><span class="csj-nav-text">Documents</span>
+          <span class="csj-nav-count" id="csjNavDocuments">0</span>
+        </button>
+      </div>
+      <div class="csj-rail-group">
+        <div class="csj-rail-label">Finish</div>
+        <button type="button" class="csj-nav" data-section="review">
+          <span class="csj-nav-icon" aria-hidden="true">&#10003;</span><span class="csj-nav-text">Review and submit</span>
+          <span class="csj-nav-count is-danger" id="csjNavIssues">0</span>
+        </button>
+      </div>
+      <div class="csj-rail-foot">
+        <div class="csj-rail-foot-label">Storage guard</div>
+        <div class="csj-rail-foot-value" id="csjRailSize">-</div>
+        <div class="csj-rail-foot-note">1 MiB per document</div>
+      </div>
+    </nav>
+
+    <!-- Main area -->
+    <main class="csj-main" id="csjMain">
+
+      <!-- ── Dashboard ── -->
+      <section class="csj-panel" data-panel="dashboard" id="csjPanelDashboard">
+        <div class="csj-page-head">
+          <div class="csj-page-head-text">
+            <div class="csj-kicker">Application overview</div>
+            <h2 class="csj-page-title">Canada Summer Jobs application</h2>
+            <p class="csj-page-sub" id="csjDashSub">Prepare the organization, contacts, job descriptions and required documents in one place.</p>
+          </div>
+          <div class="csj-page-actions">
+            <button type="button" class="csj-btn csj-btn-primary" id="csjBtnDashAddJob">Add job</button>
+            <button type="button" class="csj-btn csj-btn-quiet" id="csjBtnDashReview">Review readiness</button>
+          </div>
+        </div>
+
+        <div class="csj-dash-grid">
+          <div class="csj-card csj-score-card">
+            <div class="csj-score-ring" id="csjScoreRing">
+              <span class="csj-score-value" id="csjScoreValue">0%</span>
+            </div>
+            <div class="csj-score-copy">
+              <div class="csj-card-label">Readiness</div>
+              <div class="csj-score-title" id="csjScoreTitle">Not started</div>
+              <p class="csj-score-note" id="csjScoreNote">Complete the organization, contacts, jobs and documents.</p>
+            </div>
+          </div>
+          <div class="csj-stat" id="csjStatJobs">
+            <div class="csj-stat-label">Jobs</div>
+            <div class="csj-stat-value">0</div>
+            <div class="csj-stat-sub">positions in this application</div>
+          </div>
+          <div class="csj-stat" id="csjStatContacts">
+            <div class="csj-stat-label">Contacts</div>
+            <div class="csj-stat-value">0</div>
+            <div class="csj-stat-sub">people listed</div>
+          </div>
+          <div class="csj-stat" id="csjStatDocuments">
+            <div class="csj-stat-label">Documents</div>
+            <div class="csj-stat-value">0</div>
+            <div class="csj-stat-sub">files attached</div>
+          </div>
+        </div>
+
+        <div class="csj-dash-columns">
+          <div class="csj-card">
+            <div class="csj-card-head">
+              <h3>Blocking items</h3>
+              <span class="csj-chip" id="csjBlockerCount">0</span>
+            </div>
+            <div class="csj-check-list" id="csjDashBlockers"></div>
+          </div>
+          <div class="csj-card">
+            <div class="csj-card-head">
+              <h3>Status and activity</h3>
+              <span class="csj-muted" id="csjStatusHint">Draft</span>
+            </div>
+            <div class="csj-status-actions" id="csjStatusActions"></div>
+            <div class="csj-activity" id="csjDashActivity"></div>
+          </div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head">
+            <div>
+              <h3>Job priority alignment</h3>
+              <p class="csj-card-sub" id="csjPrioritySummary">Assign national and local priorities to each job to see the match score.</p>
+            </div>
+          </div>
+          <div class="csj-priority-dashboard" id="csjDashPriority"></div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head">
+            <h3>Storage guard</h3>
+            <span class="csj-muted">Each entry is its own document. The hard limit is 1 MiB per document.</span>
+          </div>
+          <div class="csj-size-guard" id="csjSizeGuard"></div>
+        </div>
+      </section>
+
+      <!-- ── Organization ── -->
+      <section class="csj-panel" data-panel="organization" id="csjPanelOrganization" hidden>
+        <div class="csj-page-head">
+          <div class="csj-page-head-text">
+            <div class="csj-kicker">Section 1</div>
+            <h2 class="csj-page-title">Organization information</h2>
+            <p class="csj-page-sub">Legal and contact details of the applicant organization.</p>
+          </div>
+          <div class="csj-page-actions">
+            <span class="csj-save-state" id="csjOrgSaveState">Saved</span>
+          </div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-form-grid">
+            <label class="csj-field">
+              <span class="csj-field-label">Organization legal name <span class="csj-req">*</span></span>
+              <input type="text" class="csj-input" id="csjOrgLegalName" data-app-field="legalName" maxlength="200" autocomplete="organization">
+            </label>
+            <label class="csj-field">
+              <span class="csj-field-label">Operating (common) name</span>
+              <input type="text" class="csj-input" id="csjOrgOperatingName" data-app-field="operatingName" maxlength="200">
+              <span class="csj-hint">Leave blank if it is the same as the legal name.</span>
+            </label>
+            <label class="csj-field">
+              <span class="csj-field-label">CRA business number <span class="csj-req">*</span></span>
+              <input type="text" class="csj-input" id="csjOrgCraNumber" data-app-field="craBusinessNumber" maxlength="30" placeholder="123456789RT0001">
+              <span class="csj-hint">9 digits, optionally followed by a program account (RT, RC, RP, RR, RZ).</span>
+            </label>
+            <label class="csj-field">
+              <span class="csj-field-label">Organization phone</span>
+              <input type="tel" class="csj-input" id="csjOrgPhone" data-app-field="phone" maxlength="40" autocomplete="tel">
+            </label>
+            <label class="csj-field">
+              <span class="csj-field-label">Organization email <span class="csj-req">*</span></span>
+              <input type="email" class="csj-input" id="csjOrgEmail" data-app-field="email" maxlength="160" autocomplete="email">
+            </label>
+            <label class="csj-field">
+              <span class="csj-field-label">Email for job advertisement</span>
+              <input type="email" class="csj-input" id="csjOrgJobAdsEmail" data-app-field="emailForJobAds" maxlength="160">
+              <span class="csj-hint">Used on Job Bank when youth have questions about a posting.</span>
+            </label>
+            <label class="csj-field">
+              <span class="csj-field-label">Organization website</span>
+              <input type="url" class="csj-input" id="csjOrgWebsite" data-app-field="website" maxlength="300" placeholder="https://">
+            </label>
+            <label class="csj-field">
+              <span class="csj-field-label">Year established</span>
+              <input type="number" class="csj-input" id="csjOrgYearEstablished" data-app-field="yearEstablished" min="1800" max="2100" step="1">
+            </label>
+            <label class="csj-field">
+              <span class="csj-field-label">Full-time employees in Canada</span>
+              <input type="number" class="csj-input" id="csjOrgFullTimeEmployees" data-app-field="fullTimeEmployees" min="0" step="1">
+              <span class="csj-hint">Employees working 30 hours or more per week.</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Contacts ── -->
+      <section class="csj-panel" data-panel="contacts" id="csjPanelContacts" hidden>
+        <div class="csj-page-head">
+          <div class="csj-page-head-text">
+            <div class="csj-kicker">Section 2</div>
+            <h2 class="csj-page-title">Contact people</h2>
+            <p class="csj-page-sub">Primary and secondary contacts for this application.</p>
+          </div>
+          <div class="csj-page-actions">
+            <button type="button" class="csj-btn csj-btn-primary" data-act="add-contact" id="csjBtnAddContact">Add contact</button>
+          </div>
+        </div>
+        <div class="csj-list" id="csjContactsList"></div>
+      </section>
+
+      <!-- ── Addresses ── -->
+      <section class="csj-panel" data-panel="addresses" id="csjPanelAddresses" hidden>
+        <div class="csj-page-head">
+          <div class="csj-page-head-text">
+            <div class="csj-kicker">Section 3</div>
+            <h2 class="csj-page-title">Addresses</h2>
+            <p class="csj-page-sub">Mailing address and every location where the proposed jobs will take place.</p>
+          </div>
+          <div class="csj-page-actions">
+            <button type="button" class="csj-btn csj-btn-primary" data-act="add-address" id="csjBtnAddAddress">Add address</button>
+          </div>
+        </div>
+        <div class="csj-list" id="csjAddressesList"></div>
+      </section>
+
+      <!-- ── Branches and priorities ── -->
+      <section class="csj-panel" data-panel="branches" id="csjPanelBranches" hidden>
+        <div class="csj-page-head">
+          <div class="csj-page-head-text">
+            <div class="csj-kicker">Definitions</div>
+            <h2 class="csj-page-title">Branches and priorities</h2>
+            <p class="csj-page-sub">The administrator defines the national priorities for this program year and the local priorities of every branch. Job writers select them instead of typing them.</p>
+          </div>
+          <div class="csj-page-actions">
+            <button type="button" class="csj-btn csj-btn-primary" data-act="add-branch" id="csjBtnAddBranch">Add branch</button>
+          </div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head">
+            <div>
+              <h3>National priorities</h3>
+              <p class="csj-card-sub">Add each priority as its own item. Job writers select these instead of typing. Update the list when the program year or the national priorities change.</p>
+            </div>
+            <span class="csj-save-state" id="csjNationalSaveState">Saved</span>
+          </div>
+          <div class="csj-priority-editor" id="csjNationalPriorityEditor"></div>
+          <div class="csj-page-actions csj-priority-actions">
+            <button type="button" class="csj-btn csj-btn-sm csj-btn-primary" data-act="save-national-priorities" id="csjBtnSaveNational">Save national priorities</button>
+          </div>
+          <div class="csj-priority-preview" id="csjNationalPreview"></div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head">
+            <div>
+              <h3>Branches</h3>
+              <p class="csj-card-sub">Every branch has one federal constituency and its own local priorities.</p>
+            </div>
+          </div>
+          <div class="csj-branch-list" id="csjBranchesList"></div>
+        </div>
+      </section>
+
+      <!-- ── Jobs ── -->
+      <section class="csj-panel" data-panel="jobs" id="csjPanelJobs" hidden>
+        <div class="csj-page-head">
+          <div class="csj-page-head-text">
+            <div class="csj-kicker">Section 4</div>
+            <h2 class="csj-page-title">Job descriptions</h2>
+            <p class="csj-page-sub">Each job holds the full CSJ description, skill development plan, employment terms, supervision, mentorship, recruitment plan and priorities.</p>
+          </div>
+          <div class="csj-page-actions">
+            <button type="button" class="csj-btn csj-btn-primary" data-act="add-job" id="csjBtnAddJob">Add job</button>
+          </div>
+        </div>
+        <div class="csj-strip" id="csjJobsSummary"></div>
+        <div class="csj-jobs-list" id="csjJobsList"></div>
+      </section>
+
+      <!-- ── Documents ── -->
+      <section class="csj-panel" data-panel="documents" id="csjPanelDocuments" hidden>
+        <div class="csj-page-head">
+          <div class="csj-page-head-text">
+            <div class="csj-kicker">Section 5</div>
+            <h2 class="csj-page-title">Documents and conditional requirements</h2>
+            <p class="csj-page-sub">Upload the files that support the application. Only file names and storage links are stored in the application.</p>
+          </div>
+        </div>
+
+        <div class="csj-doc-grid">
+          <div class="csj-doc-card" data-cat="proofOfBusinessRegistration">
+            <div class="csj-doc-head">
+              <div>
+                <div class="csj-doc-title">Proof of business registration <span class="csj-req">*</span></div>
+                <div class="csj-doc-hint">Incorporation document or CRA registration.</div>
+              </div>
+              <button type="button" class="csj-btn csj-btn-sm" data-act="upload-doc" data-cat="proofOfBusinessRegistration">Upload</button>
+            </div>
+            <div class="csj-doc-files" id="csjDocListProofOfBusinessRegistration"></div>
+          </div>
+          <div class="csj-doc-card" data-cat="proofOfAddress">
+            <div class="csj-doc-head">
+              <div>
+                <div class="csj-doc-title">Proof of address <span class="csj-req">*</span></div>
+                <div class="csj-doc-hint">Bill or bank statement showing the mailing address.</div>
+              </div>
+              <button type="button" class="csj-btn csj-btn-sm" data-act="upload-doc" data-cat="proofOfAddress">Upload</button>
+            </div>
+            <div class="csj-doc-files" id="csjDocListProofOfAddress"></div>
+          </div>
+          <div class="csj-doc-card" data-cat="voidCheque">
+            <div class="csj-doc-head">
+              <div>
+                <div class="csj-doc-title">Void cheque or direct deposit form</div>
+                <div class="csj-doc-hint">Payment information for the grant.</div>
+              </div>
+              <button type="button" class="csj-btn csj-btn-sm" data-act="upload-doc" data-cat="voidCheque">Upload</button>
+            </div>
+            <div class="csj-doc-files" id="csjDocListVoidCheque"></div>
+          </div>
+          <div class="csj-doc-card" data-cat="healthAndSafetyPolicy">
+            <div class="csj-doc-head">
+              <div>
+                <div class="csj-doc-title">Health and safety policy <span class="csj-req">*</span></div>
+                <div class="csj-doc-hint">The organization's current health and safety policy.</div>
+              </div>
+              <button type="button" class="csj-btn csj-btn-sm" data-act="upload-doc" data-cat="healthAndSafetyPolicy">Upload</button>
+            </div>
+            <div class="csj-doc-files" id="csjDocListHealthAndSafety"></div>
+          </div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head">
+            <div>
+              <h3>Hiring and discrimination policies</h3>
+              <p class="csj-card-sub">Upload every policy the organization has. Hiring and discrimination policies are expected.</p>
+            </div>
+            <button type="button" class="csj-btn csj-btn-sm" data-act="add-policy">Add policy</button>
+          </div>
+          <div class="csj-policy-list" id="csjPolicyList"></div>
+        </div>
+
+        <div class="csj-two-col">
+          <div class="csj-doc-card" data-cat="accessibilityDocuments">
+            <div class="csj-doc-head">
+              <div>
+                <div class="csj-doc-title">Accessibility documents</div>
+                <div class="csj-doc-hint">Supporting documents when hiring youth facing barriers.</div>
+              </div>
+              <button type="button" class="csj-btn csj-btn-sm" data-act="upload-doc" data-cat="accessibilityDocuments">Upload</button>
+            </div>
+            <div class="csj-doc-files" id="csjDocListAccessibility"></div>
+          </div>
+          <div class="csj-doc-card" data-cat="trainingProof">
+            <div class="csj-doc-head">
+              <div>
+                <div class="csj-doc-title">Proof of required training</div>
+                <div class="csj-doc-hint">Training schedule, mentorship plan, supervision schedule, safety manual or skills framework.</div>
+              </div>
+              <button type="button" class="csj-btn csj-btn-sm" data-act="upload-doc" data-cat="trainingProof">Upload</button>
+            </div>
+            <div class="csj-doc-files" id="csjDocListTrainingProof"></div>
+          </div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head">
+            <div>
+              <h3>Accommodation plan explanation</h3>
+              <p class="csj-card-sub">Explain how the organization will accommodate youth facing barriers.</p>
+            </div>
+            <span class="csj-save-state" id="csjAccommodationState">Saved</span>
+          </div>
+          <textarea class="csj-textarea" id="csjAccommodationPlan" data-app-field="accommodationPlan" rows="5" maxlength="4000" placeholder="Describe the accommodation measures, supports and training that will be in place."></textarea>
+        </div>
+      </section>
+
+      <!-- ── Review and submit ── -->
+      <section class="csj-panel" data-panel="review" id="csjPanelReview" hidden>
+        <div class="csj-page-head">
+          <div class="csj-page-head-text">
+            <div class="csj-kicker">Section 6</div>
+            <h2 class="csj-page-title">Review and submit</h2>
+            <p class="csj-page-sub">Resolve the blocking items, then freeze the application and export the package.</p>
+          </div>
+          <div class="csj-page-actions">
+            <button type="button" class="csj-btn csj-btn-quiet" data-act="export-json" id="csjBtnExportJson">Export JSON</button>
+            <button type="button" class="csj-btn csj-btn-quiet" data-act="export-pdf" id="csjBtnExportPdf">Export PDF</button>
+          </div>
+        </div>
+
+        <div class="csj-review-head" id="csjReviewHead"></div>
+        <div class="csj-card">
+          <div class="csj-card-head"><h3>Readiness checklist</h3></div>
+          <div id="csjReviewList" class="csj-review-groups"></div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head">
+            <div>
+              <h3>Status</h3>
+              <p class="csj-card-sub">Submitted applications are locked. An administrator can reopen them.</p>
+            </div>
+            <span class="csj-status-pill is-draft" id="csjReviewStatusPill">Draft</span>
+          </div>
+          <div class="csj-status-actions" id="csjReviewStatusActions"></div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head">
+            <div>
+              <h3>Frozen snapshots</h3>
+              <p class="csj-card-sub">A snapshot is written on submit. It is a separate document, never inside the live entries.</p>
+            </div>
+            <button type="button" class="csj-btn csj-btn-sm" data-act="create-snapshot">Create snapshot</button>
+          </div>
+          <div id="csjSnapshots" class="csj-snapshot-list"></div>
+        </div>
+
+        <div class="csj-card">
+          <div class="csj-card-head"><h3>Audit trail</h3></div>
+          <div id="csjAuditList" class="csj-activity"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ══ Job editor drawer ══ -->
+  <div class="csj-drawer-overlay" id="csjDrawerOverlay" hidden></div>
+  <aside class="csj-drawer" id="csjDrawer" aria-hidden="true" hidden>
+    <div class="csj-drawer-head">
+      <div class="csj-drawer-head-text">
+        <div class="csj-drawer-kicker" id="csjDrawerKicker">Job description</div>
+        <h2 class="csj-drawer-title" id="csjDrawerTitle">Edit job</h2>
+        <div class="csj-drawer-meta" id="csjDrawerMeta"></div>
+      </div>
+      <button type="button" class="csj-icon-btn" id="csjDrawerClose" aria-label="Close job editor">&times;</button>
+    </div>
+    <div class="csj-drawer-tabs" id="csjDrawerTabs" role="tablist">
+      <button type="button" class="csj-dtab is-active" data-tab="definition" role="tab">Job details</button>
+      <button type="button" class="csj-dtab" data-tab="description" role="tab">Job description</button>
+      <button type="button" class="csj-dtab" data-tab="skills" role="tab">Skills</button>
+      <button type="button" class="csj-dtab" data-tab="employment" role="tab">Employment</button>
+      <button type="button" class="csj-dtab" data-tab="supervision" role="tab">Supervision</button>
+      <button type="button" class="csj-dtab" data-tab="mentorship" role="tab">Mentorship</button>
+      <button type="button" class="csj-dtab" data-tab="recruitment" role="tab">Recruitment</button>
+      <button type="button" class="csj-dtab" data-tab="priorities" role="tab">Priorities</button>
+    </div>
+    <div class="csj-drawer-owner" id="csjDrawerOwner" hidden></div>
+    <div class="csj-drawer-remote" id="csjDrawerRemote" hidden></div>
+    <div class="csj-drawer-body" id="csjDrawerBody"></div>
+    <div class="csj-drawer-foot">
+      <span class="csj-save-state" id="csjDrawerDirty">No unsaved changes</span>
+      <div class="csj-drawer-foot-actions">
+        <button type="button" class="csj-btn csj-btn-quiet" id="csjDrawerCancel">Close</button>
+        <button type="button" class="csj-btn csj-btn-primary" id="csjDrawerSave">Save job</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ Generic modal ══ -->
+  <div class="csj-modal-overlay" id="csjModalOverlay" hidden>
+    <div class="csj-modal" role="dialog" aria-modal="true" aria-labelledby="csjModalTitle">
+      <div class="csj-modal-head">
+        <h3 id="csjModalTitle">Dialog</h3>
+        <button type="button" class="csj-icon-btn" id="csjModalClose" aria-label="Close dialog">&times;</button>
+      </div>
+      <div class="csj-modal-body" id="csjModalBody"></div>
+      <div class="csj-modal-foot" id="csjModalFoot"></div>
+    </div>
+  </div>
+
+  <!-- ══ In-app toast ══ -->
+  <div class="csj-toast" id="csjToast" hidden></div>
+</div>
